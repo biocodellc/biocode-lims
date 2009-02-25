@@ -1,0 +1,64 @@
+<project name="MooreaLabBench" default="dist" basedir=".">
+
+   <import file="../build.xml"/>
+
+<!--   <property name="build-for-current" value="COMMENT THIS PROPERTY OUT to exclude from test-currentRelease"/> -->
+   <property file="plugin.properties"/>
+   <property name="plugin.name" value="com.biomatters.plugins.moorea.MooreaLabBenchPlugin"/>
+   <property name="plugin-build" location="build"/>
+   <property name="classes" location="bin"/>
+   <property name="resources" location="resources"/>
+   <property name="src" location="src"/>
+
+   <path id="classpath" refid="classpath.common"/>
+
+   <path id="classpath.test.local">
+      <path refid="classpath"/>
+      <path refid="classpath.test"/>
+      <pathelement location="bin"/>
+      <pathelement location="testdata"/>
+   </path>
+
+   <target name= "dist" depends="build">
+      <copy file="${plugin-build}/${plugin.name}.jar"
+            tofile="${dist}/${short-plugin-name}.gplugin"/>
+   </target>
+
+   <target name="install-for-test" depends="build">
+      <move file="${plugin-build}/${plugin.name}.jar" todir="${build.plugins}"/>
+   </target>
+
+   <target name="build" depends="compile">
+      <jar jarfile="${plugin-build}/${plugin.name}.jar">
+         <fileset dir="${classes}"/>
+         <fileset dir="${resources}"/>
+         <fileset dir="">
+            <include name="plugin.properties"/>
+         </fileset>
+      </jar>
+   </target>
+
+   <target name="compile" depends="build-public-api, prepare">
+      <javac destdir="${classes}" debug="true">
+         <classpath refid="classpath"/>
+         <src path="src"/>
+      </javac>
+      <javac destdir="${classes.test}" debug="${debug}">
+         <classpath refid="classpath.test.local"/>
+         <src path="test"/>
+      </javac>
+      <copy todir="${classes.test}" failonerror="false">
+         <fileset dir="testdata"/>
+      </copy>
+   </target>
+
+   <target name="prepare">
+      <mkdir dir="${plugin-build}"/>
+      <mkdir dir="${classes}"/>
+   </target>
+
+   <target name="clean">
+      <delete dir="${plugin-build}"/>
+      <delete dir="${classes}"/>
+   </target>
+</project>
