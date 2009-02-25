@@ -14,6 +14,7 @@ import java.net.URL;
 import java.net.URISyntaxException;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.jdom.input.SAXBuilder;
 import org.jdom.Element;
@@ -73,18 +74,16 @@ public class MooreaLabBenchService extends DatabaseService {
         List<DocumentNote> notes = new ArrayList<DocumentNote>();
 
 
-        URL resource = getClass().getResource("TextAbiDocuments.xml");
+
         try {
+            InputStream resource = getClass().getResourceAsStream("TextAbiDocuments.xml");
             List<NucleotideSequenceDocument> docs = new ArrayList<NucleotideSequenceDocument>();
-            File resourceFile = new File(resource.toURI());
             SAXBuilder builder = new SAXBuilder();
-            Element root = builder.build(resourceFile).detachRootElement();
+            Element root = builder.build(resource).detachRootElement();
             for(Element e : root.getChildren()) {
                 docs.add(XMLSerializer.classFromXML(e, NucleotideSequenceDocument.class));
             }
             document.setNucleotideSequences(docs);
-        } catch (URISyntaxException e) {
-            throw new DatabaseServiceException("arse", false);
         } catch (JDOMException e) {
             throw new DatabaseServiceException("arse2", false);
         } catch (IOException e) {
