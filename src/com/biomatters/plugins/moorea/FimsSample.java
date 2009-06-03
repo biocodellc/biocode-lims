@@ -1,6 +1,7 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 
 import java.util.List;
 
@@ -11,9 +12,13 @@ import java.util.List;
  * Time: 6:31:47 PM
  * To change this template use File | Settings | File Templates.
  */
-public interface FimsSample {
+public interface FimsSample extends XMLSerializable {
 
     public String getId();
+
+    public String getSpecimenId();
+
+    public String getFimsConnectionId();
 
     public List<DocumentField> getFimsAttributes();
 

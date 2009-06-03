@@ -40,7 +40,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return Collections.emptyList();
     }
 
-    public List<FimsSample> getMatchingSamples(List<Query> queries) {
+    public List<FimsSample> getMatchingSamples(Query query) {
         return null;//todo: always return all sample records from the LIMS
     }
 }

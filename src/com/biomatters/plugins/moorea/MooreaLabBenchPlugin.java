@@ -2,6 +2,7 @@ package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.plugin.GeneiousPlugin;
 import com.biomatters.geneious.publicapi.plugin.GeneiousService;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 
 /**
  * @version $Id: MooreaLabBenchPlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -38,5 +39,12 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
     @Override
     public GeneiousService[] getServices() {
         return new GeneiousService[] {new MooreaLabBenchService()};
+    }
+
+    @Override
+    public DocumentViewerFactory[] getDocumentViewerFactories() {
+        return new DocumentViewerFactory[] {
+                new TissueImagesViewerFactory()
+        };
     }
 }

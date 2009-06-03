@@ -19,9 +19,11 @@ public class PasswordOption extends Options.Option<String, JPasswordField>{
 
     private boolean updatingComponent = false;
     boolean createdComponent = false;
+    private String password;
 
     public PasswordOption(Element e) throws XMLSerializationException {
         super(e);
+        setRestorePreferenceApplies(false);
     }
 
     public PasswordOption(String name, String label, String defaultValue){
@@ -37,6 +39,10 @@ public class PasswordOption extends Options.Option<String, JPasswordField>{
         updatingComponent = false;
     }
 
+    public String getPassword() {
+        return password;
+    }
+
     protected JPasswordField createComponent() {
         final JPasswordField passwordField = new JPasswordField();
         passwordField.setColumns(30);
@@ -46,7 +52,7 @@ public class PasswordOption extends Options.Option<String, JPasswordField>{
                 private void update() {
                     if (updatingComponent) return;
                     updatingComponent = true;
-                    setValue(new String(passwordField.getPassword()));
+                    password = new String(passwordField.getPassword());
                     updatingComponent = false;
                 }
 

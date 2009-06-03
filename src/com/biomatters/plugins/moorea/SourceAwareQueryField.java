@@ -15,7 +15,7 @@ public class SourceAwareQueryField extends QueryField{
     private String sourceId;
 
     public SourceAwareQueryField(DocumentField field, Condition[] conditions, String sourceId) {
-        //super(field, conditions);
+        super(field, conditions);
         this.sourceId = sourceId;
     }
 

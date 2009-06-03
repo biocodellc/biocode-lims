@@ -17,6 +17,7 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 
 import java.awt.event.ActionEvent;
+import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.net.URLClassLoader;
 import java.sql.Driver;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -41,6 +43,7 @@ public class MooreaLabBenchService extends DatabaseService {
     private FIMSConnection activeFIMSConnection;
     private String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     static Driver driver;
+    public static final Map<String, Image> imageCache = new HashMap<String, Image>();
 
     @Override
     public ExtendedSearchOption[] getExtendedSearchOptions(boolean isAdvancedSearch) {
@@ -78,9 +81,11 @@ public class MooreaLabBenchService extends DatabaseService {
 
         if(activeFIMSConnection != null) {
             List<DocumentField> fimsAttributes = activeFIMSConnection.getFimsAttributes();
-            for(DocumentField field : fimsAttributes) {
-                Condition[] conditions = getFieldConditions(field.getClass());
-                fieldList.add(new SourceAwareQueryField(field, conditions, activeFIMSConnection.getName()));
+            if(fimsAttributes != null) {
+                for(DocumentField field : fimsAttributes) {
+                    Condition[] conditions = getFieldConditions(field.getValueType());
+                    fieldList.add(new QueryField(field, conditions));
+                }
             }
         }
 
@@ -89,7 +94,7 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     private Condition[] getFieldConditions(Class fieldClass) {
-        if(Integer.class.isAssignableFrom(fieldClass) || Double.class.isAssignableFrom(fieldClass)) {
+        if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
             return new Condition[] {
                     Condition.EQUAL,
                     Condition.NOT_EQUAL,
@@ -99,13 +104,17 @@ public class MooreaLabBenchService extends DatabaseService {
                     Condition.LESS_THAN_OR_EQUAL_TO
             };
         }
-        else if(String.class.isAssignableFrom(fieldClass)) {
+        else if(String.class.equals(fieldClass)) {
             return new Condition[] {
                     Condition.EQUAL,
                     Condition.APPROXIMATELY_EQUAL,
                     Condition.CONTAINS,
                     Condition.NOT_EQUAL,
-                    Condition.NOT_CONTAINS
+                    Condition.NOT_CONTAINS,
+                    Condition.STRING_LENGTH_GREATER_THAN,
+                    Condition.STRING_LENGTH_GREATER_THAN,
+                    Condition.BEGINS_WITH,
+                    Condition.ENDS_WITH
             };
         }
         else {
@@ -153,8 +162,10 @@ public class MooreaLabBenchService extends DatabaseService {
                     Options loginOptions = new Options(this.getClass());
                     loginOptions.addChildOptions("fims", "", "", FIMSOptions);
                     loginOptions.addChildOptions("lims", "Lab-bench login", "", LIMSOptions);
+                    loginOptions.restorePreferences();
 
                     if(Dialogs.showOkCancelDialog(loginOptions.getPanel(), "Log in", null)) {
+                        loginOptions.savePreferences();
                         //load the connection driver
                         String driverFileName = (String)LIMSOptions.getValue("driver");
 
@@ -190,7 +201,7 @@ public class MooreaLabBenchService extends DatabaseService {
                         //connect to the LIMS
                         Properties properties = new Properties();
                         properties.put("user", LIMSOptions.getValueAsString("username"));
-                        properties.put("password", LIMSOptions.getValueAsString("password"));
+                        properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
                         try {
                             driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
                         } catch (SQLException e1) {
@@ -250,86 +261,56 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve) throws DatabaseServiceException {
-        ExperimentDocument document = new ExperimentDocument("PL005");
-
-        //add notes
-        DocumentNoteType specimen = DocumentNoteUtilities.getNoteType("moorea_specimem");
-        if(specimen == null) {
-            specimen = DocumentNoteUtilities.createNewNoteType("Specimen", "moorea_specimem", "", Arrays.asList(DocumentNoteField.createTextNoteField("Organism", "", "organism", Collections.EMPTY_LIST, false)), true);
-            DocumentNoteUtilities.setNoteType(specimen);
-        }
-        DocumentNoteType sample = DocumentNoteUtilities.getNoteType("moorea_sample");
-        if(sample == null) {
-            sample = DocumentNoteUtilities.createNewNoteType("Tissue Sample", "moorea_sample", "", Arrays.asList(DocumentNoteField.createTextNoteField("Sample ID", "", "id", Collections.EMPTY_LIST, false), DocumentNoteField.createIntegerNoteField("Freezer", "", "freezer", Collections.EMPTY_LIST, false), DocumentNoteField.createIntegerNoteField("Shelf", "", "shelf", Collections.EMPTY_LIST, false)), true);
-            DocumentNoteUtilities.setNoteType(sample);
-        }
-        DocumentNoteType extraction = DocumentNoteUtilities.getNoteType("moorea_extraction");
-        if(extraction == null) {
-            extraction = DocumentNoteUtilities.createNewNoteType("DNA Extraction", "moorea_extraction", "", Arrays.asList(
-                    DocumentNoteField.createTextNoteField("Plate ID", "", "plate", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createDateNoteField("Extraction Date", "", "date", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createTextNoteField("Extracted By", "", "extractor", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createEnumeratedNoteField(new String[] {"Method 1", "Method 2", "Method 3"}, "Extraction Method", "", "plate", false),
-                    DocumentNoteField.createIntegerNoteField("Well Location", "", "location", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createTextNoteField("Suspension Solution", "", "solution", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createTextNoteField("Plate ID", "", "plate", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createIntegerNoteField("Freezer", "", "freezer", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createIntegerNoteField("Shelf", "", "shelf", Collections.EMPTY_LIST, false),
-                    DocumentNoteField.createIntegerNoteField("Extra data", "", "extra_data", Collections.EMPTY_LIST, false)
-            ), false);
-            DocumentNoteUtilities.setNoteType(extraction);
-        }
-        DocumentNoteType pcr = DocumentNoteUtilities.getNoteType("moorea_pcr");
-        if(pcr == null) {
-            pcr = DocumentNoteUtilities.createNewNoteType("PCR Amplification", "moorea_pcr", "", Arrays.asList(DocumentNoteField.createEnumeratedNoteField(new String[] {"Passed", "Failed", "None"}, "Outcome", "", "outcome", false), DocumentNoteField.createIntegerNoteField("Freezer", "", "freezer", Collections.EMPTY_LIST, false), DocumentNoteField.createIntegerNoteField("Shelf", "", "shelf", Collections.EMPTY_LIST, false)), true);
-            DocumentNoteUtilities.setNoteType(pcr);
-        }
-
-        List<DocumentNote> notes = new ArrayList<DocumentNote>();
+        boolean allLims = false;
+        List<FimsSample> tissueSamples = null;
+        List<Query> fimsQueries = new ArrayList<Query>();
+        List<Query> limsQueries = new ArrayList<Query>();
 
 
-
-        try {
-            InputStream resource = getClass().getResourceAsStream("TextAbiDocuments.xml");
-            List<NucleotideSequenceDocument> docs = new ArrayList<NucleotideSequenceDocument>();
-            SAXBuilder builder = new SAXBuilder();
-            Element root = builder.build(resource).detachRootElement();
-            for(Element e : root.getChildren()) {
-                docs.add(XMLSerializer.classFromXML(e, NucleotideSequenceDocument.class));
+        if(query instanceof CompoundSearchQuery) {
+            CompoundSearchQuery masterQuery = (CompoundSearchQuery) query;
+            for(Query childQuery : masterQuery.getChildren()) {
+                if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getFimsAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
+                    fimsQueries.add(childQuery);//todo: distinguish between queries from multiple FIMS connections
+                }
+                else {
+                    limsQueries.add(childQuery);
+                }
             }
-            document.setNucleotideSequences(docs);
-        } catch (JDOMException e) {
-            throw new DatabaseServiceException("arse2", false);
-        } catch (IOException e) {
-            throw new DatabaseServiceException("arse3", false);
-        } catch (XMLSerializationException e) {
-            throw new DatabaseServiceException("arse4", false);
+            if(fimsQueries.size() > 0) {
+                Query compoundQuery;
+                if(masterQuery.getOperator() == CompoundSearchQuery.Operator.AND) {
+                    compoundQuery = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.EMPTY_MAP);
+                }
+                else {
+                    compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.EMPTY_MAP);
+                }
+                tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
+            }
+        }
+        else {
+            allLims = true;
+            tissueSamples = activeFIMSConnection.getMatchingSamples(query);
+            fimsQueries.add(query);
+            limsQueries.add(query);
+        }
+
+        if(tissueSamples != null) {
+            for(FimsSample sample : tissueSamples) {
+                TissueDocument doc = new TissueDocument(sample);
+                callback.add(doc, Collections.EMPTY_MAP);
+            }
         }
 
 
-        AnnotatedPluginDocument apd = DocumentUtilities.createAnnotatedPluginDocument(document);
 
-        AnnotatedPluginDocument.DocumentNotes documentNotes = apd.getDocumentNotes(true);
 
-        DocumentNote specimenNote = specimen.createDocumentNote();
-        documentNotes.setNote(specimenNote);
-
-        DocumentNote sampleNote = sample.createDocumentNote();
-        documentNotes.setNote(sampleNote);
-
-        DocumentNote extractionNote = extraction.createDocumentNote();
-        documentNotes.setNote(extractionNote);
-
-        DocumentNote pcrNote = pcr.createDocumentNote();
-        documentNotes.setNote(pcrNote);
-
-        documentNotes.saveNotes();
-
-        callback.add(apd, Collections.EMPTY_MAP);
     }
 
+    static final String UNIQUE_ID = "MooreaLabBenchService";
+
     public String getUniqueID() {
-        return "MooreaLabBenchService";
+        return UNIQUE_ID;
     }
 
     public String getName() {

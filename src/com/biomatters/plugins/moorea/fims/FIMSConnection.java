@@ -51,6 +51,6 @@ public abstract class FIMSConnection {
 
     public abstract List<DocumentField> getFimsAttributes();
 
-    public abstract List<FimsSample> getMatchingSamples(List<Query> queries);
+    public abstract List<FimsSample> getMatchingSamples(Query query);
 
 }
