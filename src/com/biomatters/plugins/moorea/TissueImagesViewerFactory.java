@@ -10,7 +10,6 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.net.URL;
-import java.net.MalformedURLException;
 import java.io.InputStream;
 import java.io.IOException;
 
@@ -51,10 +50,16 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
 
                 final JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
-                if(MooreaLabBenchService.imageCache.get(doc.getSpecimenId()) != null) {
-                    panel.setLayout(new BorderLayout());
-                    JScrollPane scroller = new JScrollPane(new ImagePanel(MooreaLabBenchService.imageCache.get(doc.getSpecimenId())));
-                    panel.add(scroller);
+                if(MooreaLabBenchService.imageCache.containsKey(doc.getSpecimenId())) {
+                    Image i = MooreaLabBenchService.imageCache.get(doc.getSpecimenId());
+                    if(i != null) {
+                        panel.setLayout(new BorderLayout());
+                        JScrollPane scroller = new JScrollPane(new ImagePanel(i));
+                        panel.add(scroller);
+                    }
+                    else {
+                        panel.add(new JLabel("This specimen has no photos"));
+                    }
                     return panel;
                 }
 
@@ -92,6 +97,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                                         panel.revalidate();
                                     }
                                     else {
+                                        MooreaLabBenchService.imageCache.put(doc.getSpecimenId(), null);
                                         panel.removeAll();
                                         panel.add(new JLabel("This specimen has no photos"));
                                     }
