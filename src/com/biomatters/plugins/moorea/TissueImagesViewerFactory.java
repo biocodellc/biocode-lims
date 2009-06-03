@@ -6,12 +6,13 @@ import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.*;
 import java.net.URL;
 import java.io.InputStream;
 import java.io.IOException;
+import java.util.List;
 
 import org.jdom.input.SAXBuilder;
 import org.jdom.JDOMException;
@@ -51,7 +52,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                 final JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
                 if(MooreaLabBenchService.imageCache.containsKey(doc.getSpecimenId())) {
-                    Image i = MooreaLabBenchService.imageCache.get(doc.getSpecimenId());
+                    Image[] i = MooreaLabBenchService.imageCache.get(doc.getSpecimenId());
                     if(i != null) {
                         panel.setLayout(new BorderLayout());
                         JScrollPane scroller = new JScrollPane(new ImagePanel(i));
@@ -76,20 +77,25 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                                     SAXBuilder builder = new SAXBuilder();
                                     Element root = builder.build(in).detachRootElement();
 
-                                    String imageUrlText = root.getChildText("enlarge_jpeg_url");
-                                    if(imageUrlText != null) {
-                                        URL imageUrl = new URL(imageUrlText);
-                                        Image i = Toolkit.getDefaultToolkit().createImage(imageUrl);
+                                    List<Element> imageUrls = root.getChildren("enlarge_jpeg_url");
+                                    if(imageUrls != null && imageUrls.size() > 0) {
+                                        Image[] images = new Image[imageUrls.size()];
                                         MediaTracker m = new MediaTracker(panel);
-                                        m.addImage(i,0);
+                                        for(int i=0; i < imageUrls.size(); i++) {
+                                            URL imageUrl = new URL(imageUrls.get(i).getText());
+                                            Image img = Toolkit.getDefaultToolkit().createImage(imageUrl);
+                                            images[i] = img;
+                                            m.addImage(img,0);
+                                        }
+
                                         try {
                                             m.waitForAll();
                                         }
                                         catch(InterruptedException ex){}
 
-                                        MooreaLabBenchService.imageCache.put(doc.getSpecimenId(), i);
+                                        MooreaLabBenchService.imageCache.put(doc.getSpecimenId(), images);
 
-                                        ImagePanel imPanel = new ImagePanel(i);
+                                        ImagePanel imPanel = new ImagePanel(images);
                                         JScrollPane scroller = new JScrollPane(imPanel);
                                         panel.removeAll();
                                         panel.setLayout(new BorderLayout());
@@ -128,21 +134,34 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
     }
 
     class ImagePanel extends JPanel {
-        private Image image;
+        private Image[] images;
 
-        public ImagePanel(Image i) {
-            this.image = i;
+        public ImagePanel(Image[] i) {
+            this.images = i;
         }
 
         public Dimension getPreferredSize() {
-            return new Dimension(image.getWidth(this)+20, image.getHeight(this)+20);
+            int w = 0;
+            int h = 0;
+            for(Image i : images) {
+                w  = Math.max(w, i.getWidth(this));
+                h += i.getHeight(this)+10;
+            }
+            w += 20;//padding
+            h += 10;
+
+            return new Dimension(w,h);
         }
 
         public void paintComponent(Graphics g) {
             g.setColor(SystemColor.control.darker().darker());
             g.fillRect(0,0,getWidth(),getHeight());
+            int y = 10;
+            for(Image i : images) {
+                g.drawImage(i,10,y,this);
+                y += i.getHeight(this)+10;
+            }
 
-            g.drawImage(image,10,10,this);
         }
 
     }

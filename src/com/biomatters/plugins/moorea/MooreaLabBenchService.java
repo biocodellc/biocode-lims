@@ -43,7 +43,7 @@ public class MooreaLabBenchService extends DatabaseService {
     private FIMSConnection activeFIMSConnection;
     private String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     static Driver driver;
-    public static final Map<String, Image> imageCache = new HashMap<String, Image>();
+    public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
 
     @Override
     public ExtendedSearchOption[] getExtendedSearchOptions(boolean isAdvancedSearch) {
@@ -285,12 +285,20 @@ public class MooreaLabBenchService extends DatabaseService {
                 else {
                     compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.EMPTY_MAP);
                 }
-                tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
+                try {
+                    tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
+                } catch (ConnectionException e) {
+                    throw new DatabaseServiceException(e.getMessage(), false);
+                }
             }
         }
         else {
             allLims = true;
-            tissueSamples = activeFIMSConnection.getMatchingSamples(query);
+            try {
+                tissueSamples = activeFIMSConnection.getMatchingSamples(query);
+            } catch (ConnectionException e) {
+                throw new DatabaseServiceException(e.getMessage(), false);
+            }
             fimsQueries.add(query);
             limsQueries.add(query);
         }

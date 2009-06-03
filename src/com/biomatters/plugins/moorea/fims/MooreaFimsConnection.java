@@ -90,7 +90,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(new DocumentField("Tissue ID", "", "biocode_tissue.seq_num", String.class, true, false));
 
-        fields.add(new DocumentField("Specimen ID", "", "biocode.Specimen_Num_Collector", String.class, true, false));
+        fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, true, false));
         fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, true, false));
 
         fields.add(new DocumentField("Plate Name", "", "biocode_tissue.format_name96", String.class, true, false));
@@ -145,7 +145,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         return fields;
     }
 
-    public List<FimsSample> getMatchingSamples(Query query) {
+    public List<FimsSample> getMatchingSamples(Query query) throws ConnectionException{
         StringBuilder queryBuilder = new StringBuilder();
         
 
@@ -170,7 +170,7 @@ public class MooreaFimsConnection extends FIMSConnection{
             return samples;
         } catch (SQLException e) {
             e.printStackTrace(); //todo: exception handling
-            throw new RuntimeException(e);
+            throw new ConnectionException(e);
         }
     }
 

@@ -67,7 +67,7 @@ public class SQLFimsSample implements FimsSample{
     }
 
     public String getSpecimenId() {
-        Object o = values.get("biocode.Specimen_Num_Collector");
+        Object o = values.get("biocode_tissue.bnhm_id");
         return o != null ? o.toString() : null;
     }
 
