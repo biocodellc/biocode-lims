@@ -2,12 +2,14 @@ package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.moorea.MooreaLabBenchService;
 
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Created by IntelliJ IDEA.
@@ -67,6 +69,13 @@ public abstract class Reaction {
 
 
     public abstract Options getOptions();
+
+    public List<DocumentField> getAllDisplayableFields() {
+        List<DocumentField> displayableFields = new ArrayList<DocumentField>();
+        displayableFields.addAll(getDisplayableFields());
+        displayableFields.addAll(MooreaLabBenchService.getInstance().getActiveFIMSConnection().getSearchAttributes());
+        return displayableFields;
+    }
 
     public abstract List<DocumentField> getDisplayableFields();
 

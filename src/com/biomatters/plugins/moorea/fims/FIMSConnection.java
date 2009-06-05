@@ -49,7 +49,13 @@ public abstract class FIMSConnection {
      */
     public abstract void connect(Options options) throws ConnectionException;
 
-    public abstract List<DocumentField> getFimsAttributes();
+    public abstract void disconnect() throws ConnectionException;
+
+    public abstract List<DocumentField> getCollectionAttributes();
+
+    public abstract List<DocumentField> getTaxonomyAttributes();
+
+    public abstract List<DocumentField> getSearchAttributes();
 
     public abstract List<FimsSample> getMatchingSamples(Query query) throws ConnectionException;
 

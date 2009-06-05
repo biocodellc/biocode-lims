@@ -36,7 +36,19 @@ public class TAPIRFimsConnection extends FIMSConnection{
     public void connect(Options options) throws ConnectionException {
     }
 
-    public List<DocumentField> getFimsAttributes() {
+    public void disconnect() throws ConnectionException {
+        
+    }
+
+    public List<DocumentField> getSearchAttributes() {
+        return Collections.emptyList();
+    }
+
+    public List<DocumentField> getCollectionAttributes() {
+        return Collections.emptyList();
+    }
+
+    public List<DocumentField> getTaxonomyAttributes() {
         return Collections.emptyList();
     }
 

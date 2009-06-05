@@ -1,10 +1,16 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
+import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,19 +22,77 @@ import java.awt.*;
 public class PlateViewer extends JPanel {
 
     private PlateView plateView;
+    private PlateViewer selfReference = this;
+
+    public PlateViewer(int numberOfReactions, Reaction.Type type) {
+        plateView = new PlateView(numberOfReactions, type);
+        init();
+    }
 
     public PlateViewer(PlateView.PlateSize size, Reaction.Type type) {
         plateView = new PlateView(size, type);
+        init();
+    }
 
+    private void init() {
         setLayout(new BorderLayout());
 
-        JToolBar toolbar = new JToolBar();
+        final JToolBar toolbar = new JToolBar();
+
+        final GeneiousAction editAction = new GeneiousAction("Edit selected") {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    plateView.editReactions(plateView.getSelectedReactions());
+                } catch (XMLSerializationException e1) {
+                    e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                }
+            }
+        };
+        toolbar.add(editAction);
+        ListSelectionListener toolbarListener = new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent e) {
+                JToolBar toolbar2 = toolbar;
+                editAction.setEnabled(plateView.getSelectedReactions().size() > 0);
+            }
+        };
+        plateView.addSelectionListener(toolbarListener);
+        toolbarListener.valueChanged(null);
 
         JScrollPane scroller = new JScrollPane(plateView);
 
         add(scroller, BorderLayout.CENTER);
 
         add(toolbar, BorderLayout.NORTH);
+
+    }
+
+    public void displayInFrame(final boolean isNew) {
+        final JFrame frame = new JFrame();
+        Runnable runnable = new Runnable() {
+            public void run() {
+                frame.getContentPane().setLayout(new BorderLayout());
+
+                frame.setTitle((isNew?"New " : " ")+plateView.getReactionType());
+                frame.getContentPane().add(selfReference, BorderLayout.CENTER);
+                frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+
+                JPanel closeButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+                JButton okButton = new JButton("OK");
+                JButton cancelButton = new JButton("Cancel");
+                closeButtonPanel.add(cancelButton);
+                closeButtonPanel.add(okButton);
+                frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);
+
+                frame.pack();
+                frame.setVisible(true);
+            }
+        };
+        ThreadUtilities.invokeNowOrWait(runnable);
+
+        while(frame.isVisible()){
+            ThreadUtilities.sleep(100);
+        }
     }
 
 

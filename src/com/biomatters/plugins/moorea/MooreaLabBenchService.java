@@ -3,25 +3,21 @@ package com.biomatters.plugins.moorea;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.GeneiousServiceListener;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.fims.GeneiousFimsConnection;
 import com.biomatters.plugins.moorea.fims.MooreaFimsConnection;
 import com.biomatters.plugins.moorea.fims.TAPIRFimsConnection;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
+import com.biomatters.plugins.moorea.lims.LIMSConnection;
 
 import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -38,12 +34,26 @@ import java.util.List;
  */
 public class MooreaLabBenchService extends DatabaseService {
     public boolean isLoggedIn = false;
-    private String username = null;
-    private String password = null;
     private FIMSConnection activeFIMSConnection;
+    private LIMSConnection limsConnection = new LIMSConnection();
     private String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     static Driver driver;
+    private static MooreaLabBenchService instance = null;
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
+
+    private MooreaLabBenchService() {
+    }
+
+    public static MooreaLabBenchService getInstance() {
+        if(instance == null) {
+            instance = new MooreaLabBenchService();
+        }
+        return instance;
+    }
+
+    public FIMSConnection getActiveFIMSConnection() {
+        return activeFIMSConnection;
+    }
 
     @Override
     public ExtendedSearchOption[] getExtendedSearchOptions(boolean isAdvancedSearch) {
@@ -80,7 +90,7 @@ public class MooreaLabBenchService extends DatabaseService {
         fieldList.addAll(Arrays.asList(limsFields));
 
         if(activeFIMSConnection != null) {
-            List<DocumentField> fimsAttributes = activeFIMSConnection.getFimsAttributes();
+            List<DocumentField> fimsAttributes = activeFIMSConnection.getSearchAttributes();
             if(fimsAttributes != null) {
                 for(DocumentField field : fimsAttributes) {
                     Condition[] conditions = getFieldConditions(field.getValueType());
@@ -106,15 +116,24 @@ public class MooreaLabBenchService extends DatabaseService {
         }
         else if(String.class.equals(fieldClass)) {
             return new Condition[] {
-                    Condition.EQUAL,
-                    Condition.APPROXIMATELY_EQUAL,
                     Condition.CONTAINS,
+                    Condition.EQUAL,
                     Condition.NOT_EQUAL,
                     Condition.NOT_CONTAINS,
                     Condition.STRING_LENGTH_GREATER_THAN,
                     Condition.STRING_LENGTH_GREATER_THAN,
                     Condition.BEGINS_WITH,
                     Condition.ENDS_WITH
+            };
+        }
+        else if(Date.class.equals(fieldClass)) {
+            return new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL,
+                    Condition.GREATER_THAN,
+                    Condition.GREATER_THAN_OR_EQUAL_TO,
+                    Condition.LESS_THAN,
+                    Condition.LESS_THAN_OR_EQUAL_TO
             };
         }
         else {
@@ -132,42 +151,50 @@ public class MooreaLabBenchService extends DatabaseService {
         if(isLoggedIn) {
             actions.add(new GeneiousAction("logout", "Log out"){
             public void actionPerformed(ActionEvent e) {
-                    username = password = null;
                     isLoggedIn = false;
-                    updateStatus();
+                try {
+                    activeFIMSConnection.disconnect();
+                } catch (ConnectionException e1) {
+                    Dialogs.showMessageDialog("Could not disconnect from "+activeFIMSConnection.getLabel()+": "+e1.getMessage());
+                }
+                try {
+                    limsConnection.disconnect();
+                } catch (ConnectionException e1) {
+                    Dialogs.showMessageDialog("Could not disconnect from the FIMS service: "+e1.getMessage());
+                }
+                updateStatus();
                 }
             }.setInPopupMenu(true));
         }
         else {
             actions.add(new GeneiousAction("login", "Log in"){
                 public void actionPerformed(ActionEvent e) {
-                    Options LIMSOptions = new Options(this.getClass());
+
                     Options FIMSOptions = new Options(this.getClass());
                     for(FIMSConnection connection : getFimsConnections()) {
                         FIMSOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new Options(this.getClass()));
                     }
                     FIMSOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
 
-                    LIMSOptions.addStringOption("server", "Server Address", "");
-                    LIMSOptions.addIntegerOption("port", "Port", 3306, 1, Integer.MAX_VALUE);
-                    LIMSOptions.addStringOption("database", "Database Name", "labbench");
-                    LIMSOptions.addStringOption("username", "Username", "");
-                    LIMSOptions.addCustomOption(new PasswordOption("password", "Password", ""));
-                    LIMSOptions.addFileSelectionOption("driver", "MySQL Driver", "", new String[0], "Browse...", new FilenameFilter(){
+                    Options LIMSOptions = limsConnection.getConnectionOptions();
+
+                    Options loginOptions = new Options(this.getClass());
+                    loginOptions.addChildOptions("fims", "", "", FIMSOptions);
+                    loginOptions.addChildOptions("lims", "Lab-bench login", "", LIMSOptions);
+
+                    loginOptions.addFileSelectionOption("driver", "MySQL Driver", "", new String[0], "Browse...", new FilenameFilter(){
                         public boolean accept(File dir, String name) {
                             return name.toLowerCase().endsWith(".jar");
                         }
                     });
 
-                    Options loginOptions = new Options(this.getClass());
-                    loginOptions.addChildOptions("fims", "", "", FIMSOptions);
-                    loginOptions.addChildOptions("lims", "Lab-bench login", "", LIMSOptions);
                     loginOptions.restorePreferences();
 
                     if(Dialogs.showOkCancelDialog(loginOptions.getPanel(), "Log in", null)) {
                         loginOptions.savePreferences();
-                        //load the connection driver
-                        String driverFileName = (String)LIMSOptions.getValue("driver");
+
+                        //load the connection driver -------------------------------------------------------------------
+                        String driverFileName = (String)loginOptions.getValue("driver");
 
                         ClassLoader loader;
                         try {
@@ -197,17 +224,7 @@ public class MooreaLabBenchService extends DatabaseService {
                             Dialogs.showMessageDialog(error);
                             return;
                         }
-
-                        //connect to the LIMS
-                        Properties properties = new Properties();
-                        properties.put("user", LIMSOptions.getValueAsString("username"));
-                        properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
-                        try {
-                            driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
-                        } catch (SQLException e1) {
-                            Dialogs.showMessageDialog("Failed to connect to the LIMS database: "+e1.getMessage());
-                            return;
-                        }
+                        //----------------------------------------------------------------------------------------------
 
 
                         //get the selected fims service.
@@ -233,6 +250,14 @@ public class MooreaLabBenchService extends DatabaseService {
                             activeFIMSConnection = null;
                             isLoggedIn = false;
                         }
+
+                        try {
+                            limsConnection.connect(LIMSOptions);
+                        } catch (ConnectionException e1) {
+                            Dialogs.showMessageDialog("Failed to connect to the LIMS database: "+e1.getMessage());
+                            return;
+                        }
+
                         updateStatus();
                         
                     }
@@ -270,7 +295,7 @@ public class MooreaLabBenchService extends DatabaseService {
         if(query instanceof CompoundSearchQuery) {
             CompoundSearchQuery masterQuery = (CompoundSearchQuery) query;
             for(Query childQuery : masterQuery.getChildren()) {
-                if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getFimsAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
+                if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
                     fimsQueries.add(childQuery);//todo: distinguish between queries from multiple FIMS connections
                 }
                 else {

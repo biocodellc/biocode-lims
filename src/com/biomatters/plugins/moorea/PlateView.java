@@ -1,13 +1,20 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 
 import javax.swing.*;
+import javax.swing.event.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
+import java.awt.event.*;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class PlateView extends JPanel {
@@ -15,6 +22,8 @@ public class PlateView extends JPanel {
     private int cols;
     private Reaction[] reactions;
     private Reaction.Type type;
+    private PlateSize plateSize;
+    private PlateView selfReference = this;
 
 
     public enum PlateSize {
@@ -23,8 +32,13 @@ public class PlateView extends JPanel {
         w384
     }
 
+    public PlateView(int numberOfWells, Reaction.Type type) {
+        init(numberOfWells, 1, type);
+    }
+
 
     public PlateView(PlateSize size, Reaction.Type type) {
+        this.type = type;
         switch(size) {
             case w48 :
                 init(8, 6, type);
@@ -35,6 +49,14 @@ public class PlateView extends JPanel {
             case w384 :
                 init(16, 24, type);
         }
+    }
+
+    public Reaction.Type getReactionType() {
+        return type;
+    }
+
+    public PlateSize getPlateSize() {
+        return plateSize;
     }
 
 
@@ -122,12 +144,17 @@ public class PlateView extends JPanel {
                 if(e.getClickCount() == 2) {
                     for(int i=0; i < reactions.length; i++) {
                         if(reactions[i].isSelected()) {
-                            Dialogs.showOptionsDialog(reactions[i].getOptions(), "Well Options", false);
+                            try {
+                                editReactions(Arrays.asList(reactions[i]));
+                            } catch (XMLSerializationException e1) {
+                                e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                            }
                             revalidate();
                         }
                     }
 
                 }
+                fireSelectionListeners();
                 repaint();
             }
 
@@ -179,6 +206,186 @@ public class PlateView extends JPanel {
 
     }
 
+    public void editReactions(List<Reaction> reactions) throws XMLSerializationException {
+        if(reactions == null || reactions.size() == 0) {
+            throw new IllegalArgumentException("reactions must be non-null and non-empty");
+        }
+
+        Options options = XMLSerializer.clone(reactions.get(0).getOptions());
+
+        Map<String, Boolean> haveAllSameValues = new HashMap<String, Boolean>();
+        //fill in the master options based on the values in all the reactions
+        for(Options.Option option : options.getOptions()) {
+            haveAllSameValues.put(option.getName(), true);
+            for(Reaction reaction : reactions) {
+                if(!reaction.getOptions().getValue(option.getName()).equals(option.getValue())) {
+                    haveAllSameValues.put(option.getName(), false);
+                    continue;
+                }
+            }
+        }
+
+        OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues);
+        JPanel fieldsPanel = getFieldsPanel(reactions);
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.add("Reaction",displayPanel);
+        tabs.add("Display", fieldsPanel);
+
+        if(Dialogs.showOkCancelDialog(tabs, "Well Options", selfReference)) {
+            for(final Options.Option option : options.getOptions()) {
+                if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
+                    for(Reaction reaction : reactions) {
+                        reaction.getOptions().setValue(option.getName(), option.getValue());
+                    }
+                }
+            }
+        }
+
+
+    }
+
+    private OptionsPanel getReactionPanel(Options options, Map<String, Boolean> haveAllSameValues) {
+        OptionsPanel displayPanel = new OptionsPanel();
+        final JCheckBox selectAllBox = new JCheckBox("<html><b>All</b></html>", false);
+        final AtomicBoolean selectAllValue = new AtomicBoolean(selectAllBox.isSelected());
+        displayPanel.addTwoComponents(selectAllBox, new JLabel(), false, false);
+        final List<JCheckBox> checkboxes = new ArrayList<JCheckBox>();
+        for(final Options.Option option : options.getOptions()) {
+            JComponent leftComponent;
+            if(!(option instanceof Options.LabelOption)) {
+                final JCheckBox checkbox = new JCheckBox(option.getLabel(), haveAllSameValues.get(option.getName()));
+                checkbox.setAlignmentY(JCheckBox.RIGHT_ALIGNMENT);
+                checkboxes.add(checkbox);
+                ChangeListener listener = new ChangeListener() {
+                    public void stateChanged(ChangeEvent e) {
+                        option.setEnabled(checkbox.isSelected());
+                    }
+                };
+                checkbox.addChangeListener(listener);
+                listener.stateChanged(null);
+                leftComponent = checkbox;
+            }
+            else {
+                leftComponent = new JLabel(option.getLabel());
+            }
+            selectAllBox.addChangeListener(new ChangeListener(){
+                public void stateChanged(ChangeEvent e) {
+                    if(selectAllBox.isSelected() != selectAllValue.getAndSet(selectAllBox.isSelected())) {
+                        for(JCheckBox cb : checkboxes) {
+                            cb.setSelected(selectAllBox.isSelected());
+                        }
+                    }
+                }
+            });
+            displayPanel.addTwoComponents(leftComponent, option.getComponent(), true, false);
+
+        }
+        return displayPanel;
+    }
+
+    private JPanel getFieldsPanel(List<Reaction> reactions) {
+        JPanel fieldsPanel = new JPanel();
+        BoxLayout layout = new BoxLayout(fieldsPanel, BoxLayout.LINE_AXIS);
+        fieldsPanel.setLayout(layout);
+
+        
+        List<DocumentField> displayableFields = reactions.get(0).getAllDisplayableFields();
+        final Vector<DocumentField> displayableFieldsVector = new Vector(displayableFields);
+        final JList availableListBox = new JList(displayableFieldsVector);
+        availableListBox.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+        final Vector<DocumentField> selectedFieldsVector = new Vector<DocumentField>();
+        final JList selectedListBox = new JList(selectedFieldsVector);
+
+        DefaultListCellRenderer cellRenderer = new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                Component superComponent = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);    //To change body of overridden methods use File | Settings | File Templates.
+                if (superComponent instanceof JLabel) {
+                    JLabel label = (JLabel) superComponent;
+                    DocumentField field = (DocumentField) value;
+                    label.setText(field.getName());
+                }
+                return superComponent;
+            }
+        };
+        availableListBox.setCellRenderer(cellRenderer);
+        selectedListBox.setCellRenderer(cellRenderer);
+
+
+
+        final JButton addButton = new JButton(" > ");
+        final JButton removeButton = new JButton(" < ");
+
+        ListSelectionListener selectionListener = new ListSelectionListener(){
+            public void valueChanged(ListSelectionEvent e) {
+                addButton.setEnabled(availableListBox.getSelectedIndices().length > 0);
+                removeButton.setEnabled(selectedListBox.getSelectedIndices().length > 0);
+            }
+        };
+        availableListBox.addListSelectionListener(selectionListener);
+        selectedListBox.addListSelectionListener(selectionListener);
+
+        addButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                int offset = 0;
+                int[] indices = availableListBox.getSelectedIndices();
+                for(int i=0; i < indices.length; i++) {
+                    int index = indices[i - offset];
+                    selectedFieldsVector.add(displayableFieldsVector.get(index));
+                    displayableFieldsVector.remove(index);
+                    offset++;
+                }
+                availableListBox.clearSelection();
+                selectedListBox.clearSelection();
+                for(ListDataListener listener : ((AbstractListModel)availableListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, displayableFieldsVector.size()-1));
+                }
+                for(ListDataListener listener : ((AbstractListModel)selectedListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size()-1));
+                }
+                availableListBox.revalidate();
+                selectedListBox.revalidate();
+            }
+        });
+
+        JPanel addRemovePanel = new JPanel(new GridLayout(2,1));
+        addRemovePanel.add(addButton);
+        addRemovePanel.add(removeButton);
+        addRemovePanel.setMaximumSize(addRemovePanel.getPreferredSize());
+        addRemovePanel.setMinimumSize(addRemovePanel.getPreferredSize());
+
+        fieldsPanel.add(new JScrollPane(availableListBox));
+        fieldsPanel.add(addRemovePanel);
+        fieldsPanel.add(new JScrollPane(selectedListBox));
+
+
+
+        return fieldsPanel;
+    }
+
+    public List<Reaction> getSelectedReactions() {
+        List<Reaction> selectedReactions = new ArrayList<Reaction>();
+        for(Reaction reaction : reactions) {
+            if(reaction.isSelected()) {
+                selectedReactions.add(reaction);
+            }
+        }
+        return selectedReactions;
+    }
+
+    private List<ListSelectionListener> selectionListeners = new ArrayList<ListSelectionListener>();
+
+    public void addSelectionListener(ListSelectionListener lsl) {
+        selectionListeners.add(lsl);
+    }
+
+    private void fireSelectionListeners() {
+        for(ListSelectionListener listener : selectionListeners) {
+            listener.valueChanged(new ListSelectionEvent(this, 0,reactions.length-1,false));
+        }
+    }
+
     private void selectRectangle(MouseEvent e) {
         Rectangle selectionRect = createRect(mousePos, e.getPoint());
         boolean ctrlIsDown = (e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == MouseEvent.CTRL_DOWN_MASK;
@@ -193,6 +400,7 @@ public class PlateView extends JPanel {
                 reactions[i].setSelected(ctrlIsDown ? wasSelected[i] : false);
             }
         }
+        fireSelectionListeners();
     }
 
     /**

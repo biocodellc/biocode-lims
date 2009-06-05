@@ -74,21 +74,48 @@ public class MooreaFimsConnection extends FIMSConnection{
         }
     }
 
-    public void disconnect() {
+    public void disconnect() throws ConnectionException{
         if(connection != null) {
             try {
                 connection.close();
             } catch (SQLException e) {
-                e.printStackTrace();  //todo: exception handling
+                throw new ConnectionException(e);
             }
             connection = null;
         }
     }
 
-    public List<DocumentField> getFimsAttributes() {
+    public List<DocumentField> getTaxonomyAttributes() {
+        List<DocumentField> fields = new ArrayList<DocumentField>();
+        fields.add(new DocumentField("Scientific Name", "", "biocode.ScientificName", String.class, true, false));
+        fields.add(new DocumentField("Colloquial Name", "", "biocode.ColloquialName", String.class, true, false));
+        fields.add(new DocumentField("Kingdom", "", "biocode.Kingdom", String.class, false, false));
+        fields.add(new DocumentField("Phylum", "", "biocode.Phylum", String.class, false, false));
+        fields.add(new DocumentField("Sub-phylum", "", "biocode.Subphylum", String.class, false, false));
+        fields.add(new DocumentField("Superclass", "", "biocode.Superclass", String.class, false, false));
+        fields.add(new DocumentField("Class", "", "biocode.Class", String.class, false, false));
+        fields.add(new DocumentField("Subclass", "", "biocode.Subclass", String.class, false, false));
+        fields.add(new DocumentField("Infraclass", "", "biocode.Infraclass", String.class, false, false));
+        fields.add(new DocumentField("Super-order", "", "biocode.Superorder", String.class, false, false));
+        fields.add(new DocumentField("Order", "", "biocode.Ordr", String.class, false, false)); //ordr is not a typo
+        fields.add(new DocumentField("Suborder", "", "biocode.Suborder", String.class, false, false));
+        fields.add(new DocumentField("Infraorder", "", "biocode.Infraorder", String.class, false, false));
+        fields.add(new DocumentField("Super-family", "", "biocode.Superfamily", String.class, false, false));
+        fields.add(new DocumentField("Family", "", "biocode.Family", String.class, false, false));
+        fields.add(new DocumentField("Subfamily", "", "biocode.Subfamily", String.class, false, false));
+        fields.add(new DocumentField("Tribe", "", "biocode.Tribe", String.class, false, false));
+        fields.add(new DocumentField("Subtribe", "", "biocode.Subtribe", String.class, false, false));
+        fields.add(new DocumentField("Genus", "", "biocode.Genus", String.class, false, false));
+        fields.add(new DocumentField("Subgenus", "", "biocode.Subgenus", String.class, false, false));
+        fields.add(new DocumentField("Specific Epithet", "", "biocode.SpecificEpithet", String.class, false, false));
+        fields.add(new DocumentField("Subspecific Epithet", "", "biocode.SubspecificEpithet", String.class, false, false));
+        return fields;
+    }
+
+    public List<DocumentField> getCollectionAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
 
-        fields.add(new DocumentField("Tissue ID", "", "biocode_tissue.seq_num", String.class, true, false));
+        fields.add(new DocumentField("Tissue ID", "", "tissueId", String.class, true, false));
 
         fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, true, false));
         fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, true, false));
@@ -112,36 +139,13 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Minimum Depth", "", "biocode_collecting_event.MinDepthMeters", Integer.class, true, false));
         fields.add(new DocumentField("Maximum Depth", "", "biocode_collecting_event.MaxDepthMeters", Integer.class, true, false));
 
+        return fields;
+    }
 
-
-        fields.add(new DocumentField("Scientific Name", "", "biocode.ScientificName", String.class, true, false));
-        fields.add(new DocumentField("Colloquial Name", "", "biocode.ColloquialName", String.class, true, false));
-        fields.add(new DocumentField("Kingdom", "", "biocode.Kingdom", String.class, true, false));
-        fields.add(new DocumentField("Phylum", "", "biocode.Phylum", String.class, true, false));
-        fields.add(new DocumentField("Sub-phylum", "", "biocode.Subphylum", String.class, true, false));
-        fields.add(new DocumentField("Superclass", "", "biocode.Superclass", String.class, true, false));
-        fields.add(new DocumentField("Class", "", "biocode.Class", String.class, true, false));
-        fields.add(new DocumentField("Subclass", "", "biocode.Subclass", String.class, true, false));
-        fields.add(new DocumentField("Infraclass", "", "biocode.Infraclass", String.class, true, false));
-        fields.add(new DocumentField("Super-order", "", "biocode.Superorder", String.class, true, false));
-        fields.add(new DocumentField("Order", "", "biocode.Ordr", String.class, true, false)); //ordr is not a typo
-        fields.add(new DocumentField("Suborder", "", "biocode.Suborder", String.class, true, false));
-        fields.add(new DocumentField("Infraorder", "", "biocode.Infraorder", String.class, true, false));
-        fields.add(new DocumentField("Super-family", "", "biocode.Superfamily", String.class, true, false));
-        fields.add(new DocumentField("Family", "", "biocode.Family", String.class, true, false));
-        fields.add(new DocumentField("Subfamily", "", "biocode.Subfamily", String.class, true, false));
-        fields.add(new DocumentField("Tribe", "", "biocode.Tribe", String.class, true, false));
-        fields.add(new DocumentField("Subtribe", "", "biocode.Subtribe", String.class, true, false));
-        fields.add(new DocumentField("Genus", "", "biocode.Genus", String.class, true, false));
-        fields.add(new DocumentField("Subgenus", "", "biocode.Subgenus", String.class, true, false));
-        fields.add(new DocumentField("Specific Epithet", "", "biocode.SpecificEpithet", String.class, true, false));
-        fields.add(new DocumentField("Subspecific Epithet", "", "biocode.SubspecificEpithet", String.class, true, false));
-
-
-
-        
-
-
+    public List<DocumentField> getSearchAttributes() {
+        List<DocumentField> fields = new ArrayList<DocumentField>();
+        fields.addAll(getCollectionAttributes());
+        fields.addAll(getTaxonomyAttributes());
         return fields;
     }
 
@@ -165,7 +169,7 @@ public class MooreaFimsConnection extends FIMSConnection{
             ResultSet resultSet = statement.executeQuery(queryString);
             List<FimsSample> samples = new ArrayList<FimsSample>();
             while(resultSet.next()){
-                samples.add(new SQLFimsSample(resultSet, this));
+                samples.add(new MooreaFimsSample(resultSet, this));
             }
             return samples;
         } catch (SQLException e) {
@@ -184,17 +188,23 @@ public class MooreaFimsConnection extends FIMSConnection{
             String searchText = basicQuery.getSearchText();
             join = " OR ";
             queryBuilder.append("(");
-            for (Iterator<DocumentField> it = getFimsAttributes().iterator(); it.hasNext();) {
-                DocumentField field = it.next();
-                if(!field.getValueType().equals(String.class)) {
+            boolean started = false;
+            for (int i = 0; i < getSearchAttributes().size(); i++) {
+                DocumentField field = getSearchAttributes().get(i);
+                String fieldCode = field.getCode();
+                if (!field.getValueType().equals(String.class) || fieldCode.equals("tissueId")) {
                     continue;
                 }
 
-                queryBuilder.append(field.getCode()+" LIKE '"+searchText+"'");
-                
-                if(it.hasNext()) {
+
+                if (started) {
                     queryBuilder.append(join);
                 }
+                started = true;
+
+                queryBuilder.append(fieldCode + " LIKE '" + searchText + "'");
+
+
             }
             queryBuilder.append(")");
         }
@@ -248,26 +258,58 @@ public class MooreaFimsConnection extends FIMSConnection{
                     prepend = "%";
                     break;
                 case NOT_EQUAL:
-                    join = "<>";
+                    join = "!=";
                     break;
                 case IN_RANGE:
                     join = "BETWEEN";
                     break;
             }
 
-            queryBuilder.append(fieldCode +" "+ join +" ");
 
-            Object[] queryValues = aquery.getValues();
-            for (int i = 0; i < queryValues.length; i++) {
-                Object value = queryValues[i];
-                String valueString = value.toString();
-                valueString = prepend+valueString+append;
-                if(value instanceof String) {
-                    valueString = "'"+valueString+"'";
+            //special cases
+            if(fieldCode.equals("tissueId")) {
+                String[] tissueIdParts = aquery.getValues()[0].toString().split(".");
+                if(tissueIdParts.length == 2) {
+                    queryBuilder.append("(biocode_tissue.bnhm_id "+join+" "+tissueIdParts[0]+" AND biocode_tissue.tissue_num "+join+" "+tissueIdParts[1]+")");
                 }
-                queryBuilder.append(valueString);
-                if(i < queryValues.length-1) {
-                    queryBuilder.append(" AND ");
+                else {
+                    queryBuilder.append("biocode_tissue.tissue_num "+join+" "+aquery.getValues()[0]);
+                }
+            }
+            else if(fieldCode.equals("biocode_collecting_event.CollectionTime")) {
+                Date date = (Date)aquery.getValues()[0];
+                //String queryString = "(biocode_collecting_event.YearCollected "+join+")";
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(date);
+                int year = cal.get(Calendar.YEAR);
+                int month = cal.get(Calendar.MONTH);
+                int day = cal.get(Calendar.DAY_OF_MONTH);
+                String queryString;
+                switch(aquery.getCondition()) {
+                    case EQUAL :
+                    case NOT_EQUAL:
+                        queryString = "(biocode_collecting_event.YearCollected "+join+" "+year+") AND (biocode_collecting_event.MonthCollected "+join+" "+month+") AND (biocode_collecting_event.DayCollected "+join+" "+day+") AND ";
+                        break;
+                    default :
+                        queryString = "(biocode_collecting_event.YearCollected "+join+" "+year+") OR (biocode_collecting_event.YearCollected = "+year+" AND biocode_collecting_event.MonthCollected "+join+" "+month+") OR (biocode_collecting_event.YearCollected = "+year+" AND biocode_collecting_event.MonthCollected = "+month+" AND biocode_collecting_event.DayCollected "+join+" "+day+")";
+                }
+                queryBuilder.append(queryString);
+            }
+            else {
+                queryBuilder.append(fieldCode +" "+ join +" ");
+
+                Object[] queryValues = aquery.getValues();
+                for (int i = 0; i < queryValues.length; i++) {
+                    Object value = queryValues[i];
+                    String valueString = value.toString();
+                    valueString = prepend+valueString+append;
+                    if(value instanceof String) {
+                        valueString = "'"+valueString+"'";
+                    }
+                    queryBuilder.append(valueString);
+                    if(i < queryValues.length-1) {
+                        queryBuilder.append(" AND ");
+                    }
                 }
             }
 

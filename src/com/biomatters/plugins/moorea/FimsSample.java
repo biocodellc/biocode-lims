@@ -22,6 +22,8 @@ public interface FimsSample extends XMLSerializable {
 
     public List<DocumentField> getFimsAttributes();
 
+    public List<DocumentField> getTaxonomyAttributes();
+
     public Object getFimsAttributeValue(String attributeName);
 
 }

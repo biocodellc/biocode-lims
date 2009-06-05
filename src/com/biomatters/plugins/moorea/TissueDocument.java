@@ -56,14 +56,32 @@ public class TissueDocument implements PluginDocument {
     }
 
     public String getDescription() {
-        return "";
+        Object description = getFieldValue("biocode_tissue.notes");
+        return description != null ? description.toString() : "";
     }
 
     public String toHTML() {
+        return null;
+    }
+
+    public String getTissueHTML() {
         StringBuilder htmlBuilder = new StringBuilder();
         htmlBuilder.append("<h1>"+getName()+"</h1>\n");
         htmlBuilder.append("<table border=\"0\">\n");
         for(DocumentField field : fimsResults.getFimsAttributes()) {
+            String name = field.getName();
+            Object value = fimsResults.getFimsAttributeValue(field.getCode());
+            htmlBuilder.append("<tr><td align=\"right\"><b>"+name+":</b></td><td>"+value+"</td></tr>\n");
+        }
+        htmlBuilder.append("</table>\n");
+        return htmlBuilder.toString();
+    }
+
+    public String getTaxonomyHTML() {
+        StringBuilder htmlBuilder = new StringBuilder();
+        htmlBuilder.append("<h1>"+getName()+"</h1>\n");
+        htmlBuilder.append("<table border=\"0\">\n");
+        for(DocumentField field : fimsResults.getTaxonomyAttributes()) {
             String name = field.getName();
             Object value = fimsResults.getFimsAttributeValue(field.getCode());
             htmlBuilder.append("<tr><td align=\"right\"><b>"+name+":</b></td><td>"+value+"</td></tr>\n");

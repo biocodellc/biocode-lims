@@ -1,8 +1,7 @@
 package com.biomatters.plugins.moorea;
 
-import com.biomatters.geneious.publicapi.plugin.GeneiousPlugin;
-import com.biomatters.geneious.publicapi.plugin.GeneiousService;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
+import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 
 /**
  * @version $Id: MooreaLabBenchPlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -38,13 +37,29 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
 
     @Override
     public GeneiousService[] getServices() {
-        return new GeneiousService[] {new MooreaLabBenchService()};
+        return new GeneiousService[] {MooreaLabBenchService.getInstance()};
     }
 
     @Override
     public DocumentViewerFactory[] getDocumentViewerFactories() {
         return new DocumentViewerFactory[] {
-                new TissueImagesViewerFactory()
+                new TissueImagesViewerFactory(),
+                new TissueSampleViewerFactory(true),
+                new TissueSampleViewerFactory(false)
+        };
+    }
+
+    @Override
+    public DocumentOperation[] getDocumentOperations() {
+        return new DocumentOperation[] {
+                new NewPlateDocumentOperation()
+        };
+    }
+
+    @Override
+    public DocumentType[] getDocumentTypes() {
+        return new DocumentType[] {
+                new DocumentType("Tissue Sample", TissueDocument.class, IconUtilities.getIcons("specimenDocument.png"))
         };
     }
 }
