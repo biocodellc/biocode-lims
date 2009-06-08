@@ -6,9 +6,15 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.Border;
+import javax.swing.plaf.SplitPaneUI;
+import javax.swing.plaf.basic.BasicSplitPaneUI;
+import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.event.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -226,7 +232,18 @@ public class PlateView extends JPanel {
         }
 
         OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues);
-        JPanel fieldsPanel = getFieldsPanel(reactions);
+        Vector<DocumentField> selectedFields = new Vector<DocumentField>();
+        for(Reaction r : reactions) {//todo: may be slow
+            List<DocumentField> availableFields = r.getFieldsToDisplay();
+            for(DocumentField df : availableFields) {
+                if(!selectedFields.contains(df)) {
+                    selectedFields.add(df);
+                }
+            }
+        }
+
+
+        JPanel fieldsPanel = getFieldsPanel(reactions,selectedFields);
         JTabbedPane tabs = new JTabbedPane();
         tabs.add("Reaction",displayPanel);
         tabs.add("Display", fieldsPanel);
@@ -239,7 +256,11 @@ public class PlateView extends JPanel {
                     }
                 }
             }
+            for(Reaction r : reactions) {
+                r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFields));
+            }
         }
+
 
 
     }
@@ -247,8 +268,9 @@ public class PlateView extends JPanel {
     private OptionsPanel getReactionPanel(Options options, Map<String, Boolean> haveAllSameValues) {
         OptionsPanel displayPanel = new OptionsPanel();
         final JCheckBox selectAllBox = new JCheckBox("<html><b>All</b></html>", false);
+        selectAllBox.setOpaque(false);
         final AtomicBoolean selectAllValue = new AtomicBoolean(selectAllBox.isSelected());
-        displayPanel.addTwoComponents(selectAllBox, new JLabel(), false, false);
+        displayPanel.addTwoComponents(selectAllBox, new JLabel(), true, false);
         final List<JCheckBox> checkboxes = new ArrayList<JCheckBox>();
         for(final Options.Option option : options.getOptions()) {
             JComponent leftComponent;
@@ -268,6 +290,7 @@ public class PlateView extends JPanel {
             else {
                 leftComponent = new JLabel(option.getLabel());
             }
+            leftComponent.setOpaque(false);
             selectAllBox.addChangeListener(new ChangeListener(){
                 public void stateChanged(ChangeEvent e) {
                     if(selectAllBox.isSelected() != selectAllValue.getAndSet(selectAllBox.isSelected())) {
@@ -283,18 +306,14 @@ public class PlateView extends JPanel {
         return displayPanel;
     }
 
-    private JPanel getFieldsPanel(List<Reaction> reactions) {
-        JPanel fieldsPanel = new JPanel();
-        BoxLayout layout = new BoxLayout(fieldsPanel, BoxLayout.LINE_AXIS);
-        fieldsPanel.setLayout(layout);
-
+    private JPanel getFieldsPanel(List<Reaction> reactions, final Vector<DocumentField> selectedFieldsVector) {
+        JPanel fieldsPanel = new JPanel(new BorderLayout());
         
         List<DocumentField> displayableFields = reactions.get(0).getAllDisplayableFields();
         final Vector<DocumentField> displayableFieldsVector = new Vector(displayableFields);
         final JList availableListBox = new JList(displayableFieldsVector);
         availableListBox.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
-        final Vector<DocumentField> selectedFieldsVector = new Vector<DocumentField>();
         final JList selectedListBox = new JList(selectedFieldsVector);
 
         DefaultListCellRenderer cellRenderer = new DefaultListCellRenderer() {
@@ -314,8 +333,19 @@ public class PlateView extends JPanel {
 
 
 
-        final JButton addButton = new JButton(" > ");
-        final JButton removeButton = new JButton(" < ");
+        final JButton addButton = new JButton(IconUtilities.getIcons("arrow_right.png").getIcon16());
+        addButton.setOpaque(false);
+        addButton.setPreferredSize(new Dimension(addButton.getPreferredSize().height, addButton.getPreferredSize().height));
+        final JButton removeButton = new JButton(IconUtilities.getIcons("arrow_left.png").getIcon16());
+        removeButton.setOpaque(false);
+        removeButton.setPreferredSize(new Dimension(removeButton.getPreferredSize().height, removeButton.getPreferredSize().height));
+
+        final JButton moveUpButton = new JButton(IconUtilities.getIcons("arrow_up.png").getIcon16());
+        moveUpButton.setOpaque(false);
+        moveUpButton.setPreferredSize(new Dimension(moveUpButton.getPreferredSize().height, moveUpButton.getPreferredSize().height));
+        final JButton moveDownButton = new JButton(IconUtilities.getIcons("arrow_down.png").getIcon16());
+        moveDownButton.setOpaque(false);
+        moveDownButton.setPreferredSize(new Dimension(moveDownButton.getPreferredSize().height, moveDownButton.getPreferredSize().height));
 
         ListSelectionListener selectionListener = new ListSelectionListener(){
             public void valueChanged(ListSelectionEvent e) {
@@ -326,11 +356,11 @@ public class PlateView extends JPanel {
         availableListBox.addListSelectionListener(selectionListener);
         selectedListBox.addListSelectionListener(selectionListener);
 
-        addButton.addActionListener(new ActionListener(){
+        final ActionListener addAction = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 int offset = 0;
                 int[] indices = availableListBox.getSelectedIndices();
-                for(int i=0; i < indices.length; i++) {
+                for (int i = 0; i < indices.length; i++) {
                     int index = indices[i - offset];
                     selectedFieldsVector.add(displayableFieldsVector.get(index));
                     displayableFieldsVector.remove(index);
@@ -338,28 +368,199 @@ public class PlateView extends JPanel {
                 }
                 availableListBox.clearSelection();
                 selectedListBox.clearSelection();
-                for(ListDataListener listener : ((AbstractListModel)availableListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, displayableFieldsVector.size()-1));
+                for (ListDataListener listener : ((AbstractListModel) availableListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, displayableFieldsVector.size() - 1));
                 }
-                for(ListDataListener listener : ((AbstractListModel)selectedListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size()-1));
+                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
                 }
                 availableListBox.revalidate();
                 selectedListBox.revalidate();
             }
+        };
+
+        final ActionListener removeAction = new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                int offset = 0;
+                int[] indices = selectedListBox.getSelectedIndices();
+                for (int i = 0; i < indices.length; i++) {
+                    int index = indices[i - offset];
+                    displayableFieldsVector.add(selectedFieldsVector.get(index));
+                    selectedFieldsVector.remove(index);
+                    offset++;
+                }
+                selectedListBox.clearSelection();
+                availableListBox.clearSelection();
+                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
+                }
+                for (ListDataListener listener : ((AbstractListModel) availableListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, displayableFieldsVector.size() - 1));
+                }
+                availableListBox.revalidate();
+                selectedListBox.revalidate();
+            }
+        };
+
+        final ActionListener sortUpAction = new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                List selectedValues = Arrays.asList(selectedListBox.getSelectedValues());
+                Vector<DocumentField> newValues = new Vector<DocumentField>();
+                DocumentField current = null;
+                for(int i=0; i < selectedFieldsVector.size(); i++) {
+                    DocumentField currentField = selectedFieldsVector.get(i);
+                    if(selectedValues.contains(currentField)) {
+                        newValues.add(currentField);
+                    }
+                    else {
+                        if(current != null) {
+                            newValues.add(current);
+                        }
+                        current = currentField;
+                    }
+                }
+                if(current != null) {
+                    newValues.add(current);
+                }
+                selectedFieldsVector.clear();
+                selectedFieldsVector.addAll(newValues);
+                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
+                }
+                selectedListBox.revalidate();
+                int[] indices = selectedListBox.getSelectedIndices();
+                boolean contiguousFirstBlock = true;
+                for(int i=0; i < indices.length; i++) {
+                    if(contiguousFirstBlock && indices[i] == i) {
+                        continue;
+                    }
+                    contiguousFirstBlock = false;
+                    indices[i] --;
+                }
+                selectedListBox.setSelectedIndices(indices);
+                
+            }
+        };
+
+        final ActionListener sortDownAction = new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                List selectedValues = Arrays.asList(selectedListBox.getSelectedValues());
+                Vector<DocumentField> newValues = new Vector<DocumentField>();
+                DocumentField current = null;
+                for(int i=selectedFieldsVector.size()-1; i >= 0; i--) {
+                    DocumentField currentField = selectedFieldsVector.get(i);
+                    if(selectedValues.contains(currentField)) {
+                        newValues.add(0,currentField);
+                    }
+                    else {
+                        if(current != null) {
+                            newValues.add(0,current);
+                        }
+                        current = currentField;
+                    }
+                }
+                if(current != null) {
+                    newValues.add(0,current);
+                }
+                selectedFieldsVector.clear();
+                selectedFieldsVector.addAll(newValues);
+                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
+                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
+                }
+                selectedListBox.revalidate();
+                int[] indices = selectedListBox.getSelectedIndices();
+                boolean contiguousFirstBlock = true;
+                for(int i=0; i < indices.length; i++) {
+                    if(contiguousFirstBlock && indices[indices.length-1-i] == selectedFieldsVector.size()-1-i) {
+                        continue;
+                    }
+                    contiguousFirstBlock = false;
+                    indices[indices.length-1-i] ++;
+                }
+                selectedListBox.setSelectedIndices(indices);
+
+            }
+        };
+
+        removeButton.addActionListener(removeAction);
+        addButton.addActionListener(addAction);
+
+        moveUpButton.addActionListener(sortUpAction);
+        moveDownButton.addActionListener(sortDownAction);
+
+        availableListBox.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if(e.getClickCount() == 2) {
+                    addAction.actionPerformed(null);
+                }
+            }
         });
 
-        JPanel addRemovePanel = new JPanel(new GridLayout(2,1));
+        selectedListBox.addMouseListener(new MouseAdapter(){
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if(e.getClickCount() == 2) {
+                    removeAction.actionPerformed(null);
+                }
+            }
+        });
+
+        final JPanel addRemovePanel = new JPanel(new GridLayout(2,1));
         addRemovePanel.add(addButton);
         addRemovePanel.add(removeButton);
         addRemovePanel.setMaximumSize(addRemovePanel.getPreferredSize());
         addRemovePanel.setMinimumSize(addRemovePanel.getPreferredSize());
+        addRemovePanel.setOpaque(false);
 
-        fieldsPanel.add(new JScrollPane(availableListBox));
-        fieldsPanel.add(addRemovePanel);
-        fieldsPanel.add(new JScrollPane(selectedListBox));
+        final JPanel movePanel = new JPanel();
+        movePanel.setOpaque(false);
+        movePanel.add(moveUpButton);
+        movePanel.add(moveDownButton);
+        movePanel.setLayout(new BoxLayout(movePanel, BoxLayout.Y_AXIS));
+        movePanel.add(moveUpButton);
+        movePanel.add(moveDownButton);
 
+        JPanel availableListBoxPanel = new JPanel(new BorderLayout());
+        availableListBoxPanel.add(new JScrollPane(availableListBox), BorderLayout.CENTER);
+        JLabel label1 = new JLabel("Available");
+        label1.setOpaque(false);
+        availableListBoxPanel.add(label1, BorderLayout.NORTH);
+        availableListBoxPanel.setOpaque(false);
 
+        JPanel selectedListBoxPanel = new JPanel(new BorderLayout());
+        selectedListBoxPanel.add(new JScrollPane(selectedListBox), BorderLayout.CENTER);
+        selectedListBoxPanel.add(movePanel, BorderLayout.EAST);
+        JLabel label2 = new JLabel("Selected");
+        label2.setOpaque(false);
+        selectedListBoxPanel.add(label2, BorderLayout.NORTH);
+        selectedListBoxPanel.setOpaque(false);
+
+        JSplitPane fieldsSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, availableListBoxPanel, selectedListBoxPanel);
+        fieldsSplit.setBorder(new EmptyBorder(0,0,0,0));
+        fieldsSplit.setUI(new BasicSplitPaneUI(){
+            @Override
+            public BasicSplitPaneDivider createDefaultDivider() {
+
+                BasicSplitPaneDivider divider = new BasicSplitPaneDivider(this){
+                    @Override
+                    public int getDividerSize() {
+                        return addRemovePanel.getPreferredSize().width;
+                    }
+
+                    public void setBorder(Border b) {}
+                };
+                divider.setLayout(new BoxLayout(divider, BoxLayout.X_AXIS));
+                divider.add(addRemovePanel);
+                return divider;
+            }
+        });
+
+        fieldsSplit.setOpaque(false);
+        fieldsSplit.setContinuousLayout(true);
+        fieldsPanel.add(fieldsSplit);
+        fieldsPanel.setOpaque(false);
+        fieldsPanel.setBorder(new EmptyBorder(10,10,10,10));
 
         return fieldsPanel;
     }

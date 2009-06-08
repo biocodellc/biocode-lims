@@ -86,10 +86,13 @@ public class PCRReaction extends Reaction {
     }
 
     public List<DocumentField> getDisplayableFields() {
+
         List<DocumentField> fields = new ArrayList<DocumentField>();
-        fields.add(new DocumentField("Sample", "", "sampleId", String.class, true, false));
-        fields.add(new DocumentField("Forward Primer", "", "fwPrimer", String.class, true, false));
-        fields.add(new DocumentField("Reverse Primer", "", "revPrimer", String.class, true, false));
+        for(Options.Option op : getOptions().getOptions()) {
+            if(!(op instanceof Options.LabelOption)){
+                fields.add(new DocumentField(op.getLabel(), "", op.getName(), op.getValue().getClass(), true, false));    
+            }
+        }
         return fields;
     }
 

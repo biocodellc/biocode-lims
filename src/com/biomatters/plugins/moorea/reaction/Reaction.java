@@ -10,6 +10,7 @@ import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * Created by IntelliJ IDEA.
@@ -22,6 +23,8 @@ public abstract class Reaction {
     private boolean selected;
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
+
+    private List<DocumentField> displayableFields;
 
     public static final int PADDING = 10;
 
@@ -79,6 +82,14 @@ public abstract class Reaction {
 
     public abstract List<DocumentField> getDisplayableFields();
 
+    public List<DocumentField> getFieldsToDisplay(){
+        return displayableFields != null ? displayableFields : Collections.EMPTY_LIST;
+    };
+
+    public void setFieldsToDisplay(List<DocumentField> fields) {
+        this.displayableFields = fields;
+    }
+
     public abstract Object getFieldValue(String fieldCode);
 
     public abstract Color getBackgroundColor();
@@ -86,7 +97,7 @@ public abstract class Reaction {
     public Dimension getPreferredSize() {
         int y = PADDING;
         int x = 0;
-        for(DocumentField field : getDisplayableFields()) {
+        for(DocumentField field : getFieldsToDisplay()) {
             String value = getFieldValue(field.getCode()).toString();
             if(value.length() == 0) {
                 continue;
@@ -96,7 +107,7 @@ public abstract class Reaction {
             x = Math.max(x, (int)tl.getBounds().getWidth());
         }
         x += PADDING;
-        return new Dimension(x, y);
+        return new Dimension(Math.min(50,x), Math.min(30,y));
     }
 
 
@@ -117,10 +128,10 @@ public abstract class Reaction {
 
         int y = location.y + 5;
         y += (location.height - getPreferredSize().height + PADDING)/2;
-        for (int i = 0; i < getDisplayableFields().size(); i++) {
+        for (int i = 0; i < getFieldsToDisplay().size(); i++) {
             g.setFont(i == 0 ? firstLabelFont : labelFont);
 
-            DocumentField field = getDisplayableFields().get(i);
+            DocumentField field = getFieldsToDisplay().get(i);
             String value = getFieldValue(field.getCode()).toString();
             if (value.length() == 0) {
                 continue;
