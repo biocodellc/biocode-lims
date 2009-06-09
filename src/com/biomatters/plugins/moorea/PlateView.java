@@ -219,6 +219,17 @@ public class PlateView extends JPanel {
 
         Options options = XMLSerializer.clone(reactions.get(0).getOptions());
 
+        //hack to copy the action listeners across
+        for(Options.Option o : options.getOptions()) {
+            if(o instanceof ButtonOption) {
+                for(ActionListener listener : ((ButtonOption)reactions.get(0).getOptions().getOption(o.getName())).getActionListeners()) {
+                    ((ButtonOption)o).addActionListener(listener);       
+                }
+
+
+            }
+        }
+
         Map<String, Boolean> haveAllSameValues = new HashMap<String, Boolean>();
         //fill in the master options based on the values in all the reactions
         for(Options.Option option : options.getOptions()) {
@@ -232,18 +243,25 @@ public class PlateView extends JPanel {
         }
 
         OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues);
-        Vector<DocumentField> selectedFields = new Vector<DocumentField>();
+        Vector<DocumentField> selectedFieldsVector = new Vector<DocumentField>();
+        Vector<DocumentField> availableFieldsVector = new Vector<DocumentField>();
         for(Reaction r : reactions) {//todo: may be slow
-            List<DocumentField> availableFields = r.getFieldsToDisplay();
+            List<DocumentField> displayableFields = r.getFieldsToDisplay();
+            for(DocumentField df : displayableFields) {
+                if(!selectedFieldsVector.contains(df)) {
+                    selectedFieldsVector.add(df);
+                }
+            }
+            List<DocumentField> availableFields = r.getAllDisplayableFields();
             for(DocumentField df : availableFields) {
-                if(!selectedFields.contains(df)) {
-                    selectedFields.add(df);
+                if(!selectedFieldsVector.contains(df)) {
+                    availableFieldsVector.add(df);
                 }
             }
         }
 
 
-        JPanel fieldsPanel = getFieldsPanel(reactions,selectedFields);
+        JPanel fieldsPanel = getFieldsPanel(availableFieldsVector,selectedFieldsVector);
         JTabbedPane tabs = new JTabbedPane();
         tabs.add("Reaction",displayPanel);
         tabs.add("Display", fieldsPanel);
@@ -257,7 +275,7 @@ public class PlateView extends JPanel {
                 }
             }
             for(Reaction r : reactions) {
-                r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFields));
+                r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
             }
         }
 
@@ -274,7 +292,7 @@ public class PlateView extends JPanel {
         final List<JCheckBox> checkboxes = new ArrayList<JCheckBox>();
         for(final Options.Option option : options.getOptions()) {
             JComponent leftComponent;
-            if(!(option instanceof Options.LabelOption)) {
+            if(!(option instanceof Options.LabelOption) && !(option instanceof ButtonOption)) {
                 final JCheckBox checkbox = new JCheckBox(option.getLabel(), haveAllSameValues.get(option.getName()));
                 checkbox.setAlignmentY(JCheckBox.RIGHT_ALIGNMENT);
                 checkboxes.add(checkbox);
@@ -306,12 +324,12 @@ public class PlateView extends JPanel {
         return displayPanel;
     }
 
-    private JPanel getFieldsPanel(List<Reaction> reactions, final Vector<DocumentField> selectedFieldsVector) {
+    private JPanel getFieldsPanel(final Vector<DocumentField> availableFieldsVector, final Vector<DocumentField> selectedFieldsVector) {
         JPanel fieldsPanel = new JPanel(new BorderLayout());
         
-        List<DocumentField> displayableFields = reactions.get(0).getAllDisplayableFields();
-        final Vector<DocumentField> displayableFieldsVector = new Vector(displayableFields);
-        final JList availableListBox = new JList(displayableFieldsVector);
+        //List<DocumentField> displayableFields = reactions.get(0).getAllDisplayableFields();
+        //final Vector<DocumentField> displayableFieldsVector = new Vector(displayableFields);
+        final JList availableListBox = new JList(availableFieldsVector);
         availableListBox.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         final JList selectedListBox = new JList(selectedFieldsVector);
@@ -336,8 +354,10 @@ public class PlateView extends JPanel {
         final JButton addButton = new JButton(IconUtilities.getIcons("arrow_right.png").getIcon16());
         addButton.setOpaque(false);
         addButton.setPreferredSize(new Dimension(addButton.getPreferredSize().height, addButton.getPreferredSize().height));
+        addButton.setCursor(Cursor.getDefaultCursor());
         final JButton removeButton = new JButton(IconUtilities.getIcons("arrow_left.png").getIcon16());
         removeButton.setOpaque(false);
+        removeButton.setCursor(Cursor.getDefaultCursor());
         removeButton.setPreferredSize(new Dimension(removeButton.getPreferredSize().height, removeButton.getPreferredSize().height));
 
         final JButton moveUpButton = new JButton(IconUtilities.getIcons("arrow_up.png").getIcon16());
@@ -361,15 +381,15 @@ public class PlateView extends JPanel {
                 int offset = 0;
                 int[] indices = availableListBox.getSelectedIndices();
                 for (int i = 0; i < indices.length; i++) {
-                    int index = indices[i - offset];
-                    selectedFieldsVector.add(displayableFieldsVector.get(index));
-                    displayableFieldsVector.remove(index);
+                    int index = indices[i]-offset;
+                    selectedFieldsVector.add(availableFieldsVector.get(index));
+                    availableFieldsVector.remove(index);
                     offset++;
                 }
                 availableListBox.clearSelection();
                 selectedListBox.clearSelection();
                 for (ListDataListener listener : ((AbstractListModel) availableListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, displayableFieldsVector.size() - 1));
+                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, availableFieldsVector.size() - 1));
                 }
                 for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
                     listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
@@ -385,7 +405,7 @@ public class PlateView extends JPanel {
                 int[] indices = selectedListBox.getSelectedIndices();
                 for (int i = 0; i < indices.length; i++) {
                     int index = indices[i - offset];
-                    displayableFieldsVector.add(selectedFieldsVector.get(index));
+                    availableFieldsVector.add(selectedFieldsVector.get(index));
                     selectedFieldsVector.remove(index);
                     offset++;
                 }
@@ -395,7 +415,7 @@ public class PlateView extends JPanel {
                     listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
                 }
                 for (ListDataListener listener : ((AbstractListModel) availableListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, displayableFieldsVector.size() - 1));
+                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, availableFieldsVector.size() - 1));
                 }
                 availableListBox.revalidate();
                 selectedListBox.revalidate();

@@ -13,6 +13,7 @@ import com.biomatters.plugins.moorea.fims.GeneiousFimsConnection;
 import com.biomatters.plugins.moorea.fims.MooreaFimsConnection;
 import com.biomatters.plugins.moorea.fims.TAPIRFimsConnection;
 import com.biomatters.plugins.moorea.lims.LIMSConnection;
+import com.biomatters.plugins.moorea.reaction.Cocktail;
 
 import java.awt.event.ActionEvent;
 import java.awt.*;
@@ -362,4 +363,13 @@ public class MooreaLabBenchService extends DatabaseService {
         return IconUtilities.getIcons("databaseSearch16.png", "databaseSearch24.png");
     }
 
+    public void addNewPCRCocktails(List<? extends Cocktail> newCocktails) {
+        if(newCocktails.size() > 0) {
+            //todo: add to the database
+        }
+    }
+
+    public boolean hasWriteAccess() {
+        return true; //todo: figure out how to do this...
+    }
 }

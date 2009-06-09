@@ -41,6 +41,10 @@ public class ButtonOption extends Options.Option<String, JPanel> {
             actionListeners.remove(listener);
         }
 
+        public List<ActionListener> getActionListeners() {
+            return new ArrayList<ActionListener>(actionListeners);
+        }
+
         protected void setValueOnComponent(JPanel component, String value) {
         }
 

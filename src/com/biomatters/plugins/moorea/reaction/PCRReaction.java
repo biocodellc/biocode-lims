@@ -2,10 +2,14 @@ package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.moorea.ButtonOption;
+import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,7 +28,7 @@ public class PCRReaction extends Reaction {
         options = new Options(this.getClass());
 
         //todo interface for user to pick the sample
-        options.addStringOption("sampleId", "Sample Name", "");
+        options.addStringOption("sampleId", "Tissue ID", "");
 
         Options.OptionValue[] passedValues = new Options.OptionValue[] {
                 new Options.OptionValue("none", "not run"),
@@ -34,47 +38,51 @@ public class PCRReaction extends Reaction {
         options.addComboBoxOption("runStatus", "Reaction state", passedValues, passedValues[0]);
 
         options.addLabel("");
-
-        Options.IntegerOption ddh2oOption = options.addIntegerOption("ddh20", "ddH20 Amount", 1, 0, Integer.MAX_VALUE);
-        Options.IntegerOption bufferOption = options.addIntegerOption("buffer", "10x PCR Buffer Amount", 1, 0, Integer.MAX_VALUE);
-        Options.IntegerOption mgOption = options.addIntegerOption("mg", "Mg Amount", 1, 0, Integer.MAX_VALUE);
-        Options.IntegerOption bsaOption = options.addIntegerOption("bsa", "BSA Amount", 1, 0, Integer.MAX_VALUE);
-        Options.IntegerOption dntpOption = options.addIntegerOption("dntp", "dNTPs Amount", 1, 0, Integer.MAX_VALUE);
-
         options.beginAlignHorizontally("forward primer", false);
         Options.OptionValue[] values = new Options.OptionValue[] {new Options.OptionValue("myPrimer1", "My Primer 1"), new Options.OptionValue("myPrimer2", "My Primer 2")};
-        options.addComboBoxOption("fwPrimer", "", values, values[0]);
-        //options.addStringOption("fwPrimer", "Name", "");
-        //options.addStringOption("fwPrimerBases", "", "");
-        options.addIntegerOption("fwAmount", "amount", 1, 0, Integer.MAX_VALUE);
+        options.addComboBoxOption("primer", "Primer", values, values[0]);
+        options.addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
         options.endAlignHorizontally();
 
-        options.beginAlignHorizontally("reverse primer", false);
-        options.addComboBoxOption("revPrimer", "", values, values[0]);
-        //options.addStringOption("revPrimer", "Name", "");
-        //options.addStringOption("revPrimerBases", "", "");
-        options.addIntegerOption("revAmount", "amount", 1, 0, Integer.MAX_VALUE);
-        options.endAlignHorizontally();
 
-        options.addIntegerOption("taq", "TAQ", 1, 0, Integer.MAX_VALUE);
+        List<Options.OptionValue> cocktails = new ArrayList<Options.OptionValue>();
+        for (int i = 0; i < new PCRCocktail().getAllCocktailsOfType().size(); i++) {
+            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
+            cocktails.add(new Options.OptionValue(""+i, cocktail.getName()));
+        }
+
+        options.addComboBoxOption("cocktail", "Reaction Cocktail",  cocktails, cocktails.get(0));
+
+        ButtonOption cocktailButton = new ButtonOption("cocktailEdit", "", "Edit Cocktails");
+        cocktailButton.setSpanningComponent(true);
+        options.addCustomOption(cocktailButton);
+        cocktailButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), null);
+                MooreaLabBenchService.getInstance().addNewPCRCocktails(newCocktails);
+            }
+        });
 
         final Options.Option<String, ? extends JComponent> labelOption = options.addLabel("Total Volume of Reaction: 0uL");
 
+        SimpleListener labelListener = new SimpleListener() {
+            public void objectChanged() {
+                int sum = 0;
+                for (Options.Option o : options.getOptions()) {
+                    if (o instanceof Options.IntegerOption) {
+                        sum += (Integer) o.getValue();
+                    }
+                }
+                labelOption.setValue("Total Volume of Reaction: " + sum + "uL");
+            }
+        };
+
         for(Options.Option o : options.getOptions()) {
             if(o instanceof Options.IntegerOption) {
-                o.addChangeListener(new SimpleListener(){
-                    public void objectChanged() {
-                        int sum = 0;
-                        for(Options.Option o : options.getOptions()) {
-                            if(o instanceof Options.IntegerOption) {
-                                sum += (Integer)o.getValue();
-                            }
-                        }
-                        labelOption.setValue("Total Volume of Reaction: "+sum+"uL");
-                    }
-                });
+                o.addChangeListener(labelListener);
             }
         }
+        labelListener.objectChanged();
 
 
     }
@@ -89,7 +97,7 @@ public class PCRReaction extends Reaction {
 
         List<DocumentField> fields = new ArrayList<DocumentField>();
         for(Options.Option op : getOptions().getOptions()) {
-            if(!(op instanceof Options.LabelOption)){
+            if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption) && !op.getName().equals("sampleId")){
                 fields.add(new DocumentField(op.getLabel(), "", op.getName(), op.getValue().getClass(), true, false));    
             }
         }
