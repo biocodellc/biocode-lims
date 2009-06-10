@@ -24,51 +24,39 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class PlateView extends JPanel {
-    private int rows;
-    private int cols;
-    private Reaction[] reactions;
-    private Reaction.Type type;
-    private PlateSize plateSize;
+
     private PlateView selfReference = this;
+    private Plate plate;
 
 
-    public enum PlateSize {
-        w48,
-        w96,
-        w384
-    }
 
     public PlateView(int numberOfWells, Reaction.Type type) {
-        init(numberOfWells, 1, type);
+        plate = new Plate(numberOfWells, type);
+        init();
     }
 
 
-    public PlateView(PlateSize size, Reaction.Type type) {
-        this.type = type;
-        switch(size) {
-            case w48 :
-                init(8, 6, type);
-                break;
-            case w96 :
-                init(8, 12, type);
-                break;
-            case w384 :
-                init(16, 24, type);
-        }
+    public PlateView(Plate.Size size, Reaction.Type type) {
+        plate = new Plate(size, type);
+        init();
     }
 
-    public Reaction.Type getReactionType() {
-        return type;
+    public PlateView(Plate plate) {
+        this.plate = plate;
+        init();
     }
 
-    public PlateSize getPlateSize() {
-        return plateSize;
+    public Plate getPlate() {
+        return plate;
     }
 
 
     @Override
     protected void paintComponent(Graphics g1) {
-        //long time = System.currentTimeMillis();
+        int cols = plate.getCols();
+        int rows = plate.getRows();
+        Reaction[] reactions = plate.getReactions();
+
         Graphics2D g = (Graphics2D)g1;
         int cellWidth = (getWidth()+1)/cols;
         int cellHeight = (getHeight()+1)/rows;
@@ -96,28 +84,25 @@ public class PlateView extends JPanel {
         int width = 0;
         int height = 0;
 
+        Reaction[] reactions = plate.getReactions();
 
-        for(int i=0; i < rows; i++) {
-            for(int j = 0; j < cols; j++) {
+        for(int i=0; i < plate.getRows(); i++) {
+            for(int j = 0; j < plate.getCols(); j++) {
                 height = Math.max(height, reactions[j*i + j].getPreferredSize().height);
                 width = Math.max(width, reactions[j*i + j].getPreferredSize().width);
             }
         }
 
 
-        return new Dimension(1+(width+1)*cols, 1+(height+1)*rows);
+        return new Dimension(1+(width+1)*plate.getCols(), 1+(height+1)*plate.getRows());
     }
 
     private Point mousePos = new Point(0,0);
     private Boolean[] wasSelected;
 
-    private void init(int rows, int cols, Reaction.Type type) {
-        this.rows = rows;
-        this.cols = cols;
-        this.type = type;
+    private void init() {
 
-        reactions = new Reaction[rows*cols];
-
+        final Reaction[] reactions = plate.getReactions();
         setBackground(Color.black);
 
         addMouseListener(new MouseAdapter(){
@@ -132,6 +117,7 @@ public class PlateView extends JPanel {
                     repaint();
                     return;
                 }
+
 
 
                 if(e.getClickCount() == 1) {
@@ -166,6 +152,7 @@ public class PlateView extends JPanel {
 
             @Override
             public void mousePressed(MouseEvent e) {
+                Reaction[] reactions = plate.getReactions();
                 boolean shiftIsDown = (e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == MouseEvent.SHIFT_DOWN_MASK;
                 if(!shiftIsDown) {
                     mousePos = e.getPoint();
@@ -198,16 +185,6 @@ public class PlateView extends JPanel {
         });
 
 
-        for(int i=0; i < rows; i++) {
-            for(int j = 0; j < cols; j++) {
-                final Reaction reaction = Reaction.getNewReaction(type);
-                reaction.setLocationString(""+(char)(65+i)+(1+j));
-                Dimension preferredSize = reaction.getPreferredSize();
-                reaction.setBounds(new Rectangle(1+(preferredSize.width+1)*j, 1+(preferredSize.height+1)*i, preferredSize.width, preferredSize.height));
-
-                reactions[cols*i + j] = reaction;
-            }
-        }
 
 
     }
@@ -587,7 +564,7 @@ public class PlateView extends JPanel {
 
     public List<Reaction> getSelectedReactions() {
         List<Reaction> selectedReactions = new ArrayList<Reaction>();
-        for(Reaction reaction : reactions) {
+        for(Reaction reaction : plate.getReactions()) {
             if(reaction.isSelected()) {
                 selectedReactions.add(reaction);
             }
@@ -603,13 +580,14 @@ public class PlateView extends JPanel {
 
     private void fireSelectionListeners() {
         for(ListSelectionListener listener : selectionListeners) {
-            listener.valueChanged(new ListSelectionEvent(this, 0,reactions.length-1,false));
+            listener.valueChanged(new ListSelectionEvent(this, 0,plate.getReactions().length-1,false));
         }
     }
 
     private void selectRectangle(MouseEvent e) {
         Rectangle selectionRect = createRect(mousePos, e.getPoint());
         boolean ctrlIsDown = (e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == MouseEvent.CTRL_DOWN_MASK;
+        Reaction[] reactions = plate.getReactions();
 
         //select all wells within the selection rectangle
         for(int i=0; i < reactions.length; i++) {

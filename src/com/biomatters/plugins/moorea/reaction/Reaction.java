@@ -49,6 +49,10 @@ public abstract class Reaction {
 
     private String locationString = "";
 
+    public Reaction() {
+        setFieldsToDisplay(getDefaultDisplayedFields());
+    }
+
 
     public void setSelected(boolean selected) {
         this.selected = selected;
@@ -82,6 +86,8 @@ public abstract class Reaction {
 
     public abstract List<DocumentField> getDisplayableFields();
 
+    public abstract List<DocumentField> getDefaultDisplayedFields();
+
     public List<DocumentField> getFieldsToDisplay(){
         return displayableFields != null ? displayableFields : Collections.EMPTY_LIST;
     };
@@ -97,17 +103,32 @@ public abstract class Reaction {
     public Dimension getPreferredSize() {
         int y = PADDING;
         int x = 0;
+        String maxLabel = "";
+        for(DocumentField field : getFieldsToDisplay()) {
+            String value = getDisplayableValue(field);
+            if(value.length() > maxLabel.length()) {
+                maxLabel = value;
+            }
+        }
+        TextLayout tl = new TextLayout(maxLabel, firstLabelFont, fontRenderContext);       
         for(DocumentField field : getFieldsToDisplay()) {
             String value = getFieldValue(field.getCode()).toString();
             if(value.length() == 0) {
                 continue;
             }
-            TextLayout tl = new TextLayout(value, firstLabelFont, fontRenderContext);
             y += (int) tl.getBounds().getHeight()+LINE_SPACING;
             x = Math.max(x, (int)tl.getBounds().getWidth());
         }
         x += PADDING;
-        return new Dimension(Math.min(50,x), Math.min(30,y));
+        return new Dimension(Math.max(50,x), Math.max(30,y));
+    }
+
+    public String getDisplayableValue(DocumentField field) {
+        Object value = getFieldValue(field.getCode());
+        if(value instanceof String) {
+            return (String)value;
+        }
+        return field.getName()+": "+value;
     }
 
 

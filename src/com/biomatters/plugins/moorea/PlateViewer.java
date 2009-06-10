@@ -29,7 +29,7 @@ public class PlateViewer extends JPanel {
         init();
     }
 
-    public PlateViewer(PlateView.PlateSize size, Reaction.Type type) {
+    public PlateViewer(Plate.Size size, Reaction.Type type) {
         plateView = new PlateView(size, type);
         init();
     }
@@ -72,7 +72,7 @@ public class PlateViewer extends JPanel {
             public void run() {
                 frame.getContentPane().setLayout(new BorderLayout());
 
-                frame.setTitle((isNew?"New " : " ")+plateView.getReactionType());
+                frame.setTitle((isNew?"New " : " ")+plateView.getPlate().getReactionType());
                 frame.getContentPane().add(selfReference, BorderLayout.CENTER);
                 frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -110,7 +110,7 @@ public class PlateViewer extends JPanel {
             e1.printStackTrace();
         }
 
-        PlateViewer pView = new PlateViewer(PlateView.PlateSize.w96, Reaction.Type.PCR);
+        PlateViewer pView = new PlateViewer(Plate.Size.w96, Reaction.Type.PCR);
 
         JFrame frame1 = new JFrame();
         frame1.setTitle("Plate View");

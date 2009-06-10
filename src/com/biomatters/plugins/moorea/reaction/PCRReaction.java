@@ -12,6 +12,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 
 /**
  * Created by IntelliJ IDEA.
@@ -28,7 +29,9 @@ public class PCRReaction extends Reaction {
         options = new Options(this.getClass());
 
         //todo interface for user to pick the sample
-        options.addStringOption("sampleId", "Tissue ID", "");
+        options.addStringOption("extractionId", "Extraction ID", "");
+        options.addStringOption("workflowId", "Workflow ID", "");
+
 
         Options.OptionValue[] passedValues = new Options.OptionValue[] {
                 new Options.OptionValue("none", "not run"),
@@ -97,15 +100,27 @@ public class PCRReaction extends Reaction {
 
         List<DocumentField> fields = new ArrayList<DocumentField>();
         for(Options.Option op : getOptions().getOptions()) {
-            if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption) && !op.getName().equals("sampleId")){
+            if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){
                 fields.add(new DocumentField(op.getLabel(), "", op.getName(), op.getValue().getClass(), true, false));    
             }
         }
         return fields;
     }
 
+    public List<DocumentField> getDefaultDisplayedFields() {
+        return Arrays.asList(new DocumentField[] {
+                new DocumentField("Tissue ID", "", "tissueId", String.class, true, false),
+                new DocumentField("Primer", "", "primer", String.class, true, false),
+                new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
+        });
+    }
+
     public Object getFieldValue(String fieldCode) {
-        return options.getValueAsString(fieldCode);
+        Object value = options.getValue(fieldCode);
+        if(value instanceof Options.OptionValue) {
+            return ((Options.OptionValue)value).getLabel();
+        }
+        return value == null ? "" : value.toString();
     }
 
     public Color getBackgroundColor() {

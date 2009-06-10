@@ -66,7 +66,21 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
-        PlateViewer plateViewer = new PlateViewer(PlateView.PlateSize.w96, Reaction.Type.PCR);
+        Plate.Size size = null;
+        Options.OptionValue plateSize = (Options.OptionValue)options.getValue("plateType");
+
+        if(plateSize.getName().equals("48Plate")) {
+            size = Plate.Size.w48;
+        }
+        else if(plateSize.getName().equals("96Plate")) {
+            size = Plate.Size.w96;
+        }
+        else if(plateSize.getName().equals("384Plate")) {
+            size = Plate.Size.w384;
+        }
+
+
+        PlateViewer plateViewer = new PlateViewer(size, Reaction.Type.PCR);
         plateViewer.displayInFrame(true);
 
         return null;
