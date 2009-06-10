@@ -1,19 +1,27 @@
-package com.biomatters.plugins.moorea;
+package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.plugins.moorea.HiddenOptionsPopupButton;
+import com.biomatters.plugins.moorea.AdvancedAndNormalPanelsSwappedOptions;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+import javax.swing.event.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.KeyEvent;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 /**
  * Created by IntelliJ IDEA.
@@ -81,7 +89,7 @@ public class ThermocycleEditor extends JPanel {
     }
 
     public ThermocycleEditor() {
-        this(null);
+        this(new Thermocycle());
     }
 
     private List<ChangeListener> listeners =  new ArrayList<ChangeListener>();
@@ -93,6 +101,8 @@ public class ThermocycleEditor extends JPanel {
 
     public ThermocycleEditor(Thermocycle tcycle) {
         final Options thermocycleOptions = new Options(this.getClass());
+
+        thermocycleOptions.addStringOption("name", "Name", "Untitled");
 
         Options cycleOptions = new Options(this.getClass());
         HiddenOptionsPopupButton buttonOption = new HiddenOptionsPopupButton("popupButton", "Edit Cycle", "states", "Edit Cycle");
@@ -106,7 +116,7 @@ public class ThermocycleEditor extends JPanel {
         infinityOption.addDependent(timeOption, false);
         stateOptions.endAlignHorizontally();
 
-        Options stateMultipleOptions = new AdvancedAndNormalPanelsSwappedOptions(this.getClass());
+        Options stateMultipleOptions = new AdvancedAndNormalPanelsSwappedOptions(this.getClass(), "");
 //        for(Options.Option o : stateOptions.getOptions()) {
 //            o.setAdvanced(true);
 //        }
@@ -121,6 +131,38 @@ public class ThermocycleEditor extends JPanel {
 
 
         Options.MultipleOptions multipleOptions = thermocycleOptions.addMultipleOptions("cycleOptions", cycleOptions, false);
+
+        Options.Option<String, JScrollPane> notesOption = new Options.Option<String, JScrollPane>("notes", "", "") {
+            public String getValueFromString(String value) {
+                return value;
+            }
+
+            protected void setValueOnComponent(JScrollPane component, String value) {
+                ((JTextArea)component.getViewport().getView()).setText(value);
+            }
+
+            protected JScrollPane createComponent() {
+                final JTextArea notes = new JTextArea(5,40);
+                JScrollPane notesScroller = new JScrollPane(notes);
+                notesScroller.setBorder(BorderFactory.createTitledBorder("Notes"));
+                notes.addKeyListener(new KeyListener(){
+                    public void keyTyped(KeyEvent e) {
+                        setValue(notes.getText());
+                    }
+
+                    public void keyPressed(KeyEvent e) {
+                        setValue(notes.getText());
+                    }
+
+                    public void keyReleased(KeyEvent e) {
+                        setValue(notes.getText());
+                    }
+                });
+                return notesScroller;
+            }
+        };
+        notesOption.setSpanningComponent(true);
+        thermocycleOptions.addCustomOption(notesOption);
 
 
 
@@ -175,17 +217,14 @@ public class ThermocycleEditor extends JPanel {
 
         viewer.setBorder(new LineBorder(SystemColor.control.darker()));
 
-        JTextArea notes = new JTextArea(5,40);
-        JScrollPane notesScroller = new JScrollPane(notes);
-        notesScroller.setBorder(BorderFactory.createTitledBorder("Notes"));
 
         add(viewer, BorderLayout.NORTH);
         add(thermocycleOptions.getPanel(), BorderLayout.CENTER);
-        add(notesScroller, BorderLayout.SOUTH);
     }
 
     private Thermocycle getThermoCycleFromOptions(Options thermocycleOptions) {
-        Thermocycle tcycle = new Thermocycle();
+        Thermocycle tcycle = new Thermocycle(thermocycleOptions.getValueAsString("name"),0);
+        tcycle.setNotes(thermocycleOptions.getValueAsString("notes"));
 
         Options.MultipleOptions cycleOptions = thermocycleOptions.getMultipleOptions("cycleOptions");
 
@@ -204,6 +243,10 @@ public class ThermocycleEditor extends JPanel {
 
 
         return tcycle;
+    }
+
+    public Thermocycle getThermocycle() {
+        return thermocycle;
     }
 
     public void print(Graphics g, Dimension dimensions) {
@@ -353,6 +396,86 @@ public class ThermocycleEditor extends JPanel {
                 "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"
         };
 
+    }
+
+    public static List<? extends Thermocycle> editThermocycles(final List<? extends Thermocycle> thermocycles, Component owner) {
+        JPanel editPanel = new JPanel(new BorderLayout());
+        final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        editPanel.add(splitPane, BorderLayout.CENTER);
+        final JList thermocycleList = new JList();
+        thermocycleList.setPrototypeCellValue("ACEGIKMOQSUWY13579");
+        Class thermocycleClass = thermocycles.get(0).getClass();
+        final List<Thermocycle> newThermocycles = new ArrayList<Thermocycle>();
+        final AbstractListModel listModel = new AbstractListModel() {
+            public int getSize() {
+                return thermocycles.size()+newThermocycles.size();
+            }
+
+            public Object getElementAt(int index) {
+                if(index < thermocycles.size())
+                    return thermocycles.get(index);
+                return newThermocycles.get(index-thermocycles.size());
+            }
+        };
+        thermocycleList.setModel(listModel);
+        JScrollPane scroller = new JScrollPane(thermocycleList);
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        JButton addButton = new JButton("Add");
+        leftPanel.add(addButton, BorderLayout.SOUTH);
+        leftPanel.add(scroller, BorderLayout.CENTER);
+        addButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                ThermocycleEditor editor = new ThermocycleEditor();
+                if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "New Thermocycle"), editor).equals(Dialogs.OK)) {
+                    Thermocycle newThermocycle = editor.getThermocycle();
+                    newThermocycles.add(newThermocycle);
+                    for(ListDataListener listener : listModel.getListDataListeners()){
+                        listener.intervalAdded(new ListDataEvent(listModel, ListDataEvent.INTERVAL_ADDED, listModel.getSize(), listModel.getSize()-1));
+                    }
+                    thermocycleList.setSelectedValue(newThermocycle, true);
+                }
+
+            }
+        });
+
+        splitPane.setLeftComponent(leftPanel);
+        thermocycleList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        thermocycleList.addListSelectionListener(new ListSelectionListener(){
+            public void valueChanged(ListSelectionEvent e) {
+                Thermocycle selectedThermocycle = (Thermocycle)thermocycleList.getSelectedValue();
+                ThermocycleViewer viewer = new ThermocycleViewer(selectedThermocycle);
+                JPanel tPanel = new JPanel(new BorderLayout());
+                tPanel.setBackground(Color.white);
+                tPanel.add(viewer, BorderLayout.NORTH);
+
+                JTextArea notes = new JTextArea(selectedThermocycle.getNotes());
+                notes.setEditable(false);
+                notes.setBackground(Color.white);
+                JScrollPane scroller = new JScrollPane(notes);
+                scroller.setBackground(Color.white);
+                scroller.setBorder(new OptionsPanel.RoundedLineBorder("Notes", false));
+                scroller.setPreferredSize(new Dimension(100, Math.max(75,scroller.getPreferredSize().height)));
+
+                tPanel.add(scroller, BorderLayout.SOUTH);
+
+                setRightComponent(splitPane, tPanel);
+            }
+        });
+
+        thermocycleList.setSelectedIndex(0);
+
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Reactions", owner), editPanel).equals(Dialogs.OK)) {
+            return newThermocycles;
+        }
+        return Collections.EMPTY_LIST;
+
+    }
+
+    private static void setRightComponent(JSplitPane sp, Component component) {
+        int location = sp.getDividerLocation();
+        sp.setRightComponent(component);
+        sp.setDividerLocation(location);
     }
 
 

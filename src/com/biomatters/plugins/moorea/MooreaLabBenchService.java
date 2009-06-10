@@ -14,6 +14,7 @@ import com.biomatters.plugins.moorea.fims.MooreaFimsConnection;
 import com.biomatters.plugins.moorea.fims.TAPIRFimsConnection;
 import com.biomatters.plugins.moorea.lims.LIMSConnection;
 import com.biomatters.plugins.moorea.reaction.Cocktail;
+import com.biomatters.plugins.moorea.reaction.Thermocycle;
 
 import java.awt.event.ActionEvent;
 import java.awt.*;
@@ -367,6 +368,35 @@ public class MooreaLabBenchService extends DatabaseService {
         if(newCocktails.size() > 0) {
             //todo: add to the database
         }
+    }
+
+    public List<Thermocycle> getPCRThermocycles() {
+        Thermocycle tc = new Thermocycle("Test Cycle", 0);
+        Thermocycle.Cycle cycle1 = new Thermocycle.Cycle(1);
+        cycle1.addState(new Thermocycle.State(25, 90));
+        tc.addCycle(cycle1);
+        Thermocycle.Cycle cycle2 = new Thermocycle.Cycle(25);
+        cycle1.addState(new Thermocycle.State(90, 30));
+        cycle1.addState(new Thermocycle.State(55, 30));
+        cycle1.addState(new Thermocycle.State(75, 30));
+        tc.addCycle(cycle2);
+        Thermocycle.Cycle cycle3 = new Thermocycle.Cycle(1);
+        cycle1.addState(new Thermocycle.State(15, Integer.MAX_VALUE));
+        tc.addCycle(cycle3);
+        return Arrays.asList(tc);
+    }
+
+    public List<Thermocycle> getCycleSequencingThermocycles() {
+        //todo: implement this
+        return getPCRThermocycles();
+    }
+
+    public void addPCRThermoCycles(List<Thermocycle> cycles){
+        //todo: implement
+    }
+
+    public void addCycleSequencingThermoCycles(List<Thermocycle> cycles){
+        //todo: implement
     }
 
     public boolean hasWriteAccess() {

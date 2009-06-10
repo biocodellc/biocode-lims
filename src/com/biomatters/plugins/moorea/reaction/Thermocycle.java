@@ -1,4 +1,4 @@
-package com.biomatters.plugins.moorea;
+package com.biomatters.plugins.moorea.reaction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,9 +14,16 @@ public class Thermocycle {
 
     private List<Cycle> cycles = new ArrayList<Cycle>();
     private String notes = "";
+    private String name;
+    private int id;
 
     public Thermocycle() {
 
+    }
+
+    public Thermocycle(String name, int id) {
+        this.name = name;
+        this.id = id;
     }
 
     public void addCycle(Cycle c) {
@@ -39,7 +46,21 @@ public class Thermocycle {
         this.notes = notes;
     }
 
-    static class Cycle {
+    public String getName() {
+        return name;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String toString() {
+        return getName();
+    }
+
+
+
+    public static class Cycle {
         private List<State> states = new ArrayList<State>();
         private int repeats = 1;
 
@@ -61,11 +82,11 @@ public class Thermocycle {
     }
 
 
-    static class State {
+    public static class State {
         private int temp;
         private int time;
 
-        State(int temp, int time) {
+        public State(int temp, int time) {
             this.temp = temp;
             this.time = time;
         }
