@@ -38,14 +38,14 @@ public class HiddenOptionsPopupButton extends Options.Option<String, JPanel>{
     }
 
     protected JPanel createComponent() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        final JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panel.setOpaque(false);
         JButton button = new JButton(getDefaultValue());
         button.setOpaque(false);
         button.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 Options options = getParentOptions().getChildOptions().get(childOptionsName);
-                Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "States"), options.getAdvancedPanel());
+                Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "States", panel), options.getAdvancedPanel());
             }
         });
         panel.add(button);

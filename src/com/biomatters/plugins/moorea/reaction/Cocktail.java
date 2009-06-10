@@ -99,7 +99,7 @@ public abstract class Cocktail {
 
         cocktailList.setSelectedIndex(0);
                 
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Reactions", owner), editPanel).equals(Dialogs.OK)) {
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Cocktails", owner), editPanel).equals(Dialogs.OK)) {
             return newCocktails;
         }
         return Collections.EMPTY_LIST;

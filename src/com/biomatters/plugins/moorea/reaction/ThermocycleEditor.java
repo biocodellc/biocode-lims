@@ -184,11 +184,11 @@ public class ThermocycleEditor extends JPanel {
 
         final ThermocycleViewer viewer = new ThermocycleViewer(tcycle);
 
-        multipleOptions.addChangeListener(new SimpleListener(){
+        SimpleListener changeListener = new SimpleListener() {
             public void objectChanged() {
                 thermocycle = getThermoCycleFromOptions(thermocycleOptions);
                 viewer.setThermocycle(thermocycle);
-                for(ChangeListener listener : listeners) {
+                for (ChangeListener listener : listeners) {
                     listener.stateChanged(null);
                 }
 //                Runnable runnable = new Runnable() {
@@ -213,7 +213,12 @@ public class ThermocycleEditor extends JPanel {
                 getRootPane().invalidate();
 
             }
-        });
+        };
+        multipleOptions.addChangeListener(changeListener);
+        for(Options.Option o : thermocycleOptions.getOptions()) {
+            o.addChangeListener(changeListener);
+        }
+        thermocycle = getThermoCycleFromOptions(thermocycleOptions);
 
         viewer.setBorder(new LineBorder(SystemColor.control.darker()));
 
@@ -307,7 +312,7 @@ public class ThermocycleEditor extends JPanel {
                 return;
             }
 
-            stateWidth = getWidth() / (stateCount);
+            stateWidth = getWidth() / Math.max(1,stateCount);
 
             int x = 0;
             int prevHeight = -1;
@@ -398,7 +403,7 @@ public class ThermocycleEditor extends JPanel {
 
     }
 
-    public static List<? extends Thermocycle> editThermocycles(final List<? extends Thermocycle> thermocycles, Component owner) {
+    public static List<Thermocycle> editThermocycles(final List<Thermocycle> thermocycles, Component owner) {
         JPanel editPanel = new JPanel(new BorderLayout());
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         editPanel.add(splitPane, BorderLayout.CENTER);
@@ -426,7 +431,7 @@ public class ThermocycleEditor extends JPanel {
         addButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
                 ThermocycleEditor editor = new ThermocycleEditor();
-                if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "New Thermocycle"), editor).equals(Dialogs.OK)) {
+                if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "New Thermocycle", splitPane), editor).equals(Dialogs.OK)) {
                     Thermocycle newThermocycle = editor.getThermocycle();
                     newThermocycles.add(newThermocycle);
                     for(ListDataListener listener : listModel.getListDataListeners()){
@@ -465,7 +470,7 @@ public class ThermocycleEditor extends JPanel {
 
         thermocycleList.setSelectedIndex(0);
 
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Reactions", owner), editPanel).equals(Dialogs.OK)) {
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Thermocycles", owner), editPanel).equals(Dialogs.OK)) {
             return newThermocycles;
         }
         return Collections.EMPTY_LIST;

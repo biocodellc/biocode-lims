@@ -1,6 +1,7 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.plugins.moorea.reaction.Reaction;
+import com.biomatters.plugins.moorea.reaction.Thermocycle;
 
 import java.awt.*;
 
@@ -16,6 +17,7 @@ public class Plate {
     private Reaction[] reactions;
     private Reaction.Type type;
     private Size plateSize;
+    private Thermocycle thermocycle;
 
     public enum Size {
         w48,
@@ -61,6 +63,14 @@ public class Plate {
 
     public Reaction[] getReactions() {
         return reactions;
+    }
+
+    public Thermocycle getThermocycle() {
+        return thermocycle;
+    }
+
+    public void setThermocycle(Thermocycle thermocycle) {
+        this.thermocycle = thermocycle;
     }
 
     private void init(int rows, int cols, Reaction.Type type) {
