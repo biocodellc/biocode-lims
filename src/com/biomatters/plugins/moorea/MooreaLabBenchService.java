@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Driver;
 import java.sql.SQLException;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.List;
 
@@ -255,8 +256,12 @@ public class MooreaLabBenchService extends DatabaseService {
 
                         try {
                             limsConnection.connect(LIMSOptions);
+                            buildCaches();
                         } catch (ConnectionException e1) {
                             Dialogs.showMessageDialog("Failed to connect to the LIMS database: "+e1.getMessage());
+                            return;
+                        } catch(TransactionException e2) {
+                            Dialogs.showMessageDialog("Failed to connect to the LIMS database: "+e2.getMessage());
                             return;
                         }
 
@@ -370,7 +375,37 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
+    private List<Thermocycle> PCRThermocycles = null;
+    private List<Thermocycle> CycleSequencingThermocycles = null;
+
+    private void buildCaches() throws TransactionException {
+        PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle");
+        CycleSequencingThermocycles = getThermocyclesFromDatabase("cycleSequencing_thermocycle");
+    }
+
+    private List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws TransactionException {
+        String sql = "SELECT * FROM "+thermocycleIdentifierTable+", thermocycle, cycle, state WHERE thermocycle.id = "+thermocycleIdentifierTable+".cycle";
+
+        ResultSet resultSet = limsConnection.executeQuery(sql);
+
+        List<Thermocycle> tCycles = new ArrayList<Thermocycle>();
+
+        try {
+            int currentId = -1;
+            while(resultSet.next()) {
+                tCycles.add(Thermocycle.fromSQL(resultSet));
+                resultSet.previous();
+            }
+        }
+        catch(SQLException ex) {
+            throw new TransactionException("could not read thermocycles from the database", ex);
+        }
+
+        return tCycles;
+    }
+
     public List<Thermocycle> getPCRThermocycles() {
+
         Thermocycle tc = new Thermocycle("Test Cycle", 0);
         Thermocycle.Cycle cycle1 = new Thermocycle.Cycle(1);
         cycle1.addState(new Thermocycle.State(25, 90));
@@ -391,8 +426,14 @@ public class MooreaLabBenchService extends DatabaseService {
         return getPCRThermocycles();
     }
 
-    public void addPCRThermoCycles(List<Thermocycle> cycles){
-        //todo: implement
+    public void addPCRThermoCycles(List<Thermocycle> cycles) throws TransactionException{
+        StringBuilder sbBuilder = new StringBuilder();
+        for(Thermocycle tCycle : cycles) {
+            sbBuilder.append(Thermocycle.toSQL(tCycle));
+            sbBuilder.append("INSERT INTO PCR_THERMOCYCLE(cycle) VALUES (SELECT id FROM thermocycle ORDER BY id DESC LIMIT 1);\n");
+        }
+        limsConnection.executeUpdate(sbBuilder.toString());
+        System.out.println("done!");
     }
 
     public void addCycleSequencingThermoCycles(List<Thermocycle> cycles){

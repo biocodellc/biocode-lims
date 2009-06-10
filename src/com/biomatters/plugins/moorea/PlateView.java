@@ -136,12 +136,9 @@ public class PlateView extends JPanel {
                 if(e.getClickCount() == 2) {
                     for(int i=0; i < reactions.length; i++) {
                         if(reactions[i].isSelected()) {
-                            try {
-                                editReactions(Arrays.asList(reactions[i]));
-                            } catch (XMLSerializationException e1) {
-                                e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-                            }
+                            editReactions(Arrays.asList(reactions[i]));
                             revalidate();
+                            repaint();
                         }
                     }
 
@@ -189,12 +186,19 @@ public class PlateView extends JPanel {
 
     }
 
-    public void editReactions(List<Reaction> reactions) throws XMLSerializationException {
+    public void editReactions(List<Reaction> reactions) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
 
-        Options options = XMLSerializer.clone(reactions.get(0).getOptions());
+        Options options = null;
+        try {
+            options = XMLSerializer.clone(reactions.get(0).getOptions());
+        } catch (XMLSerializationException e) {
+            assert false : e.getMessage(); //there's no way I can see that this would happen, so I'm making it an assert
+            e.printStackTrace();
+            options = reactions.get(0).getOptions();
+        }
 
         //hack to copy the action listeners across
         for(Options.Option o : options.getOptions()) {

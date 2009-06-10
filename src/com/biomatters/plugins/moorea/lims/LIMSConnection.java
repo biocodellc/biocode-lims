@@ -3,14 +3,13 @@ package com.biomatters.plugins.moorea.lims;
 import com.biomatters.plugins.moorea.PasswordOption;
 import com.biomatters.plugins.moorea.ConnectionException;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.TransactionException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 
 import java.io.FilenameFilter;
 import java.io.File;
-import java.sql.SQLException;
-import java.sql.Driver;
-import java.sql.Connection;
+import java.sql.*;
 import java.util.Properties;
 
 /**
@@ -43,6 +42,8 @@ public class LIMSConnection {
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
         try {
             connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
+            Statement statement = connection.createStatement();
+            statement.execute("USE labbench");
         } catch (SQLException e1) {
             throw new ConnectionException(e1);
         }
@@ -55,6 +56,26 @@ public class LIMSConnection {
             } catch (SQLException e) {
                 throw new ConnectionException(e);
             }
+        }
+    }
+
+    public ResultSet executeQuery(String sql) throws TransactionException{
+        try {
+            PreparedStatement statement = connection.prepareStatement(sql);
+            return statement.executeQuery();
+        }
+        catch(SQLException ex) {
+            throw new TransactionException("Could not execute LIMS query", ex);
+        }
+    }
+
+    public int executeUpdate(String sql) throws TransactionException{
+        try {
+            PreparedStatement statement = connection.prepareStatement(sql);
+            return statement.executeUpdate();
+        }
+        catch(SQLException ex) {
+            throw new TransactionException("Could not execute LIMS update query", ex);
         }
     }
 
