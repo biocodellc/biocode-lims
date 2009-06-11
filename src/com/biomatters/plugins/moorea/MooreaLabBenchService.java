@@ -23,11 +23,10 @@ import java.io.FilenameFilter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.sql.Driver;
-import java.sql.SQLException;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.util.*;
 import java.util.List;
+import java.util.Date;
 
 /**
  * @author Steven Stones-Havas
@@ -384,7 +383,8 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     private List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws TransactionException {
-        String sql = "SELECT * FROM "+thermocycleIdentifierTable+", thermocycle, cycle, state WHERE thermocycle.id = "+thermocycleIdentifierTable+".cycle";
+        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN (thermocycle, cycle, state) ON (thermocycleid = "+thermocycleIdentifierTable+".cycle AND thermocycle.id = cycle.thermocycleId AND cycle.id = state.cycleId);";
+
 
         ResultSet resultSet = limsConnection.executeQuery(sql);
 
@@ -405,7 +405,6 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public List<Thermocycle> getPCRThermocycles() {
-
         Thermocycle tc = new Thermocycle("Test Cycle", 0);
         Thermocycle.Cycle cycle1 = new Thermocycle.Cycle(1);
         cycle1.addState(new Thermocycle.State(25, 90));
@@ -418,7 +417,10 @@ public class MooreaLabBenchService extends DatabaseService {
         Thermocycle.Cycle cycle3 = new Thermocycle.Cycle(1);
         cycle1.addState(new Thermocycle.State(15, Integer.MAX_VALUE));
         tc.addCycle(cycle3);
-        return Arrays.asList(tc);
+        ArrayList<Thermocycle> cycles = new ArrayList<Thermocycle>();
+        cycles.addAll(PCRThermocycles);
+        cycles.add(tc);
+        return cycles;
     }
 
     public List<Thermocycle> getCycleSequencingThermocycles() {
@@ -427,12 +429,28 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public void addPCRThermoCycles(List<Thermocycle> cycles) throws TransactionException{
-        StringBuilder sbBuilder = new StringBuilder();
-        for(Thermocycle tCycle : cycles) {
-            sbBuilder.append(Thermocycle.toSQL(tCycle));
-            sbBuilder.append("INSERT INTO PCR_THERMOCYCLE(cycle) VALUES (SELECT id FROM thermocycle ORDER BY id DESC LIMIT 1);\n");
+        try {
+            Connection connection = limsConnection.getConnection();
+            connection.setAutoCommit(false);
+            for(Thermocycle tCycle : cycles) {
+                Savepoint savepoint = connection.setSavepoint();
+                try {
+                    int id = tCycle.toSQL(connection);
+                    PreparedStatement statement = connection.prepareStatement("INSERT INTO pcr_thermocycle (cycle) VALUES ("+id+");\n");
+                    statement.execute();
+                    connection.commit();
+                }
+                catch(SQLException ex) {
+                    connection.rollback(savepoint);
+                    throw ex;
+                }
+                finally {
+                    connection.setAutoCommit(true);
+                }
+            }
+        } catch (SQLException e) {
+            throw new TransactionException("Could not add thermocycle(s): "+e.getMessage(), e);
         }
-        limsConnection.executeUpdate(sbBuilder.toString());
         System.out.println("done!");
     }
 

@@ -1,14 +1,8 @@
 package com.biomatters.plugins.moorea.lims;
 
-import com.biomatters.plugins.moorea.PasswordOption;
-import com.biomatters.plugins.moorea.ConnectionException;
-import com.biomatters.plugins.moorea.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.TransactionException;
+import com.biomatters.plugins.moorea.*;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.components.Dialogs;
 
-import java.io.FilenameFilter;
-import java.io.File;
 import java.sql.*;
 import java.util.Properties;
 
@@ -69,14 +63,36 @@ public class LIMSConnection {
         }
     }
 
-    public int executeUpdate(String sql) throws TransactionException{
+    public void executeUpdate(String sql) throws TransactionException{
+        Savepoint savepoint = null;
         try {
-            PreparedStatement statement = connection.prepareStatement(sql);
-            return statement.executeUpdate();
+            connection.setAutoCommit(false);
+            savepoint = connection.setSavepoint();
+            for(String s : sql.split("\n")) {
+                PreparedStatement statement = connection.prepareStatement(s);
+                statement.execute();
+            }
+            connection.commit();
         }
         catch(SQLException ex) {
+            try {
+                if(savepoint != null) {
+                    connection.rollback(savepoint);
+                }
+            } catch (SQLException e) {
+                throw new TransactionException("Could not execute LIMS update query", ex);
+            }
             throw new TransactionException("Could not execute LIMS update query", ex);
         }
+        finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException ignore) {}
+        }
+    }
+
+    public Connection getConnection() {
+        return connection;
     }
 
 }

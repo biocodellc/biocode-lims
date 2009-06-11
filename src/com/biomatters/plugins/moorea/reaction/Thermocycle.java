@@ -1,9 +1,10 @@
 package com.biomatters.plugins.moorea.reaction;
 
+import com.biomatters.plugins.moorea.TransactionException;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -63,7 +64,9 @@ public class Thermocycle {
     public static Thermocycle fromSQL(ResultSet resultSet) throws SQLException{
         int id = resultSet.getInt("thermocycle.id");
         String name = resultSet.getString("thermocycle.name");
+        String notes = resultSet.getString("thermocycle.notes");
         Thermocycle tCycle = new Thermocycle(name, id);
+        tCycle.setNotes(notes);
         Cycle currentCycle = null;
         while(resultSet.getInt("thermocycle.id") == id) {
             int cycleId = resultSet.getInt("cycle.id");
@@ -77,21 +80,46 @@ public class Thermocycle {
             int stateLength = resultSet.getInt("state.length");
             State state = new State(stateId, stateTemp, stateLength);
             currentCycle.addState(state);
-            resultSet.next();
+            if(resultSet.next() == false) {
+                break;
+            }
         }
         return tCycle;
     }
 
-    public static String toSQL(Thermocycle tCycle) {
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("INSERT INTO thermocycle(name) VALUES(\""+tCycle.getName()+"\");\n");
-        for(Cycle cycle : tCycle.getCycles()) {
-            sqlBuilder.append("INSERT INTO cycle(thermocycleid, repeats) VALUES ((SELECT id FROM thermocycle ORDER BY id DESC LIMIT 1), "+cycle.getRepeats()+");\n");
+    /**
+     * 
+     * @param conn
+     * @return the id of the newly created thermocycle record...
+     * @throws SQLException
+     */
+    public int toSQL(Connection conn) throws SQLException{
+        //create the thermocycle record
+        conn.prepareStatement("INSERT INTO thermocycle (name, notes) VALUES ('" + getName() + "', '" + getNotes() + "');\n").execute();
+
+        //get the id of the thermocycle record
+        PreparedStatement statement = conn.prepareStatement("SELECT last_insert_id() AS new_id;\n");
+        ResultSet resultSet = statement.executeQuery();
+        resultSet.next();
+        int thermoId = resultSet.getInt("new_id");
+
+        for(Cycle cycle : getCycles()) {
+            //create a cycle record
+            conn.prepareStatement("INSERT INTO cycle (thermocycleid, repeats) VALUES (" + thermoId + ", " + cycle.getRepeats() + ");\n").execute();
+
+            //get the id of the cycle record
+            statement = conn.prepareStatement("SELECT last_insert_id() AS new_cycle_id;\n");
+            resultSet = statement.executeQuery();
+            resultSet.next();
+            int cycleId = resultSet.getInt("new_cycle_id");
+
+
             for(State state : cycle.getStates()) {
-                sqlBuilder.append("INSERT INTO state(cycleid, temp, length) VALUES ((SELECT id FROM cycle ORDER BY id DESC LIMIT 1), "+state.getTemp()+", "+state.getTime()+");\n");
+                //create the state record
+                conn.prepareStatement("INSERT INTO state (cycleid, temp, length) VALUES (" + cycleId + ", " + state.getTemp() + ", " + state.getTime() + ");\n").execute();
             }
         }
-        return sqlBuilder.toString();
+        return thermoId;
     }
 
 
