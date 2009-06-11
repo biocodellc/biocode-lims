@@ -66,27 +66,39 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction thermocycleAction = new GeneiousAction("View/Edit Thermocycles") {
             public void actionPerformed(ActionEvent e) {
-                List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);
+                final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);
                 if(newThermocycles.size() > 0) {
-                    try {
-                        switch(plateView.getPlate().getReactionType()) {
-                            case PCR :
-                                MooreaLabBenchService.getInstance().addPCRThermoCycles(newThermocycles);
-                                break;
-                            case CycleSequencing:
-                                MooreaLabBenchService.getInstance().addCycleSequencingThermoCycles(newThermocycles);
-                                break;
-                            default :
-                                assert false : "Extractions do not have thermocycles!";
-                                break;
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            MooreaLabBenchService.block("Saving Thermocycles", selfReference);
+                            try {
+                                switch(plateView.getPlate().getReactionType()) {
+                                    case PCR :
+                                        MooreaLabBenchService.getInstance().addPCRThermoCycles(newThermocycles);
+                                        break;
+                                    case CycleSequencing:
+                                        MooreaLabBenchService.getInstance().addCycleSequencingThermoCycles(newThermocycles);
+                                        break;
+                                    default :
+                                        assert false : "Extractions do not have thermocycles!";
+                                        break;
+                                }
+                                for(Thermocycle cycle : newThermocycles) {//we're assuming that thermocycles will never be deleted (they shouldn't be)
+                                    thermocycleModel.addElement(cycle);
+                                }
+                            } catch (final TransactionException e1) {
+                                e1.printStackTrace();
+                                Runnable runnable = new Runnable() {
+                                    public void run() {
+                                        Dialogs.showMessageDialog("Could not save thermocycles to the database: "+e1.getMessage());
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrLater(runnable);
+                            }
+                            MooreaLabBenchService.unBlock();
                         }
-                        for(Thermocycle cycle : newThermocycles) {//we're assuming that thermocycles will never be deleted (they shouldn't be)
-                            thermocycleModel.addElement(cycle);
-                        }
-                    } catch (TransactionException e1) {
-                        e1.printStackTrace();
-                        Dialogs.showMessageDialog("Could not save thermocycles to the database: "+e1.getMessage());
-                    }
+                    };
+                    new Thread(runnable).start();
                 }
             }
         };

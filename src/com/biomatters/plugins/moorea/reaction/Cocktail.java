@@ -33,6 +33,8 @@ public abstract class Cocktail {
 
     public abstract Cocktail createNewCocktail();
 
+    public abstract String getSQLString();
+
     public static List<? extends Cocktail> editCocktails(final List<? extends Cocktail> cocktails, Component owner) {
         JPanel editPanel = new JPanel(new BorderLayout());
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);

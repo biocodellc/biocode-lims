@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.plugins.moorea.HiddenOptionsPopupButton;
 import com.biomatters.plugins.moorea.AdvancedAndNormalPanelsSwappedOptions;
+import com.biomatters.plugins.moorea.TextAreaOption;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -132,35 +133,7 @@ public class ThermocycleEditor extends JPanel {
 
         Options.MultipleOptions multipleOptions = thermocycleOptions.addMultipleOptions("cycleOptions", cycleOptions, false);
 
-        Options.Option<String, JScrollPane> notesOption = new Options.Option<String, JScrollPane>("notes", "", "") {
-            public String getValueFromString(String value) {
-                return value;
-            }
-
-            protected void setValueOnComponent(JScrollPane component, String value) {
-                ((JTextArea)component.getViewport().getView()).setText(value);
-            }
-
-            protected JScrollPane createComponent() {
-                final JTextArea notes = new JTextArea(5,40);
-                JScrollPane notesScroller = new JScrollPane(notes);
-                notesScroller.setBorder(BorderFactory.createTitledBorder("Notes"));
-                notes.addKeyListener(new KeyListener(){
-                    public void keyTyped(KeyEvent e) {
-                        setValue(notes.getText());
-                    }
-
-                    public void keyPressed(KeyEvent e) {
-                        setValue(notes.getText());
-                    }
-
-                    public void keyReleased(KeyEvent e) {
-                        setValue(notes.getText());
-                    }
-                });
-                return notesScroller;
-            }
-        };
+        TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         notesOption.setSpanningComponent(true);
         thermocycleOptions.addCustomOption(notesOption);
 

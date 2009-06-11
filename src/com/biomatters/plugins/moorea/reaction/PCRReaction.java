@@ -2,8 +2,11 @@ package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.ButtonOption;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.TransactionException;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -61,8 +64,27 @@ public class PCRReaction extends Reaction {
         options.addCustomOption(cocktailButton);
         cocktailButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), null);
-                MooreaLabBenchService.getInstance().addNewPCRCocktails(newCocktails);
+                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), null);
+                if(newCocktails.size() > 0) {
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            try {
+                                MooreaLabBenchService.block("Adding Cocktails", options.getPanel());
+                                MooreaLabBenchService.getInstance().addNewPCRCocktails(newCocktails);
+                            } catch (final TransactionException e1) {
+                                Runnable runnable = new Runnable() {
+                                    public void run() {
+                                        Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", options.getPanel()), e1.getMessage());
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrLater(runnable);
+                            } finally {
+                                MooreaLabBenchService.unBlock();
+                            }
+                        }
+                    };
+                    new Thread(runnable).start();
+                }
             }
         });
 
