@@ -208,7 +208,7 @@ public class MooreaLabBenchService extends DatabaseService {
             public boolean accept(File dir, String name) {
                 return name.toLowerCase().endsWith(".jar");
             }
-        });
+        }).setSelectionType(JFileChooser.FILES_ONLY);
 
         loginOptions.restorePreferences();
 
