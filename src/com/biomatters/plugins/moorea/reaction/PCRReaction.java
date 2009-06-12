@@ -119,7 +119,6 @@ public class PCRReaction extends Reaction {
     }
 
     public List<DocumentField> getDisplayableFields() {
-
         List<DocumentField> fields = new ArrayList<DocumentField>();
         for(Options.Option op : getOptions().getOptions()) {
             if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){

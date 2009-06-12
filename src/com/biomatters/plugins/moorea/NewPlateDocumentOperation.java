@@ -70,6 +70,18 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
         Plate.Size size = null;
         Options.OptionValue plateSize = (Options.OptionValue)options.getValue("plateType");
+        Options.OptionValue reactionType = (Options.OptionValue)options.getValue("reactionType");
+
+        Reaction.Type type = null;
+        if(reactionType.getName().equals("extraction")) {
+            type = Reaction.Type.Extraction;
+        }
+        else if(reactionType.getName().equals("pcr")) {
+            type = Reaction.Type.PCR;
+        }
+        else if(reactionType.getName().equals("cycleSequencing")) {
+            type = Reaction.Type.CycleSequencing;
+        }
 
         if(plateSize.getName().equals("48Plate")) {
             size = Plate.Size.w48;
@@ -82,7 +94,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
 
 
-        PlateViewer plateViewer = new PlateViewer(size, Reaction.Type.PCR);
+        PlateViewer plateViewer = new PlateViewer(size, type);
         plateViewer.displayInFrame(true);
 
         return null;

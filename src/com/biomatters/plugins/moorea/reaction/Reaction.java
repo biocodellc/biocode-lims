@@ -3,6 +3,7 @@ package com.biomatters.plugins.moorea.reaction;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.FimsSample;
 
 import java.awt.*;
 import java.awt.font.FontRenderContext;
@@ -21,6 +22,10 @@ import java.util.Collections;
  */
 public abstract class Reaction {
     private boolean selected;
+    private int id=-1;
+    private int plate;
+    private int position;
+    private FimsSample tissueSample;
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -183,26 +188,28 @@ public abstract class Reaction {
         return location.getLocation();
     }
 
-
-    /*static abstract class Options {
-
-
+    public int getPosition() {
+        return position;
     }
 
+    public void setPosition(int position) {
+        this.position = position;
+    }
 
-    static abstract class Option<T, V extends JComponent> {
+    public int getId() {
+        return id;
+    }
 
+    public void setId(int id) {
+        this.id = id;
+    }
 
+    public int getPlate() {
+        return plate;
+    }
 
-        public final JPanel getOptionPanel() {
-
-        }
-
-        protected abstract V getEditableComponent();
-
-        public abstract boolean isMultipleValues();
-
-    }*/
-
+    public void setPlate(int plate) {
+        this.plate = plate;
+    }
 
 }

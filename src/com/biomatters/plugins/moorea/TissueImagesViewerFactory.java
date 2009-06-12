@@ -55,7 +55,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                     Image[] i = MooreaLabBenchService.imageCache.get(doc.getSpecimenId());
                     if(i != null) {
                         panel.setLayout(new BorderLayout());
-                        JScrollPane scroller = new JScrollPane(new ImagePanel(i));
+                        JScrollPane scroller = new JScrollPane(new com.biomatters.plugins.moorea.ImagePanel(i));
                         panel.add(scroller);
                     }
                     else {
@@ -95,7 +95,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
 
                                         MooreaLabBenchService.imageCache.put(doc.getSpecimenId(), images);
 
-                                        ImagePanel imPanel = new ImagePanel(images);
+                                        com.biomatters.plugins.moorea.ImagePanel imPanel = new ImagePanel(images);
                                         JScrollPane scroller = new JScrollPane(imPanel);
                                         panel.removeAll();
                                         panel.setLayout(new BorderLayout());
@@ -133,36 +133,4 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
         };
     }
 
-    class ImagePanel extends JPanel {
-        private Image[] images;
-
-        public ImagePanel(Image[] i) {
-            this.images = i;
-        }
-
-        public Dimension getPreferredSize() {
-            int w = 0;
-            int h = 0;
-            for(Image i : images) {
-                w  = Math.max(w, i.getWidth(this));
-                h += i.getHeight(this)+10;
-            }
-            w += 20;//padding
-            h += 10;
-
-            return new Dimension(w,h);
-        }
-
-        public void paintComponent(Graphics g) {
-            g.setColor(SystemColor.control.darker().darker());
-            g.fillRect(0,0,getWidth(),getHeight());
-            int y = 10;
-            for(Image i : images) {
-                g.drawImage(i,10,y,this);
-                y += i.getHeight(this)+10;
-            }
-
-        }
-
-    }
 }

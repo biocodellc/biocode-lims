@@ -2,7 +2,7 @@ package com.biomatters.plugins.moorea.plates;
 
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.Thermocycle;
-import com.biomatters.plugins.moorea.GelImage;
+import com.biomatters.plugins.moorea.plates.GelImage;
 
 import java.awt.*;
 import java.util.List;

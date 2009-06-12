@@ -65,6 +65,14 @@ public class PlateViewer extends JPanel {
         toolbar.add(new JLabel("Thermocycle: "));
         toolbar.add(thermocycleCombo);
 
+        final GeneiousAction gelAction = new GeneiousAction("Attach GEL image") {
+            public void actionPerformed(ActionEvent e) {
+                List<GelImage> gelImages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
+                plateView.getPlate().setImages(gelImages);
+            }
+        };
+        toolbar.add(gelAction);
+
         final GeneiousAction thermocycleAction = new GeneiousAction("View/Edit Thermocycles") {
             public void actionPerformed(ActionEvent e) {
                 final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);

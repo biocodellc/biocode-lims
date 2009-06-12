@@ -1,5 +1,6 @@
-package com.biomatters.plugins.moorea;
+package com.biomatters.plugins.moorea.plates;
 
+import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,6 +38,12 @@ public class GelImage {
             throw new IllegalStateException("The image data buffer is empty!");
         }
         image = Toolkit.getDefaultToolkit().createImage(imageBytes);
+        MediaTracker mt = new MediaTracker(new JLabel());
+        mt.addImage(image,0);
+        try {
+            mt.waitForAll();
+        }
+        catch(InterruptedException ex){}
     }
 
     public PreparedStatement toSql(Connection conn) throws SQLException {
@@ -59,5 +66,33 @@ public class GelImage {
 
     public void setPlate(int plate) {
         this.plate = plate;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public int getPlate() {
+        return plate;
+    }
+
+    public byte[] getImageBytes() {
+        return imageBytes;
+    }
+
+    public Image getImage() {
+        return image;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public void setImageBytes(byte[] imageBytes) {
+        this.imageBytes = imageBytes;
     }
 }
