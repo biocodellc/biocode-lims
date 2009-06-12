@@ -118,16 +118,6 @@ public class PCRReaction extends Reaction {
         return options;
     }
 
-    public List<DocumentField> getDisplayableFields() {
-        List<DocumentField> fields = new ArrayList<DocumentField>();
-        for(Options.Option op : getOptions().getOptions()) {
-            if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){
-                fields.add(new DocumentField(op.getLabel(), "", op.getName(), op.getValue().getClass(), true, false));    
-            }
-        }
-        return fields;
-    }
-
     public List<DocumentField> getDefaultDisplayedFields() {
         return Arrays.asList(new DocumentField[] {
                 new DocumentField("Tissue ID", "", "tissueId", String.class, true, false),
@@ -136,13 +126,6 @@ public class PCRReaction extends Reaction {
         });
     }
 
-    public Object getFieldValue(String fieldCode) {
-        Object value = options.getValue(fieldCode);
-        if(value instanceof Options.OptionValue) {
-            return ((Options.OptionValue)value).getLabel();
-        }
-        return value == null ? "" : value.toString();
-    }
 
     public Color getBackgroundColor() {
         String runStatus = options.getValueAsString("runStatus");

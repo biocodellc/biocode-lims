@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
+import com.biomatters.plugins.moorea.ButtonOption;
 
 import java.awt.*;
 import java.awt.font.FontRenderContext;
@@ -43,7 +44,7 @@ public abstract class Reaction {
     public static Reaction getNewReaction(Type type) {
         switch(type) {
             case Extraction :
-                break;
+                return new ExtractionReaction();
             case PCR :
                 return new PCRReaction();
             case CycleSequencing :
@@ -89,7 +90,15 @@ public abstract class Reaction {
         return displayableFields;
     }
 
-    public abstract List<DocumentField> getDisplayableFields();
+    public List<DocumentField> getDisplayableFields() {
+        List<DocumentField> fields = new ArrayList<DocumentField>();
+        for(Options.Option op : getOptions().getOptions()) {
+            if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){
+                fields.add(new DocumentField(op.getLabel(), "", op.getName(), op.getValue().getClass(), true, false));
+            }
+        }
+        return fields;
+    }
 
     public abstract List<DocumentField> getDefaultDisplayedFields();
 
@@ -101,14 +110,20 @@ public abstract class Reaction {
         this.displayableFields = fields;
     }
 
-    public abstract Object getFieldValue(String fieldCode);
+    public Object getFieldValue(String fieldCode) {
+        Object value = getOptions().getValue(fieldCode);
+        if(value instanceof Options.OptionValue) {
+            return ((Options.OptionValue)value).getLabel();
+        }
+        return value == null ? "" : value.toString();
+    }
 
     public abstract Color getBackgroundColor();
 
     public Dimension getPreferredSize() {
         int y = PADDING;
         int x = 0;
-        String maxLabel = "";
+        String maxLabel = " ";
         for(DocumentField field : getFieldsToDisplay()) {
             String value = getDisplayableValue(field);
             if(value.length() > maxLabel.length()) {
