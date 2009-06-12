@@ -95,7 +95,10 @@ public class Thermocycle {
      */
     public int toSQL(Connection conn) throws SQLException{
         //create the thermocycle record
-        conn.prepareStatement("INSERT INTO thermocycle (name, notes) VALUES ('" + getName() + "', '" + getNotes() + "');\n").execute();
+        PreparedStatement statement1 = conn.prepareStatement("INSERT INTO thermocycle (name, notes) VALUES (?, ?);\n");
+        statement1.setString(1, getName());
+        statement1.setString(2, getNotes());
+        statement1.execute();
 
         //get the id of the thermocycle record
         PreparedStatement statement = conn.prepareStatement("SELECT last_insert_id() AS new_id;\n");

@@ -1,9 +1,12 @@
-package com.biomatters.plugins.moorea;
+package com.biomatters.plugins.moorea.plates;
 
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.Thermocycle;
+import com.biomatters.plugins.moorea.GelImage;
 
 import java.awt.*;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * @author Steven Stones-Havas
@@ -12,12 +15,14 @@ import java.awt.*;
  *          Created on 10/06/2009 11:38:24 AM
  */
 public class Plate {
+    private int id=-1;
     private int rows;
     private int cols;
     private Reaction[] reactions;
     private Reaction.Type type;
     private Size plateSize;
     private Thermocycle thermocycle;
+    private List<GelImage> images;
 
     public enum Size {
         w48,
@@ -42,6 +47,17 @@ public class Plate {
                 break;
             case w384 :
                 init(16, 24, type);
+        }
+    }
+
+    public List<GelImage> getImages() {
+        return images;
+    }
+
+    public void setImages(List<GelImage> images) {
+        this.images = images;
+        for(GelImage image : images) {
+            image.setPlate(id);
         }
     }
 
@@ -77,6 +93,8 @@ public class Plate {
         this.rows = rows;
         this.cols = cols;
         this.type = type;
+
+        images = new ArrayList<GelImage>();
 
         reactions = new Reaction[rows*cols];
         for(int i=0; i < rows; i++) {

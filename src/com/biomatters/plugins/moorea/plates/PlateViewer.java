@@ -1,13 +1,14 @@
-package com.biomatters.plugins.moorea;
+package com.biomatters.plugins.moorea.plates;
 
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.Thermocycle;
 import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
+import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.TransactionException;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;

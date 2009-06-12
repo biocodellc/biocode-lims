@@ -5,6 +5,8 @@ import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.moorea.reaction.Reaction;
+import com.biomatters.plugins.moorea.plates.Plate;
+import com.biomatters.plugins.moorea.plates.PlateViewer;
 
 import java.util.List;
 

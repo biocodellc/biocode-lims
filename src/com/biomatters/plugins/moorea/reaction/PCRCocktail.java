@@ -45,7 +45,7 @@ public class PCRCocktail extends Cocktail{
     }
 
     public String getSQLString() {
-        return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes) VALUES ('"+options.getValueAsString("name")+"', "+options.getValueAsString("ddh20")+", "+options.getValueAsString("buffer")+", "+options.getValueAsString("mg")+", "+options.getValueAsString("bsa")+", "+options.getValueAsString("dntp")+", "+options.getValueAsString("taq")+", '"+options.getValueAsString("notes")+"')";
+        return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddh20")+", "+options.getValueAsString("buffer")+", "+options.getValueAsString("mg")+", "+options.getValueAsString("bsa")+", "+options.getValueAsString("dntp")+", "+options.getValueAsString("taq")+", '"+options.getValueAsString("notes")+"')";
     }
 
     public PCRCocktail(String name) {

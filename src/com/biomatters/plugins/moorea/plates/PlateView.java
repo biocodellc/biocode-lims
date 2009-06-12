@@ -1,4 +1,4 @@
-package com.biomatters.plugins.moorea;
+package com.biomatters.plugins.moorea.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
@@ -8,11 +8,11 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.moorea.reaction.Reaction;
+import com.biomatters.plugins.moorea.ButtonOption;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.Border;
-import javax.swing.plaf.SplitPaneUI;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 import javax.swing.plaf.basic.BasicSplitPaneDivider;
 import javax.swing.event.*;
