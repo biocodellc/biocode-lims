@@ -112,6 +112,10 @@ public class MooreaFimsConnection extends FIMSConnection{
         return fields;
     }
 
+    public DocumentField getTissueSampleDocumentField() {
+        return getCollectionAttributes().get(0);
+    }
+
     public List<DocumentField> getCollectionAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
 
@@ -268,12 +272,12 @@ public class MooreaFimsConnection extends FIMSConnection{
 
             //special cases
             if(fieldCode.equals("tissueId")) {
-                String[] tissueIdParts = aquery.getValues()[0].toString().split(".");
+                String[] tissueIdParts = aquery.getValues()[0].toString().split("\\.");
                 if(tissueIdParts.length == 2) {
-                    queryBuilder.append("(biocode_tissue.bnhm_id "+join+" "+tissueIdParts[0]+" AND biocode_tissue.tissue_num "+join+" "+tissueIdParts[1]+")");
+                    queryBuilder.append("(biocode_tissue.bnhm_id "+join+" '"+tissueIdParts[0]+"' AND biocode_tissue.tissue_num "+join+" "+tissueIdParts[1]+")");
                 }
                 else {
-                    queryBuilder.append("biocode_tissue.tissue_num "+join+" "+aquery.getValues()[0]);
+                    queryBuilder.append("biocode_tissue.bnhm_id "+join+" '"+aquery.getValues()[0]+"'");
                 }
             }
             else if(fieldCode.equals("biocode_collecting_event.CollectionTime")) {

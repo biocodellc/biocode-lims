@@ -49,21 +49,63 @@ public class PlateViewer extends JPanel {
         toolbar.setLayout(new FlowLayout(FlowLayout.LEFT));
         toolbar.setFloatable(false);
 
-        final DefaultComboBoxModel thermocycleModel = new DefaultComboBoxModel();
-        for(Thermocycle cycle : getThermocycles()) {
-            thermocycleModel.addElement(cycle);
-        }
-
-        final JComboBox thermocycleCombo = new JComboBox(thermocycleModel);
-        ItemListener thermocycleComboListener = new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                plateView.getPlate().setThermocycle((Thermocycle) thermocycleCombo.getSelectedItem());
+        if (plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
+            final DefaultComboBoxModel thermocycleModel = new DefaultComboBoxModel();
+            for (Thermocycle cycle : getThermocycles()) {
+                thermocycleModel.addElement(cycle);
             }
-        };
-        thermocycleCombo.addItemListener(thermocycleComboListener);
-        thermocycleComboListener.itemStateChanged(null);
-        toolbar.add(new JLabel("Thermocycle: "));
-        toolbar.add(thermocycleCombo);
+
+            final JComboBox thermocycleCombo = new JComboBox(thermocycleModel);
+            ItemListener thermocycleComboListener = new ItemListener() {
+                public void itemStateChanged(ItemEvent e) {
+                    plateView.getPlate().setThermocycle((Thermocycle) thermocycleCombo.getSelectedItem());
+                }
+            };
+            thermocycleCombo.addItemListener(thermocycleComboListener);
+            thermocycleComboListener.itemStateChanged(null);
+            toolbar.add(new JLabel("Thermocycle: "));
+            toolbar.add(thermocycleCombo);
+
+            final GeneiousAction thermocycleAction = new GeneiousAction("View/Edit Thermocycles") {
+                public void actionPerformed(ActionEvent e) {
+                    final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);
+                    if (newThermocycles.size() > 0) {
+                        Runnable runnable = new Runnable() {
+                            public void run() {
+                                MooreaLabBenchService.block("Saving Thermocycles", selfReference);
+                                try {
+                                    switch (plateView.getPlate().getReactionType()) {
+                                        case PCR:
+                                            MooreaLabBenchService.getInstance().addPCRThermoCycles(newThermocycles);
+                                            break;
+                                        case CycleSequencing:
+                                            MooreaLabBenchService.getInstance().addCycleSequencingThermoCycles(newThermocycles);
+                                            break;
+                                        default:
+                                            assert false : "Extractions do not have thermocycles!";
+                                            break;
+                                    }
+                                    for (Thermocycle cycle : newThermocycles) {//we're assuming that thermocycles will never be deleted (they shouldn't be)
+                                        thermocycleModel.addElement(cycle);
+                                    }
+                                } catch (final TransactionException e1) {
+                                    e1.printStackTrace();
+                                    Runnable runnable = new Runnable() {
+                                        public void run() {
+                                            Dialogs.showMessageDialog("Could not save thermocycles to the database: " + e1.getMessage());
+                                        }
+                                    };
+                                    ThreadUtilities.invokeNowOrLater(runnable);
+                                }
+                                MooreaLabBenchService.unBlock();
+                            }
+                        };
+                        new Thread(runnable).start();
+                    }
+                }
+            };
+            toolbar.add(thermocycleAction);
+        }
 
         final GeneiousAction gelAction = new GeneiousAction("Attach GEL image") {
             public void actionPerformed(ActionEvent e) {
@@ -73,46 +115,8 @@ public class PlateViewer extends JPanel {
         };
         toolbar.add(gelAction);
 
-        final GeneiousAction thermocycleAction = new GeneiousAction("View/Edit Thermocycles") {
-            public void actionPerformed(ActionEvent e) {
-                final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);
-                if(newThermocycles.size() > 0) {
-                    Runnable runnable = new Runnable() {
-                        public void run() {
-                            MooreaLabBenchService.block("Saving Thermocycles", selfReference);
-                            try {
-                                switch(plateView.getPlate().getReactionType()) {
-                                    case PCR :
-                                        MooreaLabBenchService.getInstance().addPCRThermoCycles(newThermocycles);
-                                        break;
-                                    case CycleSequencing:
-                                        MooreaLabBenchService.getInstance().addCycleSequencingThermoCycles(newThermocycles);
-                                        break;
-                                    default :
-                                        assert false : "Extractions do not have thermocycles!";
-                                        break;
-                                }
-                                for(Thermocycle cycle : newThermocycles) {//we're assuming that thermocycles will never be deleted (they shouldn't be)
-                                    thermocycleModel.addElement(cycle);
-                                }
-                            } catch (final TransactionException e1) {
-                                e1.printStackTrace();
-                                Runnable runnable = new Runnable() {
-                                    public void run() {
-                                        Dialogs.showMessageDialog("Could not save thermocycles to the database: "+e1.getMessage());
-                                    }
-                                };
-                                ThreadUtilities.invokeNowOrLater(runnable);
-                            }
-                            MooreaLabBenchService.unBlock();
-                        }
-                    };
-                    new Thread(runnable).start();
-                }
-            }
-        };
-        toolbar.add(thermocycleAction);
-        toolbar.addSeparator(new Dimension(1,24));
+
+        toolbar.addSeparator(new Dimension(1, 24));
 
         final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
             public void actionPerformed(ActionEvent e) {
@@ -139,12 +143,12 @@ public class PlateViewer extends JPanel {
     }
 
     private List<Thermocycle> getThermocycles() {
-        switch(plateView.getPlate().getReactionType()) {
-            case PCR :
+        switch (plateView.getPlate().getReactionType()) {
+            case PCR:
                 return MooreaLabBenchService.getInstance().getPCRThermocycles();
             case CycleSequencing:
                 return MooreaLabBenchService.getInstance().getCycleSequencingThermocycles();
-            default :
+            default:
                 assert false : "Extractions do not have thermocycles!";
                 return Collections.EMPTY_LIST;
         }
@@ -156,7 +160,7 @@ public class PlateViewer extends JPanel {
             public void run() {
                 frame.getContentPane().setLayout(new BorderLayout());
 
-                frame.setTitle((isNew?"New " : " ")+plateView.getPlate().getReactionType());
+                frame.setTitle((isNew ? "New " : " ") + plateView.getPlate().getReactionType());
                 frame.getContentPane().add(selfReference, BorderLayout.CENTER);
                 frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -174,7 +178,7 @@ public class PlateViewer extends JPanel {
         };
         ThreadUtilities.invokeNowOrWait(runnable);
 
-        while(frame.isVisible()){
+        while (frame.isVisible()) {
             ThreadUtilities.sleep(100);
         }
     }

@@ -51,6 +51,8 @@ public abstract class FIMSConnection {
 
     public abstract void disconnect() throws ConnectionException;
 
+    public abstract DocumentField getTissueSampleDocumentField();
+
     public abstract List<DocumentField> getCollectionAttributes();
 
     public abstract List<DocumentField> getTaxonomyAttributes();

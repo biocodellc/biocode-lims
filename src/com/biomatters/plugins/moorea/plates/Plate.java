@@ -99,14 +99,17 @@ public class Plate {
         reactions = new Reaction[rows*cols];
         for(int i=0; i < rows; i++) {
             for(int j = 0; j < cols; j++) {
+                int index = cols * i + j;
                 final Reaction reaction = Reaction.getNewReaction(type);
+                reaction.setPlate(id);
+                reaction.setPosition(index);
                 if(type != null) {
                     reaction.setLocationString(""+(char)(65+i)+(1+j));
                 }
                 Dimension preferredSize = reaction.getPreferredSize();
                 reaction.setBounds(new Rectangle(1+(preferredSize.width+1)*j, 1+(preferredSize.height+1)*i, preferredSize.width, preferredSize.height));
 
-                reactions[cols*i + j] = reaction;
+                reactions[index] = reaction;
             }
         }
     }

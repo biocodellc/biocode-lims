@@ -126,8 +126,11 @@ public class PCRReaction extends Reaction {
         });
     }
 
+    public String areReactionsValid(List<Reaction> reactions) {
+        return null;
+    }
 
-    public Color getBackgroundColor() {
+    public Color _getBackgroundColor() {
         String runStatus = options.getValueAsString("runStatus");
         if(runStatus.equals("none"))
                 return Color.white;
@@ -136,5 +139,9 @@ public class PCRReaction extends Reaction {
         else if(runStatus.equals("failed"))
             return Color.red.darker();
         return Color.white;
+    }
+
+    public String toSql() throws IllegalStateException {
+        throw new IllegalStateException("Not Implemented!");
     }
 }

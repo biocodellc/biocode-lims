@@ -40,6 +40,10 @@ public class TAPIRFimsConnection extends FIMSConnection{
         
     }
 
+    public DocumentField getTissueSampleDocumentField() {
+        return new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
+    }
+
     public List<DocumentField> getSearchAttributes() {
         return Collections.emptyList();
     }

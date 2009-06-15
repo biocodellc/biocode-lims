@@ -13,6 +13,9 @@ import java.awt.geom.AffineTransform;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -27,6 +30,8 @@ public abstract class Reaction {
     private int plate;
     private int position;
     private FimsSample tissueSample;
+    protected boolean isError = false;
+    protected FimsSample fimsSample = null;
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -115,10 +120,22 @@ public abstract class Reaction {
         if(value instanceof Options.OptionValue) {
             return ((Options.OptionValue)value).getLabel();
         }
+        if(value == null && fimsSample != null) { //check the FIMS data
+            value = fimsSample.getFimsAttributeValue(fieldCode);
+        }
         return value == null ? "" : value.toString();
     }
 
-    public abstract Color getBackgroundColor();
+    public final Color getBackgroundColor() {
+        if(isError) {
+            return Color.orange.brighter();
+        }
+        return _getBackgroundColor();
+    }
+
+    public abstract Color _getBackgroundColor();
+
+    public abstract String areReactionsValid(List<Reaction> reactions);
 
     public Dimension getPreferredSize() {
         int y = PADDING;
@@ -187,6 +204,16 @@ public abstract class Reaction {
         g.setColor(Color.black);
     }
 
+    public boolean isEmpty(){
+        Options options = getOptions();
+        for(Options.Option option : options.getOptions()) {
+            if(!option.getValue().equals(option.getDefaultValue())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void setBounds(Rectangle r) {
         this.location = new Rectangle(r);
     }
@@ -225,6 +252,31 @@ public abstract class Reaction {
 
     public void setPlate(int plate) {
         this.plate = plate;
+    }
+
+    public static void saveReactions(List<Reaction> reactions, Type type, Connection connection) throws IllegalStateException, SQLException {
+        switch(type) {
+            case Extraction:
+                String sql = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId) VALUES (?, ?, ?, ?, ?, ?)";
+                PreparedStatement statement = connection.prepareStatement(sql);
+                for(Reaction reaction : reactions) {
+                    if (!reaction.isEmpty() && reaction.plate >= 0) {
+                        Options options = reaction.getOptions();
+                        statement.setString(1, options.getValueAsString("extractionMethod"));
+                        statement.setInt(2, (Integer)options.getValue("volume"));
+                        statement.setInt(3, (Integer)options.getValue("dilution"));
+                        statement.setString(4, options.getValueAsString("parentExtraction"));
+                        statement.setString(5, options.getValueAsString("sampleId"));
+                        statement.setString(6, options.getValueAsString("extractionId"));
+                        statement.execute();
+                    }
+                }
+                break;
+            case PCR:
+                throw new RuntimeException("Not Implemented");
+            case CycleSequencing:
+                throw new RuntimeException("Not Implemented");
+        }
     }
 
 }

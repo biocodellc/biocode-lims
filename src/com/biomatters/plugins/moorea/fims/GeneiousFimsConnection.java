@@ -44,6 +44,10 @@ public class GeneiousFimsConnection extends FIMSConnection{
         return Collections.emptyList();
     }
 
+    public DocumentField getTissueSampleDocumentField() {
+        return new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
+    }
+
     public List<DocumentField> getCollectionAttributes() {
         return Collections.emptyList();
     }

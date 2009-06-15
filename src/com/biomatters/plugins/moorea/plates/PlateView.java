@@ -258,6 +258,10 @@ public class PlateView extends JPanel {
             for(Reaction r : reactions) {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
             }
+            String error = reactions.get(0).areReactionsValid(reactions);
+            if(error != null) {
+                Dialogs.showMessageDialog(error);
+            }
         }
 
 
