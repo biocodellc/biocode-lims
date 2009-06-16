@@ -35,11 +35,17 @@ public class PCRCocktail extends Cocktail{
         options = new Options(this.getClass());
         Options.StringOption nameOption = options.addStringOption("name", "Name", "");
         Options.IntegerOption ddh2oOption = options.addIntegerOption("ddh20", "ddH20 Amount", 1, 0, Integer.MAX_VALUE);
+        ddh2oOption.setUnits("ul");
         Options.IntegerOption bufferOption = options.addIntegerOption("buffer", "10x PCR Buffer Amount", 1, 0, Integer.MAX_VALUE);
+        bufferOption.setUnits("ul");
         Options.IntegerOption mgOption = options.addIntegerOption("mg", "Mg Amount", 1, 0, Integer.MAX_VALUE);
+        mgOption.setUnits("ul");
         Options.IntegerOption bsaOption = options.addIntegerOption("bsa", "BSA Amount", 1, 0, Integer.MAX_VALUE);
+        bsaOption.setUnits("ul");
         Options.IntegerOption dntpOption = options.addIntegerOption("dntp", "dNTPs Amount", 1, 0, Integer.MAX_VALUE);
+        dntpOption.setUnits("ul");
         Options.IntegerOption taqOption = options.addIntegerOption("taq", "TAQ", 1, 0, Integer.MAX_VALUE);
+        taqOption.setUnits("ul");
         TextAreaOption areaOption = new TextAreaOption("notes", "Notes", "");
         options.addCustomOption(areaOption);
     }

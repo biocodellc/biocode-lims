@@ -47,7 +47,8 @@ public class PCRReaction extends Reaction {
         options.beginAlignHorizontally("forward primer", false);
         Options.OptionValue[] values = new Options.OptionValue[] {new Options.OptionValue("myPrimer1", "My Primer 1"), new Options.OptionValue("myPrimer2", "My Primer 2")};
         options.addComboBoxOption("primer", "Primer", values, values[0]);
-        options.addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
+        Options.IntegerOption primerOption = options.addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
+        primerOption.setUnits("ul");
         options.endAlignHorizontally();
 
 

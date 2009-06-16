@@ -22,6 +22,8 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.virion.jam.util.SimpleListener;
+
 
 public class PlateView extends JPanel {
 
@@ -303,10 +305,40 @@ public class PlateView extends JPanel {
                     }
                 }
             });
-            displayPanel.addTwoComponents(leftComponent, option.getComponent(), true, false);
+            JComponent jComponent = getOptionComponent(option);
+            displayPanel.addTwoComponents(leftComponent, jComponent, true, false);
 
         }
         return displayPanel;
+    }
+
+    private static JComponent getOptionComponent(final Options.Option option) {
+        JComponent comp = option.getComponent();
+        if(option instanceof Options.IntegerOption || option instanceof Options.DoubleOption) {
+            String units;
+            if(option instanceof Options.IntegerOption) {
+                units = ((Options.IntegerOption)option).getUnits();
+            }
+            else {
+                units = ((Options.DoubleOption)option).getUnits();
+            }
+            if(units.length() > 0) {
+                JPanel panel = new JPanel(new BorderLayout(2,0));
+                panel.setOpaque(false);
+                panel.add(comp, BorderLayout.CENTER);
+                final JLabel unitsLabel = new JLabel(units);
+                panel.add(unitsLabel, BorderLayout.EAST);
+                SimpleListener listener = new SimpleListener() {
+                    public void objectChanged() {
+                        unitsLabel.setEnabled(option.isEnabled());
+                    }
+                };
+                option.addChangeListener(listener);
+                listener.objectChanged();
+                comp = panel;
+            }
+        }
+        return comp;
     }
 
     private JPanel getFieldsPanel(final Vector<DocumentField> availableFieldsVector, final Vector<DocumentField> selectedFieldsVector) {

@@ -7,6 +7,9 @@ import com.biomatters.plugins.moorea.plates.GelImage;
 import java.awt.*;
 import java.util.List;
 import java.util.ArrayList;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -114,4 +117,25 @@ public class Plate {
         }
     }
 
+    public PreparedStatement toSQL(Connection connection) throws SQLException{
+        PreparedStatement statement = connection.prepareStatement("INSERT INTO plate (name, size, type) VALUES (?, ?, ?)");
+        statement.setString(1, "plate1");
+        statement.setInt(2, reactions.length);
+        statement.setString(3, type.toString());
+        return statement;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+        for(Reaction reaction : reactions) {
+            reaction.setPlate(id);
+        }
+        for(GelImage image : images) {
+            image.setPlate(id);
+        }
+    }
 }

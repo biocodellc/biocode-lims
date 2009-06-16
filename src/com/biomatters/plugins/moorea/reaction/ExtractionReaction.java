@@ -31,7 +31,8 @@ public class ExtractionReaction extends Reaction{
             options.addStringOption("extractionMethod", "Extraction Method", "");
             options.addStringOption("parentExtraction", "Parent Extraction Id", "", "You may leave this field blank");
             options.addIntegerOption("dilution", "Dilution 1/", 5, 0, Integer.MAX_VALUE);
-            options.addIntegerOption("volume", "Extraction Volume", 5, 0, Integer.MAX_VALUE);
+            Options.IntegerOption volume = options.addIntegerOption("volume", "Extraction Volume", 5, 0, Integer.MAX_VALUE);
+            volume.setUnits("ul");
         }
         return options;
     }

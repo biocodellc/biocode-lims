@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
 import com.biomatters.plugins.moorea.ButtonOption;
+import com.biomatters.plugins.moorea.Workflow;
 
 import java.awt.*;
 import java.awt.font.FontRenderContext;
@@ -28,8 +29,8 @@ public abstract class Reaction {
     private boolean selected;
     private int id=-1;
     private int plate;
+    private Workflow workflow;
     private int position;
-    private FimsSample tissueSample;
     protected boolean isError = false;
     protected FimsSample fimsSample = null;
 
@@ -119,6 +120,10 @@ public abstract class Reaction {
         Object value = getOptions().getValue(fieldCode);
         if(value instanceof Options.OptionValue) {
             return ((Options.OptionValue)value).getLabel();
+        }
+        if(value instanceof Integer || value instanceof Double) {
+            Options.Option option = getOptions().getOption(fieldCode);
+            value = option.getLabel()+": "+option.getValue();
         }
         if(value == null && fimsSample != null) { //check the FIMS data
             value = fimsSample.getFimsAttributeValue(fieldCode);
@@ -254,10 +259,18 @@ public abstract class Reaction {
         this.plate = plate;
     }
 
-    public static void saveReactions(List<Reaction> reactions, Type type, Connection connection) throws IllegalStateException, SQLException {
+    public Workflow getWorkflow() {
+        return workflow;
+    }
+
+    public void setWorkflow(Workflow workflow) {
+        this.workflow = workflow;
+    }
+
+    public static void saveReactions(Reaction[] reactions, Type type, Connection connection) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String sql = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId) VALUES (?, ?, ?, ?, ?, ?)";
+                String sql = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, workflow) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement statement = connection.prepareStatement(sql);
                 for(Reaction reaction : reactions) {
                     if (!reaction.isEmpty() && reaction.plate >= 0) {
@@ -268,6 +281,11 @@ public abstract class Reaction {
                         statement.setString(4, options.getValueAsString("parentExtraction"));
                         statement.setString(5, options.getValueAsString("sampleId"));
                         statement.setString(6, options.getValueAsString("extractionId"));
+                        statement.setInt(7, reaction.getPlate());
+                        if(reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+                            throw new SQLException("The reaction "+reaction.getId()+" does not have a workflow set.");
+                        }
+                        statement.setInt(8, reaction.getWorkflow().getId());
                         statement.execute();
                     }
                 }

@@ -3,12 +3,14 @@ package com.biomatters.plugins.moorea.plates;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.Thermocycle;
 import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
+import com.biomatters.plugins.moorea.Workflow;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
@@ -17,8 +19,10 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.ItemEvent;
+import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.Collections;
+import java.sql.SQLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -168,8 +172,60 @@ public class PlateViewer extends JPanel {
                 JPanel closeButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
                 JButton okButton = new JButton("OK");
                 JButton cancelButton = new JButton("Cancel");
-                closeButtonPanel.add(cancelButton);
-                closeButtonPanel.add(okButton);
+                if(SystemUtilities.isMac()) {
+                    closeButtonPanel.add(cancelButton);
+                    closeButtonPanel.add(okButton);
+                }
+                else {
+                    closeButtonPanel.add(okButton);
+                    closeButtonPanel.add(cancelButton);
+                }
+                cancelButton.addActionListener(new ActionListener(){
+                    public void actionPerformed(ActionEvent e) {
+                        frame.setVisible(false);
+                    }
+                });
+                okButton.addActionListener(new ActionListener(){
+                    public void actionPerformed(ActionEvent e) {
+                        frame.setVisible(false);
+                        Plate plate = plateView.getPlate();
+
+
+                        try {
+                            //create workflows if necessary
+                            int workflowCount = 0;
+                            for(Reaction reaction : plate.getReactions()) {
+                                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                                    workflowCount++;
+                                }
+                            }
+                            if(workflowCount > 0) {
+                                List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(workflowCount);
+                                int workflowIndex = 0;
+                                for(Reaction reaction : plate.getReactions()) {
+                                    if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                                        reaction.setWorkflow(workflowList.get(workflowIndex));
+                                        workflowIndex++;
+                                    }
+                                }
+                            }
+
+
+                            if(plate.getId() < 0) { //we need to create the plate
+                                MooreaLabBenchService.getInstance().createPlate(plate);
+                            }
+                            else {
+                                MooreaLabBenchService.getInstance().updatePlate(plate);
+                            }
+
+                        }
+                        catch(SQLException ex){
+                            Dialogs.showMessageDialog("There was an error saving your plate: "+ex.getMessage());
+                            frame.setVisible(true);
+                        }
+                        frame.dispose();
+                    }
+                });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);
 
                 frame.pack();

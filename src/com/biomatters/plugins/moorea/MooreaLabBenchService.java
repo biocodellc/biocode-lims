@@ -18,6 +18,9 @@ import com.biomatters.plugins.moorea.lims.LIMSConnection;
 import com.biomatters.plugins.moorea.reaction.Cocktail;
 import com.biomatters.plugins.moorea.reaction.Thermocycle;
 import com.biomatters.plugins.moorea.reaction.PCRCocktail;
+import com.biomatters.plugins.moorea.reaction.Reaction;
+import com.biomatters.plugins.moorea.plates.Plate;
+import com.biomatters.plugins.moorea.plates.GelImage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -553,6 +556,102 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public List<Cocktail> getPCRCocktails() {
         return PCRCocktails;
+    }
+
+    public List<Workflow> createWorkflows(int numberOfWorkflows) throws SQLException{
+        List<Workflow> workflows = new ArrayList<Workflow>();
+        Connection connection = limsConnection.getConnection();
+        Savepoint savepoint = connection.setSavepoint();
+        try {
+            connection.setAutoCommit(false);
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow VALUES ()");
+            PreparedStatement statement2 = connection.prepareStatement("SELECT last_insert_id()");
+            for(int i=0; i < numberOfWorkflows; i++) {
+                statement.execute();
+                ResultSet resultSet = statement2.executeQuery();
+                resultSet.next();
+                int workflowId = resultSet.getInt(1);
+                workflows.add(new Workflow(workflowId, "workflow"+workflowId));
+            }
+            connection.commit();
+            connection.setAutoCommit(true);
+            return workflows;
+        }
+        catch(SQLException ex) {
+            connection.rollback(savepoint);
+            throw ex;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
+    public void createPlate(Plate plate) throws SQLException{
+        Connection connection = limsConnection.getConnection();
+        Savepoint savepoint = connection.setSavepoint();
+        try {
+            connection.setAutoCommit(false);
+            PreparedStatement statement = plate.toSQL(connection);
+            statement.execute();
+            PreparedStatement statement1 = connection.prepareStatement("SELECT last_insert_id()");
+            ResultSet resultSet = statement1.executeQuery();
+            resultSet.next();
+            int plateId = resultSet.getInt(1);
+            plate.setId(plateId);
+
+            for(GelImage image : plate.getImages()) {
+                image.toSql(connection).execute(); //todo: re-insert existing images or ignore them?
+            }
+
+            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection);
+            connection.commit();
+            connection.releaseSavepoint(savepoint);
+        }
+        catch(SQLException ex) {
+            connection.rollback(savepoint);
+            throw ex;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
+    public void updatePlate(Plate plate) throws SQLException{
+        if(plate.getId() < 0) {
+            throw new IllegalArgumentException("You may only call updatePlate() on a plate which has been added to the database");
+        }
+        Connection connection = limsConnection.getConnection();
+        Savepoint savepoint = connection.setSavepoint();
+        try {
+            connection.setAutoCommit(false);
+            String tableName;
+            switch(plate.getReactionType()) {
+                case Extraction :
+                    tableName = "extraction";
+                    break;
+                case PCR :
+                    tableName = "pcr";
+                    break;
+                case CycleSequencing:
+                    tableName = "cycleSequencing";
+                    break;
+                default :
+                    throw new IllegalStateException("The plate has an invalid reaction type: "+plate.getReactionType());
+            }
+
+            //delete the existing reactions...
+            PreparedStatement statement = connection.prepareStatement("DELETE * FROM "+tableName+" WHERE plate=?");
+            statement.setInt(1, plate.getId());
+            statement.execute();
+
+            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection);
+            connection.commit();
+            connection.releaseSavepoint(savepoint);
+        }
+        catch(SQLException ex) {
+            connection.rollback(savepoint);
+            throw ex;
+        } finally {
+            connection.setAutoCommit(true);
+        }
     }
 
     private static class BlockingDialog extends JDialog {
