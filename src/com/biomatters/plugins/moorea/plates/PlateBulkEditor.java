@@ -1,0 +1,400 @@
+package com.biomatters.plugins.moorea.plates;
+
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
+import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.Workflow;
+import com.biomatters.plugins.moorea.reaction.Reaction;
+
+import javax.swing.*;
+import javax.swing.event.ChangeListener;
+import javax.swing.text.Caret;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.AdjustmentListener;
+import java.awt.event.AdjustmentEvent;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.prefs.Preferences;
+import java.sql.SQLException;
+
+/**
+ * @author Steven Stones-Havas
+ * @version $Id$
+ *          <p/>
+ *          Created on 17/06/2009 12:39:03 PM
+ */
+public class PlateBulkEditor {
+    public enum Direction {
+        ACROSS_AND_DOWN,
+        DOWN_AND_ACROSS
+    }
+
+    public static void editPlate(final Plate p, JComponent owner) {
+        JPanel platePanel = new JPanel();
+        final AtomicReference<Direction> direction = new AtomicReference<Direction>(Direction.ACROSS_AND_DOWN);
+        platePanel.setLayout(new BoxLayout(platePanel, BoxLayout.X_AXIS));
+        List<DocumentField> defaultFields = getDefaultFields(p);
+        final List<DocumentFieldEditor> editors = new ArrayList<DocumentFieldEditor>();
+        final AtomicBoolean isAdjusting = new AtomicBoolean(false);
+        AdjustmentListener listener = new AdjustmentListener(){
+            public void adjustmentValueChanged(AdjustmentEvent e) {
+                if(isAdjusting.get()) {
+                    return;
+                }
+                isAdjusting.set(true);
+                for(DocumentFieldEditor editor : editors) {
+                    editor.setScrollPosition(e.getValue());
+                }
+                isAdjusting.set(false);
+            }
+        };
+        for(DocumentField field : defaultFields) {
+            DocumentFieldEditor editor = new DocumentFieldEditor(field, p, direction.get());
+            editor.addScrollListener(listener);
+            editors.add(editor);
+            platePanel.add(editor);
+        }
+
+        final DocumentField workflowField = getWorkflowField(p);
+        final DocumentField fieldToCheck = getFieldToCheck(p);
+
+        GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(PlateBulkEditor.class), false, true);
+        toolbar.addAction(new GeneiousAction("Swap Direction"){
+            public void actionPerformed(ActionEvent e) {
+                Direction newDirection;
+                switch(direction.get()) {
+                    case ACROSS_AND_DOWN:
+                        direction.set(Direction.DOWN_AND_ACROSS);
+                        break;
+                    case DOWN_AND_ACROSS:
+                        direction.set(Direction.ACROSS_AND_DOWN);
+                        break;
+                }
+                for(DocumentFieldEditor editor : editors) {
+                    editor.setDirection(direction.get());
+                }
+            }
+        });
+        toolbar.addAction(new GeneiousAction("Autodetect workflows"){
+            public void actionPerformed(ActionEvent e) {
+                List<String> idsToCheck = new ArrayList<String>();
+                if(fieldToCheck == null) {
+                    Dialogs.showMessageDialog("Could not autodetect workflows for this plate - plate type unknown!");
+                }
+                DocumentFieldEditor editorToCheck = null;
+                for(DocumentFieldEditor editor : editors) {
+                    if(editor.getField().getCode().equals(fieldToCheck.getCode())){
+                        editorToCheck = editor;
+                    }
+                }
+                if(editorToCheck == null) {
+                    Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the id field!");
+                }
+                DocumentFieldEditor workflowEditor = null;
+                for(DocumentFieldEditor editor : editors) {
+                    if(editor.getField().getCode().equals(workflowField.getCode())){
+                        workflowEditor = editor;
+                    }
+                }
+                if(workflowEditor == null) {
+                    Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the workflow field!");
+                }
+                editorToCheck.valuesFromTextView();
+                for(int row=0; row < p.getRows(); row++) {
+                    for(int col=0; col < p.getCols(); col++) {
+                        Object value = editorToCheck.getValue(row, col);
+                        if(value != null && value.toString().length() > 0) {
+                            idsToCheck.add(value.toString());
+                        }
+                    }
+                }
+                try {
+                    Map<String, Workflow> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflows(idsToCheck, p.getReactionType());
+                    for(int row=0; row < p.getRows(); row++) {
+                        for(int col=0; col < p.getCols(); col++) {
+                            Object value = editorToCheck.getValue(row, col);
+                            if(value != null && value.toString().length() > 0) {
+                                Workflow workflowValue = idToWorkflow.get(value.toString());
+                                if(workflowValue != null) {
+                                    workflowEditor.setValue(row, col, workflowValue.getName());
+                                }
+                            }
+                        }
+                    }
+                    workflowEditor.textViewFromValues();
+                } catch (SQLException e1) {
+                    Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                }
+
+            }
+        });
+        JPanel holderPanel = new JPanel(new BorderLayout());
+        holderPanel.add(platePanel, BorderLayout.CENTER);
+        holderPanel.add(toolbar, BorderLayout.NORTH);
+        Dialogs.showDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Edit Plate", owner), holderPanel);
+
+        for(DocumentFieldEditor editor : editors) {
+            editor.valuesFromTextView();
+        }
+
+        List<String> workflowIds = new ArrayList<String>();
+
+        //get the workflows out of the database (mainly to check for validity in what the user's entered)
+        for(DocumentFieldEditor editor : editors) {
+            if(editor.getField().getCode().equals(workflowField.getCode())) {
+                for(int row = 0; row < p.getRows(); row++) {
+                    for(int col = 0; col < p.getCols(); col++) {
+                        if(editor.getValue(row, col) != null && editor.getValue(row, col).toString().length() > 0) {
+                            workflowIds.add(editor.getValue(row, col).toString());
+                        }
+                    }
+                }
+            }
+        }
+
+        Map<String, Workflow> workflows = null;
+        try {
+            workflows = MooreaLabBenchService.getInstance().getWorkflows(workflowIds);
+        } catch (SQLException e) {
+            Dialogs.showMessageDialog("Could not get the workflows from the database: "+e.getMessage());
+        }
+
+        //put the values back in the reactions
+        StringBuilder badWorkflows = new StringBuilder();
+        for(int row=0; row < p.getRows(); row++) {
+            for(int col=0; col < p.getCols(); col++) {
+                Reaction reaction = p.getReaction(row, col);
+                Options options = reaction.getOptions();
+
+
+                for(DocumentFieldEditor editor : editors) {
+                    Object value = editor.getValue(row, col);
+                    if(value != null) {
+                        if(editor.getField().getCode().equals(workflowField.getCode())) {
+                            Workflow workflow = workflows.get(value);
+                            if(workflow == null) {
+                                badWorkflows.append(value+"\n");
+                            }
+                            else {
+                                reaction.setWorkflow(workflow);
+                            }
+                        }
+                        else {
+                            if(options.getOption(editor.getField().getCode()) != null) {
+                                options.setValue(editor.getField().getCode(), editor.getValue(row, col));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if(badWorkflows.length() > 0) {
+            Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
+        }
+    }
+
+    private static List<DocumentField> getDefaultFields(Plate p) {
+        switch(p.getReactionType()) {
+            case Extraction:
+                return Arrays.asList(
+                    new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
+                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                );
+            default :
+                return Collections.EMPTY_LIST;
+        }
+    }
+
+    private static DocumentField getFieldToCheck(Plate p) {
+        switch(p.getReactionType()) {
+            case Extraction:
+                return new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+            default :
+                return null;
+        }
+    }
+
+    private static DocumentField getWorkflowField(Plate p) {
+        switch(p.getReactionType()) {
+            default :
+                return new DocumentField("Workflow Id", "", "workflowId", String.class, false, false);
+        }
+    }
+
+
+
+    static class DocumentFieldEditor extends JPanel {
+        private DocumentField field;
+        private Plate plate;
+        private String[][] values;
+        Direction direction;
+        private JTextArea lineNumbers;
+        private JTextArea valueArea;
+        private JScrollPane scroller;
+
+        public DocumentFieldEditor(DocumentField field, Plate plate, Direction direction){
+            this.field = field;
+            this.plate = plate;
+            this.direction = direction;
+            values = new String[plate.getRows()][plate.getCols()];
+            for(int row = 0; row < plate.getRows(); row++) {
+                for(int col = 0; col < plate.getCols(); col++) {
+                    Object value = plate.getReaction(row, col).getFieldValue(field.getCode());
+                    values[row][col] = value != null ? value.toString() : "";
+                }
+            }
+            valueArea = new JTextArea();
+            lineNumbers = new JTextArea() {
+                @Override
+                public Dimension getPreferredSize() {
+                    return new Dimension(30, valueArea.getPreferredSize().height);
+                }
+            };
+            lineNumbers.setEditable(false);
+            lineNumbers.setCaret(new Caret(){//disable selections and cursor setting on the line numbers
+                public void install(javax.swing.text.JTextComponent c){}
+                public void deinstall(javax.swing.text.JTextComponent c){}
+                public void paint(Graphics g){}
+                public void addChangeListener(ChangeListener l){}
+                public void removeChangeListener(ChangeListener l){}
+                public boolean isVisible(){return false;}
+                public void setVisible(boolean v){}
+                public boolean isSelectionVisible(){return false;}
+                public void setSelectionVisible(boolean v){}
+                public void setMagicCaretPosition(Point p){}
+                public Point getMagicCaretPosition(){return new Point(0,0);}
+                public void setBlinkRate(int rate){}
+                public int getBlinkRate(){return 10000;}
+                public int getDot(){return 0;}
+                public int getMark(){return 0;}
+                public void setDot(int dot){}
+                public void moveDot(int dot){}
+            });
+            lineNumbers.setBackground(new Color(225,225,225));
+            scroller = new JScrollPane(valueArea);
+            scroller.setRowHeaderView(lineNumbers);
+            textViewFromValues();
+            setLayout(new BorderLayout());
+            add(scroller, BorderLayout.CENTER);
+            add(new JLabel(field.getName()), BorderLayout.NORTH);
+        }
+
+        public void textViewFromValues() {
+            StringBuilder valuesBuilder = new StringBuilder();
+            StringBuilder lineNumbersBuilder = new StringBuilder();
+            if(direction == Direction.ACROSS_AND_DOWN) {
+                for(int row = 0; row < plate.getRows(); row++) {
+                    for(int col = 0; col < plate.getCols(); col++) {
+                        valuesBuilder.append(values[row][col]+"\n");
+                        lineNumbersBuilder.append(plate.getWellName(row, col)+"\n");
+                    }
+                }
+            }
+            else {
+                for(int col = 0; col < plate.getCols(); col++) {
+                    for(int row = 0; row < plate.getRows(); row++) {
+                        valuesBuilder.append(values[row][col]+"\n");
+                        lineNumbersBuilder.append(plate.getWellName(row, col)+"\n");
+                    }
+                }
+            }
+
+            valueArea.setText(valuesBuilder.toString());
+            lineNumbers.setText(lineNumbersBuilder.toString());
+        }
+
+        public DocumentField getField() {
+            return field;
+        }
+
+        public void valuesFromTextView() {
+            String[] stringValues = valueArea.getText().split("\n");
+            int index = 0;
+            if(direction == Direction.ACROSS_AND_DOWN) {
+                for(int row = 0; row < plate.getRows(); row++) {
+                    for(int col = 0; col < plate.getCols(); col++) {
+                        String value;
+                        if(index >= stringValues.length)
+                            value = "";
+                        else
+                            value = stringValues[index];
+                        values[row][col] = value;
+                        index++;
+                    }
+                }
+            }
+            else {
+                for(int col = 0; col < plate.getCols(); col++) {
+                    for(int row = 0; row < plate.getRows(); row++) {
+                        String value;
+                        if(index >= stringValues.length)
+                            value = "";
+                        else
+                            value = stringValues[index];
+                        values[row][col] = value;
+                        index++;
+                    }
+                }
+            }
+        }
+
+        public void setDirection(Direction dir) {
+            if(dir != direction) {
+                valuesFromTextView();
+                direction = dir;
+                textViewFromValues();
+                repaint();
+            }
+        }
+
+        public Object getValue(int row, int col) throws IllegalStateException{
+            String stringValue = values[row][col];
+            if(stringValue.trim().length() == 0) {
+                return null;
+            }
+            if(Integer.class.isAssignableFrom(field.getClass())) {
+                try{
+                    return Integer.parseInt(stringValue);
+                }
+                catch(NumberFormatException ex) {
+                    throw new IllegalStateException("Invalid value '"+stringValue+"' is invalid.  Expected an integer.");
+                }
+            }
+            else if(Double.class.isAssignableFrom(field.getClass())) {
+                try{
+                    return Double.parseDouble(stringValue);
+                }
+                catch(NumberFormatException ex) {
+                    throw new IllegalStateException("Invalid value '"+stringValue+"' is invalid.  Expected a floating point number.");
+                }
+            }
+            else {
+                return stringValue;
+            }
+        }
+
+        public void setValue(int row, int col, String value) {
+            values[row][col] = value;
+        }
+
+        public int getScrollPosition() {
+            return scroller.getVerticalScrollBar().getValue();
+        }
+
+        public void setScrollPosition(int position) {
+            scroller.getVerticalScrollBar().setValue(position);
+        }
+
+        public void addScrollListener(AdjustmentListener al) {
+            scroller.getVerticalScrollBar().addAdjustmentListener(al);
+        }
+    }
+}

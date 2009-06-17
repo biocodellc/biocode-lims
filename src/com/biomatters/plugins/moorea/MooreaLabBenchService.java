@@ -654,6 +654,62 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
+    public Map<String, Workflow> getWorkflows(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{
+        StringBuilder sqlBuilder = new StringBuilder();
+        switch(reactionType) {
+            case Extraction:
+                sqlBuilder.append("SELECT extraction.sampleId AS id, workflow.name AS workflow, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.id = extraction.workflow AND (");
+                for (int i = 0; i < idsToCheck.size(); i++) {
+                    sqlBuilder.append("extraction.sampleId = ? ");
+                    if(i < idsToCheck.size()-1) {
+                        sqlBuilder.append("OR ");
+                    }
+                }
+                sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
+                break;
+            case PCR:
+                throw new RuntimeException("Not Implemented");
+            case CycleSequencing:
+                throw new RuntimeException("Not Implemented");
+            default:
+                break;
+        }
+        System.out.println(sqlBuilder.toString());
+        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sqlBuilder.toString());
+        for (int i = 0; i < idsToCheck.size(); i++) {
+            statement.setString(i+1, idsToCheck.get(i));
+        }
+        ResultSet results = statement.executeQuery();
+        Map<String, Workflow> result = new HashMap<String, Workflow>();
+
+        while(results.next()) {
+            result.put(results.getString("id"), new Workflow(results.getInt("workflowId"), results.getString("workflow")));
+        }
+        return result;
+    }
+
+    public Map<String, Workflow> getWorkflows(List<String> workflowIds) throws SQLException{
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId FROM workflow WHERE ");
+        for(int i=0; i < workflowIds.size(); i++) {
+            sqlBuilder.append("workflow.name = ? ");
+            if(i < workflowIds.size()-1) {
+                sqlBuilder.append("OR ");
+            }
+        }
+        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sqlBuilder.toString());
+        for (int i = 0; i < workflowIds.size(); i++) {
+            statement.setString(i+1, workflowIds.get(i));
+        }
+        ResultSet results = statement.executeQuery();
+        Map<String, Workflow> result = new HashMap<String, Workflow>();
+
+        while(results.next()) {
+            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow")));
+        }
+        return result;
+    }
+
     private static class BlockingDialog extends JDialog {
         private String message;
         private JLabel label;

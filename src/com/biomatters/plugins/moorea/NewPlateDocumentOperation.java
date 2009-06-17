@@ -58,7 +58,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         options.addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
         Options.RadioOption<Options.OptionValue> plateOption = options.addRadioOption("plateType", "", plateValues, plateValues[2], Options.Alignment.VERTICAL_ALIGN);
 
-        Options.IntegerOption reactionNumber = options.addIntegerOption("reactionNumber", "Number of reactions", 1, 1, 47);
+        Options.IntegerOption reactionNumber = options.addIntegerOption("reactionNumber", "Number of reactions", 1, 1, 26);
 
         plateOption.addDependent(plateValues[0], reactionNumber, true);
 
@@ -93,8 +93,13 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             size = Plate.Size.w384;
         }
 
-
-        PlateViewer plateViewer = new PlateViewer(size, type);
+        PlateViewer plateViewer;
+        if(size != null) {
+            plateViewer = new PlateViewer(size, type);
+        }
+        else {
+            plateViewer = new PlateViewer((Integer)options.getValue("reactionNumber"), type);
+        }
         plateViewer.displayInFrame(true);
 
         return null;

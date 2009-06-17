@@ -122,6 +122,13 @@ public class PlateViewer extends JPanel {
 
         toolbar.addSeparator(new Dimension(1, 24));
 
+        final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells") {
+            public void actionPerformed(ActionEvent e) {
+                PlateBulkEditor.editPlate(plateView.getPlate(), selfReference);
+            }
+        };
+        toolbar.add(bulkEditAction);
+
         final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
             public void actionPerformed(ActionEvent e) {
                 plateView.editReactions(plateView.getSelectedReactions());

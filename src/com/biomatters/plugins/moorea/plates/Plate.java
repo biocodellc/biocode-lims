@@ -107,7 +107,7 @@ public class Plate {
                 reaction.setPlate(id);
                 reaction.setPosition(index);
                 if(type != null) {
-                    reaction.setLocationString(""+(char)(65+i)+(1+j));
+                    reaction.setLocationString(getWellName(i,j));
                 }
                 Dimension preferredSize = reaction.getPreferredSize();
                 reaction.setBounds(new Rectangle(1+(preferredSize.width+1)*j, 1+(preferredSize.height+1)*i, preferredSize.width, preferredSize.height));
@@ -115,6 +115,14 @@ public class Plate {
                 reactions[index] = reaction;
             }
         }
+    }
+
+    public Reaction getReaction(int row, int col) {
+        return reactions[cols * row + col];    
+    }
+
+    public String getWellName(int row, int col) {
+        return ""+(char)(65+row)+(1+col);
     }
 
     public PreparedStatement toSQL(Connection connection) throws SQLException{
