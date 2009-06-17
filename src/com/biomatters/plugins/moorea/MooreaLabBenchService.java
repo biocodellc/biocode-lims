@@ -566,12 +566,15 @@ public class MooreaLabBenchService extends DatabaseService {
             connection.setAutoCommit(false);
             PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow VALUES ()");
             PreparedStatement statement2 = connection.prepareStatement("SELECT last_insert_id()");
+            PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = CONCAT('workflow', id) WHERE id=?");
             for(int i=0; i < numberOfWorkflows; i++) {
                 statement.execute();
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
                 workflows.add(new Workflow(workflowId, "workflow"+workflowId));
+                statement3.setInt(1, workflowId);
+                statement3.execute();
             }
             connection.commit();
             connection.setAutoCommit(true);
