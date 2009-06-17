@@ -668,7 +668,15 @@ public class MooreaLabBenchService extends DatabaseService {
                 sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
                 break;
             case PCR:
-                throw new RuntimeException("Not Implemented");
+                sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.id = extraction.workflow AND (");
+                for (int i = 0; i < idsToCheck.size(); i++) {
+                    sqlBuilder.append("extraction.extractionId = ? ");
+                    if(i < idsToCheck.size()-1) {
+                        sqlBuilder.append("OR ");
+                    }
+                }
+                sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
+                break;
             case CycleSequencing:
                 throw new RuntimeException("Not Implemented");
             default:

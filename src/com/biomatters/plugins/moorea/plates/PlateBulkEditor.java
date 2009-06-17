@@ -67,7 +67,6 @@ public class PlateBulkEditor {
         GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(PlateBulkEditor.class), false, true);
         toolbar.addAction(new GeneiousAction("Swap Direction"){
             public void actionPerformed(ActionEvent e) {
-                Direction newDirection;
                 switch(direction.get()) {
                     case ACROSS_AND_DOWN:
                         direction.set(Direction.DOWN_AND_ACROSS);
@@ -86,6 +85,7 @@ public class PlateBulkEditor {
                 List<String> idsToCheck = new ArrayList<String>();
                 if(fieldToCheck == null) {
                     Dialogs.showMessageDialog("Could not autodetect workflows for this plate - plate type unknown!");
+                    return;
                 }
                 DocumentFieldEditor editorToCheck = null;
                 for(DocumentFieldEditor editor : editors) {
@@ -95,6 +95,7 @@ public class PlateBulkEditor {
                 }
                 if(editorToCheck == null) {
                     Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the id field!");
+                    return;
                 }
                 DocumentFieldEditor workflowEditor = null;
                 for(DocumentFieldEditor editor : editors) {
@@ -104,6 +105,7 @@ public class PlateBulkEditor {
                 }
                 if(workflowEditor == null) {
                     Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the workflow field!");
+                    return;
                 }
                 editorToCheck.valuesFromTextView();
                 for(int row=0; row < p.getRows(); row++) {
@@ -130,6 +132,7 @@ public class PlateBulkEditor {
                     workflowEditor.textViewFromValues();
                 } catch (SQLException e1) {
                     Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                    return;
                 }
 
             }
@@ -185,10 +188,8 @@ public class PlateBulkEditor {
                                 reaction.setWorkflow(workflow);
                             }
                         }
-                        else {
-                            if(options.getOption(editor.getField().getCode()) != null) {
-                                options.setValue(editor.getField().getCode(), editor.getValue(row, col));
-                            }
+                        if(options.getOption(editor.getField().getCode()) != null) {
+                            options.setValue(editor.getField().getCode(), editor.getValue(row, col));
                         }
                     }
                 }
@@ -208,6 +209,12 @@ public class PlateBulkEditor {
                     new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
                     new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
                 );
+            case PCR://drop through
+            case CycleSequencing:
+                return Arrays.asList(
+                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                );
             default :
                 return Collections.EMPTY_LIST;
         }
@@ -217,6 +224,9 @@ public class PlateBulkEditor {
         switch(p.getReactionType()) {
             case Extraction:
                 return new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+            case PCR:
+            case CycleSequencing:
+                return new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
             default :
                 return null;
         }

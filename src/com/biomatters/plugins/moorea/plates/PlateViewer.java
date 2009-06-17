@@ -22,6 +22,8 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Map;
 import java.sql.SQLException;
 
 /**
@@ -199,6 +201,32 @@ public class PlateViewer extends JPanel {
 
 
                         try {
+                            //set workflows for reactions that have id's
+                            List<String> workflowIdStrings = new ArrayList<String>();
+                            for(Reaction reaction : plate.getReactions()) {
+                                Object workflowId = reaction.getFieldValue("workflowId");
+                                if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0) {
+                                    if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
+                                        continue;
+                                    }
+                                    else {
+                                        reaction.setWorkflow(null);
+                                        workflowIdStrings.add(workflowId.toString());
+                                    }
+                                }
+                            }
+
+                            if(workflowIdStrings.size() > 0) {
+                                Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
+                                for(Reaction reaction : plate.getReactions()) {
+                                    Object workflowId = reaction.getFieldValue("workflowId");
+                                    if(reaction.getWorkflow() == null){
+                                        reaction.setWorkflow(map.get(workflowId));
+                                    }
+                                }
+                            }
+
+
                             //create workflows if necessary
                             int workflowCount = 0;
                             for(Reaction reaction : plate.getReactions()) {

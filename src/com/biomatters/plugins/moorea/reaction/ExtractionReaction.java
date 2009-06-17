@@ -28,6 +28,7 @@ public class ExtractionReaction extends Reaction{
             options = new Options(this.getClass());
             options.addStringOption("sampleId", "Tissue Sample Id", "");
             options.addStringOption("extractionId", "Extraction Id", "");
+            options.addStringOption("workflowId", "Workflow ID", "");
             options.addStringOption("extractionMethod", "Extraction Method", "");
             options.addStringOption("parentExtraction", "Parent Extraction Id", "", "You may leave this field blank");
             options.addIntegerOption("dilution", "Dilution 1/", 5, 0, Integer.MAX_VALUE);
