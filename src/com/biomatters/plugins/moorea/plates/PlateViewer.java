@@ -196,69 +196,81 @@ public class PlateViewer extends JPanel {
                 });
                 okButton.addActionListener(new ActionListener(){
                     public void actionPerformed(ActionEvent e) {
-                        frame.setVisible(false);
-                        Plate plate = plateView.getPlate();
+                        final Plate plate = plateView.getPlate();
 
+                        final MooreaLabBenchService.BlockingDialog progress = new MooreaLabBenchService.BlockingDialog("Creating your plate", frame);
 
-                        try {
-                            //set workflows for reactions that have id's
-                            List<String> workflowIdStrings = new ArrayList<String>();
-                            for(Reaction reaction : plate.getReactions()) {
-                                Object workflowId = reaction.getFieldValue("workflowId");
-                                if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0) {
-                                    if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
-                                        continue;
+                        Runnable runnable = new Runnable() {
+                            public void run() {
+                                try {
+                                    progress.setMessage("Retrieving existing workflows");
+
+                                    //set workflows for reactions that have id's
+                                    List<String> workflowIdStrings = new ArrayList<String>();
+                                    for(Reaction reaction : plate.getReactions()) {
+                                        Object workflowId = reaction.getFieldValue("workflowId");
+                                        if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0) {
+                                            if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
+                                                continue;
+                                            }
+                                            else {
+                                                reaction.setWorkflow(null);
+                                                workflowIdStrings.add(workflowId.toString());
+                                            }
+                                        }
+                                    }
+
+                                    if(workflowIdStrings.size() > 0) {
+                                        Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
+                                        for(Reaction reaction : plate.getReactions()) {
+                                            Object workflowId = reaction.getFieldValue("workflowId");
+                                            if(reaction.getWorkflow() == null){
+                                                reaction.setWorkflow(map.get(workflowId));
+                                            }
+                                        }
+                                    }
+
+                                    progress.setMessage("Creating new workflows");
+
+                                    //create workflows if necessary
+                                    int workflowCount = 0;
+                                    for(Reaction reaction : plate.getReactions()) {
+                                        if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                                            workflowCount++;
+                                        }
+                                    }
+                                    if(workflowCount > 0) {
+                                        List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(workflowCount, progress);
+                                        int workflowIndex = 0;
+                                        for(Reaction reaction : plate.getReactions()) {
+                                            if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                                                reaction.setWorkflow(workflowList.get(workflowIndex));
+                                                workflowIndex++;
+                                            }
+                                        }
+                                    }
+
+                                    progress.setMessage("Creating the plate");
+
+                                    if(plate.getId() < 0) { //we need to create the plate
+                                        MooreaLabBenchService.getInstance().createPlate(plate, progress);
                                     }
                                     else {
-                                        reaction.setWorkflow(null);
-                                        workflowIdStrings.add(workflowId.toString());
+                                        MooreaLabBenchService.getInstance().updatePlate(plate, progress);
                                     }
+
                                 }
-                            }
-
-                            if(workflowIdStrings.size() > 0) {
-                                Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
-                                for(Reaction reaction : plate.getReactions()) {
-                                    Object workflowId = reaction.getFieldValue("workflowId");
-                                    if(reaction.getWorkflow() == null){
-                                        reaction.setWorkflow(map.get(workflowId));
-                                    }
+                                catch(SQLException ex){
+                                    Dialogs.showMessageDialog("There was an error saving your plate: "+ex.getMessage());
+                                    progress.setVisible(false);
+                                    return;
                                 }
+                                progress.setVisible(false);
+                                frame.dispose();
                             }
-
-
-                            //create workflows if necessary
-                            int workflowCount = 0;
-                            for(Reaction reaction : plate.getReactions()) {
-                                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                                    workflowCount++;
-                                }
-                            }
-                            if(workflowCount > 0) {
-                                List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(workflowCount);
-                                int workflowIndex = 0;
-                                for(Reaction reaction : plate.getReactions()) {
-                                    if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                                        reaction.setWorkflow(workflowList.get(workflowIndex));
-                                        workflowIndex++;
-                                    }
-                                }
-                            }
-
-
-                            if(plate.getId() < 0) { //we need to create the plate
-                                MooreaLabBenchService.getInstance().createPlate(plate);
-                            }
-                            else {
-                                MooreaLabBenchService.getInstance().updatePlate(plate);
-                            }
-
-                        }
-                        catch(SQLException ex){
-                            Dialogs.showMessageDialog("There was an error saving your plate: "+ex.getMessage());
-                            frame.setVisible(true);
-                        }
-                        frame.dispose();
+                        };
+                        new Thread(runnable, "Moorea plate creation thread").start();
+                        progress.setVisible(true);
                     }
                 });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);

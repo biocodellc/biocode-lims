@@ -14,6 +14,7 @@ import java.awt.geom.AffineTransform;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -33,6 +34,7 @@ public abstract class Reaction {
     private int position;
     protected boolean isError = false;
     protected FimsSample fimsSample = null;
+    protected Date date = new Date();
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -64,6 +66,8 @@ public abstract class Reaction {
     public Reaction() {
         setFieldsToDisplay(getDefaultDisplayedFields());
     }
+
+    public abstract Type getType();
 
 
     public void setSelected(boolean selected) {
@@ -267,23 +271,32 @@ public abstract class Reaction {
         this.workflow = workflow;
     }
 
-    public static void saveReactions(Reaction[] reactions, Type type, Connection connection) throws IllegalStateException, SQLException {
+    public Date getDate() {
+        return date;
+    }
+
+    public static void saveReactions(Reaction[] reactions, Type type, Connection connection, MooreaLabBenchService.BlockingDialog progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
                 String sql = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, workflow) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement statement = connection.prepareStatement(sql);
-                for(Reaction reaction : reactions) {
+                statement.addBatch();
+                for (int i = 0; i < reactions.length; i++) {
+                    Reaction reaction = reactions[i];
+                    if(progress != null) {
+                        progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                    }
                     if (!reaction.isEmpty() && reaction.plate >= 0) {
                         Options options = reaction.getOptions();
                         statement.setString(1, options.getValueAsString("extractionMethod"));
-                        statement.setInt(2, (Integer)options.getValue("volume"));
-                        statement.setInt(3, (Integer)options.getValue("dilution"));
+                        statement.setInt(2, (Integer) options.getValue("volume"));
+                        statement.setInt(3, (Integer) options.getValue("dilution"));
                         statement.setString(4, options.getValueAsString("parentExtraction"));
                         statement.setString(5, options.getValueAsString("sampleId"));
                         statement.setString(6, options.getValueAsString("extractionId"));
                         statement.setInt(7, reaction.getPlate());
-                        if(reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
-                            throw new SQLException("The reaction "+reaction.getId()+" does not have a workflow set.");
+                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
                         }
                         statement.setInt(8, reaction.getWorkflow().getId());
                         statement.execute();

@@ -119,6 +119,10 @@ public class PCRReaction extends Reaction {
         return options;
     }
 
+    public Type getType() {
+        return Type.PCR;
+    }
+
     public List<DocumentField> getDefaultDisplayedFields() {
         return Arrays.asList(new DocumentField[] {
                 new DocumentField("Tissue ID", "", "tissueId", String.class, true, false),

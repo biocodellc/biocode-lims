@@ -1,10 +1,13 @@
 package com.biomatters.plugins.moorea.lims;
 
 import com.biomatters.plugins.moorea.*;
+import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 
 import java.sql.*;
 import java.util.Properties;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -93,6 +96,32 @@ public class LIMSConnection {
 
     public Connection getConnection() {
         return connection;
+    }
+
+    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query) {
+        String sql = "";
+        return null;
+    }
+
+    public List<PlateDocument> getMatchingPlateDocuments(Query query) {
+        return null;
+    }
+
+//    private List<Workflow> getMatchingWorkflows(Query query) {
+//        String sql = "";
+//    }
+
+    private List<Integer> getMatchingPlates(Query query) {
+        String sql = "";
+        return null;
+    }
+
+    private List<Integer> getMatchingWorkflows(Query query) {
+        StringBuilder sql = new StringBuilder("SELECT workflow.id FROM workflow, extraction, pcr, cycleSequencing WHERE extraction.workflow = workflow.id AND pcr.workflow = workflow.id AND cycleSequenging.workflow = workflow.id AND (");
+
+
+        sql.append(")");
+        return null;
     }
 
 }

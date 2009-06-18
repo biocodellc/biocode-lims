@@ -38,6 +38,9 @@ public class ExtractionReaction extends Reaction{
         return options;
     }
 
+    public Type getType() {
+        return Type.Extraction;
+    }
 
     public List<DocumentField> getDefaultDisplayedFields() {
         return Collections.EMPTY_LIST;

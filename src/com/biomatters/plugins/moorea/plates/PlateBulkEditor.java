@@ -153,19 +153,20 @@ public class PlateBulkEditor {
             if(editor.getField().getCode().equals(workflowField.getCode())) {
                 for(int row = 0; row < p.getRows(); row++) {
                     for(int col = 0; col < p.getCols(); col++) {
-                        if(editor.getValue(row, col) != null && editor.getValue(row, col).toString().length() > 0) {
+                        if(editor.getValue(row, col) != null && editor.getValue(row, col).toString().trim().length() > 0) {
                             workflowIds.add(editor.getValue(row, col).toString());
                         }
                     }
                 }
             }
         }
-
         Map<String, Workflow> workflows = null;
-        try {
-            workflows = MooreaLabBenchService.getInstance().getWorkflows(workflowIds);
-        } catch (SQLException e) {
-            Dialogs.showMessageDialog("Could not get the workflows from the database: "+e.getMessage());
+        if(workflowIds.size() > 0) {
+            try {
+                workflows = MooreaLabBenchService.getInstance().getWorkflows(workflowIds);
+            } catch (SQLException e) {
+                Dialogs.showMessageDialog("Could not get the workflows from the database: "+e.getMessage());
+            }
         }
 
         //put the values back in the reactions
@@ -179,7 +180,7 @@ public class PlateBulkEditor {
                 for(DocumentFieldEditor editor : editors) {
                     Object value = editor.getValue(row, col);
                     if(value != null) {
-                        if(editor.getField().getCode().equals(workflowField.getCode())) {
+                        if(editor.getField().getCode().equals(workflowField.getCode()) && workflows != null) {
                             Workflow workflow = workflows.get(value);
                             if(workflow == null) {
                                 badWorkflows.append(value+"\n");
@@ -195,7 +196,6 @@ public class PlateBulkEditor {
                 }
             }
         }
-
         if(badWorkflows.length() > 0) {
             Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
         }

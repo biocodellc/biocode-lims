@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.GeneiousServiceListener;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -558,7 +557,7 @@ public class MooreaLabBenchService extends DatabaseService {
         return PCRCocktails;
     }
 
-    public List<Workflow> createWorkflows(int numberOfWorkflows) throws SQLException{
+    public List<Workflow> createWorkflows(int numberOfWorkflows, BlockingDialog progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
         Connection connection = limsConnection.getConnection();
         Savepoint savepoint = connection.setSavepoint();
@@ -568,13 +567,16 @@ public class MooreaLabBenchService extends DatabaseService {
             PreparedStatement statement2 = connection.prepareStatement("SELECT last_insert_id()");
             PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = CONCAT('workflow', id) WHERE id=?");
             for(int i=0; i < numberOfWorkflows; i++) {
+                if(progress != null) {
+                    progress.setMessage("Creating new workflow "+(i+1)+" of "+numberOfWorkflows);
+                }
                 statement.execute();
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
                 workflows.add(new Workflow(workflowId, "workflow"+workflowId));
-                statement3.setInt(1, workflowId);
-                statement3.execute();
+                //statement3.setInt(1, workflowId);
+                //statement3.execute();
             }
             connection.commit();
             connection.setAutoCommit(true);
@@ -588,7 +590,7 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
-    public void createPlate(Plate plate) throws SQLException{
+    public void createPlate(Plate plate, BlockingDialog progress) throws SQLException{
         Connection connection = limsConnection.getConnection();
         Savepoint savepoint = connection.setSavepoint();
         try {
@@ -605,19 +607,21 @@ public class MooreaLabBenchService extends DatabaseService {
                 image.toSql(connection).execute(); //todo: re-insert existing images or ignore them?
             }
 
-            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection);
+            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
             connection.commit();
             connection.releaseSavepoint(savepoint);
         }
         catch(SQLException ex) {
-            connection.rollback(savepoint);
+            try {
+                connection.rollback(savepoint);
+            } catch (SQLException e) {}
             throw ex;
         } finally {
             connection.setAutoCommit(true);
         }
     }
 
-    public void updatePlate(Plate plate) throws SQLException{
+    public void updatePlate(Plate plate, BlockingDialog progress) throws SQLException{
         if(plate.getId() < 0) {
             throw new IllegalArgumentException("You may only call updatePlate() on a plate which has been added to the database");
         }
@@ -645,7 +649,7 @@ public class MooreaLabBenchService extends DatabaseService {
             statement.setInt(1, plate.getId());
             statement.execute();
 
-            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection);
+            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
             connection.commit();
             connection.releaseSavepoint(savepoint);
         }
@@ -700,6 +704,9 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public Map<String, Workflow> getWorkflows(List<String> workflowIds) throws SQLException{
+        if(workflowIds.size() == 0) {
+            return Collections.EMPTY_MAP;
+        }
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId FROM workflow WHERE ");
         for(int i=0; i < workflowIds.size(); i++) {
@@ -721,7 +728,7 @@ public class MooreaLabBenchService extends DatabaseService {
         return result;
     }
 
-    private static class BlockingDialog extends JDialog {
+    public static class BlockingDialog extends JDialog {
         private String message;
         private JLabel label;
 
