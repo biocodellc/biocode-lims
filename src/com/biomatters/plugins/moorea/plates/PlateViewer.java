@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.Thermocycle;
 import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
@@ -16,10 +17,7 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.util.List;
 import java.util.Collections;
 import java.util.ArrayList;
@@ -54,6 +52,23 @@ public class PlateViewer extends JPanel {
         final JToolBar toolbar = new JToolBar();
         toolbar.setLayout(new FlowLayout(FlowLayout.LEFT));
         toolbar.setFloatable(false);
+
+        toolbar.add(new JLabel("Name:"));
+        final GTextField nameField = new GTextField(20);
+        nameField.addKeyListener(new KeyListener(){
+            public void keyTyped(KeyEvent e) {
+                plateView.getPlate().setName(nameField.getText());
+            }
+
+            public void keyPressed(KeyEvent e) {
+                //To change body of implemented methods use File | Settings | File Templates.
+            }
+
+            public void keyReleased(KeyEvent e) {
+                //To change body of implemented methods use File | Settings | File Templates.
+            }
+        });
+        toolbar.add(nameField);
 
         if (plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
             final DefaultComboBoxModel thermocycleModel = new DefaultComboBoxModel();

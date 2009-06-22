@@ -118,5 +118,9 @@ public class WorkflowDocument extends MuitiPartDocument {
         public ExtendedPrintable getExtendedPrintable() {
             return null;
         }
+
+        public boolean hasChanges() {
+            return false; //todo: implement
+        }
     }
 }

@@ -111,7 +111,7 @@ public class PlateBulkEditor {
                 for(int row=0; row < p.getRows(); row++) {
                     for(int col=0; col < p.getCols(); col++) {
                         Object value = editorToCheck.getValue(row, col);
-                        if(value != null && value.toString().length() > 0) {
+                        if(value != null && value.toString().trim().length() > 0) {
                             idsToCheck.add(value.toString());
                         }
                     }

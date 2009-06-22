@@ -21,6 +21,7 @@ public class Plate {
     private int id=-1;
     private int rows;
     private int cols;
+    private String name;
     private Reaction[] reactions;
     private Reaction.Type type;
     private Size plateSize;
@@ -126,8 +127,11 @@ public class Plate {
     }
 
     public PreparedStatement toSQL(Connection connection) throws SQLException{
+        if(name == null || name.trim().length() == 0) {
+            throw new SQLException("Plates cannot have empty names");
+        }
         PreparedStatement statement = connection.prepareStatement("INSERT INTO plate (name, size, type) VALUES (?, ?, ?)");
-        statement.setString(1, "plate1");
+        statement.setString(1, getName());
         statement.setInt(2, reactions.length);
         statement.setString(3, type.toString());
         return statement;
@@ -145,5 +149,13 @@ public class Plate {
         for(GelImage image : images) {
             image.setPlate(id);
         }
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

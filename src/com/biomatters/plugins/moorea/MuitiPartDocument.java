@@ -19,12 +19,23 @@ public abstract class MuitiPartDocument implements PluginDocument {
 
     public abstract Part getPart(int index);
 
+    public boolean hasChanges() {
+        for(int i=0; i < getNumberOfParts(); i++) {
+            if(getPart(i).hasChanges()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     public static abstract class Part extends JPanel {
 
         public abstract String getName();
 
         public abstract ExtendedPrintable getExtendedPrintable();
+
+        public abstract boolean hasChanges();
         
     }
 }

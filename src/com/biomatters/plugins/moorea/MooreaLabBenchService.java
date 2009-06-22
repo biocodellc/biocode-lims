@@ -662,6 +662,9 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public Map<String, Workflow> getWorkflows(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{
+        if(idsToCheck.size() == 0) {
+            return Collections.EMPTY_MAP;
+        }
         StringBuilder sqlBuilder = new StringBuilder();
         switch(reactionType) {
             case Extraction:
