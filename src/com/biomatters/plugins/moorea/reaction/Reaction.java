@@ -1,6 +1,8 @@
 package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
@@ -19,6 +21,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+import org.jdom.Element;
+
 /**
  * Created by IntelliJ IDEA.
  * User: steve
@@ -26,7 +30,7 @@ import java.sql.SQLException;
  * Time: 9:10:17 AM <br>
  * Represents a single reaction (ie a well on a plate)
  */
-public abstract class Reaction {
+public abstract class Reaction implements XMLSerializable{
     private boolean selected;
     private int id=-1;
     private int plate;
@@ -304,7 +308,46 @@ public abstract class Reaction {
                 }
                 break;
             case PCR:
-                throw new RuntimeException("Not Implemented");
+                sql = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                statement = connection.prepareStatement(sql);
+                for (int i = 0; i < reactions.length; i++) {
+                    Reaction reaction = reactions[i];
+                    if(progress != null) {
+                        progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                    }
+                    if (!reaction.isEmpty() && reaction.plate >= 0) {
+                        Options options = reaction.getOptions();
+                        Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
+                        if(!(value instanceof PCROptions.PrimerOptionValue)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+PCROptions.PrimerOptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());   
+                        }
+                        PCROptions.PrimerOptionValue primerOptionValue = (PCROptions.PrimerOptionValue) value;
+                        statement.setString(1, primerOptionValue.getLabel());
+                        statement.setString(2, primerOptionValue.getSequence());
+                        statement.setInt(3, (Integer)options.getValue("prAmount"));
+                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
+                        }
+                        statement.setInt(4, reaction.getWorkflow().getId());
+                        statement.setInt(5, reaction.getPlate());
+                        statement.setInt(6, reaction.getPosition());
+                        int cocktailId = -1;
+                        Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
+                        try {
+                            cocktailId = Integer.parseInt(cocktailValue.getName());
+                        }
+                        catch(NumberFormatException ex) {
+                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
+                        }
+                        if(cocktailId < 0) {
+                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                        }
+                        statement.setInt(7, cocktailId);
+                        statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        statement.execute();
+                    }
+                }
+                break;
             case CycleSequencing:
                 throw new RuntimeException("Not Implemented");
         }

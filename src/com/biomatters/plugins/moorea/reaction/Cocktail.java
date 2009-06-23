@@ -23,6 +23,8 @@ import java.awt.event.ActionEvent;
  */
 public abstract class Cocktail {
 
+    public abstract int getId();
+
     public abstract String getName();
 
     public abstract Options getOptions();
@@ -113,5 +115,4 @@ public abstract class Cocktail {
         sp.setRightComponent(component);
         sp.setDividerLocation(location);
     }
-
 }

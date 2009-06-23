@@ -8,8 +8,7 @@ import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
 
 import java.sql.*;
-import java.util.Properties;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -101,15 +100,15 @@ public class LIMSConnection {
     }
 
     public List<WorkflowDocument> getMatchingWorkflowDocuments(CompoundSearchQuery query, List<FimsSample> samples) throws SQLException{
-        StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN JOIN cycleSequencing ON cycleSequencing.workflow = workflow.id " +
+        StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cycleSequencing ON cycleSequencing.workflow = workflow.id " +
                 "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
                 "LEFT JOIN extraction ON extraction.workflow = workflow.id " +
-                "where ");
+                "WHERE ");
 
         if(samples != null && samples.size() > 0) {
-            sql.append("workflow.id = (SELECT extraction.workflow FROM extraction WHERE");
+            sql.append("(");
             for(int i=0; i < samples.size(); i++) {
-                sql.append(" sampleid=?");
+                sql.append(" extraction.sampleId=?");
                 if(i != samples.size()-1) {
                     sql.append(" OR");
                 }
@@ -187,7 +186,18 @@ public class LIMSConnection {
             }
         }
         ResultSet resultSet = statement.executeQuery(); //todo: this should have everything in it.  We need to split it up into the proper parts...
-        return null;
+        Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
+        while(resultSet.next()) {
+            int workflowId = resultSet.getInt("workflow.id");
+            if(workflowDocs.get(workflowId) != null) {
+                workflowDocs.get(workflowId).addRow(resultSet);    
+            }
+            else {
+                WorkflowDocument doc = new WorkflowDocument(resultSet);
+                workflowDocs.put(workflowId, doc);
+            }
+        }
+        return new ArrayList<WorkflowDocument>(workflowDocs.values());
     }
 
     public List<PlateDocument> getMatchingPlateDocuments(CompoundSearchQuery query, List<FimsSample> samples) {

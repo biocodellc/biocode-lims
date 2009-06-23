@@ -197,9 +197,10 @@ public class PlateView extends JPanel {
         try {
             options = XMLSerializer.clone(reactions.get(0).getOptions());
         } catch (XMLSerializationException e) {
-            assert false : e.getMessage(); //there's no way I can see that this would happen, so I'm making it an assert
-            e.printStackTrace();
-            options = reactions.get(0).getOptions();
+            //assert false : e.getMessage(); //there's no way I can see that this would happen, so I'm making it an assert
+            //e.printStackTrace();
+            //options = reactions.get(0).getOptions();
+            throw new RuntimeException(e);
         }
 
         //hack to copy the action listeners across

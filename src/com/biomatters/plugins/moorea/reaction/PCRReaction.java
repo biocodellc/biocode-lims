@@ -1,13 +1,20 @@
 package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.DocumentSearchCache;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentType;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.plugins.moorea.ButtonOption;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
+import com.biomatters.plugins.moorea.Workflow;
 import org.virion.jam.util.SimpleListener;
+import org.jdom.Element;
 
 import javax.swing.*;
 import java.awt.*;
@@ -16,6 +23,8 @@ import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -29,91 +38,34 @@ public class PCRReaction extends Reaction {
     private Options options;
 
     public PCRReaction() {
-        options = new Options(this.getClass());
-
-        //todo interface for user to pick the sample
-        options.addStringOption("extractionId", "Extraction ID", "");
-        options.addStringOption("workflowId", "Workflow ID", "");
-
-
-        Options.OptionValue[] passedValues = new Options.OptionValue[] {
-                new Options.OptionValue("none", "not run"),
-                new Options.OptionValue("passed", "passed"),
-                new Options.OptionValue("failed", "failed"),
-        };
-        options.addComboBoxOption("runStatus", "Reaction state", passedValues, passedValues[0]);
-
-        options.addLabel("");
-        options.beginAlignHorizontally("forward primer", false);
-        Options.OptionValue[] values = new Options.OptionValue[] {new Options.OptionValue("myPrimer1", "My Primer 1"), new Options.OptionValue("myPrimer2", "My Primer 2")};
-        options.addComboBoxOption("primer", "Primer", values, values[0]);
-        Options.IntegerOption primerOption = options.addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-        primerOption.setUnits("ul");
-        options.endAlignHorizontally();
-
-
-        List<Options.OptionValue> cocktails = new ArrayList<Options.OptionValue>();
-        for (int i = 0; i < new PCRCocktail().getAllCocktailsOfType().size(); i++) {
-            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
-            cocktails.add(new Options.OptionValue(""+i, cocktail.getName()));
-        }
-
-        options.addComboBoxOption("cocktail", "Reaction Cocktail",  cocktails, cocktails.get(0));
-
-        ButtonOption cocktailButton = new ButtonOption("cocktailEdit", "", "Edit Cocktails");
-        cocktailButton.setSpanningComponent(true);
-        options.addCustomOption(cocktailButton);
-        cocktailButton.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), null);
-                if(newCocktails.size() > 0) {
-                    Runnable runnable = new Runnable() {
-                        public void run() {
-                            try {
-                                MooreaLabBenchService.block("Adding Cocktails", options.getPanel());
-                                MooreaLabBenchService.getInstance().addNewPCRCocktails(newCocktails);
-                            } catch (final TransactionException e1) {
-                                Runnable runnable = new Runnable() {
-                                    public void run() {
-                                        Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", options.getPanel()), e1.getMessage());
-                                    }
-                                };
-                                ThreadUtilities.invokeNowOrLater(runnable);
-                            } finally {
-                                MooreaLabBenchService.unBlock();
-                            }
-                        }
-                    };
-                    new Thread(runnable).start();
-                }
-            }
-        });
-
-        final Options.Option<String, ? extends JComponent> labelOption = options.addLabel("Total Volume of Reaction: 0uL");
-
-        SimpleListener labelListener = new SimpleListener() {
-            public void objectChanged() {
-                int sum = 0;
-                for (Options.Option o : options.getOptions()) {
-                    if (o instanceof Options.IntegerOption) {
-                        sum += (Integer) o.getValue();
-                    }
-                }
-                labelOption.setValue("Total Volume of Reaction: " + sum + "uL");
-            }
-        };
-
-        for(Options.Option o : options.getOptions()) {
-            if(o instanceof Options.IntegerOption) {
-                o.addChangeListener(labelListener);
-            }
-        }
-        labelListener.objectChanged();
-
-
+        options = new PCROptions(this.getClass());
     }
 
+    public PCRReaction(ResultSet r, Workflow workflow) throws SQLException{
+        this();
+        setWorkflow(workflow);
+        setPlate(r.getInt("pcr.plate"));
+        Options options = getOptions();
+        options.setValue("extractionId", r.getString("pcr.extractionId"));
+        options.setValue("workflowId", r.getString("pcr.workflow"));
 
+        options.getOption("runStatus").getValueFromString(r.getString("pcr.progress"));
+
+        Options.ComboBoxOption primerOption = (Options.ComboBoxOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
+        String primerName = r.getString("pcr.prName");
+        PCROptions.PrimerOptionValue value = new PCROptions.PrimerOptionValue(primerName, primerName, r.getString("pcr.prSequence"));
+        primerOption.setValue(value);//todo: what if the user doesn't have the primer?
+        options.setValue("cocktail", r.getString("pcr.cocktail"));
+    }
+
+    public Element toXML() {
+        return new Element("PCRReaction");
+        //todo:
+    }
+
+    public void fromXML(Element element) throws XMLSerializationException {
+        //todo:
+    }
 
     public Options getOptions() {
         return options;

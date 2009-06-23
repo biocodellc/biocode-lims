@@ -17,10 +17,12 @@ import java.sql.SQLException;
  */
 public class PCRCocktail extends Cocktail{
 
+    int id = -1;
     private Options options;
 
     public PCRCocktail(ResultSet resultSet) throws SQLException{
         this();
+        id = resultSet.getInt("id");
         options.setValue("name", resultSet.getString("name"));
         options.setValue("ddh20", resultSet.getInt("ddH20"));
         options.setValue("buffer", resultSet.getInt("buffer"));
@@ -52,6 +54,10 @@ public class PCRCocktail extends Cocktail{
 
     public String getSQLString() {
         return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddh20")+", "+options.getValueAsString("buffer")+", "+options.getValueAsString("mg")+", "+options.getValueAsString("bsa")+", "+options.getValueAsString("dntp")+", "+options.getValueAsString("taq")+", '"+options.getValueAsString("notes")+"')";
+    }
+
+    public int getId() {
+        return id;
     }
 
     public PCRCocktail(String name) {

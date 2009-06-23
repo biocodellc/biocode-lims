@@ -3,15 +3,21 @@ package com.biomatters.plugins.moorea.reaction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
 import com.biomatters.plugins.moorea.ConnectionException;
+import com.biomatters.plugins.moorea.Workflow;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
 
 import java.util.*;
 import java.util.List;
 import java.awt.*;
+import java.sql.SQLException;
+import java.sql.ResultSet;
+
+import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
@@ -20,6 +26,20 @@ import java.awt.*;
  *          Created on 12/06/2009 5:27:29 PM
  */
 public class ExtractionReaction extends Reaction{
+
+    public ExtractionReaction(){}
+
+    public ExtractionReaction(ResultSet r, Workflow workflow) throws SQLException{
+        Options options = getOptions();
+        setWorkflow(workflow);
+        options.setValue("sampleId", r.getString("extraction.sampleId"));
+        options.setValue("extractionId", r.getString("extraction.extractionId"));
+        options.setValue("workflow", workflow.getName());
+        options.setValue("extractionMethod", r.getString("extraction.method"));
+        options.setValue("parentExtraction", r.getString("extraction.parent"));
+        options.setValue("dilution", r.getInt("extraction.dilution"));
+        setPlate(r.getInt("extraction.plate"));
+    }
 
     private Options options;
 
@@ -49,6 +69,15 @@ public class ExtractionReaction extends Reaction{
 
     public Color _getBackgroundColor() {
         return Color.white;
+    }
+
+    public Element toXML() {
+        return new Element("ExtractionReaction");
+        //todo:
+    }
+
+    public void fromXML(Element element) throws XMLSerializationException {
+        //todo:
     }
 
     public String areReactionsValid(List<Reaction> reactions) {

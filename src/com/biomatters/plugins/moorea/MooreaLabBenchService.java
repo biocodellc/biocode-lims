@@ -370,8 +370,14 @@ public class MooreaLabBenchService extends DatabaseService {
                 callback.add(doc, Collections.EMPTY_MAP);
             }
         }
-
-
+        try {
+            List<WorkflowDocument> list = limsConnection.getMatchingWorkflowDocuments((CompoundSearchQuery) Query.Factory.createAndQuery(new Query[0], Collections.EMPTY_MAP), tissueSamples);
+            for(PluginDocument doc : list) {
+                callback.add(doc, Collections.EMPTY_MAP);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
 
     }
@@ -575,8 +581,8 @@ public class MooreaLabBenchService extends DatabaseService {
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
                 workflows.add(new Workflow(workflowId, "workflow"+workflowId));
-                //statement3.setInt(1, workflowId);
-                //statement3.execute();
+                statement3.setInt(1, workflowId);
+                statement3.execute();
             }
             connection.commit();
             connection.setAutoCommit(true);
@@ -645,7 +651,7 @@ public class MooreaLabBenchService extends DatabaseService {
             }
 
             //delete the existing reactions...
-            PreparedStatement statement = connection.prepareStatement("DELETE * FROM "+tableName+" WHERE plate=?");
+            PreparedStatement statement = connection.prepareStatement("DELETE FROM "+tableName+" WHERE plate=?");
             statement.setInt(1, plate.getId());
             statement.execute();
 
