@@ -11,10 +11,13 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.ButtonOption;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
+import com.biomatters.plugins.moorea.TextAreaOption;
+
+import javax.swing.*;
+
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
-import javax.swing.*;
 import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -25,10 +28,9 @@ import java.awt.event.ActionEvent;
  * @author Steven Stones-Havas
  * @version $Id$
  *          <p/>
- *          Created on 23/06/2009 12:45:32 PM
+ *          Created on 24/06/2009 7:35:20 PM
  */
-public class PCROptions extends Options {
-
+public class CycleSequencingOptions extends Options {
     private ComboBoxOption<OptionValue> primerOption;
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
@@ -37,13 +39,13 @@ public class PCROptions extends Options {
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
    static final String LABEL_OPTION_ID = "label";
 
-    public PCROptions(Class c) {
+    public CycleSequencingOptions(Class c) {
         super(c);
         init();
         initListeners();
     }
-    
-    public PCROptions(Element e) throws XMLSerializationException {
+
+    public CycleSequencingOptions(Element e) throws XMLSerializationException {
         super(e);
         initListeners();
     }
@@ -79,13 +81,13 @@ public class PCROptions extends Options {
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), PCRCocktail.class, null);
+                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new CycleSequencingCocktail().getAllCocktailsOfType(), CycleSequencingCocktail.class, null);
                 if (newCocktails.size() > 0) {
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
                                 MooreaLabBenchService.block("Adding Cocktails", getPanel());
-                                MooreaLabBenchService.getInstance().addNewPCRCocktails(newCocktails);
+                                MooreaLabBenchService.getInstance().addNewCycleSequencingCocktails(newCocktails);
                             } catch (final TransactionException e1) {
                                 Runnable runnable = new Runnable() {
                                     public void run() {
@@ -123,7 +125,7 @@ public class PCROptions extends Options {
         }
         labelListener.objectChanged();
     }
-    
+
     public void init() {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
@@ -138,7 +140,6 @@ public class PCROptions extends Options {
         addComboBoxOption("runStatus", "Reaction state", passedValues, passedValues[0]);
 
         addLabel("");
-        beginAlignHorizontally("forward primer", false);
         OptionValue[] values = new OptionValue[] {new OptionValue("noValues", "Searching for Primers...")};
         primerOption = addComboBoxOption(PRIMER_OPTION_ID, "Primer", values, values[0]);
 
@@ -146,16 +147,17 @@ public class PCROptions extends Options {
 
         IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
         primerAmountOption.setUnits("ul");
-        endAlignHorizontally();
 
 
         List<OptionValue> cocktails = new ArrayList<OptionValue>();
-        for (int i = 0; i < new PCRCocktail().getAllCocktailsOfType().size(); i++) {
-            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
+        for (int i = 0; i < new CycleSequencingCocktail().getAllCocktailsOfType().size(); i++) {
+            Cocktail cocktail = new CycleSequencingCocktail().getAllCocktailsOfType().get(i);
             cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
         }
 
+        if(cocktails.size() > 0) {
         addComboBoxOption("cocktail", "Reaction Cocktail",  cocktails, cocktails.get(0));
+        }
 
         cocktailButton = new ButtonOption(COCKTAIL_BUTTON_ID, "", "Edit Cocktails");
         cocktailButton.setSpanningComponent(true);
@@ -164,6 +166,8 @@ public class PCROptions extends Options {
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
         cleanupOption.addDependent(cleanupMethodOption, true);
+        TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
+        addCustomOption(notesOption);
 
         labelOption = new LabelOption(LABEL_OPTION_ID, "Total Volume of Reaction: 0uL");
         addCustomOption(labelOption);
@@ -203,5 +207,4 @@ public class PCROptions extends Options {
             return xml;
         }
     }
-    
 }

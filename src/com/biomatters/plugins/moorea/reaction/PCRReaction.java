@@ -53,9 +53,10 @@ public class PCRReaction extends Reaction {
 
         Options.ComboBoxOption primerOption = (Options.ComboBoxOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
         String primerName = r.getString("pcr.prName");
-        //PCROptions.PrimerOptionValue value = new PCROptions.PrimerOptionValue(primerName, primerName, r.getString("pcr.prSequence"));
         primerOption.setValueFromString(primerName);//todo: what if the user doesn't have the primer?
         options.setValue("cocktail", r.getString("pcr.cocktail"));
+        options.setValue("cleanupPerformed", r.getBoolean("pcr.cleanupPerformed"));
+        options.setValue("cleanupMethod", r.getBoolean("pcr.cleanupMethod"));
 
         int thermocycleId = r.getInt("pcr.thermocycle");
         if(thermocycleId >= 0) {

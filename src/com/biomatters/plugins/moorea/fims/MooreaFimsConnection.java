@@ -206,7 +206,7 @@ public class MooreaFimsConnection extends FIMSConnection{
                 }
                 started = true;
 
-                queryBuilder.append(fieldCode + " LIKE '" + searchText + "'");
+                queryBuilder.append(fieldCode + " LIKE '%" + searchText + "%'");
 
 
             }

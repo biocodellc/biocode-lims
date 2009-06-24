@@ -382,7 +382,7 @@ public class ThermocycleEditor extends JPanel {
         editPanel.add(splitPane, BorderLayout.CENTER);
         final JList thermocycleList = new JList();
         thermocycleList.setPrototypeCellValue("ACEGIKMOQSUWY13579");
-        Class thermocycleClass = thermocycles.get(0).getClass();
+//        Class thermocycleClass = thermocycles.get(0).getClass();
         final List<Thermocycle> newThermocycles = new ArrayList<Thermocycle>();
         final AbstractListModel listModel = new AbstractListModel() {
             public int getSize() {

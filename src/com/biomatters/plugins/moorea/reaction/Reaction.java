@@ -61,7 +61,7 @@ public abstract class Reaction implements XMLSerializable{
             case PCR :
                 return new PCRReaction();
             case CycleSequencing :
-                break;
+                return new CycleSequencingReaction();
         }
         return null;
     }
@@ -356,7 +356,7 @@ public abstract class Reaction implements XMLSerializable{
                 }
                 break;
             case PCR:
-                sql = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 statement = connection.prepareStatement(sql);
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
@@ -398,6 +398,8 @@ public abstract class Reaction implements XMLSerializable{
                         else {
                             statement.setInt(9, -1);
                         }
+                        statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
+                        statement.setString(11, options.getValueAsString("cleanupMethod"));
                         statement.execute();
                     }
                 }

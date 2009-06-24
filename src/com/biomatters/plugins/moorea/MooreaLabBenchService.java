@@ -14,10 +14,7 @@ import com.biomatters.plugins.moorea.fims.GeneiousFimsConnection;
 import com.biomatters.plugins.moorea.fims.MooreaFimsConnection;
 import com.biomatters.plugins.moorea.fims.TAPIRFimsConnection;
 import com.biomatters.plugins.moorea.lims.LIMSConnection;
-import com.biomatters.plugins.moorea.reaction.Cocktail;
-import com.biomatters.plugins.moorea.reaction.Thermocycle;
-import com.biomatters.plugins.moorea.reaction.PCRCocktail;
-import com.biomatters.plugins.moorea.reaction.Reaction;
+import com.biomatters.plugins.moorea.reaction.*;
 import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.plates.GelImage;
 
@@ -412,14 +409,24 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
+    public void addNewCycleSequencingCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{
+        if(newCocktails.size() > 0) {
+            for(Cocktail cocktail : newCocktails) {
+                limsConnection.executeUpdate(cocktail.getSQLString());
+            }
+        }
+    }
+
     private List<Thermocycle> PCRThermocycles = null;
     private List<Thermocycle> CycleSequencingThermocycles = null;
     private List<Cocktail> PCRCocktails = null;
+    private List<Cocktail> cycleSequencingCocktails = null;
 
     private void buildCaches() throws TransactionException {
         PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle");
         CycleSequencingThermocycles = getThermocyclesFromDatabase("cycleSequencing_thermocycle");
         PCRCocktails = getPCRCocktailsFromDatabase();
+        cycleSequencingCocktails = getCycleSequencingCocktailsFromDatabase();
     }
 
     private List<Cocktail> getPCRCocktailsFromDatabase() throws TransactionException{
@@ -432,6 +439,20 @@ public class MooreaLabBenchService extends DatabaseService {
         }
         catch(SQLException ex) {
             throw new TransactionException("Could not query PCR Cocktails from the database");
+        }
+        return cocktails;
+    }
+
+    private List<Cocktail> getCycleSequencingCocktailsFromDatabase() throws TransactionException{
+        ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM cycleSequencing_cocktail");
+        List<Cocktail> cocktails = new ArrayList<Cocktail>();
+        try {
+            while(resultSet.next()) {
+                cocktails.add(new CycleSequencingCocktail(resultSet));    
+            }
+        }
+        catch(SQLException ex) {
+            throw new TransactionException("Could not query CycleSequencing Cocktails from the database");
         }
         return cocktails;
     }
@@ -513,7 +534,7 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public void addCycleSequencingThermoCycles(List<Thermocycle> cycles) throws TransactionException{
-        insertThermocycles(cycles, "cycleSequencig_thermocycle");
+        insertThermocycles(cycles, "cycleSequencing_thermocycle");
         System.out.println("done!");
     }
 
@@ -561,6 +582,10 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public List<Cocktail> getPCRCocktails() {
         return PCRCocktails;
+    }
+
+    public List<Cocktail> getCycleSequencingCocktails() {
+        return cycleSequencingCocktails;
     }
 
     public List<Workflow> createWorkflows(int numberOfWorkflows, BlockingDialog progress) throws SQLException{

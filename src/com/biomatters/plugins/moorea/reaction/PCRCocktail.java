@@ -70,17 +70,7 @@ public class PCRCocktail extends Cocktail{
     }
 
     public String getName() {
-        return options.getValueAsString("name");
-    }
-
-    public int getReactionVolume(Options options) {
-        int sum = 0;
-        for (Options.Option o : options.getOptions()) {
-            if (o instanceof Options.IntegerOption) {
-                sum += (Integer) o.getValue();
-            }
-        }
-        return sum;
+        return options == null ? "Untitled" : options.getValueAsString("name");
     }
 
     public List<Cocktail> getAllCocktailsOfType() {

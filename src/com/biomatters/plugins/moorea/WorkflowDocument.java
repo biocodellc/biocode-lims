@@ -177,11 +177,11 @@ public class WorkflowDocument extends MuitiPartDocument {
         public String getName() {
             switch(reaction.getType()) {
                 case Extraction:
-                    return "Extraction "+reaction.getCreated();
+                    return "Extraction: "+dateFormat.format(reaction.getCreated());
                 case PCR:
-                    return "PCR";
+                    return "PCR: "+dateFormat.format(reaction.getCreated());
                 case CycleSequencing:
-                    return "Cycle Sequencing";
+                    return "Cycle Sequencing: "+dateFormat.format(reaction.getCreated());
             }
             return "Unknown Reaction";
         }

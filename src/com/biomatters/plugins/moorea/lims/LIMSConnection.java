@@ -105,7 +105,9 @@ public class LIMSConnection {
                 "LEFT JOIN extraction ON extraction.workflow = workflow.id " +
                 "WHERE ");
 
+        boolean somethingToSearch = false;
         if(samples != null && samples.size() > 0) {
+            somethingToSearch = true;
             sql.append("(");
             for(int i=0; i < samples.size(); i++) {
                 sql.append(" extraction.sampleId=?");
@@ -119,6 +121,7 @@ public class LIMSConnection {
             }
         }
         if(query != null && query.getChildren().size() > 0) {
+            somethingToSearch = true;
             sql.append("(");
             String mainJoin;
             switch(query.getOperator()) {
@@ -150,6 +153,9 @@ public class LIMSConnection {
                 }
             }
             sql.append(")");
+        }
+        if(!somethingToSearch) {
+            return Collections.EMPTY_LIST;
         }
 
         //attach the values to the query

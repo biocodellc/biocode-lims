@@ -29,7 +29,15 @@ public abstract class Cocktail {
 
     public abstract Options getOptions();
 
-    public abstract int getReactionVolume(Options options);
+    public int getReactionVolume(Options options) {
+        int sum = 0;
+        for (Options.Option o : options.getOptions()) {
+            if (o instanceof Options.IntegerOption) {
+                sum += (Integer) o.getValue();
+            }
+        }
+        return sum;
+    }
 
     public abstract List<? extends Cocktail> getAllCocktailsOfType();
 
@@ -37,13 +45,12 @@ public abstract class Cocktail {
 
     public abstract String getSQLString();
 
-    public static List<? extends Cocktail> editCocktails(final List<? extends Cocktail> cocktails, Component owner) {
+    public static List<? extends Cocktail> editCocktails(final List<? extends Cocktail> cocktails, final Class<? extends Cocktail> cocktailClass, Component owner) {
         JPanel editPanel = new JPanel(new BorderLayout());
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         editPanel.add(splitPane, BorderLayout.CENTER);
         final JList cocktailList = new JList();
         cocktailList.setPrototypeCellValue("ACEGIKMOQSUWY13579");
-        Class cocktailClass = cocktails.get(0).getClass();
         final List<Cocktail> newCocktails = new ArrayList<Cocktail>();
         for(Cocktail ct : cocktails) {
             ct.getOptions().setEnabled(false);
@@ -81,7 +88,14 @@ public abstract class Cocktail {
         leftPanel.add(scroller, BorderLayout.CENTER);
         addButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                Cocktail newCocktail = cocktails.get(0).createNewCocktail();
+                Cocktail newCocktail = null;
+                try {
+                    newCocktail = cocktailClass.newInstance();
+                } catch (InstantiationException e1) {
+                    Dialogs.showMessageDialog("Could not create a new cocktail: "+e1.getMessage());
+                } catch (IllegalAccessException e1) {
+                    Dialogs.showMessageDialog("Could not create a new cocktail: "+e1.getMessage());
+                }
                 newCocktails.add(newCocktail);
                 for(ListDataListener listener : listModel.getListDataListeners()){
                     listener.intervalAdded(new ListDataEvent(listModel, ListDataEvent.INTERVAL_ADDED, listModel.getSize(), listModel.getSize()-1));
