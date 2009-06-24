@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.ExtractionReaction;
 import com.biomatters.plugins.moorea.reaction.PCRReaction;
+import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
 
 import java.util.*;
 import java.util.List;
@@ -90,12 +91,21 @@ public class WorkflowDocument extends MuitiPartDocument {
         if(workflow != null) {
             element.addContent(workflow.toXML());
         }
+        if(reactions != null) {
+            for(Reaction r : reactions) {
+                element.addContent(XMLSerializer.classToXML("reaction", r));
+            }
+        }
         
         return element;
     }
 
     public void fromXML(Element element) throws XMLSerializationException {
-        
+        workflow = new Workflow(element.getChild("workflow"));
+        reactions = new ArrayList<Reaction>();
+        for(Element e : element.getChildren("reaction")) {
+            reactions.add(XMLSerializer.classFromXML(e, Reaction.class));
+        }
     }
 
     public int getNumberOfParts() {
@@ -146,23 +156,28 @@ public class WorkflowDocument extends MuitiPartDocument {
         public ReactionPart(Reaction reaction) {
             super();
             this.reaction = reaction;
+            init();
         }
 
         private void init() {
             OptionsPanel optionsPanel = new OptionsPanel(true, false);
             List<DocumentField> documentFields = reaction.getDisplayableFields();
             for(DocumentField field : documentFields) {
-                optionsPanel.addComponentWithLabel(field.getName(), new JLabel(reaction.getFieldValue(field.getCode()).toString()), false);
+                optionsPanel.addComponentWithLabel("<html><b>"+field.getName()+": </b></html>", new JLabel(reaction.getFieldValue(field.getCode()).toString()), false);
             }
             setOpaque(false);
             setLayout(new BorderLayout());
             add(optionsPanel, BorderLayout.CENTER);
+            if(reaction.getThermocycle() != null) {
+                ThermocycleEditor.ThermocycleViewer viewer = new ThermocycleEditor.ThermocycleViewer(reaction.getThermocycle());
+                add(viewer, BorderLayout.EAST);
+            }
         }
 
         public String getName() {
             switch(reaction.getType()) {
                 case Extraction:
-                    return "Extraction";
+                    return "Extraction "+reaction.getD;
                 case PCR:
                     return "PCR";
                 case CycleSequencing:

@@ -91,6 +91,9 @@ public class Plate {
 
     public void setThermocycle(Thermocycle thermocycle) {
         this.thermocycle = thermocycle;
+        for(Reaction r : getReactions()) {
+            r.setThermocycle(thermocycle);
+        }
     }
 
     private void init(int rows, int cols, Reaction.Type type) {

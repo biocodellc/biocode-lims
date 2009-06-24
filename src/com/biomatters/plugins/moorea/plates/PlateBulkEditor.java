@@ -80,63 +80,65 @@ public class PlateBulkEditor {
                 }
             }
         });
-        toolbar.addAction(new GeneiousAction("Autodetect workflows"){
-            public void actionPerformed(ActionEvent e) {
-                List<String> idsToCheck = new ArrayList<String>();
-                if(fieldToCheck == null) {
-                    Dialogs.showMessageDialog("Could not autodetect workflows for this plate - plate type unknown!");
-                    return;
-                }
-                DocumentFieldEditor editorToCheck = null;
-                for(DocumentFieldEditor editor : editors) {
-                    if(editor.getField().getCode().equals(fieldToCheck.getCode())){
-                        editorToCheck = editor;
+        if(fieldToCheck != null) {
+            toolbar.addAction(new GeneiousAction("Autodetect workflows"){
+                public void actionPerformed(ActionEvent e) {
+                    List<String> idsToCheck = new ArrayList<String>();
+                    if(fieldToCheck == null) {
+                        Dialogs.showMessageDialog("Could not autodetect workflows for this plate - plate type unknown!");
+                        return;
                     }
-                }
-                if(editorToCheck == null) {
-                    Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the id field!");
-                    return;
-                }
-                DocumentFieldEditor workflowEditor = null;
-                for(DocumentFieldEditor editor : editors) {
-                    if(editor.getField().getCode().equals(workflowField.getCode())){
-                        workflowEditor = editor;
-                    }
-                }
-                if(workflowEditor == null) {
-                    Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the workflow field!");
-                    return;
-                }
-                editorToCheck.valuesFromTextView();
-                for(int row=0; row < p.getRows(); row++) {
-                    for(int col=0; col < p.getCols(); col++) {
-                        Object value = editorToCheck.getValue(row, col);
-                        if(value != null && value.toString().trim().length() > 0) {
-                            idsToCheck.add(value.toString());
+                    DocumentFieldEditor editorToCheck = null;
+                    for(DocumentFieldEditor editor : editors) {
+                        if(editor.getField().getCode().equals(fieldToCheck.getCode())){
+                            editorToCheck = editor;
                         }
                     }
-                }
-                try {
-                    Map<String, Workflow> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflows(idsToCheck, p.getReactionType());
+                    if(editorToCheck == null) {
+                        Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the id field!");
+                        return;
+                    }
+                    DocumentFieldEditor workflowEditor = null;
+                    for(DocumentFieldEditor editor : editors) {
+                        if(editor.getField().getCode().equals(workflowField.getCode())){
+                            workflowEditor = editor;
+                        }
+                    }
+                    if(workflowEditor == null) {
+                        Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the workflow field!");
+                        return;
+                    }
+                    editorToCheck.valuesFromTextView();
                     for(int row=0; row < p.getRows(); row++) {
                         for(int col=0; col < p.getCols(); col++) {
                             Object value = editorToCheck.getValue(row, col);
-                            if(value != null && value.toString().length() > 0) {
-                                Workflow workflowValue = idToWorkflow.get(value.toString());
-                                if(workflowValue != null) {
-                                    workflowEditor.setValue(row, col, workflowValue.getName());
-                                }
+                            if(value != null && value.toString().trim().length() > 0) {
+                                idsToCheck.add(value.toString());
                             }
                         }
                     }
-                    workflowEditor.textViewFromValues();
-                } catch (SQLException e1) {
-                    Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
-                    return;
-                }
+                    try {
+                        Map<String, Workflow> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflows(idsToCheck, p.getReactionType());
+                        for(int row=0; row < p.getRows(); row++) {
+                            for(int col=0; col < p.getCols(); col++) {
+                                Object value = editorToCheck.getValue(row, col);
+                                if(value != null && value.toString().length() > 0) {
+                                    Workflow workflowValue = idToWorkflow.get(value.toString());
+                                    if(workflowValue != null) {
+                                        workflowEditor.setValue(row, col, workflowValue.getName());
+                                    }
+                                }
+                            }
+                        }
+                        workflowEditor.textViewFromValues();
+                    } catch (SQLException e1) {
+                        Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                        return;
+                    }
 
-            }
-        });
+                }
+            });
+        }
         JPanel holderPanel = new JPanel(new BorderLayout());
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
@@ -207,7 +209,7 @@ public class PlateBulkEditor {
                 return Arrays.asList(
                     new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
                     new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                    new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                    new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
                 );
             case PCR://drop through
             case CycleSequencing:
@@ -223,7 +225,7 @@ public class PlateBulkEditor {
     private static DocumentField getFieldToCheck(Plate p) {
         switch(p.getReactionType()) {
             case Extraction:
-                return new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                return null;
             case PCR:
             case CycleSequencing:
                 return new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);

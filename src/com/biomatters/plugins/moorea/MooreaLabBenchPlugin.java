@@ -45,7 +45,9 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
         return new DocumentViewerFactory[] {
                 new TissueImagesViewerFactory(),
                 new TissueSampleViewerFactory(true),
-                new TissueSampleViewerFactory(false)
+                new TissueSampleViewerFactory(false),
+                new MultiPartDocumentViewerFactory(MultiPartDocumentViewerFactory.Type.Workflow),
+                new MultiPartDocumentViewerFactory(MultiPartDocumentViewerFactory.Type.Plate)
         };
     }
 

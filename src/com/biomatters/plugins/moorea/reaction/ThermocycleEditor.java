@@ -238,7 +238,7 @@ public class ThermocycleEditor extends JPanel {
     }
 
 
-    static class ThermocycleViewer extends JPanel {
+    public static class ThermocycleViewer extends JPanel {
         private Thermocycle thermocycle;
         private int stateWidth;
         private int stateCount = 0;

@@ -14,6 +14,10 @@ public class Workflow implements XMLSerializable {
     private int id;
     private String name;
 
+    public Workflow(Element e) throws XMLSerializationException{
+        fromXML(e);
+    }
+
     public Workflow(int id, String name) {
         this.id = id;
         this.name = name;

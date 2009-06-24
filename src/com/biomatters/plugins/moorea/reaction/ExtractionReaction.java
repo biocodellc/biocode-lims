@@ -34,7 +34,7 @@ public class ExtractionReaction extends Reaction{
         setWorkflow(workflow);
         options.setValue("sampleId", r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
-        options.setValue("workflow", workflow.getName());
+        options.setValue("workflowId", workflow.getName());
         options.setValue("extractionMethod", r.getString("extraction.method"));
         options.setValue("parentExtraction", r.getString("extraction.parent"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
@@ -58,6 +58,11 @@ public class ExtractionReaction extends Reaction{
         return options;
     }
 
+    public void setThermocycle(Thermocycle tc){}
+    public Thermocycle getThermocycle() {
+        return null;  //Extractions don't have thermocycles
+    }
+    
     public Type getType() {
         return Type.Extraction;
     }
@@ -71,14 +76,6 @@ public class ExtractionReaction extends Reaction{
         return Color.white;
     }
 
-    public Element toXML() {
-        return new Element("ExtractionReaction");
-        //todo:
-    }
-
-    public void fromXML(Element element) throws XMLSerializationException {
-        //todo:
-    }
 
     public String areReactionsValid(List<Reaction> reactions) {
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
@@ -91,7 +88,7 @@ public class ExtractionReaction extends Reaction{
             if(option.getOption("sampleId").isEnabled()){
                 Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, option.getValueAsString("sampleId"));
                 if(!queries.contains(fieldQuery)) {
-                    queries.add(fieldQuery);
+                     queries.add(fieldQuery);
                 }
             }
         }

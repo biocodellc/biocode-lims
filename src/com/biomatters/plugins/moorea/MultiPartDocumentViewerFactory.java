@@ -65,7 +65,7 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
                     holderPanel.add(part, BorderLayout.CENTER);
                     panel.addSpanningComponent(holderPanel);
                 }
-                return null;
+                return panel;
             }
 
             

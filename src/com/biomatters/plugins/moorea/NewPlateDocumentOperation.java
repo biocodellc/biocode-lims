@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.plates.PlateViewer;
@@ -100,7 +101,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         else {
             plateViewer = new PlateViewer((Integer)options.getValue("reactionNumber"), type);
         }
-        plateViewer.displayInFrame(true);
+        plateViewer.displayInFrame(true, GuiUtilities.getMainFrame());
 
         return null;
     }

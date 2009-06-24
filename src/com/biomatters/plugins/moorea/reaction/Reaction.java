@@ -45,6 +45,7 @@ public abstract class Reaction implements XMLSerializable{
     private List<DocumentField> displayableFields;
 
     public static final int PADDING = 10;
+    private Thermocycle thermocycle;
 
 
     public enum Type {
@@ -82,6 +83,14 @@ public abstract class Reaction implements XMLSerializable{
         return selected;
     }
 
+    public Date getCreated() {
+        return date;
+    }
+
+    protected void setCreated(Date date) {
+        this.date = date;
+    }
+
 
     public void setLocationString(String location) {
         this.locationString = location;
@@ -96,6 +105,14 @@ public abstract class Reaction implements XMLSerializable{
 
 
     public abstract Options getOptions();
+
+    public Thermocycle getThermocycle(){
+        return thermocycle;
+    }
+
+    public void setThermocycle(Thermocycle tc) {
+        this.thermocycle = tc;
+    }
 
     public List<DocumentField> getAllDisplayableFields() {
         List<DocumentField> displayableFields = new ArrayList<DocumentField>();
@@ -144,6 +161,37 @@ public abstract class Reaction implements XMLSerializable{
             return Color.orange.brighter();
         }
         return _getBackgroundColor();
+    }
+
+    public Element toXML() {
+        Element element = new Element("Reaction");
+        if(getThermocycle() != null) {
+            element.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
+        }
+        element.addContent(getOptions().valuesToXML("values"));
+        return element;
+    }
+
+    public void fromXML(Element element) throws XMLSerializationException {
+        String thermoCycleId = element.getChildText("thermocycle");
+        if(thermoCycleId != null) {
+            int tcId = Integer.parseInt(thermoCycleId);
+            for(Thermocycle tc : MooreaLabBenchService.getInstance().getPCRThermocycles()) {
+                if(tc.getId() == tcId) {
+                    setThermocycle(tc);
+                    break;
+                }
+            }
+            if(thermocycle == null) {
+                for(Thermocycle tc : MooreaLabBenchService.getInstance().getCycleSequencingThermocycles()) {
+                    if(tc.getId() == tcId) {
+                        setThermocycle(tc);
+                        break;
+                    }
+                }
+            }
+        }
+        getOptions().valuesFromXML(element.getChild("values"));
     }
 
     public abstract Color _getBackgroundColor();
@@ -308,7 +356,7 @@ public abstract class Reaction implements XMLSerializable{
                 }
                 break;
             case PCR:
-                sql = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                sql = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 statement = connection.prepareStatement(sql);
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
@@ -344,6 +392,12 @@ public abstract class Reaction implements XMLSerializable{
                         }
                         statement.setInt(7, cocktailId);
                         statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        if(reaction.getThermocycle() != null) {
+                            statement.setInt(9, reaction.getThermocycle().getId());
+                        }
+                        else {
+                            statement.setInt(9, -1);
+                        }
                         statement.execute();
                     }
                 }

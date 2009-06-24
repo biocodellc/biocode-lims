@@ -182,8 +182,11 @@ public class PlateViewer extends JPanel {
         }
     }
 
-    public void displayInFrame(final boolean isNew) {
+    public void displayInFrame(final boolean isNew, Component owner) {
         final JFrame frame = new JFrame();
+        if(owner != null) {
+            frame.setLocationRelativeTo(owner); 
+        }
         Runnable runnable = new Runnable() {
             public void run() {
                 frame.getContentPane().setLayout(new BorderLayout());

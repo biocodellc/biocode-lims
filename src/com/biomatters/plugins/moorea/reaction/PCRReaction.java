@@ -46,25 +46,26 @@ public class PCRReaction extends Reaction {
         setWorkflow(workflow);
         setPlate(r.getInt("pcr.plate"));
         Options options = getOptions();
-        options.setValue("extractionId", r.getString("pcr.extractionId"));
-        options.setValue("workflowId", r.getString("pcr.workflow"));
+        options.setValue("extractionId", r.getString("extraction.extractionId"));
+        options.setValue("workflowId", workflow.getName());
 
-        options.getOption("runStatus").getValueFromString(r.getString("pcr.progress"));
+        options.getOption("runStatus").setValueFromString(r.getString("pcr.progress"));
 
         Options.ComboBoxOption primerOption = (Options.ComboBoxOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
         String primerName = r.getString("pcr.prName");
-        PCROptions.PrimerOptionValue value = new PCROptions.PrimerOptionValue(primerName, primerName, r.getString("pcr.prSequence"));
-        primerOption.setValue(value);//todo: what if the user doesn't have the primer?
+        //PCROptions.PrimerOptionValue value = new PCROptions.PrimerOptionValue(primerName, primerName, r.getString("pcr.prSequence"));
+        primerOption.setValueFromString(primerName);//todo: what if the user doesn't have the primer?
         options.setValue("cocktail", r.getString("pcr.cocktail"));
-    }
 
-    public Element toXML() {
-        return new Element("PCRReaction");
-        //todo:
-    }
-
-    public void fromXML(Element element) throws XMLSerializationException {
-        //todo:
+        int thermocycleId = r.getInt("pcr.thermocycle");
+        if(thermocycleId >= 0) {
+            for(Thermocycle tc : MooreaLabBenchService.getInstance().getPCRThermocycles()) {
+                if(tc.getId() == thermocycleId) {
+                    setThermocycle(tc);
+                    break;
+                }
+            }
+        }
     }
 
     public Options getOptions() {
@@ -96,9 +97,5 @@ public class PCRReaction extends Reaction {
         else if(runStatus.equals("failed"))
             return Color.red.darker();
         return Color.white;
-    }
-
-    public String toSql() throws IllegalStateException {
-        throw new IllegalStateException("Not Implemented!");
     }
 }
