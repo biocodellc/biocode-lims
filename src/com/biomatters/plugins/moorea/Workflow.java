@@ -13,14 +13,16 @@ import org.jdom.Element;
 public class Workflow implements XMLSerializable {
     private int id;
     private String name;
+    private String extraction;
 
     public Workflow(Element e) throws XMLSerializationException{
         fromXML(e);
     }
 
-    public Workflow(int id, String name) {
+    public Workflow(int id, String name, String extractionId) {
         this.id = id;
         this.name = name;
+        this.extraction = extractionId;
     }
 
     public int getId() {
@@ -39,12 +41,21 @@ public class Workflow implements XMLSerializable {
         this.name = name;
     }
 
+    public String getExtractionId() {
+        return extraction;
+    }
+
+    public void setExtractionId(String extraction) {
+        this.extraction = extraction;
+    }
+
     public Element toXML() {
-        return new Element("workflow").addContent(new Element("name").setText(getName())).addContent(new Element("id").setText(""+getId()));
+        return new Element("workflow").addContent(new Element("name").setText(getName())).addContent(new Element("id").setText(""+getId()).addContent(new Element("extraction").setText(extraction)));
     }
 
     public void fromXML(Element element) throws XMLSerializationException {
         name = element.getChildText("name");
+        extraction = element.getChildText("extraction");
         if(element.getChildText("id") != null) {
             try {
                 id = Integer.parseInt(element.getChildText("id"));

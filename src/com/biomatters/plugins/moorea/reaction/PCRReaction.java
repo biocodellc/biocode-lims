@@ -1,18 +1,14 @@
 package com.biomatters.plugins.moorea.reaction;
 
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.DocumentSearchCache;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentType;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
-import com.biomatters.plugins.moorea.ButtonOption;
-import com.biomatters.plugins.moorea.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.TransactionException;
-import com.biomatters.plugins.moorea.Workflow;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.plugins.moorea.*;
+import com.biomatters.plugins.moorea.fims.FIMSConnection;
 import org.virion.jam.util.SimpleListener;
 import org.jdom.Element;
 
@@ -20,9 +16,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Arrays;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -85,7 +80,63 @@ public class PCRReaction extends Reaction {
         });
     }
 
+    public String getExtractionId() {
+        return getOptions().getValueAsString("extractionId");
+    }
+
     public String areReactionsValid(List<Reaction> reactions) {
+        FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
+        DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
+
+        List<Query> queries = new ArrayList<Query>();
+
+        Map<String, String> tissueMapping = null;
+        try {
+            tissueMapping = MooreaLabBenchService.getInstance().getReactionToTissueIdMapping("extraction", reactions);
+        } catch (SQLException e) {
+            return "Could not connect to the LIMS database";
+        }
+
+        for(Reaction reaction : reactions) {
+            Options option = reaction.getOptions();
+            if(option.getOption("extractionId").isEnabled()){
+                String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
+                if(tissue == null) {
+                    return "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!";
+                }
+                Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
+                if(!queries.contains(fieldQuery)) {
+                     queries.add(fieldQuery);
+                }
+            }
+        }
+
+        Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
+
+        try {
+            List<FimsSample> docList = fimsConnection.getMatchingSamples(orQuery);
+            Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
+            for(FimsSample sample : docList) {
+                docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
+            }
+            String error = "";
+            for(Reaction reaction : reactions) {
+                Options op = reaction.getOptions();
+                String extractionId = op.getValueAsString("extractionId");
+                FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
+                if(currentFimsSample == null) {
+                    error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
+                    reaction.isError = true;
+                }
+                reaction.isError = false;
+                reaction.fimsSample = currentFimsSample;
+            }
+            if(error.length() > 0) {
+                return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
+            }
+        } catch (ConnectionException e) {
+            return "Could not query the FIMS database.  "+e.getMessage();
+        }
         return null;
     }
 

@@ -588,24 +588,55 @@ public class MooreaLabBenchService extends DatabaseService {
         return cycleSequencingCocktails;
     }
 
-    public List<Workflow> createWorkflows(int numberOfWorkflows, BlockingDialog progress) throws SQLException{
+    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<Reaction> reactions) throws SQLException{
+        if(reactions.size() == 0) {
+            return Collections.EMPTY_MAP;
+        }
+        String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
+        String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
+        StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
+
+        for(int i=0; i < reactions.size(); i++) {
+            if(i > 0) {
+                sql.append(" OR ");
+            }
+            sql.append("extraction.extractionId=?");
+        }
+        sql.append(")");
+        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
+        for(int i=0; i < reactions.size(); i++) {
+            statement.setString(i+1, reactions.get(i).getExtractionId());
+        }
+
+        ResultSet resultSet = statement.executeQuery();
+
+        Map<String, String> results = new HashMap<String, String>();
+        while(resultSet.next()) {
+            results.put(resultSet.getString("extractionId"), resultSet.getString("tissue"));
+        }
+
+        return results;
+    }
+
+    public List<Workflow> createWorkflows(List<String> extractionIds, BlockingDialog progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
         Connection connection = limsConnection.getConnection();
         Savepoint savepoint = connection.setSavepoint();
         try {
             connection.setAutoCommit(false);
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow VALUES ()");
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(extractionId) VALUES ((SELECT extraction.id from extraction where extraction.extractionId = ?))");
             PreparedStatement statement2 = connection.prepareStatement("SELECT last_insert_id()");
             PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = CONCAT('workflow', id) WHERE id=?");
-            for(int i=0; i < numberOfWorkflows; i++) {
+            for(int i=0; i < extractionIds.size(); i++) {
                 if(progress != null) {
-                    progress.setMessage("Creating new workflow "+(i+1)+" of "+numberOfWorkflows);
+                    progress.setMessage("Creating new workflow "+(i+1)+" of "+extractionIds.size());
                 }
+                statement.setString(1, extractionIds.get(i));
                 statement.execute();
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
-                workflows.add(new Workflow(workflowId, "workflow"+workflowId));
+                workflows.add(new Workflow(workflowId, "workflow"+workflowId, extractionIds.get(i)));
                 statement3.setInt(1, workflowId);
                 statement3.execute();
             }
@@ -699,17 +730,10 @@ public class MooreaLabBenchService extends DatabaseService {
         StringBuilder sqlBuilder = new StringBuilder();
         switch(reactionType) {
             case Extraction:
-                sqlBuilder.append("SELECT extraction.sampleId AS id, workflow.name AS workflow, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.id = extraction.workflow AND (");
-                for (int i = 0; i < idsToCheck.size(); i++) {
-                    sqlBuilder.append("extraction.sampleId = ? ");
-                    if(i < idsToCheck.size()-1) {
-                        sqlBuilder.append("OR ");
-                    }
-                }
-                sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
-                break;
+                throw new RuntimeException("You should not be adding extractions to existing workflows!");
             case PCR:
-                sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.id = extraction.workflow AND (");
+            case CycleSequencing:
+                sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
                 for (int i = 0; i < idsToCheck.size(); i++) {
                     sqlBuilder.append("extraction.extractionId = ? ");
                     if(i < idsToCheck.size()-1) {
@@ -717,9 +741,6 @@ public class MooreaLabBenchService extends DatabaseService {
                     }
                 }
                 sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
-                break;
-            case CycleSequencing:
-                throw new RuntimeException("Not Implemented");
             default:
                 break;
         }
@@ -732,7 +753,7 @@ public class MooreaLabBenchService extends DatabaseService {
         Map<String, Workflow> result = new HashMap<String, Workflow>();
 
         while(results.next()) {
-            result.put(results.getString("id"), new Workflow(results.getInt("workflowId"), results.getString("workflow")));
+            result.put(results.getString("id"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("id")));
         }
         return result;
     }
@@ -742,13 +763,14 @@ public class MooreaLabBenchService extends DatabaseService {
             return Collections.EMPTY_MAP;
         }
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId FROM workflow WHERE ");
+        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
         for(int i=0; i < workflowIds.size(); i++) {
             sqlBuilder.append("workflow.name = ? ");
             if(i < workflowIds.size()-1) {
                 sqlBuilder.append("OR ");
             }
         }
+        sqlBuilder.append(")");
         PreparedStatement statement = limsConnection.getConnection().prepareStatement(sqlBuilder.toString());
         for (int i = 0; i < workflowIds.size(); i++) {
             statement.setString(i+1, workflowIds.get(i));
@@ -757,9 +779,13 @@ public class MooreaLabBenchService extends DatabaseService {
         Map<String, Workflow> result = new HashMap<String, Workflow>();
 
         while(results.next()) {
-            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow")));
+            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId")));
         }
         return result;
+    }
+
+    public void saveReactions(Reaction[] reactions, Reaction.Type reactionType, BlockingDialog progress) throws SQLException{
+        Reaction.saveReactions(reactions, reactionType, limsConnection.getConnection(), progress);
     }
 
     public static class BlockingDialog extends JDialog {

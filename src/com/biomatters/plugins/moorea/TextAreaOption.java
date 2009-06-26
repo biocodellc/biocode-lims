@@ -2,10 +2,15 @@ package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.TitledBorder;
 import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
+import java.awt.*;
 
 import org.jdom.Element;
 
@@ -48,7 +53,15 @@ public class TextAreaOption extends Options.Option<String, JScrollPane>{
                 getViewport().getView().setEnabled(enabled);
             }
         };
-        notesScroller.setBorder(BorderFactory.createTitledBorder(title));
+        if(SystemUtilities.isMac()) {
+            Border border = UIManager.getBorder("TitledBorder.aquaVariant");
+            notesScroller.setBorder(new TitledBorder(border, title));    
+        }
+        else {
+            notesScroller.setBorder(BorderFactory.createTitledBorder(title));
+        }
+        notesScroller.setOpaque(false);
+        notesScroller.getViewport().setOpaque(false);
         notes.addKeyListener(new KeyListener(){
             public void keyTyped(KeyEvent e) {
                 setValue(notes.getText());

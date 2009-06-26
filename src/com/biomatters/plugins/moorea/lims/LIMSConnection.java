@@ -102,7 +102,7 @@ public class LIMSConnection {
     public List<WorkflowDocument> getMatchingWorkflowDocuments(CompoundSearchQuery query, List<FimsSample> samples) throws SQLException{
         StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cycleSequencing ON cycleSequencing.workflow = workflow.id " +
                 "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
-                "LEFT JOIN extraction ON extraction.workflow = workflow.id " +
+                "LEFT JOIN extraction ON workflow.extractionId = extraction.id " +
                 "WHERE ");
 
         boolean somethingToSearch = false;

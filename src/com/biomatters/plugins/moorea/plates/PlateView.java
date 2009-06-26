@@ -204,15 +204,13 @@ public class PlateView extends JPanel {
         }
 
         //hack to copy the action listeners across
-        for(Options.Option o : options.getOptions()) {
-            if(o instanceof ButtonOption) {
-                for(ActionListener listener : ((ButtonOption)reactions.get(0).getOptions().getOption(o.getName())).getActionListeners()) {
-                    ((ButtonOption)o).addActionListener(listener);       
-                }
-
-
-            }
-        }
+//        for(Options.Option o : options.getOptions()) {
+//            if(o instanceof ButtonOption) {
+//                for(ActionListener listener : ((ButtonOption)reactions.get(0).getOptions().getOption(o.getName())).getActionListeners()) {
+//                    ((ButtonOption)o).addActionListener(listener);
+//                }
+//            }
+//        }
 
         Map<String, Boolean> haveAllSameValues = new HashMap<String, Boolean>();
         //fill in the master options based on the values in all the reactions
@@ -238,7 +236,7 @@ public class PlateView extends JPanel {
             }
             List<DocumentField> availableFields = r.getAllDisplayableFields();
             for(DocumentField df : availableFields) {
-                if(!selectedFieldsVector.contains(df)) {
+                if(!selectedFieldsVector.contains(df) && !availableFieldsVector.contains(df)) {
                     availableFieldsVector.add(df);
                 }
             }

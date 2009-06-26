@@ -3,10 +3,7 @@ package com.biomatters.plugins.moorea;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
-import com.biomatters.plugins.moorea.reaction.Reaction;
-import com.biomatters.plugins.moorea.reaction.ExtractionReaction;
-import com.biomatters.plugins.moorea.reaction.PCRReaction;
-import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
+import com.biomatters.plugins.moorea.reaction.*;
 
 import java.util.*;
 import java.util.List;
@@ -53,8 +50,9 @@ public class WorkflowDocument extends MuitiPartDocument {
     public WorkflowDocument(ResultSet resultSet) throws SQLException{
         int workflowId = resultSet.getInt("workflow.id");
         String workflowName = resultSet.getString("workflow.name");
+        String extraction = resultSet.getString("extraction.extractionId");
         this.reactions = new ArrayList<Reaction>();
-        workflow = new Workflow(workflowId, workflowName);
+        workflow = new Workflow(workflowId, workflowName, extraction);
         addRow(resultSet);
     }
 
@@ -145,6 +143,22 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
             if(!alreadyThere) {
                 Reaction r = new PCRReaction(resultSet, workflow);
+                reactions.add(r);
+            }
+        }
+
+        //add CycleSequencing's
+        if(resultSet.getObject("cycleSequencing.id") != null) {
+            int reactionId = resultSet.getInt("cycleSequencing.id");
+            //check we don't already have it
+            boolean alreadyThere = false;
+            for(Reaction r : reactions) {
+                if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
+                    alreadyThere = true;
+                }
+            }
+            if(!alreadyThere) {
+                Reaction r = new CycleSequencingReaction(resultSet, workflow);
                 reactions.add(r);
             }
         }

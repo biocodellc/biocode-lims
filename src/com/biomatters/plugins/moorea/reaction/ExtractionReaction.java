@@ -41,6 +41,10 @@ public class ExtractionReaction extends Reaction{
         setPlate(r.getInt("extraction.plate"));
     }
 
+    public String getExtractionId() {
+        return getOptions().getValueAsString("extractionId");
+    }
+
     private Options options;
 
     public Options getOptions() {
