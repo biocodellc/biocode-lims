@@ -33,7 +33,7 @@ public class PCROptions extends Options {
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
 
-    static final String PRIMER_OPTION_ID = "primer";
+    public static final String PRIMER_OPTION_ID = "primer";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
    static final String LABEL_OPTION_ID = "label";
 

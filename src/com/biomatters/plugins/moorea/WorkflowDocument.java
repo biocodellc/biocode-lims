@@ -114,6 +114,16 @@ public class WorkflowDocument extends MuitiPartDocument {
         return new ReactionPart(reactions.get(index));
     }
 
+    public Reaction getMostRecentReaction(Reaction.Type type) {
+        Reaction r = null;
+        for(int i=0; i < reactions.size(); i++) {
+            if(reactions.get(i).getType() == type) {
+                r = reactions.get(i);
+            }
+        }
+        return r;
+    }
+
     public void addRow(ResultSet resultSet) throws SQLException{
         //add extractions
         if(resultSet.getObject("extraction.id") != null) {

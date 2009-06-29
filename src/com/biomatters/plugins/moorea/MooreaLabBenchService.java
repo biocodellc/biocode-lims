@@ -20,6 +20,7 @@ import com.biomatters.plugins.moorea.plates.GelImage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.io.File;
@@ -544,6 +545,24 @@ public class MooreaLabBenchService extends DatabaseService {
 
     private static BlockingDialog blockingDialog;
 
+    public static synchronized void block(final String message, final Component parentComponent, final Runnable task){
+        Runnable r = new Runnable(){
+            public void run() {
+                try {
+                    task.run();
+                }
+                catch(Exception e) {
+                    throw new RuntimeException("An exception was caught in another thread", e);
+                }
+                finally {
+                    unBlock();
+                }
+            }
+        };
+        new Thread(r).start();
+        block(message, parentComponent);
+    }
+
     public static synchronized void block(final String message, final Component parentComponent){
         Runnable runnable = new Runnable() {
             public void run() {
@@ -554,9 +573,11 @@ public class MooreaLabBenchService extends DatabaseService {
                     }
                     if(parent instanceof Frame) {
                         blockingDialog = new BlockingDialog(message, (Frame)parent);
+                        blockingDialog.setLocationRelativeTo(parent);
                     }
                     else {
                         blockingDialog = new BlockingDialog(message, GuiUtilities.getMainFrame());
+                        blockingDialog.setLocationRelativeTo(GuiUtilities.getMainFrame());
                     }
                     blockingDialog.setVisible(true);
                 }
@@ -794,30 +815,37 @@ public class MooreaLabBenchService extends DatabaseService {
 
         public BlockingDialog(String message, Frame owner){
             super(owner);
+            if(owner != null) {
+                setLocationRelativeTo(owner);
+            }
             this.message = message;
             init();
         }
 
         public BlockingDialog(String message, Dialog owner){
             super(owner);
+            if(owner != null) {
+                setLocationRelativeTo(owner);
+            }
             this.message = message;
             init();
         }
 
         private void init() {
+            setUndecorated(true);
             setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
             setAlwaysOnTop(true);
             setModal(true);
             setTitle("Please Wait...");
             Container cp = getContentPane();
             cp.setLayout(new BoxLayout(cp, BoxLayout.Y_AXIS));
-            label = new JLabel(message);
-            JProgressBar progress = new JProgressBar();
-            progress.setIndeterminate(true);
+            AnimatedIcon activityIcon = AnimatedIcon.getActivityIcon();
+            activityIcon.startAnimation();
+            label = new JLabel(message, activityIcon, JLabel.LEFT);
+            label.setBorder(new EmptyBorder(25,50,25,50));
             cp.add(label);
-            cp.add(progress);
             if(cp instanceof JComponent) {
-                ((JComponent)cp).setBorder(new EmptyBorder(25,50,25,50));
+                ((JComponent)cp).setBorder(new LineBorder(Color.black));
             }
             pack();
         }
