@@ -66,13 +66,15 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
                         }
                     };
                     holderPanel.setOpaque(false);
+                    //holderPanel.setBackground(Color.white);
                     holderPanel.setBorder(new OptionsPanel.RoundedLineBorder(part.getName(), false));
-                    JScrollPane scroller = new JScrollPane(part);
-                    scroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-                    scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-                    scroller.setBorder(new EmptyBorder(10,10,10,10));
-                    scroller.setOpaque(false);
-                    holderPanel.add(scroller, BorderLayout.CENTER);
+//                    JScrollPane scroller = new JScrollPane(part);
+//                    scroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+//                    scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+//                    scroller.setBorder(new EmptyBorder(10,10,10,10));
+//                    scroller.setOpaque(false);
+//                    scroller.getViewport().setOpaque(false);
+                    holderPanel.add(part, BorderLayout.CENTER);
                     panel.addSpanningComponent(holderPanel);
                 }
                 return panel;

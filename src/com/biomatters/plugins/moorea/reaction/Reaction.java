@@ -39,6 +39,8 @@ public abstract class Reaction implements XMLSerializable{
     protected boolean isError = false;
     protected FimsSample fimsSample = null;
     protected Date date = new Date();
+    private static int averageCharWidth = -1;
+    private static int charHeight = -1;
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -240,11 +242,17 @@ public abstract class Reaction implements XMLSerializable{
         g.setColor(isSelected() ? getBackgroundColor().darker() : getBackgroundColor());
         g.fillRect(location.x, location.y, location.width, location.height);
 
+        if(averageCharWidth < 0 || charHeight < 0) {
+            String testString = "AbCdEfGhIjKlMnOpQrStUvWxYz";
+            TextLayout tl = new TextLayout(testString, g.getFont(), fontRenderContext);
+            averageCharWidth = (int)tl.getBounds().getWidth()/26;
+            charHeight = (int)tl.getBounds().getHeight();
+        }
+
         if(locationString != null && locationString.length() > 0) {
             g.setColor(getBackgroundColor().darker().darker());
             g.setFont(new Font("sansserif", Font.PLAIN, 12));
-            TextLayout tl = new TextLayout(locationString, g.getFont(), fontRenderContext);
-            g.drawString(locationString, location.x+2, location.y+(int)tl.getBounds().getHeight() + 2);
+            g.drawString(locationString, location.x+2, location.y+(int)charHeight + 2);
         }
 
         g.setColor(Color.black);
@@ -259,9 +267,8 @@ public abstract class Reaction implements XMLSerializable{
             if (value.length() == 0) {
                 continue;
             }
-            TextLayout tl = new TextLayout(value, g.getFont(), fontRenderContext);
-            int textHeight = (int) tl.getBounds().getHeight();
-            int textWidth = (int) tl.getBounds().getWidth();
+            int textHeight = charHeight;
+            int textWidth = averageCharWidth*value.length();
             g.drawString(value.toString(), location.x + 5 + (location.width - textWidth - PADDING) / 2, y + textHeight);
             y += textHeight + LINE_SPACING;
         }

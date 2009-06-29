@@ -63,6 +63,9 @@ public class PlateView extends JPanel {
         int cellWidth = (getWidth()+1)/cols;
         int cellHeight = (getHeight()+1)/rows;
 
+        g.setColor(Color.white);
+        g.fillRect(0,0,getWidth(),getHeight());
+
         g.setColor(getBackground());
         g.fillRect(0,0,cellWidth*cols+1,cellHeight*rows+1);
         Shape clip = g.getClip();
