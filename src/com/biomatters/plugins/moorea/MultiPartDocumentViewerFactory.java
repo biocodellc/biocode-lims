@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 /**
@@ -59,10 +60,19 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
                 panel.setBackground(Color.white);
                 for(int i=0; i < doc.getNumberOfParts(); i++) {
                     MuitiPartDocument.Part part = doc.getPart(i);
-                    JPanel holderPanel = new JPanel(new BorderLayout());
+                    JPanel holderPanel = new JPanel(new BorderLayout()) {
+                        public Dimension getPreferredSize() {
+                            return new Dimension(10, super.getPreferredSize().height+20);
+                        }
+                    };
                     holderPanel.setOpaque(false);
                     holderPanel.setBorder(new OptionsPanel.RoundedLineBorder(part.getName(), false));
-                    holderPanel.add(part, BorderLayout.CENTER);
+                    JScrollPane scroller = new JScrollPane(part);
+                    scroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+                    scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+                    scroller.setBorder(new EmptyBorder(10,10,10,10));
+                    scroller.setOpaque(false);
+                    holderPanel.add(scroller, BorderLayout.CENTER);
                     panel.addSpanningComponent(holderPanel);
                 }
                 return panel;

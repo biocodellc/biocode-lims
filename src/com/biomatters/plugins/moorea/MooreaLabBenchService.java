@@ -369,10 +369,15 @@ public class MooreaLabBenchService extends DatabaseService {
             }
         }
         try {
-            List<WorkflowDocument> list = limsConnection.getMatchingWorkflowDocuments((CompoundSearchQuery) Query.Factory.createAndQuery(new Query[0], Collections.EMPTY_MAP), tissueSamples);
-            for(PluginDocument doc : list) {
+            List<WorkflowDocument> workflowList = limsConnection.getMatchingWorkflowDocuments((CompoundSearchQuery) Query.Factory.createAndQuery(new Query[0], Collections.EMPTY_MAP), tissueSamples);
+            for(PluginDocument doc : workflowList) {
                 callback.add(doc, Collections.EMPTY_MAP);
             }
+            List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments((CompoundSearchQuery) Query.Factory.createAndQuery(new Query[0], Collections.EMPTY_MAP), workflowList);
+            for(PluginDocument doc : plateList) {
+                callback.add(doc, Collections.EMPTY_MAP);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }

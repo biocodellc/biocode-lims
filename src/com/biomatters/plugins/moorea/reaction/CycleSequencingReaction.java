@@ -32,10 +32,20 @@ public class CycleSequencingReaction extends Reaction{
     public CycleSequencingReaction(ResultSet r, Workflow workflow) throws SQLException{
         this();
         setWorkflow(workflow);
+        Options options = init(r);
+        options.setValue("workflowId", workflow.getName());
+    }
+
+    public CycleSequencingReaction(ResultSet r) throws SQLException {
+        this();
+        init(r);
+    }
+
+    private Options init(ResultSet r) throws SQLException {
         setPlate(r.getInt("cycleSequencing.plate"));
         Options options = getOptions();
         options.setValue("extractionId", r.getString("extraction.extractionId"));
-        options.setValue("workflowId", workflow.getName());
+
 
         options.getOption("runStatus").setValueFromString(r.getString("cycleSequencing.progress"));
 
@@ -55,6 +65,7 @@ public class CycleSequencingReaction extends Reaction{
                 }
             }
         }
+        return options;
     }
 
     public Type getType() {
@@ -63,6 +74,16 @@ public class CycleSequencingReaction extends Reaction{
 
     public Options getOptions() {
         return options;
+    }
+
+    public Cocktail getCocktail() {
+        String cocktailId = ((Options.OptionValue)getOptions().getOption("cocktail").getValue()).getName();
+        for(Cocktail c : new CycleSequencingCocktail().getAllCocktailsOfType()) {
+            if((""+c.getId()).equals(cocktailId)) {
+                return c;
+            }
+        }
+        return null;
     }
 
     public List<DocumentField> getDefaultDisplayedFields() {

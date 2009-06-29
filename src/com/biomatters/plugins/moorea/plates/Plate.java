@@ -1,8 +1,10 @@
 package com.biomatters.plugins.moorea.plates;
 
-import com.biomatters.plugins.moorea.reaction.Reaction;
-import com.biomatters.plugins.moorea.reaction.Thermocycle;
+import com.biomatters.plugins.moorea.reaction.*;
 import com.biomatters.plugins.moorea.plates.GelImage;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 
 import java.awt.*;
 import java.util.List;
@@ -10,6 +12,9 @@ import java.util.ArrayList;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.ResultSet;
+
+import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
@@ -17,7 +22,7 @@ import java.sql.SQLException;
  *          <p/>
  *          Created on 10/06/2009 11:38:24 AM
  */
-public class Plate {
+public class Plate implements XMLSerializable {
     private int id=-1;
     private int rows;
     private int cols;
@@ -34,6 +39,37 @@ public class Plate {
         w384
     }
 
+    public Plate(Element e) throws XMLSerializationException{
+        fromXML(e);
+    }
+
+    public Plate(ResultSet resultSet) throws SQLException{
+        String typeString = resultSet.getString("plate.type");
+        Reaction.Type type = Reaction.Type.valueOf(typeString);
+        int size = resultSet.getInt("plate.size");
+        plateSize = getSizeEnum(size);
+        name = resultSet.getString("plate.name");
+        if(plateSize != null) {
+            init(plateSize, type);
+        }
+        else {
+            init(size, 1, type);
+        }
+    }
+
+    private Size getSizeEnum(int size) {
+        if(size == 48) {
+            return Size.w48;
+        }
+        else if(size == 96) {
+            return Size.w48;
+        }
+        else if(size == 384) {
+            return Size.w48;
+        }
+        return null;
+    }
+
     public Plate(int numberOfWells, Reaction.Type type) {
         init(numberOfWells, 1, type);
     }
@@ -42,6 +78,10 @@ public class Plate {
     public Plate(Plate.Size size, Reaction.Type type) {
         this.type = type;
         this.plateSize = size;
+        init(size, type);
+    }
+
+    private void init(Size size, Reaction.Type type) {
         switch(size) {
             case w48 :
                 init(8, 6, type);
@@ -140,6 +180,23 @@ public class Plate {
         return statement;
     }
 
+    public void addReaction(ResultSet resultSet) throws SQLException{
+        Reaction r;
+        switch(type) {
+            case Extraction:
+                r = new ExtractionReaction(resultSet);
+                break;
+            case PCR:
+                r = new PCRReaction(resultSet);
+                break;
+            case CycleSequencing:
+            default:
+                r = new CycleSequencingReaction(resultSet);
+                break;
+        }
+        reactions[r.getPosition()] = r;
+    }
+
     public int getId() {
         return id;
     }
@@ -160,5 +217,36 @@ public class Plate {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void fromXML(Element element) throws XMLSerializationException {
+        setName(element.getChildText("name"));
+        type = Reaction.Type.valueOf(element.getChildText("type"));
+        int size = Integer.parseInt(element.getChildText("size"));
+        Size sizeEnum = getSizeEnum(size);
+        if(sizeEnum != null) {
+            init(sizeEnum, type);
+        }
+        else {
+            init(size, 1, type);
+        }
+        for(Element e : element.getChildren("reaction")) {
+            Reaction r = XMLSerializer.classFromXML(e, Reaction.class);
+            reactions[r.getPosition()] = r;
+        }
+    }
+
+    public Element toXML() {
+        Element plateElement = new Element("Plate");
+        plateElement.addContent(new Element("name").setText(getName()));
+        plateElement.addContent(new Element("type").setText(type.toString()));
+        plateElement.addContent(new Element("size").setText(""+reactions.length));
+        for(Reaction r : reactions) {
+            plateElement.addContent(XMLSerializer.classToXML("reaction",r));
+        }
+
+        
+
+        return plateElement;
     }
 }

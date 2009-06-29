@@ -114,6 +114,8 @@ public abstract class Reaction implements XMLSerializable{
         this.thermocycle = tc;
     }
 
+    public abstract Cocktail getCocktail();
+
     public List<DocumentField> getAllDisplayableFields() {
         List<DocumentField> displayableFields = new ArrayList<DocumentField>();
         displayableFields.addAll(getDisplayableFields());

@@ -129,4 +129,15 @@ public abstract class Cocktail {
         sp.setRightComponent(component);
         sp.setDividerLocation(location);
     }
+
+    public boolean Equals(Object o) {
+        if(o instanceof Cocktail) {
+            return ((Cocktail)o).getId() == getId();
+        }
+        return false;
+    }
+
+    public int hashCode() {
+        return getId();
+    }
 }

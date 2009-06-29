@@ -174,7 +174,7 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
     }
 
-    private class ReactionPart extends Part {
+    public static class ReactionPart extends Part {
         private Reaction reaction;
 
         public ReactionPart(Reaction reaction) {
@@ -208,6 +208,10 @@ public class WorkflowDocument extends MuitiPartDocument {
                     return "Cycle Sequencing: "+dateFormat.format(reaction.getCreated());
             }
             return "Unknown Reaction";
+        }
+
+        public Reaction getReaction() {
+            return reaction;
         }
 
         public ExtendedPrintable getExtendedPrintable() {

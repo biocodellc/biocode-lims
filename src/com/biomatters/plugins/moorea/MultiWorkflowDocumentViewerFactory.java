@@ -109,7 +109,7 @@ public class MultiWorkflowDocumentViewerFactory extends DocumentViewerFactory{
 
                         Color color = Color.black;
                         if(value != null){
-                            color = value.getColor() == Color.white ? Color.black : value.getColor();
+                            color = value.getColor().equals(Color.white) ? Color.black : value.getColor();
                         }
                         comp.setForeground(color);
 
@@ -119,6 +119,10 @@ public class MultiWorkflowDocumentViewerFactory extends DocumentViewerFactory{
                 return new JScrollPane(table);
             }
         };
+    }
+
+    private static Color getBrighterColor(Color c) {
+        return new Color(Math.min(255,c.getRed()+192), Math.min(255,c.getGreen()+192), Math.min(255,c.getBlue()+192));
     }
 
     private static class ObjectAndColor{

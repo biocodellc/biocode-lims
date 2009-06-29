@@ -39,10 +39,19 @@ public class PCRReaction extends Reaction {
     public PCRReaction(ResultSet r, Workflow workflow) throws SQLException{
         this();
         setWorkflow(workflow);
+        Options options = init(r);
+        options.setValue("workflowId", workflow.getName());
+    }
+
+    public PCRReaction(ResultSet r) throws SQLException{
+        this();
+        init(r);
+    }
+
+    private Options init(ResultSet r) throws SQLException {
         setPlate(r.getInt("pcr.plate"));
         Options options = getOptions();
-        options.setValue("extractionId", r.getString("extraction.extractionId"));
-        options.setValue("workflowId", workflow.getName());
+        options.setValue("extractionId", r.getString("pcr.extractionId"));
 
         options.getOption("runStatus").setValueFromString(r.getString("pcr.progress"));
 
@@ -62,6 +71,7 @@ public class PCRReaction extends Reaction {
                 }
             }
         }
+        return options;
     }
 
     public Options getOptions() {
@@ -70,6 +80,16 @@ public class PCRReaction extends Reaction {
 
     public Type getType() {
         return Type.PCR;
+    }
+
+    public Cocktail getCocktail() {
+        String cocktailId = ((Options.OptionValue)getOptions().getOption("cocktail").getValue()).getName();
+        for(Cocktail c : new PCRCocktail().getAllCocktailsOfType()) {
+            if((""+c.getId()).equals(cocktailId)) {
+                return c;
+            }
+        }
+        return null;
     }
 
     public List<DocumentField> getDefaultDisplayedFields() {

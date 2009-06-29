@@ -1,6 +1,7 @@
 package com.biomatters.plugins.moorea.lims;
 
 import com.biomatters.plugins.moorea.*;
+import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
@@ -206,25 +207,49 @@ public class LIMSConnection {
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
     }
 
-    public List<PlateDocument> getMatchingPlateDocuments(CompoundSearchQuery query, List<FimsSample> samples) {
-        return null;
-    }
+    public List<PlateDocument> getMatchingPlateDocuments(CompoundSearchQuery query, List<WorkflowDocument> workflowDocuments) throws SQLException{
+        StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cycleSequencing ON cycleSequencing.plate = plate.id " +
+                "LEFT JOIN pcr ON pcr.plate = plate.id " +
+                "LEFT JOIN extraction ON extraction.plate = plate.id " +
+                "WHERE");
 
-//    private List<Workflow> getMatchingWorkflows(Query query) {
-//        String sql = "";
-//    }
+        Set<Integer> plateIds = new HashSet<Integer>();
+        for(WorkflowDocument doc : workflowDocuments) {
+            for(int i=0; i < doc.getNumberOfParts(); i++) {
+                WorkflowDocument.ReactionPart p = (WorkflowDocument.ReactionPart)doc.getPart(i);
+                Reaction reaction = p.getReaction();
+                plateIds.add(reaction.getPlate());
+            }
+        }
+        for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
+            Integer intg = it.next();
+            sql.append(" plate.id=" + intg);
+            if(it.hasNext()) {
+                sql.append(" OR");
+            }
+        }
+        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        ResultSet resultSet = statement.executeQuery();
+        Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
+        while(resultSet.next()) {
+            Plate plate;
+            int plateId = resultSet.getInt("plate.id");
+            if(plateMap.get(plateId) == null) {
+                plate = new Plate(resultSet);  
+                plateMap.put(plate.getId(), plate);
+            }
+            else {
+                plate = plateMap.get(plateId);
+            }
+            plate.addReaction(resultSet);
+        }
+        List<PlateDocument> docs = new ArrayList<PlateDocument>();
+        for(Plate plate : plateMap.values()) {
+            docs.add(new PlateDocument(plate));
+        }
 
-    private List<Integer> getMatchingPlates(Query query, List<FimsSample> samples) {
-        String sql = "";
-        return null;
-    }
+        return docs;
 
-    private List<Integer> getMatchingWorkflows(Query query, List<FimsSample> samples) {
-        StringBuilder sql = new StringBuilder("SELECT workflow.id FROM workflow, extraction, pcr, cycleSequencing WHERE extraction.workflow = workflow.id AND pcr.workflow = workflow.id AND cycleSequenging.workflow = workflow.id AND (");
-
-
-        sql.append(")");
-        return null;
     }
 
     private static QueryTermSurrounder getQueryTermSurrounder(AdvancedSearchQueryTerm query) {

@@ -9,6 +9,7 @@ import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
 import com.biomatters.plugins.moorea.ConnectionException;
 import com.biomatters.plugins.moorea.Workflow;
+import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
 
 import java.util.*;
@@ -32,9 +33,18 @@ public class ExtractionReaction extends Reaction{
     public ExtractionReaction(ResultSet r, Workflow workflow) throws SQLException{
         Options options = getOptions();
         setWorkflow(workflow);
+        init(r, options);
+        options.setValue("workflowId", workflow.getName());
+    }
+
+    public ExtractionReaction(ResultSet r) throws SQLException{
+        Options options = getOptions();
+        init(r, options);
+    }
+
+    private void init(ResultSet r, Options options) throws SQLException {
         options.setValue("sampleId", r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
-        options.setValue("workflowId", workflow.getName());
         options.setValue("extractionMethod", r.getString("extraction.method"));
         options.setValue("parentExtraction", r.getString("extraction.parent"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
@@ -65,6 +75,10 @@ public class ExtractionReaction extends Reaction{
     public void setThermocycle(Thermocycle tc){}
     public Thermocycle getThermocycle() {
         return null;  //Extractions don't have thermocycles
+    }
+
+    public Cocktail getCocktail() {
+        return null; //extractions don't have cocktails
     }
     
     public Type getType() {
