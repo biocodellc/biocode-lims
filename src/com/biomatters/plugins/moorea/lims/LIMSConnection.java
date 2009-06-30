@@ -104,6 +104,7 @@ public class LIMSConnection {
         StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cycleSequencing ON cycleSequencing.workflow = workflow.id " +
                 "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
                 "LEFT JOIN extraction ON workflow.extractionId = extraction.id " +
+                "LEFT JOIN plate ON (plate.id = extraction.plate OR plate.id = pcr.plate OR plate.id = cycleSequencing.plate) "+
                 "WHERE ");
 
         boolean somethingToSearch = false;
@@ -208,6 +209,9 @@ public class LIMSConnection {
     }
 
     public List<PlateDocument> getMatchingPlateDocuments(CompoundSearchQuery query, List<WorkflowDocument> workflowDocuments) throws SQLException{
+        if(workflowDocuments.size() == 0) {
+            return Collections.EMPTY_LIST;
+        }
         StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cycleSequencing ON cycleSequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN extraction ON extraction.plate = plate.id " +

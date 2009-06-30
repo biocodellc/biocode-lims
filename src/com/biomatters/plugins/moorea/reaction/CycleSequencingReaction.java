@@ -43,6 +43,8 @@ public class CycleSequencingReaction extends Reaction{
 
     private Options init(ResultSet r) throws SQLException {
         setPlate(r.getInt("cycleSequencing.plate"));
+        setPosition(r.getInt("cycleSequencing.location"));
+        setCreated(r.getDate("cycleSequencing.date"));
         Options options = getOptions();
         options.setValue("extractionId", r.getString("extraction.extractionId"));
 
@@ -52,11 +54,14 @@ public class CycleSequencingReaction extends Reaction{
         Options.ComboBoxOption primerOption = (Options.ComboBoxOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
         String primerName = r.getString("cycleSequencing.primerName");
         primerOption.setValueFromString(primerName);//todo: what if the user doesn't have the primer?
+        options.setValue("prAmount", r.getInt("cycleSequencing.primerAmount"));
+        options.setValue("notes", r.getString("cycleSequencing.notes"));
+        options.setValue("runStatus", r.getString("cycleSequencing.progress"));
         options.setValue("cocktail", r.getString("cycleSequencing.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("cycleSequencing.cleanupPerformed"));
         options.setValue("cleanupMethod", r.getBoolean("cycleSequencing.cleanupMethod"));
 
-        int thermocycleId = r.getInt("cycleSequencing.thermocycle");
+        int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {
             for(Thermocycle tc : MooreaLabBenchService.getInstance().getCycleSequencingThermocycles()) {
                 if(tc.getId() == thermocycleId) {

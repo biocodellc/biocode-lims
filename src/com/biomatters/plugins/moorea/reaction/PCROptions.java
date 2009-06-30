@@ -32,10 +32,13 @@ public class PCROptions extends Options {
     private ComboBoxOption<OptionValue> primerOption;
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
+    private ComboBoxOption cocktailOption;
 
     public static final String PRIMER_OPTION_ID = "primer";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
-   static final String LABEL_OPTION_ID = "label";
+    static final String LABEL_OPTION_ID = "label";
+    static final String COCKTAIL_OPTION_ID = "cocktail";
+
 
     public PCROptions(Class c) {
         super(c);
@@ -52,6 +55,7 @@ public class PCROptions extends Options {
         primerOption = (ComboBoxOption<OptionValue>)getOption(PRIMER_OPTION_ID);
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
+        cocktailOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
 
 
         //search cache listener
@@ -90,6 +94,7 @@ public class PCROptions extends Options {
                                 Runnable runnable = new Runnable() {
                                     public void run() {
                                         Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
+
                                     }
                                 };
                                 ThreadUtilities.invokeNowOrLater(runnable);
@@ -100,6 +105,7 @@ public class PCROptions extends Options {
                     };
                     new Thread(runnable).start();
                 }
+                updateCocktailOption(cocktailOption);
             }
         };
         cocktailButton.addActionListener(cocktailButtonListener);
@@ -155,7 +161,9 @@ public class PCROptions extends Options {
             cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
         }
 
-        addComboBoxOption("cocktail", "Reaction Cocktail",  cocktails, cocktails.get(0));
+        cocktailOption = addComboBoxOption(COCKTAIL_OPTION_ID, "Reaction Cocktail", cocktails, cocktails.get(0));
+
+        updateCocktailOption(cocktailOption);
 
         cocktailButton = new ButtonOption(COCKTAIL_BUTTON_ID, "", "Edit Cocktails");
         cocktailButton.setSpanningComponent(true);
@@ -167,6 +175,15 @@ public class PCROptions extends Options {
 
         labelOption = new LabelOption(LABEL_OPTION_ID, "Total Volume of Reaction: 0uL");
         addCustomOption(labelOption);
+    }
+
+    private void updateCocktailOption(ComboBoxOption<OptionValue> cocktailOption) {
+        List<OptionValue> cocktails = new ArrayList<OptionValue>();
+        for (int i = 0; i < new PCRCocktail().getAllCocktailsOfType().size(); i++) {
+            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
+            cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
+        }
+        cocktailOption.setPossibleValues(cocktails);
     }
 
 

@@ -32,6 +32,8 @@ import java.sql.*;
 import java.util.*;
 import java.util.List;
 import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * @author Steven Stones-Havas
@@ -47,6 +49,8 @@ public class MooreaLabBenchService extends DatabaseService {
     static Driver driver;
     private static MooreaLabBenchService instance = null;
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
+
+    public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);
 
     private MooreaLabBenchService() {
     }
@@ -413,6 +417,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 limsConnection.executeUpdate(cocktail.getSQLString());
             }
         }
+        buildCaches();
     }
 
     public void addNewCycleSequencingCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{
@@ -421,6 +426,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 limsConnection.executeUpdate(cocktail.getSQLString());
             }
         }
+        buildCaches();
     }
 
     private List<Thermocycle> PCRThermocycles = null;

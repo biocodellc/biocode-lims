@@ -1,14 +1,14 @@
 package com.biomatters.plugins.moorea;
 
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
-import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.print.PrinterException;
+import java.awt.print.Printable;
 
 /**
  * @author Steven Stones-Havas
@@ -52,9 +52,10 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
     }
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
+        final MuitiPartDocument doc = (MuitiPartDocument)annotatedDocuments[0].getDocumentOrCrash();
+
         return new DocumentViewer(){
             public JComponent getComponent() {
-                MuitiPartDocument doc = (MuitiPartDocument)annotatedDocuments[0].getDocumentOrCrash();
                 OptionsPanel panel = new OptionsPanel();
                 panel.setOpaque(true);
                 panel.setBackground(Color.white);
@@ -80,7 +81,50 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
                 return panel;
             }
 
-            
+            @Override
+            public ExtendedPrintable getExtendedPrintable() {
+                return new ExtendedPrintable(){
+                    @Override
+                    public Options getOptions(boolean isSavingToFile) {
+                        Options o = new Options(this.getClass());
+                        for(int i=0; i < doc.getNumberOfParts(); i++) {
+                            o.addBooleanOption(""+i, "Print "+doc.getPart(i).getName(), true);
+                        }
+                        return o;
+                    }
+
+                    public int print(Graphics2D graphics, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
+                        int totalPages = -1;
+                        for(int i=0; i < doc.getNumberOfParts(); i++) {
+                            if((Boolean)options.getValue(""+i)) {
+                                ExtendedPrintable partPrintable = doc.getPart(i).getExtendedPrintable();
+                                if(partPrintable != null) {
+                                    int pagesRequired = partPrintable.getPagesRequired(dimensions, null);
+                                    if(pageIndex <= totalPages + pagesRequired) {
+                                        partPrintable.print(graphics, dimensions, pageIndex-totalPages, null);
+                                        return Printable.PAGE_EXISTS;
+                                    }
+                                    totalPages += pagesRequired;
+                                }
+                            }
+                        }
+                        return Printable.NO_SUCH_PAGE;
+                    }
+
+                    public int getPagesRequired(Dimension dimensions, Options options) {
+                        int pages = 0;
+                        for(int i=0; i < doc.getNumberOfParts(); i++) {
+                            if((Boolean)options.getValue(""+i)) {
+                                ExtendedPrintable partPrintable = doc.getPart(i).getExtendedPrintable();
+                                if(partPrintable != null) {
+                                    pages += partPrintable.getPagesRequired(dimensions, null);
+                                }
+                            }
+                        }
+                        return pages;
+                    }
+                };
+            }
         };
     }
 }

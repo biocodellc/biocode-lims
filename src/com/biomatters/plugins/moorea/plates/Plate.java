@@ -2,6 +2,7 @@ package com.biomatters.plugins.moorea.plates;
 
 import com.biomatters.plugins.moorea.reaction.*;
 import com.biomatters.plugins.moorea.plates.GelImage;
+import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
@@ -47,6 +48,7 @@ public class Plate implements XMLSerializable {
         String typeString = resultSet.getString("plate.type");
         Reaction.Type type = Reaction.Type.valueOf(typeString);
         int size = resultSet.getInt("plate.size");
+        this.id = resultSet.getInt("plate.id");
         plateSize = getSizeEnum(size);
         name = resultSet.getString("plate.name");
         if(plateSize != null) {
@@ -55,6 +57,19 @@ public class Plate implements XMLSerializable {
         else {
             init(size, 1, type);
         }
+        int thermocycleId = resultSet.getInt("plate.thermocycle");
+        setThermocycleFromId(thermocycleId);
+    }
+
+    private void setThermocycleFromId(int thermocycleId) {
+        if(thermocycleId >= 0) {
+            for(Thermocycle tc : MooreaLabBenchService.getInstance().getPCRThermocycles()) {
+                if(tc.getId() == thermocycleId) {
+                    setThermocycle(tc);
+                    break;
+                }
+            }
+        }
     }
 
     private Size getSizeEnum(int size) {
@@ -62,10 +77,10 @@ public class Plate implements XMLSerializable {
             return Size.w48;
         }
         else if(size == 96) {
-            return Size.w48;
+            return Size.w96;
         }
         else if(size == 384) {
-            return Size.w48;
+            return Size.w384;
         }
         return null;
     }
@@ -173,10 +188,17 @@ public class Plate implements XMLSerializable {
         if(name == null || name.trim().length() == 0) {
             throw new SQLException("Plates cannot have empty names");
         }
-        PreparedStatement statement = connection.prepareStatement("INSERT INTO plate (name, size, type) VALUES (?, ?, ?)");
+        PreparedStatement statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle) VALUES (?, ?, ?, ?)");
         statement.setString(1, getName());
         statement.setInt(2, reactions.length);
         statement.setString(3, type.toString());
+        Thermocycle tc = getThermocycle();
+        if(tc != null) {
+            statement.setInt(4, tc.getId());
+        }
+        else {
+            statement.setInt(4, -1);
+        }
         return statement;
     }
 
@@ -234,6 +256,10 @@ public class Plate implements XMLSerializable {
             Reaction r = XMLSerializer.classFromXML(e, Reaction.class);
             reactions[r.getPosition()] = r;
         }
+        String thermocycleId = element.getChildText("thermocycle");
+        if(thermocycleId != null) {
+            setThermocycleFromId(Integer.parseInt(thermocycleId));     
+        }
     }
 
     public Element toXML() {
@@ -241,6 +267,9 @@ public class Plate implements XMLSerializable {
         plateElement.addContent(new Element("name").setText(getName()));
         plateElement.addContent(new Element("type").setText(type.toString()));
         plateElement.addContent(new Element("size").setText(""+reactions.length));
+        if(getThermocycle() != null) {
+            plateElement.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
+        }
         for(Reaction r : reactions) {
             plateElement.addContent(XMLSerializer.classToXML("reaction",r));
         }

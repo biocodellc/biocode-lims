@@ -20,6 +20,7 @@ import java.util.Date;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.text.ParseException;
 
 import org.jdom.Element;
 
@@ -174,12 +175,21 @@ public abstract class Reaction implements XMLSerializable{
         if(getThermocycle() != null) {
             element.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
         }
+        element.addContent(new Element("created").setText(MooreaLabBenchService.dateFormat.format(getCreated())));
+        element.addContent(new Element("position").setText(""+getPosition()));
         element.addContent(getOptions().valuesToXML("values"));
         return element;
     }
 
     public void fromXML(Element element) throws XMLSerializationException {
         String thermoCycleId = element.getChildText("thermocycle");
+        setPosition(Integer.parseInt(element.getChildText("position")));
+        try {
+            setCreated(MooreaLabBenchService.dateFormat.parse(element.getChildText("created")));
+        } catch (ParseException e) {
+            assert false : "Could not read the date "+element.getChildText("created");
+            setCreated(new Date());
+        }
         if(thermoCycleId != null) {
             int tcId = Integer.parseInt(thermoCycleId);
             for(Thermocycle tc : MooreaLabBenchService.getInstance().getPCRThermocycles()) {
@@ -214,14 +224,13 @@ public abstract class Reaction implements XMLSerializable{
                 maxLabel = value;
             }
         }
-        TextLayout tl = new TextLayout(maxLabel, firstLabelFont, fontRenderContext);       
         for(DocumentField field : getFieldsToDisplay()) {
             String value = getFieldValue(field.getCode()).toString();
             if(value.length() == 0) {
                 continue;
             }
-            y += (int) tl.getBounds().getHeight()+LINE_SPACING;
-            x = Math.max(x, (int)tl.getBounds().getWidth());
+            y += charHeight+LINE_SPACING;
+            x = Math.max(x, averageCharWidth*value.length());
         }
         x += PADDING;
         return new Dimension(Math.max(50,x), Math.max(30,y));
@@ -262,13 +271,15 @@ public abstract class Reaction implements XMLSerializable{
         for (int i = 0; i < getFieldsToDisplay().size(); i++) {
             g.setFont(i == 0 ? firstLabelFont : labelFont);
 
+            int charWidth = i == 0 ? averageCharWidth+1 : averageCharWidth;
+
             DocumentField field = getFieldsToDisplay().get(i);
             String value = getFieldValue(field.getCode()).toString();
             if (value.length() == 0) {
                 continue;
             }
             int textHeight = charHeight;
-            int textWidth = averageCharWidth*value.length();
+            int textWidth = charWidth*value.length();
             g.drawString(value.toString(), location.x + 5 + (location.width - textWidth - PADDING) / 2, y + textHeight);
             y += textHeight + LINE_SPACING;
         }
@@ -341,7 +352,7 @@ public abstract class Reaction implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, MooreaLabBenchService.BlockingDialog progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String sql = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                String sql = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement statement = connection.prepareStatement(sql);
                 statement.addBatch();
                 for (int i = 0; i < reactions.length; i++) {
@@ -358,6 +369,7 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setString(5, options.getValueAsString("sampleId"));
                         statement.setString(6, options.getValueAsString("extractionId"));
                         statement.setInt(7, reaction.getPlate());
+                        statement.setInt(8, reaction.getPosition());
                         statement.execute();
                     }
                 }

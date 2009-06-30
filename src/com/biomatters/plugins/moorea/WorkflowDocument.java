@@ -26,7 +26,7 @@ import javax.swing.*;
 public class WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
     private List<Reaction> reactions;
-    private static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);
+
 
     public WorkflowDocument() {
         this.reactions = new ArrayList<Reaction>();    
@@ -201,11 +201,11 @@ public class WorkflowDocument extends MuitiPartDocument {
         public String getName() {
             switch(reaction.getType()) {
                 case Extraction:
-                    return "Extraction: "+dateFormat.format(reaction.getCreated());
+                    return "Extraction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
                 case PCR:
-                    return "PCR: "+dateFormat.format(reaction.getCreated());
+                    return "PCR: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
                 case CycleSequencing:
-                    return "Cycle Sequencing: "+dateFormat.format(reaction.getCreated());
+                    return "Cycle Sequencing: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
             }
             return "Unknown Reaction";
         }
