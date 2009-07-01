@@ -90,23 +90,11 @@ public class PlateDocument extends MuitiPartDocument {
 
     public static class PlatePart extends Part {
         private Plate plate;
-        private PlateView pView;
         private Map<Cocktail, Integer>  cocktailCount;
 
         public PlatePart(Plate plate) {
             this.plate = plate;
-            pView = new PlateView(plate);
-            setOpaque(false);
 
-            //the main plate
-            OptionsPanel mainPanel = new OptionsPanel();
-            mainPanel.setOpaque(false);
-            mainPanel.addDividerWithLabel("Plate");
-            JScrollPane jScrollPane = new JScrollPane(pView);
-            jScrollPane.setBorder(null);
-            jScrollPane.setPreferredSize(new Dimension(1, jScrollPane.getPreferredSize().height+20));
-            jScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-            mainPanel.addSpanningComponent(jScrollPane);
 
             cocktailCount = new HashMap<Cocktail, Integer>();
             for(Reaction r : plate.getReactions()) {
@@ -120,6 +108,25 @@ public class PlateDocument extends MuitiPartDocument {
                     cocktailCount.put(c, count);
                 }
             }
+
+        }
+
+        public JPanel getPanel() {
+            JPanel panel = new JPanel();
+
+            PlateView pView = new PlateView(plate);
+            panel.setOpaque(false);
+
+            //the main plate
+            OptionsPanel mainPanel = new OptionsPanel();
+            mainPanel.setOpaque(false);
+            mainPanel.addDividerWithLabel("Plate");
+            JScrollPane jScrollPane = new JScrollPane(pView);
+            jScrollPane.setBorder(null);
+            jScrollPane.setPreferredSize(new Dimension(1, jScrollPane.getPreferredSize().height+20));
+            jScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+            mainPanel.addSpanningComponent(jScrollPane);
+
             if(cocktailCount.size() > 0) {
                 JPanel cocktailHolderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
                 cocktailHolderPanel.setOpaque(false);
@@ -141,8 +148,10 @@ public class PlateDocument extends MuitiPartDocument {
                 mainPanel.addSpanningComponent(thermocyclePanel);
             }
 
-            setLayout(new BorderLayout());
-            add(mainPanel, BorderLayout.CENTER);
+            panel.setLayout(new BorderLayout());
+            panel.add(mainPanel, BorderLayout.CENTER);
+
+            return panel;
         }
 
         private JPanel getThermocyclePanel(Plate plate) {
@@ -193,18 +202,42 @@ public class PlateDocument extends MuitiPartDocument {
             return new ExtendedPrintable(){
                 private double masterScale = 0.75;
 
-                public int print(Graphics2D g, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
+                public int print(Graphics2D graphics, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
+                    int pages = printAndPagesRequired(graphics, dimensions, pageIndex, options);
+                    return pages > pageIndex ? Printable.PAGE_EXISTS : Printable.NO_SUCH_PAGE;
+                }
+
+                public int getPagesRequired(Dimension dimensions, Options options) {
+                    try {
+                        return printAndPagesRequired(null, dimensions, -1, options);
+                    } catch (PrinterException e) {
+                        return 0;
+                    }
+                }
+
+                @Override
+                public Options getOptions(boolean isSavingToFile) {
+                    Options o = new Options(this.getClass());
+                    o.addBooleanOption("colorPlate", "Color the plate", true);
+                    return o;
+                }
+
+                public int printAndPagesRequired(Graphics2D g, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
                     int page = 1;
 
                     //everything is too big by default...
-                    g.scale(masterScale, masterScale);
+                    if(g != null) {
+                        g.scale(masterScale, masterScale);
+                    }
                     dimensions = new Dimension((int)(dimensions.width/masterScale), (int)(dimensions.height/masterScale));
 
                     int availableHeight = dimensions.height;
+                    PlateView pView = new PlateView(plate);
+                    pView.setColorBackground((Boolean)options.getValue("colorPlate"));
                     double scaleFactor = dimensions.getWidth()/pView.getPreferredSize().width;
                     double requiredPlateHeight = scaleFactor*pView.getPreferredSize().height;
 
-                    if(pageIndex == page) {
+                    if(pageIndex == page && g != null) {
                         g.scale(scaleFactor, scaleFactor);
                         pView.setBounds(0,0,pView.getPreferredSize().width, pView.getPreferredSize().height);
                         pView.print(g);
@@ -229,7 +262,7 @@ public class PlateDocument extends MuitiPartDocument {
                                 if (cocktailHeight + maxRowHeight > availableHeight) {
                                     page++;
                                     cocktailHeight = maxRowHeight;
-                                    availableHeight = dimensions.height=cocktailHeight;
+                                    availableHeight = dimensions.height;
                                     cocktailWidth = 0;
                                 }
                                 else {
@@ -242,13 +275,12 @@ public class PlateDocument extends MuitiPartDocument {
 
                             maxRowHeight = Math.max(maxRowHeight, heightIncriment);
 
-                            if(pageIndex == page) {
+                            if(pageIndex == page && g != null) {
                                 cocktailPanel.setBounds(0,0, cocktailPanel.getPreferredSize().width, cocktailPanel.getPreferredSize().height);
                                 recursiveDoLayout(cocktailPanel);
+                                cocktailPanel.validate();
                                 g.translate(cocktailWidth-widthIncriment, dimensions.height - availableHeight + cocktailHeight);
-                                disableDoubleBuffering(cocktailPanel);
-                                cocktailPanel.paint(g);
-                                enableDoubleBuffering(cocktailPanel);
+                                cocktailPanel.print(g);
                                 g.translate(-cocktailWidth+widthIncriment, -(dimensions.height - availableHeight + cocktailHeight));
                             }
 
@@ -277,8 +309,11 @@ public class PlateDocument extends MuitiPartDocument {
 
                         if(thermocyclePanel.getPreferredSize().getHeight()+10 > dimensions.height-y) {
                             page++;
+                            availableHeight = dimensions.height;
+                            x = (dimensions.width-thermocyclePanel.getPreferredSize().width)/2;
+                            y = dimensions.height-availableHeight;
                         }
-                        if(page == pageIndex) {
+                        if(page == pageIndex && g != null) {
                             thermocyclePanel.setBounds(x, y, thermocyclePanel.getPreferredSize().width, thermocyclePanel.getPreferredSize().height);
                             recursiveDoLayout(thermocyclePanel);
                             g.translate(x, y);
@@ -287,50 +322,14 @@ public class PlateDocument extends MuitiPartDocument {
                         }
                     }
 
-                    g.scale(1/masterScale, 1/masterScale);
-                    return pageIndex > page ? Printable.NO_SUCH_PAGE : Printable.PAGE_EXISTS;
-                }
-
-                public int getPagesRequired(Dimension dimensions, Options options) {
-                    int page = 1;
-                    int availableHeight = dimensions.height;
-                    double scaleFactor = dimensions.getWidth()/pView.getPreferredSize().width;
-                    double requiredPlateHeight = scaleFactor*pView.getPreferredSize().height;
-                    availableHeight -= requiredPlateHeight+10;
-
-                    if(cocktailCount.size() > 0) {
-                        int height = 0;
-                        int width = 0;
-                        for(Map.Entry<Cocktail, Integer> entry : cocktailCount.entrySet()) {
-                            JPanel cocktailPanel = getCocktailPanel(entry);
-                            if(width + cocktailPanel.getPreferredSize().width+10 < dimensions.width) {
-                                width += cocktailPanel.getPreferredSize().width+10;
-                            }
-                            else if (height + cocktailPanel.getPreferredSize().height + 10 > availableHeight) {
-                                page++;
-                                height = cocktailPanel.getPreferredSize().height+10;
-                                availableHeight = dimensions.height=height;
-                                width = 0;
-                            }
-                            else {
-                                width = 0;
-                                height += cocktailPanel.getPreferredSize().height+10;
-                                availableHeight -= cocktailPanel.getPreferredSize().height+10;
-                            }
-                        }
+                    if(g != null) {
+                        g.scale(1/masterScale, 1/masterScale);
                     }
-
-                    if(plate.getThermocycle() != null) {
-                        JPanel thermocyclePanel = getThermocyclePanel(plate);
-                        if(thermocyclePanel.getPreferredSize().getHeight()+10 > availableHeight) {
-                            page++;
-                        }
-                    }
-
                     return page;
                 }
             };
         }
+
 
         public boolean hasChanges() {
             return false;

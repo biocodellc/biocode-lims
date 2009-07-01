@@ -161,6 +161,7 @@ public class LIMSConnection {
         }
 
         //attach the values to the query
+        System.out.println(sql.toString());
         PreparedStatement statement = connection.prepareStatement(sql.toString());
         int position = 1;
         if(samples != null && samples.size() > 0) {

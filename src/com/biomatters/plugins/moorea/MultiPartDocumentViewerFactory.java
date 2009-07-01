@@ -75,7 +75,7 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
 //                    scroller.setBorder(new EmptyBorder(10,10,10,10));
 //                    scroller.setOpaque(false);
 //                    scroller.getViewport().setOpaque(false);
-                    holderPanel.add(part, BorderLayout.CENTER);
+                    holderPanel.add(part.getPanel(), BorderLayout.CENTER);
                     panel.addSpanningComponent(holderPanel);
                 }
                 return panel;
@@ -88,7 +88,18 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
                     public Options getOptions(boolean isSavingToFile) {
                         Options o = new Options(this.getClass());
                         for(int i=0; i < doc.getNumberOfParts(); i++) {
-                            o.addBooleanOption(""+i, "Print "+doc.getPart(i).getName(), true);
+                            MuitiPartDocument.Part part = doc.getPart(i);
+                            Options.BooleanOption booleanOption = null;
+                            if(doc.getNumberOfParts() > 1) {
+                                booleanOption = o.addBooleanOption("" + i, "Print " + part.getName(), true);
+                            }
+                            Options childOptions = part.getExtendedPrintable().getOptions(isSavingToFile);
+                            if(childOptions != null) {
+                                o.addChildOptions(""+i, "", "", childOptions);
+                                if(doc.getNumberOfParts() > 1) {
+                                    booleanOption.addChildOptionsDependent(childOptions, true, true);
+                                }
+                            }
                         }
                         return o;
                     }
@@ -96,12 +107,13 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
                     public int print(Graphics2D graphics, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
                         int totalPages = -1;
                         for(int i=0; i < doc.getNumberOfParts(); i++) {
-                            if((Boolean)options.getValue(""+i)) {
+                            if(doc.getNumberOfParts() == 1 || ((Options.BooleanOption)options.getOption("" + i)).getValue()) {
                                 ExtendedPrintable partPrintable = doc.getPart(i).getExtendedPrintable();
+                                Options childOptions = options.getChildOptions().get(""+i);
                                 if(partPrintable != null) {
-                                    int pagesRequired = partPrintable.getPagesRequired(dimensions, null);
+                                    int pagesRequired = partPrintable.getPagesRequired(dimensions, childOptions);
                                     if(pageIndex <= totalPages + pagesRequired) {
-                                        partPrintable.print(graphics, dimensions, pageIndex-totalPages, null);
+                                        partPrintable.print(graphics, dimensions, pageIndex-totalPages, childOptions);
                                         return Printable.PAGE_EXISTS;
                                     }
                                     totalPages += pagesRequired;
@@ -114,10 +126,11 @@ public class MultiPartDocumentViewerFactory extends DocumentViewerFactory{
                     public int getPagesRequired(Dimension dimensions, Options options) {
                         int pages = 0;
                         for(int i=0; i < doc.getNumberOfParts(); i++) {
-                            if((Boolean)options.getValue(""+i)) {
+                            if(doc.getNumberOfParts() == 1 || (Boolean)options.getValue(""+i)) {
+                                Options childOptions = options.getChildOptions().get(""+i);
                                 ExtendedPrintable partPrintable = doc.getPart(i).getExtendedPrintable();
                                 if(partPrintable != null) {
-                                    pages += partPrintable.getPagesRequired(dimensions, null);
+                                    pages += partPrintable.getPagesRequired(dimensions, childOptions);
                                 }
                             }
                         }

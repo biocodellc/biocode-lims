@@ -245,10 +245,11 @@ public abstract class Reaction implements XMLSerializable{
     }
 
 
-    public void paint(Graphics2D g){
+    public void paint(Graphics2D g, boolean colorTheBackground){
         fontRenderContext = g.getFontRenderContext();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(isSelected() ? getBackgroundColor().darker() : getBackgroundColor());
+        Color backgroundColor = colorTheBackground ? getBackgroundColor() : Color.white;
+        g.setColor(isSelected() ? backgroundColor.darker() : backgroundColor);
         g.fillRect(location.x, location.y, location.width, location.height);
 
         if(averageCharWidth < 0 || charHeight < 0) {

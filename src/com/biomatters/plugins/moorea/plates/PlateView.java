@@ -29,6 +29,7 @@ public class PlateView extends JPanel {
 
     private PlateView selfReference = this;
     private Plate plate;
+    private boolean colorBackground = true;
 
 
 
@@ -77,11 +78,19 @@ public class PlateView extends JPanel {
                 Rectangle reactionBounds = new Rectangle(1+cellWidth * j, 1+cellHeight * i, cellWidth - 1, cellHeight - 1);
                 reaction.setBounds(reactionBounds);
                 g.clip(reactionBounds);
-                reaction.paint(g);
+                reaction.paint(g, colorBackground);
                 g.setClip(clip);
             }
         }
         //System.out.println("paintin: "+(System.currentTimeMillis()-time));
+    }
+
+    public boolean isColorBackground() {
+        return colorBackground;
+    }
+
+    public void setColorBackground(boolean colorBackground) {
+        this.colorBackground = colorBackground;
     }
 
     @Override

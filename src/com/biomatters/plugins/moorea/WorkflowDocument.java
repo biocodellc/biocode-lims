@@ -2,12 +2,15 @@ package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.plugins.moorea.reaction.*;
 
 import java.util.*;
 import java.util.List;
 import java.awt.*;
+import java.awt.print.PrinterException;
+import java.awt.print.Printable;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.sql.ResultSet;
@@ -126,26 +129,26 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public void addRow(ResultSet resultSet) throws SQLException{
         //add extractions
-        if(resultSet.getObject("extraction.id") != null) {
-            int reactionId = resultSet.getInt("extraction.id");
-            //check we don't already have it
-            boolean alreadyThere = false;
-            for(Reaction r : reactions) {
-                if(r.getType() == Reaction.Type.Extraction && r.getId() == reactionId) {
-                    alreadyThere = true;
+        Reaction.Type rowType = Reaction.Type.valueOf(resultSet.getString("plate.type"));
+        switch(rowType) {
+            case Extraction :
+                int reactionId = resultSet.getInt("extraction.id");
+                //check we don't already have it
+                boolean alreadyThere = false;
+                for(Reaction r : reactions) {
+                    if(r.getType() == Reaction.Type.Extraction && r.getId() == reactionId) {
+                        alreadyThere = true;
+                    }
                 }
-            }
-            if(!alreadyThere) {
-                Reaction r = new ExtractionReaction(resultSet, workflow);
-                reactions.add(r);
-            }
-        }
-
-        //add PCR's
-        if(resultSet.getObject("pcr.id") != null) {
-            int reactionId = resultSet.getInt("pcr.id");
+                if(!alreadyThere) {
+                    Reaction r = new ExtractionReaction(resultSet, workflow);
+                    reactions.add(r);
+                }
+            break;
+        case PCR :
+            reactionId = resultSet.getInt("pcr.id");
             //check we don't already have it
-            boolean alreadyThere = false;
+            alreadyThere = false;
             for(Reaction r : reactions) {
                 if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
                     alreadyThere = true;
@@ -155,13 +158,11 @@ public class WorkflowDocument extends MuitiPartDocument {
                 Reaction r = new PCRReaction(resultSet, workflow);
                 reactions.add(r);
             }
-        }
-
-        //add CycleSequencing's
-        if(resultSet.getObject("cycleSequencing.id") != null) {
-            int reactionId = resultSet.getInt("cycleSequencing.id");
+            break;
+        case CycleSequencing :
+            reactionId = resultSet.getInt("cycleSequencing.id");
             //check we don't already have it
-            boolean alreadyThere = false;
+            alreadyThere = false;
             for(Reaction r : reactions) {
                 if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
                     alreadyThere = true;
@@ -171,6 +172,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                 Reaction r = new CycleSequencingReaction(resultSet, workflow);
                 reactions.add(r);
             }
+            break;
         }
     }
 
@@ -180,32 +182,45 @@ public class WorkflowDocument extends MuitiPartDocument {
         public ReactionPart(Reaction reaction) {
             super();
             this.reaction = reaction;
-            init();
         }
 
-        private void init() {
+        public JPanel getPanel() {
+            JPanel panel = new JPanel();
+            OptionsPanel optionsPanel = getReactionPanel(reaction);
+            panel.setOpaque(false);
+            panel.setLayout(new BorderLayout());
+            panel.add(optionsPanel, BorderLayout.CENTER);
+            ThermocycleEditor.ThermocycleViewer viewer = getThermocyclePanel(reaction);
+            if(viewer != null) {
+                panel.add(viewer, BorderLayout.EAST);
+            }
+            return panel;
+        }
+
+        private static OptionsPanel getReactionPanel(Reaction reaction) {
             OptionsPanel optionsPanel = new OptionsPanel(true, false);
             List<DocumentField> documentFields = reaction.getDisplayableFields();
             for(DocumentField field : documentFields) {
                 optionsPanel.addComponentWithLabel("<html><b>"+field.getName()+": </b></html>", new JLabel(reaction.getFieldValue(field.getCode()).toString()), false);
             }
-            setOpaque(false);
-            setLayout(new BorderLayout());
-            add(optionsPanel, BorderLayout.CENTER);
+            return optionsPanel;
+        }
+
+        public static ThermocycleEditor.ThermocycleViewer getThermocyclePanel(Reaction reaction) {
             if(reaction.getThermocycle() != null) {
-                ThermocycleEditor.ThermocycleViewer viewer = new ThermocycleEditor.ThermocycleViewer(reaction.getThermocycle());
-                add(viewer, BorderLayout.EAST);
+                return new ThermocycleEditor.ThermocycleViewer(reaction.getThermocycle());
             }
+            return null;
         }
 
         public String getName() {
             switch(reaction.getType()) {
                 case Extraction:
-                    return "Extraction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
+                    return "Extraction Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
                 case PCR:
-                    return "PCR: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
+                    return "PCR Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
                 case CycleSequencing:
-                    return "Cycle Sequencing: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
+                    return "Cycle Sequencing Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
             }
             return "Unknown Reaction";
         }
@@ -215,7 +230,34 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
 
         public ExtendedPrintable getExtendedPrintable() {
-            return null;
+            return new ExtendedPrintable(){
+                public int print(Graphics2D graphics, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
+                    if(pageIndex > 1) {
+                        return Printable.NO_SUCH_PAGE;
+                    }
+                    JPanel reactionPanel = getReactionPanel(reaction);
+                    JPanel thermocyclePanel = getThermocyclePanel(reaction);
+                    JLabel headerLabel = new JLabel(getName());
+                    headerLabel.setFont(new Font("arial", Font.BOLD, 16));
+                    JPanel holderPanel = new JPanel(new BorderLayout());
+                    holderPanel.setOpaque(false);
+                    holderPanel.add(headerLabel, BorderLayout.NORTH);
+                    holderPanel.add(reactionPanel, BorderLayout.CENTER);
+                    if(thermocyclePanel != null) {
+                        holderPanel.add(thermocyclePanel, BorderLayout.SOUTH);
+                    }
+                    holderPanel.setBounds(0,0,dimensions.width, dimensions.height);
+                    PlateDocument.recursiveDoLayout(holderPanel);
+                    holderPanel.validate();
+                    holderPanel.invalidate();
+                    holderPanel.print(graphics);
+                    return Printable.PAGE_EXISTS;
+                }
+
+                public int getPagesRequired(Dimension dimensions, Options options) {
+                    return 1;
+                }
+            };
         }
 
         public boolean hasChanges() {

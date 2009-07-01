@@ -29,11 +29,13 @@ public abstract class MuitiPartDocument implements PluginDocument {
     }
 
 
-    public static abstract class Part extends JPanel {
+    public static abstract class Part {
 
         public abstract String getName();
 
         public abstract ExtendedPrintable getExtendedPrintable();
+
+        public abstract JPanel getPanel();
 
         public abstract boolean hasChanges();
         
