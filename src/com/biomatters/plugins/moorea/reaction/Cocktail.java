@@ -2,6 +2,9 @@ package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
@@ -15,19 +18,27 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
+import org.jdom.Element;
+
 /**
  * @author Steven Stones-Havas
  * @version $Id$
  *          <p/>
  *          Created on 9/06/2009 11:17:43 AM
  */
-public abstract class Cocktail {
+public abstract class Cocktail implements XMLSerializable {
 
     public abstract int getId();
 
     public abstract String getName();
 
     public abstract Options getOptions();
+
+    protected abstract void setOptions(Options options);
+
+    protected abstract void setId(int id);
+
+    protected abstract void setName(String name);
 
     public int getReactionVolume(Options options) {
         int sum = 0;
@@ -139,5 +150,19 @@ public abstract class Cocktail {
 
     public int hashCode() {
         return getId();
+    }
+
+    public Element toXML() {
+        Element e = new Element("cocktail");
+        e.addContent(new Element("name").setText(getName()));
+        e.addContent(new Element("id").setText(""+getId()));
+        e.addContent(XMLSerializer.classToXML("options", getOptions()));
+        return e;
+    }
+
+    public void fromXML(Element element) throws XMLSerializationException {
+        setOptions(XMLSerializer.classFromXML(element.getChild("options"), Options.class));
+        setName(element.getChildText("name"));
+        setId(Integer.parseInt(element.getChildText("id")));
     }
 }

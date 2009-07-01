@@ -69,6 +69,20 @@ public class PCRCocktail extends Cocktail{
         return options;
     }
 
+    protected void setOptions(Options options) {
+        this.options = options;
+    }
+
+    protected void setId(int id) {
+        this.id = id;
+    }
+
+    protected void setName(String name) {
+        if(options != null) {
+            options.setValue("name", name);
+        }
+    }
+
     public String getName() {
         return options == null ? "Untitled" : options.getValueAsString("name");
     }

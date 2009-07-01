@@ -25,6 +25,8 @@ import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.FileOutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -35,6 +37,12 @@ import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import org.jdom.input.SAXBuilder;
+import org.jdom.JDOMException;
+import org.jdom.Element;
+import org.jdom.output.XMLOutputter;
+import org.jdom.output.Format;
+
 /**
  * @author Steven Stones-Havas
  * @version $Id$
@@ -42,17 +50,41 @@ import java.text.SimpleDateFormat;
  *          Created on 23/02/2009 4:41:26 PM
  */
 public class MooreaLabBenchService extends DatabaseService {
-    public boolean isLoggedIn = false;
+    private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection = new LIMSConnection();
     private String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     static Driver driver;
     private static MooreaLabBenchService instance = null;
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
+    private File dataDirectory;
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);
 
     private MooreaLabBenchService() {
+    }
+
+    public void setDataDirectory(File dataDirectory) {
+        this.dataDirectory = dataDirectory;
+        try {
+            buildCachesFromDisk();
+        } catch (IOException e) {
+            assert false : e.getMessage();
+            loadEmptyCaches();
+        } catch (JDOMException e) {
+            assert false : e.getMessage();
+            loadEmptyCaches();
+        } catch (XMLSerializationException e) {
+            assert false : e.getMessage();
+            loadEmptyCaches();
+        }
+    }
+
+    private void loadEmptyCaches() {
+        cycleSequencingCocktails = Collections.EMPTY_LIST;
+        PCRCocktails = Collections.EMPTY_LIST;
+        PCRThermocycles = Collections.EMPTY_LIST;
+        cycleSequencingThermocycles = Collections.EMPTY_LIST;
     }
 
     public static MooreaLabBenchService getInstance() {
@@ -64,6 +96,10 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public FIMSConnection getActiveFIMSConnection() {
         return activeFIMSConnection;
+    }
+
+    public boolean isLoggedIn() {
+        return isLoggedIn;
     }
 
     @Override
@@ -430,15 +466,137 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     private List<Thermocycle> PCRThermocycles = null;
-    private List<Thermocycle> CycleSequencingThermocycles = null;
+    private List<Thermocycle> cycleSequencingThermocycles = null;
     private List<Cocktail> PCRCocktails = null;
     private List<Cocktail> cycleSequencingCocktails = null;
 
     private void buildCaches() throws TransactionException {
         PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle");
-        CycleSequencingThermocycles = getThermocyclesFromDatabase("cycleSequencing_thermocycle");
+        cycleSequencingThermocycles = getThermocyclesFromDatabase("cycleSequencing_thermocycle");
         PCRCocktails = getPCRCocktailsFromDatabase();
         cycleSequencingCocktails = getCycleSequencingCocktailsFromDatabase();
+        try {
+            saveCachesToDisk();
+        } catch (IOException e) {
+            throw new TransactionException("Could not write the caches to disk", e);
+        } catch (JDOMException e) {
+            throw new TransactionException("Could not write the caches to disk", e);
+        } catch (XMLSerializationException e) {
+            throw new TransactionException("Could not write the caches to disk", e);
+        }
+    }
+
+    private void buildCachesFromDisk() throws IOException, JDOMException, XMLSerializationException {
+        PCRThermocycles = getThermocyclesFromDisk("pcr_thermocycle");
+        cycleSequencingThermocycles = getThermocyclesFromDisk("cycleSequencing_thermocycle");
+        PCRCocktails = getPCRCocktailsFromDisk();
+        cycleSequencingCocktails = getCycleSequencingCocktailsFromDisk();
+    }
+
+    private void saveCachesToDisk() throws IOException, JDOMException, XMLSerializationException {
+        saveThermocyclesToDisk("pcr_thermocycle", PCRThermocycles);
+        saveThermocyclesToDisk("cycleSequencing_thermocycle", cycleSequencingThermocycles);
+        savePCRCocktailsToDisk();
+        saveCycleSequencingCocktailsToDisk();
+    }
+
+    private List<Cocktail> getCycleSequencingCocktailsFromDisk() throws JDOMException, IOException, XMLSerializationException{
+        File file = new File(dataDirectory, "cycleSequencingCocktails.xml");
+        return getCocktails(file);
+    }
+
+    private List<Cocktail> getPCRCocktailsFromDisk() throws IOException, JDOMException, XMLSerializationException {
+        File file = new File(dataDirectory, "PCRCocktails.xml");
+        return getCocktails(file);
+    }
+
+    private List<Cocktail> getCocktails(File file) throws JDOMException, IOException, XMLSerializationException {
+        if(!file.exists()) {
+            return Collections.EMPTY_LIST;
+        }
+        List<Cocktail> cocktails = new ArrayList<Cocktail>();
+        SAXBuilder builder = new SAXBuilder();
+        Element element = builder.build(file).detachRootElement();
+        for(Element e : element.getChildren("cocktail")) {
+            cocktails.add(XMLSerializer.classFromXML(e, Cocktail.class));
+        }
+        return cocktails;
+    }
+
+    private List<Thermocycle> getThermocyclesFromDisk(String type)  throws JDOMException, IOException, XMLSerializationException{
+        File file = new File(dataDirectory, type+".xml");
+        if(!file.exists()) {
+            return Collections.EMPTY_LIST;
+        }
+
+        List<Thermocycle> thermocycles = new ArrayList<Thermocycle>();
+        SAXBuilder builder = new SAXBuilder();
+        Element element = builder.build(file).detachRootElement();
+        for(Element e : element.getChildren("thermocycle")) {
+            thermocycles.add(XMLSerializer.classFromXML(e, Thermocycle.class));
+        }
+        return thermocycles;
+    }
+
+    //----
+
+    private void saveCycleSequencingCocktailsToDisk() throws IOException, XMLSerializationException{
+        File file = new File(dataDirectory, "cycleSequencingCocktails.xml");
+        if(!file.exists()) {
+            createNewFile(file);
+        }
+        saveCocktails(file, PCRCocktails);
+    }
+
+    private void savePCRCocktailsToDisk() throws IOException, XMLSerializationException {
+        File file = new File(dataDirectory, "PCRCocktails.xml");
+        if(!file.exists()) {
+            createNewFile(file);
+        }
+        saveCocktails(file, cycleSequencingCocktails);
+    }
+
+    private void saveCocktails(File file, List<Cocktail> cocktails) throws IOException, XMLSerializationException {
+        if(cocktails == null || cocktails.size() == 0) {
+            file.delete();
+            return;
+        }
+        Element cocktailsElement = new Element("cocktails");
+        for(Cocktail c : cocktails) {
+            cocktailsElement.addContent(XMLSerializer.classToXML("cocktail", c));
+        }
+        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        FileOutputStream outf = new FileOutputStream(file);
+        out.output(cocktailsElement, outf);
+        outf.close();
+    }
+
+
+    private void saveThermocyclesToDisk(String type, List<Thermocycle> thermocycles)  throws IOException, XMLSerializationException{
+        File file = new File(dataDirectory, type+".xml");
+        if(!file.exists()) {
+            createNewFile(file);
+        }
+        if(thermocycles == null || thermocycles.size() == 0) {
+            file.delete();
+            return;
+        }
+
+        Element thermocyclesElement = new Element("thermocycles");
+        for(Thermocycle tc : thermocycles) {
+            thermocyclesElement.addContent(XMLSerializer.classToXML("thermocycle", tc));
+        }
+        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        FileOutputStream outf = new FileOutputStream(file);
+        out.output(thermocyclesElement, outf);
+        outf.close();
+    }
+
+    private void createNewFile(File f) throws IOException {
+        if(f.getParentFile() != null && !f.getParentFile().exists()) {
+            f.getParentFile().mkdirs();
+        }
+        f.createNewFile();
     }
 
     private List<Cocktail> getPCRCocktailsFromDatabase() throws TransactionException{
@@ -511,7 +669,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public List<Thermocycle> getCycleSequencingThermocycles() {
         ArrayList<Thermocycle> cycles = new ArrayList<Thermocycle>();
-        cycles.addAll(CycleSequencingThermocycles);
+        cycles.addAll(cycleSequencingThermocycles);
         return cycles;
     }
 
@@ -620,7 +778,7 @@ public class MooreaLabBenchService extends DatabaseService {
         return cycleSequencingCocktails;
     }
 
-    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<Reaction> reactions) throws SQLException{
+    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{
         if(reactions.size() == 0) {
             return Collections.EMPTY_MAP;
         }

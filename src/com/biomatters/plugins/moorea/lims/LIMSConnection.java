@@ -2,7 +2,11 @@ package com.biomatters.plugins.moorea.lims;
 
 import com.biomatters.plugins.moorea.*;
 import com.biomatters.plugins.moorea.plates.Plate;
+import com.biomatters.plugins.moorea.plates.GelImage;
 import com.biomatters.plugins.moorea.reaction.Reaction;
+import com.biomatters.plugins.moorea.reaction.ExtractionReaction;
+import com.biomatters.plugins.moorea.reaction.PCRReaction;
+import com.biomatters.plugins.moorea.reaction.CycleSequencingReaction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
@@ -40,6 +44,7 @@ public class LIMSConnection {
         properties.put("user", LIMSOptions.getValueAsString("username"));
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
         try {
+            DriverManager.setLoginTimeout(20);
             connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
             Statement statement = connection.createStatement();
             statement.execute("USE labbench");
@@ -194,7 +199,7 @@ public class LIMSConnection {
                 }
             }
         }
-        ResultSet resultSet = statement.executeQuery(); //todo: this should have everything in it.  We need to split it up into the proper parts...
+        ResultSet resultSet = statement.executeQuery();
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
         while(resultSet.next()) {
             int workflowId = resultSet.getInt("workflow.id");
@@ -236,6 +241,9 @@ public class LIMSConnection {
         PreparedStatement statement = connection.prepareStatement(sql.toString());
         ResultSet resultSet = statement.executeQuery();
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
+        List<ExtractionReaction> extractionReactions = new ArrayList<ExtractionReaction>();
+        List<PCRReaction> pcrReactions = new ArrayList<PCRReaction>();
+        List<CycleSequencingReaction> cycleSequencingReactions = new ArrayList<CycleSequencingReaction>();
         while(resultSet.next()) {
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
@@ -246,15 +254,70 @@ public class LIMSConnection {
             else {
                 plate = plateMap.get(plateId);
             }
-            plate.addReaction(resultSet);
+            Reaction reaction = plate.addReaction(resultSet);
+            if(reaction instanceof ExtractionReaction) {
+                extractionReactions.add((ExtractionReaction)reaction);
+            }
+            else if(reaction instanceof PCRReaction) {
+                pcrReactions.add((PCRReaction)reaction);
+            }
+            else if(reaction instanceof CycleSequencingReaction) {
+                cycleSequencingReactions.add((CycleSequencingReaction)reaction);
+            }
         }
+        if(extractionReactions.size() > 0) {
+            extractionReactions.get(0).areReactionsValid(extractionReactions);
+        }
+        if(pcrReactions.size() > 0) {
+            pcrReactions.get(0).areReactionsValid(pcrReactions);
+        }
+        if(cycleSequencingReactions.size() > 0) {
+            cycleSequencingReactions.get(0).areReactionsValid(cycleSequencingReactions);
+        }
+        Map<Integer, List<GelImage>> gelImages = getGelImages(plateIds);
         List<PlateDocument> docs = new ArrayList<PlateDocument>();
         for(Plate plate : plateMap.values()) {
+            List<GelImage> gelImagesForPlate = gelImages.get(plate.getId());
+            if(gelImagesForPlate != null) {
+                plate.setImages(gelImagesForPlate);
+            }
             docs.add(new PlateDocument(plate));
         }
 
         return docs;
 
+    }
+
+    private Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws SQLException{
+        if(plateIds == null || plateIds.size() == 0) {
+            return Collections.EMPTY_MAP;
+        }
+        StringBuilder sql = new StringBuilder("SELECT * FROM gelImages WHERE (");
+        for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
+            Integer i = it.next();
+            sql.append("gelImages.plate=" + i);
+            if (it.hasNext()) {
+                sql.append(" OR ");
+            }
+        }
+        sql.append(")");
+        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        ResultSet resultSet = statement.executeQuery();
+        Map<Integer, List<GelImage>> map = new HashMap<Integer, List<GelImage>>();
+        while(resultSet.next()) {
+            GelImage image = new GelImage(resultSet);
+            List<GelImage> imageList;
+            List<GelImage> existingImageList = map.get(image.getPlate());
+            if(existingImageList != null) {
+                imageList = existingImageList;
+            }
+            else {
+                imageList = new ArrayList<GelImage>();
+                map.put(image.getPlate(), imageList);
+            }
+            imageList.add(image);
+        }
+        return map;
     }
 
     private static QueryTermSurrounder getQueryTermSurrounder(AdvancedSearchQueryTerm query) {

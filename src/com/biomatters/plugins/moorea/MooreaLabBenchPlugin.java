@@ -3,10 +3,15 @@ package com.biomatters.plugins.moorea;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 
+import java.io.File;
+
 /**
  * @version $Id: MooreaLabBenchPlugin.java 22212 2008-09-17 02:57:52Z richard $
  */
 public class MooreaLabBenchPlugin extends GeneiousPlugin {
+    private File pluginUserDirectory;
+    private File pluginDirectory;
+
     public String getName() {
         return "Moorea Lab Bench Plugin";
     }
@@ -36,8 +41,16 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
     }
 
     @Override
+    public void initialize(File pluginUserDirectory, File pluginDirectory) {
+        this.pluginUserDirectory = pluginUserDirectory;
+        this.pluginDirectory = pluginDirectory;
+    }
+
+    @Override
     public GeneiousService[] getServices() {
-        return new GeneiousService[] {MooreaLabBenchService.getInstance()};
+        MooreaLabBenchService service = MooreaLabBenchService.getInstance();
+        service.setDataDirectory(pluginUserDirectory);
+        return new GeneiousService[] {service};
     }
 
     @Override

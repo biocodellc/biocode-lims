@@ -87,7 +87,10 @@ public class ExtractionReaction extends Reaction{
     }
 
     public List<DocumentField> getDefaultDisplayedFields() {
-        return Collections.EMPTY_LIST;
+        return Arrays.asList(
+                new DocumentField("Sample Id", "", "sampleId", String.class, false, false),
+                new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)
+        );
     }
 
 
@@ -96,7 +99,10 @@ public class ExtractionReaction extends Reaction{
     }
 
 
-    public String areReactionsValid(List<Reaction> reactions) {
+    public String areReactionsValid(List<? extends Reaction> reactions) {
+        if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
+            return "You are not logged in to the database";
+        }
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
@@ -130,7 +136,7 @@ public class ExtractionReaction extends Reaction{
                     reaction.isError = true;
                 }
                 reaction.isError = false;
-                reaction.fimsSample = currentFimsSample;
+                reaction.setFimsSample(currentFimsSample);
             }
             if(error.length() > 0) {
                 return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";

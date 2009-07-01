@@ -46,7 +46,7 @@ public class CycleSequencingReaction extends Reaction{
         setPosition(r.getInt("cycleSequencing.location"));
         setCreated(r.getDate("cycleSequencing.date"));
         Options options = getOptions();
-        options.setValue("extractionId", r.getString("extraction.extractionId"));
+        options.setValue("extractionId", r.getString("cycleSequencing.extractionId"));
 
 
         options.getOption("runStatus").setValueFromString(r.getString("cycleSequencing.progress"));
@@ -92,7 +92,11 @@ public class CycleSequencingReaction extends Reaction{
     }
 
     public List<DocumentField> getDefaultDisplayedFields() {
-        return Collections.EMPTY_LIST;
+        return Arrays.asList(new DocumentField[] {
+                new DocumentField("Tissue ID", "", "tissueId", String.class, true, false),
+                new DocumentField("Primer", "", CycleSequencingOptions.PRIMER_OPTION_ID, String.class, true, false),
+                new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
+        });
     }
 
     public Color _getBackgroundColor() {
@@ -103,7 +107,10 @@ public class CycleSequencingReaction extends Reaction{
         return getOptions().getValueAsString("extractionId");
     }
 
-    public String areReactionsValid(List<Reaction> reactions) {
+    public String areReactionsValid(List<? extends Reaction> reactions) {
+        if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
+            return "You are not logged in to the database";
+        }
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
@@ -148,7 +155,7 @@ public class CycleSequencingReaction extends Reaction{
                     reaction.isError = true;
                 }
                 reaction.isError = false;
-                reaction.fimsSample = currentFimsSample;
+                reaction.setFimsSample(currentFimsSample);
             }
             if(error.length() > 0) {
                 return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";

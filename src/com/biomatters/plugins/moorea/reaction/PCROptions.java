@@ -156,9 +156,13 @@ public class PCROptions extends Options {
 
 
         List<OptionValue> cocktails = new ArrayList<OptionValue>();
-        for (int i = 0; i < new PCRCocktail().getAllCocktailsOfType().size(); i++) {
+        List<Cocktail> cocktailList = new PCRCocktail().getAllCocktailsOfType();
+        for (int i = 0; i < cocktailList.size(); i++) {
             Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
             cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
+        }
+        if(cocktailList.size() == 0) {
+            cocktails.add(new OptionValue("-1", "No available cocktails"));
         }
 
         cocktailOption = addComboBoxOption(COCKTAIL_OPTION_ID, "Reaction Cocktail", cocktails, cocktails.get(0));
@@ -182,6 +186,9 @@ public class PCROptions extends Options {
         for (int i = 0; i < new PCRCocktail().getAllCocktailsOfType().size(); i++) {
             Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
             cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
+        }
+        if(cocktails.size() == 0) {
+            cocktails.add(new OptionValue("-1", "No available cocktails"));
         }
         cocktailOption.setPossibleValues(cocktails);
     }

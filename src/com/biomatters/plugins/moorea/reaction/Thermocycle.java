@@ -1,10 +1,14 @@
 package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.plugins.moorea.TransactionException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.sql.*;
+
+import org.jdom.Element;
 
 /**
  * Created by IntelliJ IDEA.
@@ -13,7 +17,7 @@ import java.sql.*;
  * Time: 12:58:02 PM
  * To change this template use File | Settings | File Templates.
  */
-public class Thermocycle {
+public class Thermocycle implements XMLSerializable {
 
     private List<Cycle> cycles = new ArrayList<Cycle>();
     private String notes = "";
@@ -125,11 +129,35 @@ public class Thermocycle {
         return thermoId;
     }
 
+    public Element toXML() {
+        Element e = new Element("thermocycle");
+        e.addContent(new Element("id").setText(""+id));
+        e.addContent(new Element("name").setText(name));
+        e.addContent(new Element("notes").setText(notes));
+        for(Cycle c : cycles) {
+            e.addContent(c.toXML());
+        }
+        return e;
+    }
 
-    public static class Cycle {
+    public void fromXML(Element e) throws XMLSerializationException {
+        id = Integer.parseInt(e.getChildText("id"));
+        name = e.getChildText("name");
+        notes = e.getChildText("notes");
+        cycles = new ArrayList<Cycle>();
+        for(Element el : e.getChildren("cycle")) {
+            cycles.add(new Cycle(el));
+        }
+    }
+
+    public static final class Cycle implements XMLSerializable{
         private List<State> states = new ArrayList<State>();
         private int repeats = 1;
         private int id = 0;
+
+        public Cycle(Element e) throws XMLSerializationException {
+            fromXML(e);
+        }
 
         public Cycle(int id, int repeats) {
             this.repeats = repeats;
@@ -155,13 +183,36 @@ public class Thermocycle {
         public int getId() {
             return id;
         }
+
+        public Element toXML() {
+            Element e = new Element("cycle");
+            e.addContent(new Element("repeats").setText(""+repeats));
+            e.addContent(new Element("id").setText(""+id));
+            for(State s : states) {
+                e.addContent(s.toXML());
+            }
+            return e;
+        }
+
+        public void fromXML(Element e) throws XMLSerializationException {
+            repeats = Integer.parseInt(e.getChildText("repeats"));
+            id = Integer.parseInt(e.getChildText("id"));
+            states = new ArrayList<State>();
+            for(Element el : e.getChildren("state")) {
+                states.add(new State(el));
+            }
+        }
     }
 
 
-    public static class State {
+    public static final class State implements XMLSerializable{
         private int temp;
         private int time;
         private int id = 0;
+
+        public State(Element e) throws XMLSerializationException {
+            fromXML(e);
+        }
 
         public State(int id, int temp, int time) {
             this.temp = temp;
@@ -188,6 +239,20 @@ public class Thermocycle {
 
         public void setTime(int time) {
             this.time = time;
+        }
+
+        public Element toXML() {
+            Element e = new Element("state");
+            e.addContent(new Element("id").setText(""+id));
+            e.addContent(new Element("temp").setText(""+temp));
+            e.addContent(new Element("time").setText(""+time));
+            return e;
+        }
+
+        public void fromXML(Element e) throws XMLSerializationException {
+            id = Integer.parseInt(e.getChildText("id"));
+            temp = Integer.parseInt(e.getChildText("temp"));
+            time = Integer.parseInt(e.getChildText("time"));
         }
     }
 

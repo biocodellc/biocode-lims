@@ -69,6 +69,12 @@ public class Plate implements XMLSerializable {
                     break;
                 }
             }
+            for(Thermocycle tc : MooreaLabBenchService.getInstance().getCycleSequencingThermocycles()) {
+                if(tc.getId() == thermocycleId) {
+                    setThermocycle(tc);
+                    break;
+                }
+            }
         }
     }
 
@@ -202,7 +208,7 @@ public class Plate implements XMLSerializable {
         return statement;
     }
 
-    public void addReaction(ResultSet resultSet) throws SQLException{
+    public Reaction addReaction(ResultSet resultSet) throws SQLException{
         Reaction r;
         switch(type) {
             case Extraction:
@@ -217,6 +223,10 @@ public class Plate implements XMLSerializable {
                 break;
         }
         reactions[r.getPosition()] = r;
+        int row = r.getPosition() / cols;
+        int col = r.getPosition() % cols;
+        r.setLocationString(getWellName(row, col));
+        return r;
     }
 
     public int getId() {
@@ -260,6 +270,10 @@ public class Plate implements XMLSerializable {
         if(thermocycleId != null) {
             setThermocycleFromId(Integer.parseInt(thermocycleId));     
         }
+        images = new ArrayList<GelImage>();
+        for(Element gelImageElement : element.getChildren("gelImage")) {
+            images.add(XMLSerializer.classFromXML(gelImageElement, GelImage.class));
+        }
     }
 
     public Element toXML() {
@@ -272,6 +286,9 @@ public class Plate implements XMLSerializable {
         }
         for(Reaction r : reactions) {
             plateElement.addContent(XMLSerializer.classToXML("reaction",r));
+        }
+        for(GelImage gi : images) {
+            plateElement.addContent(XMLSerializer.classToXML("gelImage", gi));
         }
 
         

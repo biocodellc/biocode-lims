@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.plates.PlateView;
+import com.biomatters.plugins.moorea.plates.GelImage;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.Cocktail;
 import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
@@ -148,6 +149,13 @@ public class PlateDocument extends MuitiPartDocument {
                 mainPanel.addSpanningComponent(thermocyclePanel);
             }
 
+            if(plate.getImages() != null && plate.getImages().size() > 0) {
+                mainPanel.addDividerWithLabel("GEL Images");
+                for(GelImage image : plate.getImages()) {
+                    mainPanel.addSpanningComponent(getGelImagePanel(image));
+                }
+            }
+
             panel.setLayout(new BorderLayout());
             panel.add(mainPanel, BorderLayout.CENTER);
 
@@ -192,6 +200,40 @@ public class PlateDocument extends MuitiPartDocument {
             return cockatilPanel;
         }
 
+        private JPanel getGelImagePanel(GelImage gelImage) {
+            final Image img = gelImage.getImage();
+            JPanel imagePanel = getImagePanel(img);
+            JPanel holderPanel = new JPanel(new BorderLayout());
+            holderPanel.setOpaque(false);
+            holderPanel.add(imagePanel, BorderLayout.CENTER);
+            JTextArea notes = new JTextArea(gelImage.getNotes());
+            notes.setWrapStyleWord(true);
+            notes.setLineWrap(true);
+            holderPanel.add(notes, BorderLayout.SOUTH);
+            return holderPanel;
+        }
+
+        private JPanel getImagePanel(final Image img) {
+            return new JPanel(){
+                @Override
+                public Dimension getPreferredSize() {
+                    return new Dimension(img.getWidth(this), img.getHeight(this));
+                }
+
+                @Override
+                protected void paintComponent(Graphics g) {
+                    double scaleFactor = 1.0;
+                    if(img.getWidth(this) > getWidth() || img.getHeight(this) > getHeight()) {
+                        scaleFactor = Math.min(scaleFactor, (double)getWidth()/img.getWidth(this));
+                        scaleFactor = Math.min(scaleFactor, (double)getHeight()/img.getHeight(this));
+                    }
+                    ((Graphics2D)g).scale(scaleFactor, scaleFactor);
+                    g.drawImage(img, 0, 0, this);
+                    ((Graphics2D)g).scale(1/scaleFactor, 1/scaleFactor);
+                }
+            };
+        }
+
 
         public String getName() {
             return plate.getName();
@@ -219,6 +261,9 @@ public class PlateDocument extends MuitiPartDocument {
                 public Options getOptions(boolean isSavingToFile) {
                     Options o = new Options(this.getClass());
                     o.addBooleanOption("colorPlate", "Color the plate", true);
+                    if(plate.getImages() != null && plate.getImages().size() > 0) {
+                        o.addBooleanOption("printImages", "Print GEL Images", true);
+                    }
                     return o;
                 }
 
@@ -235,6 +280,7 @@ public class PlateDocument extends MuitiPartDocument {
                     PlateView pView = new PlateView(plate);
                     pView.setColorBackground((Boolean)options.getValue("colorPlate"));
                     double scaleFactor = dimensions.getWidth()/pView.getPreferredSize().width;
+                    scaleFactor = Math.min(scaleFactor, dimensions.getHeight()/pView.getPreferredSize().height);
                     double requiredPlateHeight = scaleFactor*pView.getPreferredSize().height;
 
                     if(pageIndex == page && g != null) {
@@ -297,6 +343,7 @@ public class PlateDocument extends MuitiPartDocument {
 
                         JPanel thermocyclePanel = getThermocyclePanel(plate);
                         thermocyclePanel.setBorder(null);
+                        thermocyclePanel.setSize(thermocyclePanel.getPreferredSize());
 
                         if(dimensions.width-cocktailWidth-10 > thermocyclePanel.getPreferredSize().width) {
                             x = ((dimensions.width+cocktailWidth)-thermocyclePanel.getPreferredSize().width)/2;
@@ -314,11 +361,41 @@ public class PlateDocument extends MuitiPartDocument {
                             y = dimensions.height-availableHeight;
                         }
                         if(page == pageIndex && g != null) {
-                            thermocyclePanel.setBounds(x, y, thermocyclePanel.getPreferredSize().width, thermocyclePanel.getPreferredSize().height);
+                            thermocyclePanel.setBounds(x, y, thermocyclePanel.getPreferredSize().width, thermocyclePanel.getPreferredSize().height+30);
                             recursiveDoLayout(thermocyclePanel);
+                            thermocyclePanel.validate();
+                            thermocyclePanel.invalidate();
                             g.translate(x, y);
                             thermocyclePanel.print(g);
                             g.translate(-x, -y);
+                        }
+                    }
+
+                    if(plate.getImages() != null && plate.getImages().size() > 0 && (Boolean)options.getValue("printImages")) {
+                        for(GelImage image : plate.getImages()) {
+                            JPanel imagePanel = getGelImagePanel(image);
+
+                            Dimension preferredSize = imagePanel.getPreferredSize();
+                            if(preferredSize.height > availableHeight) {
+                                page++;
+                                availableHeight = dimensions.height;
+                            }
+                            if(preferredSize.width > dimensions.width || imagePanel.getPreferredSize().height > availableHeight) {
+                                double imageScaleFactor = 1.0;
+                                imageScaleFactor = Math.min(imageScaleFactor,(double)dimensions.width/ preferredSize.width);
+                                imageScaleFactor = Math.min(imageScaleFactor, (double)dimensions.height/preferredSize.height);
+                                imagePanel.setSize(new Dimension((int)(preferredSize.width*imageScaleFactor), (int)(preferredSize.height*imageScaleFactor)));
+                            }
+                            else {
+                                imagePanel.setSize(preferredSize);
+                            }
+                            if(pageIndex == page && g != null) {
+                                recursiveDoLayout(imagePanel);
+                                g.translate(0, dimensions.height-availableHeight);
+                                imagePanel.print(g);
+                                g.translate(0, availableHeight-dimensions.height);
+                            }
+                            availableHeight-=imagePanel.getHeight();
                         }
                     }
 

@@ -3,6 +3,7 @@ package com.biomatters.plugins.moorea.reaction;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
@@ -38,10 +39,10 @@ public abstract class Reaction implements XMLSerializable{
     private Workflow workflow;
     private int position;
     protected boolean isError = false;
-    protected FimsSample fimsSample = null;
+    private FimsSample fimsSample = null;
     protected Date date = new Date();
-    private static int averageCharWidth = -1;
     private static int charHeight = -1;
+    private int[] fieldWidthCache = null;
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -73,6 +74,11 @@ public abstract class Reaction implements XMLSerializable{
 
     public Reaction() {
         setFieldsToDisplay(getDefaultDisplayedFields());
+    }
+
+    protected void setFimsSample(FimsSample sample) {
+        this.fimsSample = sample;
+        fieldWidthCache = null;
     }
 
     public abstract Type getType();
@@ -122,7 +128,9 @@ public abstract class Reaction implements XMLSerializable{
     public List<DocumentField> getAllDisplayableFields() {
         List<DocumentField> displayableFields = new ArrayList<DocumentField>();
         displayableFields.addAll(getDisplayableFields());
-        displayableFields.addAll(MooreaLabBenchService.getInstance().getActiveFIMSConnection().getSearchAttributes());
+        if(MooreaLabBenchService.getInstance().isLoggedIn()) {
+            displayableFields.addAll(MooreaLabBenchService.getInstance().getActiveFIMSConnection().getSearchAttributes());
+        }
         return displayableFields;
     }
 
@@ -144,10 +152,15 @@ public abstract class Reaction implements XMLSerializable{
 
     public void setFieldsToDisplay(List<DocumentField> fields) {
         this.displayableFields = fields;
+        fieldWidthCache = null;
     }
 
     public Object getFieldValue(String fieldCode) {
-        Object value = getOptions().getValue(fieldCode);
+        Options options = getOptions();
+        if(options == null) {
+            return null;
+        }
+        Object value = options.getValue(fieldCode);
         if(value instanceof Options.OptionValue) {
             return ((Options.OptionValue)value).getLabel();
         }
@@ -175,8 +188,14 @@ public abstract class Reaction implements XMLSerializable{
         if(getThermocycle() != null) {
             element.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
         }
+        if(fimsSample != null) {
+            element.addContent(XMLSerializer.classToXML("fimsSample", fimsSample));
+        }
         element.addContent(new Element("created").setText(MooreaLabBenchService.dateFormat.format(getCreated())));
         element.addContent(new Element("position").setText(""+getPosition()));
+        if(locationString != null) {
+            element.addContent(new Element("wellLabel").setText(locationString));
+        }
         element.addContent(getOptions().valuesToXML("values"));
         return element;
     }
@@ -184,6 +203,14 @@ public abstract class Reaction implements XMLSerializable{
     public void fromXML(Element element) throws XMLSerializationException {
         String thermoCycleId = element.getChildText("thermocycle");
         setPosition(Integer.parseInt(element.getChildText("position")));
+        Element locationStringElement = element.getChild("wellLabel");
+        if(locationStringElement != null) {
+            locationString = locationStringElement.getText();
+        }
+        Element fimsElement = element.getChild("fimsSample");
+        if(fimsElement != null) {
+            fimsSample = XMLSerializer.classFromXML(fimsElement, FimsSample.class);
+        }
         try {
             setCreated(MooreaLabBenchService.dateFormat.parse(element.getChildText("created")));
         } catch (ParseException e) {
@@ -212,28 +239,47 @@ public abstract class Reaction implements XMLSerializable{
 
     public abstract Color _getBackgroundColor();
 
-    public abstract String areReactionsValid(List<Reaction> reactions);
+    public abstract String areReactionsValid(List<? extends Reaction> reactions);
 
     public Dimension getPreferredSize() {
-        int y = PADDING;
+        int y = PADDING+3;
         int x = 0;
         String maxLabel = " ";
+        if(fieldWidthCache == null) {
+            initFieldWidthCache();
+        }
         for(DocumentField field : getFieldsToDisplay()) {
             String value = getDisplayableValue(field);
             if(value.length() > maxLabel.length()) {
                 maxLabel = value;
             }
         }
-        for(DocumentField field : getFieldsToDisplay()) {
+        for (int i = 0; i < getFieldsToDisplay().size(); i++) {
+            DocumentField field = getFieldsToDisplay().get(i);
             String value = getFieldValue(field.getCode()).toString();
-            if(value.length() == 0) {
+            if (value.length() == 0) {
                 continue;
             }
-            y += charHeight+LINE_SPACING;
-            x = Math.max(x, averageCharWidth*value.length());
+            y += charHeight + LINE_SPACING;
+            x = Math.max(x, fieldWidthCache[i]);
         }
         x += PADDING;
         return new Dimension(Math.max(50,x), Math.max(30,y));
+    }
+
+    private void initFieldWidthCache() {
+        List<DocumentField> fieldList = getFieldsToDisplay();
+        fieldWidthCache = new int[fieldList.size()];
+        for(int i=0; i < fieldList.size(); i++) {
+            String value = getFieldValue(fieldList.get(i).getCode()).toString();
+            if(value.length() == 0) {
+                continue;
+            }
+            Font font = i == 0 ? firstLabelFont : labelFont;
+            TextLayout tl = new TextLayout(value, font, fontRenderContext);
+            fieldWidthCache[i] = (int)tl.getBounds().getWidth();
+            charHeight = (int)tl.getBounds().getHeight();
+        }
     }
 
     public String getDisplayableValue(DocumentField field) {
@@ -248,31 +294,25 @@ public abstract class Reaction implements XMLSerializable{
     public void paint(Graphics2D g, boolean colorTheBackground){
         fontRenderContext = g.getFontRenderContext();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        Color backgroundColor = colorTheBackground ? getBackgroundColor() : Color.white;
-        g.setColor(isSelected() ? backgroundColor.darker() : backgroundColor);
+        g.setColor(colorTheBackground ? isSelected() ? getBackgroundColor().darker() : getBackgroundColor() : Color.white);
         g.fillRect(location.x, location.y, location.width, location.height);
 
-        if(averageCharWidth < 0 || charHeight < 0) {
-            String testString = "AbCdEfGhIjKlMnOpQrStUvWxYz";
-            TextLayout tl = new TextLayout(testString, g.getFont(), fontRenderContext);
-            averageCharWidth = (int)tl.getBounds().getWidth()/26;
-            charHeight = (int)tl.getBounds().getHeight();
+        if(fieldWidthCache == null) {
+            initFieldWidthCache();
         }
 
         if(locationString != null && locationString.length() > 0) {
-            g.setColor(getBackgroundColor().darker().darker());
+            g.setColor(new Color(0,0,0,128));
             g.setFont(new Font("sansserif", Font.PLAIN, 12));
-            g.drawString(locationString, location.x+2, location.y+(int)charHeight + 2);
+            g.drawString(locationString, location.x+2, location.y+charHeight + 2);
         }
 
         g.setColor(Color.black);
 
-        int y = location.y + 5;
+        int y = location.y + 8;
         y += (location.height - getPreferredSize().height + PADDING)/2;
         for (int i = 0; i < getFieldsToDisplay().size(); i++) {
             g.setFont(i == 0 ? firstLabelFont : labelFont);
-
-            int charWidth = i == 0 ? averageCharWidth+1 : averageCharWidth;
 
             DocumentField field = getFieldsToDisplay().get(i);
             String value = getFieldValue(field.getCode()).toString();
@@ -280,8 +320,8 @@ public abstract class Reaction implements XMLSerializable{
                 continue;
             }
             int textHeight = charHeight;
-            int textWidth = charWidth*value.length();
-            g.drawString(value.toString(), location.x + 5 + (location.width - textWidth - PADDING) / 2, y + textHeight);
+            int textWidth = fieldWidthCache[i];
+            g.drawString(value.toString(), location.x + (location.width - textWidth) / 2, y + textHeight);
             y += textHeight + LINE_SPACING;
         }
 

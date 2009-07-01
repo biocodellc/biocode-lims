@@ -42,6 +42,10 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
+        if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException("You must log in to the lab bench service to create plates");
+        }
+        
         Options options = new Options(this.getClass());
         Options.OptionValue[] plateValues = new Options.OptionValue[] {
                 new Options.OptionValue("individualReactions", "Individual Reactions"),
@@ -69,6 +73,10 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
+        if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException("You must log in to the lab bench service to create plates");
+        }
+
         Plate.Size size = null;
         Options.OptionValue plateSize = (Options.OptionValue)options.getValue("plateType");
         Options.OptionValue reactionType = (Options.OptionValue)options.getValue("reactionType");

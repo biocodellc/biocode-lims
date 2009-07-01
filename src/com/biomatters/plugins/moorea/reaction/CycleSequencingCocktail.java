@@ -56,6 +56,20 @@ public class CycleSequencingCocktail extends Cocktail{
         return options;
     }
 
+    protected void setOptions(Options options) {
+        this.options = options;
+    }
+
+    protected void setId(int id) {
+        this.id = id;
+    }
+
+    protected void setName(String name) {
+        if(options != null) {
+            options.setValue("name", name);
+        }
+    }
+
     public List<? extends Cocktail> getAllCocktailsOfType() {
         return MooreaLabBenchService.getInstance().getCycleSequencingCocktails();
     }

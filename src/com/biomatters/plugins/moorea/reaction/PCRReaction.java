@@ -99,7 +99,7 @@ public class PCRReaction extends Reaction {
     public List<DocumentField> getDefaultDisplayedFields() {
         return Arrays.asList(new DocumentField[] {
                 new DocumentField("Tissue ID", "", "tissueId", String.class, true, false),
-                new DocumentField("Primer", "", "primer", String.class, true, false),
+                new DocumentField("Primer", "", PCROptions.PRIMER_OPTION_ID, String.class, true, false),
                 new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
         });
     }
@@ -108,7 +108,10 @@ public class PCRReaction extends Reaction {
         return getOptions().getValueAsString("extractionId");
     }
 
-    public String areReactionsValid(List<Reaction> reactions) {
+    public String areReactionsValid(List<? extends Reaction> reactions) {
+        if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
+            return "You are not logged in to the database";
+        }
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
@@ -153,7 +156,7 @@ public class PCRReaction extends Reaction {
                     reaction.isError = true;
                 }
                 reaction.isError = false;
-                reaction.fimsSample = currentFimsSample;
+                reaction.setFimsSample(currentFimsSample);
             }
             if(error.length() > 0) {
                 return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
