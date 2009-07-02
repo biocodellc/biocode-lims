@@ -21,7 +21,7 @@ public class AnimatedIcon implements Icon {
     static {
         images = new Image[12];
         for(int i = 0; i < 12; i++){
-            images[i] = IconUtilities.getImage("activity13_"+(i+1)+".png");
+            images[i] = IconUtilities.getImage("activity"+(i+1)+".png");
         }
         MediaTracker m = new MediaTracker(new JPanel());
         for(Image img : images)

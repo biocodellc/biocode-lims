@@ -148,7 +148,7 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
             public void actionPerformed(ActionEvent e) {
-                plateView.editReactions(plateView.getSelectedReactions());
+                plateView.editReactions(plateView.getSelectedReactions(), false);
                 plateView.revalidate();
                 plateView.repaint();
             }

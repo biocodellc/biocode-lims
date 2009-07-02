@@ -131,6 +131,10 @@ public abstract class Reaction implements XMLSerializable{
         if(MooreaLabBenchService.getInstance().isLoggedIn()) {
             displayableFields.addAll(MooreaLabBenchService.getInstance().getActiveFIMSConnection().getSearchAttributes());
         }
+        else if(fimsSample != null) {
+            displayableFields.addAll(fimsSample.getFimsAttributes());
+            displayableFields.addAll(fimsSample.getTaxonomyAttributes());
+        }
         return displayableFields;
     }
 
@@ -196,6 +200,11 @@ public abstract class Reaction implements XMLSerializable{
         if(locationString != null) {
             element.addContent(new Element("wellLabel").setText(locationString));
         }
+        if(displayableFields != null && displayableFields.size() > 0) {
+            for(DocumentField df : displayableFields) {
+                element.addContent(XMLSerializer.classToXML("displayableField", df));
+            }
+        }
         element.addContent(getOptions().valuesToXML("values"));
         return element;
     }
@@ -233,6 +242,10 @@ public abstract class Reaction implements XMLSerializable{
                     }
                 }
             }
+        }
+        displayableFields = new ArrayList<DocumentField>();
+        for(Element e : element.getChildren("displayableField")) {
+            displayableFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
         }
         getOptions().valuesFromXML(element.getChild("values"));
     }

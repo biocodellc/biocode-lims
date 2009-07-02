@@ -247,7 +247,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                         holderPanel.add(thermocyclePanel, BorderLayout.SOUTH);
                     }
                     holderPanel.setBounds(0,0,dimensions.width, dimensions.height);
-                    PlateDocument.recursiveDoLayout(holderPanel);
+                    MultiPartDocumentViewerFactory.recursiveDoLayout(holderPanel);
                     holderPanel.validate();
                     holderPanel.invalidate();
                     holderPanel.print(graphics);

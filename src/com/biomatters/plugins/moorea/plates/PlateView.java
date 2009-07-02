@@ -147,16 +147,17 @@ public class PlateView extends JPanel {
                         }
                     }
                 }
-                if(e.getClickCount() == 2) {
-                    for(int i=0; i < reactions.length; i++) {
-                        if(reactions[i].isSelected()) {
-                            editReactions(Arrays.asList(reactions[i]));
-                            revalidate();
-                            repaint();
-                        }
-                    }
-
-                }
+                //todo: do we want double clicking?
+//                if(e.getClickCount() == 2) {
+//                    for(int i=0; i < reactions.length; i++) {
+//                        if(reactions[i].isSelected()) {
+//                            editReactions(Arrays.asList(reactions[i]), justEditDisplayableFields);
+//                            revalidate();
+//                            repaint();
+//                        }
+//                    }
+//
+//                }
                 fireSelectionListeners();
                 repaint();
             }
@@ -200,7 +201,7 @@ public class PlateView extends JPanel {
 
     }
 
-    public void editReactions(List<Reaction> reactions) {
+    public void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -256,24 +257,35 @@ public class PlateView extends JPanel {
 
 
         JPanel fieldsPanel = getFieldsPanel(availableFieldsVector,selectedFieldsVector);
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.add("Reaction",displayPanel);
-        tabs.add("Display", fieldsPanel);
+        JComponent componentToDisplay;
+        if(justEditDisplayableFields) {
+            componentToDisplay = fieldsPanel;
+        }
+        else {
+            JTabbedPane tabs = new JTabbedPane();
+            tabs.add("Reaction",displayPanel);
+            tabs.add("Display", fieldsPanel);
+            componentToDisplay = tabs;
+        }
 
-        if(Dialogs.showOkCancelDialog(tabs, "Well Options", selfReference)) {
-            for(final Options.Option option : options.getOptions()) {
-                if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
-                    for(Reaction reaction : reactions) {
-                        reaction.getOptions().setValue(option.getName(), option.getValue());
+        if(Dialogs.showOkCancelDialog(componentToDisplay, "Well Options", selfReference)) {
+            if(!justEditDisplayableFields) {
+                for(final Options.Option option : options.getOptions()) {
+                    if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
+                        for(Reaction reaction : reactions) {
+                            reaction.getOptions().setValue(option.getName(), option.getValue());
+                        }
                     }
                 }
             }
             for(Reaction r : reactions) {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
             }
-            String error = reactions.get(0).areReactionsValid(reactions);
-            if(error != null) {
-                Dialogs.showMessageDialog(error);
+            if(!justEditDisplayableFields) {
+                String error = reactions.get(0).areReactionsValid(reactions);
+                if(error != null) {
+                    Dialogs.showMessageDialog(error);
+                }
             }
         }
 

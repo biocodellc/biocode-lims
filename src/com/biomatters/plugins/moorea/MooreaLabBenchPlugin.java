@@ -3,7 +3,13 @@ package com.biomatters.plugins.moorea;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 
+import javax.swing.*;
 import java.io.File;
+import java.util.Map;
+import java.util.HashMap;
+import java.net.URL;
+import java.net.URISyntaxException;
+import java.awt.*;
 
 /**
  * @version $Id: MooreaLabBenchPlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -11,6 +17,10 @@ import java.io.File;
 public class MooreaLabBenchPlugin extends GeneiousPlugin {
     private File pluginUserDirectory;
     private File pluginDirectory;
+    public static final Map<String, Icons> pluginIcons;
+    static {
+        pluginIcons = new HashMap<String, Icons>();
+    }
 
     public String getName() {
         return "Moorea Lab Bench Plugin";
@@ -44,6 +54,34 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
     public void initialize(File pluginUserDirectory, File pluginDirectory) {
         this.pluginUserDirectory = pluginUserDirectory;
         this.pluginDirectory = pluginDirectory;
+        Runnable r = new Runnable(){
+            public void run() {
+                initialiseIcons();
+            }
+        };
+        new Thread(r).start();
+    }
+
+    private static void initialiseIcons() {
+        URL thermocycleIcon = MooreaLabBenchPlugin.class.getResource("thermocycle_16.png");
+        putUrlIntoIconsMap(thermocycleIcon, "thermocycle_16.png");
+
+        URL imageIcon = MooreaLabBenchPlugin.class.getResource("addImage_16.png");
+        putUrlIntoIconsMap(imageIcon, "addImage_16.png");
+    }
+
+    private static void putUrlIntoIconsMap(URL url, String key){
+        if(url == null) {
+            assert false : url.toString();
+            return;
+        }
+        ImageIcon icon = new ImageIcon(url);
+        Icons icons = new Icons(icon);
+        pluginIcons.put(key, icons);
+    }
+
+    public static Icons getIcons(String name) {
+        return pluginIcons.get(name);
     }
 
     @Override
@@ -59,8 +97,8 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
                 new TissueImagesViewerFactory(),
                 new TissueSampleViewerFactory(true),
                 new TissueSampleViewerFactory(false),
-                new MultiPartDocumentViewerFactory(MultiPartDocumentViewerFactory.Type.Workflow),
-                new MultiPartDocumentViewerFactory(MultiPartDocumentViewerFactory.Type.Plate),
+                new PlateDocumentViewerFactory(),
+                new WorkflowDocumentViewerFactory(),
                 new MultiWorkflowDocumentViewerFactory()
         };
     }
