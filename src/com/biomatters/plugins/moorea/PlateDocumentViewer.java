@@ -230,7 +230,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 Dialogs.showMessageDialog("Please log in");
                 return;
             }
-            List<GelImage> gelImages = GelEditor.editGels(plateView.getPlate().getImages(), getComponent());
+            List<GelImage> gelImages = GelEditor.editGels(plateView.getPlate().getImages(), container);
             plateView.getPlate().setImages(gelImages);
             updatePanel();
         }
@@ -243,11 +243,11 @@ public class PlateDocumentViewer extends DocumentViewer{
                 Dialogs.showMessageDialog("Please log in");
                 return;
             }
-            final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(cycles, getComponent());
+            final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(cycles, container);
             if (newThermocycles.size() > 0) {
                 Runnable runnable = new Runnable() {
                     public void run() {
-                        MooreaLabBenchService.block("Saving Thermocycles", getComponent());
+                        MooreaLabBenchService.block("Saving Thermocycles", container);
                         try {
                             switch (plateView.getPlate().getReactionType()) {
                                 case PCR:

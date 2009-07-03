@@ -21,7 +21,7 @@ import jebl.util.ProgressListener;
  */
 public class NewPlateDocumentOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {
-        return new GeneiousActionOptions("New Reaction", "Create a new reaction (or plate of reactions)", IconUtilities.getIcons("newReaction.png")).setInMainToolbar(true);
+        return new GeneiousActionOptions("New Reaction", "Create a new reaction (or plate of reactions)", MooreaLabBenchPlugin.getIcons("newReaction_24.png")).setInMainToolbar(true);
     }
 
     public String getHelp() {

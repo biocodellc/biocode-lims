@@ -8,8 +8,6 @@ import java.io.File;
 import java.util.Map;
 import java.util.HashMap;
 import java.net.URL;
-import java.net.URISyntaxException;
-import java.awt.*;
 
 /**
  * @version $Id: MooreaLabBenchPlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -68,6 +66,12 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
 
         URL imageIcon = MooreaLabBenchPlugin.class.getResource("addImage_16.png");
         putUrlIntoIconsMap(imageIcon, "addImage_16.png");
+
+        URL reactionIcon = MooreaLabBenchPlugin.class.getResource("newReaction_24.png");
+        putUrlIntoIconsMap(reactionIcon, "newReaction_24.png");
+
+        URL specimenIcon = MooreaLabBenchPlugin.class.getResource("specimenDocument_24.png");
+        putUrlIntoIconsMap(specimenIcon, "specimenDocument_24.png");
     }
 
     private static void putUrlIntoIconsMap(URL url, String key){
@@ -113,7 +117,7 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
     @Override
     public DocumentType[] getDocumentTypes() {
         return new DocumentType[] {
-                new DocumentType("Tissue Sample", TissueDocument.class, IconUtilities.getIcons("specimenDocument.png"))
+                new DocumentType("Tissue Sample", TissueDocument.class, MooreaLabBenchPlugin.getIcons("specimenDocument_24.png"))
         };
     }
 }

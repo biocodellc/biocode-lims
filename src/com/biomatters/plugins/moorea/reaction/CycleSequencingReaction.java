@@ -100,6 +100,13 @@ public class CycleSequencingReaction extends Reaction{
     }
 
     public Color _getBackgroundColor() {
+        String runStatus = options.getValueAsString("runStatus");
+        if(runStatus.equals("none"))
+                return Color.white;
+        else if(runStatus.equals("passed"))
+                return Color.green.darker();
+        else if(runStatus.equals("failed"))
+            return Color.red.darker();
         return Color.white;
     }
 
