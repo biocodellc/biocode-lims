@@ -406,15 +406,25 @@ public abstract class Reaction implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, MooreaLabBenchService.BlockingDialog progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String sql = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                PreparedStatement statement = connection.prepareStatement(sql);
-                statement.addBatch();
+                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                String updateSQL = "UPDATE extraction SET method=?m volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=? WHERE id=?";
+                PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
+                PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
+                insertStatement.addBatch();
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
                         progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
                     }
                     if (!reaction.isEmpty() && reaction.plate >= 0) {
+                        PreparedStatement statement;
+                        if(reaction.getId() >= 0) { //the reaction is already in the database
+                            statement = updateStatement;
+                            statement.setInt(9, reaction.getId());
+                        }
+                        else {
+                            statement = insertStatement;
+                        }
                         Options options = reaction.getOptions();
                         statement.setString(1, options.getValueAsString("extractionMethod"));
                         statement.setInt(2, (Integer) options.getValue("volume"));
@@ -429,14 +439,25 @@ public abstract class Reaction implements XMLSerializable{
                 }
                 break;
             case PCR:
-                sql = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                statement = connection.prepareStatement(sql);
+                insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=? WHERE plate=?";
+                insertStatement = connection.prepareStatement(insertSQL);
+                updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
                         progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
                     }
                     if (!reaction.isEmpty() && reaction.plate >= 0) {
+                        PreparedStatement statement;
+                        if(reaction.getId() >= 0) { //the reaction is already in the database
+                            statement = updateStatement;
+                            statement.setInt(13, reaction.getId());
+                        }
+                        else {
+                            statement = insertStatement;
+                        }
+
                         Options options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
                         if(!(value instanceof PCROptions.PrimerOptionValue)) {
@@ -463,30 +484,42 @@ public abstract class Reaction implements XMLSerializable{
                         if(cocktailId < 0) {
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
-                        statement.setInt(7, cocktailId);
-                        statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        insertStatement.setInt(7, cocktailId);
+                        insertStatement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
                         if(reaction.getThermocycle() != null) {
-                            statement.setInt(9, reaction.getThermocycle().getId());
+                            insertStatement.setInt(9, reaction.getThermocycle().getId());
                         }
                         else {
-                            statement.setInt(9, -1);
+                            insertStatement.setInt(9, -1);
                         }
-                        statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
-                        statement.setString(11, options.getValueAsString("cleanupMethod"));
-                        statement.setString(12, reaction.getExtractionId());
-                        statement.execute();
+                        insertStatement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
+                        insertStatement.setString(11, options.getValueAsString("cleanupMethod"));
+                        insertStatement.setString(12, reaction.getExtractionId());
+                        insertStatement.execute();
                     }
                 }
                 break;
             case CycleSequencing:
-                sql = "INSERT INTO cycleSequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                statement = connection.prepareStatement(sql);
+                insertSQL = "INSERT INTO cycleSequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?) WHERE plate=?";
+                insertStatement = connection.prepareStatement(insertSQL);
+                updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
                         progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
                     }
                     if (!reaction.isEmpty() && reaction.plate >= 0) {
+
+                        PreparedStatement statement;
+                        if(reaction.getId() >= 0) { //the reaction is already in the database
+                            statement = updateStatement;
+                            statement.setInt(14, reaction.getId());
+                        }
+                        else {
+                            statement = insertStatement;
+                        }
+
                         Options options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
                         if(!(value instanceof CycleSequencingOptions.PrimerOptionValue)) {

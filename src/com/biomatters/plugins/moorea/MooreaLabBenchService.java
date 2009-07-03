@@ -842,72 +842,114 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
-    public void createPlate(Plate plate, BlockingDialog progress) throws SQLException{
-        Connection connection = limsConnection.getConnection();
-        Savepoint savepoint = connection.setSavepoint();
-        try {
-            connection.setAutoCommit(false);
-            PreparedStatement statement = plate.toSQL(connection);
-            statement.execute();
-            PreparedStatement statement1 = connection.prepareStatement("SELECT last_insert_id()");
-            ResultSet resultSet = statement1.executeQuery();
-            resultSet.next();
-            int plateId = resultSet.getInt(1);
-            plate.setId(plateId);
+    public void saveExtractions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException{
+        createOrUpdatePlate(plate, progress);
 
-            for(GelImage image : plate.getImages()) {
-                image.toSql(connection).execute(); //todo: re-insert existing images or ignore them?
+        progress.setMessage("Creating new workflows");
+
+        //create workflows if necessary
+        List<String> extractionIds = new ArrayList<String>();
+        for(Reaction reaction : plate.getReactions()) {
+            if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                extractionIds.add(reaction.getExtractionId());
             }
+        }
+        if(extractionIds.size() > 0) {
+            List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
+            int workflowIndex = 0;
+            for(Reaction reaction : plate.getReactions()) {
+                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                    reaction.setWorkflow(workflowList.get(workflowIndex));
+                    workflowIndex++;
+                }
+            }
+        }
 
-            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
-            connection.commit();
-            connection.releaseSavepoint(savepoint);
-        }
-        catch(SQLException ex) {
-            try {
-                connection.rollback(savepoint);
-            } catch (SQLException e) {}
-            throw ex;
-        } finally {
-            connection.setAutoCommit(true);
-        }
+
+
     }
 
-    public void updatePlate(Plate plate, BlockingDialog progress) throws SQLException{
-        if(plate.getId() < 0) {
-            throw new IllegalArgumentException("You may only call updatePlate() on a plate which has been added to the database");
+    public void saveReactions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException {
+        progress.setMessage("Retrieving existing workflows");
+
+        //set workflows for reactions that have id's
+        List<String> workflowIdStrings = new ArrayList<String>();
+        for(Reaction reaction : plate.getReactions()) {
+            Object workflowId = reaction.getFieldValue("workflowId");
+            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0) {
+                if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
+                    continue;
+                }
+                else {
+                    reaction.setWorkflow(null);
+                    workflowIdStrings.add(workflowId.toString());
+                }
+            }
         }
+
+        if(workflowIdStrings.size() > 0) {
+            Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
+            for(Reaction reaction : plate.getReactions()) {
+                Object workflowId = reaction.getFieldValue("workflowId");
+                if(reaction.getWorkflow() == null){
+                    reaction.setWorkflow(map.get(workflowId));
+                }
+            }
+        }
+
+        progress.setMessage("Creating new workflows");
+
+        //create workflows if necessary
+        //int workflowCount = 0;
+        List<String> extractionIds = new ArrayList<String>();
+        for(Reaction reaction : plate.getReactions()) {
+            if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                extractionIds.add(reaction.getExtractionId());
+            }
+        }
+        if(extractionIds.size() > 0) {
+            List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
+            int workflowIndex = 0;
+            for(Reaction reaction : plate.getReactions()) {
+                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                    reaction.setWorkflow(workflowList.get(workflowIndex));
+                    workflowIndex++;
+                }
+            }
+        }
+
+        progress.setMessage("Creating the plate");
+        //we need to create the plate
+        createOrUpdatePlate(plate, progress);
+    }
+
+    private void createOrUpdatePlate(Plate plate, BlockingDialog progress) throws SQLException{
         Connection connection = limsConnection.getConnection();
         Savepoint savepoint = connection.setSavepoint();
         try {
             connection.setAutoCommit(false);
-            String tableName;
-            switch(plate.getReactionType()) {
-                case Extraction :
-                    tableName = "extraction";
-                    break;
-                case PCR :
-                    tableName = "pcr";
-                    break;
-                case CycleSequencing:
-                    tableName = "cycleSequencing";
-                    break;
-                default :
-                    throw new IllegalStateException("The plate has an invalid reaction type: "+plate.getReactionType());
+
+            //update the plate
+            PreparedStatement statement = plate.toSQL(connection);
+            statement.execute();
+            if(plate.getId() < 0) {
+                PreparedStatement statement1 = connection.prepareStatement("SELECT last_insert_id()");
+                ResultSet resultSet = statement1.executeQuery();
+                resultSet.next();
+                int plateId = resultSet.getInt(1);
+                plate.setId(plateId);
             }
 
-            //delete the existing reactions...
-            PreparedStatement statement = connection.prepareStatement("DELETE FROM "+tableName+" WHERE plate=?");
-            statement.setInt(1, plate.getId());
-            statement.execute();
+            //replace the images
+            PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE * FROM gelImages WHERE plate="+plate.getId());
+            deleteImagesStatement.execute();
+            for(GelImage image : plate.getImages()) {
+                image.toSql(connection).execute();
+            }
 
             Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
             connection.commit();
             connection.releaseSavepoint(savepoint);
-        }
-        catch(SQLException ex) {
-            connection.rollback(savepoint);
-            throw ex;
         } finally {
             connection.setAutoCommit(true);
         }
@@ -974,15 +1016,32 @@ public class MooreaLabBenchService extends DatabaseService {
         return result;
     }
 
-    public void saveReactions(Reaction[] reactions, Reaction.Type reactionType, BlockingDialog progress) throws SQLException{
-        Reaction.saveReactions(reactions, reactionType, limsConnection.getConnection(), progress);
-    }
-
     public static class BlockingDialog extends JDialog {
         private String message;
         private JLabel label;
 
-        public BlockingDialog(String message, Frame owner){
+        public static BlockingDialog getDialog(String message, Component owner) {
+            Window w = getParentFrame(owner);
+            if(w instanceof JFrame) {
+                return new BlockingDialog(message, (JFrame)w);
+            }
+            else if(w instanceof JDialog) {
+                return new BlockingDialog(message, (JDialog)w);
+            }
+            return new BlockingDialog(message, GuiUtilities.getMainFrame());
+        }
+
+        private static Window getParentFrame(Component component) {
+            if(component instanceof Window) {
+                return (Window)component;
+            }
+            if(component.getParent() != null) {
+                return getParentFrame(component.getParent());
+            }
+            return null;
+        }
+
+        private BlockingDialog(String message, Frame owner){
             super(owner);
             if(owner != null) {
                 setLocationRelativeTo(owner);
@@ -991,7 +1050,7 @@ public class MooreaLabBenchService extends DatabaseService {
             init();
         }
 
-        public BlockingDialog(String message, Dialog owner){
+        private BlockingDialog(String message, Dialog owner){
             super(owner);
             if(owner != null) {
                 setLocationRelativeTo(owner);
@@ -1022,7 +1081,7 @@ public class MooreaLabBenchService extends DatabaseService {
         public void setMessage(String s) {
             message = s;
             label.setText(message);
-            invalidate();
+            pack();
         }
 
 

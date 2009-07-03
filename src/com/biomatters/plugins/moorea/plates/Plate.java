@@ -194,7 +194,14 @@ public class Plate implements XMLSerializable {
         if(name == null || name.trim().length() == 0) {
             throw new SQLException("Plates cannot have empty names");
         }
-        PreparedStatement statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle) VALUES (?, ?, ?, ?)");
+        PreparedStatement statement;
+        if(getId() < 0) {
+            statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle) VALUES (?, ?, ?, ?)");
+        }
+        else {
+            statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=? WHERE id=?");
+            statement.setInt(5, getId());
+        }
         statement.setString(1, getName());
         statement.setInt(2, reactions.length);
         statement.setString(3, type.toString());
@@ -253,6 +260,10 @@ public class Plate implements XMLSerializable {
 
     public void fromXML(Element element) throws XMLSerializationException {
         setName(element.getChildText("name"));
+        id = Integer.parseInt(element.getChildText("id"));
+        rows = Integer.parseInt(element.getChildText("rows"));
+        cols = Integer.parseInt(element.getChildText("cols"));
+        plateSize = Size.valueOf(element.getChildText("plateSize"));
         type = Reaction.Type.valueOf(element.getChildText("type"));
         int size = Integer.parseInt(element.getChildText("size"));
         Size sizeEnum = getSizeEnum(size);
@@ -276,11 +287,26 @@ public class Plate implements XMLSerializable {
         }
     }
 
+
+//    private int id=-1;
+//    private int rows;
+//    private int cols;
+//    private String name;
+//    private Reaction[] reactions;
+//    private Reaction.Type type;
+//    private Size plateSize;
+//    private Thermocycle thermocycle;
+//    private List<GelImage> images;
+
     public Element toXML() {
         Element plateElement = new Element("Plate");
+        plateElement.addContent(new Element("id").setText(""+id));
         plateElement.addContent(new Element("name").setText(getName()));
         plateElement.addContent(new Element("type").setText(type.toString()));
         plateElement.addContent(new Element("size").setText(""+reactions.length));
+        plateElement.addContent(new Element("rows").setText(""+rows));
+        plateElement.addContent(new Element("cols").setText(""+cols));
+        plateElement.addContent(new Element("plateSize").setText(plateSize.toString()));
         if(getThermocycle() != null) {
             plateElement.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
         }

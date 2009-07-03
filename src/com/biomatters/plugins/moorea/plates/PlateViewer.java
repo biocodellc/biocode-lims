@@ -216,18 +216,17 @@ public class PlateViewer extends JPanel {
                     public void actionPerformed(ActionEvent e) {
                         final Plate plate = plateView.getPlate();
 
-                        final MooreaLabBenchService.BlockingDialog progress = new MooreaLabBenchService.BlockingDialog("Creating your plate", frame);
+                        final MooreaLabBenchService.BlockingDialog progress = MooreaLabBenchService.BlockingDialog.getDialog("Creating your plate", frame);
 
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
                                     if(plate.getReactionType() == Reaction.Type.Extraction) {
-                                        updateExtractions(progress, plate);
+                                        MooreaLabBenchService.getInstance().saveExtractions(progress, plate);
                                     }
                                     else {
-                                        updateReactions(progress, plate);
+                                        MooreaLabBenchService.getInstance().saveReactions(progress, plate);
                                     }
-
                                 }
                                 catch(SQLException ex){
                                     Dialogs.showMessageDialog("There was an error saving your plate: "+ex.getMessage());
@@ -255,108 +254,6 @@ public class PlateViewer extends JPanel {
         }
     }
 
-    private void updateExtractions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException{
-
-        //creating the extractions
-        List<Reaction> reactionsToCreate = new ArrayList<Reaction>();
-        List<Reaction> reactionsToUpdate = new ArrayList<Reaction>();
-        for(Reaction reaction : plate.getReactions()) {
-            if(reaction.getId() < 0) {
-                reactionsToCreate.add(reaction);
-            }
-            else {
-                reactionsToUpdate.add(reaction);
-            }
-        }
-
-        if(reactionsToCreate.size() > 0) {
-            MooreaLabBenchService.getInstance().createPlate(plate, progress);
-            //MooreaLabBenchService.getInstance().saveReactions(reactionsToCreate.toArray(new Reaction[reactionsToCreate.size()]), plate.getReactionType(), progress);
-        }
-
-        progress.setMessage("Creating new workflows");
-
-        //create workflows if necessary
-        //int workflowCount = 0;
-        List<String> extractionIds = new ArrayList<String>();
-        for(Reaction reaction : plate.getReactions()) {
-            if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                extractionIds.add(reaction.getExtractionId());
-            }
-        }
-        if(extractionIds.size() > 0) {
-            List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
-            int workflowIndex = 0;
-            for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                    reaction.setWorkflow(workflowList.get(workflowIndex));
-                    workflowIndex++;
-                }
-            }
-        }
-
-        
-
-    }
-
-    private void updateReactions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException {
-        progress.setMessage("Retrieving existing workflows");
-
-        //set workflows for reactions that have id's
-        List<String> workflowIdStrings = new ArrayList<String>();
-        for(Reaction reaction : plate.getReactions()) {
-            Object workflowId = reaction.getFieldValue("workflowId");
-            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0) {
-                if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
-                    continue;
-                }
-                else {
-                    reaction.setWorkflow(null);
-                    workflowIdStrings.add(workflowId.toString());
-                }
-            }
-        }
-
-        if(workflowIdStrings.size() > 0) {
-            Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
-            for(Reaction reaction : plate.getReactions()) {
-                Object workflowId = reaction.getFieldValue("workflowId");
-                if(reaction.getWorkflow() == null){
-                    reaction.setWorkflow(map.get(workflowId));
-                }
-            }
-        }
-
-        progress.setMessage("Creating new workflows");
-
-        //create workflows if necessary
-        //int workflowCount = 0;
-        List<String> extractionIds = new ArrayList<String>();
-        for(Reaction reaction : plate.getReactions()) {
-            if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                extractionIds.add(reaction.getExtractionId());
-            }
-        }
-        if(extractionIds.size() > 0) {
-            List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
-            int workflowIndex = 0;
-            for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                    reaction.setWorkflow(workflowList.get(workflowIndex));
-                    workflowIndex++;
-                }
-            }
-        }
-
-        progress.setMessage("Creating the plate");
-
-        if(plate.getId() < 0) { //we need to create the plate
-            MooreaLabBenchService.getInstance().createPlate(plate, progress);
-        }
-        else {
-            MooreaLabBenchService.getInstance().updatePlate(plate, progress);
-        }
-    }
 
 
     public static void main(String[] args) {

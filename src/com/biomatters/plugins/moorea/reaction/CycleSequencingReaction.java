@@ -47,6 +47,7 @@ public class CycleSequencingReaction extends Reaction{
         setCreated(r.getDate("cycleSequencing.date"));
         Options options = getOptions();
         options.setValue("extractionId", r.getString("cycleSequencing.extractionId"));
+        options.setValue("workflowId", r.getString("cycleSequencing.workflow"));
 
 
         options.getOption("runStatus").setValueFromString(r.getString("cycleSequencing.progress"));

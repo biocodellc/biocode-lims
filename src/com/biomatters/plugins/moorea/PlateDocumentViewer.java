@@ -25,6 +25,7 @@ import java.awt.*;
 import java.awt.print.PrinterException;
 import java.awt.print.Printable;
 import java.lang.reflect.InvocationTargetException;
+import java.sql.SQLException;
 
 import org.virion.jam.util.SimpleListener;
 
@@ -72,6 +73,27 @@ public class PlateDocumentViewer extends DocumentViewer{
                 plateDoc.setPlate(plateView.getPlate());
                 annotatedDocument.saveDocument();
                 setEnabled(false);
+                if(!isLocal) {
+                    final MooreaLabBenchService.BlockingDialog dialog = MooreaLabBenchService.BlockingDialog.getDialog("Saving your plate", container);
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            try {
+                                if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
+                                    MooreaLabBenchService.getInstance().saveExtractions(dialog, plateView.getPlate());
+                                }
+                                else {
+                                    MooreaLabBenchService.getInstance().saveReactions(dialog, plateView.getPlate());
+                                }
+                            } catch (SQLException e1) {
+                                e1.printStackTrace(); //todo: handle this!
+                            } finally {
+                                dialog.setVisible(false);
+                            }
+                        }
+                    };
+                    new Thread(runnable).start();
+                    dialog.setVisible(true);
+                }
             }
         };
         saveAction.setIcons(StandardIcons.save.getIcons());
