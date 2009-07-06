@@ -54,6 +54,16 @@ public class PCRReaction extends Reaction {
         Options options = getOptions();
         options.setValue("extractionId", r.getString("pcr.extractionId"));
 
+        String s = r.getString("workflow.name");
+        if(s != null) {
+            options.setValue("workflowId", s);
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("pcr.extractionId")));
+            options.setValue("workflowId", getWorkflow().getName());
+        }
+        else {
+            assert false : "We should be getting a resultset of at least the CycleSequencing table joined to the Workflow table";
+        }
+
         options.getOption("runStatus").setValueFromString(r.getString("pcr.progress"));
 
         Options.ComboBoxOption primerOption = (Options.ComboBoxOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
@@ -115,54 +125,99 @@ public class PCRReaction extends Reaction {
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
+        String error = "";            
+
         List<Query> queries = new ArrayList<Query>();
 
+        //check the extractions exist in the database...
         Map<String, String> tissueMapping = null;
         try {
             tissueMapping = MooreaLabBenchService.getInstance().getReactionToTissueIdMapping("extraction", reactions);
         } catch (SQLException e) {
             return "Could not connect to the LIMS database";
         }
-
         for(Reaction reaction : reactions) {
+            reaction.isError = false;
             Options option = reaction.getOptions();
             if(option.getOption("extractionId").isEnabled()){
                 String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
                 if(tissue == null) {
-                    return "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!";
+                    error += "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!\n";
+                    reaction.isError = true;
                 }
-                Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
-                if(!queries.contains(fieldQuery)) {
-                     queries.add(fieldQuery);
+                else {
+                    Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
+                    if(!queries.contains(fieldQuery)) {
+                         queries.add(fieldQuery);
+                    }
                 }
             }
         }
 
-        Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
 
-        try {
-            List<FimsSample> docList = fimsConnection.getMatchingSamples(orQuery);
-            Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
-            for(FimsSample sample : docList) {
-                docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
-            }
-            String error = "";
-            for(Reaction reaction : reactions) {
-                Options op = reaction.getOptions();
-                String extractionId = op.getValueAsString("extractionId");
-                FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
-                if(currentFimsSample == null) {
-                    error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
-                    reaction.isError = true;
+        //check the tissue samples exist in the database...
+        if(queries.size() > 0) {
+            Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
+            try {
+                List<FimsSample> docList = fimsConnection.getMatchingSamples(orQuery);
+                Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
+                for(FimsSample sample : docList) {
+                    docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
                 }
-                reaction.isError = false;
-                reaction.setFimsSample(currentFimsSample);
+                for(Reaction reaction : reactions) {
+                    Options op = reaction.getOptions();
+                    String extractionId = op.getValueAsString("extractionId");
+                    FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
+                    if(currentFimsSample == null) {
+                        error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
+                        reaction.isError = true;
+                    }
+                    else {
+                        reaction.isError = false;
+                        reaction.setFimsSample(currentFimsSample);
+                    }
+                }
+            } catch (ConnectionException e) {
+                return "Could not query the FIMS database.  "+e.getMessage();
             }
-            if(error.length() > 0) {
-                return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
+        }
+
+        //check the workflows exist in the database
+        Set<String> workflowIdStrings = new HashSet<String>();
+        for(Reaction reaction : reactions) {
+            Object workflowId = reaction.getFieldValue("workflowId");
+            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
+                if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
+                    continue;
+                }
+                else {
+                    reaction.setWorkflow(null);
+                    workflowIdStrings.add(workflowId.toString());
+                }
             }
-        } catch (ConnectionException e) {
-            return "Could not query the FIMS database.  "+e.getMessage();
+        }
+
+        if(workflowIdStrings.size() > 0) {
+            try {
+                Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(new ArrayList<String>(workflowIdStrings));
+
+                for(Reaction reaction : reactions) {
+                    Object workflowId = reaction.getFieldValue("workflowId");
+                    if(workflowId != null && workflowId.toString().length() > 0) {
+                        Workflow workflow = map.get(workflowId);
+                        if(workflow == null) {
+                            error += "The workflow "+workflowId+" does not exist in the database.\n";    
+                        }
+                        reaction.setWorkflow(workflow);
+                    }
+                }
+            } catch (SQLException e) {
+                return "Could not query the LIMS database.  "+e.getMessage();
+            }
+        }
+
+        if(error.length() > 0) {
+            return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
         }
         return null;
     }

@@ -229,6 +229,7 @@ public class Plate implements XMLSerializable {
                 r = new CycleSequencingReaction(resultSet);
                 break;
         }
+        r.setPlate(this.id);
         reactions[r.getPosition()] = r;
         int row = r.getPosition() / cols;
         int col = r.getPosition() % cols;

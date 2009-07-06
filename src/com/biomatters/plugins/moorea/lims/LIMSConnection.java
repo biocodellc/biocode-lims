@@ -11,6 +11,8 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 
 import java.sql.*;
 import java.util.*;
@@ -221,6 +223,7 @@ public class LIMSConnection {
         StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cycleSequencing ON cycleSequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN extraction ON extraction.plate = plate.id " +
+                "RIGHT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cycleSequencing.workflow) " +
                 "WHERE");
 
         Set<Integer> plateIds = new HashSet<Integer>();
@@ -238,6 +241,7 @@ public class LIMSConnection {
                 sql.append(" OR");
             }
         }
+        System.out.println(sql.toString());
         PreparedStatement statement = connection.prepareStatement(sql.toString());
         ResultSet resultSet = statement.executeQuery();
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
@@ -265,15 +269,34 @@ public class LIMSConnection {
                 cycleSequencingReactions.add((CycleSequencingReaction)reaction);
             }
         }
+        final StringBuilder totalErrors = new StringBuilder("");
         if(extractionReactions.size() > 0) {
-            extractionReactions.get(0).areReactionsValid(extractionReactions);
+            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions);
+            if(extractionErrors != null) {
+                totalErrors.append(extractionErrors+"\n");
+            }
         }
         if(pcrReactions.size() > 0) {
-            pcrReactions.get(0).areReactionsValid(pcrReactions);
+            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions);
+            if(pcrErrors != null) {
+                totalErrors.append(pcrErrors+"\n");
+            }
         }
         if(cycleSequencingReactions.size() > 0) {
-            cycleSequencingReactions.get(0).areReactionsValid(cycleSequencingReactions);
+            String cycleSequencingErrors = cycleSequencingReactions.get(0).areReactionsValid(cycleSequencingReactions);
+            if(cycleSequencingErrors != null) {
+                totalErrors.append(cycleSequencingErrors+"\n");
+            }
         }
+        if(totalErrors.length() > 0) {
+            Runnable runnable = new Runnable() {
+                public void run() {
+                    Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n"+totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
+                }
+            };
+            ThreadUtilities.invokeNowOrLater(runnable);
+        }
+
         Map<Integer, List<GelImage>> gelImages = getGelImages(plateIds);
         List<PlateDocument> docs = new ArrayList<PlateDocument>();
         for(Plate plate : plateMap.values()) {

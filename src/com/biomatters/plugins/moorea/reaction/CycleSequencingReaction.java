@@ -39,15 +39,26 @@ public class CycleSequencingReaction extends Reaction{
     public CycleSequencingReaction(ResultSet r) throws SQLException {
         this();
         init(r);
+//        if(r.getObject("workflow.id") != null) {
+//            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId")));
+//        }
     }
 
     private Options init(ResultSet r) throws SQLException {
         setPlate(r.getInt("cycleSequencing.plate"));
         setPosition(r.getInt("cycleSequencing.location"));
         setCreated(r.getDate("cycleSequencing.date"));
+        setId(r.getInt("cycleSequencing.id"));
         Options options = getOptions();
         options.setValue("extractionId", r.getString("cycleSequencing.extractionId"));
-        options.setValue("workflowId", r.getString("cycleSequencing.workflow"));
+        String s = r.getString("workflow.name");
+        if(s != null) {
+            options.setValue("workflowId", s);
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("cycleSequencing.extractionId")));
+        }
+        else {
+            assert false : "We should be getting a resultset of at least the CycleSequencing table joined to the Workflow table";
+        }
 
 
         options.getOption("runStatus").setValueFromString(r.getString("cycleSequencing.progress"));
@@ -122,6 +133,8 @@ public class CycleSequencingReaction extends Reaction{
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
+        String error = "";
+
         List<Query> queries = new ArrayList<Query>();
 
         Map<String, String> tissueMapping = null;
@@ -132,15 +145,19 @@ public class CycleSequencingReaction extends Reaction{
         }
 
         for(Reaction reaction : reactions) {
+            reaction.isError = false;
             Options option = reaction.getOptions();
             if(option.getOption("extractionId").isEnabled()){
                 String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
                 if(tissue == null) {
-                    return "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!";
+                    error += "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!\n";
+                    reaction.isError = true;
                 }
-                Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
-                if(!queries.contains(fieldQuery)) {
-                     queries.add(fieldQuery);
+                else {
+                    Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
+                    if(!queries.contains(fieldQuery)) {
+                         queries.add(fieldQuery);
+                    }
                 }
             }
         }
@@ -153,7 +170,7 @@ public class CycleSequencingReaction extends Reaction{
             for(FimsSample sample : docList) {
                 docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
             }
-            String error = "";
+
             for(Reaction reaction : reactions) {
                 Options op = reaction.getOptions();
                 String extractionId = op.getValueAsString("extractionId");
@@ -162,14 +179,53 @@ public class CycleSequencingReaction extends Reaction{
                     error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
                     reaction.isError = true;
                 }
-                reaction.isError = false;
-                reaction.setFimsSample(currentFimsSample);
+                else {
+                    reaction.setFimsSample(currentFimsSample);
+                }
             }
-            if(error.length() > 0) {
-                return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
-            }
+
         } catch (ConnectionException e) {
             return "Could not query the FIMS database.  "+e.getMessage();
+        }
+
+
+
+        //check the workflows exist in the database
+        Set<String> workflowIdStrings = new HashSet<String>();
+        for(Reaction reaction : reactions) {
+            Object workflowId = reaction.getFieldValue("workflowId");
+            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
+                if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
+                    continue;
+                }
+                else {
+                    reaction.setWorkflow(null);
+                    workflowIdStrings.add(workflowId.toString());
+                }
+            }
+        }
+
+        if(workflowIdStrings.size() > 0) {
+            try {
+                Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(new ArrayList<String>(workflowIdStrings));
+
+                for(Reaction reaction : reactions) {
+                    Object workflowId = reaction.getFieldValue("workflowId");
+                    if(workflowId != null && workflowId.toString().length() > 0) {
+                        Workflow workflow = map.get(workflowId);
+                        if(workflow == null) {
+                            error += "The workflow "+workflowId+" does not exist in the database.\n";
+                        }
+                        reaction.setWorkflow(workflow);
+                    }
+                }
+            } catch (SQLException e) {
+                return "Could not query the LIMS database.  "+e.getMessage();
+            }
+        }
+
+        if(error.length() > 0) {
+            return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
         }
         return null;
     }

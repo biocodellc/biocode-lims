@@ -137,9 +137,11 @@ public class PlateDocumentViewer extends DocumentViewer{
     private void updateToolbar(boolean showDialogs) {
         updateThermocycleAction(showDialogs);
         boolean buttonsEnabled = !isLocal;
-        thermocycleAction.setEnabled(buttonsEnabled);
-        editThermocycleAction.setEnabled(buttonsEnabled);
-        gelAction.setEnabled(buttonsEnabled);
+        if(plateDoc.getPlate().getReactionType() != Reaction.Type.Extraction) {
+            thermocycleAction.setEnabled(buttonsEnabled);
+            editThermocycleAction.setEnabled(buttonsEnabled);
+            gelAction.setEnabled(buttonsEnabled);
+        }
         editAction.setEnabled(plateView.getSelectedReactions().size() > 0);
     }
 
@@ -166,6 +168,9 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private void updateThermocycleAction(boolean showDialogs){
+        if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+            return;
+        }
         List<GeneiousAction> actions = new ArrayList<GeneiousAction>();
         final AtomicReference<String> name = new AtomicReference<String>(plateView.getPlate().getThermocycle().getName());
         if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
@@ -226,6 +231,12 @@ public class PlateDocumentViewer extends DocumentViewer{
 
             @Override
             public List<GeneiousAction> getOtherActions() {
+                if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+                    thermocycleAction = editThermocycleAction = gelAction = null;
+                    return Arrays.asList(
+                        editAction
+                    );
+                }
                 return Arrays.asList(
                         thermocycleAction,
                         editThermocycleAction,
@@ -246,7 +257,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         };
     }
 
-    final GeneiousAction gelAction = new GeneiousAction("Attach GEL image", null, MooreaLabBenchPlugin.getIcons("addImage_16.png")) {
+    GeneiousAction gelAction = new GeneiousAction("Attach GEL image", null, MooreaLabBenchPlugin.getIcons("addImage_16.png")) {
         public void actionPerformed(ActionEvent e) {
             if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
                 Dialogs.showMessageDialog("Please log in");

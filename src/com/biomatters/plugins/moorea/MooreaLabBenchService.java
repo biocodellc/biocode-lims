@@ -835,25 +835,31 @@ public class MooreaLabBenchService extends DatabaseService {
             return workflows;
         }
         catch(SQLException ex) {
-            connection.rollback(savepoint);
-            throw ex;
+            try {
+                connection.rollback(savepoint);
+            } catch (SQLException e) {}
+            finally {
+                throw ex;
+            }
         } finally {
             connection.setAutoCommit(true);
         }
     }
 
     public void saveExtractions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException{
+        List<String> extractionIds = new ArrayList<String>();
+        for(Reaction reaction : plate.getReactions()) {
+            if(!reaction.isEmpty() && (reaction.getId() < 0)) {
+                extractionIds.add(reaction.getExtractionId());
+            }
+        }
+
         createOrUpdatePlate(plate, progress);
 
         progress.setMessage("Creating new workflows");
 
         //create workflows if necessary
-        List<String> extractionIds = new ArrayList<String>();
-        for(Reaction reaction : plate.getReactions()) {
-            if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                extractionIds.add(reaction.getExtractionId());
-            }
-        }
+
         if(extractionIds.size() > 0) {
             List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
             int workflowIndex = 0;
@@ -876,7 +882,7 @@ public class MooreaLabBenchService extends DatabaseService {
         List<String> workflowIdStrings = new ArrayList<String>();
         for(Reaction reaction : plate.getReactions()) {
             Object workflowId = reaction.getFieldValue("workflowId");
-            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0) {
+            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
                 if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
                     continue;
                 }
@@ -941,7 +947,7 @@ public class MooreaLabBenchService extends DatabaseService {
             }
 
             //replace the images
-            PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE * FROM gelImages WHERE plate="+plate.getId());
+            PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelImages WHERE plate="+plate.getId());
             deleteImagesStatement.execute();
             for(GelImage image : plate.getImages()) {
                 image.toSql(connection).execute();

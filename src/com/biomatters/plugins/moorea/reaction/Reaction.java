@@ -195,6 +195,15 @@ public abstract class Reaction implements XMLSerializable{
         if(fimsSample != null) {
             element.addContent(XMLSerializer.classToXML("fimsSample", fimsSample));
         }
+        if(getId() >= 0) {
+            element.addContent(new Element("id").setText(""+getId()));
+        }
+        if(getPlate() >= 0) {
+            element.addContent(new Element("plate").setText(""+getPlate()));
+        }
+        if(isError) {
+            element.addContent(new Element("isError").setText("true"));
+        }
         element.addContent(new Element("created").setText(MooreaLabBenchService.dateFormat.format(getCreated())));
         element.addContent(new Element("position").setText(""+getPosition()));
         if(locationString != null) {
@@ -213,9 +222,16 @@ public abstract class Reaction implements XMLSerializable{
         String thermoCycleId = element.getChildText("thermocycle");
         setPosition(Integer.parseInt(element.getChildText("position")));
         Element locationStringElement = element.getChild("wellLabel");
+        if(element.getChild("id") != null) {
+            setId(Integer.parseInt(element.getChildText("id")));
+        }
+        if(element.getChild("plate") != null) {
+            setPlate(Integer.parseInt(element.getChildText("plate")));
+        }
         if(locationStringElement != null) {
             locationString = locationStringElement.getText();
         }
+        isError = element.getChild("isError") != null;
         Element fimsElement = element.getChild("fimsSample");
         if(fimsElement != null) {
             fimsSample = XMLSerializer.classFromXML(fimsElement, FimsSample.class);
@@ -407,7 +423,7 @@ public abstract class Reaction implements XMLSerializable{
         switch(type) {
             case Extraction:
                 String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?m volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=? WHERE id=?";
+                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=? WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 insertStatement.addBatch();
@@ -440,7 +456,7 @@ public abstract class Reaction implements XMLSerializable{
                 break;
             case PCR:
                 insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=? WHERE plate=?";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=? WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -484,24 +500,24 @@ public abstract class Reaction implements XMLSerializable{
                         if(cocktailId < 0) {
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
-                        insertStatement.setInt(7, cocktailId);
-                        insertStatement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        statement.setInt(7, cocktailId);
+                        statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
                         if(reaction.getThermocycle() != null) {
-                            insertStatement.setInt(9, reaction.getThermocycle().getId());
+                            statement.setInt(9, reaction.getThermocycle().getId());
                         }
                         else {
-                            insertStatement.setInt(9, -1);
+                            statement.setInt(9, -1);
                         }
-                        insertStatement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
-                        insertStatement.setString(11, options.getValueAsString("cleanupMethod"));
-                        insertStatement.setString(12, reaction.getExtractionId());
-                        insertStatement.execute();
+                        statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
+                        statement.setString(11, options.getValueAsString("cleanupMethod"));
+                        statement.setString(12, reaction.getExtractionId());
+                        statement.execute();
                     }
                 }
                 break;
             case CycleSequencing:
                 insertSQL = "INSERT INTO cycleSequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?) WHERE plate=?";
+                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=? WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {

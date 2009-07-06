@@ -43,6 +43,7 @@ public class ExtractionReaction extends Reaction{
     }
 
     private void init(ResultSet r, Options options) throws SQLException {
+        setId(r.getInt("extraction.id"));
         options.setValue("sampleId", r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
         options.setValue("extractionMethod", r.getString("extraction.method"));
@@ -128,6 +129,7 @@ public class ExtractionReaction extends Reaction{
             }
             String error = "";
             for(Reaction reaction : reactions) {
+                reaction.isError = false;
                 Options op = reaction.getOptions();
                 String tissueId = op.getValueAsString("sampleId");
                 FimsSample currentFimsSample = docMap.get(tissueId);
@@ -135,8 +137,9 @@ public class ExtractionReaction extends Reaction{
                     error += "The tissue sample "+tissueId+" does not exist in the database.\n";
                     reaction.isError = true;
                 }
-                reaction.isError = false;
-                reaction.setFimsSample(currentFimsSample);
+                else {
+                    reaction.setFimsSample(currentFimsSample);
+                }
             }
             if(error.length() > 0) {
                 return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
