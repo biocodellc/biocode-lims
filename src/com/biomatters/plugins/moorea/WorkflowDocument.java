@@ -201,7 +201,12 @@ public class WorkflowDocument extends MuitiPartDocument {
             OptionsPanel optionsPanel = new OptionsPanel(true, false);
             List<DocumentField> documentFields = reaction.getDisplayableFields();
             for(DocumentField field : documentFields) {
-                optionsPanel.addComponentWithLabel("<html><b>"+field.getName()+": </b></html>", new JLabel(reaction.getFieldValue(field.getCode()).toString()), false);
+                if(field.getName().length() > 0) {
+                    optionsPanel.addComponentWithLabel("<html><b>"+field.getName()+": </b></html>", new JLabel(reaction.getFieldValue(field.getCode()).toString()), false);
+                }
+                else {
+                    optionsPanel.addSpanningComponent(new JLabel(reaction.getFieldValue(field.getCode()).toString()));
+                }
             }
             return optionsPanel;
         }

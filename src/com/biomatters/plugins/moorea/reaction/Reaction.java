@@ -422,8 +422,8 @@ public abstract class Reaction implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, MooreaLabBenchService.BlockingDialog progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=? WHERE id=?";
+                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=?, notes=? WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 insertStatement.addBatch();
@@ -436,7 +436,7 @@ public abstract class Reaction implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(9, reaction.getId());
+                            statement.setInt(10, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -450,13 +450,14 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setString(6, options.getValueAsString("extractionId"));
                         statement.setInt(7, reaction.getPlate());
                         statement.setInt(8, reaction.getPosition());
+                        statement.setString(9, options.getValueAsString("notes"));
                         statement.execute();
                     }
                 }
                 break;
             case PCR:
-                insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=? WHERE id=?";
+                insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=? WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -468,7 +469,7 @@ public abstract class Reaction implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(13, reaction.getId());
+                            statement.setInt(14, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -511,6 +512,7 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
                         statement.setString(11, options.getValueAsString("cleanupMethod"));
                         statement.setString(12, reaction.getExtractionId());
+                        statement.setString(13, options.getValueAsString("notes"));
                         statement.execute();
                     }
                 }

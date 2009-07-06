@@ -5,10 +5,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.plugins.moorea.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.FimsSample;
-import com.biomatters.plugins.moorea.ConnectionException;
-import com.biomatters.plugins.moorea.Workflow;
+import com.biomatters.plugins.moorea.*;
 import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
 
@@ -50,6 +47,7 @@ public class ExtractionReaction extends Reaction{
         options.setValue("parentExtraction", r.getString("extraction.parent"));
         options.setValue("volume", r.getInt("extraction.volume"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
+        options.setValue("notes", r.getString("extraction.notes"));
         setPlate(r.getInt("extraction.plate"));
         setPosition(r.getInt("extraction.location"));
     }
@@ -70,6 +68,8 @@ public class ExtractionReaction extends Reaction{
             options.addIntegerOption("dilution", "Dilution 1/", 5, 0, Integer.MAX_VALUE);
             Options.IntegerOption volume = options.addIntegerOption("volume", "Extraction Volume", 5, 0, Integer.MAX_VALUE);
             volume.setUnits("ul");
+            TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
+            options.addCustomOption(notesOption);
         }
         return options;
     }

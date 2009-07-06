@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.ButtonOption;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
+import com.biomatters.plugins.moorea.TextAreaOption;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -176,6 +177,8 @@ public class PCROptions extends Options {
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
         cleanupOption.addDependent(cleanupMethodOption, true);
+        TextAreaOption notes = new TextAreaOption("notes", "Notes", "");
+        addCustomOption(notes);
 
         labelOption = new LabelOption(LABEL_OPTION_ID, "Total Volume of Reaction: 0uL");
         addCustomOption(labelOption);

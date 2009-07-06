@@ -75,6 +75,7 @@ public class PCRReaction extends Reaction {
         options.setValue("cocktail", r.getString("pcr.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("pcr.cleanupPerformed"));
         options.setValue("cleanupMethod", r.getString("pcr.cleanupMethod"));
+        options.setValue("notes", r.getString("pcr.notes"));
 
         int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {
