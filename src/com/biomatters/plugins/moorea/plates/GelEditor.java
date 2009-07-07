@@ -64,9 +64,12 @@ public class GelEditor {
         JButton addButton = new JButton("Add");
         JPanel buttonPanel = new JPanel(new GridLayout(1,2));
         buttonPanel.add(addButton);
-        JButton removeButton = new JButton("Remove");
+        final JButton removeButton = new JButton("Remove");
         buttonPanel.add(removeButton);
-        leftPanel.add(addButton, BorderLayout.SOUTH);
+        JPanel addRemovePanel = new JPanel(new GridLayout(1,2));
+        addRemovePanel.add(addButton);
+        addRemovePanel.add(removeButton);
+        leftPanel.add(addRemovePanel, BorderLayout.SOUTH);
         leftPanel.add(scroller, BorderLayout.CENTER);
         addButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
@@ -97,6 +100,15 @@ public class GelEditor {
             }
         });
 
+        final ListSelectionListener selectionListener = new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent e) {
+                GelImage selectedGelimage = (GelImage) gelimageList.getSelectedValue();
+                //todo
+                setRightComponent(splitPane, getGelViewerPanel(selectedGelimage));
+                removeButton.setEnabled(gelimageList.getSelectedIndex() >= 0);
+            }
+        };
+
         removeButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
                 int index = gelimageList.getSelectedIndex();
@@ -104,6 +116,7 @@ public class GelEditor {
                 for(ListDataListener listener : listModel.getListDataListeners()){
                     listener.contentsChanged(new ListDataEvent(listModel, ListDataEvent.CONTENTS_CHANGED, 0, listModel.getSize()-1));
                 }
+                selectionListener.valueChanged(null);
             }
         });
 
@@ -114,13 +127,7 @@ public class GelEditor {
         
         setRightComponent(splitPane, holderPanel);
 
-        gelimageList.addListSelectionListener(new ListSelectionListener(){
-            public void valueChanged(ListSelectionEvent e) {
-                GelImage selectedGelimage = (GelImage)gelimageList.getSelectedValue();
-                //todo
-                setRightComponent(splitPane, getGelViewerPanel(selectedGelimage));
-            }
-        });
+        gelimageList.addListSelectionListener(selectionListener);
 
         gelimageList.setSelectedIndex(0);
                 

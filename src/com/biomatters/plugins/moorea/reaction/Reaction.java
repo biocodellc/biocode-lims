@@ -432,7 +432,7 @@ public abstract class Reaction implements XMLSerializable{
         switch(type) {
             case Extraction:
                 String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=?, notes=? WHERE id=?";
+                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=?, notes=?, date=extraction.date WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 insertStatement.addBatch();
@@ -466,7 +466,7 @@ public abstract class Reaction implements XMLSerializable{
                 break;
             case PCR:
                 insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=? WHERE id=?";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=pcr.date WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -528,7 +528,7 @@ public abstract class Reaction implements XMLSerializable{
                 break;
             case CycleSequencing:
                 insertSQL = "INSERT INTO cycleSequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=? WHERE id=?";
+                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=cycleSequencing.date WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {

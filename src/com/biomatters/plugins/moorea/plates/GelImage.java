@@ -66,19 +66,19 @@ public class GelImage implements XMLSerializable {
 
     public PreparedStatement toSql(Connection conn) throws SQLException {
         PreparedStatement statement;
-        if(id < 0) {
+//        if(id < 0) {
             statement = conn.prepareStatement("INSERT INTO gelImages (plate, imageData, notes) VALUES (?, ?, ?)");
             statement.setInt(1, plate);
             statement.setObject(2, imageBytes);
             statement.setString(3, notes);
-        }
-        else {
-            statement = conn.prepareStatement("UPDATE gelImages WHERE id=? SET plate=?, imageData=?, notes=?");
-            statement.setInt(1, id);
-            statement.setInt(2, plate);
-            statement.setObject(3, imageBytes);
-            statement.setString(4, notes);
-        }
+//        }
+//        else {
+//            statement = conn.prepareStatement("UPDATE gelImages SET plate=?, imageData=?, notes=? WHERE id=?");
+//            statement.setInt(1, id);
+//            statement.setInt(2, plate);
+//            statement.setObject(3, imageBytes);
+//            statement.setString(4, notes);
+//        }
         return statement;
     }
 
