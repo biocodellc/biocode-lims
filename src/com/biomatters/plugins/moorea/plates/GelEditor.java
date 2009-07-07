@@ -16,10 +16,7 @@ import java.util.Collections;
 import java.util.ArrayList;
 import java.util.prefs.Preferences;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 
@@ -137,9 +134,16 @@ public class GelEditor {
         ImagePanel imagePanel = new ImagePanel(image.getImage());
         JScrollPane imageScroller = new JScrollPane(imagePanel);
         final JTextArea notesArea = new JTextArea(image.getNotes());
-        notesArea.addKeyListener(new KeyAdapter() {
-            @Override
+        notesArea.addKeyListener(new KeyListener() {
             public void keyTyped(KeyEvent e) {
+                image.setNotes(notesArea.getText());
+            }
+
+            public void keyPressed(KeyEvent e) {
+                image.setNotes(notesArea.getText());
+            }
+
+            public void keyReleased(KeyEvent e) {
                 image.setNotes(notesArea.getText());
             }
         });

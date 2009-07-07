@@ -66,11 +66,14 @@ public class PCROptions extends Options {
                 List<AnnotatedPluginDocument> documents = searchCache.getDocuments();
                 if (documents != null) {
                     if (documents.size() == 0) {
-                        primerOption.setPossibleValues(Arrays.asList(new OptionValue("noValues", "No primers found in your database")));
+                        OptionValue noPrimer = new OptionValue("noValues", "No primers found in your database");
+                        primerOption.setPossibleValues(Arrays.asList(noPrimer));
+                        primerOption.setDefaultValue(noPrimer);
                     }
                     else {
                         List<OptionValue> valueList = new ArrayList(getOptionValues(documents));
                         primerOption.setPossibleValues(valueList);
+                        primerOption.setDefaultValue(valueList.get(0));
                     }
                 }
             }

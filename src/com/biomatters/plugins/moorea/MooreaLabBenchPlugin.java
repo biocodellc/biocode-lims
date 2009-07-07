@@ -72,6 +72,9 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
 
         URL specimenIcon = MooreaLabBenchPlugin.class.getResource("specimenDocument_24.png");
         putUrlIntoIconsMap(specimenIcon, "specimenDocument_24.png");
+
+        URL bulkEditIcon = MooreaLabBenchPlugin.class.getResource("bulkEdit_16.png");
+        putUrlIntoIconsMap(bulkEditIcon, "bulkEdit_16.png");
     }
 
     private static void putUrlIntoIconsMap(URL url, String key){

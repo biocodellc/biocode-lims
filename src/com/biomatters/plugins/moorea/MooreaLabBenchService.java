@@ -846,119 +846,180 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
-    public void saveExtractions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException{
+    public void saveExtractions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException, BadDataException{
         List<String> extractionIds = new ArrayList<String>();
-        for(Reaction reaction : plate.getReactions()) {
-            if(!reaction.isEmpty() && (reaction.getId() < 0)) {
-                extractionIds.add(reaction.getExtractionId());
-            }
-        }
 
-        createOrUpdatePlate(plate, progress);
-
-        progress.setMessage("Creating new workflows");
-
-        //create workflows if necessary
-
-        if(extractionIds.size() > 0) {
-            List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
-            int workflowIndex = 0;
-            for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                    reaction.setWorkflow(workflowList.get(workflowIndex));
-                    workflowIndex++;
-                }
-            }
-        }
-
-
-
-    }
-
-    public void saveReactions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException {
-        progress.setMessage("Retrieving existing workflows");
-
-        //set workflows for reactions that have id's
-        List<String> workflowIdStrings = new ArrayList<String>();
-        for(Reaction reaction : plate.getReactions()) {
-            Object workflowId = reaction.getFieldValue("workflowId");
-            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
-                if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
-                    continue;
-                }
-                else {
-                    reaction.setWorkflow(null);
-                    workflowIdStrings.add(workflowId.toString());
-                }
-            }
-        }
-
-        if(workflowIdStrings.size() > 0) {
-            Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
-            for(Reaction reaction : plate.getReactions()) {
-                Object workflowId = reaction.getFieldValue("workflowId");
-                if(reaction.getWorkflow() == null){
-                    reaction.setWorkflow(map.get(workflowId));
-                }
-            }
-        }
-
-        progress.setMessage("Creating new workflows");
-
-        //create workflows if necessary
-        //int workflowCount = 0;
-        List<String> extractionIds = new ArrayList<String>();
-        for(Reaction reaction : plate.getReactions()) {
-            if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                extractionIds.add(reaction.getExtractionId());
-            }
-        }
-        if(extractionIds.size() > 0) {
-            List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
-            int workflowIndex = 0;
-            for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                    reaction.setWorkflow(workflowList.get(workflowIndex));
-                    workflowIndex++;
-                }
-            }
-        }
-
-        progress.setMessage("Creating the plate");
-        //we need to create the plate
-        createOrUpdatePlate(plate, progress);
-    }
-
-    private void createOrUpdatePlate(Plate plate, BlockingDialog progress) throws SQLException{
         Connection connection = limsConnection.getConnection();
         Savepoint savepoint = connection.setSavepoint();
         try {
             connection.setAutoCommit(false);
-
-            //update the plate
-            PreparedStatement statement = plate.toSQL(connection);
-            statement.execute();
-            if(plate.getId() < 0) {
-                PreparedStatement statement1 = connection.prepareStatement("SELECT last_insert_id()");
-                ResultSet resultSet = statement1.executeQuery();
-                resultSet.next();
-                int plateId = resultSet.getInt(1);
-                plate.setId(plateId);
+            List<Reaction> reactionsToSave = new ArrayList<Reaction>();
+            for(Reaction reaction : plate.getReactions()) {
+                if(!reaction.isEmpty() && (reaction.getId() < 0)) {
+                    extractionIds.add(reaction.getExtractionId());
+                    reactionsToSave.add(reaction);
+                }
             }
 
-            //replace the images
-            PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelImages WHERE plate="+plate.getId());
-            deleteImagesStatement.execute();
-            for(GelImage image : plate.getImages()) {
-                image.toSql(connection).execute();
+            if(reactionsToSave.size() == 0) {
+                throw new BadDataException("You need to save at least one reaction with your plate");
             }
 
-            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
+            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave);
+            if(error != null && error.length() > 0) {
+                throw new BadDataException(error);
+            }
+
+            createOrUpdatePlate(plate, progress);
+
+            progress.setMessage("Creating new workflows");
+
+            //create workflows if necessary
+
+            if(extractionIds.size() > 0) {
+                List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
+                int workflowIndex = 0;
+                for(Reaction reaction : plate.getReactions()) {
+                    if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                        reaction.setWorkflow(workflowList.get(workflowIndex));
+                        workflowIndex++;
+                    }
+                }
+            }
             connection.commit();
             connection.releaseSavepoint(savepoint);
+        } catch(BadDataException e) {
+            try {
+                connection.rollback(savepoint);
+            } catch (SQLException e1) {} //ignore - if this fails, then we are already rolled back.
+            finally {
+                throw e;
+            }
         } finally {
             connection.setAutoCommit(true);
         }
+
+
+    }
+
+    public void saveReactions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException, BadDataException {
+        progress.setMessage("Retrieving existing workflows");
+        Connection connection = limsConnection.getConnection();
+        Savepoint savepoint = connection.setSavepoint();
+        int originalPlateId = plate.getId();
+        try {
+            connection.setAutoCommit(false);
+
+            //set workflows for reactions that have id's
+            List<Reaction> reactionsToSave = new ArrayList<Reaction>();
+            List<String> workflowIdStrings = new ArrayList<String>();
+            for(Reaction reaction : plate.getReactions()) {
+                Object workflowId = reaction.getFieldValue("workflowId");
+                if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
+                    reactionsToSave.add(reaction);
+                    if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
+                        continue;
+                    }
+                    else {
+                        reaction.setWorkflow(null);
+                        workflowIdStrings.add(workflowId.toString());
+                    }
+                }
+            }
+
+            if(reactionsToSave.size() == 0) {
+                throw new BadDataException("You need to save at least one reaction with your plate");
+            }
+
+            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave);
+            if(error != null && error.length() > 0) {
+                throw new BadDataException(error);
+            }
+
+            if(workflowIdStrings.size() > 0) {
+                Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
+                for(Reaction reaction : plate.getReactions()) {
+                    Object workflowId = reaction.getFieldValue("workflowId");
+                    if(reaction.getWorkflow() == null){
+                        reaction.setWorkflow(map.get(workflowId));
+                    }
+                }
+            }
+
+            progress.setMessage("Creating new workflows");
+
+            //create workflows if necessary
+            //int workflowCount = 0;
+            List<String> extractionIds = new ArrayList<String>();
+            for(Reaction reaction : plate.getReactions()) {
+                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                    extractionIds.add(reaction.getExtractionId());
+                }
+            }
+            if(extractionIds.size() > 0) {
+                List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
+                int workflowIndex = 0;
+                for(Reaction reaction : plate.getReactions()) {
+                    if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                        reaction.setWorkflow(workflowList.get(workflowIndex));
+                        workflowIndex++;
+                    }
+                }
+            }
+
+            progress.setMessage("Creating the plate");
+            //we need to create the plate
+            createOrUpdatePlate(plate, progress);
+            connection.commit();
+            connection.releaseSavepoint(savepoint);
+        } catch(BadDataException e) {
+            plate.setId(originalPlateId);
+            try {
+                connection.rollback(savepoint);
+            } catch (SQLException e1) {} //ignore - if this fails, then we are already rolled back.
+            finally {
+                throw e;
+            }
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
+    private void createOrUpdatePlate(Plate plate, BlockingDialog progress) throws SQLException, BadDataException{
+        Connection connection = limsConnection.getConnection();
+
+        //check the vaidity of the plate.
+        if(plate.getName() == null || plate.getName().length() == 0) {
+            throw new BadDataException("Pates cannot have empty names");
+        }
+        PreparedStatement plateCheckStatement = connection.prepareStatement("SELECT name FROM plate WHERE name=?");
+        plateCheckStatement.setString(1, plate.getName());
+        if(plateCheckStatement.executeQuery().next()) {
+            throw new BadDataException("A plate with the name '"+plate.getName()+"'");
+        }
+        if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
+            throw new BadDataException("The plate has no thermocycle set");
+        }
+
+        //update the plate
+        PreparedStatement statement = plate.toSQL(connection);
+        statement.execute();
+        if(plate.getId() < 0) {
+            PreparedStatement statement1 = connection.prepareStatement("SELECT last_insert_id()");
+            ResultSet resultSet = statement1.executeQuery();
+            resultSet.next();
+            int plateId = resultSet.getInt(1);
+            plate.setId(plateId);
+        }
+
+        //replace the images
+        PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelImages WHERE plate="+plate.getId());
+        deleteImagesStatement.execute();
+        for(GelImage image : plate.getImages()) {
+            image.toSql(connection).execute();
+        }
+
+        Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
     }
 
     public Map<String, Workflow> getWorkflows(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{

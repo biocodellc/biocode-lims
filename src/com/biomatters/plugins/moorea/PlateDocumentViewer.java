@@ -12,10 +12,7 @@ import com.biomatters.plugins.moorea.reaction.Thermocycle;
 import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
 import com.biomatters.plugins.moorea.reaction.Cocktail;
 import com.biomatters.plugins.moorea.reaction.Reaction;
-import com.biomatters.plugins.moorea.plates.GelImage;
-import com.biomatters.plugins.moorea.plates.GelEditor;
-import com.biomatters.plugins.moorea.plates.Plate;
-import com.biomatters.plugins.moorea.plates.PlateView;
+import com.biomatters.plugins.moorea.plates.*;
 
 import java.util.*;
 import java.util.List;
@@ -86,6 +83,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                                 }
                             } catch (SQLException e1) {
                                 e1.printStackTrace(); //todo: handle this!
+                            } catch(BadDataException e2) {
+                                Dialogs.showMessageDialog("You hve some errors in your plate:\n\n"+e2.getMessage());    
                             } finally {
                                 dialog.setVisible(false);
                             }
@@ -137,12 +136,13 @@ public class PlateDocumentViewer extends DocumentViewer{
     private void updateToolbar(boolean showDialogs) {
         updateThermocycleAction(showDialogs);
         boolean buttonsEnabled = !isLocal;
-        if(plateDoc.getPlate().getReactionType() != Reaction.Type.Extraction) {
+        if(plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
             thermocycleAction.setEnabled(buttonsEnabled);
             editThermocycleAction.setEnabled(buttonsEnabled);
             gelAction.setEnabled(buttonsEnabled);
         }
         editAction.setEnabled(plateView.getSelectedReactions().size() > 0);
+        bulkEditAction.setEnabled(buttonsEnabled);
     }
 
     private JScrollPane getScrollPane(Container component) {
@@ -168,7 +168,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private void updateThermocycleAction(boolean showDialogs){
-        if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+        if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
             return;
         }
         List<GeneiousAction> actions = new ArrayList<GeneiousAction>();
@@ -231,17 +231,19 @@ public class PlateDocumentViewer extends DocumentViewer{
 
             @Override
             public List<GeneiousAction> getOtherActions() {
-                if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+                if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
                     thermocycleAction = editThermocycleAction = gelAction = null;
                     return Arrays.asList(
-                        editAction
+                        editAction,
+                        bulkEditAction
                     );
                 }
                 return Arrays.asList(
                         thermocycleAction,
                         editThermocycleAction,
                         gelAction,
-                        editAction
+                        editAction,
+                        bulkEditAction
                 );
             }
 
@@ -315,6 +317,18 @@ public class PlateDocumentViewer extends DocumentViewer{
         public void actionPerformed(ActionEvent e) {
             plateView.editReactions(plateView.getSelectedReactions(), isLocal);
             saveAction.setEnabled(true);
+            updatePanel();
+        }
+    };
+
+    GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit wells", null, MooreaLabBenchPlugin.getIcons("bulkEdit_16.png")) {
+        public void actionPerformed(ActionEvent e) {
+            PlateBulkEditor.editPlate(plateView.getPlate(), container);
+            saveAction.setEnabled(true);
+            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
+            if(error != null && error.length() > 0) {
+                Dialogs.showMessageDialog(error);
+            }
             updatePanel();
         }
     };

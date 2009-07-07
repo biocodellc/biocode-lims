@@ -151,6 +151,9 @@ public abstract class Reaction implements XMLSerializable{
     public abstract List<DocumentField> getDefaultDisplayedFields();
 
     public List<DocumentField> getFieldsToDisplay(){
+        if(isEmpty()) {
+            return Collections.EMPTY_LIST;
+        }
         return displayableFields != null ? displayableFields : Collections.EMPTY_LIST;
     };
 
@@ -160,6 +163,9 @@ public abstract class Reaction implements XMLSerializable{
     }
 
     public Object getFieldValue(String fieldCode) {
+        if(fieldCode.equals("testField")) {
+            return "A";
+        }
         Options options = getOptions();
         if(options == null) {
             return null;
@@ -297,8 +303,11 @@ public abstract class Reaction implements XMLSerializable{
     }
 
     private void initFieldWidthCache() {
-        List<DocumentField> fieldList = getFieldsToDisplay();
-        fieldWidthCache = new int[fieldList.size()];
+        List<DocumentField> fieldList = new ArrayList<DocumentField>(getFieldsToDisplay());
+        if(fieldList.size() == 0) {
+            fieldList.add(new DocumentField("a", "", "testField", String.class, false, false));
+        }
+        fieldWidthCache = new int[fieldList.size()];       
         for(int i=0; i < fieldList.size(); i++) {
             String value = getFieldValue(fieldList.get(i).getCode()).toString();
             if(value.length() == 0) {
@@ -360,7 +369,7 @@ public abstract class Reaction implements XMLSerializable{
     public boolean isEmpty(){
         Options options = getOptions();
         for(Options.Option option : options.getOptions()) {
-            if(!option.getValue().equals(option.getDefaultValue())) {
+            if(!option.getValue().equals(option.getDefaultValue()) && !(option instanceof Options.LabelOption)) {
                 return false;
             }
         }

@@ -12,16 +12,15 @@ import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
 import com.biomatters.plugins.moorea.Workflow;
+import com.biomatters.plugins.moorea.BadDataException;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.*;
 import java.util.List;
-import java.util.Collections;
-import java.util.ArrayList;
-import java.util.Map;
 import java.sql.SQLException;
 
 /**
@@ -61,11 +60,11 @@ public class PlateViewer extends JPanel {
             }
 
             public void keyPressed(KeyEvent e) {
-                //To change body of implemented methods use File | Settings | File Templates.
+                plateView.getPlate().setName(nameField.getText());
             }
 
             public void keyReleased(KeyEvent e) {
-                //To change body of implemented methods use File | Settings | File Templates.
+                plateView.getPlate().setName(nameField.getText());
             }
         });
         toolbar.add(nameField);
@@ -142,6 +141,10 @@ public class PlateViewer extends JPanel {
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells") {
             public void actionPerformed(ActionEvent e) {
                 PlateBulkEditor.editPlate(plateView.getPlate(), selfReference);
+                String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
+                if(error != null && error.length() > 0) {
+                    Dialogs.showMessageDialog(error);
+                }
             }
         };
         toolbar.add(bulkEditAction);
@@ -182,11 +185,8 @@ public class PlateViewer extends JPanel {
         }
     }
 
-    public void displayInFrame(final boolean isNew, Component owner) {
+    public void displayInFrame(final boolean isNew, final Component owner) {
         final JFrame frame = new JFrame();
-        if(owner != null) {
-            frame.setLocationRelativeTo(owner); 
-        }
         Runnable runnable = new Runnable() {
             public void run() {
                 frame.getContentPane().setLayout(new BorderLayout());
@@ -228,7 +228,11 @@ public class PlateViewer extends JPanel {
                                         MooreaLabBenchService.getInstance().saveReactions(progress, plate);
                                     }
                                 }
-                                catch(SQLException ex){
+                                catch(BadDataException ex) {
+                                    Dialogs.showMessageDialog("You have some errors in your plate:\n\n"+ex.getMessage());
+                                    progress.setVisible(false);
+                                    return;
+                                } catch(SQLException ex){
                                     Dialogs.showMessageDialog("There was an error saving your plate: "+ex.getMessage());
                                     progress.setVisible(false);
                                     return;
@@ -244,6 +248,9 @@ public class PlateViewer extends JPanel {
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);
 
                 frame.pack();
+                if(owner != null) {
+                    frame.setLocationRelativeTo(owner);
+                }
                 frame.setVisible(true);
             }
         };
