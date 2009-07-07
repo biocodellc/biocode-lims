@@ -22,7 +22,7 @@ import java.awt.*;
  *          <p/>
  *          Created on 28/06/2009 5:27:11 PM
  */
-public class MultiWorkflowDocumentViewerFactory extends DocumentViewerFactory{
+public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFactory{
     public String getName() {
         return "Summary View";
     }
@@ -39,7 +39,8 @@ public class MultiWorkflowDocumentViewerFactory extends DocumentViewerFactory{
         return new DocumentSelectionSignature[] {new DocumentSelectionSignature(WorkflowDocument.class, 2, Integer.MAX_VALUE)};
     }
 
-    private TableModel getTableModel(final AnnotatedPluginDocument[] docs){
+
+    public TableModel getTableModel(final AnnotatedPluginDocument[] docs) {
         TableModel tableModel = new TableModel(){
             public int getRowCount() {
                 return docs.length;
@@ -91,55 +92,5 @@ public class MultiWorkflowDocumentViewerFactory extends DocumentViewerFactory{
             }
         };
         return tableModel;
-    }
-
-    public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
-        return new DocumentViewer(){
-            public JComponent getComponent() {
-                TableModel model = getTableModel(annotatedDocuments);
-                TableSorter sorter = new TableSorter(model);
-                JTable table = new JTable(sorter);
-                table.setGridColor(Color.lightGray);
-                sorter.setTableHeader(table.getTableHeader());
-                table.setDefaultRenderer(ObjectAndColor.class, new DefaultTableCellRenderer(){
-                    @Override
-                    public Component getTableCellRendererComponent(JTable table, Object avalue, boolean isSelected, boolean hasFocus, int row, int column) {
-                        ObjectAndColor value = (ObjectAndColor)avalue;
-                        Component comp = super.getTableCellRendererComponent(table, value == null ? null : value.getObject(), isSelected, hasFocus, row, column);
-
-                        Color color = Color.black;
-                        if(value != null){
-                            color = value.getColor().equals(Color.white) ? Color.black : value.getColor();
-                        }
-                        comp.setForeground(color);
-
-                        return comp;
-                    }
-                });
-                return new JScrollPane(table);
-            }
-        };
-    }
-
-    private static Color getBrighterColor(Color c) {
-        return new Color(Math.min(255,c.getRed()+192), Math.min(255,c.getGreen()+192), Math.min(255,c.getBlue()+192));
-    }
-
-    private static class ObjectAndColor{
-        private Object object;
-        private Color color;
-
-        private ObjectAndColor(Object object, Color color) {
-            this.object = object;
-            this.color = color;
-        }
-
-        public Object getObject() {
-            return object;
-        }
-
-        public Color getColor() {
-            return color;
-        }
     }
 }

@@ -41,6 +41,7 @@ public class ExtractionReaction extends Reaction{
 
     private void init(ResultSet r, Options options) throws SQLException {
         setId(r.getInt("extraction.id"));
+        setCreated(r.getDate("extraction.date"));
         options.setValue("sampleId", r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
         options.setValue("extractionMethod", r.getString("extraction.method"));

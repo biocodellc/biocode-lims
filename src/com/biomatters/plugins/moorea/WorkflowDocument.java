@@ -127,6 +127,16 @@ public class WorkflowDocument extends MuitiPartDocument {
         return r;
     }
 
+    public List<Reaction> getReactions(Reaction.Type type) {
+        List<Reaction> reactionsList = new ArrayList<Reaction>();
+        for(int i=0; i < reactions.size(); i++) {
+            if(reactions.get(i).getType() == type) {
+                reactionsList.add(reactions.get(i));
+            }
+        }
+        return reactionsList;
+    }
+
     public void addRow(ResultSet resultSet) throws SQLException{
         //add extractions
         Reaction.Type rowType = Reaction.Type.valueOf(resultSet.getString("plate.type"));

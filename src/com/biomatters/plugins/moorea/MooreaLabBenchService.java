@@ -992,10 +992,12 @@ public class MooreaLabBenchService extends DatabaseService {
         if(plate.getName() == null || plate.getName().length() == 0) {
             throw new BadDataException("Pates cannot have empty names");
         }
-        PreparedStatement plateCheckStatement = connection.prepareStatement("SELECT name FROM plate WHERE name=?");
-        plateCheckStatement.setString(1, plate.getName());
-        if(plateCheckStatement.executeQuery().next()) {
-            throw new BadDataException("A plate with the name '"+plate.getName()+"'");
+        if(plate.getId() < 0) {
+            PreparedStatement plateCheckStatement = connection.prepareStatement("SELECT name FROM plate WHERE name=?");
+            plateCheckStatement.setString(1, plate.getName());
+            if(plateCheckStatement.executeQuery().next()) {
+                throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
+            }
         }
         if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
             throw new BadDataException("The plate has no thermocycle set");

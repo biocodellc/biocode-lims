@@ -2,6 +2,7 @@ package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.plugins.moorea.reaction.Reaction;
 
 import javax.swing.*;
 import java.io.File;
@@ -106,7 +107,9 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
                 new TissueSampleViewerFactory(false),
                 new PlateDocumentViewerFactory(),
                 new WorkflowDocumentViewerFactory(),
-                new MultiWorkflowDocumentViewerFactory()
+                new MultiWorkflowDocumentViewerFactory(),
+                new MultiPrimerDocumentViewerFactory(Reaction.Type.PCR),
+                new MultiPrimerDocumentViewerFactory(Reaction.Type.CycleSequencing)
         };
     }
 
