@@ -131,10 +131,20 @@ public class MooreaLabBenchService extends DatabaseService {
     public QueryField[] getSearchFields() {
         List<QueryField> fieldList = new ArrayList<QueryField>();
 
-        QueryField[] limsFields = {
-                new QueryField(new DocumentField("Experiment ID", "", "ExperimentId", String.class, true, false), new Condition[]{Condition.EQUAL, Condition.APPROXIMATELY_EQUAL})
-        };
-        fieldList.addAll(Arrays.asList(limsFields));
+        List<DocumentField> limsFields = limsConnection.getSearchAttributes();
+        for(DocumentField field : limsFields) {
+            Condition[] conditions;
+            if(field.isEnumeratedField()) {
+                conditions = new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL
+                };
+            }
+            else {
+                conditions = getFieldConditions(field.getValueType());
+            }
+            fieldList.add(new QueryField(field, conditions));
+        }
 
         if(activeFIMSConnection != null) {
             List<DocumentField> fimsAttributes = activeFIMSConnection.getSearchAttributes();
@@ -360,7 +370,6 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve) throws DatabaseServiceException {
-        boolean allLims = false;
         List<FimsSample> tissueSamples = null;
         List<Query> fimsQueries = new ArrayList<Query>();
         List<Query> limsQueries = new ArrayList<Query>();
@@ -391,8 +400,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 }
             }
         }
-        else {
-            allLims = true;
+        else if(query instanceof BasicSearchQuery){
             try {
                 tissueSamples = activeFIMSConnection.getMatchingSamples(query);
             } catch (ConnectionException e) {
@@ -400,6 +408,13 @@ public class MooreaLabBenchService extends DatabaseService {
             }
             fimsQueries.add(query);
             limsQueries.add(query);
+        } else if(query instanceof AdvancedSearchQueryTerm){
+            if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
+                fimsQueries.add(query);
+            }
+            else {
+                limsQueries.add(query);
+            }
         }
 
         if(tissueSamples != null) {
@@ -409,17 +424,17 @@ public class MooreaLabBenchService extends DatabaseService {
             }
         }
         try {
-            List<WorkflowDocument> workflowList = limsConnection.getMatchingWorkflowDocuments((CompoundSearchQuery) Query.Factory.createAndQuery(new Query[0], Collections.EMPTY_MAP), tissueSamples);
+            List<WorkflowDocument> workflowList = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), tissueSamples);
             for(PluginDocument doc : workflowList) {
                 callback.add(doc, Collections.EMPTY_MAP);
             }
-            List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments((CompoundSearchQuery) Query.Factory.createAndQuery(new Query[0], Collections.EMPTY_MAP), workflowList);
+            List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), workflowList);
             for(PluginDocument doc : plateList) {
                 callback.add(doc, Collections.EMPTY_MAP);
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DatabaseServiceException(e, e.getMessage(), true);
         }
 
 

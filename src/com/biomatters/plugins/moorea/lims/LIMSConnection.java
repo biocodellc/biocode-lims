@@ -13,6 +13,7 @@ import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 
 import java.sql.*;
 import java.util.*;
@@ -87,13 +88,6 @@ public class LIMSConnection {
             connection.commit();
         }
         catch(SQLException ex) {
-            try {
-                if(savepoint != null) {
-                    connection.rollback(savepoint);
-                }
-            } catch (SQLException e) {
-                throw new TransactionException("Could not execute LIMS update query", ex);
-            }
             throw new TransactionException("Could not execute LIMS update query", ex);
         }
         finally {
@@ -107,7 +101,29 @@ public class LIMSConnection {
         return connection;
     }
 
-    public List<WorkflowDocument> getMatchingWorkflowDocuments(CompoundSearchQuery query, List<FimsSample> samples) throws SQLException{
+    public List<DocumentField> getSearchAttributes() {
+        return Arrays.asList(
+                new DocumentField("Plate Name", "", "plate.name", String.class, true, false),
+                new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false),
+                DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false)
+        );
+    }
+
+    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, List<FimsSample> samples) throws SQLException{
+        List<? extends Query> refinedQueries;
+        CompoundSearchQuery.Operator operator;
+        if(query instanceof CompoundSearchQuery) {
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type"));
+            operator = ((CompoundSearchQuery)query).getOperator();
+        }
+        else {
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type"));
+            operator = CompoundSearchQuery.Operator.AND;
+        }
+        if((samples == null || samples.size() == 0) && refinedQueries.size() == 0) {
+            return Collections.EMPTY_LIST;
+        }
+
         StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cycleSequencing ON cycleSequencing.workflow = workflow.id " +
                 "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
                 "LEFT JOIN extraction ON workflow.extractionId = extraction.id " +
@@ -125,43 +141,18 @@ public class LIMSConnection {
                 }
             }
             sql.append(")");
-            if(query != null && query.getChildren().size() > 0) {
+            if(refinedQueries.size() > 0) {
                 sql.append(" AND ");
             }
         }
-        if(query != null && query.getChildren().size() > 0) {
+        if(refinedQueries.size() > 0) {
             somethingToSearch = true;
-            sql.append("(");
-            String mainJoin;
-            switch(query.getOperator()) {
-                case AND:
-                    mainJoin = "AND";
-                    break;
-                default:
-                    mainJoin = "OR";
+            if(refinedQueries.size() > 0) {
+                somethingToSearch = true;
+                sql.append("(");
+                sql.append(queryToSql(refinedQueries, operator, new ArrayList<Object>()));
+                sql.append(")");
             }
-            for (int i = 0; i < query.getChildren().size(); i++) {
-                if(query.getChildren().get(i) instanceof AdvancedSearchQueryTerm) {
-                    AdvancedSearchQueryTerm q = (AdvancedSearchQueryTerm)query.getChildren().get(i);
-                    QueryTermSurrounder termSurrounder = getQueryTermSurrounder(q);
-                    sql.append(" "+ q.getField().getCode() +" "+ termSurrounder.getJoin() +" ");
-
-                    Object[] queryValues = q.getValues();
-                    for (int j = 0; j < queryValues.length; j++) {
-                        Object value = queryValues[j];
-                        String valueString = value.toString();
-                        valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend()+"?";
-                        sql.append(valueString);
-                        if(i < queryValues.length-1) {
-                            sql.append(" AND ");
-                        }
-                    }
-                }
-                if(i < query.getChildren().size()-1) {
-                    sql.append(" "+mainJoin);
-                }
-            }
-            sql.append(")");
         }
         if(!somethingToSearch) {
             return Collections.EMPTY_LIST;
@@ -177,27 +168,26 @@ public class LIMSConnection {
                 position++;
             }
         }
-        if(query != null && query.getChildren().size() > 0) {
-            for (Query q : query.getChildren()) {
-                if(q instanceof AdvancedSearchQueryTerm) {
-                    AdvancedSearchQueryTerm aq = (AdvancedSearchQueryTerm)q;
-                    Class fclass = aq.getField().getClass();
-                    Object[] queryValues = aq.getValues();
-                    for (int j = 0; j < queryValues.length; j++) {
-                        if(Integer.class.isAssignableFrom(fclass)) {
-                            statement.setInt(position, (Integer)queryValues[j]);
-                        }
-                        else if(Double.class.isAssignableFrom(fclass)) {
-                            statement.setDouble(position, (Double)queryValues[j]);
-                        }
-                        else if(String.class.isAssignableFrom(fclass)) {
-                            statement.setString(position, (String)queryValues[j]);
-                        }
-                        else {
-                            throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());
-                        }
-                        position++;
+        for (Query q : refinedQueries) {
+            if(q instanceof AdvancedSearchQueryTerm) {
+                AdvancedSearchQueryTerm aq = (AdvancedSearchQueryTerm)q;
+                Class fclass = aq.getField().getValueType();
+                Object[] queryValues = aq.getValues();
+                for (int j = 0; j < queryValues.length; j++) {
+                    if(Integer.class.isAssignableFrom(fclass)) {
+                        statement.setInt(position, (Integer)queryValues[j]);
                     }
+                    else if(Double.class.isAssignableFrom(fclass)) {
+                        statement.setDouble(position, (Double)queryValues[j]);
+                    }
+                    else if(String.class.isAssignableFrom(fclass)) {
+                        QueryTermSurrounder ts = getQueryTermSurrounder(aq);
+                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().replace("\"", "")+ts.getAppend());
+                    }
+                    else {
+                        throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());
+                    }
+                    position++;
                 }
             }
         }
@@ -216,8 +206,74 @@ public class LIMSConnection {
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
     }
 
-    public List<PlateDocument> getMatchingPlateDocuments(CompoundSearchQuery query, List<WorkflowDocument> workflowDocuments) throws SQLException{
-        if(workflowDocuments.size() == 0) {
+    private List<? extends Query> removeFields(List<? extends Query> queries, List<String>  codesToIgnore) {
+        if(queries == null) {
+            return Collections.EMPTY_LIST;
+        }
+        List<Query> returnList = new ArrayList<Query>();
+        for(Query q : queries) {
+            if(q instanceof AdvancedSearchQueryTerm) {
+                if(!codesToIgnore.contains(((AdvancedSearchQueryTerm)q).getField().getCode())) {
+                    returnList.add(q);
+                }
+            }
+        }
+
+        return returnList;
+    }
+
+    private String queryToSql(List<? extends Query> queries, CompoundSearchQuery.Operator operator, List<Object> inserts) {
+        StringBuilder sql = new StringBuilder();
+        String mainJoin;
+        switch(operator) {
+            case AND:
+                mainJoin = "AND";
+                break;
+            default:
+                mainJoin = "OR";
+        }
+        for (int i = 0; i < queries.size(); i++) {
+            if(queries.get(i) instanceof AdvancedSearchQueryTerm) {
+                AdvancedSearchQueryTerm q = (AdvancedSearchQueryTerm)queries.get(i);
+                QueryTermSurrounder termSurrounder = getQueryTermSurrounder(q);
+                sql.append(" "+ q.getField().getCode() +" "+ termSurrounder.getJoin() +" ");
+
+                Object[] queryValues = q.getValues();
+                for (int j = 0; j < queryValues.length; j++) {
+                    Object value = queryValues[j];
+                    String valueString = value.toString();
+                    valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
+                    if(value instanceof String) {
+                        inserts.add(valueString);
+                    }
+                    else {
+                        inserts.add(value);
+                    }
+                    sql.append("?");
+                    if(i < queryValues.length-1) {
+                        sql.append(" AND ");
+                    }
+                }
+            }
+            if(i < queries.size()-1) {
+                sql.append(" "+mainJoin);
+            }
+        }
+        return sql.toString();
+    }
+
+    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments) throws SQLException{
+        List<? extends Query> refinedQueries;
+        CompoundSearchQuery.Operator operator;
+        if(query instanceof CompoundSearchQuery) {
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name"));
+            operator = ((CompoundSearchQuery)query).getOperator();
+        }
+        else {
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("workflow.name"));
+            operator = CompoundSearchQuery.Operator.AND;
+        }
+        if((workflowDocuments == null || workflowDocuments.size() == 0) && refinedQueries.size() == 0) {
             return Collections.EMPTY_LIST;
         }
         StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cycleSequencing ON cycleSequencing.plate = plate.id " +
@@ -234,15 +290,57 @@ public class LIMSConnection {
                 plateIds.add(reaction.getPlate());
             }
         }
-        for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
-            Integer intg = it.next();
-            sql.append(" plate.id=" + intg);
-            if(it.hasNext()) {
-                sql.append(" OR");
+        if(plateIds.size() > 0) {
+            sql.append(" (");
+            for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
+                Integer intg = it.next();
+                sql.append(" plate.id=" + intg);
+                if(it.hasNext()) {
+                    sql.append(" OR");
+                }
             }
+            sql.append(")");
+        }
+        if(refinedQueries.size() > 0) {
+            if(plateIds.size() > 0) {
+                sql.append(" AND (");
+            }
+            else{
+                sql.append(" (");
+            }
+
+            sql.append(queryToSql(refinedQueries, operator, new ArrayList<Object>()));
+
+            sql.append(")");
         }
         System.out.println(sql.toString());
         PreparedStatement statement = connection.prepareStatement(sql.toString());
+
+        int position = 1;
+        for (Query q : refinedQueries) {
+            if(q instanceof AdvancedSearchQueryTerm) {
+                AdvancedSearchQueryTerm aq = (AdvancedSearchQueryTerm)q;
+                Class fclass = aq.getField().getValueType();
+                Object[] queryValues = aq.getValues();
+                for (int j = 0; j < queryValues.length; j++) {
+                    if(Integer.class.isAssignableFrom(fclass)) {
+                        statement.setInt(position, (Integer)queryValues[j]);
+                    }
+                    else if(Double.class.isAssignableFrom(fclass)) {
+                        statement.setDouble(position, (Double)queryValues[j]);
+                    }
+                    else if(String.class.isAssignableFrom(fclass)) {
+                        QueryTermSurrounder ts = getQueryTermSurrounder(aq);
+                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().replace("\"", "")+ts.getAppend());
+                    }
+                    else {
+                        throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());
+                    }
+                    position++;
+                }
+            }
+        }
+
         ResultSet resultSet = statement.executeQuery();
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
         List<ExtractionReaction> extractionReactions = new ArrayList<ExtractionReaction>();
