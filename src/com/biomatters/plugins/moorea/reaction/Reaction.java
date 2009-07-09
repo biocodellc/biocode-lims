@@ -115,6 +115,8 @@ public abstract class Reaction implements XMLSerializable{
 
     public abstract Options getOptions();
 
+    protected abstract void setOptions(Options op);
+
     public Thermocycle getThermocycle(){
         return thermocycle;
     }
@@ -220,7 +222,7 @@ public abstract class Reaction implements XMLSerializable{
                 element.addContent(XMLSerializer.classToXML("displayableField", df));
             }
         }
-        element.addContent(getOptions().valuesToXML("values"));
+        element.addContent(XMLSerializer.classToXML("options", getOptions()));
         return element;
     }
 
@@ -269,7 +271,7 @@ public abstract class Reaction implements XMLSerializable{
         for(Element e : element.getChildren("displayableField")) {
             displayableFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
         }
-        getOptions().valuesFromXML(element.getChild("values"));
+        setOptions(XMLSerializer.classFromXML(element.getChild("options"), Options.class));
     }
 
     public abstract Color _getBackgroundColor();

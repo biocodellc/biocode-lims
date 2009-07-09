@@ -75,6 +75,10 @@ public class ExtractionReaction extends Reaction{
         return options;
     }
 
+    protected void setOptions(Options op) {
+        this.options = options;
+    }
+
     public void setThermocycle(Thermocycle tc){}
     public Thermocycle getThermocycle() {
         return null;  //Extractions don't have thermocycles

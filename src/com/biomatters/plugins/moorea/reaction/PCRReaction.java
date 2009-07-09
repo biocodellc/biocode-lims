@@ -66,9 +66,10 @@ public class PCRReaction extends Reaction {
 
         options.getOption("runStatus").setValueFromString(r.getString("pcr.progress"));
 
-        Options.ComboBoxOption primerOption = (Options.ComboBoxOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
+        PrimerOption primerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
         String primerName = r.getString("pcr.prName");
-        primerOption.setValueFromString(primerName);//todo: what if the user doesn't have the primer?
+        String primerSequence = r.getString("pcr.prSequence");
+        primerOption.setAndAddValue(primerName, primerSequence);
         options.setValue("prAmount", r.getInt("pcr.prAmount"));
         setCreated(r.getDate("pcr.date"));
         setPosition(r.getInt("pcr.location"));
@@ -91,6 +92,13 @@ public class PCRReaction extends Reaction {
 
     public Options getOptions() {
         return options;
+    }
+
+    protected void setOptions(Options op) {
+        if(!(op instanceof PCROptions)) {
+            throw new IllegalArgumentException("Options must be instances of PCR options");
+        }
+        this.options = op;
     }
 
     public Type getType() {

@@ -31,7 +31,6 @@ import java.awt.event.ActionEvent;
  *          Created on 24/06/2009 7:35:20 PM
  */
 public class CycleSequencingOptions extends Options {
-    private ComboBoxOption<OptionValue> primerOption;
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
 
@@ -51,32 +50,8 @@ public class CycleSequencingOptions extends Options {
     }
 
     public void initListeners() {
-        primerOption = (ComboBoxOption<OptionValue>)getOption(PRIMER_OPTION_ID);
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
-
-
-        //search cache listener
-        final DocumentSearchCache<OligoSequenceDocument> searchCache = DocumentSearchCache.getDocumentSearchCacheFor(DocumentType.OLIGO_DOC_TYPE);
-        SimpleListener primerListener = new SimpleListener() {
-            public void objectChanged() {
-                List<AnnotatedPluginDocument> documents = searchCache.getDocuments();
-                if (documents != null) {
-                    if (documents.size() == 0) {
-                        primerOption.setPossibleValues(Arrays.asList(new OptionValue("noValues", "No primers found in your database")));
-                    }
-                    else {
-                        List<OptionValue> valueList = new ArrayList(getOptionValues(documents));
-                        primerOption.setPossibleValues(valueList);
-                    }
-                }
-            }
-        };
-        primerListener.objectChanged();
-        searchCache.addDocumentsUpdatedListener(primerListener);
-        if(searchCache.hasSearcdhedEntireDatabase()) {
-            primerListener.objectChanged();
-        }
 
 
         ActionListener cocktailButtonListener = new ActionListener() {
@@ -141,7 +116,8 @@ public class CycleSequencingOptions extends Options {
 
         addLabel("");
         OptionValue[] values = new OptionValue[] {new OptionValue("noValues", "Searching for Primers...")};
-        primerOption = addComboBoxOption(PRIMER_OPTION_ID, "Primer", values, values[0]);
+        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer", null);
+        addCustomOption(primerOption);
 
 
 

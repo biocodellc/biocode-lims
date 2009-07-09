@@ -63,9 +63,10 @@ public class CycleSequencingReaction extends Reaction{
 
         options.getOption("runStatus").setValueFromString(r.getString("cycleSequencing.progress"));
 
-        Options.ComboBoxOption primerOption = (Options.ComboBoxOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
+        PrimerOption primerOption = (PrimerOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
         String primerName = r.getString("cycleSequencing.primerName");
-        primerOption.setValueFromString(primerName);//todo: what if the user doesn't have the primer?
+        String primerSequence = r.getString("cycleSequencing.primerSequence");
+        primerOption.setAndAddValue(primerName, primerSequence);
         options.setValue("prAmount", r.getInt("cycleSequencing.primerAmount"));
         options.setValue("notes", r.getString("cycleSequencing.notes"));
         options.setValue("runStatus", r.getString("cycleSequencing.progress"));
@@ -91,6 +92,13 @@ public class CycleSequencingReaction extends Reaction{
 
     public Options getOptions() {
         return options;
+    }
+
+    protected void setOptions(Options op) {
+        if(!(op instanceof CycleSequencingOptions)) {
+            throw new IllegalArgumentException("Options must be instances of CycleSequencingOptions");
+        }
+        this.options = op;
     }
 
     public Cocktail getCocktail() {

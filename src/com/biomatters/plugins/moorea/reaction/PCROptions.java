@@ -30,7 +30,6 @@ import java.awt.event.ActionEvent;
  */
 public class PCROptions extends Options {
 
-    private ComboBoxOption<OptionValue> primerOption;
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
     private ComboBoxOption cocktailOption;
@@ -53,37 +52,9 @@ public class PCROptions extends Options {
     }
 
     public void initListeners() {
-        primerOption = (ComboBoxOption<OptionValue>)getOption(PRIMER_OPTION_ID);
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
         cocktailOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
-
-
-        //search cache listener
-        final DocumentSearchCache<OligoSequenceDocument> searchCache = DocumentSearchCache.getDocumentSearchCacheFor(DocumentType.OLIGO_DOC_TYPE);
-        SimpleListener primerListener = new SimpleListener() {
-            public void objectChanged() {
-                List<AnnotatedPluginDocument> documents = searchCache.getDocuments();
-                if (documents != null) {
-                    if (documents.size() == 0) {
-                        OptionValue noPrimer = new OptionValue("noValues", "No primers found in your database");
-                        primerOption.setPossibleValues(Arrays.asList(noPrimer));
-                        primerOption.setDefaultValue(noPrimer);
-                    }
-                    else {
-                        List<OptionValue> valueList = new ArrayList(getOptionValues(documents));
-                        primerOption.setPossibleValues(valueList);
-                        primerOption.setDefaultValue(valueList.get(0));
-                    }
-                }
-            }
-        };
-        primerListener.objectChanged();
-        searchCache.addDocumentsUpdatedListener(primerListener);
-        if(searchCache.hasSearcdhedEntireDatabase()) {
-            primerListener.objectChanged();
-        }
-
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -149,8 +120,8 @@ public class PCROptions extends Options {
 
         addLabel("");
         beginAlignHorizontally("forward primer", false);
-        OptionValue[] values = new OptionValue[] {new OptionValue("noValues", "Searching for Primers...")};
-        primerOption = addComboBoxOption(PRIMER_OPTION_ID, "Primer", values, values[0]);
+        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer", null);
+        addCustomOption(primerOption);
 
 
 
@@ -200,14 +171,6 @@ public class PCROptions extends Options {
     }
 
 
-    private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
-        ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
-        for(AnnotatedPluginDocument doc : documents) {
-            OligoSequenceDocument seq = (OligoSequenceDocument)doc.getDocumentOrCrash();
-            primerList.add(new PrimerOptionValue(doc.getName(), doc.getName(), seq.getSequenceString()));
-        }
-        return primerList;
-    }
 
     public static class PrimerOptionValue extends Options.OptionValue{
         private String sequence;
