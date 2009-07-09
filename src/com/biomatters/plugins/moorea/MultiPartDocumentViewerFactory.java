@@ -31,7 +31,7 @@ public abstract class MultiPartDocumentViewerFactory extends DocumentViewerFacto
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
         final MuitiPartDocument doc = (MuitiPartDocument)annotatedDocuments[0].getDocumentOrCrash();
 
-        return new MultiPartDocumentViewer(doc, annotatedDocuments[0].isInLocalRepository());
+        return new MultiPartDocumentViewer(annotatedDocuments[0], doc, annotatedDocuments[0].isInLocalRepository());
     }
 
     public static void recursiveDoLayout(Component c) {

@@ -98,6 +98,10 @@ public class MooreaLabBenchService extends DatabaseService {
         return activeFIMSConnection;
     }
 
+    public LIMSConnection getActiveLIMSConnection() {
+        return limsConnection;
+    }
+
     public boolean isLoggedIn() {
         return isLoggedIn;
     }

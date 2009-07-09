@@ -8,10 +8,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.plugins.moorea.reaction.Thermocycle;
-import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
-import com.biomatters.plugins.moorea.reaction.Cocktail;
-import com.biomatters.plugins.moorea.reaction.Reaction;
+import com.biomatters.plugins.moorea.reaction.*;
 import com.biomatters.plugins.moorea.plates.*;
 
 import java.util.*;
@@ -316,7 +313,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction editAction = new GeneiousAction("Edit selected wells", null, StandardIcons.edit.getIcons()) {
         public void actionPerformed(ActionEvent e) {
-            plateView.editReactions(plateView.getSelectedReactions(), isLocal);
+            ReactionUtilities.editReactions(plateView.getSelectedReactions(), isLocal, plateView);
             saveAction.setEnabled(true);
             updatePanel();
         }

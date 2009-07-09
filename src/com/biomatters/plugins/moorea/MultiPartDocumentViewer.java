@@ -1,14 +1,21 @@
 package com.biomatters.plugins.moorea;
 
-import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
-import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
-import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.print.PrinterException;
 import java.awt.print.Printable;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Savepoint;
+
+import org.virion.jam.util.SimpleListener;
 
 /**
  * @author Steven Stones-Havas
@@ -18,17 +25,75 @@ import java.awt.print.Printable;
  */
 public class MultiPartDocumentViewer extends DocumentViewer {
     protected OptionsPanel panel;
+    private GeneiousAction saveAction;
 
     private MuitiPartDocument doc;
     private boolean isLocal;
 
-    public MultiPartDocumentViewer(MuitiPartDocument doc, boolean isLocal) {
-        this.doc = doc;
+    public MultiPartDocumentViewer(final AnnotatedPluginDocument annotatedDocument, MuitiPartDocument document, boolean isLocal) {
+        this.doc = document;
         this.isLocal = isLocal;
+        saveAction = new GeneiousAction("Save", "", StandardIcons.save.getIcons()){
+            public void actionPerformed(ActionEvent e) {
+                final MooreaLabBenchService.BlockingDialog dialog = MooreaLabBenchService.BlockingDialog.getDialog("Saving Reactions", panel);
+                Connection connection = MooreaLabBenchService.getInstance().getActiveLIMSConnection().getConnection();
+                Savepoint savepoint = null;
+                try {
+                    connection.setAutoCommit(false);
+                    savepoint = connection.setSavepoint("saveReactions");
+                    for(int i=0; i < doc.getNumberOfParts(); i++) {
+                        MuitiPartDocument.Part p = doc.getPart(i);
+                        if(p.hasChanges()) {
+                            p.saveChangesToDatabase(dialog, connection);
+                        }
+                    }
+                    connection.commit();
+                }
+                catch(SQLException ex) {
+                    if(savepoint != null) {
+                        try {
+                            connection.rollback(savepoint);
+                        } catch (SQLException e1) {} //don't need to catch
+                    }
+                    Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
+                } finally {
+                    try {
+                        connection.setAutoCommit(true);
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();  //don't need to catch this
+                    }
+                    annotatedDocument.saveDocument();
+                    updateToolbar();
+                }
+            }
+        };
+        updateToolbar();
+
+        for(int i=0; i < doc.getNumberOfParts(); i++) {
+            doc.getPart(i).addModifiedStateChangedListener(new SimpleListener(){
+                public void objectChanged() {
+                    updateToolbar();
+                }
+            });
+        }
+    }
+
+    private void updateToolbar() {
+        saveAction.setEnabled(doc.hasChanges());
     }
 
     public boolean isLocal() {
         return isLocal;
+    }
+
+    @Override
+    public ActionProvider getActionProvider() {
+        return new ActionProvider() {
+            @Override
+            public GeneiousAction getSaveAction() {
+                return saveAction;
+            }
+        };
     }
 
     public JComponent getComponent() {

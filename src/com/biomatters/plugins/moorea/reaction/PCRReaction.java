@@ -94,7 +94,7 @@ public class PCRReaction extends Reaction {
         return options;
     }
 
-    protected void setOptions(Options op) {
+    public void setOptions(Options op) {
         if(!(op instanceof PCROptions)) {
             throw new IllegalArgumentException("Options must be instances of PCR options");
         }

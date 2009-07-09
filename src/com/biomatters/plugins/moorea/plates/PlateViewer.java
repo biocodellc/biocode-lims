@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 import com.biomatters.plugins.moorea.reaction.Thermocycle;
 import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
+import com.biomatters.plugins.moorea.reaction.ReactionUtilities;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
 import com.biomatters.plugins.moorea.Workflow;
@@ -151,7 +152,7 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
             public void actionPerformed(ActionEvent e) {
-                plateView.editReactions(plateView.getSelectedReactions(), false);
+                ReactionUtilities.editReactions(plateView.getSelectedReactions(), false, plateView);
                 plateView.revalidate();
                 plateView.repaint();
             }

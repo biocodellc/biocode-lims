@@ -115,10 +115,14 @@ public abstract class Reaction implements XMLSerializable{
 
     public abstract Options getOptions();
 
-    protected abstract void setOptions(Options op);
+    public abstract void setOptions(Options op);
 
     public Thermocycle getThermocycle(){
         return thermocycle;
+    }
+
+    public boolean hasError() {
+        return isError;
     }
 
     public void setThermocycle(Thermocycle tc) {

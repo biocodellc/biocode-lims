@@ -4,19 +4,25 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.moorea.reaction.*;
 
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.awt.*;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 import java.awt.print.PrinterException;
 import java.awt.print.Printable;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Connection;
 
 import org.jdom.Element;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 
@@ -29,16 +35,21 @@ import javax.swing.*;
 public class WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
     private List<Reaction> reactions;
+    private List<ReactionPart> parts;
 
 
     public WorkflowDocument() {
-        this.reactions = new ArrayList<Reaction>();    
+        this(null, Collections.EMPTY_LIST);
     }
 
     public WorkflowDocument(Workflow workflow, List<Reaction> reactions) {
         this.workflow = workflow;
         this.reactions = new ArrayList<Reaction>(reactions);
         sortReactions(reactions);
+        parts = new ArrayList<ReactionPart>();
+        for(Reaction r : reactions) {
+            parts.add(new ReactionPart(r));
+        }
     }
 
     private void sortReactions(List<Reaction> reactions) {
@@ -56,6 +67,7 @@ public class WorkflowDocument extends MuitiPartDocument {
         String extraction = resultSet.getString("extraction.extractionId");
         this.reactions = new ArrayList<Reaction>();
         workflow = new Workflow(workflowId, workflowName, extraction);
+        this.parts = new ArrayList<ReactionPart>();
         addRow(resultSet);
     }
 
@@ -107,14 +119,17 @@ public class WorkflowDocument extends MuitiPartDocument {
         for(Element e : element.getChildren("reaction")) {
             reactions.add(XMLSerializer.classFromXML(e, Reaction.class));
         }
+        for(Reaction r : reactions) {
+            parts.add(new ReactionPart(r));
+        }
     }
 
     public int getNumberOfParts() {
-        return reactions.size();
+        return parts.size();
     }
 
     public Part getPart(int index) {
-        return new ReactionPart(reactions.get(index));
+        return parts.get(index);
     }
 
     public Reaction getMostRecentReaction(Reaction.Type type) {
@@ -153,6 +168,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                 if(!alreadyThere) {
                     Reaction r = new ExtractionReaction(resultSet, workflow);
                     reactions.add(r);
+                    parts.add(new ReactionPart(r));
                 }
             break;
         case PCR :
@@ -167,6 +183,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             if(!alreadyThere) {
                 Reaction r = new PCRReaction(resultSet, workflow);
                 reactions.add(r);
+                parts.add(new ReactionPart(r));
             }
             break;
         case CycleSequencing :
@@ -181,6 +198,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             if(!alreadyThere) {
                 Reaction r = new CycleSequencingReaction(resultSet, workflow);
                 reactions.add(r);
+                parts.add(new ReactionPart(r));
             }
             break;
         }
@@ -188,18 +206,66 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public static class ReactionPart extends Part {
         private Reaction reaction;
+        private List<SimpleListener> changesListeners;
+        private boolean changes = false;
 
         public ReactionPart(Reaction reaction) {
             super();
             this.reaction = reaction;
+            changesListeners = new ArrayList<SimpleListener>();
+        }
+
+        @Override
+        public void addModifiedStateChangedListener(SimpleListener sl) {
+            changesListeners.add(sl);
+        }
+
+        @Override
+        public void removeModifiedStateChangedListener(SimpleListener sl) {
+            changesListeners.remove(sl);
+        }
+
+        private void fireChangeListeners() {
+            for(SimpleListener listener : changesListeners) {
+                listener.objectChanged();
+            }
         }
 
         public JPanel getPanel() {
-            JPanel panel = new JPanel();
-            OptionsPanel optionsPanel = getReactionPanel(reaction);
+            final JPanel panel = new JPanel();
+            final AtomicReference<OptionsPanel> optionsPanel = new AtomicReference<OptionsPanel>(getReactionPanel(reaction));
+            final JPanel holder = new JPanel(new BorderLayout());
+            holder.setOpaque(false);
+            holder.add(optionsPanel.get(), BorderLayout.CENTER);
+            JButton editButton = new JButton("Edit");
+            editButton.addActionListener(new ActionListener(){
+                public void actionPerformed(ActionEvent e) {
+                    Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
+                    ReactionUtilities.editReactions(Arrays.asList(reaction), false, panel);
+                    if(reaction.hasError()) {
+                        try {
+                            reaction.setOptions(XMLSerializer.classFromXML(oldOptions, Options.class));
+                        } catch (XMLSerializationException e1) {
+                            Dialogs.showMessageDialog("Error resetting options: could not deserailse your option's values.  It is recommended that you discard changes to this document if possible.");
+                        }
+                    }
+                    else {
+                        holder.remove(optionsPanel.get());
+                        optionsPanel.set(getReactionPanel(reaction));
+                        holder.add(optionsPanel.get(), BorderLayout.CENTER);
+                        holder.validate();
+                        changes = true;
+                        fireChangeListeners();
+                    }
+                }
+            });
+            JPanel editPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            editPanel.setOpaque(false);
+            editPanel.add(editButton);
+            holder.add(editPanel, BorderLayout.SOUTH);
             panel.setOpaque(false);
             panel.setLayout(new BorderLayout());
-            panel.add(optionsPanel, BorderLayout.CENTER);
+            panel.add(holder, BorderLayout.CENTER);
             ThermocycleEditor.ThermocycleViewer viewer = getThermocyclePanel(reaction);
             if(viewer != null) {
                 panel.add(viewer, BorderLayout.EAST);
@@ -276,7 +342,12 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
 
         public boolean hasChanges() {
-            return false; //todo: implement
+            return changes;
+        }
+
+        public void saveChangesToDatabase(MooreaLabBenchService.BlockingDialog progress, Connection connection) throws SQLException{
+            Reaction.saveReactions(new Reaction[] {reaction}, reaction.getType(), connection, progress);
+            changes = false;
         }
     }
 }
