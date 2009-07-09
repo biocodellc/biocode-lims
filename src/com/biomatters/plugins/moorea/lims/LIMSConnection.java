@@ -26,6 +26,7 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class LIMSConnection {
+    private static final int EXPECTED_SERVER_VERSION = 1;
     Driver driver;
     Connection connection;
 
@@ -51,6 +52,16 @@ public class LIMSConnection {
             connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
             Statement statement = connection.createStatement();
             statement.execute("USE labbench");
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseVersion LIMIT 1");
+            if(!resultSet.next()) {
+                throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
+            }
+            else {
+                int version = resultSet.getInt("version");
+                if(version != EXPECTED_SERVER_VERSION) {
+                    throw new ConnectionException("The server you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
+                }
+            }
         } catch (SQLException e1) {
             throw new ConnectionException(e1);
         }
