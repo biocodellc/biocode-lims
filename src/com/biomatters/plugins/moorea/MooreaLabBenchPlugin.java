@@ -76,6 +76,9 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
 
         URL bulkEditIcon = MooreaLabBenchPlugin.class.getResource("bulkEdit_16.png");
         putUrlIntoIconsMap(bulkEditIcon, "bulkEdit_16.png");
+
+        URL workflowDocumentIcon = MooreaLabBenchPlugin.class.getResource("workflowDocument_32.png");
+        putUrlIntoIconsMap(workflowDocumentIcon, "workflowDocument_32.png");
     }
 
     private static void putUrlIntoIconsMap(URL url, String key){
@@ -123,7 +126,8 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
     @Override
     public DocumentType[] getDocumentTypes() {
         return new DocumentType[] {
-                new DocumentType("Tissue Sample", TissueDocument.class, MooreaLabBenchPlugin.getIcons("specimenDocument_24.png"))
+                new DocumentType("Tissue Sample", TissueDocument.class, MooreaLabBenchPlugin.getIcons("specimenDocument_24.png")),
+                new DocumentType("Workflow Document", WorkflowDocument.class, MooreaLabBenchPlugin.getIcons("workflowDocument_32.png"))
         };
     }
 }
