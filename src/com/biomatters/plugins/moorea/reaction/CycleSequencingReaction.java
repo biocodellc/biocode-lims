@@ -3,6 +3,10 @@ package com.biomatters.plugins.moorea.reaction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
@@ -15,6 +19,12 @@ import java.util.List;
 import java.awt.*;
 import java.sql.SQLException;
 import java.sql.ResultSet;
+import java.io.StringReader;
+import java.io.IOException;
+
+import org.jdom.input.SAXBuilder;
+import org.jdom.JDOMException;
+import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
@@ -24,6 +34,7 @@ import java.sql.ResultSet;
  */
 public class CycleSequencingReaction extends Reaction{
     private Options options;
+    private List<SequenceDocument> traces;
 
     public CycleSequencingReaction() {
         options = new CycleSequencingOptions(this.getClass());
@@ -81,6 +92,25 @@ public class CycleSequencingReaction extends Reaction{
                     setThermocycle(tc);
                     break;
                 }
+            }
+        }
+
+        String sequenceString = r.getString("cycleSequencing.sequences");
+        if(sequenceString != null & sequenceString.length() > 0) {
+            SAXBuilder builder = new SAXBuilder();
+            try {
+                Element sequenceElement = builder.build(new StringReader(sequenceString)).detachRootElement();
+                DefaultSequenceListDocument defaultSequenceListDocument = XMLSerializer.classFromXML(sequenceElement, DefaultSequenceListDocument.class);
+                ((CycleSequencingOptions)options).setSequences(defaultSequenceListDocument.getNucleotideSequences());
+            } catch (JDOMException e) {
+                e.printStackTrace();
+                throw new SQLException("Could not deserialize the sequences: "+e.getMessage());
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new SQLException("Could not read the sequences: "+e.getMessage());
+            } catch (XMLSerializationException e) {
+                e.printStackTrace();
+                throw new SQLException("Couldn't deserialize the sequences: "+e.getMessage());
             }
         }
         return options;

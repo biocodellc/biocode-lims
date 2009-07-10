@@ -5,6 +5,10 @@ import com.biomatters.geneious.publicapi.plugin.DocumentType;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentSearchCache;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -21,6 +25,7 @@ import org.virion.jam.util.SimpleListener;
 import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
@@ -33,10 +38,14 @@ import java.awt.event.ActionEvent;
 public class CycleSequencingOptions extends Options {
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
+    private ButtonOption tracesButton;
 
     public static final String PRIMER_OPTION_ID = "primer";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
-   static final String LABEL_OPTION_ID = "label";
+    static final String LABEL_OPTION_ID = "label";
+    static final String TRACES_BUTTON_ID = "traces";
+
+    private List<NucleotideSequenceDocument> sequences;
 
     public CycleSequencingOptions(Class c) {
         super(c);
@@ -46,12 +55,17 @@ public class CycleSequencingOptions extends Options {
 
     public CycleSequencingOptions(Element e) throws XMLSerializationException {
         super(e);
+        Element sequencesElement = e.getChild("sequences");
+        if(sequencesElement != null) {
+            sequences = XMLSerializer.classFromXML(sequencesElement, DefaultSequenceListDocument.class).getNucleotideSequences();
+        }
         initListeners();
     }
 
     public void initListeners() {
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
+        tracesButton = (ButtonOption)getOption(TRACES_BUTTON_ID);
 
 
         ActionListener cocktailButtonListener = new ActionListener() {
@@ -80,6 +94,16 @@ public class CycleSequencingOptions extends Options {
             }
         };
         cocktailButton.addActionListener(cocktailButtonListener);
+
+        tracesButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                TracesEditor editor = new TracesEditor(sequences==null ? Collections.EMPTY_LIST : sequences);
+                if(editor.showDialog(tracesButton.getComponent())) {
+                    sequences = editor.getSequences();
+                }
+
+            }
+        });
 
         SimpleListener labelListener = new SimpleListener() {
             public void objectChanged() {
@@ -142,6 +166,8 @@ public class CycleSequencingOptions extends Options {
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
         cleanupOption.addDependent(cleanupMethodOption, true);
+        tracesButton = new ButtonOption("traces", "", "Add Traces");
+        addCustomOption(tracesButton);
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);
 
@@ -149,6 +175,13 @@ public class CycleSequencingOptions extends Options {
         addCustomOption(labelOption);
     }
 
+    public List<NucleotideSequenceDocument> getSequences() {
+        return sequences;
+    }
+
+    public void setSequences(List<NucleotideSequenceDocument> sequences) {
+        this.sequences = sequences;
+    }
 
     private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
         ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
@@ -182,5 +215,15 @@ public class CycleSequencingOptions extends Options {
             xml.addContent(new Element("sequence").setText(sequence));
             return xml;
         }
+    }
+
+    @Override
+    public Element toXML() {
+        Element element = super.toXML();
+        if(sequences != null) {
+            DefaultSequenceListDocument list = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+            element.addContent(XMLSerializer.classToXML("sequences", list));
+        }
+        return element;
     }
 }

@@ -1,7 +1,6 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
@@ -18,7 +17,6 @@ import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.awt.print.PrinterException;
 import java.awt.print.Printable;
-import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 
 import org.virion.jam.util.SimpleListener;
@@ -313,7 +311,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction editAction = new GeneiousAction("Edit selected wells", null, StandardIcons.edit.getIcons()) {
         public void actionPerformed(ActionEvent e) {
-            ReactionUtilities.editReactions(plateView.getSelectedReactions(), isLocal, plateView);
+            ReactionUtilities.editReactions(plateView.getSelectedReactions(), isLocal, plateView, false);
             saveAction.setEnabled(true);
             updatePanel();
         }

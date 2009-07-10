@@ -15,8 +15,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.print.PrinterException;
 import java.awt.print.Printable;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Connection;
@@ -241,7 +239,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             editButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
-                    ReactionUtilities.editReactions(Arrays.asList(reaction), false, panel);
+                    ReactionUtilities.editReactions(Arrays.asList(reaction), false, panel, true);
                     if(reaction.hasError()) {
                         try {
                             reaction.setOptions(XMLSerializer.classFromXML(oldOptions, Options.class));

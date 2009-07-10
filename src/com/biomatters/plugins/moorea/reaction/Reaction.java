@@ -4,6 +4,8 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
@@ -22,8 +24,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.io.StringWriter;
+import java.io.IOException;
 
 import org.jdom.Element;
+import org.jdom.output.XMLOutputter;
+import org.jdom.output.Format;
 
 /**
  * Created by IntelliJ IDEA.
@@ -492,12 +498,12 @@ public abstract class Reaction implements XMLSerializable{
 
                         Options options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
-                        if(!(value instanceof PCROptions.PrimerOptionValue)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+PCROptions.PrimerOptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        if(!(value instanceof Options.OptionValue)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
                         }
-                        PCROptions.PrimerOptionValue primerOptionValue = (PCROptions.PrimerOptionValue) value;
+                        Options.OptionValue primerOptionValue = (Options.OptionValue) value;
                         statement.setString(1, primerOptionValue.getLabel());
-                        statement.setString(2, primerOptionValue.getSequence());
+                        statement.setString(2, primerOptionValue.getDescription());
                         statement.setInt(3, (Integer)options.getValue("prAmount"));
                         if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
@@ -533,8 +539,8 @@ public abstract class Reaction implements XMLSerializable{
                 }
                 break;
             case CycleSequencing:
-                insertSQL = "INSERT INTO cycleSequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=cycleSequencing.date WHERE id=?";
+                insertSQL = "INSERT INTO cycleSequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cycleSequencing.date WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -547,7 +553,7 @@ public abstract class Reaction implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(14, reaction.getId());
+                            statement.setInt(15, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -555,12 +561,12 @@ public abstract class Reaction implements XMLSerializable{
 
                         Options options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
-                        if(!(value instanceof CycleSequencingOptions.PrimerOptionValue)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+CycleSequencingOptions.PrimerOptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        if(!(value instanceof Options.OptionValue)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
                         }
-                        CycleSequencingOptions.PrimerOptionValue primerOptionValue = (CycleSequencingOptions.PrimerOptionValue) value;
+                        Options.OptionValue primerOptionValue = (Options.OptionValue) value;
                         statement.setString(1, primerOptionValue.getLabel());
-                        statement.setString(2, primerOptionValue.getSequence());
+                        statement.setString(2, primerOptionValue.getDescription());
                         statement.setInt(3, (Integer)options.getValue("prAmount"));
                         if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
@@ -591,6 +597,22 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setString(11, options.getValueAsString("cleanupMethod"));
                         statement.setString(12, reaction.getExtractionId());
                         statement.setString(13, options.getValueAsString("notes"));
+                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
+                        String sequenceString = "";
+                        if(sequences != null && sequences.size() > 0) {
+                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+                            Element element = XMLSerializer.classToXML("sequences", sequenceList);
+                            XMLOutputter out = new XMLOutputter(Format.getCompactFormat());
+                            StringWriter writer = new StringWriter();
+                            try {
+                                out.output(element, writer);
+                                sequenceString = writer.toString();
+                            } catch (IOException e) {
+                                throw new SQLException("Could not write the sequences to the database: "+e.getMessage());
+                            }
+                        }
+
+                        statement.setString(14, sequenceString);
                         statement.execute();
                     }
                 }

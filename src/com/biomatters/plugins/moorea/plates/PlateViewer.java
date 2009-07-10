@@ -12,7 +12,6 @@ import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
 import com.biomatters.plugins.moorea.reaction.ReactionUtilities;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
-import com.biomatters.plugins.moorea.Workflow;
 import com.biomatters.plugins.moorea.BadDataException;
 
 import javax.swing.*;
@@ -152,7 +151,7 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
             public void actionPerformed(ActionEvent e) {
-                ReactionUtilities.editReactions(plateView.getSelectedReactions(), false, plateView);
+                ReactionUtilities.editReactions(plateView.getSelectedReactions(), false, plateView, false);
                 plateView.revalidate();
                 plateView.repaint();
             }

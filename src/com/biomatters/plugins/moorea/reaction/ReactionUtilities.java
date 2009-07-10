@@ -25,6 +25,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 import org.virion.jam.util.SimpleListener;
+import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
@@ -34,7 +35,7 @@ import org.virion.jam.util.SimpleListener;
  */
 public class ReactionUtilities {
 
-    public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, Component owner) {
+    public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, Component owner, boolean justEditOptions) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -85,6 +86,9 @@ public class ReactionUtilities {
         if(justEditDisplayableFields) {
             componentToDisplay = fieldsPanel;
         }
+        else if(justEditOptions) {
+            componentToDisplay = displayPanel;
+        }
         else {
             JTabbedPane tabs = new JTabbedPane();
             tabs.add("Reaction",displayPanel);
@@ -92,20 +96,21 @@ public class ReactionUtilities {
             componentToDisplay = tabs;
         }
 
-        if(Dialogs.showOkCancelDialog(componentToDisplay, "Well Options", owner)) {
-            if(!justEditDisplayableFields) {
-                for(final Options.Option option : options.getOptions()) {
-                    if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
+        if(Dialogs.showOkCancelDialog(componentToDisplay, "Well Options", owner, Dialogs.DialogIcon.NO_ICON)) {
+            if(!justEditDisplayableFields || justEditOptions) {
+                Element optionsElement = XMLSerializer.classToXML("options", options);
                         for(Reaction reaction : reactions) {
-                            reaction.getOptions().setValue(option.getName(), option.getValue());
+                            try {
+                                reaction.setOptions(XMLSerializer.classFromXML(optionsElement, Options.class));
+                            } catch (XMLSerializationException e) {
+                                Dialogs.showMessageDialog("Could not save your options: "+e.getMessage());
+                            }
                         }
-                    }
-                }
             }
             for(Reaction r : reactions) {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
             }
-            if(!justEditDisplayableFields) {
+            if(!justEditDisplayableFields || justEditOptions) {
                 String error = reactions.get(0).areReactionsValid(reactions);
                 if(error != null) {
                     Dialogs.showMessageDialog(error);
