@@ -421,20 +421,27 @@ public class MooreaLabBenchService extends DatabaseService {
             }
         }
 
-        if(tissueSamples != null) {
+        if(tissueSamples != null && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
             for(FimsSample sample : tissueSamples) {
                 TissueDocument doc = new TissueDocument(sample);
                 callback.add(doc, Collections.EMPTY_MAP);
             }
         }
         try {
-            List<WorkflowDocument> workflowList = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), tissueSamples);
-            for(PluginDocument doc : workflowList) {
-                callback.add(doc, Collections.EMPTY_MAP);
+            List<WorkflowDocument> workflowList = Collections.EMPTY_LIST;
+            if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
+                workflowList = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), tissueSamples);
             }
+            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
+                for(PluginDocument doc : workflowList) {
+                    callback.add(doc, Collections.EMPTY_MAP);
+                }
+            }
+            if((Boolean)query.getExtendedOptionValue("plateDocuments")) {
             List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), workflowList);
-            for(PluginDocument doc : plateList) {
-                callback.add(doc, Collections.EMPTY_MAP);
+                for(PluginDocument doc : plateList) {
+                    callback.add(doc, Collections.EMPTY_MAP);
+                }
             }
 
         } catch (SQLException e) {
