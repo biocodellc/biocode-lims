@@ -1,8 +1,12 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.moorea.reaction.*;
@@ -311,30 +315,54 @@ public class WorkflowDocument extends MuitiPartDocument {
         public ExtendedPrintable getExtendedPrintable() {
             return new ExtendedPrintable(){
                 public int print(Graphics2D graphics, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
-                    if(pageIndex > 1) {
-                        return Printable.NO_SUCH_PAGE;
+                    if(pageIndex == 1) {
+                        JPanel reactionPanel = getReactionPanel(reaction);
+                        JPanel thermocyclePanel = getThermocyclePanel(reaction);
+                        JLabel headerLabel = new JLabel(getName());
+                        headerLabel.setFont(new Font("arial", Font.BOLD, 16));
+                        JPanel holderPanel = new JPanel(new BorderLayout());
+                        holderPanel.setOpaque(false);
+                        holderPanel.add(headerLabel, BorderLayout.NORTH);
+                        holderPanel.add(reactionPanel, BorderLayout.CENTER);
+                        if(thermocyclePanel != null) {
+                            holderPanel.add(thermocyclePanel, BorderLayout.SOUTH);
+                        }
+                        holderPanel.setBounds(0,0,dimensions.width, dimensions.height);
+                        MultiPartDocumentViewerFactory.recursiveDoLayout(holderPanel);
+                        holderPanel.validate();
+                        holderPanel.invalidate();
+                        holderPanel.print(graphics);
                     }
-                    JPanel reactionPanel = getReactionPanel(reaction);
-                    JPanel thermocyclePanel = getThermocyclePanel(reaction);
-                    JLabel headerLabel = new JLabel(getName());
-                    headerLabel.setFont(new Font("arial", Font.BOLD, 16));
-                    JPanel holderPanel = new JPanel(new BorderLayout());
-                    holderPanel.setOpaque(false);
-                    holderPanel.add(headerLabel, BorderLayout.NORTH);
-                    holderPanel.add(reactionPanel, BorderLayout.CENTER);
-                    if(thermocyclePanel != null) {
-                        holderPanel.add(thermocyclePanel, BorderLayout.SOUTH);
+                    else {
+                        if(reaction instanceof CycleSequencingReaction) {
+                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions) reaction.getOptions()).getSequences();
+                        if(sequences != null && sequences.size() > 0) {
+                                DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+                                DocumentViewerFactory factory = TracesEditor.getViewerFactory(sequenceList);
+                                DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
+                                ExtendedPrintable printable = viewer.getExtendedPrintable();
+                                Options op = printable.getOptions(false);
+                                return printable.print(graphics, dimensions, pageIndex-2, op);
+                            }
+                        }
                     }
-                    holderPanel.setBounds(0,0,dimensions.width, dimensions.height);
-                    MultiPartDocumentViewerFactory.recursiveDoLayout(holderPanel);
-                    holderPanel.validate();
-                    holderPanel.invalidate();
-                    holderPanel.print(graphics);
                     return Printable.PAGE_EXISTS;
                 }
 
                 public int getPagesRequired(Dimension dimensions, Options options) {
-                    return 1;
+                    int pagesRequired = 1;
+                    if(reaction instanceof CycleSequencingReaction) {
+                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions) reaction.getOptions()).getSequences();
+                        if(sequences != null && sequences.size() > 0) {
+                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+                            DocumentViewerFactory factory = TracesEditor.getViewerFactory(sequenceList);
+                            DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
+                            ExtendedPrintable printable = viewer.getExtendedPrintable();
+                            Options op = printable.getOptions(false);
+                            pagesRequired += printable.getPagesRequired(dimensions, op);
+                        }
+                    }
+                    return pagesRequired;
                 }
             };
         }

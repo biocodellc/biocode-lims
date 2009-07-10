@@ -107,6 +107,19 @@ public class TracesEditor {
         else {
             sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
         }
+        factory = getViewerFactory(sequenceList);
+        if(factory == null) {
+            throw new RuntimeException("Could not find the sequence viewer!");
+        }
+        if(!faked) {
+            updateViewer(sequences);
+        }
+
+
+    }
+
+    public static DocumentViewerFactory getViewerFactory(DefaultSequenceListDocument sequenceList) {
+        DocumentViewerFactory factory = null;
         AnnotatedPluginDocument annotatedDocument = DocumentUtilities.createAnnotatedPluginDocument(sequenceList);
         List<DocumentViewerFactory> documentViewerFactories = PluginUtilities.getDocumentViewerFactories(annotatedDocument);
         for(DocumentViewerFactory fac : documentViewerFactories) {
@@ -119,14 +132,7 @@ public class TracesEditor {
                 }
             }
         }
-        if(factory == null) {
-            throw new RuntimeException("Could not find the sequence viewer!");
-        }
-        if(!faked) {
-            updateViewer(sequences);
-        }
-
-
+        return factory;
     }
 
     public boolean showDialog(Component owner) {
