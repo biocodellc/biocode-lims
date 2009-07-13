@@ -19,48 +19,68 @@ import java.util.List;
  * To change this template use File | Settings | File Templates.
  */
 public class ButtonOption extends Options.Option<String, JPanel> {
-        List<ActionListener> actionListeners = new ArrayList<ActionListener>();
+    List<ActionListener> actionListeners = new ArrayList<ActionListener>();
+    private boolean displayInMultiOptions = true;
 
-        public ButtonOption(String name, String label, String defaultValue){
-            super(name, label, defaultValue);
-        }
-
-        public ButtonOption(Element e) throws XMLSerializationException {
-            super(e);
-        }
-
-        public String getValueFromString(String value) {
-            return value;
-        }
-
-        public void addActionListener(ActionListener listener) {
-            actionListeners.add(listener);
-        }
-
-        public void removeActionListener(ActionListener listener) {
-            actionListeners.remove(listener);
-        }
-
-        public List<ActionListener> getActionListeners() {
-            return new ArrayList<ActionListener>(actionListeners);
-        }
-
-        protected void setValueOnComponent(JPanel component, String value) {
-        }
-
-        protected JPanel createComponent() {
-            JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            panel.setOpaque(false);
-            JButton button = new JButton(getDefaultValue());
-            button.setOpaque(false);
-            button.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent e) {
-                    for(ActionListener a : actionListeners){
-                        a.actionPerformed(new ActionEvent(getComponent(), 0, "Advanced"));
-                    }
-                }
-            });
-            panel.add(button);
-            return panel;
-        }
+    public ButtonOption(String name, String label, String defaultValue){
+        super(name, label, defaultValue);
     }
+
+    public ButtonOption(String name, String label, String defaultValue, boolean displayInMultiOptions){
+        super(name, label, defaultValue);
+        this.displayInMultiOptions = displayInMultiOptions;
+    }
+
+    public ButtonOption(Element e) throws XMLSerializationException {
+        super(e);
+        displayInMultiOptions = "true".equals(e.getChildText("displayInMultiOptions"));
+    }
+
+    public String getValueFromString(String value) {
+        return value;
+    }
+
+    public void addActionListener(ActionListener listener) {
+        actionListeners.add(listener);
+    }
+
+    public void removeActionListener(ActionListener listener) {
+        actionListeners.remove(listener);
+    }
+
+    public List<ActionListener> getActionListeners() {
+        return new ArrayList<ActionListener>(actionListeners);
+    }
+
+    protected void setValueOnComponent(JPanel component, String value) {
+    }
+
+    protected JPanel createComponent() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panel.setOpaque(false);
+        JButton button = new JButton(getDefaultValue());
+        button.setOpaque(false);
+        button.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                for(ActionListener a : actionListeners){
+                    a.actionPerformed(new ActionEvent(getComponent(), 0, "Advanced"));
+                }
+            }
+        });
+        panel.add(button);
+        return panel;
+    }
+
+    @Override
+     public Element toXML() {
+        Element element = super.toXML();
+        if(displayInMultiOptions) {
+            element.addContent(new Element("displayInMultiOptions").setText("true"));
+        }
+        return element;
+    }
+
+    public boolean displayInMultiOptions() {
+        return displayInMultiOptions;
+    }
+}

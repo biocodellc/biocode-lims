@@ -105,6 +105,9 @@ public class PlateDocumentViewer extends DocumentViewer{
 
         updateToolbar(false);
         saveAction.setEnabled(false);
+        bulkEditAction.setProOnly(true);
+        editThermocycleAction.setProOnly(true);
+        gelAction.setProOnly(true);
     }
 
     public JComponent getComponent() {
@@ -206,6 +209,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
         }
         thermocycleAction = new GeneiousAction.SubMenu(new GeneiousActionOptions("Thermocycle: "+name.get(), null, MooreaLabBenchPlugin.getIcons("thermocycle_16.png")), actions);
+        thermocycleAction.setProOnly(true);
         Runnable runnable = new Runnable() {
             public void run() {
                 for(SimpleListener listener : actionsChangedListeners) {

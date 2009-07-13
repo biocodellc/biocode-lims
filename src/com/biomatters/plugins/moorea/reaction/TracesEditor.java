@@ -47,13 +47,20 @@ public class TracesEditor {
         addSequenceAction = new GeneiousAction("Add sequence") {
             public void actionPerformed(ActionEvent e) {
                 JFileChooser chooser = new JFileChooser(System.getProperty("user.dir"));
+                chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                chooser.setMultiSelectionEnabled(true);
                 if(chooser.showOpenDialog(holder) == JFileChooser.APPROVE_OPTION) {
-                    final File sequenceFile = chooser.getSelectedFile();
+                    final File[] sequenceFiles = chooser.getSelectedFiles();
                     final ProgressFrame progress = new ProgressFrame("Importing", "Importing Documents", 500, false);
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                List<AnnotatedPluginDocument> pluginDocuments = PluginUtilities.importDocuments(sequenceFile, ProgressListener.EMPTY);
+                                List<AnnotatedPluginDocument> pluginDocuments = new ArrayList<AnnotatedPluginDocument>();
+                                for (int i = 0; i < sequenceFiles.length && !progress.isCanceled(); i++) {
+                                    File f = sequenceFiles[i];
+                                    List<AnnotatedPluginDocument> docs = PluginUtilities.importDocuments(f, ProgressListener.EMPTY);
+                                    pluginDocuments.addAll(docs);
+                                }
                                 if (!progress.isCanceled()) {
                                     updatePanel(pluginDocuments);
                                 }

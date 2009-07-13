@@ -1,6 +1,7 @@
 package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.License;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -34,6 +35,8 @@ import org.jdom.Element;
  *          Created on 9/07/2009 6:22:53 PM
  */
 public class ReactionUtilities {
+    private static String PRO_VERSION_INFO = "<html><b>All</b></html>";
+    private static String FREE_VERSION_INFO = "Editing in Geneious Pro only";
 
     public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, Component owner, boolean justEditOptions) {
         if(reactions == null || reactions.size() == 0) {
@@ -62,7 +65,7 @@ public class ReactionUtilities {
             }
         }
 
-        OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues);
+        OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues, reactions.size() > 1);
         Vector<DocumentField> selectedFieldsVector = new Vector<DocumentField>();
         Vector<DocumentField> availableFieldsVector = new Vector<DocumentField>();
         for(Reaction r : reactions) {//todo: may be slow
@@ -97,20 +100,32 @@ public class ReactionUtilities {
         }
 
         if(Dialogs.showOkCancelDialog(componentToDisplay, "Well Options", owner, Dialogs.DialogIcon.NO_ICON)) {
+            int changedOptionCount = 0;
             if(!justEditDisplayableFields || justEditOptions) {
                 Element optionsElement = XMLSerializer.classToXML("options", options);
-                        for(Reaction reaction : reactions) {
-                            try {
-                                reaction.setOptions(XMLSerializer.classFromXML(optionsElement, Options.class));
-                            } catch (XMLSerializationException e) {
-                                Dialogs.showMessageDialog("Could not save your options: "+e.getMessage());
+                if(reactions.size() == 1) {
+                    Reaction reaction = reactions.get(0);
+                    try {
+                        reaction.setOptions(XMLSerializer.classFromXML(optionsElement, Options.class));
+                    } catch (XMLSerializationException e) {
+                        Dialogs.showMessageDialog("Could not save your options: "+e.getMessage());
+                    }
+                }
+                else {
+                    for(Reaction reaction : reactions) {
+                        for(final Options.Option option : options.getOptions()) {
+                            if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
+                                reaction.getOptions().setValue(option.getName(), option.getValue());
+                                changedOptionCount++;
                             }
                         }
+                    }
+                }
             }
             for(Reaction r : reactions) {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
             }
-            if(!justEditDisplayableFields || justEditOptions) {
+            if(changedOptionCount > 0) {
                 String error = reactions.get(0).areReactionsValid(reactions);
                 if(error != null) {
                     Dialogs.showMessageDialog(error);
@@ -120,17 +135,26 @@ public class ReactionUtilities {
 
     }
 
-    private static OptionsPanel getReactionPanel(Options options, Map<String, Boolean> haveAllSameValues) {
+    private static OptionsPanel getReactionPanel(Options options, Map<String, Boolean> haveAllSameValues, boolean multiOptions) {
         OptionsPanel displayPanel = new OptionsPanel();
-        final JCheckBox selectAllBox = new JCheckBox("<html><b>All</b></html>", false);
+        final JCheckBox selectAllBox = new JCheckBox(License.isProVersion() ? PRO_VERSION_INFO : FREE_VERSION_INFO, false);
         selectAllBox.setOpaque(false);
+        selectAllBox.setEnabled(License.isProVersion());
         final AtomicBoolean selectAllValue = new AtomicBoolean(selectAllBox.isSelected());
         displayPanel.addTwoComponents(selectAllBox, new JLabel(), true, false);
         final List<JCheckBox> checkboxes = new ArrayList<JCheckBox>();
         for(final Options.Option option : options.getOptions()) {
             JComponent leftComponent;
+            if(option instanceof ButtonOption && !((ButtonOption)option).displayInMultiOptions() && multiOptions) {
+                continue;
+            }
+
             if(!(option instanceof Options.LabelOption) && !(option instanceof ButtonOption)) {
                 final JCheckBox checkbox = new JCheckBox(option.getLabel(), haveAllSameValues.get(option.getName()));
+                if(!License.isProVersion()) {
+                    checkbox.setEnabled(false);
+                    checkbox.setSelected(false);
+                }
                 checkbox.setAlignmentY(JCheckBox.RIGHT_ALIGNMENT);
                 checkboxes.add(checkbox);
                 ChangeListener listener = new ChangeListener() {
@@ -144,6 +168,9 @@ public class ReactionUtilities {
             }
             else {
                 leftComponent = new JLabel(option.getLabel());
+                if(!License.isProVersion()) {
+                    option.setEnabled(false);
+                }
             }
             leftComponent.setOpaque(false);
             selectAllBox.addChangeListener(new ChangeListener(){

@@ -166,7 +166,7 @@ public class CycleSequencingOptions extends Options {
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
         cleanupOption.addDependent(cleanupMethodOption, true);
-        tracesButton = new ButtonOption("traces", "", "Add Traces");
+        tracesButton = new ButtonOption("traces", "", "Add Traces", false);
         addCustomOption(tracesButton);
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);

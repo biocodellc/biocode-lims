@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.ConnectionException;
 import com.biomatters.plugins.moorea.FimsSample;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.PasswordOption;
 
 import java.sql.*;
 import java.util.*;
@@ -44,7 +45,9 @@ public class MooreaFimsConnection extends FIMSConnection{
         options.addStringOption("serverUrl", "Server", "darwin.berkeley.edu");
         options.addIntegerOption("serverPort", "Port", 3306, 0, Integer.MAX_VALUE);
         options.addStringOption("username", "Username", "");
-        options.addStringOption("password", "Password", "");
+        //options.addStringOption("password", "Password", "");
+        PasswordOption password = new PasswordOption("password", "Password", "");
+        options.addCustomOption(password);
 
         return options;
     }
@@ -64,7 +67,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         //connect
         Properties properties = new Properties();
         properties.put("user", options.getValueAsString("username"));
-        properties.put("password", options.getValueAsString("password"));
+        properties.put("password", ((PasswordOption)options.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
             connection = driver.connect("jdbc:mysql://"+options.getValueAsString("serverUrl")+":"+options.getValueAsString("serverPort"), properties);
@@ -193,25 +196,17 @@ public class MooreaFimsConnection extends FIMSConnection{
             String searchText = basicQuery.getSearchText();
             join = " OR ";
             queryBuilder.append("(");
-            boolean started = false;
+            List<Query> queryList = new ArrayList<Query>();
             for (int i = 0; i < getSearchAttributes().size(); i++) {
                 DocumentField field = getSearchAttributes().get(i);
-                String fieldCode = field.getCode();
-                if (!field.getValueType().equals(String.class) || fieldCode.equals("tissueId")) {
+                if (!field.getValueType().equals(String.class)) {
                     continue;
                 }
 
-
-                if (started) {
-                    queryBuilder.append(join);
-                }
-                started = true;
-
-                queryBuilder.append(fieldCode + " LIKE '%" + searchText + "%'");
-
-
+                queryList.add(BasicSearchQuery.Factory.createFieldQuery(field, Condition.APPROXIMATELY_EQUAL, searchText));
             }
-            queryBuilder.append(")");
+            Query compoundQuery = CompoundSearchQuery.Factory.createOrQuery(queryList.toArray(new Query[queryList.size()]), Collections.EMPTY_MAP);
+            return getQuerySQLString(compoundQuery);
         }
         else if(query instanceof AdvancedSearchQueryTerm) {
             AdvancedSearchQueryTerm aquery = (AdvancedSearchQueryTerm)query;

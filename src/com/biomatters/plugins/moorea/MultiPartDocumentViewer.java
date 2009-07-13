@@ -67,6 +67,7 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                 }
             }
         };
+        saveAction.setProOnly(true);
         updateToolbar();
 
         for(int i=0; i < doc.getNumberOfParts(); i++) {

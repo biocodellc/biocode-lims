@@ -7,6 +7,9 @@ import org.jdom.Element;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
+import java.awt.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -15,11 +18,12 @@ import javax.swing.event.DocumentListener;
  * Time: 5:55:26 AM
  * To change this template use File | Settings | File Templates.
  */
-public class PasswordOption extends Options.Option<String, JPasswordField>{
+public class PasswordOption extends Options.Option<String, JPanel>{
 
     private boolean updatingComponent = false;
     boolean createdComponent = false;
     private String password;
+    private boolean save = false;
 
     public PasswordOption(Element e) throws XMLSerializationException {
         super(e);
@@ -31,20 +35,27 @@ public class PasswordOption extends Options.Option<String, JPasswordField>{
     }
 
 
-    protected void setValueOnComponent(JPasswordField password, String value) {
-        if (updatingComponent) return;
-        
-        updatingComponent = true;
-        password.setText(value);
-        updatingComponent = false;
+    protected void setValueOnComponent(JPanel panel, String value) {
     }
 
     public String getPassword() {
-        return password;
+        return password != null ? password : "";
     }
 
-    protected JPasswordField createComponent() {
-        final JPasswordField passwordField = new JPasswordField();
+    private void setPassword(String password) {
+        this.password = password;
+        if(save) {
+            setValue(password);
+        }
+    }
+
+    protected JPanel createComponent() {
+        JPanel panel = new JPanel();
+        this.password = getValue();
+        panel.setOpaque(false);
+        panel.setBorder(null);
+        panel.setLayout(new BorderLayout(0,0));
+        final JPasswordField passwordField = new JPasswordField(getValue());
         passwordField.setColumns(30);
 
 
@@ -52,7 +63,7 @@ public class PasswordOption extends Options.Option<String, JPasswordField>{
                 private void update() {
                     if (updatingComponent) return;
                     updatingComponent = true;
-                    password = new String(passwordField.getPassword());
+                    setPassword(new String(passwordField.getPassword()));
                     updatingComponent = false;
                 }
 
@@ -69,7 +80,22 @@ public class PasswordOption extends Options.Option<String, JPasswordField>{
                 }
             });
         createdComponent = true;
-        return passwordField;
+        panel.add(passwordField, BorderLayout.CENTER);
+        save = getValue().length() > 0;
+        final JCheckBox saveBox = new JCheckBox("Save", save);
+        panel.add(saveBox, BorderLayout.EAST);
+        saveBox.addChangeListener(new ChangeListener(){
+            public void stateChanged(ChangeEvent e) {
+                save = saveBox.isSelected();
+                if(save) {
+                    setValue(getPassword());
+                }
+                else {
+                    setValue("");
+                }
+            }
+        });
+        return panel;
     }
 
 
