@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.Workflow;
+import com.biomatters.plugins.moorea.MooreaLabBenchPlugin;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 
 import javax.swing.*;
@@ -65,7 +66,7 @@ public class PlateBulkEditor {
         final DocumentField fieldToCheck = getFieldToCheck(p);
 
         GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(PlateBulkEditor.class), false, true);
-        toolbar.addAction(new GeneiousAction("Swap Direction"){
+        toolbar.addAction(new GeneiousAction("Swap Direction", "Swap the direction the wells are read from (between 'across then down', or 'down then across')", MooreaLabBenchPlugin.getIcons("swapDirection_16.png")){
             public void actionPerformed(ActionEvent e) {
                 switch(direction.get()) {
                     case ACROSS_AND_DOWN:
@@ -142,7 +143,9 @@ public class PlateBulkEditor {
         JPanel holderPanel = new JPanel(new BorderLayout());
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
-        Dialogs.showDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Edit Plate", owner), holderPanel);
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Plate", owner), holderPanel) == Dialogs.CANCEL) {
+            return;    
+        }
 
         for(DocumentFieldEditor editor : editors) {
             editor.valuesFromTextView();

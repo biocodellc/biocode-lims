@@ -79,6 +79,9 @@ public class MooreaLabBenchPlugin extends GeneiousPlugin {
 
         URL workflowDocumentIcon = MooreaLabBenchPlugin.class.getResource("workflowDocument_32.png");
         putUrlIntoIconsMap(workflowDocumentIcon, "workflowDocument_32.png");
+
+        URL swapDirectionIcon = MooreaLabBenchPlugin.class.getResource("swapDirection_16.png");
+        putUrlIntoIconsMap(swapDirectionIcon, "swapDirection_16.png");
     }
 
     private static void putUrlIntoIconsMap(URL url, String key){

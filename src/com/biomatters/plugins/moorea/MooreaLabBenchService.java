@@ -812,13 +812,21 @@ public class MooreaLabBenchService extends DatabaseService {
         String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
         StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
 
+        int count = 0;
         for(int i=0; i < reactions.size(); i++) {
-            if(i > 0) {
+            if(reactions.get(i).isEmpty()) {
+                continue;
+            }
+            if(count > 0) {
                 sql.append(" OR ");
             }
             sql.append("extraction.extractionId=?");
+            count++;
         }
         sql.append(")");
+        if(count == 0) {
+            return Collections.EMPTY_MAP;
+        }
         PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
         for(int i=0; i < reactions.size(); i++) {
             statement.setString(i+1, reactions.get(i).getExtractionId());
@@ -878,6 +886,8 @@ public class MooreaLabBenchService extends DatabaseService {
         Connection connection = limsConnection.getConnection();
         Savepoint savepoint = connection.setSavepoint();
         try {
+            isPlateValid(plate, connection);
+
             connection.setAutoCommit(false);
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
@@ -1015,19 +1025,7 @@ public class MooreaLabBenchService extends DatabaseService {
         Connection connection = limsConnection.getConnection();
 
         //check the vaidity of the plate.
-        if(plate.getName() == null || plate.getName().length() == 0) {
-            throw new BadDataException("Pates cannot have empty names");
-        }
-        if(plate.getId() < 0) {
-            PreparedStatement plateCheckStatement = connection.prepareStatement("SELECT name FROM plate WHERE name=?");
-            plateCheckStatement.setString(1, plate.getName());
-            if(plateCheckStatement.executeQuery().next()) {
-                throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
-            }
-        }
-        if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
-            throw new BadDataException("The plate has no thermocycle set");
-        }
+        isPlateValid(plate, connection);
 
         //update the plate
         PreparedStatement statement = plate.toSQL(connection);
@@ -1048,6 +1046,22 @@ public class MooreaLabBenchService extends DatabaseService {
         }
 
         Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
+    }
+
+    private void isPlateValid(Plate plate, Connection connection) throws BadDataException, SQLException {
+        if(plate.getName() == null || plate.getName().length() == 0) {
+            throw new BadDataException("Pates cannot have empty names");
+        }
+        if(plate.getId() < 0) {
+            PreparedStatement plateCheckStatement = connection.prepareStatement("SELECT name FROM plate WHERE name=?");
+            plateCheckStatement.setString(1, plate.getName());
+            if(plateCheckStatement.executeQuery().next()) {
+                throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
+            }
+        }
+        if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
+            throw new BadDataException("The plate has no thermocycle set");
+        }
     }
 
     public Map<String, Workflow> getWorkflows(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{

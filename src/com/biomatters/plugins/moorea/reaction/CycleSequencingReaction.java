@@ -183,6 +183,9 @@ public class CycleSequencingReaction extends Reaction{
         }
 
         for(Reaction reaction : reactions) {
+            if(reaction.isEmpty()) {
+                continue;
+            }
             reaction.isError = false;
             Options option = reaction.getOptions();
             if(option.getOption("extractionId").isEnabled()){
@@ -200,6 +203,9 @@ public class CycleSequencingReaction extends Reaction{
             }
         }
 
+        if(queries.size() == 0) {
+            return null;
+        }
         Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
 
         try {

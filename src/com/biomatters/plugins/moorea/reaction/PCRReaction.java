@@ -146,6 +146,9 @@ public class PCRReaction extends Reaction {
             return "Could not connect to the LIMS database";
         }
         for(Reaction reaction : reactions) {
+            if(reaction.isEmpty()) {
+                continue;
+            }
             reaction.isError = false;
             Options option = reaction.getOptions();
             if(option.getOption("extractionId").isEnabled()){

@@ -115,6 +115,9 @@ public class ExtractionReaction extends Reaction{
         List<Query> queries = new ArrayList<Query>();
 
         for(Reaction reaction : reactions) {
+            if(reaction.isEmpty()) {
+                continue;
+            }
             Options option = reaction.getOptions();
             if(option.getOption("sampleId").isEnabled()){
                 Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, option.getValueAsString("sampleId"));
@@ -124,6 +127,9 @@ public class ExtractionReaction extends Reaction{
             }
         }
 
+        if(queries.size() == 0) {
+            return null;
+        }
         Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
 
         try {
@@ -134,6 +140,9 @@ public class ExtractionReaction extends Reaction{
             }
             String error = "";
             for(Reaction reaction : reactions) {
+                if(reaction.isEmpty()) {
+                    continue;
+                }
                 reaction.isError = false;
                 Options op = reaction.getOptions();
                 String tissueId = op.getValueAsString("sampleId");
