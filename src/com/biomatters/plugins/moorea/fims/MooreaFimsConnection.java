@@ -203,7 +203,7 @@ public class MooreaFimsConnection extends FIMSConnection{
                     continue;
                 }
 
-                queryList.add(BasicSearchQuery.Factory.createFieldQuery(field, Condition.APPROXIMATELY_EQUAL, searchText));
+                queryList.add(BasicSearchQuery.Factory.createFieldQuery(field, Condition.CONTAINS, searchText));
             }
             Query compoundQuery = CompoundSearchQuery.Factory.createOrQuery(queryList.toArray(new Query[queryList.size()]), Collections.EMPTY_MAP);
             return getQuerySQLString(compoundQuery);
