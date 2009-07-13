@@ -36,35 +36,43 @@ public class MultiPartDocumentViewer extends DocumentViewer {
         saveAction = new GeneiousAction("Save", "", StandardIcons.save.getIcons()){
             public void actionPerformed(ActionEvent e) {
                 final MooreaLabBenchService.BlockingDialog dialog = MooreaLabBenchService.BlockingDialog.getDialog("Saving Reactions", panel);
-                Connection connection = MooreaLabBenchService.getInstance().getActiveLIMSConnection().getConnection();
-                Savepoint savepoint = null;
-                try {
-                    connection.setAutoCommit(false);
-                    savepoint = connection.setSavepoint("saveReactions");
-                    for(int i=0; i < doc.getNumberOfParts(); i++) {
-                        MuitiPartDocument.Part p = doc.getPart(i);
-                        if(p.hasChanges()) {
-                            p.saveChangesToDatabase(dialog, connection);
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        Connection connection = MooreaLabBenchService.getInstance().getActiveLIMSConnection().getConnection();
+                        Savepoint savepoint = null;
+                        try {
+                            connection.setAutoCommit(false);
+                            savepoint = connection.setSavepoint("saveReactions");
+                            for(int i=0; i < doc.getNumberOfParts(); i++) {
+                                MuitiPartDocument.Part p = doc.getPart(i);
+                                dialog.setMessage("Saving "+p.getName());
+                                if(p.hasChanges()) {
+                                    p.saveChangesToDatabase(dialog, connection);
+                                }
+                            }
+                            connection.commit();
+                        }
+                        catch(SQLException ex) {
+                            if(savepoint != null) {
+                                try {
+                                    connection.rollback(savepoint);
+                                } catch (SQLException e1) {} //don't need to catch
+                            }
+                            Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
+                        } finally {
+                            try {
+                                connection.setAutoCommit(true);
+                            } catch (SQLException e1) {
+                                e1.printStackTrace();  //don't need to catch this
+                            }
+                            annotatedDocument.saveDocument();
+                            updateToolbar();
+                            dialog.setVisible(false);
                         }
                     }
-                    connection.commit();
-                }
-                catch(SQLException ex) {
-                    if(savepoint != null) {
-                        try {
-                            connection.rollback(savepoint);
-                        } catch (SQLException e1) {} //don't need to catch
-                    }
-                    Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
-                } finally {
-                    try {
-                        connection.setAutoCommit(true);
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();  //don't need to catch this
-                    }
-                    annotatedDocument.saveDocument();
-                    updateToolbar();
-                }
+                };
+                new Thread(null, runnable, "mooreaSavingWorkflow").start();
+                dialog.setVisible(true);
             }
         };
         saveAction.setProOnly(true);
