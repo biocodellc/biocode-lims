@@ -191,7 +191,7 @@ public class CycleSequencingReaction extends Reaction{
             if(option.getOption("extractionId").isEnabled()){
                 String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
                 if(tissue == null) {
-                    error += "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!\n";
+                    error += "The extraction '"+option.getOption("extractionId").getValue()+"' does not exist in the database!\n";
                     reaction.isError = true;
                 }
                 else {
@@ -204,7 +204,7 @@ public class CycleSequencingReaction extends Reaction{
         }
 
         if(queries.size() == 0) {
-            return null;
+            return  error.length() == 0 ? null : error;
         }
         Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
 

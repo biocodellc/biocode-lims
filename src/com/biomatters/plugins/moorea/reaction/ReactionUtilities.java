@@ -104,6 +104,7 @@ public class ReactionUtilities {
             if(!justEditDisplayableFields || justEditOptions) {
                 Element optionsElement = XMLSerializer.classToXML("options", options);
                 if(reactions.size() == 1) {
+                    changedOptionCount = 1;
                     Reaction reaction = reactions.get(0);
                     try {
                         reaction.setOptions(XMLSerializer.classFromXML(optionsElement, Options.class));
