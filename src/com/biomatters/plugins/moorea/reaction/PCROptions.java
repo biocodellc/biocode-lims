@@ -96,13 +96,23 @@ public class PCROptions extends ReactionOptions {
                     if (o instanceof IntegerOption) {
                         sum += (Integer) o.getValue();
                     }
+                    if(o.getName().equals("cocktail")) {
+                        Integer cocktailId = Integer.parseInt(((Options.OptionValue)o.getValue()).getName());
+                        List<Cocktail> cocktailList = MooreaLabBenchService.getInstance().getPCRCocktails();
+                        for(Cocktail cocktail : cocktailList) {
+                            if(cocktail.getId() == cocktailId) {
+                                sum += cocktail.getReactionVolume(cocktail.getOptions());
+                            }
+                        }
+
+                    }
                 }
                 labelOption.setValue("Total Volume of Reaction: " + sum + "uL");
             }
         };
 
         for(Option o : getOptions()) {
-            if(o instanceof IntegerOption) {
+            if(o instanceof IntegerOption || o.getName().equals("cocktail")) {
                 o.addChangeListener(labelListener);
             }
         }
