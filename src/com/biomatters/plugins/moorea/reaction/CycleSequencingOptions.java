@@ -35,7 +35,7 @@ import java.awt.event.ActionEvent;
  *          <p/>
  *          Created on 24/06/2009 7:35:20 PM
  */
-public class CycleSequencingOptions extends Options {
+public class CycleSequencingOptions extends ReactionOptions {
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
     private ButtonOption tracesButton;
@@ -60,6 +60,10 @@ public class CycleSequencingOptions extends Options {
             sequences = XMLSerializer.classFromXML(sequencesElement, DefaultSequenceListDocument.class).getNucleotideSequences();
         }
         initListeners();
+    }
+
+    public boolean fieldIsFinal(String fieldCode) {
+        return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode);
     }
 
     public void initListeners() {
@@ -187,35 +191,11 @@ public class CycleSequencingOptions extends Options {
         ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
         for(AnnotatedPluginDocument doc : documents) {
             OligoSequenceDocument seq = (OligoSequenceDocument)doc.getDocumentOrCrash();
-            primerList.add(new PrimerOptionValue(doc.getName(), doc.getName(), seq.getSequenceString()));
+            primerList.add(new OptionValue(doc.getName(), doc.getName(), seq.getSequenceString()));
         }
         return primerList;
     }
 
-    public static class PrimerOptionValue extends Options.OptionValue{
-        private String sequence;
-
-        public PrimerOptionValue(Element xml) throws XMLSerializationException{
-            super(xml);
-            sequence = xml.getChildText("sequence");
-        }
-
-        public PrimerOptionValue(String name, String label, String sequence) {
-            super(name, label, sequence.substring(0, Math.max(10, sequence.length()-1)));
-            this.sequence = sequence;
-        }
-
-        public String getSequence() {
-            return sequence;
-        }
-
-        @Override
-        public Element toXML() {
-            Element xml = super.toXML();
-            xml.addContent(new Element("sequence").setText(sequence));
-            return xml;
-        }
-    }
 
     @Override
     public Element toXML() {

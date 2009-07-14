@@ -315,7 +315,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction editAction = new GeneiousAction("Edit selected wells", null, StandardIcons.edit.getIcons()) {
         public void actionPerformed(ActionEvent e) {
-            ReactionUtilities.editReactions(plateView.getSelectedReactions(), isLocal, plateView, false);
+            ReactionUtilities.editReactions(plateView.getSelectedReactions(), isLocal, plateView, false, false);
             saveAction.setEnabled(true);
             updatePanel();
         }

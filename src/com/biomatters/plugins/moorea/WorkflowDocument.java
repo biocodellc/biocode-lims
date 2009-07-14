@@ -193,7 +193,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             //check we don't already have it
             alreadyThere = false;
             for(Reaction r : reactions) {
-                if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
+                if(r.getType() == Reaction.Type.CycleSequencing && r.getId() == reactionId) {
                     alreadyThere = true;
                 }
             }
@@ -243,10 +243,10 @@ public class WorkflowDocument extends MuitiPartDocument {
             editButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
-                    ReactionUtilities.editReactions(Arrays.asList(reaction), false, panel, true);
+                    ReactionUtilities.editReactions(Arrays.asList(reaction), false, panel, true, false);
                     if(reaction.hasError()) {
                         try {
-                            reaction.setOptions(XMLSerializer.classFromXML(oldOptions, Options.class));
+                            reaction.setOptions(XMLSerializer.classFromXML(oldOptions, ReactionOptions.class));
                         } catch (XMLSerializationException e1) {
                             Dialogs.showMessageDialog("Error resetting options: could not deserailse your option's values.  It is recommended that you discard changes to this document if possible.");
                         }

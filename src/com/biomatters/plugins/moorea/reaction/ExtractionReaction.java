@@ -28,14 +28,14 @@ public class ExtractionReaction extends Reaction{
     public ExtractionReaction(){}
 
     public ExtractionReaction(ResultSet r, Workflow workflow) throws SQLException{
-        Options options = getOptions();
+        ReactionOptions options = getOptions();
         setWorkflow(workflow);
         init(r, options);
         options.setValue("workflowId", workflow.getName());
     }
 
     public ExtractionReaction(ResultSet r) throws SQLException{
-        Options options = getOptions();
+        ReactionOptions options = getOptions();
         init(r, options);
     }
 
@@ -57,25 +57,16 @@ public class ExtractionReaction extends Reaction{
         return getOptions().getValueAsString("extractionId");
     }
 
-    private Options options;
+    private ReactionOptions options;
 
-    public Options getOptions() {
+    public ReactionOptions getOptions() {
         if(options == null) {
-            options = new Options(this.getClass());
-            options.addStringOption("sampleId", "Tissue Sample Id", "");
-            options.addStringOption("extractionId", "Extraction Id", "");
-            options.addStringOption("extractionMethod", "Extraction Method", "");
-            options.addStringOption("parentExtraction", "Parent Extraction Id", "", "You may leave this field blank");
-            options.addIntegerOption("dilution", "Dilution 1/", 5, 0, Integer.MAX_VALUE);
-            Options.IntegerOption volume = options.addIntegerOption("volume", "Extraction Volume", 5, 0, Integer.MAX_VALUE);
-            volume.setUnits("ul");
-            TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
-            options.addCustomOption(notesOption);
+            options = new ExtractionOptions();
         }
         return options;
     }
 
-    public void setOptions(Options op) {
+    public void setOptions(ReactionOptions op) {
         this.options = op;
     }
 
@@ -118,7 +109,7 @@ public class ExtractionReaction extends Reaction{
             if(reaction.isEmpty()) {
                 continue;
             }
-            Options option = reaction.getOptions();
+            ReactionOptions option = reaction.getOptions();
             if(option.getOption("sampleId").isEnabled()){
                 Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, option.getValueAsString("sampleId"));
                 if(!queries.contains(fieldQuery)) {
@@ -144,7 +135,7 @@ public class ExtractionReaction extends Reaction{
                     continue;
                 }
                 reaction.isError = false;
-                Options op = reaction.getOptions();
+                ReactionOptions op = reaction.getOptions();
                 String tissueId = op.getValueAsString("sampleId");
                 FimsSample currentFimsSample = docMap.get(tissueId);
                 if(currentFimsSample == null) {

@@ -54,7 +54,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
                             boolean alreadyHasPrimer = false;
                             for(AnnotatedPluginDocument doc : documents) {
                                 OligoSequenceDocument seq = (OligoSequenceDocument)doc.getDocumentOrCrash();
-                                if(doc.getName().equals(extraPrimer.getName()) && seq.getSequenceString().equals(extraPrimer.getSequenceString())) {
+                                if(doc.getName().equals(extraPrimer.getName()) && seq.getSequenceString().equalsIgnoreCase(extraPrimer.getSequenceString())) {
                                     alreadyHasPrimer = true;
                                 }
                             }
@@ -79,14 +79,14 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
         for(AnnotatedPluginDocument doc : documents) {
             OligoSequenceDocument seq = (OligoSequenceDocument)doc.getDocumentOrCrash();
-            PCROptions.PrimerOptionValue optionValue = getOptionValue(seq, doc.getName());
+            Options.OptionValue optionValue = getOptionValue(seq, doc.getName());
             primerList.add(optionValue);
         }
         return primerList;
     }
 
-    private PCROptions.PrimerOptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
-        PCROptions.PrimerOptionValue optionValue = new PCROptions.PrimerOptionValue(overrideName, overrideName, seq.getSequenceString());
+    private Options.OptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
+        Options.OptionValue optionValue = new Options.OptionValue(overrideName, overrideName, seq.getSequenceString());
         return optionValue;
     }
 

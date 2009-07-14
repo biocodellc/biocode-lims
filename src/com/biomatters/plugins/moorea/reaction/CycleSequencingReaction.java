@@ -33,7 +33,7 @@ import org.jdom.Element;
  *          Created on 24/06/2009 6:02:38 PM
  */
 public class CycleSequencingReaction extends Reaction{
-    private Options options;
+    private ReactionOptions options;
     private List<SequenceDocument> traces;
 
     public CycleSequencingReaction() {
@@ -120,11 +120,11 @@ public class CycleSequencingReaction extends Reaction{
         return Type.CycleSequencing;
     }
 
-    public Options getOptions() {
+    public ReactionOptions getOptions() {
         return options;
     }
 
-    public void setOptions(Options op) {
+    public void setOptions(ReactionOptions op) {
         if(!(op instanceof CycleSequencingOptions)) {
             throw new IllegalArgumentException("Options must be instances of CycleSequencingOptions");
         }

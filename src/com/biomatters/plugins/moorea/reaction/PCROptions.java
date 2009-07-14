@@ -28,7 +28,7 @@ import java.awt.event.ActionEvent;
  *          <p/>
  *          Created on 23/06/2009 12:45:32 PM
  */
-public class PCROptions extends Options {
+public class PCROptions extends ReactionOptions {
 
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
@@ -49,6 +49,10 @@ public class PCROptions extends Options {
     public PCROptions(Element e) throws XMLSerializationException {
         super(e);
         initListeners();
+    }
+
+    public boolean fieldIsFinal(String fieldCode) {
+        return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode);
     }
 
     public void initListeners() {
@@ -168,33 +172,6 @@ public class PCROptions extends Options {
             cocktails.add(new OptionValue("-1", "No available cocktails"));
         }
         cocktailOption.setPossibleValues(cocktails);
-    }
-
-
-
-    public static class PrimerOptionValue extends Options.OptionValue{
-        private String sequence;
-
-        public PrimerOptionValue(Element xml) throws XMLSerializationException{
-            super(xml);
-            sequence = xml.getChildText("sequence");
-        }
-
-        public PrimerOptionValue(String name, String label, String sequence) {
-            super(name, label, sequence.substring(0, Math.max(10, sequence.length()-1)));
-            this.sequence = sequence;
-        }
-
-        public String getSequence() {
-            return sequence;
-        }
-
-        @Override
-        public Element toXML() {
-            Element xml = super.toXML();
-            xml.addContent(new Element("sequence").setText(sequence));
-            return xml;
-        }
     }
     
 }

@@ -119,9 +119,9 @@ public abstract class Reaction implements XMLSerializable{
     private Rectangle location = new Rectangle(0,0,0,0);
 
 
-    public abstract Options getOptions();
+    public abstract ReactionOptions getOptions();
 
-    public abstract void setOptions(Options op);
+    public abstract void setOptions(ReactionOptions op);
 
     public Thermocycle getThermocycle(){
         return thermocycle;
@@ -232,6 +232,9 @@ public abstract class Reaction implements XMLSerializable{
                 element.addContent(XMLSerializer.classToXML("displayableField", df));
             }
         }
+        if(workflow != null) {
+            XMLSerializer.classToXML("workflow",workflow);
+        }
         element.addContent(XMLSerializer.classToXML("options", getOptions()));
         return element;
     }
@@ -277,11 +280,15 @@ public abstract class Reaction implements XMLSerializable{
                 }
             }
         }
+        Element workflowElement = element.getChild("workflow");
+        if(workflowElement != null) {
+            workflow = XMLSerializer.classFromXML(workflowElement, Workflow.class);
+        }
         displayableFields = new ArrayList<DocumentField>();
         for(Element e : element.getChildren("displayableField")) {
             displayableFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
         }
-        setOptions(XMLSerializer.classFromXML(element.getChild("options"), Options.class));
+        setOptions(XMLSerializer.classFromXML(element.getChild("options"), ReactionOptions.class));
     }
 
     public abstract Color _getBackgroundColor();
@@ -462,7 +469,7 @@ public abstract class Reaction implements XMLSerializable{
                         else {
                             statement = insertStatement;
                         }
-                        Options options = reaction.getOptions();
+                        ReactionOptions options = reaction.getOptions();
                         statement.setString(1, options.getValueAsString("extractionMethod"));
                         statement.setInt(2, (Integer) options.getValue("volume"));
                         statement.setInt(3, (Integer) options.getValue("dilution"));
@@ -496,7 +503,7 @@ public abstract class Reaction implements XMLSerializable{
                             statement = insertStatement;
                         }
 
-                        Options options = reaction.getOptions();
+                        ReactionOptions options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
                         if(!(value instanceof Options.OptionValue)) {
                             throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
@@ -559,7 +566,7 @@ public abstract class Reaction implements XMLSerializable{
                             statement = insertStatement;
                         }
 
-                        Options options = reaction.getOptions();
+                        ReactionOptions options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
                         if(!(value instanceof Options.OptionValue)) {
                             throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());

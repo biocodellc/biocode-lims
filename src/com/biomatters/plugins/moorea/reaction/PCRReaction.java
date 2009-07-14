@@ -30,7 +30,7 @@ import java.sql.SQLException;
  */
 public class PCRReaction extends Reaction {
 
-    private Options options;
+    private ReactionOptions options;
 
     public PCRReaction() {
         options = new PCROptions(this.getClass());
@@ -51,7 +51,7 @@ public class PCRReaction extends Reaction {
     private Options init(ResultSet r) throws SQLException {
         setId(r.getInt("pcr.id"));
         setPlate(r.getInt("pcr.plate"));
-        Options options = getOptions();
+        ReactionOptions options = getOptions();
         options.setValue("extractionId", r.getString("pcr.extractionId"));
 
         String s = r.getString("workflow.name");
@@ -90,11 +90,11 @@ public class PCRReaction extends Reaction {
         return options;
     }
 
-    public Options getOptions() {
+    public ReactionOptions getOptions() {
         return options;
     }
 
-    public void setOptions(Options op) {
+    public void setOptions(ReactionOptions op) {
         if(!(op instanceof PCROptions)) {
             throw new IllegalArgumentException("Options must be instances of PCR options");
         }
@@ -150,7 +150,7 @@ public class PCRReaction extends Reaction {
                 continue;
             }
             reaction.isError = false;
-            Options option = reaction.getOptions();
+            ReactionOptions option = reaction.getOptions();
             if(option.getOption("extractionId").isEnabled()){
                 String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
                 if(tissue == null) {
@@ -177,7 +177,7 @@ public class PCRReaction extends Reaction {
                     docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
                 }
                 for(Reaction reaction : reactions) {
-                    Options op = reaction.getOptions();
+                    ReactionOptions op = reaction.getOptions();
                     String extractionId = op.getValueAsString("extractionId");
                     FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
                     if(currentFimsSample == null) {
@@ -215,7 +215,7 @@ public class PCRReaction extends Reaction {
 
                 for(Reaction reaction : reactions) {
                     Object workflowId = reaction.getFieldValue("workflowId");
-                    if(workflowId != null && workflowId.toString().length() > 0) {
+                    if(workflowId != null && workflowId.toString().length() > 0 && reaction.getWorkflow() == null && reaction.getType() != Reaction.Type.Extraction) {
                         Workflow workflow = map.get(workflowId);
                         if(workflow == null) {
                             error += "The workflow "+workflowId+" does not exist in the database.\n";    
