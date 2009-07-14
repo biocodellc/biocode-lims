@@ -77,9 +77,9 @@ public class PlateDocumentViewer extends DocumentViewer{
                                     MooreaLabBenchService.getInstance().saveReactions(dialog, plateView.getPlate());
                                 }
                             } catch (SQLException e1) {
-                                e1.printStackTrace(); //todo: handle this!
+                                Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());    
                             } catch(BadDataException e2) {
-                                Dialogs.showMessageDialog("You hve some errors in your plate:\n\n"+e2.getMessage());    
+                                Dialogs.showMessageDialog("You have some errors in your plate:\n\n"+e2.getMessage());
                             } finally {
                                 dialog.setVisible(false);
                             }

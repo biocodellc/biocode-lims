@@ -88,12 +88,7 @@ public class PCRCocktail extends Cocktail{
     }
 
     public List<Cocktail> getAllCocktailsOfType() {
-        //todo: retrieve from database
         return MooreaLabBenchService.getInstance().getPCRCocktails();
-//        List<Cocktail> cocktails = new ArrayList<Cocktail>();
-//        cocktails.add(new PCRCocktail("Steve's Cocktail 1"));
-//        cocktails.add(new PCRCocktail("Steve's Cocktail 2"));
-//        return cocktails;
     }
 
     public Cocktail createNewCocktail() {
