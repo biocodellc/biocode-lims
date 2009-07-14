@@ -186,14 +186,10 @@ public abstract class Reaction implements XMLSerializable{
         if(value instanceof Options.OptionValue) {
             return ((Options.OptionValue)value).getLabel();
         }
-        if(value instanceof Integer || value instanceof Double) {
-            Options.Option option = getOptions().getOption(fieldCode);
-            value = option.getLabel()+": "+option.getValue();
-        }
         if(value == null && fimsSample != null) { //check the FIMS data
             value = fimsSample.getFimsAttributeValue(fieldCode);
         }
-        return value == null ? "" : value.toString();
+        return value == null ? "" : value;
     }
 
     public abstract String getExtractionId();
@@ -302,15 +298,9 @@ public abstract class Reaction implements XMLSerializable{
         if(fieldWidthCache == null) {
             initFieldWidthCache();
         }
-        for(DocumentField field : getFieldsToDisplay()) {
-            String value = getDisplayableValue(field);
-            if(value.length() > maxLabel.length()) {
-                maxLabel = value;
-            }
-        }
         for (int i = 0; i < getFieldsToDisplay().size(); i++) {
             DocumentField field = getFieldsToDisplay().get(i);
-            String value = getFieldValue(field.getCode()).toString();
+            String value = getDisplayableValue(field).toString();
             if (value.length() == 0) {
                 continue;
             }
@@ -328,7 +318,7 @@ public abstract class Reaction implements XMLSerializable{
         }
         fieldWidthCache = new int[fieldList.size()];       
         for(int i=0; i < fieldList.size(); i++) {
-            String value = getFieldValue(fieldList.get(i).getCode()).toString();
+            String value = getDisplayableValue(fieldList.get(i)).toString();
             if(value.length() == 0) {
                 continue;
             }
@@ -343,6 +333,13 @@ public abstract class Reaction implements XMLSerializable{
         Object value = getFieldValue(field.getCode());
         if(value instanceof String) {
             return (String)value;
+        }
+        Options.Option option = getOptions().getOption(field.getCode());
+        if(option instanceof Options.IntegerOption) {
+            value = value + ((Options.IntegerOption)option).getUnits();
+        }
+        if(option instanceof Options.DoubleOption) {
+            value = value + ((Options.DoubleOption)option).getUnits();
         }
         return field.getName()+": "+value;
     }
@@ -372,7 +369,7 @@ public abstract class Reaction implements XMLSerializable{
             g.setFont(i == 0 ? firstLabelFont : labelFont);
 
             DocumentField field = getFieldsToDisplay().get(i);
-            String value = getFieldValue(field.getCode()).toString();
+            String value = getDisplayableValue(field).toString();
             if (value.length() == 0) {
                 continue;
             }
