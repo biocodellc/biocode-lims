@@ -152,6 +152,7 @@ public class ReactionUtilities {
 
             if(!(option instanceof Options.LabelOption) && !(option instanceof ButtonOption)) {
                 if(!creating && options.fieldIsFinal(option.getName())) {
+                    option.setEnabled(false);
                     if(multiOptions) {//just don't display the option if we're editing multiple reactions
                         continue;
                     }
@@ -193,6 +194,7 @@ public class ReactionUtilities {
             });
             JComponent jComponent;
             if(!creating && options.fieldIsFinal(option.getName())) {
+                option.setEnabled(false);
                 jComponent = new JLabel(option.getValue().toString());
             }
             else {

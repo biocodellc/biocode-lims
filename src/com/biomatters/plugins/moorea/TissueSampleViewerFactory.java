@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 
 import javax.swing.*;
 
@@ -55,7 +56,12 @@ public class TissueSampleViewerFactory extends DocumentViewerFactory{
                 else {
                     html = doc.getTissueHTML();
                 }
-                JEditorPane editorPane = new JEditorPane("text/html", html);
+                StringBuilder htmlBuilder = new StringBuilder("<html>");
+                htmlBuilder.append(GuiUtilities.getHtmlHead());
+                htmlBuilder.append("<body>");
+                htmlBuilder.append(html);
+                htmlBuilder.append("</body></html>");
+                JEditorPane editorPane = new JEditorPane("text/html", htmlBuilder.toString());
                 JScrollPane scroller = new JScrollPane(editorPane);
                 return scroller;
             }

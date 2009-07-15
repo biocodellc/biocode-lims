@@ -131,6 +131,10 @@ public abstract class Reaction implements XMLSerializable{
         return isError;
     }
 
+    public void setHasError(boolean b) {
+        isError = b;
+    }
+
     public void setThermocycle(Thermocycle tc) {
         this.thermocycle = tc;
     }
@@ -229,7 +233,8 @@ public abstract class Reaction implements XMLSerializable{
             }
         }
         if(workflow != null) {
-            XMLSerializer.classToXML("workflow",workflow);
+            Element workflowElement = XMLSerializer.classToXML("workflow", workflow);
+            element.addContent(workflowElement);
         }
         element.addContent(XMLSerializer.classToXML("options", getOptions()));
         return element;
@@ -295,10 +300,12 @@ public abstract class Reaction implements XMLSerializable{
         int y = PADDING+3;
         int x = 0;
         String maxLabel = " ";
-        if(fieldWidthCache == null) {
+        List<DocumentField> fieldsToDisplay = getFieldsToDisplay();
+
+        if(fieldWidthCache == null || fieldWidthCache.length != fieldsToDisplay.size()) {
             initFieldWidthCache();
         }
-        for (int i = 0; i < getFieldsToDisplay().size(); i++) {
+        for (int i = 0; i < fieldsToDisplay.size(); i++) {
             DocumentField field = getFieldsToDisplay().get(i);
             String value = getDisplayableValue(field).toString();
             if (value.length() == 0) {

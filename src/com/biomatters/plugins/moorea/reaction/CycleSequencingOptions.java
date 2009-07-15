@@ -101,7 +101,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         tracesButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                TracesEditor editor = new TracesEditor(sequences==null ? Collections.EMPTY_LIST : sequences);
+                TracesEditor editor = new TracesEditor(sequences==null ? Collections.EMPTY_LIST : sequences, getValueAsString("extractionId"));
                 if(editor.showDialog(tracesButton.getComponent())) {
                     sequences = editor.getSequences();
                 }
@@ -180,7 +180,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
         cleanupOption.addDependent(cleanupMethodOption, true);
-        tracesButton = new ButtonOption("traces", "", "Add Traces", false);
+        tracesButton = new ButtonOption("traces", "", "Add/Edit Traces", false);
         addCustomOption(tracesButton);
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);

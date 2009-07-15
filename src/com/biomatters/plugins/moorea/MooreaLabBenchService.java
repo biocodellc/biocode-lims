@@ -707,20 +707,22 @@ public class MooreaLabBenchService extends DatabaseService {
         try {
             Connection connection = limsConnection.getConnection();
             connection.setAutoCommit(false);
+            boolean autoCommit = connection.getAutoCommit();
             for(Thermocycle tCycle : cycles) {
                 Savepoint savepoint = connection.setSavepoint();
                 try {
                     int id = tCycle.toSQL(connection);
                     PreparedStatement statement = connection.prepareStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+");\n");
                     statement.execute();
-                    connection.commit();
+                    if(autoCommit)
+                        connection.commit();
                 }
                 catch(SQLException ex) {
                     connection.rollback(savepoint);
                     throw ex;
                 }
                 finally {
-                    connection.setAutoCommit(true);
+                    connection.setAutoCommit(autoCommit);
                 }
             }
         } catch (SQLException e) {
@@ -845,6 +847,7 @@ public class MooreaLabBenchService extends DatabaseService {
     public List<Workflow> createWorkflows(List<String> extractionIds, BlockingDialog progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
         Connection connection = limsConnection.getConnection();
+        boolean autoCommit = connection.getAutoCommit();
         Savepoint savepoint = connection.setSavepoint();
         try {
             connection.setAutoCommit(false);
@@ -864,8 +867,8 @@ public class MooreaLabBenchService extends DatabaseService {
                 statement3.setInt(1, workflowId);
                 statement3.execute();
             }
-            connection.commit();
-            connection.setAutoCommit(true);
+            if(autoCommit)
+                connection.commit();
             return workflows;
         }
         catch(SQLException ex) {
@@ -876,7 +879,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 throw ex;
             }
         } finally {
-            connection.setAutoCommit(true);
+            connection.setAutoCommit(autoCommit);
         }
     }
 
@@ -884,6 +887,7 @@ public class MooreaLabBenchService extends DatabaseService {
         List<String> extractionIds = new ArrayList<String>();
 
         Connection connection = limsConnection.getConnection();
+        boolean autoCommit = connection.getAutoCommit();
         Savepoint savepoint = connection.setSavepoint();
         try {
             isPlateValid(plate, connection);
@@ -922,7 +926,8 @@ public class MooreaLabBenchService extends DatabaseService {
                     }
                 }
             }
-            connection.commit();
+            if(autoCommit)
+                connection.commit();
             connection.releaseSavepoint(savepoint);
         } catch(BadDataException e) {
             try {
@@ -932,7 +937,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 throw e;
             }
         } finally {
-            connection.setAutoCommit(true);
+            connection.setAutoCommit(autoCommit);
         }
 
 
@@ -941,6 +946,7 @@ public class MooreaLabBenchService extends DatabaseService {
     public void saveReactions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException, BadDataException {
         progress.setMessage("Retrieving existing workflows");
         Connection connection = limsConnection.getConnection();
+        boolean autoCommit = connection.getAutoCommit();
         Savepoint savepoint = connection.setSavepoint();
         int originalPlateId = plate.getId();
         try {
@@ -951,10 +957,17 @@ public class MooreaLabBenchService extends DatabaseService {
             List<String> workflowIdStrings = new ArrayList<String>();
             for(Reaction reaction : plate.getReactions()) {
                 Object workflowId = reaction.getFieldValue("workflowId");
+                Object extractionId = reaction.getExtractionId();
                 if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
                     reactionsToSave.add(reaction);
-                    if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
-                        continue;
+                    if(reaction.getWorkflow() != null){
+                        if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                            reaction.setHasError(true);
+                            throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                        }
+                        if(reaction.getWorkflow().getName().equals(workflowId)) {
+                            continue;
+                        }
                     }
                     else {
                         reaction.setWorkflow(null);
@@ -977,7 +990,15 @@ public class MooreaLabBenchService extends DatabaseService {
                 for(Reaction reaction : plate.getReactions()) {
                     Object workflowId = reaction.getFieldValue("workflowId");
                     if(reaction.getWorkflow() == null){
-                        reaction.setWorkflow(map.get(workflowId));
+                        Workflow workflow = map.get(workflowId);
+                        if(workflow != null) {
+                            String extractionId = reaction.getExtractionId();
+                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                                reaction.setHasError(true);
+                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                            }
+                        }
+                        reaction.setWorkflow(workflow);
                     }
                 }
             }
@@ -1006,7 +1027,8 @@ public class MooreaLabBenchService extends DatabaseService {
             progress.setMessage("Creating the plate");
             //we need to create the plate
             createOrUpdatePlate(plate, progress);
-            connection.commit();
+            if(autoCommit)
+                connection.commit();
             connection.releaseSavepoint(savepoint);
         } catch(BadDataException e) {
             plate.setId(originalPlateId);
@@ -1017,7 +1039,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 throw e;
             }
         } finally {
-            connection.setAutoCommit(true);
+            connection.setAutoCommit(autoCommit);
         }
     }
 

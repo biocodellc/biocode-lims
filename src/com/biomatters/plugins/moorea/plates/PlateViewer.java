@@ -125,15 +125,16 @@ public class PlateViewer extends JPanel {
                 }
             };
             toolbar.add(thermocycleAction);
+
+            final GeneiousAction gelAction = new GeneiousAction("Attach GEL image") {
+            public void actionPerformed(ActionEvent e) {
+                    List<GelImage> gelImages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
+                    plateView.getPlate().setImages(gelImages);
+                }
+            };
+            toolbar.add(gelAction);
         }
 
-        final GeneiousAction gelAction = new GeneiousAction("Attach GEL image") {
-            public void actionPerformed(ActionEvent e) {
-                List<GelImage> gelImages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
-                plateView.getPlate().setImages(gelImages);
-            }
-        };
-        toolbar.add(gelAction);
 
 
         toolbar.addSeparator(new Dimension(1, 24));

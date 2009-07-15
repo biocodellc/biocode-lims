@@ -445,6 +445,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 dimensions = new Dimension((int)(dimensions.width/masterScale), (int)(dimensions.height/masterScale));
 
                 int availableHeight = dimensions.height;
+                boolean oldColorBackground = plateView.isColorBackground();
                 plateView.setColorBackground((Boolean)options.getValue("colorPlate"));
                 double scaleFactor = dimensions.getWidth()/plateView.getPreferredSize().width;
                 scaleFactor = Math.min(scaleFactor, dimensions.getHeight()/plateView.getPreferredSize().height);
@@ -456,6 +457,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                     plateView.print(g);
                     g.scale(1/scaleFactor, 1/scaleFactor);
                 }
+                plateView.setColorBackground(oldColorBackground);
 
                 availableHeight -= requiredPlateHeight+10;
 

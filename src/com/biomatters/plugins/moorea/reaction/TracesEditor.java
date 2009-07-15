@@ -12,11 +12,14 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseService;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 
 import javax.swing.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -39,12 +42,14 @@ public class TracesEditor {
     private JPanel sequenceHolder = new JPanel(new GridLayout(1,1));
     DocumentViewerMessageHandler messageHandler;
     private SequenceSelection sequenceSelection;
-    private GeneiousAction addSequenceAction, removeSequencesAction;
+    private GeneiousAction addSequenceAction, removeSequencesAction, importSequencesAction;
     private DocumentViewer documentViewer;
+    private String name;
 
-    public TracesEditor(List<NucleotideSequenceDocument> sequencesa) {
+    public TracesEditor(List<NucleotideSequenceDocument> sequencesa, String reactionName) {
+        this.name = reactionName;
         sequenceHolder.setPreferredSize(new Dimension(640,480));
-        addSequenceAction = new GeneiousAction("Add sequence") {
+        addSequenceAction = new GeneiousAction("Add sequence(s)") {
             public void actionPerformed(ActionEvent e) {
                 JFileChooser chooser = new JFileChooser(System.getProperty("user.dir"));
                 chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -87,6 +92,28 @@ public class TracesEditor {
                     }
                 }
                 updateViewer(sequences);
+            }
+        };
+
+        importSequencesAction = new GeneiousAction("Import sequence(s) into Geneious"){
+            public void actionPerformed(ActionEvent e) {
+                WritableDatabaseService selectedFolder = ServiceUtilities.getUserSelectedFolder(null);
+                if(selectedFolder != null){
+                    Set<SequenceDocument> sequences = sequenceSelection.getSelectedSequences();
+                    ArrayList<NucleotideSequenceDocument> sequenceList = new ArrayList<NucleotideSequenceDocument>();
+                    for(SequenceDocument doc : sequences) {
+                        sequenceList.add((NucleotideSequenceDocument)doc);
+                    }
+                    DefaultSequenceListDocument listDocument = DefaultSequenceListDocument.forNucleotideSequences(sequenceList);
+                    if(name != null) {
+                        listDocument.setName(name+" reads");
+                    }
+                    try {
+                        selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(listDocument), ProgressListener.EMPTY).setUnread(true);
+                    } catch (DatabaseServiceException e1) {
+                        Dialogs.showMessageDialog(e1.getMessage());
+                    }
+                }
             }
         };
 
@@ -150,6 +177,7 @@ public class TracesEditor {
         holder.add(toolbar, BorderLayout.NORTH);
         toolbar.add(addSequenceAction);
         toolbar.add(removeSequencesAction);
+        toolbar.add(importSequencesAction);
         updateToolbar();
 
 
@@ -213,7 +241,9 @@ public class TracesEditor {
     }
 
     private void updateToolbar() {
-        removeSequencesAction.setEnabled(sequenceSelection != null && sequenceSelection.getSelectedSequenceCount() > 0);
+        boolean enabled = sequenceSelection != null && sequenceSelection.getSelectedSequenceCount() > 0;
+        removeSequencesAction.setEnabled(enabled);
+        importSequencesAction.setEnabled(enabled);
     }
 
     public List<NucleotideSequenceDocument> getSequences() {

@@ -199,8 +199,15 @@ public class PCRReaction extends Reaction {
         for(Reaction reaction : reactions) {
             Object workflowId = reaction.getFieldValue("workflowId");
             if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
-                if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
-                    continue;
+                if(reaction.getWorkflow() != null){
+                    String extractionId = reaction.getExtractionId();
+                    if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                        reaction.setHasError(true);
+                        error += "The workflow "+workflowId+" does not match the extraction "+extractionId;
+                    }
+                    if(reaction.getWorkflow().getName().equals(workflowId)) {
+                        continue;
+                    }
                 }
                 else {
                     reaction.setWorkflow(null);
@@ -217,10 +224,16 @@ public class PCRReaction extends Reaction {
                     Object workflowId = reaction.getFieldValue("workflowId");
                     if(workflowId != null && workflowId.toString().length() > 0 && reaction.getWorkflow() == null && reaction.getType() != Reaction.Type.Extraction) {
                         Workflow workflow = map.get(workflowId);
+                        String extractionId = reaction.getExtractionId();
                         if(workflow == null) {
                             error += "The workflow "+workflowId+" does not exist in the database.\n";    
                         }
-                        reaction.setWorkflow(workflow);
+                        else if(!workflow.getExtractionId().equals(extractionId)) {
+                            error += "The workflow "+workflowId+" does not match the extraction "+extractionId;       
+                        }
+                        else {
+                            reaction.setWorkflow(workflow);
+                        }
                     }
                 }
             } catch (SQLException e) {
