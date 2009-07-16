@@ -128,8 +128,8 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, true, false));
         fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, true, false));
 
-        fields.add(new DocumentField("Plate Name", "", "biocode_tissue.format_name96", String.class, true, false));
-        fields.add(new DocumentField("Well Number", "", "biocode_tissue.well_number96", String.class, true, false));
+        fields.add(new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false));
+        fields.add(new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false));
         fields.add(new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false));
 
         fields.add(new DocumentField("BOLD ProcessID", "", "biocode_tissue.molecular_id", String.class, true, false));
@@ -163,7 +163,11 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         queryBuilder.append("SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID AND ");
 
-        queryBuilder.append(getQuerySQLString(query));
+        String sqlString = getQuerySQLString(query);
+        if(sqlString == null) {
+            return Collections.EMPTY_LIST;
+        }
+        queryBuilder.append(sqlString);
         
 
         String queryString = queryBuilder.toString();
@@ -194,6 +198,9 @@ public class MooreaFimsConnection extends FIMSConnection{
         if(query instanceof BasicSearchQuery) {
             BasicSearchQuery basicQuery = (BasicSearchQuery)query;
             String searchText = basicQuery.getSearchText();
+            if(searchText == null || searchText.trim().length() == 0) {
+                return null;
+            }
             join = " OR ";
             queryBuilder.append("(");
             List<Query> queryList = new ArrayList<Query>();
@@ -265,6 +272,11 @@ public class MooreaFimsConnection extends FIMSConnection{
                     break;
             }
 
+            Object testSearchText = aquery.getValues()[0];
+            if(testSearchText == null || testSearchText.toString().trim().length() == 0) {
+                return null;
+            }
+
 
             //special cases
             if(fieldCode.equals("tissueId")) {
@@ -327,14 +339,23 @@ public class MooreaFimsConnection extends FIMSConnection{
             }
 
             queryBuilder.append("(");
+            int count = 0;
             for (Iterator<? extends Query> it = cquery.getChildren().iterator(); it.hasNext();) {
                 Query childQuery = it.next();
 
-                queryBuilder.append(getQuerySQLString(childQuery));
+                String s = getQuerySQLString(childQuery);
+                if(s == null) {
+                    continue;
+                }
+                count ++;
+                queryBuilder.append(s);
 
                 if(it.hasNext()) {
                     queryBuilder.append(join);
                 }
+            }
+            if(count == 0) {
+                return null;
             }
 
             queryBuilder.append(")");

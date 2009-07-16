@@ -168,7 +168,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                     }
                 }
                 if(!alreadyThere) {
-                    Reaction r = new ExtractionReaction(resultSet, workflow);
+                    Reaction r = new ExtractionReaction(resultSet);
                     reactions.add(r);
                     parts.add(new ReactionPart(r));
                 }
@@ -183,7 +183,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                 }
             }
             if(!alreadyThere) {
-                Reaction r = new PCRReaction(resultSet, workflow);
+                Reaction r = new PCRReaction(resultSet);
                 reactions.add(r);
                 parts.add(new ReactionPart(r));
             }
@@ -198,7 +198,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                 }
             }
             if(!alreadyThere) {
-                Reaction r = new CycleSequencingReaction(resultSet, workflow);
+                Reaction r = new CycleSequencingReaction(resultSet);
                 reactions.add(r);
                 parts.add(new ReactionPart(r));
             }

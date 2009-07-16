@@ -40,19 +40,10 @@ public class CycleSequencingReaction extends Reaction{
         options = new CycleSequencingOptions(this.getClass());
     }
 
-    public CycleSequencingReaction(ResultSet r, Workflow workflow) throws SQLException{
-        this();
-        setWorkflow(workflow);
-        Options options = init(r);
-        options.setValue("workflowId", workflow.getName());
-    }
-
     public CycleSequencingReaction(ResultSet r) throws SQLException {
         this();
         init(r);
-//        if(r.getObject("workflow.id") != null) {
-//            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId")));
-//        }
+        System.out.println(getWorkflow());
     }
 
     private Options init(ResultSet r) throws SQLException {
@@ -188,17 +179,15 @@ public class CycleSequencingReaction extends Reaction{
             }
             reaction.isError = false;
             Options option = reaction.getOptions();
-            if(option.getOption("extractionId").isEnabled()){
-                String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
-                if(tissue == null) {
-                    error += "The extraction '"+option.getOption("extractionId").getValue()+"' does not exist in the database!\n";
-                    reaction.isError = true;
-                }
-                else {
-                    Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
-                    if(!queries.contains(fieldQuery)) {
-                         queries.add(fieldQuery);
-                    }
+            String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
+            if(tissue == null) {
+                error += "The extraction '"+option.getOption("extractionId").getValue()+"' does not exist in the database!\n";
+                reaction.isError = true;
+            }
+            else {
+                Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
+                if(!queries.contains(fieldQuery)) {
+                     queries.add(fieldQuery);
                 }
             }
         }

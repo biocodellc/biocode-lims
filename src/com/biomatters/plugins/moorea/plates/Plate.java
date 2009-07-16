@@ -3,6 +3,7 @@ package com.biomatters.plugins.moorea.plates;
 import com.biomatters.plugins.moorea.reaction.*;
 import com.biomatters.plugins.moorea.plates.GelImage;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.Workflow;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;

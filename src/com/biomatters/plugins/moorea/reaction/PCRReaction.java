@@ -36,16 +36,10 @@ public class PCRReaction extends Reaction {
         options = new PCROptions(this.getClass());
     }
 
-    public PCRReaction(ResultSet r, Workflow workflow) throws SQLException{
-        this();
-        setWorkflow(workflow);
-        Options options = init(r);
-        options.setValue("workflowId", workflow.getName());
-    }
-
     public PCRReaction(ResultSet r) throws SQLException{
         this();
         init(r);
+        System.out.println(getWorkflow());
     }
 
     private Options init(ResultSet r) throws SQLException {
@@ -151,17 +145,15 @@ public class PCRReaction extends Reaction {
             }
             reaction.isError = false;
             ReactionOptions option = reaction.getOptions();
-            if(option.getOption("extractionId").isEnabled()){
-                String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
-                if(tissue == null) {
-                    error += "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!\n";
-                    reaction.isError = true;
-                }
-                else {
-                    Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
-                    if(!queries.contains(fieldQuery)) {
-                         queries.add(fieldQuery);
-                    }
+            String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
+            if(tissue == null) {
+                error += "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!\n";
+                reaction.isError = true;
+            }
+            else {
+                Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
+                if(!queries.contains(fieldQuery)) {
+                     queries.add(fieldQuery);
                 }
             }
         }

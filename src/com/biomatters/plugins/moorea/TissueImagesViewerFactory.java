@@ -43,13 +43,14 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
         return new DocumentViewer(){
+            JPanel panel;
             public JComponent getComponent() {
                 final TissueDocument doc = (TissueDocument)annotatedDocuments[0].getDocumentOrCrash();
                 if(doc.getSpecimenId() == null) {
                     return null;
                 }
 
-                final JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+                panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
                 if(MooreaLabBenchService.imageCache.containsKey(doc.getSpecimenId())) {
                     Image[] i = MooreaLabBenchService.imageCache.get(doc.getSpecimenId());
@@ -128,6 +129,11 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
 
 
 
+                return panel;
+            }
+
+            @Override
+            public JComponent getPrintableComponent() {
                 return panel;
             }
         };

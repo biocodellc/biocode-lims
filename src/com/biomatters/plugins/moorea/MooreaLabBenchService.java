@@ -415,10 +415,18 @@ public class MooreaLabBenchService extends DatabaseService {
         } else if(query instanceof AdvancedSearchQueryTerm){
             if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
                 fimsQueries.add(query);
+                try {
+                    tissueSamples = activeFIMSConnection.getMatchingSamples(query);
+                } catch (ConnectionException e) {
+                    throw new DatabaseServiceException(e.getMessage(), false);
+                }
             }
             else {
                 limsQueries.add(query);
             }
+        }
+        if(callback.isCanceled()) {
+            return;
         }
 
         if(tissueSamples != null && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
@@ -427,18 +435,30 @@ public class MooreaLabBenchService extends DatabaseService {
                 callback.add(doc, Collections.EMPTY_MAP);
             }
         }
+        if(callback.isCanceled()) {
+            return;
+        }
         try {
             List<WorkflowDocument> workflowList = Collections.EMPTY_LIST;
             if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
                 workflowList = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), tissueSamples);
+            }
+            if(callback.isCanceled()) {
+                return;
             }
             if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
                 for(PluginDocument doc : workflowList) {
                     callback.add(doc, Collections.EMPTY_MAP);
                 }
             }
+            if(callback.isCanceled()) {
+                return;
+            }
             if((Boolean)query.getExtendedOptionValue("plateDocuments")) {
-            List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), workflowList);
+                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), workflowList);
+                if(callback.isCanceled()) {
+                    return;
+                }
                 for(PluginDocument doc : plateList) {
                     callback.add(doc, Collections.EMPTY_MAP);
                 }
@@ -714,7 +734,7 @@ public class MooreaLabBenchService extends DatabaseService {
                     int id = tCycle.toSQL(connection);
                     PreparedStatement statement = connection.prepareStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+");\n");
                     statement.execute();
-                    if(autoCommit)
+                    if(!autoCommit)
                         connection.commit();
                 }
                 catch(SQLException ex) {
@@ -867,7 +887,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 statement3.setInt(1, workflowId);
                 statement3.execute();
             }
-            if(autoCommit)
+            if(!autoCommit)
                 connection.commit();
             return workflows;
         }
@@ -885,6 +905,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public void saveExtractions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException, BadDataException{
         List<String> extractionIds = new ArrayList<String>();
+        List<String> extractionWithoutWorkflowIds = new ArrayList<String>();
 
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
@@ -895,8 +916,11 @@ public class MooreaLabBenchService extends DatabaseService {
             connection.setAutoCommit(false);
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && (reaction.getId() < 0)) {
+                if(!reaction.isEmpty()) {
                     extractionIds.add(reaction.getExtractionId());
+                    if(reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+                        extractionWithoutWorkflowIds.add(reaction.getExtractionId());
+                    }
                     reactionsToSave.add(reaction);
                 }
             }
@@ -912,21 +936,23 @@ public class MooreaLabBenchService extends DatabaseService {
 
             createOrUpdatePlate(plate, progress);
 
-            progress.setMessage("Creating new workflows");
+            if(extractionWithoutWorkflowIds.size() > 0) {
+                progress.setMessage("Creating new workflows");
 
-            //create workflows if necessary
+                //create workflows if necessary
 
-            if(extractionIds.size() > 0) {
-                List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
-                int workflowIndex = 0;
-                for(Reaction reaction : plate.getReactions()) {
-                    if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                        reaction.setWorkflow(workflowList.get(workflowIndex));
-                        workflowIndex++;
+                if(extractionIds.size() > 0) {
+                    List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionWithoutWorkflowIds, progress);
+                    int workflowIndex = 0;
+                    for(Reaction reaction : plate.getReactions()) {
+                        if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                            reaction.setWorkflow(workflowList.get(workflowIndex));
+                            workflowIndex++;
+                        }
                     }
                 }
             }
-            if(autoCommit)
+            if(!autoCommit)
                 connection.commit();
             connection.releaseSavepoint(savepoint);
         } catch(BadDataException e) {
@@ -958,9 +984,9 @@ public class MooreaLabBenchService extends DatabaseService {
             for(Reaction reaction : plate.getReactions()) {
                 Object workflowId = reaction.getFieldValue("workflowId");
                 Object extractionId = reaction.getExtractionId();
-                if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
+                if(!reaction.isEmpty() && reaction.getType() != Reaction.Type.Extraction) {
                     reactionsToSave.add(reaction);
-                    if(reaction.getWorkflow() != null){
+                    if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
                         if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
                             reaction.setHasError(true);
                             throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
@@ -1027,7 +1053,7 @@ public class MooreaLabBenchService extends DatabaseService {
             progress.setMessage("Creating the plate");
             //we need to create the plate
             createOrUpdatePlate(plate, progress);
-            if(autoCommit)
+            if(!autoCommit)
                 connection.commit();
             connection.releaseSavepoint(savepoint);
         } catch(BadDataException e) {

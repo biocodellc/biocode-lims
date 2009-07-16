@@ -50,7 +50,7 @@ public class Workflow implements XMLSerializable {
     }
 
     public Element toXML() {
-        return new Element("workflow").addContent(new Element("name").setText(getName())).addContent(new Element("id").setText(""+getId()).addContent(new Element("extraction").setText(extraction)));
+        return new Element("workflow").addContent(new Element("name").setText(getName())).addContent(new Element("id").setText(""+getId())).addContent(new Element("extraction").setText(extraction));
     }
 
     public void fromXML(Element element) throws XMLSerializationException {

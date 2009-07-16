@@ -114,7 +114,7 @@ public class LIMSConnection {
 
     public List<DocumentField> getSearchAttributes() {
         return Arrays.asList(
-                new DocumentField("Plate Name", "", "plate.name", String.class, true, false),
+                new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false),
                 new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false),
                 DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false)
         );
