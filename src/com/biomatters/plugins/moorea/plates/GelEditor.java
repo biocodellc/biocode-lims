@@ -42,6 +42,9 @@ public class GelEditor {
             }
 
             public Object getElementAt(int index) {
+                if(index >= gelimages.size()) {
+                    return null;
+                }
                 return gelimages.get(index);
             }
         };
@@ -138,6 +141,9 @@ public class GelEditor {
     }
 
     private static JComponent getGelViewerPanel(final GelImage image) {
+        if(image == null) {
+            return new JPanel();
+        }
         ImagePanel imagePanel = new ImagePanel(image.getImage());
         JScrollPane imageScroller = new JScrollPane(imagePanel);
         final JTextArea notesArea = new JTextArea(image.getNotes());
