@@ -117,9 +117,9 @@ public class MooreaLabBenchService extends DatabaseService {
 
     private static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
-                new GeneiousFimsConnection(),
+                //new GeneiousFimsConnection(),
                 new MooreaFimsConnection(),
-                new TAPIRFimsConnection()
+                //new TAPIRFimsConnection()
         };
     }
 
