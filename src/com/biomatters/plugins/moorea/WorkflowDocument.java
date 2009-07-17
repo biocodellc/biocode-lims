@@ -189,7 +189,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
             break;
         case CycleSequencing :
-            reactionId = resultSet.getInt("cycleSequencing.id");
+            reactionId = resultSet.getInt("cyclesequencing.id");
             //check we don't already have it
             alreadyThere = false;
             for(Reaction r : reactions) {

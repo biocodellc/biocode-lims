@@ -57,7 +57,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         Options.OptionValue[] typeValues = new Options.OptionValue[] {
                 new Options.OptionValue("extraction", "Extraction"),
                 new Options.OptionValue("pcr", "PCR"),
-                new Options.OptionValue("cycleSequencing", "Cycle Sequencing")
+                new Options.OptionValue("cyclesequencing", "Cycle Sequencing")
         };
 
         options.addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
@@ -88,7 +88,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         else if(reactionType.getName().equals("pcr")) {
             type = Reaction.Type.PCR;
         }
-        else if(reactionType.getName().equals("cycleSequencing")) {
+        else if(reactionType.getName().equals("cyclesequencing")) {
             type = Reaction.Type.CycleSequencing;
         }
 

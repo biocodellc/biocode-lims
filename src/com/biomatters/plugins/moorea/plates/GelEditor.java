@@ -30,7 +30,7 @@ public class GelEditor {
     static Preferences preferences = Preferences.userNodeForPackage(GelEditor.class);
     
     public static List<GelImage> editGels(List<GelImage> gels, Component owner) {
-        final List<GelImage> gelImages = new ArrayList<GelImage>(gels);
+        final List<GelImage> gelimages = new ArrayList<GelImage>(gels);
         final JPanel editPanel = new JPanel(new BorderLayout());
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         editPanel.add(splitPane, BorderLayout.CENTER);
@@ -38,11 +38,11 @@ public class GelEditor {
         gelimageList.setPrototypeCellValue("Image");
         final AbstractListModel listModel = new AbstractListModel() {
             public int getSize() {
-                return gelImages.size();
+                return gelimages.size();
             }
 
             public Object getElementAt(int index) {
-                return gelImages.get(index);
+                return gelimages.get(index);
             }
         };
         gelimageList.setCellRenderer(new DefaultListCellRenderer(){
@@ -88,7 +88,7 @@ public class GelEditor {
                     preferences.put("filelocation", chooser.getSelectedFile().getParent());
                     try {
                         GelImage newGelimage = new GelImage(-1, chooser.getSelectedFile(), "");
-                        gelImages.add(newGelimage);
+                        gelimages.add(newGelimage);
                         for(ListDataListener listener : listModel.getListDataListeners()){
                             listener.intervalAdded(new ListDataEvent(listModel, ListDataEvent.INTERVAL_ADDED, listModel.getSize(), listModel.getSize()-1));
                         }
@@ -112,7 +112,7 @@ public class GelEditor {
         removeButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
                 int index = gelimageList.getSelectedIndex();
-                gelImages.remove(index);
+                gelimages.remove(index);
                 for(ListDataListener listener : listModel.getListDataListeners()){
                     listener.contentsChanged(new ListDataEvent(listModel, ListDataEvent.CONTENTS_CHANGED, 0, listModel.getSize()-1));
                 }
@@ -132,7 +132,7 @@ public class GelEditor {
         gelimageList.setSelectedIndex(0);
                 
         if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Gelimages", owner), editPanel).equals(Dialogs.OK)) {
-            return gelImages;
+            return gelimages;
         }
         return gels;
     }

@@ -47,34 +47,34 @@ public class CycleSequencingReaction extends Reaction{
     }
 
     private Options init(ResultSet r) throws SQLException {
-        setPlate(r.getInt("cycleSequencing.plate"));
-        setPosition(r.getInt("cycleSequencing.location"));
-        setCreated(r.getDate("cycleSequencing.date"));
-        setId(r.getInt("cycleSequencing.id"));
+        setPlate(r.getInt("cyclesequencing.plate"));
+        setPosition(r.getInt("cyclesequencing.location"));
+        setCreated(r.getDate("cyclesequencing.date"));
+        setId(r.getInt("cyclesequencing.id"));
         Options options = getOptions();
-        options.setValue("extractionId", r.getString("cycleSequencing.extractionId"));
+        options.setValue("extractionId", r.getString("cyclesequencing.extractionId"));
         String s = r.getString("workflow.name");
         if(s != null) {
             options.setValue("workflowId", s);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("cycleSequencing.extractionId")));
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("cyclesequencing.extractionId")));
         }
         else {
             assert false : "We should be getting a resultset of at least the CycleSequencing table joined to the Workflow table";
         }
 
 
-        options.getOption("runStatus").setValueFromString(r.getString("cycleSequencing.progress"));
+        options.getOption("runStatus").setValueFromString(r.getString("cyclesequencing.progress"));
 
         PrimerOption primerOption = (PrimerOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
-        String primerName = r.getString("cycleSequencing.primerName");
-        String primerSequence = r.getString("cycleSequencing.primerSequence");
+        String primerName = r.getString("cyclesequencing.primerName");
+        String primerSequence = r.getString("cyclesequencing.primerSequence");
         primerOption.setAndAddValue(primerName, primerSequence);
-        options.setValue("prAmount", r.getInt("cycleSequencing.primerAmount"));
-        options.setValue("notes", r.getString("cycleSequencing.notes"));
-        options.setValue("runStatus", r.getString("cycleSequencing.progress"));
-        options.setValue("cocktail", r.getString("cycleSequencing.cocktail"));
-        options.setValue("cleanupPerformed", r.getBoolean("cycleSequencing.cleanupPerformed"));
-        options.setValue("cleanupMethod", r.getBoolean("cycleSequencing.cleanupMethod"));
+        options.setValue("prAmount", r.getInt("cyclesequencing.primerAmount"));
+        options.setValue("notes", r.getString("cyclesequencing.notes"));
+        options.setValue("runStatus", r.getString("cyclesequencing.progress"));
+        options.setValue("cocktail", r.getString("cyclesequencing.cocktail"));
+        options.setValue("cleanupPerformed", r.getBoolean("cyclesequencing.cleanupPerformed"));
+        options.setValue("cleanupMethod", r.getBoolean("cyclesequencing.cleanupMethod"));
 
         int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {
@@ -86,7 +86,7 @@ public class CycleSequencingReaction extends Reaction{
             }
         }
 
-        String sequenceString = r.getString("cycleSequencing.sequences");
+        String sequenceString = r.getString("cyclesequencing.sequences");
         if(sequenceString != null & sequenceString.length() > 0) {
             SAXBuilder builder = new SAXBuilder();
             try {

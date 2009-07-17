@@ -264,8 +264,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                 Dialogs.showMessageDialog("Please log in");
                 return;
             }
-            List<GelImage> gelImages = GelEditor.editGels(plateView.getPlate().getImages(), container);
-            plateView.getPlate().setImages(gelImages);
+            List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), container);
+            plateView.getPlate().setImages(gelimages);
             saveAction.setEnabled(true);
             updatePanel();
         }

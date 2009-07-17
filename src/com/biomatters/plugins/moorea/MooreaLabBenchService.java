@@ -81,10 +81,10 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     private void loadEmptyCaches() {
-        cycleSequencingCocktails = Collections.EMPTY_LIST;
+        cyclesequencingCocktails = Collections.EMPTY_LIST;
         PCRCocktails = Collections.EMPTY_LIST;
         PCRThermocycles = Collections.EMPTY_LIST;
-        cycleSequencingThermocycles = Collections.EMPTY_LIST;
+        cyclesequencingThermocycles = Collections.EMPTY_LIST;
     }
 
     public static MooreaLabBenchService getInstance() {
@@ -512,15 +512,15 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     private List<Thermocycle> PCRThermocycles = null;
-    private List<Thermocycle> cycleSequencingThermocycles = null;
+    private List<Thermocycle> cyclesequencingThermocycles = null;
     private List<Cocktail> PCRCocktails = null;
-    private List<Cocktail> cycleSequencingCocktails = null;
+    private List<Cocktail> cyclesequencingCocktails = null;
 
     private void buildCaches() throws TransactionException {
         PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle");
-        cycleSequencingThermocycles = getThermocyclesFromDatabase("cycleSequencing_thermocycle");
+        cyclesequencingThermocycles = getThermocyclesFromDatabase("cyclesequencing_thermocycle");
         PCRCocktails = getPCRCocktailsFromDatabase();
-        cycleSequencingCocktails = getCycleSequencingCocktailsFromDatabase();
+        cyclesequencingCocktails = getCycleSequencingCocktailsFromDatabase();
         try {
             saveCachesToDisk();
         } catch (IOException e) {
@@ -534,20 +534,20 @@ public class MooreaLabBenchService extends DatabaseService {
 
     private void buildCachesFromDisk() throws IOException, JDOMException, XMLSerializationException {
         PCRThermocycles = getThermocyclesFromDisk("pcr_thermocycle");
-        cycleSequencingThermocycles = getThermocyclesFromDisk("cycleSequencing_thermocycle");
+        cyclesequencingThermocycles = getThermocyclesFromDisk("cyclesequencing_thermocycle");
         PCRCocktails = getPCRCocktailsFromDisk();
-        cycleSequencingCocktails = getCycleSequencingCocktailsFromDisk();
+        cyclesequencingCocktails = getCycleSequencingCocktailsFromDisk();
     }
 
     private void saveCachesToDisk() throws IOException, JDOMException, XMLSerializationException {
         saveThermocyclesToDisk("pcr_thermocycle", PCRThermocycles);
-        saveThermocyclesToDisk("cycleSequencing_thermocycle", cycleSequencingThermocycles);
+        saveThermocyclesToDisk("cyclesequencing_thermocycle", cyclesequencingThermocycles);
         savePCRCocktailsToDisk();
         saveCycleSequencingCocktailsToDisk();
     }
 
     private List<Cocktail> getCycleSequencingCocktailsFromDisk() throws JDOMException, IOException, XMLSerializationException{
-        File file = new File(dataDirectory, "cycleSequencingCocktails.xml");
+        File file = new File(dataDirectory, "cyclesequencingCocktails.xml");
         return getCocktails(file);
     }
 
@@ -587,7 +587,7 @@ public class MooreaLabBenchService extends DatabaseService {
     //----
 
     private void saveCycleSequencingCocktailsToDisk() throws IOException, XMLSerializationException{
-        File file = new File(dataDirectory, "cycleSequencingCocktails.xml");
+        File file = new File(dataDirectory, "cyclesequencingCocktails.xml");
         if(!file.exists()) {
             createNewFile(file);
         }
@@ -599,7 +599,7 @@ public class MooreaLabBenchService extends DatabaseService {
         if(!file.exists()) {
             createNewFile(file);
         }
-        saveCocktails(file, cycleSequencingCocktails);
+        saveCocktails(file, cyclesequencingCocktails);
     }
 
     private void saveCocktails(File file, List<Cocktail> cocktails) throws IOException, XMLSerializationException {
@@ -660,7 +660,7 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     private List<Cocktail> getCycleSequencingCocktailsFromDatabase() throws TransactionException{
-        ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM cycleSequencing_cocktail");
+        ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM cyclesequencing_cocktail");
         List<Cocktail> cocktails = new ArrayList<Cocktail>();
         try {
             while(resultSet.next()) {
@@ -715,7 +715,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public List<Thermocycle> getCycleSequencingThermocycles() {
         ArrayList<Thermocycle> cycles = new ArrayList<Thermocycle>();
-        cycles.addAll(cycleSequencingThermocycles);
+        cycles.addAll(cyclesequencingThermocycles);
         return cycles;
     }
 
@@ -752,7 +752,7 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public void addCycleSequencingThermoCycles(List<Thermocycle> cycles) throws TransactionException{
-        insertThermocycles(cycles, "cycleSequencing_thermocycle");
+        insertThermocycles(cycles, "cyclesequencing_thermocycle");
         System.out.println("done!");
     }
 
@@ -823,7 +823,7 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public List<Cocktail> getCycleSequencingCocktails() {
-        return cycleSequencingCocktails;
+        return cyclesequencingCocktails;
     }
 
     public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{
@@ -1087,7 +1087,7 @@ public class MooreaLabBenchService extends DatabaseService {
         }
 
         //replace the images
-        PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelImages WHERE plate="+plate.getId());
+        PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
         deleteImagesStatement.execute();
         for(GelImage image : plate.getImages()) {
             image.toSql(connection).execute();

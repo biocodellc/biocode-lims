@@ -128,8 +128,8 @@ public class PlateViewer extends JPanel {
 
             final GeneiousAction gelAction = new GeneiousAction("Attach GEL image") {
             public void actionPerformed(ActionEvent e) {
-                    List<GelImage> gelImages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
-                    plateView.getPlate().setImages(gelImages);
+                    List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
+                    plateView.getPlate().setImages(gelimages);
                 }
             };
             toolbar.add(gelAction);

@@ -52,7 +52,7 @@ public class LIMSConnection {
             connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
             Statement statement = connection.createStatement();
             statement.execute("USE labbench");
-            ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseVersion LIMIT 1");
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
             if(!resultSet.next()) {
                 throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
             }
@@ -135,10 +135,10 @@ public class LIMSConnection {
             return Collections.EMPTY_LIST;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cycleSequencing ON cycleSequencing.workflow = workflow.id " +
+        StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id " +
                 "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
                 "LEFT JOIN extraction ON workflow.extractionId = extraction.id " +
-                "LEFT JOIN plate ON (plate.id = extraction.plate OR plate.id = pcr.plate OR plate.id = cycleSequencing.plate) "+
+                "LEFT JOIN plate ON (plate.id = extraction.plate OR plate.id = pcr.plate OR plate.id = cyclesequencing.plate) "+
                 "WHERE ");
 
         boolean somethingToSearch = false;
@@ -287,10 +287,10 @@ public class LIMSConnection {
         if((workflowDocuments == null || workflowDocuments.size() == 0) && refinedQueries.size() == 0) {
             return Collections.EMPTY_LIST;
         }
-        StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cycleSequencing ON cycleSequencing.plate = plate.id " +
+        StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN extraction ON extraction.plate = plate.id " +
-                "RIGHT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cycleSequencing.workflow) " +
+                "RIGHT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
                 "WHERE");
 
         Set<Integer> plateIds = new HashSet<Integer>();
@@ -356,7 +356,7 @@ public class LIMSConnection {
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
         List<ExtractionReaction> extractionReactions = new ArrayList<ExtractionReaction>();
         List<PCRReaction> pcrReactions = new ArrayList<PCRReaction>();
-        List<CycleSequencingReaction> cycleSequencingReactions = new ArrayList<CycleSequencingReaction>();
+        List<CycleSequencingReaction> cyclesequencingReactions = new ArrayList<CycleSequencingReaction>();
         while(resultSet.next()) {
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
@@ -375,7 +375,7 @@ public class LIMSConnection {
                 pcrReactions.add((PCRReaction)reaction);
             }
             else if(reaction instanceof CycleSequencingReaction) {
-                cycleSequencingReactions.add((CycleSequencingReaction)reaction);
+                cyclesequencingReactions.add((CycleSequencingReaction)reaction);
             }
         }
         final StringBuilder totalErrors = new StringBuilder("");
@@ -391,10 +391,10 @@ public class LIMSConnection {
                 totalErrors.append(pcrErrors+"\n");
             }
         }
-        if(cycleSequencingReactions.size() > 0) {
-            String cycleSequencingErrors = cycleSequencingReactions.get(0).areReactionsValid(cycleSequencingReactions);
-            if(cycleSequencingErrors != null) {
-                totalErrors.append(cycleSequencingErrors+"\n");
+        if(cyclesequencingReactions.size() > 0) {
+            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions);
+            if(cyclesequencingErrors != null) {
+                totalErrors.append(cyclesequencingErrors+"\n");
             }
         }
         if(totalErrors.length() > 0) {
@@ -406,12 +406,12 @@ public class LIMSConnection {
             ThreadUtilities.invokeNowOrLater(runnable);
         }
 
-        Map<Integer, List<GelImage>> gelImages = getGelImages(plateIds);
+        Map<Integer, List<GelImage>> gelimages = getGelImages(plateIds);
         List<PlateDocument> docs = new ArrayList<PlateDocument>();
         for(Plate plate : plateMap.values()) {
-            List<GelImage> gelImagesForPlate = gelImages.get(plate.getId());
-            if(gelImagesForPlate != null) {
-                plate.setImages(gelImagesForPlate);
+            List<GelImage> gelimagesForPlate = gelimages.get(plate.getId());
+            if(gelimagesForPlate != null) {
+                plate.setImages(gelimagesForPlate);
             }
             docs.add(new PlateDocument(plate));
         }
@@ -424,10 +424,10 @@ public class LIMSConnection {
         if(plateIds == null || plateIds.size() == 0) {
             return Collections.EMPTY_MAP;
         }
-        StringBuilder sql = new StringBuilder("SELECT * FROM gelImages WHERE (");
+        StringBuilder sql = new StringBuilder("SELECT * FROM gelimages WHERE (");
         for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
             Integer i = it.next();
-            sql.append("gelImages.plate=" + i);
+            sql.append("gelimages.plate=" + i);
             if (it.hasNext()) {
                 sql.append(" OR ");
             }

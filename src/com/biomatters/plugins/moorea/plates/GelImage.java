@@ -44,10 +44,10 @@ public class GelImage implements XMLSerializable {
     }
 
     public GelImage(ResultSet resultSet) throws SQLException{
-        this.notes = resultSet.getString("gelImages.notes");
-        this.plate = resultSet.getInt("gelImages.plate");
-        this.id = resultSet.getInt("gelImages.id");
-        this.imageBytes = resultSet.getBytes("gelImages.imageData");
+        this.notes = resultSet.getString("gelimages.notes");
+        this.plate = resultSet.getInt("gelimages.plate");
+        this.id = resultSet.getInt("gelimages.id");
+        this.imageBytes = resultSet.getBytes("gelimages.imageData");
         createImage();
     }
 
@@ -67,13 +67,13 @@ public class GelImage implements XMLSerializable {
     public PreparedStatement toSql(Connection conn) throws SQLException {
         PreparedStatement statement;
 //        if(id < 0) {
-            statement = conn.prepareStatement("INSERT INTO gelImages (plate, imageData, notes) VALUES (?, ?, ?)");
+            statement = conn.prepareStatement("INSERT INTO gelimages (plate, imageData, notes) VALUES (?, ?, ?)");
             statement.setInt(1, plate);
             statement.setObject(2, imageBytes);
             statement.setString(3, notes);
 //        }
 //        else {
-//            statement = conn.prepareStatement("UPDATE gelImages SET plate=?, imageData=?, notes=? WHERE id=?");
+//            statement = conn.prepareStatement("UPDATE gelimages SET plate=?, imageData=?, notes=? WHERE id=?");
 //            statement.setInt(1, id);
 //            statement.setInt(2, plate);
 //            statement.setObject(3, imageBytes);

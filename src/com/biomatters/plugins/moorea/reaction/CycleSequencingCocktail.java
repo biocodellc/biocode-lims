@@ -79,7 +79,7 @@ public class CycleSequencingCocktail extends Cocktail{
     }
 
     public String getSQLString() {
-        String s = "INSERT INTO cycleSequencing_cocktail (name, ddh2o, buffer, bigDye, notes) VALUES ('" + options.getValueAsString("name").replace("'", "''") + "', " + options.getValueAsString("ddh2o") + ", " + options.getValueAsString("buffer") + ", " + options.getValueAsString("bigDye") + ", '" + options.getValueAsString("notes").replace("'", "''") + "')";
+        String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes) VALUES ('" + options.getValueAsString("name").replace("'", "''") + "', " + options.getValueAsString("ddh2o") + ", " + options.getValueAsString("buffer") + ", " + options.getValueAsString("bigDye") + ", '" + options.getValueAsString("notes").replace("'", "''") + "')";
         System.out.println(s);
         return s;
     }

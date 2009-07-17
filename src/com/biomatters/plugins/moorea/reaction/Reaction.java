@@ -550,8 +550,8 @@ public abstract class Reaction implements XMLSerializable{
                 }
                 break;
             case CycleSequencing:
-                insertSQL = "INSERT INTO cycleSequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cycleSequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cycleSequencing.date WHERE id=?";
+                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cyclesequencing.date WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
