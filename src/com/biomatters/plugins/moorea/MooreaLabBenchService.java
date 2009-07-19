@@ -327,9 +327,9 @@ public class MooreaLabBenchService extends DatabaseService {
                         isLoggedIn = true;
                     }
                     catch (ConnectionException ex) {
-                        Dialogs.showMessageDialog("Could not connect to " + activeFIMSConnection.getLabel());
-                        logOut();
                         unBlock();
+                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"},"Error connecting to FIMS"), "There was an error connecting to "+activeFIMSConnection.getLabel(), ex.getMessage());
+                        logOut();
                         return;
                     }
 
