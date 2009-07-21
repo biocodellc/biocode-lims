@@ -70,7 +70,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         };
         primerListener.objectChanged();
         searchCache.addDocumentsUpdatedListener(primerListener);
-        if(searchCache.hasSearcdhedEntireDatabase()) {
+        if(searchCache.hasSearchedEntireDatabase()) {
             primerListener.objectChanged();
         }
     }
