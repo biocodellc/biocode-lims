@@ -105,7 +105,8 @@ public class PlateViewer extends JPanel {
                                             assert false : "Extractions do not have thermocycles!";
                                             break;
                                     }
-                                    for (Thermocycle cycle : newThermocycles) {//we're assuming that thermocycles will never be deleted (they shouldn't be)
+                                    thermocycleModel.removeAllElements();
+                                    for (Thermocycle cycle : getThermocycles()) {
                                         thermocycleModel.addElement(cycle);
                                     }
                                 } catch (final TransactionException e1) {
