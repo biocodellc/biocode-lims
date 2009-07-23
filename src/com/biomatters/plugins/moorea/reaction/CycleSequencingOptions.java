@@ -154,7 +154,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         addLabel("");
         OptionValue[] values = new OptionValue[] {new OptionValue("noValues", "Searching for Primers...")};
-        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer", null);
+        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer");
         addCustomOption(primerOption);
 
 

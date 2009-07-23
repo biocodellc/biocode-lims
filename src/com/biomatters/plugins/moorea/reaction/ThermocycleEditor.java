@@ -338,6 +338,9 @@ public class ThermocycleEditor extends JPanel {
         }
 
         private Rectangle2D getTextBounds(Graphics g, String labelText) {
+            if(labelText.length() == 0) {
+                return new Rectangle2D.Double(0,0,0,0);
+            }
             FontRenderContext frc = ((Graphics2D)g).getFontRenderContext();
             TextLayout tl = new TextLayout(labelText, g.getFont(), frc);
             return tl.getBounds();

@@ -488,8 +488,8 @@ public abstract class Reaction implements XMLSerializable{
                 }
                 break;
             case PCR:
-                insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=pcr.date WHERE id=?";
+                insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrAmount, revPrSequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrAmount=?, revPrSequence=?, date=pcr.date WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -501,7 +501,7 @@ public abstract class Reaction implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(14, reaction.getId());
+                            statement.setInt(17, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -516,6 +516,15 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setString(1, primerOptionValue.getLabel());
                         statement.setString(2, primerOptionValue.getDescription());
                         statement.setInt(3, (Integer)options.getValue("prAmount"));
+
+                        Object value2 = options.getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
+                        if(!(value instanceof Options.OptionValue)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        }
+                        Options.OptionValue primerOptionValue2 = (Options.OptionValue) value2;
+                        statement.setString(14, primerOptionValue2.getLabel());
+                        statement.setString(16, primerOptionValue2.getDescription());
+                        statement.setInt(15, (Integer)options.getValue("revPrAmount"));
                         if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
                         }

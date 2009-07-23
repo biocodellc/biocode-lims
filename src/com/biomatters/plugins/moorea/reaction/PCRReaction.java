@@ -63,8 +63,19 @@ public class PCRReaction extends Reaction {
         PrimerOption primerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
         String primerName = r.getString("pcr.prName");
         String primerSequence = r.getString("pcr.prSequence");
-        primerOption.setAndAddValue(primerName, primerSequence);
+        if(primerSequence.length() > 0) {
+            primerOption.setAndAddValue(primerName, primerSequence);
+        }
         options.setValue("prAmount", r.getInt("pcr.prAmount"));
+
+        PrimerOption reversePrimerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
+        String reversePrimerName = r.getString("pcr.revPrName");
+        String reversePrimerSequence = r.getString("pcr.revPrSequence");
+        if(reversePrimerSequence.length() > 0) {
+            reversePrimerOption.setAndAddValue(reversePrimerName, reversePrimerSequence);
+        }
+        options.setValue("revPrAmount", r.getInt("pcr.revPrAmount"));
+
         setCreated(r.getDate("pcr.date"));
         setPosition(r.getInt("pcr.location"));
         options.setValue("cocktail", r.getString("pcr.cocktail"));
@@ -112,7 +123,8 @@ public class PCRReaction extends Reaction {
     public List<DocumentField> getDefaultDisplayedFields() {
         return Arrays.asList(new DocumentField[] {
                 new DocumentField("Tissue ID", "", "tissueId", String.class, true, false),
-                new DocumentField("Primer", "", PCROptions.PRIMER_OPTION_ID, String.class, true, false),
+                new DocumentField("Forward Primer", "", PCROptions.PRIMER_OPTION_ID, String.class, true, false),
+                new DocumentField("Reverse Primer", "", PCROptions.PRIMER_REVERSE_OPTION_ID, String.class, true, false),
                 new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
         });
     }

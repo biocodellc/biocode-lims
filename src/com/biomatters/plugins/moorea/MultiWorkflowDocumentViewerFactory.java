@@ -47,11 +47,11 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public int getColumnCount() {
-                return 4;
+                return 5;
             }
 
             public String getColumnName(int columnIndex) {
-                String[] names = new String[] {"Name", "Extraction", "PCR", "Cycle Sequencing"};
+                String[] names = new String[] {"Name", "Extraction", "PCR forward primer", "PCR reverse primer", "Cycle Sequencing"};
                 return names[columnIndex];
             }
 
@@ -75,6 +75,9 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                         Reaction recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
                         return recentPCR != null ? new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_OPTION_ID), recentPCR.getBackgroundColor()) : null;
                     case 3 :
+                        recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
+                        return recentPCR != null ? new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_REVERSE_OPTION_ID), recentPCR.getBackgroundColor()) : null;
+                    case 4 :
                         Reaction recentCycleSequencing = doc.getMostRecentReaction(Reaction.Type.CycleSequencing);
                         return recentCycleSequencing != null ? new ObjectAndColor(recentCycleSequencing.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID), recentCycleSequencing.getBackgroundColor()) : null;
                 }

@@ -35,6 +35,7 @@ public class PCROptions extends ReactionOptions {
     private ComboBoxOption cocktailOption;
 
     public static final String PRIMER_OPTION_ID = "primer";
+    public static final String PRIMER_REVERSE_OPTION_ID = "revPrimer";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
     static final String LABEL_OPTION_ID = "label";
     static final String COCKTAIL_OPTION_ID = "cocktail";
@@ -133,15 +134,14 @@ public class PCROptions extends ReactionOptions {
         addComboBoxOption("runStatus", "Reaction state", passedValues, passedValues[0]);
 
         addLabel("");
-        beginAlignHorizontally("forward primer", false);
-        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer", null);
+        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Forward Primer");
         addCustomOption(primerOption);
-
-
-
         IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
         primerAmountOption.setUnits("ul");
-        endAlignHorizontally();
+        PrimerOption revPrimerOption = new PrimerOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer");
+        addCustomOption(revPrimerOption);
+        IntegerOption revPrimerAmountOption = addIntegerOption("revPrAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
+        revPrimerAmountOption.setUnits("ul");
 
 
         List<OptionValue> cocktails = new ArrayList<OptionValue>();
