@@ -24,6 +24,8 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
 
 /**
  * @author Steven Stones-Havas
@@ -354,22 +356,51 @@ public class PlateDocumentViewer extends DocumentViewer{
         return holderPanel;
     }
 
+    private Map<Cocktail, OptionsPanel> panelMap = new HashMap<Cocktail, OptionsPanel>();
+
     private OptionsPanel getCocktailPanel(Map.Entry<Cocktail, Integer> entry) {
-        Cocktail ct = entry.getKey();
-        int count = entry.getValue();
+        final Cocktail ct = entry.getKey();
+        final int count = entry.getValue();
+        if(panelMap.get(ct) != null) {
+            return panelMap.get(ct);
+        }
+        final JSpinner fudgeSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 100, 1));
+        JPanel fudgePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        fudgePanel.setOpaque(false);
+        fudgePanel.add(new JLabel("Fudge factor: "));
+        fudgePanel.add(fudgeSpinner);
+        fudgePanel.add(new JLabel("%"));
         OptionsPanel cockatilPanel = new OptionsPanel();
+        cockatilPanel.addSpanningComponent(fudgePanel);
         for(Options.Option option : ct.getOptions().getOptions()) {
             if(option instanceof Options.IntegerOption) {
-                Options.IntegerOption integerOption = (Options.IntegerOption)option;
-                JLabel label = new JLabel(integerOption.getValue() * count + " ul");
+                final Options.IntegerOption integerOption = (Options.IntegerOption)option;
+                final JLabel label = new JLabel();
+                ChangeListener listener = new ChangeListener() {
+                    public void stateChanged(ChangeEvent e) {
+                        double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
+                        label.setText((int) (fudgeFactor * integerOption.getValue() * count) + " ul");
+                    }
+                };
+                fudgeSpinner.addChangeListener(listener);
+                listener.stateChanged(null);
                 label.setOpaque(false);
                 cockatilPanel.addComponentWithLabel(integerOption.getLabel(), label, false);
             }
         }
-        JLabel countLabel = new JLabel("<html><b>" + (ct.getReactionVolume(ct.getOptions()) * count) + " ul</b></html>");
+        final JLabel countLabel = new JLabel();
+        ChangeListener changeListener = new ChangeListener(){
+            public void stateChanged(ChangeEvent e) {
+                double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
+                countLabel.setText("<html><b>" + ((int)(fudgeFactor * ct.getReactionVolume(ct.getOptions()) * count)) + " ul</b></html>");
+            }
+        };
+        fudgeSpinner.addChangeListener(changeListener);
+        changeListener.stateChanged(null);
         countLabel.setOpaque(false);
         cockatilPanel.addComponentWithLabel("<html><b>Total volume</b></html>", countLabel, false);
         cockatilPanel.setBorder(new OptionsPanel.RoundedLineBorder(ct.getName(), false));
+        panelMap.put(ct, cockatilPanel);
         return cockatilPanel;
     }
 
@@ -467,6 +498,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 if(cocktailCount.size() > 0) {
                     for(Map.Entry<Cocktail, Integer> entry : cocktailCount.entrySet()) {
                         JPanel cocktailPanel = getCocktailPanel(entry);
+                        ((Container)((JScrollPane)cocktailPanel.getComponent(0)).getViewport().getView()).getComponent(0).setVisible(false);
                         int widthIncriment = cocktailPanel.getPreferredSize().width + 10;
                         int heightIncriment = cocktailPanel.getPreferredSize().height + 10;
 
@@ -498,6 +530,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                             cocktailPanel.print(g);
                             g.translate(-cocktailWidth+widthIncriment, -(dimensions.height - availableHeight + cocktailHeight));
                         }
+                        ((Container)((JScrollPane)cocktailPanel.getComponent(0)).getViewport().getView()).getComponent(0).setVisible(true);
 
 
                     }
