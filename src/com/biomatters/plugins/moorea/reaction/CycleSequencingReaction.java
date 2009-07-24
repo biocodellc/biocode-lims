@@ -13,6 +13,7 @@ import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.FimsSample;
 import com.biomatters.plugins.moorea.ConnectionException;
 import com.biomatters.plugins.moorea.Workflow;
+import com.biomatters.plugins.moorea.plates.Plate;
 
 import java.util.*;
 import java.util.List;
@@ -47,7 +48,7 @@ public class CycleSequencingReaction extends Reaction{
     }
 
     private Options init(ResultSet r) throws SQLException {
-        setPlate(r.getInt("cyclesequencing.plate"));
+        setPlateId(r.getInt("cyclesequencing.plate"));
         setPosition(r.getInt("cyclesequencing.location"));
         setCreated(r.getDate("cyclesequencing.date"));
         setId(r.getInt("cyclesequencing.id"));
@@ -75,6 +76,9 @@ public class CycleSequencingReaction extends Reaction{
         options.setValue("cocktail", r.getString("cyclesequencing.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("cyclesequencing.cleanupPerformed"));
         options.setValue("cleanupMethod", r.getBoolean("cyclesequencing.cleanupMethod"));
+
+        setPlateName(r.getString("plate.name"));
+        setLocationString(Plate.getWellName(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))));
 
         int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {

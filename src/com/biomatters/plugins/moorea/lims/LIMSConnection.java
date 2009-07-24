@@ -298,7 +298,7 @@ public class LIMSConnection {
             for(int i=0; i < doc.getNumberOfParts(); i++) {
                 WorkflowDocument.ReactionPart p = (WorkflowDocument.ReactionPart)doc.getPart(i);
                 Reaction reaction = p.getReaction();
-                plateIds.add(reaction.getPlate());
+                plateIds.add(reaction.getPlateId());
             }
         }
         if(plateIds.size() > 0) {

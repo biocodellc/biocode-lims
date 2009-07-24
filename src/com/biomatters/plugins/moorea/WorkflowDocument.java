@@ -286,6 +286,10 @@ public class WorkflowDocument extends MuitiPartDocument {
                     optionsPanel.addSpanningComponent(new JLabel(reaction.getFieldValue(field.getCode()).toString()));
                 }
             }
+            if(reaction.getPlateId() >= 0) {
+                optionsPanel.addComponentWithLabel("<html><b>Plate Name: </b></html>", new JLabel(reaction.getPlateName()), false);
+                optionsPanel.addComponentWithLabel("<html><b>Well: </b></html>", new JLabel(reaction.getLocationString()), false);
+            }
             return optionsPanel;
         }
 

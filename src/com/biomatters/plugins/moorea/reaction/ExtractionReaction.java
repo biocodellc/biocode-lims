@@ -3,11 +3,9 @@ package com.biomatters.plugins.moorea.reaction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.moorea.*;
-import com.biomatters.plugins.moorea.lims.LIMSConnection;
 import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
 
@@ -18,8 +16,6 @@ import java.sql.SQLException;
 import java.sql.ResultSet;
 import java.sql.PreparedStatement;
 import java.sql.Connection;
-
-import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
@@ -47,9 +43,14 @@ public class ExtractionReaction extends Reaction{
         options.setValue("volume", r.getInt("extraction.volume"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
         options.setValue("notes", r.getString("extraction.notes"));
-        setPlate(r.getInt("extraction.plate"));
+        setPlateId(r.getInt("extraction.plate"));
         setPosition(r.getInt("extraction.location"));
         String s = r.getString("workflow.name");
+
+        setPlateName(r.getString("plate.name"));
+        setLocationString(Plate.getWellName(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))));
+        
+        
         if(s != null) {
             options.setValue("workflowId", s);
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("pcr.extractionId")));

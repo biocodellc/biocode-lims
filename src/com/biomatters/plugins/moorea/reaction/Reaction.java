@@ -41,7 +41,8 @@ import org.jdom.output.Format;
 public abstract class Reaction implements XMLSerializable{
     private boolean selected;
     private int id=-1;
-    private int plate;
+    private int plateId;
+    private String plateName;
     private Workflow workflow;
     private int position;
     protected boolean isError = false;
@@ -109,6 +110,18 @@ public abstract class Reaction implements XMLSerializable{
 
     public void setLocationString(String location) {
         this.locationString = location;
+    }
+
+    public String getPlateName() {
+        return plateName;
+    }
+
+    public void setPlateName(String plateName) {
+        this.plateName = plateName;
+    }
+
+    public String getLocationString() {
+        return locationString;
     }
 
     private static final int LINE_SPACING = 5;
@@ -216,8 +229,11 @@ public abstract class Reaction implements XMLSerializable{
         if(getId() >= 0) {
             element.addContent(new Element("id").setText(""+getId()));
         }
-        if(getPlate() >= 0) {
-            element.addContent(new Element("plate").setText(""+getPlate()));
+        if(getPlateId() >= 0) {
+            element.addContent(new Element("plate").setText(""+ getPlateId()));
+        }
+        if(plateName != null && plateName.length() > 0) {
+            element.addContent(new Element("plateName").setText(plateName));
         }
         if(isError) {
             element.addContent(new Element("isError").setText("true"));
@@ -244,14 +260,18 @@ public abstract class Reaction implements XMLSerializable{
         String thermoCycleId = element.getChildText("thermocycle");
         setPosition(Integer.parseInt(element.getChildText("position")));
         Element locationStringElement = element.getChild("wellLabel");
+        Element plateNameElement = element.getChild("plateName");
         if(element.getChild("id") != null) {
             setId(Integer.parseInt(element.getChildText("id")));
         }
         if(element.getChild("plate") != null) {
-            setPlate(Integer.parseInt(element.getChildText("plate")));
+            setPlateId(Integer.parseInt(element.getChildText("plate")));
         }
         if(locationStringElement != null) {
             locationString = locationStringElement.getText();
+        }
+        if(plateNameElement != null) {
+            plateName = plateNameElement.getText();
         }
         isError = element.getChild("isError") != null;
         Element fimsElement = element.getChild("fimsSample");
@@ -431,12 +451,12 @@ public abstract class Reaction implements XMLSerializable{
         this.id = id;
     }
 
-    public int getPlate() {
-        return plate;
+    public int getPlateId() {
+        return plateId;
     }
 
-    public void setPlate(int plate) {
-        this.plate = plate;
+    public void setPlateId(int plate) {
+        this.plateId = plate;
     }
 
     public Workflow getWorkflow() {
@@ -464,7 +484,7 @@ public abstract class Reaction implements XMLSerializable{
                     if(progress != null) {
                         progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
                     }
-                    if (!reaction.isEmpty() && reaction.plate >= 0) {
+                    if (!reaction.isEmpty() && reaction.plateId >= 0) {
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
@@ -480,7 +500,7 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setString(4, options.getValueAsString("parentExtraction"));
                         statement.setString(5, options.getValueAsString("sampleId"));
                         statement.setString(6, options.getValueAsString("extractionId"));
-                        statement.setInt(7, reaction.getPlate());
+                        statement.setInt(7, reaction.getPlateId());
                         statement.setInt(8, reaction.getPosition());
                         statement.setString(9, options.getValueAsString("notes"));
                         statement.execute();
@@ -497,7 +517,7 @@ public abstract class Reaction implements XMLSerializable{
                     if(progress != null) {
                         progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
                     }
-                    if (!reaction.isEmpty() && reaction.plate >= 0) {
+                    if (!reaction.isEmpty() && reaction.plateId >= 0) {
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
@@ -529,7 +549,7 @@ public abstract class Reaction implements XMLSerializable{
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
                         }
                         statement.setInt(4, reaction.getWorkflow().getId());
-                        statement.setInt(5, reaction.getPlate());
+                        statement.setInt(5, reaction.getPlateId());
                         statement.setInt(6, reaction.getPosition());
                         int cocktailId = -1;
                         Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
@@ -568,7 +588,7 @@ public abstract class Reaction implements XMLSerializable{
                     if(progress != null) {
                         progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
                     }
-                    if (!reaction.isEmpty() && reaction.plate >= 0) {
+                    if (!reaction.isEmpty() && reaction.plateId >= 0) {
 
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
@@ -592,7 +612,7 @@ public abstract class Reaction implements XMLSerializable{
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
                         }
                         statement.setInt(4, reaction.getWorkflow().getId());
-                        statement.setInt(5, reaction.getPlate());
+                        statement.setInt(5, reaction.getPlateId());
                         statement.setInt(6, reaction.getPosition());
                         int cocktailId = -1;
                         Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");

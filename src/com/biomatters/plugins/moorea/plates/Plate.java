@@ -3,7 +3,6 @@ package com.biomatters.plugins.moorea.plates;
 import com.biomatters.plugins.moorea.reaction.*;
 import com.biomatters.plugins.moorea.plates.GelImage;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.Workflow;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
@@ -79,7 +78,7 @@ public class Plate implements XMLSerializable {
         }
     }
 
-    private Size getSizeEnum(int size) {
+    public static Size getSizeEnum(int size) {
         if(size == 48) {
             return Size.w48;
         }
@@ -170,8 +169,9 @@ public class Plate implements XMLSerializable {
             for(int j = 0; j < cols; j++) {
                 int index = cols * i + j;
                 final Reaction reaction = Reaction.getNewReaction(type);
-                reaction.setPlate(id);
+                reaction.setPlateId(id);
                 reaction.setPosition(index);
+                reaction.setPlateName(getName());
                 if(type != null) {
                     reaction.setLocationString(getWellName(i,j));
                 }
@@ -187,7 +187,30 @@ public class Plate implements XMLSerializable {
         return reactions[cols * row + col];    
     }
 
-    public String getWellName(int row, int col) {
+    public static String getWellName(int position, Size size) {
+        int cols;
+        if(size != null) {
+            switch(size) {
+                case w48 :
+                    cols = 6;
+                    break;
+                case w96 :
+                    cols = 12;
+                    break;
+                case w384 :
+                default :
+                    cols = 24;
+            }
+        }
+        else {
+            cols = 1;
+        }
+        int row = position / cols;
+        int col = position % cols;
+        return getWellName(row, col);
+    }
+
+    public static String getWellName(int row, int col) {
         return ""+(char)(65+row)+(1+col);
     }
 
@@ -230,11 +253,10 @@ public class Plate implements XMLSerializable {
                 r = new CycleSequencingReaction(resultSet);
                 break;
         }
-        r.setPlate(this.id);
+        r.setPlateId(this.id);
+        r.setPlateName(getName());
         reactions[r.getPosition()] = r;
-        int row = r.getPosition() / cols;
-        int col = r.getPosition() % cols;
-        r.setLocationString(getWellName(row, col));
+        r.setLocationString(getWellName(r.getPosition(), plateSize));
         return r;
     }
 
@@ -245,7 +267,7 @@ public class Plate implements XMLSerializable {
     public void setId(int id) {
         this.id = id;
         for(Reaction reaction : reactions) {
-            reaction.setPlate(id);
+            reaction.setPlateId(id);
         }
         for(GelImage image : images) {
             image.setPlate(id);

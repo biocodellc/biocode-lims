@@ -2,20 +2,12 @@ package com.biomatters.plugins.moorea.reaction;
 
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.DocumentType;
-import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.plugins.moorea.*;
+import com.biomatters.plugins.moorea.plates.Plate;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
-import org.virion.jam.util.SimpleListener;
-import org.jdom.Element;
 
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import java.util.*;
 import java.util.List;
 import java.sql.ResultSet;
@@ -44,7 +36,7 @@ public class PCRReaction extends Reaction {
 
     private Options init(ResultSet r) throws SQLException {
         setId(r.getInt("pcr.id"));
-        setPlate(r.getInt("pcr.plate"));
+        setPlateId(r.getInt("pcr.plate"));
         ReactionOptions options = getOptions();
         options.setValue("extractionId", r.getString("pcr.extractionId"));
 
@@ -82,6 +74,9 @@ public class PCRReaction extends Reaction {
         options.setValue("cleanupPerformed", r.getBoolean("pcr.cleanupPerformed"));
         options.setValue("cleanupMethod", r.getString("pcr.cleanupMethod"));
         options.setValue("notes", r.getString("pcr.notes"));
+
+        setPlateName(r.getString("plate.name"));
+        setLocationString(Plate.getWellName(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))));
 
         int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {
