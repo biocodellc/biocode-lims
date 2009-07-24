@@ -51,7 +51,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public String getColumnName(int columnIndex) {
-                String[] names = new String[] {"Name", "Extraction", "PCR forward primer", "PCR reverse primer", "Cycle Sequencing"};
+                String[] names = new String[] {"Name", "Extraction", "PCR forward primer", "PCR reverse primer", "PCR plate", "Cycle Sequencing", "Cycle Sequencing Plate"};
                 return names[columnIndex];
             }
 
@@ -65,21 +65,28 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
 
             public Object getValueAt(int rowIndex, int columnIndex) {
                 WorkflowDocument doc = (WorkflowDocument)docs[rowIndex].getDocumentOrCrash();
+                Reaction recentExtraction = doc.getMostRecentReaction(Reaction.Type.Extraction);
+                Reaction recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
+                Reaction recentCycleSequencing = doc.getMostRecentReaction(Reaction.Type.CycleSequencing);
                 switch(columnIndex) {
                     case 0 :
                         return doc.getName();
                     case 1 :
-                        Reaction recentExtraction = doc.getMostRecentReaction(Reaction.Type.Extraction);
                         return recentExtraction != null ? recentExtraction.getExtractionId() : null;
                     case 2 :
-                        Reaction recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
-                        return recentPCR != null ? new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_OPTION_ID), recentPCR.getBackgroundColor()) : null;
+                        if(recentPCR == null) return null;
+                        int amount = (Integer)recentPCR.getFieldValue("prAmount");
+                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_OPTION_ID) + (amount > 0 ? " "+amount+"uL" : ""), recentPCR.getBackgroundColor());
                     case 3 :
-                        recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
-                        return recentPCR != null ? new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_REVERSE_OPTION_ID), recentPCR.getBackgroundColor()) : null;
+                        if(recentPCR == null) return null;
+                        amount = (Integer)recentPCR.getFieldValue("revPrAmount");
+                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_REVERSE_OPTION_ID) + (amount > 0 ? " "+amount+"uL" : ""), recentPCR.getBackgroundColor());
                     case 4 :
-                        Reaction recentCycleSequencing = doc.getMostRecentReaction(Reaction.Type.CycleSequencing);
+                        return recentPCR != null ? new ObjectAndColor(recentPCR.getPlateName()+" "+recentPCR.getLocationString(), recentPCR.getBackgroundColor()) : null;
+                    case 5 :
                         return recentCycleSequencing != null ? new ObjectAndColor(recentCycleSequencing.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID), recentCycleSequencing.getBackgroundColor()) : null;
+                    case 6 :
+                        return recentCycleSequencing != null ? new ObjectAndColor(recentCycleSequencing.getPlateName()+" "+recentCycleSequencing.getLocationString(), recentCycleSequencing.getBackgroundColor()) : null;
                 }
                 return null;
             }

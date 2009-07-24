@@ -42,16 +42,66 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
         };
     }
 
+    private static class PrimerIdentifier{
+        public enum Type {
+            forward,
+            reverse
+        }
+
+        private Type type;
+        private String name;
+
+        private PrimerIdentifier(Type type, String name) {
+            this.type = type;
+            this.name = name;
+        }
+
+        public Type getType() {
+            return type;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof PrimerIdentifier)) return false;
+
+            PrimerIdentifier that = (PrimerIdentifier) o;
+
+            if (!name.equals(that.name)) return false;
+            if (type != that.type) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = type.hashCode();
+            result = 31 * result + name.hashCode();
+            return result;
+        }
+    }
+
     public TableModel getTableModel(final AnnotatedPluginDocument[] docs) {
-        Set<String> primerNamesSet = new HashSet<String>();
+        Set<PrimerIdentifier> primerNamesSet = new HashSet<PrimerIdentifier>();
         for(AnnotatedPluginDocument doc : docs) {
             WorkflowDocument workflow = (WorkflowDocument)doc.getDocumentOrCrash();
             List<Reaction> reactions = workflow.getReactions(type);
             for(Reaction r : reactions) {
-                primerNamesSet.add(((Options.OptionValue)r.getOptions().getValue("primer")).getName());
+                Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("primer");
+                primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.forward, primerValue.getName()));
+            }
+            if(type == Reaction.Type.PCR) {
+                for(Reaction r : reactions) {
+                    Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("revPrimer");
+                    primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.reverse, primerValue.getName()));
+                }
             }
         }
-        final List<String> primerList = new ArrayList<String>(primerNamesSet);
+        final List<PrimerIdentifier> primerList = new ArrayList<PrimerIdentifier>(primerNamesSet);
 
         final ObjectAndColor[][] tableValues = new ObjectAndColor[docs.length][primerNamesSet.size()];
         ObjectAndColor notTriedValue = new ObjectAndColor("Not tried", Color.black);
@@ -64,9 +114,10 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
             WorkflowDocument workflow = (WorkflowDocument) doc.getDocumentOrCrash();
             List<Reaction> reactions = workflow.getReactions(type);
             for (int j = 0; j < primerList.size(); j++) {
-                String s = primerList.get(j);
+                PrimerIdentifier primer = primerList.get(j);
+                String s = primer.getName();
                 for (Reaction r : reactions) {
-                    String primerName = ((Options.OptionValue) r.getOptions().getValue("primer")).getName();
+                    String primerName = ((Options.OptionValue) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer")).getName();
                     if (primerName.equals(s)) {
                         tableValues[i][j] = new ObjectAndColor(r.getOptions().getValueAsString("runStatus"), r.getBackgroundColor());
                     }
@@ -90,7 +141,8 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 if(columnIndex == 1) {
                     return "Extraction";
                 }
-                return primerList.get(columnIndex-2);
+                PrimerIdentifier primerIdentifier = primerList.get(columnIndex - 2);
+                return primerIdentifier.getName() + " ("+primerIdentifier.getType()+")";
             }
 
             public Class<?> getColumnClass(int columnIndex) {

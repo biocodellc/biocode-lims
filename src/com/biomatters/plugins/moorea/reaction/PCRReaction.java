@@ -60,7 +60,7 @@ public class PCRReaction extends Reaction {
         }
         options.setValue("prAmount", r.getInt("pcr.prAmount"));
 
-        PrimerOption reversePrimerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
+        PrimerOption reversePrimerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
         String reversePrimerName = r.getString("pcr.revPrName");
         String reversePrimerSequence = r.getString("pcr.revPrSequence");
         if(reversePrimerSequence.length() > 0) {
