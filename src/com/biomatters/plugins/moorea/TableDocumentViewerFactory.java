@@ -3,11 +3,13 @@ package com.biomatters.plugins.moorea;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.components.GTable;
 
 import javax.swing.table.TableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.*;
 import java.awt.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steven Stones-Havas
@@ -24,7 +26,17 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
             public JComponent getComponent() {
                 TableModel model = getTableModel(annotatedDocuments);
                 TableSorter sorter = new TableSorter(model);
-                JTable table = new JTable(sorter);
+                final AtomicReference<JScrollPane> scroller = new AtomicReference<JScrollPane>();
+                JTable table = new GTable(sorter){
+                    @Override
+                    public Dimension getPreferredSize() {
+                        Dimension size = super.getPreferredSize();
+                        return new Dimension(Math.max(scroller.get().getViewportBorderBounds().width, size.width), size.height);
+                    }
+
+                };
+                scroller.set(new JScrollPane(table));
+                table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);                
                 table.setGridColor(Color.lightGray);
                 sorter.setTableHeader(table.getTableHeader());
                 table.setDefaultRenderer(ObjectAndColor.class, new DefaultTableCellRenderer(){
@@ -42,7 +54,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                         return comp;
                     }
                 });
-                return new JScrollPane(table);
+                return scroller.get();
             }
         };
     }
