@@ -2,6 +2,7 @@ package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
+import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.components.GTable;
 
@@ -23,11 +24,12 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
         return new DocumentViewer(){
+            JTable table;
             public JComponent getComponent() {
                 TableModel model = getTableModel(annotatedDocuments);
                 TableSorter sorter = new TableSorter(model);
                 final AtomicReference<JScrollPane> scroller = new AtomicReference<JScrollPane>();
-                JTable table = new GTable(sorter){
+                table = new GTable(sorter){
                     @Override
                     public Dimension getPreferredSize() {
                         Dimension size = super.getPreferredSize();
@@ -56,6 +58,11 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 });
                 return scroller.get();
             }
+
+            @Override
+            public ExtendedPrintable getExtendedPrintable() {
+                return new JTablePrintable(table);
+            }
         };
     }
 
@@ -78,6 +85,11 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
         public Color getColor() {
             return color;
+        }
+
+        @Override
+        public String toString() {
+            return getObject() == null ? null : getObject().toString();
         }
     }
 }

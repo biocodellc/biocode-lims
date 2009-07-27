@@ -118,8 +118,9 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 String s = primer.getName();
                 for (Reaction r : reactions) {
                     String primerName = ((Options.OptionValue) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer")).getName();
+                    int primerAmount = (Integer)r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "prAmount" : "revPrAmount");
                     if (primerName.equals(s)) {
-                        tableValues[i][j] = new ObjectAndColor(r.getOptions().getValueAsString("runStatus"), r.getBackgroundColor());
+                        tableValues[i][j] = new ObjectAndColor(r.getPlateName()+" "+r.getLocationString()+", "+primerAmount+"uL", r.getBackgroundColor());
                     }
                 }
             }
