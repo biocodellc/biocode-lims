@@ -58,4 +58,32 @@ public class JTablePrintable extends ExtendedPrintable {
         int headerHeight = header == null ? 0 : header.getPreferredSize().height;
         return (int)Math.ceil(((double)table.getRowCount())/((dimensions.height-headerHeight)/rowHeight));
     }
+
+    private int getHeight(int width, Options options) {
+        int headerHeight = 0;
+        if(header != null) {
+            headerHeight = header.getPreferredSize().height;
+        }
+        return table.getPreferredSize().height + headerHeight;
+    }
+
+    @Override
+    public int getDefaultHeight(int width, Options options) {
+        return getHeight(width, options);
+    }
+
+    @Override
+    public int getMaximumHeight(int width, Options options) {
+        return getHeight(width, options);
+    }
+
+    @Override
+    public int getMinimumHeight(int width, Options options) {
+        return getHeight(width, options);
+    }
+
+    @Override
+    public int getDefaultWidth(Options options) {
+        return table.getPreferredSize().width;
+    }
 }
