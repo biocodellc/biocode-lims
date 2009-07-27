@@ -54,7 +54,7 @@ public class JTablePrintable extends ExtendedPrintable {
     }
 
     public int getPagesRequired(Dimension dimensions, Options options) {
-        int rowHeight = table.getRowHeight()+1;
+        int rowHeight = table.getRowHeight();
         int headerHeight = header == null ? 0 : header.getPreferredSize().height;
         return (int)Math.ceil(((double)table.getRowCount())/((dimensions.height-headerHeight)/rowHeight));
     }
