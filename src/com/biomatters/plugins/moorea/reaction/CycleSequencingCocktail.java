@@ -30,6 +30,9 @@ public class CycleSequencingCocktail extends Cocktail{
         options.setValue("buffer", resultSet.getInt("buffer"));
         options.setValue("bigDye", resultSet.getInt("bigDye"));
         options.setValue("notes", resultSet.getString("notes"));
+        options.setValue("bufferConc", resultSet.getInt("bufferConc"));
+        options.setValue("bigDyeConc", resultSet.getInt("bigDyeConc"));
+        options.setValue("templateConc", resultSet.getInt("templateConc"));
     }
 
     public int getId() {
@@ -44,12 +47,18 @@ public class CycleSequencingCocktail extends Cocktail{
         if(options == null) {
             options = new Options(this.getClass());
             Options.StringOption nameOption = options.addStringOption("name", "Name", "");
-            Options.IntegerOption ddh2oOptionOption = options.addIntegerOption("ddh2o", "ddH2O", 1, 1, Integer.MAX_VALUE);
-            ddh2oOptionOption.setUnits("ul");
+            Options.IntegerOption templateConcOption = options.addIntegerOption("templateConc", "Template/target concentration", 0, 0, Integer.MAX_VALUE);
+            templateConcOption.setUnits("uM");
+            Options.IntegerOption ddh2oOption = options.addIntegerOption("ddh2o", "ddH2O", 1, 1, Integer.MAX_VALUE);
+            ddh2oOption.setUnits("ul");
             Options.IntegerOption bufferOption = options.addIntegerOption("buffer", "5x buffer", 1, 1, Integer.MAX_VALUE);
             bufferOption.setUnits("ul");
+            Options.IntegerOption bufferConcOption = options.addIntegerOption("bufferConc", "Buffer concentration", 0, 0, Integer.MAX_VALUE);
+            bufferConcOption.setUnits("uM");
             Options.IntegerOption dyeOption = options.addIntegerOption("bigDye", "Big Dye", 1, 1, Integer.MAX_VALUE);
             dyeOption.setUnits("ul");
+            Options.IntegerOption bigDyeConcOption = options.addIntegerOption("bigDyeConc", "Big Dye concentration", 0, 0, Integer.MAX_VALUE);
+            bigDyeConcOption.setUnits("uM");
             TextAreaOption areaOption = new TextAreaOption("notes", "Notes", "");
             options.addCustomOption(areaOption);
         }
@@ -79,7 +88,7 @@ public class CycleSequencingCocktail extends Cocktail{
     }
 
     public String getSQLString() {
-        String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes) VALUES ('" + options.getValueAsString("name").replace("'", "''") + "', " + options.getValueAsString("ddh2o") + ", " + options.getValueAsString("buffer") + ", " + options.getValueAsString("bigDye") + ", '" + options.getValueAsString("notes").replace("'", "''") + "')";
+        String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes, bufferConc, bigDyeConc, templateConc) VALUES ('" + options.getValueAsString("name").replace("'", "''") + "', " + options.getValueAsString("ddh2o") + ", " + options.getValueAsString("buffer") + ", " + options.getValueAsString("bigDye") + ", '" + options.getValueAsString("notes").replace("'", "''") + "', "+options.getValue("bufferConc")+", "+options.getValue("bigDyeConc")+", "+options.getValue("templateConc")+")";
         System.out.println(s);
         return s;
     }

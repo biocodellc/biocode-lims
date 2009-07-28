@@ -31,29 +31,47 @@ public class PCRCocktail extends Cocktail{
         options.setValue("dntp", resultSet.getInt("dNTP"));
         options.setValue("taq", resultSet.getInt("taq"));
         options.setValue("notes", resultSet.getString("notes"));
+        options.setValue("bufferConc", resultSet.getInt("bufferConc"));
+        options.setValue("mgConc", resultSet.getInt("mgConc"));
+        options.setValue("bsaConc", resultSet.getInt("bsaConc"));
+        options.setValue("dntpConc", resultSet.getInt("dNTPConc"));
+        options.setValue("taqConc", resultSet.getInt("taqConc"));
+        options.setValue("templateConc", resultSet.getInt("templateConc"));
     }
 
     public PCRCocktail() {
         options = new Options(this.getClass());
         Options.StringOption nameOption = options.addStringOption("name", "Name", "");
+        Options.IntegerOption tempateConcOption = options.addIntegerOption("templateConc", "Template/target Concentration", 0, 0, Integer.MAX_VALUE);
+        tempateConcOption.setUnits("uM");
         Options.IntegerOption ddh2oOption = options.addIntegerOption("ddh20", "ddH20", 1, 0, Integer.MAX_VALUE);
         ddh2oOption.setUnits("ul");
         Options.IntegerOption bufferOption = options.addIntegerOption("buffer", "10x PCR Buffer", 1, 0, Integer.MAX_VALUE);
         bufferOption.setUnits("ul");
+        Options.IntegerOption bufferConcOption = options.addIntegerOption("bufferConc", "buffer Concentration", 0, 0, Integer.MAX_VALUE);
+        bufferConcOption.setUnits("uM");
         Options.IntegerOption mgOption = options.addIntegerOption("mg", "Mg", 1, 0, Integer.MAX_VALUE);
         mgOption.setUnits("ul");
+        Options.IntegerOption mgConcOption = options.addIntegerOption("mgConc", "Mg Concentration", 0, 0, Integer.MAX_VALUE);
+        mgConcOption.setUnits("uM");
         Options.IntegerOption bsaOption = options.addIntegerOption("bsa", "BSA", 1, 0, Integer.MAX_VALUE);
         bsaOption.setUnits("ul");
+        Options.IntegerOption bsaConcOption = options.addIntegerOption("bsaConc", "bsa Concentration", 0, 0, Integer.MAX_VALUE);
+        bsaConcOption.setUnits("uM");
         Options.IntegerOption dntpOption = options.addIntegerOption("dntp", "dNTPs", 1, 0, Integer.MAX_VALUE);
         dntpOption.setUnits("ul");
+        Options.IntegerOption dntpConcOption = options.addIntegerOption("dntpConc", "dntp Concentration", 0, 0, Integer.MAX_VALUE);
+        dntpConcOption.setUnits("uM");
         Options.IntegerOption taqOption = options.addIntegerOption("taq", "TAQ", 1, 0, Integer.MAX_VALUE);
         taqOption.setUnits("ul");
+        Options.IntegerOption taqConcOption = options.addIntegerOption("taqConc", "taq Concentration", 0, 0, Integer.MAX_VALUE);
+        taqConcOption.setUnits("uM");
         TextAreaOption areaOption = new TextAreaOption("notes", "Notes", "");
         options.addCustomOption(areaOption);
     }
 
     public String getSQLString() {
-        return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddh20")+", "+options.getValueAsString("buffer")+", "+options.getValueAsString("mg")+", "+options.getValueAsString("bsa")+", "+options.getValueAsString("dntp")+", "+options.getValueAsString("taq")+", '"+options.getValueAsString("notes")+"')";
+        return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes, bufferConc, mgConc, dNTPConc, taqConc, templateConc, bsaConc) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddh20")+", "+options.getValueAsString("buffer")+", "+options.getValueAsString("mg")+", "+options.getValueAsString("bsa")+", "+options.getValueAsString("dntp")+", "+options.getValueAsString("taq")+", '"+options.getValueAsString("notes")+"', "+options.getValue("bufferConc")+", "+options.getValue("mgConc")+", "+options.getValue("dntpConc")+", "+options.getValue("taqConc")+", "+options.getValue("templateConc")+", "+options.getValue("bsaConc")+")";
     }
 
     public int getId() {

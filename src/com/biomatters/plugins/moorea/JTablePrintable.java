@@ -26,7 +26,7 @@ public class JTablePrintable extends ExtendedPrintable {
 
 
     public int print(Graphics2D graphics, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
-        if(pageIndex > getPagesRequired(dimensions, options)) {
+        if(pageIndex >= getPagesRequired(dimensions, options)) {
             return Printable.NO_SUCH_PAGE;
         }
         int rowHeight = table.getRowHeight();

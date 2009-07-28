@@ -74,7 +74,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new CycleSequencingCocktail().getAllCocktailsOfType(), CycleSequencingCocktail.class, null);
+                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new CycleSequencingCocktail().getAllCocktailsOfType(), CycleSequencingCocktail.class, cocktailButton.getComponent());
                 if (newCocktails.size() > 0) {
                     Runnable runnable = new Runnable() {
                         public void run() {

@@ -63,7 +63,7 @@ public class PCROptions extends ReactionOptions {
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), PCRCocktail.class, null);
+                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), PCRCocktail.class, cocktailOption.getComponent());
                 if (newCocktails.size() > 0) {
                     Runnable runnable = new Runnable() {
                         public void run() {
