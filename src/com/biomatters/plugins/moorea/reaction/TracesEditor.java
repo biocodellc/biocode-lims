@@ -60,12 +60,7 @@ public class TracesEditor {
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                List<AnnotatedPluginDocument> pluginDocuments = new ArrayList<AnnotatedPluginDocument>();
-                                for (int i = 0; i < sequenceFiles.length && !progress.isCanceled(); i++) {
-                                    File f = sequenceFiles[i];
-                                    List<AnnotatedPluginDocument> docs = PluginUtilities.importDocuments(f, ProgressListener.EMPTY);
-                                    pluginDocuments.addAll(docs);
-                                }
+                                List<AnnotatedPluginDocument> pluginDocuments = ReactionUtilities.importDocuments(sequenceFiles, progress);
                                 if (!progress.isCanceled()) {
                                     updatePanel(pluginDocuments);
                                 }
@@ -188,32 +183,16 @@ public class TracesEditor {
     private void updatePanel(final List<AnnotatedPluginDocument> pluginDocuments){
         Runnable runnable = new Runnable() {
             public void run() {
-                List<NucleotideSequenceDocument> nucleotideDocuments = new ArrayList<NucleotideSequenceDocument>();
-                if(pluginDocuments == null || pluginDocuments.size() == 0) {
-                    Dialogs.showMessageDialog("No documents were imported!");
-                    return;
-                }
-                for(AnnotatedPluginDocument doc : pluginDocuments) {
-                    try {
-                        if(SequenceListDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-                            nucleotideDocuments.addAll(((SequenceListDocument)doc.getDocument()).getNucleotideSequences());
-                        }
-                        else if(NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-                                nucleotideDocuments.add((NucleotideSequenceDocument)doc.getDocument());
-                        }
-                        else {
-                            Dialogs.showMessageDialog("You can only import nucleotide sequences.  The document "+doc.getName()+" was not a nucleotide sequence.");
-                            return;
-                        }
-                    } catch (DocumentOperationException e1) {
-                        Dialogs.showMessageDialog(e1.getMessage());
-                        return;
-                    }
+                List<NucleotideSequenceDocument> nucleotideDocuments = null;
+                try {
+                    nucleotideDocuments = ReactionUtilities.getSequencesFromAnnotatedPluginDocuments(pluginDocuments);
+                } catch (IllegalArgumentException e) {
+                    Dialogs.showMessageDialog(e.getMessage());
                 }
                 if(sequences != null) {
                     nucleotideDocuments.addAll(sequences);
-                    sequences = nucleotideDocuments;
                 }
+                sequences = nucleotideDocuments;
                 updateViewer(nucleotideDocuments);
             }
         };

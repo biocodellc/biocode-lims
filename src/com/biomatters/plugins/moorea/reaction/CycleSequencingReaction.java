@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.plugins.moorea.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
@@ -34,7 +35,7 @@ import org.jdom.Element;
  *          Created on 24/06/2009 6:02:38 PM
  */
 public class CycleSequencingReaction extends Reaction{
-    private ReactionOptions options;
+    private CycleSequencingOptions options;
     private List<SequenceDocument> traces;
 
     public CycleSequencingReaction() {
@@ -123,7 +124,7 @@ public class CycleSequencingReaction extends Reaction{
         if(!(op instanceof CycleSequencingOptions)) {
             throw new IllegalArgumentException("Options must be instances of CycleSequencingOptions");
         }
-        this.options = op;
+        this.options = (CycleSequencingOptions)op;
     }
 
     public Cocktail getCocktail() {
@@ -142,6 +143,10 @@ public class CycleSequencingReaction extends Reaction{
                 new DocumentField("Primer", "", CycleSequencingOptions.PRIMER_OPTION_ID, String.class, true, false),
                 new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
         });
+    }
+
+    public void addSequences(List<NucleotideSequenceDocument> sequences) {
+        options.addSequences(sequences);
     }
 
     public Color _getBackgroundColor() {

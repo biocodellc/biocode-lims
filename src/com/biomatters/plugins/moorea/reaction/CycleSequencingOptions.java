@@ -197,6 +197,15 @@ public class CycleSequencingOptions extends ReactionOptions {
         this.sequences = sequences;
     }
 
+    public void addSequences(List<NucleotideSequenceDocument> sequences) {
+        if(this.sequences == null) {
+            this.sequences = new ArrayList<NucleotideSequenceDocument>(sequences);
+        }
+        else {
+            this.sequences.addAll(sequences);
+        }
+    }
+
     private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
         ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
         for(AnnotatedPluginDocument doc : documents) {

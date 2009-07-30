@@ -772,11 +772,11 @@ public class MooreaLabBenchService extends DatabaseService {
                     throw new RuntimeException("An exception was caught in another thread", e);
                 }
                 finally {
-                    unBlock();
+                    unSynchronizedUnBlock();
                 }
             }
         };
-        new Thread(r).start();
+        new Thread(r, "Moorea blocking thread").start();
         block(message, parentComponent);
     }
 
@@ -807,6 +807,19 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public static synchronized void unBlock() {
+        Runnable runnable = new Runnable() {
+            public void run() {
+                if(blockingDialog != null) {
+                    blockingDialog.setVisible(false);
+                    blockingDialog = null;
+                }
+            }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
+    }
+
+
+    public static void unSynchronizedUnBlock() {
         Runnable runnable = new Runnable() {
             public void run() {
                 if(blockingDialog != null) {

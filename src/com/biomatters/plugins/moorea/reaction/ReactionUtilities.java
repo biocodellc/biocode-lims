@@ -1,14 +1,20 @@
 package com.biomatters.plugins.moorea.reaction;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.License;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.ButtonOption;
+import com.biomatters.plugins.moorea.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.plates.Plate;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
@@ -24,9 +30,13 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.FilenameFilter;
+import java.io.File;
+import java.io.IOException;
 
 import org.virion.jam.util.SimpleListener;
 import org.jdom.Element;
+import jebl.util.ProgressListener;
 
 /**
  * @author Steven Stones-Havas
@@ -37,6 +47,242 @@ import org.jdom.Element;
 public class ReactionUtilities {
     private static String PRO_VERSION_INFO = "<html><b>All</b></html>";
     private static String FREE_VERSION_INFO = "Editing in Geneious Pro only";
+
+
+    /**
+     * Shows a dialog and tries to get chromatograms for each reaction by parsing the well name out of the abi file names
+     * @param plate the cycle sequencing plate to modify
+     * @param owner
+     * @return true if the user clicked OK on the dialog
+     */
+    public static boolean bulkLoadChromatograms(Plate plate, JComponent owner) {
+        if(plate == null || plate.getReactionType() != Reaction.Type.CycleSequencing) {
+            throw new IllegalArgumentException("You may only call this method with Cycle Sequencing plates");
+        }
+        final List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
+        for(Reaction r : plate.getReactions()) {
+            if(r instanceof CycleSequencingReaction) {
+                reactions.add((CycleSequencingReaction)r);
+            }
+        }
+
+        Options options = new Options(ReactionUtilities.class);
+        Options.FileSelectionOption selectionOption = options.addFileSelectionOption("inputFolder", "Folder containing chromats", "", new String[0], "Browse...", new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                File file = new File(dir, name);
+                return file.exists() && file.isDirectory();
+            }
+        });
+
+
+        options.beginAlignHorizontally(null, false);
+        Options.Option label = options.addLabel("Well name is:");
+        label.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
+        List<Options.OptionValue> namePartValues = getNamePartValues(6);
+        Options.ComboBoxOption namePartOption2 = options.addComboBoxOption("namePart2", "", namePartValues, namePartValues.get(0));
+        namePartOption2.setDescription("Each name is split into segments by the given separator, then the n-th segment is used to identify the sequence's well");
+        options.addLabel("part of name,");
+        options.endAlignHorizontally();
+        options.beginAlignHorizontally(null, false);
+        Options.BooleanOption checkPlateName = options.addBooleanOption("checkPlateName", "", false);
+        Options.Option<String, ? extends JComponent> label2 = options.addLabel("Check plate name is correct, where plate name is:");
+        checkPlateName.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
+        Options.ComboBoxOption namePartOption = options.addComboBoxOption("namePart", "", namePartValues, namePartValues.get(0));
+        namePartOption.setDescription("Each name is split into segments by the given separator, then the n-th segment is used to identify the sequence's plate");
+        Options.Option<String, ? extends JComponent> label3 = options.addLabel("part of name,");
+        checkPlateName.addDependent(namePartOption,  true);
+        checkPlateName.addDependent(label2, true);
+        checkPlateName.addDependent(label3, true);
+        options.endAlignHorizontally();
+        options.beginAlignHorizontally(null, false);
+        options.addLabel(" seperated by");
+        Options.EditableComboBoxOption nameSeperatorOption = options.addEditableComboBoxOption("nameSeparator", "", Seperator.hyphen.label, getPossibleSeperators());
+        nameSeperatorOption.setDescription("The character at which each name is split (there should be one of these on either side of the identifier in each name).");
+        options.endAlignHorizontally();
+
+        if(!Dialogs.showOptionsDialog(options, "Bulk add chromatograms", true, owner)){
+            return false;    
+        }
+
+        String separatorString = null;
+        String seperatorLabel = nameSeperatorOption.getValue();
+        for (Seperator seperator : Seperator.values()) {
+            if(seperator.label.equals(seperatorLabel)) {
+                separatorString = seperator.sepString;
+            }
+        }
+        if(separatorString == null) {
+            assert false : "separator string was null!";
+            System.out.println("separator string was null!");
+            return false;
+        }
+        final int platePart = Integer.parseInt(((Options.OptionValue)namePartOption.getValue()).getName());
+        final int wellPart = Integer.parseInt(((Options.OptionValue)namePartOption2.getValue()).getName());
+        final boolean checkPlate = (Boolean)checkPlateName.getValue();
+
+        final File folder = new File(selectionOption.getValue());
+        if(!folder.exists()) {
+            throw new IllegalStateException(folder.getAbsolutePath()+" does not exist!");
+        }
+        if(!folder.isDirectory()) {
+            throw new IllegalStateException(folder.getAbsolutePath()+" is not a folder!");
+        }
+
+        final String separatorString1 = separatorString;
+        Runnable runnable = new Runnable() {
+            public void run() {
+                importAndAddTraces(reactions, separatorString1, platePart, wellPart, checkPlate, folder);
+            }
+        };
+        MooreaLabBenchService.block("Importing traces", owner, runnable);
+
+
+        return true;
+    }
+
+    private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int wellPart, boolean checkPlate, File folder) {
+        for(File f : folder.listFiles()) {
+            if(f.isHidden()) {
+                continue;
+            }
+            if(f.getName().startsWith(".")) { //stupid macos files
+                continue;
+            }
+            if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
+                String[] nameParts = f.getName().split(separatorString);
+                if(wellPart >= nameParts.length) {
+                    continue;
+                }
+
+                String wellStringBig = nameParts[wellPart];
+                int count = 1;
+                String wellString = ""+wellStringBig.charAt(0);
+                while(true) {
+                    if(count >= wellStringBig.length()) {
+                        break;
+                    }
+                    char numberChar = wellStringBig.charAt(count);
+                    if(numberChar < 48 || numberChar > 57) {//not a number
+                        break;
+                    }
+                    wellString = wellString+ numberChar;
+                    count++;
+                }
+                if(wellString.equals("A1")) {
+                    System.out.println(f.getAbsolutePath());
+                }
+                for(CycleSequencingReaction r : reactions) {
+                    if(wellString.equalsIgnoreCase(r.getLocationString())) {
+                        if(checkPlate) {
+                            if(nameParts.length >= platePart) {
+                                break;
+                            }
+                            String plateName = nameParts[platePart];
+                            if(!plateName.equals(r.getPlateName())) {
+                                break;
+                            }
+                        }
+                        List<AnnotatedPluginDocument> annotatedDocuments = null;
+                        try {
+                            annotatedDocuments = importDocuments(new File[]{f}, ProgressListener.EMPTY);
+                        } catch (IOException e) {
+                            Dialogs.showMessageDialog("Error reading sequences: "+e.getMessage());
+                            break;
+                        } catch (DocumentImportException e) {
+                            Dialogs.showMessageDialog("Error importing sequences: "+e.getMessage());
+                            break;
+                        }
+                        List<NucleotideSequenceDocument> sequences = getSequencesFromAnnotatedPluginDocuments(annotatedDocuments);
+                        r.addSequences(sequences);
+                    }
+                }
+            }
+        }
+    }
+
+    private static List<Options.OptionValue> getNamePartValues(int numberOfParts) {
+        List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
+
+        for(int i=1; i<=numberOfParts; i++) {
+            String humanIndex = "" + i;
+            if(humanIndex.length() != 1 && i/10 % 10 != 1) {
+                humanIndex += "th";
+            } else if(i % 10 == 1) {
+                humanIndex += "st";
+            } else if(i % 10 == 2) {
+                humanIndex += "nd";
+            } else if(i % 10 == 3) {
+                humanIndex += "rd";
+            } else {
+                humanIndex += "th";
+            }
+            values.add(new Options.OptionValue("" + (i-1), humanIndex));
+        }
+        return values;
+    }
+
+    private static String[] getPossibleSeperators() {
+        List<String> seperators = new ArrayList<String>();
+        for (Seperator seperator : Seperator.values()) {
+            seperators.add(seperator.label);
+        }
+        return seperators.toArray(new String[seperators.size()]);
+    }
+
+    enum Seperator {
+        underscore("_", "_ (Underscore)"),
+        asterisk("\\*", "* (Asterisk)"),
+        bar("\\|", "| (Vertical Bar)"),
+        hyphen("-", "- (Hyphen)"),
+        colon(":", ": (Colon)"),
+        dollarSign("\\$", "$ (Dollar)"),
+        equals("=", "= (Equals)"),
+        fullstop("\\.", ". (Full Stop)"),
+        comma(",", ", (Comma)"),
+        plus("\\+", "+ (Plus)"),
+        whitespace("\\s+", "(Space)");
+
+        String sepString;
+        String label;
+
+        private Seperator(String regex, String label) {
+            this.sepString = regex;
+            this.label = label;
+        }
+    }
+
+    public static List<AnnotatedPluginDocument> importDocuments(File[] sequenceFiles, ProgressListener progress) throws IOException, DocumentImportException {
+        List<AnnotatedPluginDocument> pluginDocuments = new ArrayList<AnnotatedPluginDocument>();
+        for (int i = 0; i < sequenceFiles.length && !progress.isCanceled(); i++) {
+            File f = sequenceFiles[i];
+            List<AnnotatedPluginDocument> docs = PluginUtilities.importDocuments(f, ProgressListener.EMPTY);
+            pluginDocuments.addAll(docs);
+        }
+        return pluginDocuments;
+    }
+
+    public static List<NucleotideSequenceDocument> getSequencesFromAnnotatedPluginDocuments(List<AnnotatedPluginDocument> pluginDocuments) {
+        List<NucleotideSequenceDocument> nucleotideDocuments = new ArrayList<NucleotideSequenceDocument>();
+        if(pluginDocuments == null || pluginDocuments.size() == 0) {
+            throw new IllegalArgumentException("No documents were imported!");
+        }
+        for(AnnotatedPluginDocument doc : pluginDocuments) {
+            try {
+                if(SequenceListDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                    nucleotideDocuments.addAll(((SequenceListDocument)doc.getDocument()).getNucleotideSequences());
+                }
+                else if(NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                        nucleotideDocuments.add((NucleotideSequenceDocument)doc.getDocument());
+                }
+                else {
+                    throw new IllegalArgumentException("You can only import nucleotide sequences.  The document "+doc.getName()+" was not a nucleotide sequence.");
+                }
+            } catch (DocumentOperationException e1) {
+                throw new IllegalArgumentException(e1.getMessage());
+            }
+        }
+        return nucleotideDocuments;
+    }
 
     public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, Component owner, boolean justEditOptions, boolean creating) {
         if(reactions == null || reactions.size() == 0) {

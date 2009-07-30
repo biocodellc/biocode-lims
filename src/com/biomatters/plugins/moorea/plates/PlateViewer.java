@@ -6,10 +6,7 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GTextField;
-import com.biomatters.plugins.moorea.reaction.Reaction;
-import com.biomatters.plugins.moorea.reaction.Thermocycle;
-import com.biomatters.plugins.moorea.reaction.ThermocycleEditor;
-import com.biomatters.plugins.moorea.reaction.ReactionUtilities;
+import com.biomatters.plugins.moorea.reaction.*;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.TransactionException;
 import com.biomatters.plugins.moorea.BadDataException;
@@ -150,6 +147,15 @@ public class PlateViewer extends JPanel {
             }
         };
         toolbar.add(bulkEditAction);
+
+        final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk-add traces") {
+            public void actionPerformed(ActionEvent e) {
+                ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
+            }
+        };
+        if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
+            toolbar.add(bulkChromatAction);
+        }
 
         final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
             public void actionPerformed(ActionEvent e) {
