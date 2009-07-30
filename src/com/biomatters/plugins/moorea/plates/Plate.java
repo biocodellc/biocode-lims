@@ -188,6 +188,18 @@ public class Plate implements XMLSerializable {
     }
 
     public static String getWellName(int position, Size size) {
+        return getAbiOrNormalWellName(position, size, false);
+    }
+
+    public static String getAbiWellName(int position, Size size) {
+        return getAbiOrNormalWellName(position, size, true);    
+    }
+
+    public static String getWellName(int row, int col) {
+        return ""+(char)(65+row)+(1+col);
+    }
+
+    private static String getAbiOrNormalWellName(int position, Size size, boolean abi) {
         int cols;
         if(size != null) {
             switch(size) {
@@ -207,11 +219,15 @@ public class Plate implements XMLSerializable {
         }
         int row = position / cols;
         int col = position % cols;
-        return getWellName(row, col);
+        return abi ? getAbiWellName(row, col) : getWellName(row, col);
     }
 
-    public static String getWellName(int row, int col) {
-        return ""+(char)(65+row)+(1+col);
+    public static String getAbiWellName(int row, int col) {
+        String colNumber = ""+ (1 + col);
+        if(colNumber.length() < 2) {
+            colNumber = "0" + colNumber;
+        }
+        return ""+(char)(65+row)+ colNumber;
     }
 
     public PreparedStatement toSQL(Connection connection) throws SQLException{

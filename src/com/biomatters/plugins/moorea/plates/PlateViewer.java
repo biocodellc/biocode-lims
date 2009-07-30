@@ -173,6 +173,14 @@ public class PlateViewer extends JPanel {
         plateView.addSelectionListener(toolbarListener);
         toolbarListener.valueChanged(null);
 
+        toolbar.addSeparator();
+        final GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
+            public void actionPerformed(ActionEvent e) {
+                ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
+            }
+        };
+        toolbar.add(exportPlateAction);
+
         JScrollPane scroller = new JScrollPane(plateView);
 
         add(scroller, BorderLayout.CENTER);

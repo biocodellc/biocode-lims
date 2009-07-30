@@ -24,15 +24,14 @@ import javax.swing.border.Border;
 import javax.swing.event.*;
 import java.util.*;
 import java.util.List;
+import java.util.prefs.Preferences;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.FilenameFilter;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 
 import org.virion.jam.util.SimpleListener;
 import org.jdom.Element;
@@ -282,6 +281,59 @@ public class ReactionUtilities {
             }
         }
         return nucleotideDocuments;
+    }
+
+
+    public static boolean saveAbiFileFromPlate(Plate plate, JComponent owner) {
+        Options options = new Options(ReactionUtilities.class);
+        options.addStringOption("owner", "Owner", "");
+        options.addStringOption("operator", "Operator", "");
+        options.addStringOption("plateSealing", "Plate Sealing", "Septa");
+        options.addStringOption("resultsGroup", "Results Group", "");
+        options.addStringOption("instrumentProtocol", "Instrument Protocol", "LongSeq50");
+        options.addStringOption("analysisProtocol", "Analysis Protocol", "Standard_3.1");
+
+        if(!Dialogs.showOptionsDialog(options, "Export API config file", true)) {
+            return false;
+        }
+
+        if(plate.getReactionType() == Reaction.Type.Extraction) {
+            Dialogs.showMessageDialog("You cannot create ABI input files from extraction plates");
+            return false;
+        }
+
+        Preferences prefs = Preferences.userNodeForPackage(ReactionUtilities.class);
+
+        JFileChooser chooser = new JFileChooser(prefs.get("abiFileLocation", System.getProperty("user.home")));
+
+        if(chooser.showSaveDialog(owner) != JFileChooser.APPROVE_OPTION) {
+            return false;
+        }
+
+        File outFile = chooser.getSelectedFile();
+
+        PrintWriter out = null;
+        try {
+            out = new PrintWriter(outFile);
+            out.println("Container Name\tPlate ID\tDescription\tContainerType\tAppType\tOwner\tOperator\tPlateSealing\tSchedulingPref");
+            out.println(plate.getName()+"\t"+plate.getName()+"\t\t"+plate.getReactions().length+"-Well\tRegular\t"+options.getValue("owner")+"\t"+options.getValue("operator")+"\t"+options.getValue("plateSealing")+"\t1234");
+            out.println("AppServer\tAppInstance");
+            out.println("SequencingAnalysis");
+            out.println("Well\tSample Name\tComment\tResults Group 1\tInstrument Protocol 1\tAnalysis Protocol 1");
+            for(Reaction r : plate.getReactions()) {
+                out.println(Plate.getAbiWellName(r.getPosition(), plate.getPlateSize())+"\t"+r.getExtractionId()+"\t\t"+options.getValue("resultsGroup")+"\t"+options.getValue("instrumentProtocol")+"\t"+options.getValue("analysisProtocol"));
+            }
+            
+        } catch (IOException e) {
+            e.printStackTrace();  //todo
+        } finally {
+            if(out != null) {
+                out.close();
+            }
+        }
+
+        return true;
+
     }
 
     public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, Component owner, boolean justEditOptions, boolean creating) {

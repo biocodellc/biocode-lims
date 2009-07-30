@@ -244,7 +244,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                         editThermocycleAction,
                         gelAction,
                         editAction,
-                        bulkEditAction
+                        bulkEditAction,
+                        exportPlateAction
                 );
             }
 
@@ -332,6 +333,12 @@ public class PlateDocumentViewer extends DocumentViewer{
                 Dialogs.showMessageDialog(error);
             }
             updatePanel();
+        }
+    };
+
+    GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
+        public void actionPerformed(ActionEvent e) {
+            ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
         }
     };
 
