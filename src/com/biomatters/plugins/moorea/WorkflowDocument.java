@@ -240,6 +240,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             holder.setOpaque(false);
             holder.add(optionsPanel.get(), BorderLayout.CENTER);
             JButton editButton = new JButton("Edit");
+            editButton.setOpaque(false);
             editButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());

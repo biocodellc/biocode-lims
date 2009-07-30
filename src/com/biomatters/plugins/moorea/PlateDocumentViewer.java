@@ -114,7 +114,8 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     public JComponent getComponent() {
         container = new JPanel(new BorderLayout());
-        container.setOpaque(false);
+        container.setOpaque(true);
+        container.setBackground(Color.white);
         container.add(getPanel(), BorderLayout.CENTER);
         return container;
     }
