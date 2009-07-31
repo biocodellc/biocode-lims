@@ -45,6 +45,8 @@ public class PlateViewer extends JPanel {
     private void init() {
         setLayout(new BorderLayout());
 
+        final JScrollPane scroller = new JScrollPane(plateView);
+
         final JToolBar toolbar = new JToolBar();
         toolbar.setLayout(new FlowLayout(FlowLayout.LEFT));
         toolbar.setFloatable(false);
@@ -144,6 +146,9 @@ public class PlateViewer extends JPanel {
                 if(error != null && error.length() > 0) {
                     Dialogs.showMessageDialog(error);
                 }
+                plateView.invalidate();
+                scroller.getViewport().validate();
+                plateView.repaint();
             }
         };
         toolbar.add(bulkEditAction);
@@ -160,7 +165,8 @@ public class PlateViewer extends JPanel {
         final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
             public void actionPerformed(ActionEvent e) {
                 ReactionUtilities.editReactions(plateView.getSelectedReactions(), false, plateView, false, true);
-                plateView.revalidate();
+                plateView.invalidate();
+                scroller.getViewport().validate();
                 plateView.repaint();
             }
         };
@@ -181,7 +187,7 @@ public class PlateViewer extends JPanel {
         };
         toolbar.add(exportPlateAction);
 
-        JScrollPane scroller = new JScrollPane(plateView);
+
 
         add(scroller, BorderLayout.CENTER);
 
