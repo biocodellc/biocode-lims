@@ -372,7 +372,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         if(panelMap.get(ct) != null) {
             return panelMap.get(ct);
         }
-        final JSpinner fudgeSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 100, 1));
+        final JSpinner fudgeSpinner = new JSpinner(new SpinnerNumberModel(10, 0, 100, 1));
         JPanel fudgePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         fudgePanel.setOpaque(false);
         fudgePanel.add(new JLabel("Fudge factor: "));
