@@ -41,6 +41,7 @@ public class CycleSequencingOptions extends ReactionOptions {
     private ButtonOption tracesButton;
 
     public static final String PRIMER_OPTION_ID = "primer";
+    static final String COCKTAIL_OPTION_ID = "cocktail";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
     static final String LABEL_OPTION_ID = "label";
     static final String TRACES_BUTTON_ID = "traces";
@@ -66,10 +67,16 @@ public class CycleSequencingOptions extends ReactionOptions {
         return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode);
     }
 
+    public void refreshValuesFromCaches() {
+        final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
+        cocktailsOption.setPossibleValues(getCocktails());
+    }
+
     public void initListeners() {
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
         tracesButton = (ButtonOption)getOption(TRACES_BUTTON_ID);
+        final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
 
 
         ActionListener cocktailButtonListener = new ActionListener() {
@@ -79,8 +86,13 @@ public class CycleSequencingOptions extends ReactionOptions {
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                MooreaLabBenchService.block("Adding Cocktails", getPanel());
+                                MooreaLabBenchService.block("Adding Cocktails", cocktailButton.getComponent());
                                 MooreaLabBenchService.getInstance().addNewCycleSequencingCocktails(newCocktails);
+                                List<OptionValue> cocktails = getCocktails();
+
+                                if(cocktails.size() > 0) {
+                                    cocktailsOption.setPossibleValues(cocktails);
+                                }
                             } catch (final TransactionException e1) {
                                 Runnable runnable = new Runnable() {
                                     public void run() {
@@ -163,14 +175,10 @@ public class CycleSequencingOptions extends ReactionOptions {
         primerAmountOption.setUnits("ul");
 
 
-        List<OptionValue> cocktails = new ArrayList<OptionValue>();
-        for (int i = 0; i < new CycleSequencingCocktail().getAllCocktailsOfType().size(); i++) {
-            Cocktail cocktail = new CycleSequencingCocktail().getAllCocktailsOfType().get(i);
-            cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
-        }
+        List<OptionValue> cocktails = getCocktails();
 
         if(cocktails.size() > 0) {
-        addComboBoxOption("cocktail", "Reaction Cocktail",  cocktails, cocktails.get(0));
+        addComboBoxOption(COCKTAIL_OPTION_ID, "Reaction Cocktail",  cocktails, cocktails.get(0));
         }
 
         cocktailButton = new ButtonOption(COCKTAIL_BUTTON_ID, "", "Edit Cocktails");
@@ -187,6 +195,18 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         labelOption = new LabelOption(LABEL_OPTION_ID, "Total Volume of Reaction: 0uL");
         addCustomOption(labelOption);
+    }
+
+    private List<OptionValue> getCocktails() {
+        List<OptionValue> cocktails = new ArrayList<OptionValue>();
+        for (int i = 0; i < new CycleSequencingCocktail().getAllCocktailsOfType().size(); i++) {
+            Cocktail cocktail = new CycleSequencingCocktail().getAllCocktailsOfType().get(i);
+            cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
+        }
+        if(cocktails.size() == 0) {
+            cocktails.add(new OptionValue("-1", "No available cocktails"));
+        }
+        return cocktails;
     }
 
     public List<NucleotideSequenceDocument> getSequences() {

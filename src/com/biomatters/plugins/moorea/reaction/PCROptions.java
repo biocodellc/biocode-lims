@@ -56,6 +56,11 @@ public class PCROptions extends ReactionOptions {
         return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode);
     }
 
+    public void refreshValuesFromCaches() {
+        final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
+        cocktailsOption.setPossibleValues(getCocktails());
+    }
+
     public void initListeners() {
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
@@ -68,8 +73,13 @@ public class PCROptions extends ReactionOptions {
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                MooreaLabBenchService.block("Adding Cocktails", getPanel());
+                                MooreaLabBenchService.block("Adding Cocktails", cocktailButton.getComponent());
                                 MooreaLabBenchService.getInstance().addNewPCRCocktails(newCocktails);
+                                List<OptionValue> cocktails = getCocktails();
+
+                                if(cocktails.size() > 0) {
+                                    cocktailOption.setPossibleValues(cocktails);
+                                }
                             } catch (final TransactionException e1) {
                                 Runnable runnable = new Runnable() {
                                     public void run() {
@@ -144,15 +154,7 @@ public class PCROptions extends ReactionOptions {
         revPrimerAmountOption.setUnits("ul");
 
 
-        List<OptionValue> cocktails = new ArrayList<OptionValue>();
-        List<Cocktail> cocktailList = new PCRCocktail().getAllCocktailsOfType();
-        for (int i = 0; i < cocktailList.size(); i++) {
-            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
-            cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
-        }
-        if(cocktailList.size() == 0) {
-            cocktails.add(new OptionValue("-1", "No available cocktails"));
-        }
+        List<OptionValue> cocktails = getCocktails();
 
         cocktailOption = addComboBoxOption(COCKTAIL_OPTION_ID, "Reaction Cocktail", cocktails, cocktails.get(0));
 
@@ -170,6 +172,19 @@ public class PCROptions extends ReactionOptions {
 
         labelOption = new LabelOption(LABEL_OPTION_ID, "Total Volume of Reaction: 0uL");
         addCustomOption(labelOption);
+    }
+
+    private List<OptionValue> getCocktails() {
+        List<OptionValue> cocktails = new ArrayList<OptionValue>();
+        List<Cocktail> cocktailList = new PCRCocktail().getAllCocktailsOfType();
+        for (int i = 0; i < cocktailList.size(); i++) {
+            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
+            cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
+        }
+        if(cocktailList.size() == 0) {
+            cocktails.add(new OptionValue("-1", "No available cocktails"));
+        }
+        return cocktails;
     }
 
     private void updateCocktailOption(ComboBoxOption<OptionValue> cocktailOption) {

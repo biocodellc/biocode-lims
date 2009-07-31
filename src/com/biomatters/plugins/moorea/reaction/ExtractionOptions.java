@@ -28,6 +28,8 @@ public class ExtractionOptions extends ReactionOptions{
         addCustomOption(notesOption);
     }
 
+    public void refreshValuesFromCaches() {}
+
     public ExtractionOptions(Class cl) {
         super(cl);
     }

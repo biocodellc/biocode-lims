@@ -344,6 +344,7 @@ public class ReactionUtilities {
         ReactionOptions options = null;
         try {
             options = XMLSerializer.clone(reactions.get(0).getOptions());
+            options.refreshValuesFromCaches();
         } catch (XMLSerializationException e) {
             //assert false : e.getMessage(); //there's no way I can see that this would happen, so I'm making it an assert
             //e.printStackTrace();

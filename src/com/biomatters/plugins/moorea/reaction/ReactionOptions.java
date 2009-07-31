@@ -27,4 +27,6 @@ public abstract class ReactionOptions extends Options {
     }
 
     public abstract boolean fieldIsFinal(String fieldCode);
+
+    public abstract void refreshValuesFromCaches();
 }
