@@ -4,7 +4,7 @@
 
 <!--   <property name="build-for-current" value="COMMENT THIS PROPERTY OUT to exclude from test-currentRelease"/> -->
    <property file="plugin.properties"/>
-   <property name="plugin.name" value="com.biomatters.plugins.moorea.MooreaLabBenchPlugin"/>
+   <property name="plugin.name" value="com.biomatters.plugins.moorea.MooreaPlugin"/>
    <property name="plugin-build" location="build"/>
    <property name="classes" location="bin"/>
    <property name="resources" location="resources"/>
