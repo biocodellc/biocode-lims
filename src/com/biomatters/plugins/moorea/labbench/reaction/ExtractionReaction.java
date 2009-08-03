@@ -190,6 +190,19 @@ public class ExtractionReaction extends Reaction{
         } catch (SQLException e) {
             return "Could not qurey the LIMS database: "+e.getMessage();
         }
+        Set<String> namesSet = new HashSet<String>();
+        for(Reaction r : reactions) {
+            if(!r.isEmpty()) {
+                if(r.getExtractionId().length() == 0) {
+                    error += "Extraction reactions cannot have empty id's.\n";
+                    r.isError = true;
+                }
+                else if(!namesSet.add(r.getExtractionId())) {
+                    error += "You cannot add an extraction with the name '"+r.getExtractionId()+"' more than once.\n";
+                    r.isError = true;
+                }
+            }
+        }
 
 
         if(error.length() > 0) {
