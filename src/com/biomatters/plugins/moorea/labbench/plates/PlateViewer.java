@@ -142,10 +142,15 @@ public class PlateViewer extends JPanel {
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells") {
             public void actionPerformed(ActionEvent e) {
                 PlateBulkEditor.editPlate(plateView.getPlate(), selfReference);
-                String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
-                if(error != null && error.length() > 0) {
-                    Dialogs.showMessageDialog(error);
-                }
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
+                        if(error != null && error.length() > 0) {
+                            Dialogs.showMessageDialog(error);
+                        }
+                    }
+                };
+                MooreaLabBenchService.block("Checking reactions", selfReference, runnable);
                 plateView.invalidate();
                 scroller.getViewport().validate();
                 plateView.repaint();

@@ -87,22 +87,26 @@ public class PlateBulkEditor {
                 public void actionPerformed(ActionEvent e) {
                     DocumentField barcodeField = new DocumentField("Tissue Barcode", "", "barcode", String.class, false, false);
                     DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
-                    DocumentFieldEditor barcodeEditor = new DocumentFieldEditor(barcodeField, p, direction.get());
-                    DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+                    final DocumentFieldEditor barcodeEditor = new DocumentFieldEditor(barcodeField, p, direction.get());
+                    final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
                     if(tissueEditor == null) {
                         Dialogs.showMessageDialog("Could not autodetect tissue id's for this plate - no editor set for the id field!");
                         return;
                     }
                     if(Dialogs.showOkCancelDialog(barcodeEditor, "Enter Barcode Ids", tissueEditor, Dialogs.DialogIcon.NO_ICON)) {
                         barcodeEditor.valuesFromTextView();
-                        List<String> idsToCheck = getIdsToCheck(barcodeEditor, p);
-                        try {
-                            Map<String, String> barcodeToId = MooreaLabBenchService.getInstance().getTissueIdsFromBarcodes(idsToCheck);
-                            putMappedValuesIntoEditor(barcodeEditor, tissueEditor, barcodeToId, p);
-                        } catch (ConnectionException e1) {
-                            Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
-                            return;
-                        }
+                        final List<String> idsToCheck = getIdsToCheck(barcodeEditor, p);
+                            Runnable runnable = new Runnable() {
+                                public void run() {
+                                    try {
+                                        Map<String, String> barcodeToId = MooreaLabBenchService.getInstance().getTissueIdsFromBarcodes(idsToCheck);
+                                        putMappedValuesIntoEditor(barcodeEditor, tissueEditor, barcodeToId, p);
+                                    } catch (ConnectionException e1) {
+                                        Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                                    }
+                                }
+                            };
+                        MooreaLabBenchService.block("Fetching tissue ID's from the FIMS database", tissueEditor, runnable);
                     }
                 }
             });
@@ -114,25 +118,30 @@ public class PlateBulkEditor {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - plate type unknown!");
                         return;
                     }
-                    DocumentFieldEditor editorToCheck = getEditorForField(editors, fieldToCheck);
+                    final DocumentFieldEditor editorToCheck = getEditorForField(editors, fieldToCheck);
                     if(editorToCheck == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the id field!");
                         return;
                     }
-                    DocumentFieldEditor workflowEditor = getEditorForField(editors, workflowField);
+                    final DocumentFieldEditor workflowEditor = getEditorForField(editors, workflowField);
                     if(workflowEditor == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the workflow field!");
                         return;
                     }
                     editorToCheck.valuesFromTextView();
-                    List<String> idsToCheck = getIdsToCheck(editorToCheck, p);
-                    try {
-                        Map<String, String> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflowIds(idsToCheck, p.getReactionType());
-                        putMappedValuesIntoEditor(editorToCheck, workflowEditor, idToWorkflow, p);
-                    } catch (SQLException e1) {
-                        Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
-                        return;
-                    }
+                    final List<String> idsToCheck = getIdsToCheck(editorToCheck, p);
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            try {
+                                Map<String, String> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflowIds(idsToCheck, p.getReactionType());
+                                putMappedValuesIntoEditor(editorToCheck, workflowEditor, idToWorkflow, p);
+                            } catch (SQLException e1) {
+                                Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                                return;
+                            }
+                        }
+                    };
+                    MooreaLabBenchService.block("Fetching workflow ID's from the database", editorToCheck, runnable);
 
                 }
             });
