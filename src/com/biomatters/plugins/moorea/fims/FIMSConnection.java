@@ -53,6 +53,8 @@ public abstract class FIMSConnection {
 
     public abstract DocumentField getTissueSampleDocumentField();
 
+    public abstract DocumentField getTissueBarcodeDocumentField();
+
     public abstract List<DocumentField> getCollectionAttributes();
 
     public abstract List<DocumentField> getTaxonomyAttributes();

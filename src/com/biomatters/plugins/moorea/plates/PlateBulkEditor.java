@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.Workflow;
 import com.biomatters.plugins.moorea.MooreaLabBenchPlugin;
+import com.biomatters.plugins.moorea.ConnectionException;
 import com.biomatters.plugins.moorea.reaction.Reaction;
 
 import javax.swing.*;
@@ -81,57 +82,53 @@ public class PlateBulkEditor {
                 }
             }
         });
-        if(fieldToCheck != null) {
-            toolbar.addAction(new GeneiousAction("Autodetect workflows"){
+        if(p.getReactionType() == Reaction.Type.Extraction) {
+            toolbar.addAction(new GeneiousAction("Get Tissue Id's from Barcodes", "Use 2D barcode tube data to get tissue sample ids from the FIMS", MooreaLabBenchPlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
-                    List<String> idsToCheck = new ArrayList<String>();
+                    DocumentField barcodeField = new DocumentField("Tissue Barcode", "", "barcode", String.class, false, false);
+                    DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                    DocumentFieldEditor barcodeEditor = new DocumentFieldEditor(barcodeField, p, direction.get());
+                    DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+                    if(tissueEditor == null) {
+                        Dialogs.showMessageDialog("Could not autodetect tissue id's for this plate - no editor set for the id field!");
+                        return;
+                    }
+                    if(Dialogs.showOkCancelDialog(barcodeEditor, "Enter Barcode Ids", tissueEditor, Dialogs.DialogIcon.NO_ICON)) {
+                        barcodeEditor.valuesFromTextView();
+                        List<String> idsToCheck = getIdsToCheck(barcodeEditor, p);
+                        try {
+                            Map<String, String> barcodeToId = MooreaLabBenchService.getInstance().getTissueIdsFromBarcodes(idsToCheck);
+                            putMappedValuesIntoEditor(barcodeEditor, tissueEditor, barcodeToId, p);
+                        } catch (ConnectionException e1) {
+                            Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                            return;
+                        }
+                    }
+                }
+            });
+        }
+        if(fieldToCheck != null) {
+            toolbar.addAction(new GeneiousAction("Autodetect workflows", "Autodetect workflows from the extraction id's you have entered", MooreaLabBenchPlugin.getIcons("workflow_16.png")){
+                public void actionPerformed(ActionEvent e) {
                     if(fieldToCheck == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - plate type unknown!");
                         return;
                     }
-                    DocumentFieldEditor editorToCheck = null;
-                    for(DocumentFieldEditor editor : editors) {
-                        if(editor.getField().getCode().equals(fieldToCheck.getCode())){
-                            editorToCheck = editor;
-                        }
-                    }
+                    DocumentFieldEditor editorToCheck = getEditorForField(editors, fieldToCheck);
                     if(editorToCheck == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the id field!");
                         return;
                     }
-                    DocumentFieldEditor workflowEditor = null;
-                    for(DocumentFieldEditor editor : editors) {
-                        if(editor.getField().getCode().equals(workflowField.getCode())){
-                            workflowEditor = editor;
-                        }
-                    }
+                    DocumentFieldEditor workflowEditor = getEditorForField(editors, workflowField);
                     if(workflowEditor == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the workflow field!");
                         return;
                     }
                     editorToCheck.valuesFromTextView();
-                    for(int row=0; row < p.getRows(); row++) {
-                        for(int col=0; col < p.getCols(); col++) {
-                            Object value = editorToCheck.getValue(row, col);
-                            if(value != null && value.toString().trim().length() > 0) {
-                                idsToCheck.add(value.toString());
-                            }
-                        }
-                    }
+                    List<String> idsToCheck = getIdsToCheck(editorToCheck, p);
                     try {
-                        Map<String, Workflow> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflows(idsToCheck, p.getReactionType());
-                        for(int row=0; row < p.getRows(); row++) {
-                            for(int col=0; col < p.getCols(); col++) {
-                                Object value = editorToCheck.getValue(row, col);
-                                if(value != null && value.toString().length() > 0) {
-                                    Workflow workflowValue = idToWorkflow.get(value.toString());
-                                    if(workflowValue != null) {
-                                        workflowEditor.setValue(row, col, workflowValue.getName());
-                                    }
-                                }
-                            }
-                        }
-                        workflowEditor.textViewFromValues();
+                        Map<String, String> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflowIds(idsToCheck, p.getReactionType());
+                        putMappedValuesIntoEditor(editorToCheck, workflowEditor, idToWorkflow, p);
                     } catch (SQLException e1) {
                         Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
                         return;
@@ -204,6 +201,44 @@ public class PlateBulkEditor {
         if(badWorkflows.length() > 0) {
             Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
         }
+    }
+
+    private static void putMappedValuesIntoEditor(DocumentFieldEditor sourceEditor, DocumentFieldEditor destEditor, Map<String, String> mappedValues, Plate plate) {
+        for(int row=0; row < plate.getRows(); row++) {
+            for(int col=0; col < plate.getCols(); col++) {
+                Object value = sourceEditor.getValue(row, col);
+                if(value != null && value.toString().length() > 0) {
+                    String destValue = mappedValues.get(value.toString());
+                    if(destValue != null) {
+                        destEditor.setValue(row, col, destValue);
+                    }
+                }
+            }
+        }
+        destEditor.textViewFromValues();
+    }
+
+    private static List<String> getIdsToCheck(DocumentFieldEditor editorToCheck, Plate p) {
+        List<String> idsToCheck = new ArrayList<String>();
+        for(int row=0; row < p.getRows(); row++) {
+            for(int col=0; col < p.getCols(); col++) {
+                Object value = editorToCheck.getValue(row, col);
+                if(value != null && value.toString().trim().length() > 0) {
+                    idsToCheck.add(value.toString());
+                }
+            }
+        }
+        return idsToCheck;
+    }
+
+    private static DocumentFieldEditor getEditorForField(List<DocumentFieldEditor> editors, DocumentField field) {
+        DocumentFieldEditor editorToCheck = null;
+        for(DocumentFieldEditor editor : editors) {
+            if(editor.getField().getCode().equals(field.getCode())){
+                editorToCheck = editor;
+            }
+        }
+        return editorToCheck;
     }
 
     private static List<DocumentField> getDefaultFields(Plate p) {

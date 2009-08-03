@@ -48,6 +48,10 @@ public class GeneiousFimsConnection extends FIMSConnection{
         return new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
     }
 
+    public DocumentField getTissueBarcodeDocumentField() {
+        return new DocumentField("Tissue Barcode", "", "tissue_barcode", String.class, true, false);
+    }
+
     public List<DocumentField> getCollectionAttributes() {
         return Collections.emptyList();
     }

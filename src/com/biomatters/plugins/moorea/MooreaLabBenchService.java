@@ -1125,7 +1125,7 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
-    public Map<String, Workflow> getWorkflows(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{
+    public Map<String, String> getWorkflowIds(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{
         if(idsToCheck.size() == 0) {
             return Collections.EMPTY_MAP;
         }
@@ -1152,10 +1152,10 @@ public class MooreaLabBenchService extends DatabaseService {
             statement.setString(i+1, idsToCheck.get(i));
         }
         ResultSet results = statement.executeQuery();
-        Map<String, Workflow> result = new HashMap<String, Workflow>();
+        Map<String, String> result = new HashMap<String, String>();
 
         while(results.next()) {
-            result.put(results.getString("id"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("id")));
+            result.put(results.getString("id"), results.getString("workflow")/*new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("id"))*/);
         }
         return result;
     }
@@ -1183,6 +1183,32 @@ public class MooreaLabBenchService extends DatabaseService {
         while(results.next()) {
             result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId")));
         }
+        return result;
+    }
+
+    public Map<String, String> getTissueIdsFromBarcodes(List<String> barcodeIds) throws ConnectionException {
+        if(activeFIMSConnection == null) {
+            return Collections.EMPTY_MAP;
+        }
+
+        DocumentField barcodeField = activeFIMSConnection.getTissueBarcodeDocumentField();
+        DocumentField tissueField = activeFIMSConnection.getTissueSampleDocumentField();
+
+
+        Query[] queries = new Query[barcodeIds.size()];
+        for(int i=0; i < barcodeIds.size(); i++) {
+            queries[i] = Query.Factory.createFieldQuery(barcodeField, Condition.EQUAL, barcodeIds.get(i));
+        }
+
+        Query orQuery = Query.Factory.createOrQuery(queries, Collections.EMPTY_MAP);
+
+        List<FimsSample> samples = activeFIMSConnection.getMatchingSamples(orQuery);
+
+        Map<String, String> result = new HashMap<String, String>();
+        for(FimsSample sample : samples) {
+            result.put(""+sample.getFimsAttributeValue(barcodeField.getCode()), ""+sample.getFimsAttributeValue(tissueField.getCode()));
+        }
+
         return result;
     }
 

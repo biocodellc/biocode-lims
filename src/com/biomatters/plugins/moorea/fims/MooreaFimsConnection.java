@@ -120,6 +120,10 @@ public class MooreaFimsConnection extends FIMSConnection{
         return getCollectionAttributes().get(0);
     }
 
+    public DocumentField getTissueBarcodeDocumentField() {
+        return getCollectionAttributes().get(5);
+    }
+
     public List<DocumentField> getCollectionAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
 
