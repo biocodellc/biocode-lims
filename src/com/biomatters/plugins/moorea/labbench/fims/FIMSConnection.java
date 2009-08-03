@@ -7,6 +7,7 @@ import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -62,5 +63,7 @@ public abstract class FIMSConnection {
     public abstract List<DocumentField> getSearchAttributes();
 
     public abstract List<FimsSample> getMatchingSamples(Query query) throws ConnectionException;
+
+    public abstract Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException;
 
 }

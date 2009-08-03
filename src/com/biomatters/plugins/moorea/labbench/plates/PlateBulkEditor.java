@@ -99,7 +99,7 @@ public class PlateBulkEditor {
                             Runnable runnable = new Runnable() {
                                 public void run() {
                                     try {
-                                        Map<String, String> barcodeToId = MooreaLabBenchService.getInstance().getTissueIdsFromBarcodes(idsToCheck);
+                                        Map<String, String> barcodeToId = MooreaLabBenchService.getInstance().getActiveFIMSConnection().getTissueIdsFromExtractionBarcodes(idsToCheck);
                                         putMappedValuesIntoEditor(barcodeEditor, tissueEditor, barcodeToId, p);
                                     } catch (ConnectionException e1) {
                                         Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());

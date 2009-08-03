@@ -8,6 +8,7 @@ import com.biomatters.plugins.moorea.labbench.FimsSample;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by IntelliJ IDEA.
@@ -62,5 +63,9 @@ public class GeneiousFimsConnection extends FIMSConnection{
 
     public List<FimsSample> getMatchingSamples(Query query) {
         return null;//todo: always return all sample records from the LIMS
+    }
+
+    public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
+        return Collections.EMPTY_MAP;
     }
 }

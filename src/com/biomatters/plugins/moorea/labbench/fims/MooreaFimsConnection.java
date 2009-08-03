@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.PasswordOption;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
@@ -365,5 +366,37 @@ public class MooreaFimsConnection extends FIMSConnection{
             queryBuilder.append(")");
         }
         return queryBuilder.toString();
+    }
+
+    public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
+        if(extractionIds == null || extractionIds.size() == 0) {
+            return Collections.EMPTY_MAP;
+        }
+
+        StringBuilder query = new StringBuilder("SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode_extract, biocode_tissue WHERE biocode_extract.bnhm_id = biocode_tissue.bnhm_id AND (");
+
+        List<String> queryTerms = new ArrayList<String>();
+        for(String s : extractionIds) {
+            queryTerms.add("biocode_extract.extract_barcode = ?");
+        }
+
+        query.append(StringUtilities.join(" OR ", queryTerms));
+        query.append(");");
+        try {
+            PreparedStatement statement = connection.prepareStatement(query.toString());
+            for (int i = 0; i < extractionIds.size(); i++) {
+                String s = extractionIds.get(i);
+                statement.setString(i+1, s);
+            }
+            ResultSet resultSet = statement.executeQuery();
+            Map<String, String> result = new HashMap<String, String>();
+            while(resultSet.next()) {
+                result.put(resultSet.getString("biocode_extract.extract_barcode"), resultSet.getString("biocode_tissue.bnhm_id")+"."+resultSet.getString("biocode_tissue.tissue_num"));
+            }
+            return result;
+            
+        } catch (SQLException e) {
+            throw new ConnectionException("Error fetching tissue data from FIMS", e);
+        }
     }
 }
