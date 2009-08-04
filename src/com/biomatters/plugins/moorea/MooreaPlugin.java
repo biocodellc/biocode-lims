@@ -3,7 +3,7 @@ package com.biomatters.plugins.moorea;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
-import com.biomatters.plugins.moorea.assembler.VerifyTaxonomyOperation;
+import com.biomatters.plugins.moorea.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.moorea.labbench.*;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
 
