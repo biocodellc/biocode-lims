@@ -1,14 +1,17 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
+import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
+import com.biomatters.plugins.moorea.assembler.VerifyTaxonomyOperation;
 import com.biomatters.plugins.moorea.labbench.*;
+import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
 
 import javax.swing.*;
 import java.io.File;
-import java.util.Map;
-import java.util.HashMap;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @version $Id: MooreaLabBenchPlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -128,7 +131,10 @@ public class MooreaPlugin extends GeneiousPlugin {
     @Override
     public DocumentOperation[] getDocumentOperations() {
         return new DocumentOperation[] {
-                new NewPlateDocumentOperation()
+                new NewPlateDocumentOperation(),
+                new SetReadDirectionOperation(),
+                new BatchChromatogramExportOperation(),
+                new VerifyTaxonomyOperation()
         };
     }
 
