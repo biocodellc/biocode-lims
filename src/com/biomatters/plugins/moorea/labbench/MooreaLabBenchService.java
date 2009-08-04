@@ -1126,6 +1126,57 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
+    public FimsSample getFimsSampleForCycleSequencingReaction(String plateName, String wellLocation) throws SQLException{
+        //step 1, query the plate record
+        String query1 = "SELECT plate.size, plate.id FROM plate WHERE plate.name = ?";
+        PreparedStatement statement1 = limsConnection.getConnection().prepareStatement(query1);
+        statement1.setString(1, plateName);
+        ResultSet resultSet1 = statement1.executeQuery();
+        if(!resultSet1.next()) {
+            return null;
+        }
+        int plateId = resultSet1.getInt("plate.id");
+
+
+        Plate.Size size = Plate.getSizeEnum(resultSet1.getInt("plate.size"));
+        int locationInt = Plate.getWellLocation(wellLocation, size);
+
+
+        //step 2, get the relevant reaction record
+        String query2 = "SELECT extraction.sampleId FROM cyclesequencing, plate, extraction WHERE cyclesequencing.extractionId = extraction.extractionId AND cyclesequencing.plate = ? AND cyclesequencing.location=?";
+        PreparedStatement statement2 = limsConnection.getConnection().prepareStatement(query2);
+        statement2.setInt(1, plateId);
+        statement2.setInt(2, locationInt);
+        ResultSet resultSet2 = statement2.executeQuery();
+        if(!resultSet2.next()) {
+            String queryError = query2.replaceFirst("\\?", ""+plateId);
+            queryError = queryError.replaceFirst("\\?", ""+locationInt);
+            assert false : "we shouldn't fail at this point!\n sql query was: "+queryError;
+            return null;
+        }
+
+        String fimsSampleId = resultSet2.getString("extraction.sampleId");
+
+        //step 3 - get the fims sample from the fims database
+        Query fieldQuery = Query.Factory.createFieldQuery(activeFIMSConnection.getTissueSampleDocumentField(), Condition.EQUAL, fimsSampleId);
+
+        try {
+            List<FimsSample> list = activeFIMSConnection.getMatchingSamples(fieldQuery);
+            if(list == null || list.size() != 1) {
+                assert false : "We should always get exactly one entry back from this query.  The LIMS database may be corrupt.  Please check the validity of the tissue sample "+fimsSampleId;
+                return null;
+            }
+            return list.get(0);
+        } catch (ConnectionException e) {
+            if(e.getCause() instanceof SQLException){
+                throw (SQLException)e.getCause();
+            }
+            e.printStackTrace();
+            assert false;
+        }
+        return null;
+    }
+
     public Map<String, String> getWorkflowIds(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{
         if(idsToCheck.size() == 0) {
             return Collections.EMPTY_MAP;

@@ -230,6 +230,51 @@ public class Plate implements XMLSerializable {
         return ""+(char)(65+row)+ colNumber;
     }
 
+    /**
+     * wellName must be in the form A1, or A01
+     * @param wellName
+     * @return
+     */
+    public static int getWellLocation(String wellName, Size size) {
+        if(wellName == null || wellName.length() < 2) {
+            throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+        }
+        wellName = wellName.toUpperCase();
+        int letter = (int)wellName.toCharArray()[0];
+        if(letter < 65 || letter > 90) {
+            throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+        }
+        letter -= 65;
+
+        int number = 0;
+        try {
+            number = Integer.parseInt(wellName.substring(1));
+        }
+        catch(NumberFormatException ex) {
+            throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+        }
+
+        int cols;
+        if(size != null) {
+            switch(size) {
+                case w48 :
+                    cols = 6;
+                    break;
+                case w96 :
+                    cols = 12;
+                    break;
+                case w384 :
+                default :
+                    cols = 24;
+            }
+        }
+        else {
+            cols = 1;
+        }
+
+        return letter*cols * number;
+    }
+
     public PreparedStatement toSQL(Connection connection) throws SQLException{
         if(name == null || name.trim().length() == 0) {
             throw new SQLException("Plates cannot have empty names");
