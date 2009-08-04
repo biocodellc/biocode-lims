@@ -6,40 +6,39 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.moorea.labbench.reaction.*;
-import com.biomatters.plugins.moorea.labbench.plates.Plate;
 import com.biomatters.plugins.moorea.labbench.plates.GelImage;
+import com.biomatters.plugins.moorea.labbench.plates.Plate;
+import com.biomatters.plugins.moorea.labbench.reaction.*;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import java.awt.event.ActionEvent;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.FileOutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.*;
-import java.util.*;
-import java.util.List;
-import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-
-import org.jdom.input.SAXBuilder;
-import org.jdom.JDOMException;
-import org.jdom.Element;
-import org.jdom.output.XMLOutputter;
-import org.jdom.output.Format;
+import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -264,7 +263,11 @@ public class MooreaLabBenchService extends DatabaseService {
 
         loginOptions.restorePreferences();
 
-        if (Dialogs.showOkCancelDialog(loginOptions.getPanel(), "Log in", null)) {
+        String logIn = "Log In";
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {logIn, "Cancel"}, logIn, null, Dialogs.DialogIcon.NO_ICON);
+        dialogOptions.setMaxWidth(dialogOptions.getMaxDimensions().width + 50);
+        Object result = Dialogs.showDialog(dialogOptions, loginOptions.getPanel());
+        if (logIn.equals(result)) {
             loginOptions.savePreferences();
 
             //load the connection driver -------------------------------------------------------------------
