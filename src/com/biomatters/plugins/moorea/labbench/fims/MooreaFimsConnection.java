@@ -142,6 +142,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Project Name", "", "biocode_collecting_event.ProjectName", String.class, true, false));
         fields.add(new DocumentField("Collector", "", "biocode_collecting_event.Collector", String.class, true, false));
         fields.add(new DocumentField("Collection time", "", "biocode_collecting_event.CollectionTime", Date.class, true, false));
+        fields.add(new DocumentField("Identified By", "", "biocode.IdentifiedBy", String.class, true, false));
 
         fields.add(new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Integer.class, true, false));
         fields.add(new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Integer.class, true, false));
