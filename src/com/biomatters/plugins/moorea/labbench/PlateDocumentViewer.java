@@ -108,7 +108,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
         updateToolbar(false);
         saveAction.setEnabled(false);
-        bulkEditAction.setProOnly(true);
+        //bulkEditAction.setProOnly(true);
         editThermocycleAction.setProOnly(true);
         gelAction.setProOnly(true);
     }
@@ -144,7 +144,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             gelAction.setEnabled(buttonsEnabled);
         }
         editAction.setEnabled(plateView.getSelectedReactions().size() > 0);
-        bulkEditAction.setEnabled(buttonsEnabled);
+        //bulkEditAction.setEnabled(buttonsEnabled);
     }
 
     private JScrollPane getScrollPane(Container component) {
@@ -237,8 +237,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                 if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
                     thermocycleAction = editThermocycleAction = gelAction = null;
                     return Arrays.asList(
-                        editAction,
-                        bulkEditAction
+                        editAction//,
+                        //bulkEditAction
                     );
                 }
                 return Arrays.asList(
@@ -246,7 +246,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                         editThermocycleAction,
                         gelAction,
                         editAction,
-                        bulkEditAction,
+                        //bulkEditAction,
                         exportPlateAction
                 );
             }
@@ -326,17 +326,17 @@ public class PlateDocumentViewer extends DocumentViewer{
         }
     };
 
-    GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit wells", null, MooreaPlugin.getIcons("bulkEdit_16.png")) {
-        public void actionPerformed(ActionEvent e) {
-            PlateBulkEditor.editPlate(plateView.getPlate(), container);
-            saveAction.setEnabled(true);
-            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
-            if(error != null && error.length() > 0) {
-                Dialogs.showMessageDialog(error);
-            }
-            updatePanel();
-        }
-    };
+//    GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit wells", null, MooreaPlugin.getIcons("bulkEdit_16.png")) {
+//        public void actionPerformed(ActionEvent e) {
+//            PlateBulkEditor.editPlate(plateView.getPlate(), container);
+//            saveAction.setEnabled(true);
+//            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
+//            if(error != null && error.length() > 0) {
+//                Dialogs.showMessageDialog(error);
+//            }
+//            updatePanel();
+//        }
+//    };
 
     GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
         public void actionPerformed(ActionEvent e) {
