@@ -381,14 +381,19 @@ public class PlateDocumentViewer extends DocumentViewer{
         fudgePanel.add(new JLabel("%"));
         OptionsPanel cockatilPanel = new OptionsPanel();
         cockatilPanel.addSpanningComponent(fudgePanel);
-        for(Options.Option option : ct.getOptions().getOptions()) {
+        for(final Options.Option option : ct.getOptions().getOptions()) {
             if(option instanceof Options.IntegerOption) {
                 final Options.IntegerOption integerOption = (Options.IntegerOption)option;
                 final JLabel label = new JLabel();
                 ChangeListener listener = new ChangeListener() {
                     public void stateChanged(ChangeEvent e) {
                         double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
-                        label.setText((int) (fudgeFactor * integerOption.getValue() * count) + " ul");
+                        if(option.getLabel().toLowerCase().contains("concentration")) { //just display the concentration, it doesn't add (or need a fudge factor)
+                            label.setText(integerOption.getValue() + " " + integerOption.getUnits());    
+                        }
+                        else {
+                            label.setText((int) (fudgeFactor * integerOption.getValue() * count) + " " + integerOption.getUnits());
+                        }
                     }
                 };
                 fudgeSpinner.addChangeListener(listener);
