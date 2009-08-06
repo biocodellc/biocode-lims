@@ -137,6 +137,15 @@ public class ReactionUtilities {
         return true;
     }
 
+    /**
+     *
+     * @param reactions
+     * @param separatorString
+     * @param platePart
+     * @param wellPart
+     * @param checkPlate
+     * @param folder
+     */
     private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int wellPart, boolean checkPlate, File folder) {
         for(File f : folder.listFiles()) {
             if(f.isHidden()) {
@@ -153,18 +162,23 @@ public class ReactionUtilities {
 
                 String wellStringBig = nameParts[wellPart];
                 int count = 1;
-                String wellString = ""+wellStringBig.charAt(0);
+                int wellNumber = -1;
+                String wellNumberString = "";
                 while(true) {
                     if(count >= wellStringBig.length()) {
                         break;
                     }
                     char numberChar = wellStringBig.charAt(count);
-                    if(numberChar < 48 || numberChar > 57) {//not a number
+                    try{
+                        wellNumber = Integer.parseInt(wellNumberString+numberChar);
+                    }
+                    catch(NumberFormatException ex) {
                         break;
                     }
-                    wellString = wellString+ numberChar;
+                    wellNumberString = wellNumberString+numberChar;
                     count++;
                 }
+                String wellString = ""+wellStringBig.toUpperCase().charAt(0)+wellNumber;
                 if(wellString.equals("A1")) {
                     System.out.println(f.getAbsolutePath());
                 }
