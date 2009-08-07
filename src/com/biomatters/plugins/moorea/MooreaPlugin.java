@@ -133,10 +133,10 @@ public class MooreaPlugin extends GeneiousPlugin {
     public DocumentOperation[] getDocumentOperations() {
         return new DocumentOperation[] {
                 new NewPlateDocumentOperation(),
-//                new SetReadDirectionOperation(),
-//                new BatchChromatogramExportOperation(),
-//                new VerifyTaxonomyOperation(),
-//                new AnnotateFimsDataOperation()
+                new SetReadDirectionOperation(),
+                new BatchChromatogramExportOperation(),
+                new VerifyTaxonomyOperation(),
+                new AnnotateFimsDataOperation()
         };
     }
 
