@@ -1,6 +1,7 @@
 package com.biomatters.plugins.moorea.labbench.plates;
 
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.labbench.reaction.ReactionUtilities;
 
 import javax.swing.*;
 import javax.swing.event.*;
@@ -15,21 +16,26 @@ public class PlateView extends JPanel {
     private PlateView selfReference = this;
     private Plate plate;
     private boolean colorBackground = true;
+    private boolean selectAll = false;
+    boolean creating = false;
 
 
 
-    public PlateView(int numberOfWells, Reaction.Type type) {
+    public PlateView(int numberOfWells, Reaction.Type type, boolean creating) {
+        this.creating = creating;
         plate = new Plate(numberOfWells, type);
         init();
     }
 
 
-    public PlateView(Plate.Size size, Reaction.Type type) {
+    public PlateView(Plate.Size size, Reaction.Type type, boolean creating) {
+        this.creating = creating;
         plate = new Plate(size, type);
         init();
     }
 
-    public PlateView(Plate plate) {
+    public PlateView(Plate plate, boolean creating) {
+        this.creating = creating;
         this.plate = plate;
         init();
     }
@@ -107,7 +113,7 @@ public class PlateView extends JPanel {
         addMouseListener(new MouseAdapter(){
             @Override
             public void mouseClicked(MouseEvent e) {
-
+                requestFocus();
                 boolean ctrlIsDown = (e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == MouseEvent.CTRL_DOWN_MASK;
                 boolean shiftIsDown = (e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == MouseEvent.SHIFT_DOWN_MASK;
 
@@ -132,23 +138,23 @@ public class PlateView extends JPanel {
                         }
                     }
                 }
-                //todo: do we want double clicking?
-//                if(e.getClickCount() == 2) {
-//                    for(int i=0; i < reactions.length; i++) {
-//                        if(reactions[i].isSelected()) {
-//                            editReactions(Arrays.asList(reactions[i]), justEditDisplayableFields);
-//                            revalidate();
-//                            repaint();
-//                        }
-//                    }
-//
-//                }
+                if(e.getClickCount() == 2) {
+                    for(int i=0; i < reactions.length; i++) {
+                        if(reactions[i].isSelected()) {
+                            ReactionUtilities.editReactions(Arrays.asList(reactions[i]), false, selfReference, false, creating);
+                            revalidate();
+                            repaint();
+                        }
+                    }
+
+                }
                 fireSelectionListeners();
                 repaint();
             }
 
             @Override
             public void mousePressed(MouseEvent e) {
+                selectAll = false;
                 Reaction[] reactions = plate.getReactions();
                 boolean shiftIsDown = (e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == MouseEvent.SHIFT_DOWN_MASK;
                 if(!shiftIsDown) {
@@ -178,6 +184,19 @@ public class PlateView extends JPanel {
 
                 //System.out.println("selectin: "+(System.currentTimeMillis()-time));
 
+            }
+        });
+
+        addKeyListener(new KeyAdapter(){
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if(e.getKeyCode() == KeyEvent.VK_A && e.isControlDown()) {
+                    selectAll = !selectAll;
+                    for(Reaction r : reactions) {
+                        r.setSelected(selectAll);
+                    }
+                    repaint();
+                }
             }
         });
 

@@ -33,12 +33,12 @@ public class PlateViewer extends JPanel {
     private PlateViewer selfReference = this;
 
     public PlateViewer(int numberOfReactions, Reaction.Type type) {
-        plateView = new PlateView(numberOfReactions, type);
+        plateView = new PlateView(numberOfReactions, type, true);
         init();
     }
 
     public PlateViewer(Plate.Size size, Reaction.Type type) {
-        plateView = new PlateView(size, type);
+        plateView = new PlateView(size, type, true);
         init();
     }
 

@@ -58,7 +58,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         } catch (XMLSerializationException e) {
             throw new RuntimeException("Could not serialise the plate!",e);
         }
-        this.plateView = new PlateView(plate);
+        this.plateView = new PlateView(plate, false);
         saveAction = new GeneiousAction("Save") {
             public void actionPerformed(ActionEvent e) {
                 if(!isLocal && !MooreaLabBenchService.getInstance().isLoggedIn()) {
