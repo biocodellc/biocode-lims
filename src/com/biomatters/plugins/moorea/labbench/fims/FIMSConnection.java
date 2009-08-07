@@ -56,6 +56,14 @@ public abstract class FIMSConnection {
 
     public abstract DocumentField getTissueBarcodeDocumentField();
 
+    public DocumentField getPlateDocumentField() {
+        return new DocumentField("Plate Name (FIMS)", "", "format_name96", String.class, true, false);
+    }
+
+    public DocumentField getWellDocumentField() {
+        return new DocumentField("Well Number (FIMS)", "", "well_number96", String.class, true, false);
+    }
+
     public abstract List<DocumentField> getCollectionAttributes();
 
     public abstract List<DocumentField> getTaxonomyAttributes();

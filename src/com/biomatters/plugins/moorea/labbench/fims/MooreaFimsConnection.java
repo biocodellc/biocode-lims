@@ -1,17 +1,17 @@
 package com.biomatters.plugins.moorea.labbench.fims;
 
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
+import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
-import com.biomatters.plugins.moorea.labbench.PasswordOption;
-import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.labbench.PasswordOption;
 
 import java.sql.*;
 import java.util.*;
@@ -92,8 +92,6 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     public List<DocumentField> getTaxonomyAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
-        fields.add(new DocumentField("Scientific Name", "", "biocode.ScientificName", String.class, true, false));
-        fields.add(new DocumentField("Colloquial Name", "", "biocode.ColloquialName", String.class, true, false));
         fields.add(new DocumentField("Kingdom", "", "biocode.Kingdom", String.class, false, false));
         fields.add(new DocumentField("Phylum", "", "biocode.Phylum", String.class, false, false));
         fields.add(new DocumentField("Sub-phylum", "", "biocode.Subphylum", String.class, false, false));
@@ -125,13 +123,23 @@ public class MooreaFimsConnection extends FIMSConnection{
         return getCollectionAttributes().get(5);
     }
 
+    @Override
+    public DocumentField getPlateDocumentField() {
+        return getCollectionAttributes().get(3);
+    }
+
+    @Override
+    public DocumentField getWellDocumentField() {
+        return getCollectionAttributes().get(4);
+    }
+
     public List<DocumentField> getCollectionAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
 
         fields.add(new DocumentField("Tissue ID", "", "tissueId", String.class, true, false));
 
-        fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, true, false));
-        fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, true, false));
+        fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, false, false));
+        fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, false, false));
 
         fields.add(new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false));
         fields.add(new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false));
@@ -139,19 +147,22 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(new DocumentField("BOLD ProcessID", "", "biocode_tissue.molecular_id", String.class, true, false));
 
-        fields.add(new DocumentField("Project Name", "", "biocode_collecting_event.ProjectName", String.class, true, false));
+        fields.add(new DocumentField("Project Name", "", "biocode_collecting_event.ProjectName", String.class, false, false));
         fields.add(new DocumentField("Collector", "", "biocode_collecting_event.Collector", String.class, true, false));
         fields.add(new DocumentField("Collection time", "", "biocode_collecting_event.CollectionTime", Date.class, true, false));
         fields.add(new DocumentField("Identified By", "", "biocode.IdentifiedBy", String.class, true, false));
 
-        fields.add(new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Integer.class, true, false));
-        fields.add(new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Integer.class, true, false));
+        fields.add(DocumentField.ORGANISM_FIELD);
+        fields.add(DocumentField.COMMON_NAME_FIELD);
 
-        fields.add(new DocumentField("Minimum Elevation", "", "biocode_collecting_event.MinElevationMeters", Integer.class, true, false));
-        fields.add(new DocumentField("Maximum Elevation", "", "biocode_collecting_event.MaxElevationMeters", Integer.class, true, false));
+        fields.add(new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Integer.class, false, false));
+        fields.add(new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Integer.class, false, false));
 
-        fields.add(new DocumentField("Minimum Depth", "", "biocode_collecting_event.MinDepthMeters", Integer.class, true, false));
-        fields.add(new DocumentField("Maximum Depth", "", "biocode_collecting_event.MaxDepthMeters", Integer.class, true, false));
+        fields.add(new DocumentField("Minimum Elevation", "", "biocode_collecting_event.MinElevationMeters", Integer.class, false, false));
+        fields.add(new DocumentField("Maximum Elevation", "", "biocode_collecting_event.MaxElevationMeters", Integer.class, false, false));
+
+        fields.add(new DocumentField("Minimum Depth", "", "biocode_collecting_event.MinDepthMeters", Integer.class, false, false));
+        fields.add(new DocumentField("Maximum Depth", "", "biocode_collecting_event.MaxDepthMeters", Integer.class, false, false));
 
         return fields;
     }
@@ -314,6 +325,12 @@ public class MooreaFimsConnection extends FIMSConnection{
                 queryBuilder.append(queryString);
             }
             else {
+                if (fieldCode.equals(DocumentField.ORGANISM_FIELD.getCode())) {
+                    fieldCode = "biocode.ScientificName"; //we use the standard organism field so we need to map it to the correct database id
+                }
+                else if (fieldCode.equals(DocumentField.COMMON_NAME_FIELD.getCode())) {
+                    fieldCode = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
+                }
                 queryBuilder.append(fieldCode +" "+ join +" ");
 
                 Object[] queryValues = aquery.getValues();
@@ -371,7 +388,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
         if(extractionIds == null || extractionIds.size() == 0) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
 
         StringBuilder query = new StringBuilder("SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode_extract, biocode_tissue WHERE biocode_extract.bnhm_id = biocode_tissue.bnhm_id AND (");

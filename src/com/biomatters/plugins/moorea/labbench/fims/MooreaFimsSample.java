@@ -1,14 +1,13 @@
 package com.biomatters.plugins.moorea.labbench.fims;
 
-import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-
-import java.util.*;
-import java.util.Date;
-import java.sql.*;
-
+import com.biomatters.plugins.moorea.labbench.FimsSample;
 import org.jdom.Element;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 
 /**
  * @author Steven Stones-Havas
@@ -50,7 +49,7 @@ public class MooreaFimsSample implements FimsSample {
         //special case
         hiddenFimsAttributes = new ArrayList<DocumentField>();
         for(DocumentField field : extraHiddenFields) {
-            values.put(field.getCode(), getResult(resultSet, field));
+            values.put(field.getCode(), getResult(resultSet, field.getCode(), field.getValueType()));
             hiddenFimsAttributes.add(field);
         }
 
@@ -58,36 +57,47 @@ public class MooreaFimsSample implements FimsSample {
     }
 
     private void putField(ResultSet resultSet, DocumentField field) throws SQLException {
+
+        String code = field.getCode();
+        if(DocumentField.ORGANISM_FIELD.getCode().equals(code)) {
+            code = "biocode.ScientificName"; //we use the standard organism field so we need to map it to the correct database id
+        }
+        else if(DocumentField.COMMON_NAME_FIELD.getCode().equals(code)) {
+            code = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
+        }
+
         try {//skip collumns that don't exist
-            resultSet.findColumn(field.getCode());
+            resultSet.findColumn(code);
         }
         catch(SQLException ex) {
             return;
         }
 
-        Object value = getResult(resultSet, field);
+        Object value = getResult(resultSet, code, field.getValueType());
 
         values.put(field.getCode(), value);
     }
 
-    private Object getResult(ResultSet resultSet, DocumentField field) throws SQLException {
+    private Object getResult(ResultSet resultSet, String code, Class valueType) throws SQLException {
         Object value;
 
-        if(field.getValueType().equals(Integer.class)) {
-            value = resultSet.getInt(field.getCode());
+
+
+        if(valueType.equals(Integer.class)) {
+            value = resultSet.getInt(code);
         }
-        else if(field.getValueType().equals(Double.class)) {
-            value = resultSet.getDouble(field.getCode());
+        else if(valueType.equals(Double.class)) {
+            value = resultSet.getDouble(code);
         }
-        else if(field.getValueType().equals(String.class)) {
-            value = resultSet.getString(field.getCode());
+        else if(valueType.equals(String.class)) {
+            value = resultSet.getString(code);
         }
-        else if(field.getValueType().equals(Date.class)) {
-            java.sql.Date date = resultSet.getDate(field.getCode());
+        else if(valueType.equals(Date.class)) {
+            java.sql.Date date = resultSet.getDate(code);
             value = new Date(date.getTime());
         }
         else {
-            throw new IllegalArgumentException("The class "+field.getValueType()+" is not supported!");
+            throw new IllegalArgumentException("The class "+valueType+" is not supported!");
         }
         return value;
     }
