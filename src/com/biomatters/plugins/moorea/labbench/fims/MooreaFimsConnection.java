@@ -29,6 +29,11 @@ public class MooreaFimsConnection extends FIMSConnection{
     private Driver driver;
     private Connection connection;
 
+    private static final DocumentField MOOREA_TISSUE_ID_FIELD = new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
+    private static final DocumentField MOOREA_PLATE_NAME_FIELD = new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false);
+    private static final DocumentField MOOREA_WELL_NUMBER_FIELD = new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false);
+    private static final DocumentField MOOREA_TISSUE_BARCODE_FIELD = new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false);
+
     public String getLabel() {
         return "Moorea FIMS";
     }
@@ -116,35 +121,35 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     public DocumentField getTissueSampleDocumentField() {
-        return getCollectionAttributes().get(0);
+        return MOOREA_TISSUE_ID_FIELD;
     }
 
     public DocumentField getTissueBarcodeDocumentField() {
-        return getCollectionAttributes().get(5);
+        return MOOREA_TISSUE_BARCODE_FIELD;
     }
 
     @Override
     public DocumentField getPlateDocumentField() {
-        return getCollectionAttributes().get(3);
+        return MOOREA_PLATE_NAME_FIELD;
     }
 
     @Override
     public DocumentField getWellDocumentField() {
-        return getCollectionAttributes().get(4);
+        return MOOREA_WELL_NUMBER_FIELD;
     }
 
     public List<DocumentField> getCollectionAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
 
-        fields.add(new DocumentField("Tissue ID", "", "tissueId", String.class, true, false));
+        fields.add(MOOREA_TISSUE_ID_FIELD);
 
         fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, false, false));
         fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, false, false));
         fields.add(new DocumentField("Specimen Num Collector", "", "biocode.Specimen_Num_Collector", String.class, false, false));
 
-        fields.add(new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false));
-        fields.add(new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false));
-        fields.add(new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false));
+        fields.add(MOOREA_PLATE_NAME_FIELD);
+        fields.add(MOOREA_WELL_NUMBER_FIELD);
+        fields.add(MOOREA_TISSUE_BARCODE_FIELD);
 
         fields.add(new DocumentField("BOLD ProcessID", "", "biocode_tissue.molecular_id", String.class, true, false));
 
@@ -155,6 +160,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(DocumentField.ORGANISM_FIELD);
         fields.add(DocumentField.COMMON_NAME_FIELD);
+
         fields.add(new DocumentField("Lowest Taxon", "", "biocode.LowestTaxon", String.class, true, false));
         fields.add(new DocumentField("Lowest Taxon Level", "", "biocode.LowestTaxonLevel", String.class, true, false));
 
