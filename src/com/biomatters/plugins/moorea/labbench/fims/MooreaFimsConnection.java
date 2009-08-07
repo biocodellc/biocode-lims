@@ -140,6 +140,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, false, false));
         fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, false, false));
+        fields.add(new DocumentField("Specimen Num Collector", "", "biocode.Specimen_Num_Collector", String.class, false, false));
 
         fields.add(new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false));
         fields.add(new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false));
@@ -154,6 +155,8 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(DocumentField.ORGANISM_FIELD);
         fields.add(DocumentField.COMMON_NAME_FIELD);
+        fields.add(new DocumentField("Lowest Taxon", "", "biocode.LowestTaxon", String.class, true, false));
+        fields.add(new DocumentField("Lowest Taxon Level", "", "biocode.LowestTaxonLevel", String.class, true, false));
 
         fields.add(new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Integer.class, false, false));
         fields.add(new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Integer.class, false, false));
@@ -363,6 +366,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
             queryBuilder.append("(");
             int count = 0;
+            boolean firstTime = true;
             for (Iterator<? extends Query> it = cquery.getChildren().iterator(); it.hasNext();) {
                 Query childQuery = it.next();
 
@@ -370,12 +374,12 @@ public class MooreaFimsConnection extends FIMSConnection{
                 if(s == null) {
                     continue;
                 }
-                count ++;
-                queryBuilder.append(s);
-
-                if(it.hasNext()) {
+                else if(!firstTime) {
                     queryBuilder.append(join);
                 }
+                firstTime = false;
+                count ++;
+                queryBuilder.append(s);
             }
             if(count == 0) {
                 return null;
