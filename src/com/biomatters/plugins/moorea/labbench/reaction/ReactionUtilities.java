@@ -1,39 +1,44 @@
 package com.biomatters.plugins.moorea.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
-import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ButtonOption;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.plates.Plate;
+import com.biomatters.plugins.moorea.options.NamePartOption;
+import com.biomatters.plugins.moorea.options.NameSeparatorOption;
+import jebl.util.ProgressListener;
+import org.jdom.Element;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicSplitPaneUI;
-import javax.swing.plaf.basic.BasicSplitPaneDivider;
-import javax.swing.border.EmptyBorder;
 import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.*;
-import java.util.*;
-import java.util.List;
-import java.util.prefs.Preferences;
-import java.util.concurrent.atomic.AtomicBoolean;
+import javax.swing.plaf.basic.BasicSplitPaneDivider;
+import javax.swing.plaf.basic.BasicSplitPaneUI;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.*;
-
-import org.virion.jam.util.SimpleListener;
-import org.jdom.Element;
-import jebl.util.ProgressListener;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.prefs.Preferences;
 
 /**
  * @author Steven Stones-Havas
@@ -75,8 +80,8 @@ public class ReactionUtilities {
         options.beginAlignHorizontally(null, false);
         Options.Option label = options.addLabel("Well name is:");
         label.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
-        List<Options.OptionValue> namePartValues = getNamePartValues(6);
-        Options.ComboBoxOption namePartOption2 = options.addComboBoxOption("namePart2", "", namePartValues, namePartValues.get(0));
+        NamePartOption namePartOption2 = new NamePartOption("namePart2", "");
+        options.addCustomOption(namePartOption2);
         namePartOption2.setDescription("Each name is split into segments by the given separator, then the n-th segment is used to identify the sequence's well");
         options.addLabel("part of name,");
         options.endAlignHorizontally();
@@ -84,7 +89,8 @@ public class ReactionUtilities {
         Options.BooleanOption checkPlateName = options.addBooleanOption("checkPlateName", "", false);
         Options.Option<String, ? extends JComponent> label2 = options.addLabel("Check plate name is correct, where plate name is:");
         checkPlateName.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
-        Options.ComboBoxOption namePartOption = options.addComboBoxOption("namePart", "", namePartValues, namePartValues.get(0));
+        NamePartOption namePartOption = new NamePartOption("namePart", "");
+        options.addCustomOption(namePartOption);
         namePartOption.setDescription("Each name is split into segments by the given separator, then the n-th segment is used to identify the sequence's plate");
         Options.Option<String, ? extends JComponent> label3 = options.addLabel("part of name,");
         checkPlateName.addDependent(namePartOption,  true);
@@ -93,29 +99,17 @@ public class ReactionUtilities {
         options.endAlignHorizontally();
         options.beginAlignHorizontally(null, false);
         options.addLabel(" seperated by");
-        Options.EditableComboBoxOption nameSeperatorOption = options.addEditableComboBoxOption("nameSeparator", "", Seperator.hyphen.label, getPossibleSeperators());
-        nameSeperatorOption.setDescription("The character at which each name is split (there should be one of these on either side of the identifier in each name).");
+        NameSeparatorOption nameSeperatorOption = new NameSeparatorOption("nameSeparator", "");
+        options.addCustomOption(nameSeperatorOption);
         options.endAlignHorizontally();
 
         if(!Dialogs.showOptionsDialog(options, "Bulk add chromatograms", true, owner)){
             return false;    
         }
 
-        String separatorString = null;
-        String seperatorLabel = nameSeperatorOption.getValue();
-        for (Seperator seperator : Seperator.values()) {
-            if(seperator.label.equals(seperatorLabel)) {
-                separatorString = seperator.sepString;
-            }
-        }
-        if(separatorString == null) {
-            assert false : "separator string was null!";
-            System.out.println("separator string was null!");
-            return false;
-        }
-        final int platePart = Integer.parseInt(((Options.OptionValue)namePartOption.getValue()).getName());
-        final int wellPart = Integer.parseInt(((Options.OptionValue)namePartOption2.getValue()).getName());
-        final boolean checkPlate = (Boolean)checkPlateName.getValue();
+        final int platePart = namePartOption.getPart();
+        final int wellPart = namePartOption2.getPart();
+        final boolean checkPlate = checkPlateName.getValue();
 
         final File folder = new File(selectionOption.getValue());
         if(!folder.exists()) {
@@ -125,14 +119,13 @@ public class ReactionUtilities {
             throw new IllegalStateException(folder.getAbsolutePath()+" is not a folder!");
         }
 
-        final String separatorString1 = separatorString;
+        final String separatorString = nameSeperatorOption.getSeparatorString();
         Runnable runnable = new Runnable() {
             public void run() {
-                importAndAddTraces(reactions, separatorString1, platePart, wellPart, checkPlate, folder);
+                importAndAddTraces(reactions, separatorString, platePart, wellPart, checkPlate, folder);
             }
         };
         MooreaLabBenchService.block("Importing traces", owner, runnable);
-
 
         return true;
     }
@@ -156,29 +149,8 @@ public class ReactionUtilities {
             }
             if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
                 String[] nameParts = f.getName().split(separatorString);
-                if(wellPart >= nameParts.length) {
-                    continue;
-                }
-
-                String wellStringBig = nameParts[wellPart];
-                int count = 1;
-                int wellNumber = -1;
-                String wellNumberString = "";
-                while(true) {
-                    if(count >= wellStringBig.length()) {
-                        break;
-                    }
-                    char numberChar = wellStringBig.charAt(count);
-                    try{
-                        wellNumber = Integer.parseInt(wellNumberString+numberChar);
-                    }
-                    catch(NumberFormatException ex) {
-                        break;
-                    }
-                    wellNumberString = wellNumberString+numberChar;
-                    count++;
-                }
-                String wellString = ""+wellStringBig.toUpperCase().charAt(0)+wellNumber;
+                String wellString = MooreaUtilities.getWellString(f.getName(), separatorString, wellPart);
+                if (wellString == null) continue;
                 if(wellString.equals("A1")) {
                     System.out.println(f.getAbsolutePath());
                 }
@@ -208,57 +180,6 @@ public class ReactionUtilities {
                     }
                 }
             }
-        }
-    }
-
-    private static List<Options.OptionValue> getNamePartValues(int numberOfParts) {
-        List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
-
-        for(int i=1; i<=numberOfParts; i++) {
-            String humanIndex = "" + i;
-            if(humanIndex.length() != 1 && i/10 % 10 != 1) {
-                humanIndex += "th";
-            } else if(i % 10 == 1) {
-                humanIndex += "st";
-            } else if(i % 10 == 2) {
-                humanIndex += "nd";
-            } else if(i % 10 == 3) {
-                humanIndex += "rd";
-            } else {
-                humanIndex += "th";
-            }
-            values.add(new Options.OptionValue("" + (i-1), humanIndex));
-        }
-        return values;
-    }
-
-    private static String[] getPossibleSeperators() {
-        List<String> seperators = new ArrayList<String>();
-        for (Seperator seperator : Seperator.values()) {
-            seperators.add(seperator.label);
-        }
-        return seperators.toArray(new String[seperators.size()]);
-    }
-
-    enum Seperator {
-        underscore("_", "_ (Underscore)"),
-        asterisk("\\*", "* (Asterisk)"),
-        bar("\\|", "| (Vertical Bar)"),
-        hyphen("-", "- (Hyphen)"),
-        colon(":", ": (Colon)"),
-        dollarSign("\\$", "$ (Dollar)"),
-        equals("=", "= (Equals)"),
-        fullstop("\\.", ". (Full Stop)"),
-        comma(",", ", (Comma)"),
-        plus("\\+", "+ (Plus)"),
-        whitespace("\\s+", "(Space)");
-
-        String sepString;
-        String label;
-
-        private Seperator(String regex, String label) {
-            this.sepString = regex;
-            this.label = label;
         }
     }
 
