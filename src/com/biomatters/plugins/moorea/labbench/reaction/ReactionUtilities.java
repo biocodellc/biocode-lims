@@ -78,7 +78,7 @@ public class ReactionUtilities {
 
 
         options.beginAlignHorizontally(null, false);
-        Options.Option label = options.addLabel("Well name is:");
+        Options.Option label = options.addLabel("Well number is:");
         label.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
         NamePartOption namePartOption2 = new NamePartOption("namePart2", "");
         options.addCustomOption(namePartOption2);
@@ -149,8 +149,9 @@ public class ReactionUtilities {
             }
             if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
                 String[] nameParts = f.getName().split(separatorString);
-                String wellString = MooreaUtilities.getWellString(f.getName(), separatorString, wellPart);
-                if (wellString == null) continue;
+                MooreaUtilities.Well well = MooreaUtilities.getWellString(f.getName(), separatorString, wellPart);
+                if (well == null) continue;
+                String wellString = well.toString();
                 if(wellString.equals("A1")) {
                     System.out.println(f.getAbsolutePath());
                 }
