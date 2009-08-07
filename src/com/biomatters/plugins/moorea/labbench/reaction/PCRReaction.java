@@ -49,9 +49,6 @@ public class PCRReaction extends Reaction {
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("pcr.extractionId")));
             options.setValue("workflowId", getWorkflow().getName());
         }
-        else {
-            assert false : "We should be getting a resultset of at least the CycleSequencing table joined to the Workflow table";
-        }
 
         options.getOption("runStatus").setValueFromString(r.getString("pcr.progress"));
 
@@ -147,15 +144,18 @@ public class PCRReaction extends Reaction {
         try {
             tissueMapping = MooreaLabBenchService.getInstance().getReactionToTissueIdMapping("extraction", reactions);
         } catch (SQLException e) {
-            return "Could not connect to the LIMS database";
+            e.printStackTrace();
+            return "Could not connect to the LIMS database: "+e.getMessage();
         }
         for(Reaction reaction : reactions) {
-            if(reaction.isEmpty()) {
+            ReactionOptions option = reaction.getOptions();
+            String extractionid = option.getValueAsString("extractionId");
+            if(reaction.isEmpty() || extractionid == null || extractionid.length() == 0) {
                 continue;
             }
             reaction.isError = false;
-            ReactionOptions option = reaction.getOptions();
-            String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
+
+            String tissue = tissueMapping.get(extractionid);
             if(tissue == null) {
                 error += "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!\n";
                 reaction.isError = true;
@@ -169,7 +169,7 @@ public class PCRReaction extends Reaction {
         }
 
 
-        //check the tissue samples exist in the database...
+        //add FIMS data to the reaction...
         if(queries.size() > 0) {
             Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
             try {
@@ -181,12 +181,11 @@ public class PCRReaction extends Reaction {
                 for(Reaction reaction : reactions) {
                     ReactionOptions op = reaction.getOptions();
                     String extractionId = op.getValueAsString("extractionId");
-                    FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
-                    if(currentFimsSample == null) {
-                        error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
-                        reaction.isError = true;
+                    if(extractionId == null || extractionId.length() == 0) {
+                        continue;
                     }
-                    else {
+                    FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
+                    if(currentFimsSample != null) {
                         reaction.isError = false;
                         reaction.setFimsSample(currentFimsSample);
                     }

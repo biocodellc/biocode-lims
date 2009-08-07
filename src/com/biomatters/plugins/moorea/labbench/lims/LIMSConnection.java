@@ -290,7 +290,7 @@ public class LIMSConnection {
         StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN extraction ON extraction.plate = plate.id " +
-                "RIGHT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
+                "LEFT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
                 "WHERE");
 
         Set<Integer> plateIds = new HashSet<Integer>();

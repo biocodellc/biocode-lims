@@ -59,9 +59,6 @@ public class ExtractionReaction extends Reaction{
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("pcr.extractionId")));
             options.setValue("workflowId", getWorkflow().getName());
         }
-        else {
-            assert false : "We should be getting a resultset of at least the CycleSequencing table joined to the Workflow table";
-        }
     }
 
     public String getExtractionId() {
@@ -117,11 +114,13 @@ public class ExtractionReaction extends Reaction{
         List<Query> queries = new ArrayList<Query>();
 
         for(Reaction reaction : reactions) {
-            if(reaction.isEmpty()) {
+            ReactionOptions option = reaction.getOptions();
+            String tissueId = option.getValueAsString("sampleId");
+
+            if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
                 continue;
             }
-            ReactionOptions option = reaction.getOptions();
-            Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, option.getValueAsString("sampleId"));
+            Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissueId);
             if(!queries.contains(fieldQuery)) {
                  queries.add(fieldQuery);
             }
@@ -141,12 +140,13 @@ public class ExtractionReaction extends Reaction{
                 docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
             }
             for(Reaction reaction : reactions) {
-                if(reaction.isEmpty()) {
-                    continue;
-                }
-                reaction.isError = false;
                 ReactionOptions op = reaction.getOptions();
                 String tissueId = op.getValueAsString("sampleId");
+                reaction.isError = false;
+                                
+                if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
+                    continue;
+                }
                 FimsSample currentFimsSample = docMap.get(tissueId);
                 if(currentFimsSample == null) {
                     error += "The tissue sample "+tissueId+" does not exist in the database.\n";

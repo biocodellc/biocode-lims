@@ -545,10 +545,16 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setString(14, primerOptionValue2.getLabel());
                         statement.setString(16, primerOptionValue2.getDescription());
                         statement.setInt(15, (Integer)options.getValue("revPrAmount"));
-                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
-                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
+//                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+//                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
+//                        }
+                        //statement.setInt(4, reaction.getWorkflow() != null ? reaction.getWorkflow().getId() : 0);
+                        if(reaction.getWorkflow() != null) {
+                            statement.setInt(4, reaction.getWorkflow().getId());
                         }
-                        statement.setInt(4, reaction.getWorkflow().getId());
+                        else {
+                            statement.setObject(4, null);
+                        }
                         statement.setInt(5, reaction.getPlateId());
                         statement.setInt(6, reaction.getPosition());
                         int cocktailId = -1;

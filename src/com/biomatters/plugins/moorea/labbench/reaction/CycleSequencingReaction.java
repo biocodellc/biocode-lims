@@ -60,9 +60,6 @@ public class CycleSequencingReaction extends Reaction{
             options.setValue("workflowId", s);
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("cyclesequencing.extractionId")));
         }
-        else {
-            assert false : "We should be getting a resultset of at least the CycleSequencing table joined to the Workflow table";
-        }
 
 
         options.getOption("runStatus").setValueFromString(r.getString("cyclesequencing.progress"));

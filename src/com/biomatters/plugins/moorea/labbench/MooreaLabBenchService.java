@@ -106,9 +106,9 @@ public class MooreaLabBenchService extends DatabaseService {
     @Override
     public ExtendedSearchOption[] getExtendedSearchOptions(boolean isAdvancedSearch) {
         return new ExtendedSearchOption[] {
-                new CheckboxSearchOption("tissueDocuments", "Return tissue sample records", true),
-                new CheckboxSearchOption("workflowDocuments", "Return workflow records", true),
-                new CheckboxSearchOption("plateDocuments", "Return plate records", true),
+                new CheckboxSearchOption("tissueDocuments", "Tissue-samples", true),
+                new CheckboxSearchOption("workflowDocuments", "Workflows", true),
+                new CheckboxSearchOption("plateDocuments", "Plates", true),
         };
     }
 
@@ -864,8 +864,13 @@ public class MooreaLabBenchService extends DatabaseService {
             return Collections.EMPTY_MAP;
         }
         PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
+        int reactionCount = 1;
         for(int i=0; i < reactions.size(); i++) {
-            statement.setString(i+1, reactions.get(i).getExtractionId());
+            if(reactions.get(i).isEmpty()) {
+                continue;
+            }
+            statement.setString(reactionCount, reactions.get(i).getExtractionId());
+            reactionCount++;
         }
 
         ResultSet resultSet = statement.executeQuery();
@@ -932,7 +937,7 @@ public class MooreaLabBenchService extends DatabaseService {
             for(Reaction reaction : plate.getReactions()) {
                 if(!reaction.isEmpty()) {
                     extractionIds.add(reaction.getExtractionId());
-                    if(reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+                    if((reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getOptions().getValueAsString("sampleId").length() > 0) {
                         extractionWithoutWorkflowIds.add(reaction.getExtractionId());
                     }
                     reactionsToSave.add(reaction);
@@ -959,7 +964,7 @@ public class MooreaLabBenchService extends DatabaseService {
                     List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionWithoutWorkflowIds, progress);
                     int workflowIndex = 0;
                     for(Reaction reaction : plate.getReactions()) {
-                        if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                        if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getOptions().getValueAsString("sampleId").length() > 0) {
                             reaction.setWorkflow(workflowList.get(workflowIndex));
                             workflowIndex++;
                         }
@@ -1000,18 +1005,20 @@ public class MooreaLabBenchService extends DatabaseService {
                 Object extractionId = reaction.getExtractionId();
                 if(!reaction.isEmpty() && reaction.getType() != Reaction.Type.Extraction) {
                     reactionsToSave.add(reaction);
-                    if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
-                        if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
-                            reaction.setHasError(true);
-                            throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                    if(extractionId != null && extractionId.toString().length() > 0) {
+                        if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
+                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                                reaction.setHasError(true);
+                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                            }
+                            if(reaction.getWorkflow().getName().equals(workflowId)) {
+                                continue;
+                            }
                         }
-                        if(reaction.getWorkflow().getName().equals(workflowId)) {
-                            continue;
+                        else {
+                            reaction.setWorkflow(null);
+                            workflowIdStrings.add(workflowId.toString());
                         }
-                    }
-                    else {
-                        reaction.setWorkflow(null);
-                        workflowIdStrings.add(workflowId.toString());
                     }
                 }
             }
@@ -1029,10 +1036,10 @@ public class MooreaLabBenchService extends DatabaseService {
                 Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
                 for(Reaction reaction : plate.getReactions()) {
                     Object workflowId = reaction.getFieldValue("workflowId");
-                    if(reaction.getWorkflow() == null){
+                    String extractionId = reaction.getExtractionId();
+                    if(reaction.getWorkflow() == null && extractionId.length() > 0){
                         Workflow workflow = map.get(workflowId);
                         if(workflow != null) {
-                            String extractionId = reaction.getExtractionId();
                             if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
                                 reaction.setHasError(true);
                                 throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
@@ -1049,7 +1056,7 @@ public class MooreaLabBenchService extends DatabaseService {
             //int workflowCount = 0;
             List<String> extractionIds = new ArrayList<String>();
             for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                if(!reaction.isEmpty() && reaction.getExtractionId().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
                     extractionIds.add(reaction.getExtractionId());
                 }
             }
@@ -1057,7 +1064,7 @@ public class MooreaLabBenchService extends DatabaseService {
                 List<Workflow> workflowList = MooreaLabBenchService.getInstance().createWorkflows(extractionIds, progress);
                 int workflowIndex = 0;
                 for(Reaction reaction : plate.getReactions()) {
-                    if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                    if(!reaction.isEmpty() && reaction.getExtractionId().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
                         reaction.setWorkflow(workflowList.get(workflowIndex));
                         workflowIndex++;
                     }
