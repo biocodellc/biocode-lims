@@ -42,7 +42,7 @@ public class MooreaUtilities {
      * @param partNumber
      * @return well or null if couldn't parse out well name
      */
-    public static Well getWellString(String fileName, String separator, int partNumber) {
+    public static Well getWellFromFileName(String fileName, String separator, int partNumber) {
         String[] nameParts = fileName.split(separator);
         if(partNumber >= nameParts.length) {
             return null;
@@ -63,9 +63,17 @@ public class MooreaUtilities {
             catch(NumberFormatException ex) {
                 break;
             }
-            wellNumberString = wellNumberString+numberChar;
+            wellNumberString += numberChar;
             count++;
         }
         return new Well(wellStringBig.toUpperCase().charAt(0), wellNumber);
+    }
+
+    public static String getBarcodeFromFileName(String fileName, String separator, int partNumber) {
+        String[] nameParts = fileName.split(separator);
+        if(partNumber >= nameParts.length) {
+            return null;
+        }
+        return nameParts[partNumber];
     }
 }

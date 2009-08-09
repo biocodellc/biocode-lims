@@ -149,7 +149,7 @@ public class ReactionUtilities {
             }
             if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
                 String[] nameParts = f.getName().split(separatorString);
-                MooreaUtilities.Well well = MooreaUtilities.getWellString(f.getName(), separatorString, wellPart);
+                MooreaUtilities.Well well = MooreaUtilities.getWellFromFileName(f.getName(), separatorString, wellPart);
                 if (well == null) continue;
                 String wellString = well.toString();
                 if(wellString.equals("A1")) {
