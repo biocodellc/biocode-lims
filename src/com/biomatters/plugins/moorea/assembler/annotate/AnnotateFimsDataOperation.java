@@ -41,6 +41,9 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
+        if (MooreaLabBenchService.getInstance().getActiveFIMSConnection() == null) {
+            throw new DocumentOperationException("You must connect to the lab bench service first");
+        }
         return new AnnotateFimsDataOptions();
     }
 

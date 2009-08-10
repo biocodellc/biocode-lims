@@ -4,9 +4,12 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.moorea.assembler.annotate.AnnotateFimsDataOperation;
+import com.biomatters.plugins.moorea.assembler.lims.AddAssemblyResultsToLims;
 import com.biomatters.plugins.moorea.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.moorea.labbench.*;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.submission.bold.ExportForBoldOperation;
+import com.biomatters.plugins.moorea.submission.genbank.barstool.ExportForBarstoolOperation;
 
 import javax.swing.*;
 import java.io.File;
@@ -31,6 +34,7 @@ public class MooreaPlugin extends GeneiousPlugin {
         if (superBiocodeAction == null) {
             superBiocodeAction = new GeneiousActionOptions("Biocode", null, getIcons("biocode24.png"))
                     .setInMainToolbar(true, 0.55);
+            superBiocodeAction.addSubmenuDivider(0.5);
         }
         return superBiocodeAction;
     }
@@ -160,7 +164,10 @@ public class MooreaPlugin extends GeneiousPlugin {
                 new SetReadDirectionOperation(),
                 new BatchChromatogramExportOperation(),
                 new VerifyTaxonomyOperation(),
-                new AnnotateFimsDataOperation()
+                new AnnotateFimsDataOperation(),
+                new AddAssemblyResultsToLims(),
+                new ExportForBoldOperation(),
+                new ExportForBarstoolOperation()
         };
     }
 
