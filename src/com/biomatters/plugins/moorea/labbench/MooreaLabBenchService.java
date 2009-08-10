@@ -7,8 +7,8 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
@@ -479,7 +479,7 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public String getName() {
-        return "Moorea";
+        return "Moorea Biocode";
     }
 
     public String getDescription() {
@@ -491,7 +491,7 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public Icons getIcons() {
-        return IconUtilities.getIcons("databaseSearch16.png", "databaseSearch24.png");
+        return MooreaPlugin.getIcons("biocode24.png");
     }
 
     public void addNewPCRCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{

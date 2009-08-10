@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
@@ -22,9 +23,10 @@ import java.util.List;
 public class AnnotateFimsDataOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
-        return new GeneiousActionOptions("Annotate with FIMS Data...",
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Annotate with FIMS Data...",
                 "Annotate sequences/assemblies with data from the Field Information Management System. eg. Taxonomy, Collector")
-                .setMainMenuLocation(GeneiousActionOptions.MainMenu.Sequence);
+                .setInPopupMenu(true, 0.2);
+        return GeneiousActionOptions.createSubmenuActionOptions(MooreaPlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 
     public String getHelp() {

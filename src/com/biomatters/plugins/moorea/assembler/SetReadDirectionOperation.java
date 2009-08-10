@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.plugins.moorea.MooreaPlugin;
 import jebl.util.ProgressListener;
 
 import java.util.List;
@@ -18,8 +19,9 @@ public class SetReadDirectionOperation extends DocumentOperation {
             "Whether this read is in the forward direction", "isForwardRead", false, false);
 
     public GeneiousActionOptions getActionOptions() {
-        return new GeneiousActionOptions("Set Read Direction...", "Mark sequences as forward or reverse reads so the correct reads are reverse complemented by assembly")
-                .setMainMenuLocation(GeneiousActionOptions.MainMenu.Sequence);
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Set Read Direction...", "Mark sequences as forward or reverse reads so the correct reads are reverse complemented by assembly")
+                .setInPopupMenu(true, 0.1);
+        return GeneiousActionOptions.createSubmenuActionOptions(MooreaPlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 
     public String getHelp() {

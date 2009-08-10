@@ -18,11 +18,21 @@ import java.util.Map;
  * @version $Id: MooreaLabBenchPlugin.java 22212 2008-09-17 02:57:52Z richard $
  */
 public class MooreaPlugin extends GeneiousPlugin {
+
     private File pluginUserDirectory;
-    private File pluginDirectory;
     public static final Map<String, Icons> pluginIcons;
     static {
         pluginIcons = new HashMap<String, Icons>();
+    }
+
+    private static GeneiousActionOptions superBiocodeAction;
+
+    public static GeneiousActionOptions getSuperBiocodeAction() {
+        if (superBiocodeAction == null) {
+            superBiocodeAction = new GeneiousActionOptions("Biocode", null, getIcons("biocode24.png"))
+                    .setInMainToolbar(true, 0.55);
+        }
+        return superBiocodeAction;
     }
 
     public String getName() {
@@ -56,7 +66,6 @@ public class MooreaPlugin extends GeneiousPlugin {
     @Override
     public void initialize(File pluginUserDirectory, File pluginDirectory) {
         this.pluginUserDirectory = pluginUserDirectory;
-        this.pluginDirectory = pluginDirectory;
         Runnable r = new Runnable(){
             public void run() {
                 initialiseIcons();
@@ -92,15 +101,30 @@ public class MooreaPlugin extends GeneiousPlugin {
 
         URL workflowIcon = MooreaPlugin.class.getResource("workflow_16.png");
         putUrlIntoIconsMap(workflowIcon, "workflow_16.png");
+
+        URL biocodeIconS = MooreaPlugin.class.getResource("biocode16.png");
+        URL biocodeIconL = MooreaPlugin.class.getResource("biocode24.png");
+        putUrlIntoIconsMap(biocodeIconS, biocodeIconL, "biocode24.png");
     }
 
     private static void putUrlIntoIconsMap(URL url, String key){
         if(url == null) {
-            assert false : url.toString();
+            assert false;
             return;
         }
         ImageIcon icon = new ImageIcon(url);
         Icons icons = new Icons(icon);
+        pluginIcons.put(key, icons);
+    }
+
+    private static void putUrlIntoIconsMap(URL urlSmall, URL urlLarge, String key){
+        if(urlSmall == null || urlLarge == null) {
+            assert false;
+            return;
+        }
+        ImageIcon iconSmall = new ImageIcon(urlSmall);
+        ImageIcon iconLarge = new ImageIcon(urlLarge);
+        Icons icons = new Icons(iconSmall, iconLarge);
         pluginIcons.put(key, icons);
     }
 

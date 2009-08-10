@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.plugins.moorea.MooreaPlugin;
 import jebl.util.ProgressListener;
 
 import java.util.Collections;
@@ -18,10 +19,11 @@ import java.util.List;
 public class VerifyTaxonomyOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
-        return new GeneiousActionOptions("Verify Taxonomy...",
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Verify Taxonomy...",
                 "Perform a batch BLAST search to verify the taxonomy and locus of sequencing results")
-                .setMainMenuLocation(GeneiousActionOptions.MainMenu.Sequence)
+                .setInPopupMenu(true, 0.3)
                 .setProOnly(true);
+        return GeneiousActionOptions.createSubmenuActionOptions(MooreaPlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 
     public String getHelp() {
