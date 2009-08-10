@@ -19,13 +19,16 @@ import java.util.Map;
  */
 public class VerifyTaxonomyCallback extends RetrieveCallback {
 
-    private final List<AnnotatedPluginDocument> queries;
+    private final AnnotatedPluginDocument[] queries;
+    private final String keywords;
     private final Map<AnnotatedPluginDocument, List<VerifyResult>> results = new HashMap<AnnotatedPluginDocument, List<VerifyResult>>();
     private int currentQuery = -1;
+    private static final DocumentField CLOSEST_GENBANK_TAXON_FIELD = DocumentField.createStringField("Closest GenBank Taxon", "The taxonomy of the most similar sequence in GenBank, determined by BLAST", "closestGenbankTaxon", true, false);
 
-    public VerifyTaxonomyCallback(List<AnnotatedPluginDocument> queries, ProgressListener progressListener) {
+    public VerifyTaxonomyCallback(AnnotatedPluginDocument[] queries, ProgressListener progressListener, String keywords) {
         super(progressListener);
         this.queries = queries;
+        this.keywords = keywords;
     }
 
     protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
@@ -33,7 +36,9 @@ public class VerifyTaxonomyCallback extends RetrieveCallback {
     }
 
     protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
-        AnnotatedPluginDocument query = queries.get(currentQuery);
+        AnnotatedPluginDocument query = queries[currentQuery];
+        query.setFieldValue(CLOSEST_GENBANK_TAXON_FIELD, document.getFieldValue(DocumentField.TAXONOMY_FIELD));
+        query.save();
         List<VerifyResult> resultsForQuery = results.get(query);
         if (resultsForQuery == null) {
             resultsForQuery = new ArrayList<VerifyResult>();
@@ -48,6 +53,6 @@ public class VerifyTaxonomyCallback extends RetrieveCallback {
     }
 
     AnnotatedPluginDocument getResultsDocument() {
-        return DocumentUtilities.createAnnotatedPluginDocument(new VerifyTaxonomyResultsDocument(results));
+        return DocumentUtilities.createAnnotatedPluginDocument(new VerifyTaxonomyResultsDocument(results, keywords));
     }
 }

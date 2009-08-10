@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Richard
@@ -20,9 +21,10 @@ public class VerifyTaxonomyResultsDocument extends AbstractPluginDocument {
     public VerifyTaxonomyResultsDocument() {
     }
 
-    public VerifyTaxonomyResultsDocument(Map<AnnotatedPluginDocument, List<VerifyResult>> results) {
+    public VerifyTaxonomyResultsDocument(Map<AnnotatedPluginDocument, List<VerifyResult>> results, String keywords) {
         this.results = results;
         setFieldValue("name", DocumentUtilities.getUniqueNameForDocument("Verify Taxonomy Results"));
+        setFieldValue("keywords", keywords);
     }
 
     public String getName() {
@@ -37,15 +39,59 @@ public class VerifyTaxonomyResultsDocument extends AbstractPluginDocument {
         StringBuilder html = new StringBuilder("<html>");
         html.append(GuiUtilities.getHtmlHead());
         html.append("<table>");
-        html.append("<tr><td>Query<td>Hit<td>E-Value");
+        html.append("<tr><td><b>Query</b><td><b>Query Taxon</b><td><b>Hit Taxon</b><td><b>Keywords</b><td><b>Hit Definition</b><td><b>E-Value</b><td><b>Bin</b>");
         for (Map.Entry<AnnotatedPluginDocument, List<VerifyResult>> result : results.entrySet()) {
-            html.append("<tr><td>");
-            html.append(result.getKey().getName());
-            html.append("<td>").append(result.getValue().get(0).document.getFieldValue(DocumentField.DESCRIPTION_FIELD));
-            html.append("<td>").append(result.getValue().get(0).eValue);
+
+            AtomicReference<String> keys = new AtomicReference<String>(getFieldValue("keywords").toString());
+            AtomicReference<String> definition = new AtomicReference<String>(result.getValue().get(0).document.getFieldValue(DocumentField.DESCRIPTION_FIELD).toString());
+            Object fimsTaxonomy = result.getKey().getFieldValue(DocumentField.TAXONOMY_FIELD);
+            AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
+            AtomicReference<String> blastTaxonomy = new AtomicReference<String>(result.getValue().get(0).document.getFieldValue(DocumentField.TAXONOMY_FIELD).toString());
+            boolean allOk = highlight(keys, ",", definition);
+            allOk &= highlight(taxonomy, ";", blastTaxonomy);
+
+            String nameColor = allOk ? "green" : "red";
+
+            html.append("<tr>");
+
+            html.append("<td valign=\"top\"><font color=\"").append(nameColor).append("\">").append(result.getKey().getName()).append("</font>");
+            html.append("<td valign=\"top\">").append(taxonomy.get());
+            html.append("<td valign=\"top\">").append(blastTaxonomy.get());
+            html.append("<td valign=\"top\">").append(keys.get());
+            html.append("<td valign=\"top\">").append(definition.get());
+            html.append("<td valign=\"top\">").append(result.getValue().get(0).eValue);
+            html.append("<td valign=\"top\">").append(result.getKey().getFieldValue(DocumentField.BIN).toString()
+                    .replace("</html>", "").replaceAll("<html>.*</head>", "").replaceAll("</?b>", ""));
         }
         html.append("</table></html>");
         return html.toString();
+    }
+
+    /**
+     *
+     * @param keywords keywords separated by delimiter, used to return value too
+     * @param delimiter
+     * @param s string to check for keywords, used to return value too
+     * @return true iff all keywords were found in s, false otherwise
+     */
+    private static boolean highlight(AtomicReference<String> keywords, String delimiter, AtomicReference<String> s) {
+        boolean foundAll = true;
+        String[] keys = keywords.get().split(delimiter);
+        String keys2 = keywords.get();
+        String s2 = s.get();
+        for (String key : keys) {
+            key = key.trim();
+            if (!s2.contains(key)) {
+                keys2 = keys2.replace(key, "<font color=\"red\">" + key + "</font>");
+                foundAll = false;
+            } else {
+                keys2 = keys2.replace(key, "<font color=\"green\">" + key + "</font>");
+                s2 = s2.replace(key, "<font color=\"green\">" + key + "</font>");
+            }
+        }
+        keywords.set(keys2);
+        s.set(s2);
+        return foundAll;
     }
 
     @Override

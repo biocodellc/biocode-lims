@@ -52,8 +52,8 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         Options searchOptions = database.getSequenceSearchOptions("Megablast");
         searchOptions.setValue("maxHits", 1);
         searchOptions.setValue("EXPECT", 1);
-//        searchOptions.setValue("getHitAnnos", true);
-        VerifyTaxonomyCallback callback = new VerifyTaxonomyCallback(queries, progressListener);
+        searchOptions.setValue("getHitAnnos", true);
+        VerifyTaxonomyCallback callback = new VerifyTaxonomyCallback(annotatedDocuments, progressListener, options.getKeywords());
         try {
             database.batchSequenceSearch(queries, "Megablast", searchOptions, callback);
         } catch (DatabaseServiceException e) {

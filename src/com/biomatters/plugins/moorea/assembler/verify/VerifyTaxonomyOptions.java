@@ -17,7 +17,13 @@ import java.util.List;
  */
 public class VerifyTaxonomyOptions extends Options {
 
+    private StringOption keywordsOption;
+
     public VerifyTaxonomyOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
+        addLabel("Check hit definition for keywords (comma separated):");
+        beginAlignHorizontally(null, false);
+        keywordsOption = addStringOption("definitionKeywords", "", "COI");
+        endAlignHorizontally();
         boolean isAlignments = SequenceAlignmentDocument.class.isAssignableFrom(documents[0].getDocumentClass());
         if (isAlignments) {
             //todo check sequence type
@@ -51,5 +57,9 @@ public class VerifyTaxonomyOptions extends Options {
             queries = Arrays.asList(annotatedDocuments);
         }
         return queries;
+    }
+
+    public String getKeywords() {
+        return keywordsOption.getValue();
     }
 }
