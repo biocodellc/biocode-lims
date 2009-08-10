@@ -78,10 +78,10 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     private void loadEmptyCaches() {
-        cyclesequencingCocktails = Collections.EMPTY_LIST;
-        PCRCocktails = Collections.EMPTY_LIST;
-        PCRThermocycles = Collections.EMPTY_LIST;
-        cyclesequencingThermocycles = Collections.EMPTY_LIST;
+        cyclesequencingCocktails = Collections.emptyList();
+        PCRCocktails = Collections.emptyList();
+        PCRThermocycles = Collections.emptyList();
+        cyclesequencingThermocycles = Collections.emptyList();
     }
 
     public static MooreaLabBenchService getInstance() {
@@ -247,7 +247,7 @@ public class MooreaLabBenchService extends DatabaseService {
         for (FIMSConnection connection : getFimsConnections()) {
             FIMSOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new Options(this.getClass()));
         }
-        FIMSOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
+        FIMSOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
 
         final Options LIMSOptions = limsConnection.getConnectionOptions();
 
@@ -393,10 +393,10 @@ public class MooreaLabBenchService extends DatabaseService {
             if(fimsQueries.size() > 0) {
                 Query compoundQuery;
                 if(masterQuery.getOperator() == CompoundSearchQuery.Operator.AND) {
-                    compoundQuery = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.EMPTY_MAP);
+                    compoundQuery = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
                 }
                 else {
-                    compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.EMPTY_MAP);
+                    compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
                 }
                 try {
                     tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
@@ -433,14 +433,14 @@ public class MooreaLabBenchService extends DatabaseService {
         if(tissueSamples != null && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
             for(FimsSample sample : tissueSamples) {
                 TissueDocument doc = new TissueDocument(sample);
-                callback.add(doc, Collections.EMPTY_MAP);
+                callback.add(doc, Collections.<String, Object>emptyMap());
             }
         }
         if(callback.isCanceled()) {
             return;
         }
         try {
-            List<WorkflowDocument> workflowList = Collections.EMPTY_LIST;
+            List<WorkflowDocument> workflowList = Collections.emptyList();
             if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
                 workflowList = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), tissueSamples);
             }
@@ -449,7 +449,7 @@ public class MooreaLabBenchService extends DatabaseService {
             }
             if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
                 for(PluginDocument doc : workflowList) {
-                    callback.add(doc, Collections.EMPTY_MAP);
+                    callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
             if(callback.isCanceled()) {
@@ -461,7 +461,7 @@ public class MooreaLabBenchService extends DatabaseService {
                     return;
                 }
                 for(PluginDocument doc : plateList) {
-                    callback.add(doc, Collections.EMPTY_MAP);
+                    callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
 
@@ -559,7 +559,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     private List<Cocktail> getCocktails(File file) throws JDOMException, IOException, XMLSerializationException {
         if(!file.exists()) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
         List<Cocktail> cocktails = new ArrayList<Cocktail>();
         SAXBuilder builder = new SAXBuilder();
@@ -573,7 +573,7 @@ public class MooreaLabBenchService extends DatabaseService {
     private List<Thermocycle> getThermocyclesFromDisk(String type)  throws JDOMException, IOException, XMLSerializationException{
         File file = new File(dataDirectory, type+".xml");
         if(!file.exists()) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         List<Thermocycle> thermocycles = new ArrayList<Thermocycle>();
@@ -842,7 +842,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{
         if(reactions.size() == 0) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
         String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
         String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
@@ -861,7 +861,7 @@ public class MooreaLabBenchService extends DatabaseService {
         }
         sql.append(")");
         if(count == 0) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
         PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
         int reactionCount = 1;
@@ -1186,7 +1186,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public Map<String, String> getWorkflowIds(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{
         if(idsToCheck.size() == 0) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
         StringBuilder sqlBuilder = new StringBuilder();
         switch(reactionType) {
@@ -1221,7 +1221,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public Map<String, Workflow> getWorkflows(List<String> workflowIds) throws SQLException{
         if(workflowIds.size() == 0) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
@@ -1247,7 +1247,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public Map<String, String> getTissueIdsFromBarcodes(List<String> barcodeIds) throws ConnectionException {
         if(activeFIMSConnection == null) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
 
         DocumentField barcodeField = activeFIMSConnection.getTissueBarcodeDocumentField();
@@ -1259,7 +1259,7 @@ public class MooreaLabBenchService extends DatabaseService {
             queries[i] = Query.Factory.createFieldQuery(barcodeField, Condition.EQUAL, barcodeIds.get(i));
         }
 
-        Query orQuery = Query.Factory.createOrQuery(queries, Collections.EMPTY_MAP);
+        Query orQuery = Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap());
 
         List<FimsSample> samples = activeFIMSConnection.getMatchingSamples(orQuery);
 
