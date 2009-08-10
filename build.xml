@@ -7,10 +7,15 @@
    <property name="plugin.name" value="com.biomatters.plugins.moorea.MooreaPlugin"/>
    <property name="plugin-build" location="build"/>
    <property name="classes" location="bin"/>
+   <property name="lib" location="lib"/>
    <property name="resources" location="resources"/>
    <property name="src" location="src"/>
 
-   <path id="classpath" refid="classpath.common"/>
+
+   <path id="classpath">
+      <fileset dir="${lib}"/>
+      <path refid="classpath.publicapi"/>
+   </path>
 
    <path id="classpath.test.local">
       <path refid="classpath"/>
