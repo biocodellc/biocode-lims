@@ -32,7 +32,9 @@
         <CLASSES>
           <root url="jar://$MODULE_DIR$/lib/jxl.jar!/" />
         </CLASSES>
-        <JAVADOC />
+        <JAVADOC>
+          <root url="file://$MODULE_DIR$/../../../jexcelapi/docs" />
+        </JAVADOC>
         <SOURCES />
       </library>
     </orderEntry>
