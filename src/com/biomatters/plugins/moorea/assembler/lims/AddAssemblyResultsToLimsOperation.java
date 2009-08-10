@@ -11,7 +11,7 @@ import java.util.List;
  * @author Richard
  * @version $Id$
  */
-public class AddAssemblyResultsToLims extends DocumentOperation {
+public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Add Assembly Results to LIMS...")
@@ -20,7 +20,8 @@ public class AddAssemblyResultsToLims extends DocumentOperation {
     }
 
     public String getHelp() {
-        return ""; //todo
+        return "Select one or more assemblies or consensus sequences to add the results to to the relevant workflows in " +
+                "the LIMS (labratory information management system).";
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
@@ -33,12 +34,12 @@ public class AddAssemblyResultsToLims extends DocumentOperation {
     }
 
     @Override
-    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
-        throw new DocumentOperationException("Coming soon");
+    public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
+        return new AddAssemblyResultsToLimsOptions(documents);
     }
 
     @Override
-    public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
-        return super.getOptions(documents);
+    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
+        throw new DocumentOperationException("Coming soon");
     }
 }

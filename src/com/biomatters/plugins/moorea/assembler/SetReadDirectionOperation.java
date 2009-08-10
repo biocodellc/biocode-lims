@@ -16,7 +16,7 @@ import java.util.List;
 public class SetReadDirectionOperation extends DocumentOperation {
     private static final Options.OptionValue FORWARD_OPTION_VALUE = new Options.OptionValue("forward", "Forward");
     private static final DocumentField IS_FORWARD_FIELD = DocumentField.createBooleanField("Is Forward Read",
-            "Whether this read is in the forward direction", "isForwardRead", false, false);
+            "Whether this read is in the forward direction", "isForwardRead", true, false);
 
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Set Read Direction...", "Mark sequences as forward or reverse reads so the correct reads are reverse complemented by assembly")
@@ -43,7 +43,7 @@ public class SetReadDirectionOperation extends DocumentOperation {
             if (progressListener.isCanceled()) {
                 return null;
             }
-            annotatedDocument.setHiddenFieldValue(IS_FORWARD_FIELD, isForward);
+            annotatedDocument.setFieldValue(IS_FORWARD_FIELD, isForward);
             annotatedDocument.save();
         }
         return null;

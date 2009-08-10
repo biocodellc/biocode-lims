@@ -4,7 +4,8 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.moorea.assembler.annotate.AnnotateFimsDataOperation;
-import com.biomatters.plugins.moorea.assembler.lims.AddAssemblyResultsToLims;
+import com.biomatters.plugins.moorea.assembler.lims.AddAssemblyResultsToLimsOperation;
+import com.biomatters.plugins.moorea.assembler.lims.SetAssemblyResultOperation;
 import com.biomatters.plugins.moorea.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.moorea.labbench.*;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
@@ -165,9 +166,10 @@ public class MooreaPlugin extends GeneiousPlugin {
                 new BatchChromatogramExportOperation(),
                 new VerifyTaxonomyOperation(),
                 new AnnotateFimsDataOperation(),
-                new AddAssemblyResultsToLims(),
+                new AddAssemblyResultsToLimsOperation(),
                 new ExportForBoldOperation(),
-                new ExportForBarstoolOperation()
+                new ExportForBarstoolOperation(),
+                new SetAssemblyResultOperation()
         };
     }
 
