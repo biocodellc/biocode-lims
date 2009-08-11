@@ -37,6 +37,7 @@
       <jar jarfile="${plugin-build}/${plugin.name}.jar">
          <fileset dir="${classes}"/>
          <fileset dir="${resources}"/>
+         <fileset dir="${lib}"/>
          <fileset dir="">
             <include name="plugin.properties"/>
          </fileset>
