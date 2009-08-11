@@ -24,25 +24,46 @@
       <pathelement location="testdata"/>
    </path>
 
-   <target name= "dist" depends="build">
-      <copy file="${plugin-build}/${plugin.name}.jar"
-            tofile="${dist}/${short-plugin-name}.gplugin"/>
+   <target name="dist" depends="build">
+      <zip zipfile="${dist}/${short-plugin-name}.gplugin">
+         <fileset dir="${plugin-build}"/>
+      </zip>
    </target>
 
+   <!--<target name= "dist" depends="build">-->
+      <!--<copy file="${plugin-build}/${plugin.name}.jar"-->
+            <!--tofile="${dist}/${short-plugin-name}.gplugin"/>-->
+   <!--</target>-->
+
    <target name="install-for-test" depends="build">
-      <move file="${plugin-build}/${plugin.name}.jar" todir="${build.plugins}"/>
+      <move file="${plugin-build}/${plugin.name}" todir="${build.plugins}"/>
    </target>
 
    <target name="build" depends="compile">
-      <jar jarfile="${plugin-build}/${plugin.name}.jar">
+      <jar jarfile="${plugin-build}/${plugin-name}/${short-plugin-name}.jar">
          <fileset dir="${classes}"/>
-         <fileset dir="${resources}"/>
-         <fileset dir="${lib}"/>
-         <fileset dir="">
+         <fileset dir="${resources}">
             <include name="plugin.properties"/>
          </fileset>
       </jar>
+      <copy todir="${plugin-build}/${plugin-name}">
+         <fileset dir="${lib}"/>
+         <fileset dir="${resources}">
+            <exclude name="plugin.properties"/>
+         </fileset>
+      </copy>
    </target>
+
+   <!--<target name="build" depends="compile">-->
+      <!--<jar jarfile="${plugin-build}/${plugin.name}.jar">-->
+         <!--<fileset dir="${classes}"/>-->
+         <!--<fileset dir="${resources}"/>-->
+         <!--<fileset dir="${lib}"/>-->
+         <!--<fileset dir="">-->
+            <!--<include name="plugin.properties"/>-->
+         <!--</fileset>-->
+      <!--</jar>-->
+   <!--</target>-->
 
    <target name="compile" depends="build-public-api, prepare">
       <javac destdir="${classes}" debug="true">
@@ -59,7 +80,7 @@
    </target>
 
    <target name="prepare">
-      <mkdir dir="${plugin-build}"/>
+      <mkdir dir="${plugin-build}/${plugin-name}"/>
       <mkdir dir="${classes}"/>
    </target>
 
