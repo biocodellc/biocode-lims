@@ -1,13 +1,16 @@
 package com.biomatters.plugins.moorea.labbench.plates;
 
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
 import com.biomatters.plugins.moorea.labbench.reaction.ReactionUtilities;
 
 import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -187,22 +190,16 @@ public class PlateView extends JPanel {
             }
         });
 
-        addKeyListener(new KeyAdapter(){
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if(e.getKeyCode() == KeyEvent.VK_A && e.isControlDown()) {
-                    selectAll = !selectAll;
-                    for(Reaction r : reactions) {
-                        r.setSelected(selectAll);
-                    }
-                    repaint();
+        getActionMap().put("select-all", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                selectAll = !selectAll;
+                for(Reaction r : reactions) {
+                    r.setSelected(selectAll);
                 }
+                repaint();
             }
         });
-
-
-
-
+        getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_A, GuiUtilities.MENU_MASK), "select-all");
     }
 
 
