@@ -282,7 +282,7 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
 
         private static OptionsPanel getReactionPanel(Reaction reaction) {
-            OptionsPanel optionsPanel = new OptionsPanel(true, false);
+            OptionsPanel optionsPanel = new OptionsPanel(false, false);
             List<DocumentField> documentFields = reaction.getDisplayableFields();
             for(DocumentField field : documentFields) {
                 if(field.getName().length() > 0) {
