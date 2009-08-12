@@ -59,7 +59,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         try {
             database.batchSequenceSearch(queries, "Megablast", searchOptions, callback);
         } catch (DatabaseServiceException e) {
-            throw new DocumentOperationException("BLAST search failed", e);
+            throw new DocumentOperationException("BLAST search failed: " + e.getMessage(), e);
         }
         return Collections.singletonList(callback.getResultsDocument());
     }

@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaPlugin;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
@@ -41,8 +42,8 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
-        if (MooreaLabBenchService.getInstance().getActiveFIMSConnection() == null) {
-            throw new DocumentOperationException("You must connect to the lab bench service first");
+        if (!MooreaLabBenchService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(MooreaUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
         return new AnnotateFimsDataOptions();
     }
@@ -57,9 +58,6 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         AnnotateFimsDataOptions options = (AnnotateFimsDataOptions) o;
         MooreaLabBenchService mooreaLabBenchService = MooreaLabBenchService.getInstance();
         FIMSConnection activeFIMSConnection = mooreaLabBenchService.getActiveFIMSConnection();
-        if (activeFIMSConnection == null) {
-            throw new DocumentOperationException("You must connect to the lab bench service first");
-        }
         CompositeProgressListener compositeProgress = new CompositeProgressListener(progressListener, annotatedDocuments.length);
         if (compositeProgress.getRootProgressListener() instanceof ProgressFrame) {
             ((ProgressFrame)compositeProgress.getRootProgressListener()).setCancelButtonLabel("Stop");
@@ -75,7 +73,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
             try {
                 tissue = options.getTissueRecord(annotatedDocument, activeFIMSConnection);
             } catch (ConnectionException e) {
-                throw new DocumentOperationException("Failed to connect to FIMS", e);
+                throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
             }
             if (tissue == null) {
                 failBlog.add(annotatedDocument.getName());

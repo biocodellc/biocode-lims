@@ -1,19 +1,19 @@
 package com.biomatters.plugins.moorea.labbench.lims;
 
-import com.biomatters.plugins.moorea.labbench.plates.Plate;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
+import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.moorea.labbench.*;
 import com.biomatters.plugins.moorea.labbench.plates.GelImage;
-import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.labbench.plates.Plate;
+import com.biomatters.plugins.moorea.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.moorea.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.moorea.labbench.reaction.PCRReaction;
-import com.biomatters.plugins.moorea.labbench.reaction.CycleSequencingReaction;
-import com.biomatters.plugins.moorea.labbench.*;
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
-import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
 
 import java.sql.*;
 import java.util.*;
@@ -132,7 +132,7 @@ public class LIMSConnection {
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((samples == null || samples.size() == 0) && refinedQueries.size() == 0) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id " +
@@ -166,7 +166,7 @@ public class LIMSConnection {
             }
         }
         if(!somethingToSearch) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         //attach the values to the query
@@ -219,7 +219,7 @@ public class LIMSConnection {
 
     private List<? extends Query> removeFields(List<? extends Query> queries, List<String>  codesToIgnore) {
         if(queries == null) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
         List<Query> returnList = new ArrayList<Query>();
         for(Query q : queries) {

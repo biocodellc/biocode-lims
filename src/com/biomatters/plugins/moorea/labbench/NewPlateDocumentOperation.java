@@ -1,17 +1,17 @@
 package com.biomatters.plugins.moorea.labbench;
 
-import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.MooreaPlugin;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.plates.Plate;
 import com.biomatters.plugins.moorea.labbench.plates.PlateViewer;
-import com.biomatters.plugins.moorea.MooreaPlugin;
+import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import jebl.util.ProgressListener;
 
 import java.util.List;
-
-import jebl.util.ProgressListener;
 
 /**
  * @author Steven Stones-Havas
@@ -21,7 +21,7 @@ import jebl.util.ProgressListener;
  */
 public class NewPlateDocumentOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {
-        return new GeneiousActionOptions("New Reaction", "Create a new reaction (or plate of reactions)", MooreaPlugin.getIcons("newReaction_24.png")).setInMainToolbar(true).setProOnly(true);
+        return new GeneiousActionOptions("New Reaction", "Create a new reaction (or plate of reactions)", MooreaPlugin.getIcons("newReaction_24.png")).setInMainToolbar(true, 0.533).setProOnly(true);
     }
 
     public String getHelp() {
@@ -43,7 +43,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
         if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
-            throw new DocumentOperationException("You must log in to the lab bench service to create plates");
+            throw new DocumentOperationException(MooreaUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
         
         Options options = new Options(this.getClass());
@@ -74,7 +74,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
         if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
-            throw new DocumentOperationException("You must log in to the lab bench service to create plates");
+            throw new DocumentOperationException(MooreaUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
 
         Plate.Size size = null;

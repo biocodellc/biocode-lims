@@ -1,32 +1,30 @@
 package com.biomatters.plugins.moorea.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.Condition;
-import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.labbench.FimsSample;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
+import com.biomatters.plugins.moorea.labbench.FimsSample;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.Workflow;
+import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.labbench.plates.Plate;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
+import java.awt.*;
+import java.io.IOException;
+import java.io.StringReader;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
-import java.awt.*;
-import java.sql.SQLException;
-import java.sql.ResultSet;
-import java.io.StringReader;
-import java.io.IOException;
-
-import org.jdom.input.SAXBuilder;
-import org.jdom.JDOMException;
-import org.jdom.Element;
 
 /**
  * @author Steven Stones-Havas
@@ -36,7 +34,6 @@ import org.jdom.Element;
  */
 public class CycleSequencingReaction extends Reaction{
     private CycleSequencingOptions options;
-    private List<SequenceDocument> traces;
 
     public CycleSequencingReaction() {
         options = new CycleSequencingOptions(this.getClass());
@@ -89,7 +86,7 @@ public class CycleSequencingReaction extends Reaction{
         }
 
         String sequenceString = r.getString("cyclesequencing.sequences");
-        if(sequenceString != null & sequenceString.length() > 0) {
+        if(sequenceString != null && sequenceString.length() > 0) {
             SAXBuilder builder = new SAXBuilder();
             try {
                 Element sequenceElement = builder.build(new StringReader(sequenceString)).detachRootElement();
@@ -201,7 +198,7 @@ public class CycleSequencingReaction extends Reaction{
         if(queries.size() == 0) {
             return  error.length() == 0 ? null : error;
         }
-        Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
+        Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap());
 
         try {
             List<FimsSample> docList = fimsConnection.getMatchingSamples(orQuery);

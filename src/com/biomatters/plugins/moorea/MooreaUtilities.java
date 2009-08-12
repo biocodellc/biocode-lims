@@ -1,10 +1,27 @@
 package com.biomatters.plugins.moorea;
 
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperation;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
+
 /**
  * @author Richard
  * @version $Id$
  */
 public class MooreaUtilities {
+
+    public static final String NOT_CONNECTED_ERROR_MESSAGE = "<html><b>You must connect to the lab bench service first.</b><br><br>" +
+            "To connect, right-click on the Moorea Biocode service in the Sources panel to the left.";
+
+    public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
+        DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
+        if (consensusOperation == null) {
+            return null;
+        }
+        return consensusOperation.getOptions(selectedDocuments);
+    }
 
     public static final class Well {
         public final char letter;

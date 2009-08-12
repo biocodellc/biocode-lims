@@ -1,32 +1,30 @@
 package com.biomatters.plugins.moorea.labbench;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.moorea.labbench.reaction.*;
-
-import java.util.*;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.awt.print.PrinterException;
-import java.awt.print.Printable;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Connection;
-
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steven Stones-Havas
@@ -41,7 +39,7 @@ public class WorkflowDocument extends MuitiPartDocument {
 
 
     public WorkflowDocument() {
-        this(null, Collections.EMPTY_LIST);
+        this(null, Collections.<Reaction>emptyList());
     }
 
     public WorkflowDocument(Workflow workflow, List<Reaction> reactions) {
@@ -74,7 +72,7 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public List<DocumentField> getDisplayableFields() {
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     public Object getFieldValue(String fieldCodeName) {
@@ -83,6 +81,13 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public String getName() {
         return workflow == null ? "Untitled" : workflow.getName();
+    }
+
+    /**
+     * @return workflow id or -1 if no workflow associated with this document
+     */
+    public int getId() {
+        return workflow == null ? -1 : workflow.getId();
     }
 
     public URN getURN() {

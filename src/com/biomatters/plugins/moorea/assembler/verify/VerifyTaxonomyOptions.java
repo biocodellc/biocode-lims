@@ -6,8 +6,10 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperation;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import jebl.util.ProgressListener;
 
+import javax.swing.*;
 import java.util.Arrays;
 import java.util.List;
 
@@ -27,20 +29,12 @@ public class VerifyTaxonomyOptions extends Options {
         boolean isAlignments = SequenceAlignmentDocument.class.isAssignableFrom(documents[0].getDocumentClass());
         if (isAlignments) {
             //todo check sequence type
-            Options consensusOptions = getConsensusOptions(documents);
+            Options consensusOptions = MooreaUtilities.getConsensusOptions(documents);
             if (consensusOptions == null) {
                 throw new DocumentOperationException("The consensus plugin must be installed to be able to verify");
             }
             addChildOptions("consensus", "Consensus", null, consensusOptions);
         }
-    }
-
-    public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
-        DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
-        if (consensusOperation == null) {
-            return null;
-        }
-        return consensusOperation.getOptions(selectedDocuments);
     }
 
     public List<AnnotatedPluginDocument> getQueries(AnnotatedPluginDocument[] annotatedDocuments) throws DocumentOperationException {
@@ -61,5 +55,10 @@ public class VerifyTaxonomyOptions extends Options {
 
     public String getKeywords() {
         return keywordsOption.getValue();
+    }
+
+    @Override
+    protected JPanel createAdvancedPanel() {
+        return null;
     }
 }
