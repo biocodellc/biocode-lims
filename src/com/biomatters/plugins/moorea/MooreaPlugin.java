@@ -33,7 +33,8 @@ public class MooreaPlugin extends GeneiousPlugin {
     public static GeneiousActionOptions getSuperBiocodeAction() {
         if (superBiocodeAction == null) {
             superBiocodeAction = new GeneiousActionOptions("Biocode", null, getIcons("biocode24.png"))
-                    .setInMainToolbar(true, 0.532);
+                    .setInMainToolbar(true, 0.532)
+                    .setMainMenuLocation(GeneiousActionOptions.MainMenu.Sequence);
             superBiocodeAction.addSubmenuDivider(0.5);
             superBiocodeAction.addSubmenuDivider(0.65);
         }
