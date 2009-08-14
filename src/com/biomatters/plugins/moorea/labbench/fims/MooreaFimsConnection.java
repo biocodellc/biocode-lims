@@ -164,8 +164,8 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Lowest Taxon", "", "biocode.LowestTaxon", String.class, true, false));
         fields.add(new DocumentField("Lowest Taxon Level", "", "biocode.LowestTaxonLevel", String.class, true, false));
 
-        fields.add(new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Integer.class, false, false));
-        fields.add(new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Integer.class, false, false));
+        fields.add(new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Double.class, false, false));
+        fields.add(new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Double.class, false, false));
 
         fields.add(new DocumentField("Minimum Elevation", "", "biocode_collecting_event.MinElevationMeters", Integer.class, false, false));
         fields.add(new DocumentField("Maximum Elevation", "", "biocode_collecting_event.MaxElevationMeters", Integer.class, false, false));
@@ -209,6 +209,7 @@ public class MooreaFimsConnection extends FIMSConnection{
             while(resultSet.next()){
                 samples.add(new MooreaFimsSample(resultSet, this));
             }
+            resultSet.close();
             return samples;
         } catch (SQLException e) {
             e.printStackTrace(); //todo: exception handling

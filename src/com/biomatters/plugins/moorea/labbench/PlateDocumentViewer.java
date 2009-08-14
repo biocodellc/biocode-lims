@@ -1,32 +1,33 @@
 package com.biomatters.plugins.moorea.labbench;
 
-import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.StandardIcons;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.plugins.moorea.labbench.reaction.*;
-import com.biomatters.plugins.moorea.labbench.plates.*;
+import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.StandardIcons;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.MooreaPlugin;
-
-import java.util.*;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-import java.awt.event.ActionEvent;
-import java.awt.*;
-import java.awt.print.PrinterException;
-import java.awt.print.Printable;
-import java.sql.SQLException;
-
+import com.biomatters.plugins.moorea.labbench.plates.GelEditor;
+import com.biomatters.plugins.moorea.labbench.plates.GelImage;
+import com.biomatters.plugins.moorea.labbench.plates.Plate;
+import com.biomatters.plugins.moorea.labbench.plates.PlateView;
+import com.biomatters.plugins.moorea.labbench.reaction.*;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steven Stones-Havas
@@ -53,6 +54,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         this.plateDoc = doc;
         this.isLocal = local;
         Plate plate = null;
+        deletePlateAction.setProOnly(true);
         try {
             plate = new Plate(plateDoc.getPlate().toXML());
         } catch (XMLSerializationException e) {
@@ -106,11 +108,11 @@ public class PlateDocumentViewer extends DocumentViewer{
 
 
 
-        updateToolbar(false);
         saveAction.setEnabled(false);
         //bulkEditAction.setProOnly(true);
         editThermocycleAction.setProOnly(true);
         gelAction.setProOnly(true);
+        updateToolbar(false);
     }
 
     public JComponent getComponent() {
@@ -123,6 +125,9 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     private void updateCocktailCount() {
         for(Reaction r : plateView.getPlate().getReactions()) {
+            if(r.isEmpty()) {
+                continue;
+            }
             Cocktail c = r.getCocktail();
             if(c != null) {
                 int count = 1;
@@ -143,8 +148,15 @@ public class PlateDocumentViewer extends DocumentViewer{
             editThermocycleAction.setEnabled(buttonsEnabled);
             gelAction.setEnabled(buttonsEnabled);
         }
-        editAction.setEnabled(plateView.getSelectedReactions().size() > 0);
+        editAction.setEnabled(plateView.getSelectedReactions().size() > 0 && !plateView.getPlate().isDeleted());
         //bulkEditAction.setEnabled(buttonsEnabled);
+
+        if(plateView.getPlate().isDeleted()) {
+            for(Action a : getActionProvider().getOtherActions()) {
+                a.setEnabled(false);
+            }
+            saveAction.setEnabled(false);
+        }
     }
 
     private JScrollPane getScrollPane(Container component) {
@@ -234,21 +246,26 @@ public class PlateDocumentViewer extends DocumentViewer{
 
             @Override
             public List<GeneiousAction> getOtherActions() {
+                List<GeneiousAction> actions = new ArrayList<GeneiousAction>();
                 if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
                     thermocycleAction = editThermocycleAction = gelAction = null;
-                    return Arrays.asList(
-                        editAction//,
-                        //bulkEditAction
-                    );
+                    actions.add(editAction);
                 }
-                return Arrays.asList(
-                        thermocycleAction,
-                        editThermocycleAction,
-                        gelAction,
-                        editAction,
-                        //bulkEditAction,
-                        exportPlateAction
-                );
+                else {
+                    actions.addAll(Arrays.asList(
+                            thermocycleAction,
+                            editThermocycleAction,
+                            gelAction,
+                            editAction,
+                            exportPlateAction
+                    ));
+                }
+
+                if(!isLocal) {
+                    actions.add(deletePlateAction);
+                }
+
+                return actions;
             }
 
             @Override
@@ -341,6 +358,36 @@ public class PlateDocumentViewer extends DocumentViewer{
     GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
         public void actionPerformed(ActionEvent e) {
             ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
+        }
+    };
+
+    GeneiousAction deletePlateAction = new GeneiousAction("Delete Plate", "Removes the plate, and all associated reactions from the database", StandardIcons.delete.getIcons()) {
+        public void actionPerformed(ActionEvent e) {
+            String message;
+            boolean isExtraction = plateView.getPlate().getReactionType() == Reaction.Type.Extraction;
+            if(isExtraction) {
+                message = "<html><b>WARNING: </b>Deleting an extraction plate will also remove all workflows, PCR, and Cycle Sequencing reactions associated with these extractions.";
+            }
+            else {
+                message = "<html>This will delete all reactions associated with this plate.";
+            }
+
+            if(Dialogs.showYesNoDialog(message+"<br>Are you sure you want to continue?</html>", "Delete Plate", plateView, isExtraction ? Dialogs.DialogIcon.WARNING : Dialogs.DialogIcon.INFORMATION)) {
+                try {
+                    MooreaLabBenchService.getInstance().deletePlate(MooreaLabBenchService.BlockingDialog.getDialog("Deleting your plate", plateView), plateView.getPlate());
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                }
+                plateView.repaint();
+                if(!isLocal && !MooreaLabBenchService.getInstance().isLoggedIn()) {
+                    Dialogs.showMessageDialog("Please log in");
+                    return;
+                }
+                annotatedDocument.saveDocument();
+                updateToolbar(false);
+            }
+
+
         }
     };
 

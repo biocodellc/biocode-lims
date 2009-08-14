@@ -183,11 +183,7 @@ public class CycleSequencingReaction extends Reaction{
             reaction.isError = false;
             Options option = reaction.getOptions();
             String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
-            if(tissue == null) {
-                error += "The extraction '"+option.getOption("extractionId").getValue()+"' does not exist in the database!\n";
-                reaction.isError = true;
-            }
-            else {
+            if(tissue != null) {
                 Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
                 if(!queries.contains(fieldQuery)) {
                      queries.add(fieldQuery);
@@ -212,8 +208,8 @@ public class CycleSequencingReaction extends Reaction{
                 String extractionId = op.getValueAsString("extractionId");
                 FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
                 if(currentFimsSample == null) {
-                    error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
-                    reaction.isError = true;
+//                    error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
+//                    reaction.isError = true;
                 }
                 else {
                     reaction.setFimsSample(currentFimsSample);

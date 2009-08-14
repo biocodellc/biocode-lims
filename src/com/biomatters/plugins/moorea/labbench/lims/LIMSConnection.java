@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.labbench.*;
 import com.biomatters.plugins.moorea.labbench.plates.GelImage;
@@ -62,6 +63,7 @@ public class LIMSConnection {
                     throw new ConnectionException("The server you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
                 }
             }
+            resultSet.close();
         } catch (SQLException e1) {
             throw new ConnectionException(e1);
         }
@@ -75,6 +77,24 @@ public class LIMSConnection {
                 throw new ConnectionException(e);
             }
         }
+    }
+
+    public int deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
+        List<String> terms = new ArrayList<String>();
+        int count = 0;
+        for(Object id : ids) {
+            count++;
+            terms.add(term+"="+id);
+        }
+
+        if(count == 0) {
+            return 0;
+        }
+
+        String termString = StringUtilities.join(" OR ", terms);
+
+        PreparedStatement statement = connection.prepareStatement("DELETE FROM "+tableName+" WHERE "+termString);
+        return statement.executeUpdate();
     }
 
     public ResultSet executeQuery(String sql) throws TransactionException{
@@ -95,6 +115,7 @@ public class LIMSConnection {
             for(String s : sql.split("\n")) {
                 PreparedStatement statement = connection.prepareStatement(s);
                 statement.execute();
+                statement.close();
             }
             connection.commit();
         }
@@ -207,13 +228,14 @@ public class LIMSConnection {
         while(resultSet.next()) {
             int workflowId = resultSet.getInt("workflow.id");
             if(workflowDocs.get(workflowId) != null) {
-                workflowDocs.get(workflowId).addRow(resultSet);    
+                workflowDocs.get(workflowId).addRow(resultSet);
             }
             else {
                 WorkflowDocument doc = new WorkflowDocument(resultSet);
                 workflowDocs.put(workflowId, doc);
             }
         }
+        resultSet.close();
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
     }
 
@@ -232,6 +254,23 @@ public class LIMSConnection {
 
         return returnList;
     }
+
+//    private AdvancedSearchQueryTerm getField(List<? extends Query> queries, String  code) {
+//        if(queries == null) {
+//            return null;
+//        }
+//        AdvancedSearchQueryTerm returnValue = null;
+//        for(Query q : queries) {
+//            if(q instanceof AdvancedSearchQueryTerm) {
+//                AdvancedSearchQueryTerm advancedSearchQueryTerm = (AdvancedSearchQueryTerm) q;
+//                if(code.equals(advancedSearchQueryTerm.getField().getCode())) {
+//                    returnValue = advancedSearchQueryTerm;
+//                }
+//            }
+//        }
+//
+//        return returnValue;
+//    }
 
     private String queryToSql(List<? extends Query> queries, CompoundSearchQuery.Operator operator, List<Object> inserts) {
         StringBuilder sql = new StringBuilder();
@@ -276,6 +315,7 @@ public class LIMSConnection {
     public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
+        Set<Integer> plateIds = new HashSet<Integer>();
         if(query instanceof CompoundSearchQuery) {
             refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name"));
             operator = ((CompoundSearchQuery)query).getOperator();
@@ -293,7 +333,6 @@ public class LIMSConnection {
                 "LEFT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
                 "WHERE");
 
-        Set<Integer> plateIds = new HashSet<Integer>();
         for(WorkflowDocument doc : workflowDocuments) {
             for(int i=0; i < doc.getNumberOfParts(); i++) {
                 WorkflowDocument.ReactionPart p = (WorkflowDocument.ReactionPart)doc.getPart(i);
@@ -357,18 +396,23 @@ public class LIMSConnection {
         List<ExtractionReaction> extractionReactions = new ArrayList<ExtractionReaction>();
         List<PCRReaction> pcrReactions = new ArrayList<PCRReaction>();
         List<CycleSequencingReaction> cyclesequencingReactions = new ArrayList<CycleSequencingReaction>();
+        List<Integer> returnedPlateIds = new ArrayList<Integer>();
         while(resultSet.next()) {
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
             if(plateMap.get(plateId) == null) {
-                plate = new Plate(resultSet);  
+                returnedPlateIds.add(plateId);
+                plate = new Plate(resultSet);
                 plateMap.put(plate.getId(), plate);
             }
             else {
                 plate = plateMap.get(plateId);
             }
             Reaction reaction = plate.addReaction(resultSet);
-            if(reaction instanceof ExtractionReaction) {
+            if(reaction == null) {
+                //do nothing
+            }
+            else if(reaction instanceof ExtractionReaction) {
                 extractionReactions.add((ExtractionReaction)reaction);
             }
             else if(reaction instanceof PCRReaction) {
@@ -406,18 +450,29 @@ public class LIMSConnection {
             ThreadUtilities.invokeNowOrLater(runnable);
         }
 
-        Map<Integer, List<GelImage>> gelimages = getGelImages(plateIds);
         List<PlateDocument> docs = new ArrayList<PlateDocument>();
+        getGelImagesForPlates(plateMap.values());
         for(Plate plate : plateMap.values()) {
-            List<GelImage> gelimagesForPlate = gelimages.get(plate.getId());
-            if(gelimagesForPlate != null) {
-                plate.setImages(gelimagesForPlate);
-            }
             docs.add(new PlateDocument(plate));
         }
 
         return docs;
 
+    }
+
+    public void getGelImagesForPlates(Collection<Plate> plates) throws SQLException {
+        List<Integer> plateIds = new ArrayList<Integer>();
+        for(Plate plate : plates) {
+            plateIds.add(plate.getId());
+        }
+
+        Map<Integer, List<GelImage>> gelimages = getGelImages(plateIds);
+        for(Plate plate : plates) {
+            List<GelImage> gelimagesForPlate = gelimages.get(plate.getId());
+            if(gelimagesForPlate != null) {
+                plate.setImages(gelimagesForPlate);
+            }
+        }
     }
 
     private Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws SQLException{

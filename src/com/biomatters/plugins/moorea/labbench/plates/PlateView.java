@@ -72,7 +72,7 @@ public class PlateView extends JPanel {
                 Rectangle reactionBounds = new Rectangle(1+cellWidth * j, 1+cellHeight * i, cellWidth - 1, cellHeight - 1);
                 reaction.setBounds(reactionBounds);
                 g.clip(reactionBounds);
-                reaction.paint(g, colorBackground);
+                reaction.paint(g, colorBackground, !plate.isDeleted());
                 g.setClip(clip);
             }
         }
@@ -116,11 +116,17 @@ public class PlateView extends JPanel {
         addMouseListener(new MouseAdapter(){
             @Override
             public void mouseClicked(MouseEvent e) {
+                if(plate.isDeleted()) {
+                    return;
+                }
                 requestFocus();
-                boolean ctrlIsDown = (e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == MouseEvent.CTRL_DOWN_MASK;
+                boolean ctrlIsDown = (e.getModifiers() & Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()) > 0;
                 boolean shiftIsDown = (e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == MouseEvent.SHIFT_DOWN_MASK;
 
                 if(mousePos != null && shiftIsDown) {
+                    if(wasSelected == null) {
+                        initWasSelected(reactions);
+                    }
                     selectRectangle(e);
                     repaint();
                     return;
@@ -142,14 +148,12 @@ public class PlateView extends JPanel {
                     }
                 }
                 if(e.getClickCount() == 2) {
-                    for(int i=0; i < reactions.length; i++) {
-                        if(reactions[i].isSelected()) {
-                            ReactionUtilities.editReactions(Arrays.asList(reactions[i]), false, selfReference, false, creating);
-                            revalidate();
-                            repaint();
-                        }
+                    List<Reaction> selectedReactions = getSelectedReactions();
+                    if(selectedReactions.size() > 0) {
+                        ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), false, selfReference, false, creating);
                     }
-
+                    revalidate();
+                    repaint();
                 }
                 fireSelectionListeners();
                 repaint();
@@ -157,6 +161,9 @@ public class PlateView extends JPanel {
 
             @Override
             public void mousePressed(MouseEvent e) {
+                if(plate.isDeleted()) {
+                    return;
+                }
                 selectAll = false;
                 Reaction[] reactions = plate.getReactions();
                 boolean shiftIsDown = (e.getModifiersEx() & MouseEvent.SHIFT_DOWN_MASK) == MouseEvent.SHIFT_DOWN_MASK;
@@ -164,10 +171,7 @@ public class PlateView extends JPanel {
                     mousePos = e.getPoint();
                 }
 
-                wasSelected = new Boolean[reactions.length];
-                for(int i=0; i < reactions.length; i++) {
-                    wasSelected[i] = reactions[i].isSelected();
-                }
+                initWasSelected(reactions);
 
             }
 
@@ -180,6 +184,9 @@ public class PlateView extends JPanel {
         addMouseMotionListener(new MouseMotionAdapter(){
             @Override
             public void mouseDragged(MouseEvent e) {
+                if(plate.isDeleted()) {
+                    return;
+                }
                 //long time = System.currentTimeMillis();
                 selectRectangle(e);
                 long time2 = System.currentTimeMillis();
@@ -190,16 +197,30 @@ public class PlateView extends JPanel {
             }
         });
 
-        getActionMap().put("select-all", new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                selectAll = !selectAll;
-                for(Reaction r : reactions) {
-                    r.setSelected(selectAll);
+        addKeyListener(new KeyAdapter(){
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if(plate.isDeleted()) {
+                    return;
+                }
+                if(e.getKeyCode() == KeyEvent.VK_A && (e.getModifiers() & Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()) > 0) {
+                    selectAll = !selectAll;
+                    for(Reaction r : reactions) {
+                        r.setSelected(selectAll);
+                    }
+                    repaint();
                 }
                 repaint();
             }
         });
         getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_A, GuiUtilities.MENU_MASK), "select-all");
+    }
+
+    private void initWasSelected(Reaction[] reactions) {
+        wasSelected = new Boolean[reactions.length];
+        for(int i=0; i < reactions.length; i++) {
+            wasSelected[i] = reactions[i].isSelected();
+        }
     }
 
 
@@ -227,7 +248,7 @@ public class PlateView extends JPanel {
 
     private void selectRectangle(MouseEvent e) {
         Rectangle selectionRect = createRect(mousePos, e.getPoint());
-        boolean ctrlIsDown = (e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) == MouseEvent.CTRL_DOWN_MASK;
+        boolean ctrlIsDown = (e.getModifiers() & Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()) > 0;
         Reaction[] reactions = plate.getReactions();
 
         //select all wells within the selection rectangle
@@ -237,7 +258,7 @@ public class PlateView extends JPanel {
                 reactions[i].setSelected(true);
             }
             else {
-                reactions[i].setSelected(ctrlIsDown ? wasSelected[i] : false);
+                reactions[i].setSelected(ctrlIsDown && wasSelected != null ? wasSelected[i] : false);
             }
         }
         fireSelectionListeners();

@@ -4,32 +4,31 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.plugins.moorea.labbench.FimsSample;
-import com.biomatters.plugins.moorea.labbench.Workflow;
-import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.ButtonOption;
+import com.biomatters.plugins.moorea.labbench.FimsSample;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.labbench.Workflow;
+import org.jdom.Element;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.io.StringWriter;
-import java.io.IOException;
-
-import org.jdom.Element;
-import org.jdom.output.XMLOutputter;
-import org.jdom.output.Format;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -158,11 +157,11 @@ public abstract class Reaction implements XMLSerializable{
         List<DocumentField> displayableFields = new ArrayList<DocumentField>();
         displayableFields.addAll(getDisplayableFields());
         if(MooreaLabBenchService.getInstance().isLoggedIn()) {
-            displayableFields.addAll(MooreaLabBenchService.getInstance().getActiveFIMSConnection().getSearchAttributes());
+            displayableFields.addAll(MooreaLabBenchService.getInstance().getActiveFIMSConnection().getCollectionAttributes());
         }
         else if(fimsSample != null) {
             displayableFields.addAll(fimsSample.getFimsAttributes());
-            displayableFields.addAll(fimsSample.getTaxonomyAttributes());
+            //displayableFields.addAll(fimsSample.getTaxonomyAttributes());
         }
         return displayableFields;
     }
@@ -171,7 +170,7 @@ public abstract class Reaction implements XMLSerializable{
         List<DocumentField> fields = new ArrayList<DocumentField>();
         for(Options.Option op : getOptions().getOptions()) {
             if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){
-                fields.add(new DocumentField(op.getLabel(), "", op.getName(), op.getValue().getClass(), true, false));
+                fields.add(new DocumentField(op.getLabel().length() > 0 ? op.getLabel() : op.getName(), "", op.getName(), op.getValue().getClass(), true, false));
             }
         }
         return fields;
@@ -372,10 +371,10 @@ public abstract class Reaction implements XMLSerializable{
     }
 
 
-    public void paint(Graphics2D g, boolean colorTheBackground){
+    public void paint(Graphics2D g, boolean colorTheBackground, boolean enabled){
         fontRenderContext = g.getFontRenderContext();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(colorTheBackground ? isSelected() ? getBackgroundColor().darker() : getBackgroundColor() : Color.white);
+        g.setColor(colorTheBackground && enabled ? isSelected() ? getBackgroundColor().darker() : getBackgroundColor() : Color.white);
         g.fillRect(location.x, location.y, location.width, location.height);
 
         if(fieldWidthCache == null) {
@@ -388,7 +387,7 @@ public abstract class Reaction implements XMLSerializable{
             g.drawString(locationString, location.x+2, location.y+charHeight + 2);
         }
 
-        g.setColor(Color.black);
+        g.setColor(enabled ? Color.black : Color.gray);
 
         int y = location.y + 8;
         y += (location.height - getPreferredSize().height + PADDING)/2;
@@ -506,6 +505,8 @@ public abstract class Reaction implements XMLSerializable{
                         statement.execute();
                     }
                 }
+                insertStatement.close();
+                updateStatement.close();
                 break;
             case PCR:
                 insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrAmount, revPrSequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -583,6 +584,8 @@ public abstract class Reaction implements XMLSerializable{
                         statement.execute();
                     }
                 }
+                insertStatement.close();
+                updateStatement.close();
                 break;
             case CycleSequencing:
                 insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -614,10 +617,12 @@ public abstract class Reaction implements XMLSerializable{
                         statement.setString(1, primerOptionValue.getLabel());
                         statement.setString(2, primerOptionValue.getDescription());
                         statement.setInt(3, (Integer)options.getValue("prAmount"));
-                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
-                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
+                        if(reaction.getWorkflow() != null) {
+                            statement.setInt(4, reaction.getWorkflow().getId());
                         }
-                        statement.setInt(4, reaction.getWorkflow().getId());
+                        else {
+                            statement.setObject(4, null);
+                        }
                         statement.setInt(5, reaction.getPlateId());
                         statement.setInt(6, reaction.getPosition());
                         int cocktailId = -1;
@@ -662,6 +667,8 @@ public abstract class Reaction implements XMLSerializable{
                         statement.execute();
                     }
                 }
+                insertStatement.close();
+                updateStatement.close();
                 break;
         }
     }

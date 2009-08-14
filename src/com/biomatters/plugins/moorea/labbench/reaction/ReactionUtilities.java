@@ -227,12 +227,12 @@ public class ReactionUtilities {
         options.addStringOption("instrumentProtocol", "Instrument Protocol", "LongSeq50");
         options.addStringOption("analysisProtocol", "Analysis Protocol", "Standard_3.1");
 
-        if(!Dialogs.showOptionsDialog(options, "Export API config file", true)) {
+        if(!Dialogs.showOptionsDialog(options, "Export API config file", true, owner)) {
             return false;
         }
 
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            Dialogs.showMessageDialog("You cannot create ABI input files from extraction plates");
+            Dialogs.showMessageDialog("You cannot create ABI input files from extraction plates", "Error creating ABI input", owner, Dialogs.DialogIcon.WARNING);
             return false;
         }
 

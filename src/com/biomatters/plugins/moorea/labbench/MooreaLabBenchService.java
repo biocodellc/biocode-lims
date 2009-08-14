@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.moorea.labbench.fims.GeneiousFimsConnection;
 import com.biomatters.plugins.moorea.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.moorea.labbench.plates.GelImage;
@@ -114,7 +115,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     private static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
-                //new GeneiousFimsConnection(),
+                new GeneiousFimsConnection(),
                 new MooreaFimsConnection(),
                 //new TAPIRFimsConnection()
         };
@@ -937,7 +938,7 @@ public class MooreaLabBenchService extends DatabaseService {
             for(Reaction reaction : plate.getReactions()) {
                 if(!reaction.isEmpty()) {
                     extractionIds.add(reaction.getExtractionId());
-                    if((reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getOptions().getValueAsString("sampleId").length() > 0) {
+                    if((reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getFieldValue("sampleId").toString().length() > 0) {
                         extractionWithoutWorkflowIds.add(reaction.getExtractionId());
                     }
                     reactionsToSave.add(reaction);
@@ -988,6 +989,120 @@ public class MooreaLabBenchService extends DatabaseService {
 
     }
 
+    public void deletePlate(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException {
+
+        //delete the reactions...
+        if(plate.getReactionType() == Reaction.Type.Extraction) {
+            deleteWorkflows(progress, plate);
+        }
+        else {
+            deleteReactions(progress, plate);
+        }
+
+
+        //delete the images...
+        progress.setMessage("Deleting GEL images");
+        limsConnection.deleteRecords("gelimages", "plate", Arrays.asList(plate.getId()));
+
+        //delete the plate...
+        progress.setMessage("deleting the plate");
+
+        limsConnection.deleteRecords("plate", "id", Arrays.asList(plate.getId()));
+
+        if(plate.getReactionType() == Reaction.Type.Extraction) {
+            List<Plate> emptyPlates = getEmptyPlates();
+            if(emptyPlates.size() > 0) {
+                StringBuilder message = new StringBuilder("Geneious has found the following empty plates in the database.\n  Do you want to delete them as well?\n");
+                for(Plate emptyPlate : emptyPlates) {
+                    message.append(emptyPlate.getName()+"\n");
+                }
+                if(Dialogs.showYesNoDialog(message.toString(), "Delete empty plates", progress, Dialogs.DialogIcon.QUESTION)){
+                    for(Plate p : emptyPlates) {
+                        deletePlate(progress, p);
+                    }
+                }
+            }
+        }
+
+
+
+        plate.setDeleted(true);
+        progress.dispose();
+
+    }
+
+    private void deleteWorkflows(BlockingDialog progress, Plate plate) throws SQLException {
+        progress.setMessage("deleting workflows");
+        if(plate.getReactionType() != Reaction.Type.Extraction) {
+            throw new IllegalArgumentException("You may only delete workflows from an extraction plate!");
+        }
+
+        ArrayList<Integer> workflows = new ArrayList<Integer>();
+        ArrayList<Integer> ids = new ArrayList<Integer>();
+        ArrayList<String> extractionNames = new ArrayList<String>();
+        for(Reaction r : plate.getReactions()) {
+            if(r.getId() >= 0) {
+                ids.add(r.getId());
+                extractionNames.add("'"+r.getExtractionId()+"'");
+            }
+
+            if(r.getWorkflow() != null) {
+                if(r.getWorkflow().getId() >= 0) {
+                    workflows.add(r.getWorkflow().getId());
+                }
+            }
+        }
+
+        limsConnection.deleteRecords("pcr", "workflow", workflows);
+        limsConnection.deleteRecords("pcr", "extractionId", extractionNames);
+        limsConnection.deleteRecords("cyclesequencing", "workflow", workflows);
+        limsConnection.deleteRecords("cycleSequencing", "extractionId", extractionNames);
+        limsConnection.deleteRecords("workflow", "id", workflows);
+        limsConnection.deleteRecords("extraction", "id", ids);
+    }
+
+    private void deleteReactions(BlockingDialog progress, Plate plate) throws SQLException {
+        progress.setMessage("deleting reactions");
+
+        String tableName;
+        switch(plate.getReactionType()) {
+            case Extraction:
+                tableName = "extraction";
+                break;
+            case PCR:
+                tableName = "pcr";
+                break;
+            case CycleSequencing:
+            default:
+                tableName = "cyclesequencing";
+                break;
+        }
+
+        ArrayList<Integer> terms = new ArrayList<Integer>();
+        for(Reaction r : plate.getReactions()) {
+            if(r.getId() >= 0) {
+                terms.add(r.getId());
+            }
+        }
+
+        limsConnection.deleteRecords(tableName, "id", terms);
+    }
+
+    /**
+     * returns all the empty plates in the database...
+     * @return all the empty plates in the database...
+     * @throws SQLException
+     */
+    private List<Plate> getEmptyPlates() throws SQLException{
+        String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN (select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
+        ResultSet resultSet = limsConnection.getConnection().createStatement().executeQuery(sql);
+        List<Plate> result = new ArrayList<Plate>();
+        while(resultSet.next()) {
+            result.add(new Plate(resultSet));
+        }
+        return result;
+    }
+
     public void saveReactions(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException, BadDataException {
         progress.setMessage("Retrieving existing workflows");
         Connection connection = limsConnection.getConnection();
@@ -1001,11 +1116,14 @@ public class MooreaLabBenchService extends DatabaseService {
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
             List<String> workflowIdStrings = new ArrayList<String>();
             for(Reaction reaction : plate.getReactions()) {
+
                 Object workflowId = reaction.getFieldValue("workflowId");
-                Object extractionId = reaction.getExtractionId();
+                Object tissueId = reaction.getFieldValue("sampleId");
+                String extractionId = reaction.getExtractionId();
+
                 if(!reaction.isEmpty() && reaction.getType() != Reaction.Type.Extraction) {
                     reactionsToSave.add(reaction);
-                    if(extractionId != null && extractionId.toString().length() > 0) {
+                    if(extractionId != null && tissueId != null && tissueId.toString().length() > 0) {
                         if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
                             if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
                                 reaction.setHasError(true);
@@ -1035,9 +1153,12 @@ public class MooreaLabBenchService extends DatabaseService {
             if(workflowIdStrings.size() > 0) {
                 Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(workflowIdStrings);
                 for(Reaction reaction : plate.getReactions()) {
+
                     Object workflowId = reaction.getFieldValue("workflowId");
+                    Object tissueId = reaction.getFieldValue("sampleId");
                     String extractionId = reaction.getExtractionId();
-                    if(reaction.getWorkflow() == null && extractionId.length() > 0){
+
+                    if(reaction.getWorkflow() == null && tissueId != null && tissueId.toString().length() > 0){
                         Workflow workflow = map.get(workflowId);
                         if(workflow != null) {
                             if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
@@ -1056,7 +1177,8 @@ public class MooreaLabBenchService extends DatabaseService {
             //int workflowCount = 0;
             List<String> extractionIds = new ArrayList<String>();
             for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && reaction.getExtractionId().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                Object tissueId = reaction.getFieldValue("sampleId");
+                if(!reaction.isEmpty() && tissueId != null && tissueId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
                     extractionIds.add(reaction.getExtractionId());
                 }
             }

@@ -1,20 +1,21 @@
 package com.biomatters.plugins.moorea.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.plugins.moorea.labbench.plates.Plate;
-import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
+import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.moorea.labbench.ConnectionException;
+import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.Workflow;
-import com.biomatters.plugins.moorea.labbench.FimsSample;
-import com.biomatters.plugins.moorea.labbench.ConnectionException;
+import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.moorea.labbench.plates.Plate;
 
 import java.awt.*;
-import java.util.*;
-import java.util.List;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.*;
+import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -157,7 +158,7 @@ public class PCRReaction extends Reaction {
 
             String tissue = tissueMapping.get(extractionid);
             if(tissue == null) {
-                error += "The extraction '"+option.getOption("extractionId")+"' does not exist in the database!\n";
+                error += "The extraction '"+option.getOption("extractionId").getValue()+"' does not exist in the database!\n";
                 reaction.isError = true;
             }
             else {
@@ -217,6 +218,7 @@ public class PCRReaction extends Reaction {
             }
         }
 
+        //do the same check for reactions that have a workflow id, but not a workflow object set.
         if(workflowIdStrings.size() > 0) {
             try {
                 Map<String,Workflow> map = MooreaLabBenchService.getInstance().getWorkflows(new ArrayList<String>(workflowIdStrings));

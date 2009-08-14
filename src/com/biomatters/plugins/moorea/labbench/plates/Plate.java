@@ -1,21 +1,19 @@
 package com.biomatters.plugins.moorea.labbench.plates;
 
-import com.biomatters.plugins.moorea.labbench.reaction.*;
-import com.biomatters.plugins.moorea.labbench.plates.GelImage;
-import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.labbench.reaction.*;
+import org.jdom.Element;
 
 import java.awt.*;
-import java.util.List;
-import java.util.ArrayList;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.ResultSet;
-
-import org.jdom.Element;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -33,6 +31,7 @@ public class Plate implements XMLSerializable {
     private Size plateSize;
     private Thermocycle thermocycle;
     private List<GelImage> images;
+    private boolean isDeleted = false;
 
     public enum Size {
         w48,
@@ -155,6 +154,14 @@ public class Plate implements XMLSerializable {
         for(Reaction r : getReactions()) {
             r.setThermocycle(thermocycle);
         }
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
     }
 
     private void init(int rows, int cols, Reaction.Type type) {
@@ -304,13 +311,22 @@ public class Plate implements XMLSerializable {
         Reaction r;
         switch(type) {
             case Extraction:
+                if(resultSet.getObject("extraction.id") == null) {
+                    return null;
+                }
                 r = new ExtractionReaction(resultSet);
                 break;
             case PCR:
+                if(resultSet.getObject("pcr.id") == null) {
+                    return null;
+                }
                 r = new PCRReaction(resultSet);
                 break;
             case CycleSequencing:
             default:
+                if(resultSet.getObject("cyclesequencing.id") == null) {
+                    return null;
+                }
                 r = new CycleSequencingReaction(resultSet);
                 break;
         }
@@ -351,6 +367,7 @@ public class Plate implements XMLSerializable {
         plateSize = Size.valueOf(element.getChildText("plateSize"));
         type = Reaction.Type.valueOf(element.getChildText("type"));
         int size = Integer.parseInt(element.getChildText("size"));
+        isDeleted = "true".equals(element.getChildText("isDeleted"));
         Size sizeEnum = getSizeEnum(size);
         if(sizeEnum != null) {
             init(sizeEnum, type);
@@ -392,6 +409,7 @@ public class Plate implements XMLSerializable {
         plateElement.addContent(new Element("rows").setText(""+rows));
         plateElement.addContent(new Element("cols").setText(""+cols));
         plateElement.addContent(new Element("plateSize").setText(plateSize.toString()));
+        plateElement.addContent(new Element("isDeleted").setText(""+isDeleted));
         if(getThermocycle() != null) {
             plateElement.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
         }
