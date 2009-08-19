@@ -46,18 +46,10 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
         VerifyTaxonomyOptions options = (VerifyTaxonomyOptions) o;
         List<AnnotatedPluginDocument> queries = options.getQueries(annotatedDocuments);
-        GeneiousService service = ServiceUtilities.getService("NCBI_nr");
-        if (service == null || !(service instanceof DatabaseService)) {
-            throw new DocumentOperationException("Could not find the nr BLAST database, make sure the NCBI plugin is installed");
-        }
-        DatabaseService database = (DatabaseService)service;
-        Options searchOptions = database.getSequenceSearchOptions("Megablast");
-        searchOptions.setValue("maxHits", 1);
-        searchOptions.setValue("EXPECT", 1);
-        searchOptions.setValue("getHitAnnos", true);
+        DatabaseService database = options.getDatabase();
         VerifyTaxonomyCallback callback = new VerifyTaxonomyCallback(annotatedDocuments, progressListener, options.getKeywords());
         try {
-            database.batchSequenceSearch(queries, "Megablast", searchOptions, callback);
+            database.batchSequenceSearch(queries, options.getProgram(), options.getSearchOptions(), callback);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("BLAST search failed: " + e.getMessage(), e);
         }
