@@ -5,6 +5,7 @@ import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.moorea.assembler.annotate.AnnotateFimsDataOperation;
 import com.biomatters.plugins.moorea.assembler.lims.AddAssemblyResultsToLimsOperation;
+import com.biomatters.plugins.moorea.assembler.verify.VerifyTaxonomyDocumentViewerFactory;
 import com.biomatters.plugins.moorea.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.moorea.labbench.*;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
@@ -155,7 +156,8 @@ public class MooreaPlugin extends GeneiousPlugin {
                 new WorkflowDocumentViewerFactory(),
                 new MultiWorkflowDocumentViewerFactory(),
                 new MultiPrimerDocumentViewerFactory(Reaction.Type.PCR),
-                new MultiPrimerDocumentViewerFactory(Reaction.Type.CycleSequencing)
+                new MultiPrimerDocumentViewerFactory(Reaction.Type.CycleSequencing),
+                new VerifyTaxonomyDocumentViewerFactory()
         };
     }
 

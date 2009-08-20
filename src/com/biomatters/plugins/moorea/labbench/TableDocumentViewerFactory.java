@@ -1,14 +1,15 @@
 package com.biomatters.plugins.moorea.labbench;
 
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
-import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.components.GTable;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.ActionProvider;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
+import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 
-import javax.swing.table.TableModel;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableModel;
 import java.awt.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -21,6 +22,25 @@ import java.util.concurrent.atomic.AtomicReference;
 public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
     public abstract TableModel getTableModel(AnnotatedPluginDocument[] docs);
+
+    /**
+     * Override this to make changes to the table before Geneious gets hold of it
+     *
+     * @param table
+     */
+    protected void messWithTheTable(JTable table) {
+
+    }
+
+    /**
+     * override this for an action provider
+     *
+     * @param table
+     * @return
+     */
+    protected ActionProvider getActionProvider(JTable table) {
+        return null;
+    }
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
         return new DocumentViewer(){
@@ -56,12 +76,18 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                         return comp;
                     }
                 });
+                messWithTheTable(table);
                 return scroller.get();
             }
 
             @Override
             public ExtendedPrintable getExtendedPrintable() {
                 return new JTablePrintable(table);
+            }
+
+            @Override
+            public ActionProvider getActionProvider() {
+                return TableDocumentViewerFactory.this.getActionProvider(table);
             }
         };
     }
