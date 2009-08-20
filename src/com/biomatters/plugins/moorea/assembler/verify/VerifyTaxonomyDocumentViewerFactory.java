@@ -2,6 +2,7 @@ package com.biomatters.plugins.moorea.assembler.verify;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.implementations.Percentage;
+import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.plugins.moorea.labbench.TableDocumentViewerFactory;
 import com.biomatters.plugins.moorea.labbench.TableSorter;
@@ -10,6 +11,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * @author Richard
@@ -64,7 +67,22 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
             }
         });
         TableModel model = ((TableSorter) table.getModel()).getTableModel();
-        ((VerifyTaxonomyTableModel)model).setColumnWidths(table.getColumnModel());
+        final VerifyTaxonomyTableModel verifyTaxonomyModel = (VerifyTaxonomyTableModel) model;
+        verifyTaxonomyModel.setTable(table);
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1) {
+                    verifyTaxonomyModel.doDoubleClick();
+                }
+            }
+        });
+    }
+
+    @Override
+    protected ActionProvider getActionProvider(JTable table) {
+        TableModel model = ((TableSorter) table.getModel()).getTableModel();
+        return ((VerifyTaxonomyTableModel)model).getActionProvider();
     }
 
     public String getName() {

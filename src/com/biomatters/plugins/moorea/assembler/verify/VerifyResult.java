@@ -1,8 +1,10 @@
 package com.biomatters.plugins.moorea.assembler.verify;
 
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.implementations.EValue;
 import org.jdom.Element;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Richard
@@ -10,28 +12,49 @@ import org.jdom.Element;
 */
 class VerifyResult implements XMLSerializable {
 
-    final AnnotatedPluginDocument document;
-    final EValue eValue;
+    final List<AnnotatedPluginDocument> hitDocuments;
+    final AnnotatedPluginDocument queryDocument;
 
-    VerifyResult(AnnotatedPluginDocument document, EValue eValue) {
-        this.document = document;
-        this.eValue = eValue;
+    VerifyResult(List<AnnotatedPluginDocument> hitDocuments, AnnotatedPluginDocument queryDocument) {
+        this.hitDocuments = hitDocuments;
+        this.queryDocument = queryDocument;
     }
 
     VerifyResult(Element element) throws XMLSerializationException {
         try {
-            this.document = DocumentUtilities.getDocumentByURN(URN.fromXML(element.getChild("resultUrn")));
+            hitDocuments = new ArrayList<AnnotatedPluginDocument>();
+            Element hitsElement = element.getChild("hits");
+            if (hitsElement == null) {
+                throw new XMLSerializationException("This verify results document is no longer supported, run Verify Taxonomy again.");
+            }
+            for (Element hitElement : hitsElement.getChildren()) {
+                AnnotatedPluginDocument hitDocument = DocumentUtilities.getDocumentByURN(URN.fromXML(hitElement.getChild("hitUrn")));
+                this.hitDocuments.add(hitDocument);
+            }
         } catch (MalformedURNException e) {
             throw new XMLSerializationException(e);
         }
-        this.eValue = new EValue();
-        this.eValue.fromXML(element.getChild("evalue"));
+        try {
+            this.queryDocument = DocumentUtilities.getDocumentByURN(URN.fromXML(element.getChild("queryUrn")));
+        } catch (MalformedURNException e) {
+            throw new XMLSerializationException(e);
+        }
+    }
+
+    void addHit(AnnotatedPluginDocument hitDocument) {
+        hitDocuments.add(hitDocument);
     }
 
     public Element toXML() {
         Element element = new Element("verifyResult");
-        element.addContent(eValue.toXML());
-        element.addContent(document.getURN().toXML("resultUrn"));
+        element.addContent(queryDocument.getURN().toXML("queryUrn"));
+        Element hitsElement = new Element("hits");
+        for (AnnotatedPluginDocument hitDocument : hitDocuments) {
+            Element hitElement = new Element("hit");
+            hitElement.addContent(hitDocument.getURN().toXML("hitUrn"));
+            hitsElement.addContent(hitElement);
+        }
+        element.addContent(hitsElement);
         return element;
     }
 
