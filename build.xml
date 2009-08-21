@@ -43,13 +43,16 @@
       <jar jarfile="${plugin-build}/${plugin-name}/${short-plugin-name}.jar">
          <fileset dir="${classes}"/>
          <fileset dir="${resources}">
-            <include name="plugin.properties"/>
+            <exclude name="plugin.properties"/>
          </fileset>
       </jar>
       <copy todir="${plugin-build}/${plugin-name}">
          <fileset dir="${lib}"/>
          <fileset dir="${resources}">
             <exclude name="plugin.properties"/>
+         </fileset>
+          <fileset dir="">
+            <include name="plugin.properties"/>
          </fileset>
       </copy>
    </target>
