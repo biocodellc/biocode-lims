@@ -60,9 +60,10 @@ public class VerifyTaxonomyOptions extends Options {
         for (Map.Entry<String, Options> childOptionsEntry : childOptionsToAdd.entrySet()) {
             Options options = childOptionsEntry.getValue();
             options.setVisible(false);
-            //todo don't set this, should set default or something
-            options.setValue("maxHits", 5);
-            options.setValue("getHitAnnos", true);
+            //noinspection unchecked
+            options.getOption("maxHits").setDefaultValue(5);
+            //noinspection unchecked
+            options.getOption("getHitAnnos").setDefaultValue(true);
             addChildOptions(childOptionsEntry.getKey(), "", null, options);
         }
         SimpleListener programListener = new SimpleListener() {

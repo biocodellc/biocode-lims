@@ -10,10 +10,12 @@ import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import org.jdom.Element;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
@@ -34,13 +36,23 @@ import java.util.prefs.Preferences;
  */
 public class VerifyTaxonomyTableModel implements TableModel {
 
-    private final List<VerifyRow> rows = new ArrayList<VerifyRow>();
+    private final List<VerifyResult> rows = new ArrayList<VerifyResult>();
     private int selectedRow = -1;
     private JComponent dialogParent = null;
 
-    public VerifyTaxonomyTableModel(VerifyTaxonomyResultsDocument results) {
+    private final VerifyBinningOptions binningOptions;
+
+    private static final Color HTML_GREEN = new Color(0, 128, 0);
+    private static final Color ORANGEY = new Color(233, 160, 45);
+
+    public VerifyTaxonomyTableModel(VerifyTaxonomyResultsDocument results, VerifyBinningOptions overrideBinningOptions) {
         for (VerifyResult entry : results.getResults()) {
-            rows.add(new VerifyRow(entry));
+            rows.add(entry);
+        }
+        if (overrideBinningOptions != null) {
+            binningOptions = overrideBinningOptions;
+        } else {
+            binningOptions = new VerifyBinningOptions();
         }
         saveAction.setEnabled(false);
         goToAssemblyAction.setEnabled(false);
@@ -54,7 +66,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
     public void setSelectedRow(int i) {
         selectedRow = i;
         goToAssemblyAction.setEnabled(i != -1);
-        showOtherHitsAction.setEnabled(i != -1 && rows.get(selectedRow).result.hitDocuments.size() > 1);
+        showOtherHitsAction.setEnabled(i != -1 && rows.get(selectedRow).hitDocuments.size() > 1);
     }
 
     public int getRowCount() {
@@ -62,15 +74,15 @@ public class VerifyTaxonomyTableModel implements TableModel {
     }
 
     public int getColumnCount() {
-        return COLUMNS.length;
+        return columns.length;
     }
 
     public String getColumnName(int columnIndex) {
-        return COLUMNS[columnIndex].name;
+        return columns[columnIndex].name;
     }
 
     public Class<?> getColumnClass(int columnIndex) {
-        return COLUMNS[columnIndex].columnClass;
+        return columns[columnIndex].columnClass;
     }
 
     public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -78,22 +90,40 @@ public class VerifyTaxonomyTableModel implements TableModel {
     }
 
     public Object getValueAt(int rowIndex, int columnIndex) {
-        return COLUMNS[columnIndex].getValue(rows.get(rowIndex));
+        return columns[columnIndex].getValue(rows.get(rowIndex));
     }
 
     public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
         throw new UnsupportedOperationException("Edit this value, you shall not!");
     }
 
+    private final List<TableModelListener> listeners = new ArrayList<TableModelListener>();
+
     public void addTableModelListener(TableModelListener l) {
+        synchronized (listeners) {
+            listeners.add(l);
+        }
     }
 
     public void removeTableModelListener(TableModelListener l) {
+        synchronized (listeners) {
+            listeners.remove(l);
+        }
+    }
+
+    private void fireListeners() {
+        List<TableModelListener> listenersCopy;
+        synchronized (listeners) {
+            listenersCopy = new ArrayList<TableModelListener>(listeners);
+        }
+        for (TableModelListener listener : listenersCopy) {
+            listener.tableChanged(new TableModelEvent(this));
+        }
     }
 
     public void setColumnWidths(TableColumnModel columnModel) {
-        for (int i = 0; i < COLUMNS.length; i++) {
-            VerifyColumn column = COLUMNS[i];
+        for (int i = 0; i < columns.length; i++) {
+            VerifyColumn column = columns[i];
             columnModel.getColumn(i).setPreferredWidth(column.getPreferredWidth());
             if (column.fixedWidth) {
                 columnModel.getColumn(i).setMinWidth(column.getPreferredWidth());
@@ -104,10 +134,30 @@ public class VerifyTaxonomyTableModel implements TableModel {
         }
     }
 
+    public Color getColorForHitLength(int length, boolean isSelected) {
+        if (length >= binningOptions.getHighBinOptions().getMinLength()) {
+            return HTML_GREEN;
+        }
+        if (length >= binningOptions.getMediumBinOptions().getMinLength()) {
+            return isSelected ? ORANGEY.darker() : ORANGEY;
+        }
+        return Color.red; 
+    }
+
+    public Color getColorForIdentity(double identity, boolean isSelected) {
+        if (identity >= binningOptions.getHighBinOptions().getMinIdentity()) {
+            return HTML_GREEN;
+        }
+        if (identity >= binningOptions.getMediumBinOptions().getMinIdentity()) {
+            return isSelected ? ORANGEY.darker() : ORANGEY;
+        }
+        return Color.red;
+    }
+
     private final GeneiousAction goToAssemblyAction = new GeneiousAction("Go To Query",
             "Select the query document for the selected result", IconUtilities.getIcons("sequenceSearch16.png")) {
         public void actionPerformed(ActionEvent e) {
-            URN urn = rows.get(selectedRow).result.queryDocument.getURN();
+            URN urn = rows.get(selectedRow).queryDocument.getURN();
             DocumentUtilities.selectDocument(urn);
         }
     };
@@ -118,12 +168,13 @@ public class VerifyTaxonomyTableModel implements TableModel {
             "Show the other hits that were downloaded for this query (SuperTip: Double click in table for quick access)", IconUtilities.getIcons("nucleotideList16.png")) {
         public void actionPerformed(ActionEvent e) {
             List<VerifyResult> dummyResults = new ArrayList<VerifyResult>();
-            for (AnnotatedPluginDocument hitDocument : rows.get(selectedRow).result.hitDocuments) {
-                dummyResults.add(new VerifyResult(Collections.singletonList(hitDocument), rows.get(selectedRow).result.queryDocument));
+            for (AnnotatedPluginDocument hitDocument : rows.get(selectedRow).hitDocuments) {
+                dummyResults.add(new VerifyResult(Collections.singletonList(hitDocument), rows.get(selectedRow).queryDocument));
             }
-            JComponent tableComponent = new VerifyTaxonomyDocumentViewerFactory().createViewer(new AnnotatedPluginDocument[]{
+            JComponent tableComponent = new VerifyTaxonomyDocumentViewerFactory(binningOptions).createViewer(new AnnotatedPluginDocument[]{
                     DocumentUtilities.createAnnotatedPluginDocument(new VerifyTaxonomyResultsDocument(dummyResults, null))
             }).getComponent();
+
             Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"Close"}, "Other Hits", dialogParent, Dialogs.DialogIcon.NO_ICON);
             int width = PREFS.getInt("popupWidth4", 1024);
             int height = PREFS.getInt("popupHeight4", 500);
@@ -143,16 +194,21 @@ public class VerifyTaxonomyTableModel implements TableModel {
 
     private final GeneiousAction binningParametersAction = new GeneiousAction("Binning Parameters",
             "Set the binning parameters for this taxonomy verification",
-            new Icons(new ImageIcon(VerifyTaxonomyTableModel.class.getResource("happy.gif")))) {
+            new Icons(new ImageIcon(VerifyTaxonomyTableModel.class.getResource("happy.png")))) {
         public void actionPerformed(ActionEvent e) {
-            Dialogs.showMessageDialog("Coming soon");
+            Element oldValues = binningOptions.valuesToXML("flyingMonkey");
+            boolean choice = Dialogs.showOptionsDialog(binningOptions, "Binning Parameters", false, dialogParent);
+            if (!choice) {
+                binningOptions.valuesFromXML(oldValues);
+            }
+            fireListeners();
         }
     };
 
     private final GeneiousAction saveAction = new GeneiousAction("Save",
             "Save the current binning parameters", IconUtilities.getIcons("save16.png")) {
         public void actionPerformed(ActionEvent e) {
-            Dialogs.showMessageDialog("Coming soon");
+
         }
     };
 
@@ -206,14 +262,31 @@ public class VerifyTaxonomyTableModel implements TableModel {
             return new JLabel(name).getPreferredSize().width;
         }
 
-        abstract Object getValue(VerifyRow row);
+        abstract Object getValue(VerifyResult row);
     }
 
-    private static final VerifyColumn[] COLUMNS = new VerifyColumn[] {
+    private final VerifyColumn[] columns = new VerifyColumn[] {
+            new VerifyColumn("Bin", Icons.class, true) {
+                @Override
+                Object getValue(VerifyResult row) {
+                    if (binningOptions.getHighBinOptions().isMetBy(row, binningOptions.getKeywords())) {
+                        return VerifyBinOptions.Bin.High.getIcons();
+                    }
+                    if (binningOptions.getMediumBinOptions().isMetBy(row, binningOptions.getKeywords())) {
+                        return VerifyBinOptions.Bin.Medium.getIcons();
+                    }
+                    return VerifyBinOptions.Bin.Low.getIcons();
+                }
+
+                @Override
+                int getPreferredWidth() {
+                    return 40;
+                }
+            },
             new VerifyColumn("Query", String.class) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.queryName;
+                Object getValue(VerifyResult row) {
+                    return row.queryDocument.getName();
                 }
 
                 @Override
@@ -223,8 +296,13 @@ public class VerifyTaxonomyTableModel implements TableModel {
             },
             new VerifyColumn("Query Taxon", String.class) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.queryTaxon;
+                Object getValue(VerifyResult row) {
+                    Object fimsTaxonomy = row.queryDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
+                    AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
+                    Object taxObject = row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD);
+                    AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
+                    highlight(taxonomy, ";", blastTaxonomy);
+                    return taxonomy.get();
                 }
 
                 @Override
@@ -234,8 +312,13 @@ public class VerifyTaxonomyTableModel implements TableModel {
             },
             new VerifyColumn("Hit Taxon", String.class) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.hitTaxon;
+                Object getValue(VerifyResult row) {
+                    Object fimsTaxonomy = row.queryDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
+                    AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
+                    Object taxObject = row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD);
+                    AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
+                    highlight(taxonomy, ";", blastTaxonomy);
+                    return blastTaxonomy.get();
                 }
 
                 @Override
@@ -245,8 +328,11 @@ public class VerifyTaxonomyTableModel implements TableModel {
             },
             new VerifyColumn("Keywords", String.class) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.keywords;
+                Object getValue(VerifyResult row) {
+                    AtomicReference<String> keys = new AtomicReference<String>(binningOptions.getKeywords());
+                    AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString());
+                    highlight(keys, ",", definition);
+                    return keys.get();
                 }
 
                 @Override
@@ -256,8 +342,11 @@ public class VerifyTaxonomyTableModel implements TableModel {
             },
             new VerifyColumn("Hit Definition", String.class) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.hitDefinition;
+                Object getValue(VerifyResult row) {
+                    AtomicReference<String> keys = new AtomicReference<String>(binningOptions.getKeywords());
+                    AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString());
+                    highlight(keys, ",", definition);
+                    return definition.get();
                 }
 
                 @Override
@@ -267,20 +356,20 @@ public class VerifyTaxonomyTableModel implements TableModel {
             },
             new VerifyColumn("Hit Length", Integer.class, true) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.hitLength;
+                Object getValue(VerifyResult row) {
+                    return row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH);
                 }
             },
             new VerifyColumn("Hit Identity", Percentage.class, true) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.hitIdentity;
+                Object getValue(VerifyResult row) {
+                    return row.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL);
                 }
             },
             new VerifyColumn("Assembly Bin", String.class, true) {
                 @Override
-                Object getValue(VerifyRow row) {
-                    return row.assemblyBin;
+                Object getValue(VerifyResult row) {
+                    return row.queryDocument.getFieldValue(DocumentField.BIN).toString();
                 }
             }
     };
@@ -292,56 +381,21 @@ public class VerifyTaxonomyTableModel implements TableModel {
      * @param s string to check for keywords, used to return value too
      * @return true iff all keywords were found in s, false otherwise
      */
-    private static boolean highlight(AtomicReference<String> keywords, String delimiter, AtomicReference<String> s) {
-        boolean foundAll = true;
+    private static void highlight(AtomicReference<String> keywords, String delimiter, AtomicReference<String> s) {
         String[] keys = keywords.get().split(delimiter);
         String keys2 = keywords.get();
         String s2 = s.get();
         for (String key : keys) {
             key = key.trim();
-            if (!s2.contains(key)) {
-                keys2 = keys2.replace(key, "<font color=\"red\">" + key + "</font>");
-                foundAll = false;
-            } else {
+            int index = s2.toLowerCase().indexOf(key.toLowerCase());
+            if (index != -1) {
                 keys2 = keys2.replace(key, "<font color=\"green\">" + key + "</font>");
-                s2 = s2.replace(key, "<font color=\"green\">" + key + "</font>");
+                s2 = s2.substring(0, index) + "<font color=\"green\">" + s2.substring(index, index + key.length()) + "</font>" + s2.substring(index + key.length());
+            } else {
+                keys2 = keys2.replace(key, "<font color=\"red\">" + key + "</font>");
             }
         }
         keywords.set(keys2);
         s.set(s2);
-        return foundAll;
-    }
-
-    private class VerifyRow {
-
-        final String queryName;
-        final String queryTaxon;
-        final String hitTaxon;
-        final String keywords;
-        final String hitDefinition;
-        final int hitLength;
-        final Percentage hitIdentity;
-        final String assemblyBin;
-        final VerifyResult result;
-
-        public VerifyRow(VerifyResult result) {
-            this.result = result;
-            this.queryName = result.queryDocument.getName();
-            Object fimsTaxonomy = result.queryDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
-            AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
-            Object taxObject = result.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD);
-            AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
-            highlight(taxonomy, ";", blastTaxonomy);
-            queryTaxon = taxonomy.get();
-            hitTaxon = blastTaxonomy.get();
-            AtomicReference<String> keys = new AtomicReference<String>("COI, cytochrome");
-            AtomicReference<String> definition = new AtomicReference<String>(result.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString());
-            highlight(keys, ",", definition);
-            keywords = keys.get();
-            hitDefinition = definition.get();
-            hitLength = (Integer)result.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH);
-            hitIdentity = (Percentage)result.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL);
-            assemblyBin = result.queryDocument.getFieldValue(DocumentField.BIN).toString();
-        }
     }
 }
