@@ -22,6 +22,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.sql.SQLException;
@@ -376,6 +378,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 try {
                     MooreaLabBenchService.getInstance().deletePlate(MooreaLabBenchService.BlockingDialog.getDialog("Deleting your plate", plateView), plateView.getPlate());
                 } catch (SQLException e1) {
+                    Dialogs.showMessageDialog("There was an error deleting your plate: "+e1.getMessage());
                     e1.printStackTrace();
                 }
                 plateView.repaint();
@@ -474,6 +477,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         JTextArea notes = new JTextArea(gelImage.getNotes());
         notes.setWrapStyleWord(true);
         notes.setLineWrap(true);
+        notes.setEditable(false);
         holderPanel.add(notes, BorderLayout.SOUTH);
         return holderPanel;
     }
@@ -710,8 +714,31 @@ public class PlateDocumentViewer extends DocumentViewer{
 
         if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0) {
             mainPanel.addDividerWithLabel("GEL Images");
-            for(GelImage image : plateView.getPlate().getImages()) {
-                mainPanel.addSpanningComponent(getGelImagePanel(image));
+            for(final GelImage image : plateView.getPlate().getImages()) {
+                final JPanel imagePanel = getGelImagePanel(image);
+                imagePanel.setToolTipText("Double-click to pop out");
+                imagePanel.addMouseListener(new MouseAdapter(){
+                    JFrame frame;
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        if(e.getClickCount() == 2) {
+                            JPanel gelImagePanel = getGelImagePanel(image);
+                            if(frame == null || !frame.isShowing()) {
+                                frame = new JFrame();
+                                frame.setTitle("GEL Image");
+                                frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                                frame.setSize(640, 480);
+                                frame.setLocationRelativeTo(imagePanel);
+                                frame.getContentPane().add(new JScrollPane(gelImagePanel));
+                                frame.setVisible(true);
+                            }
+                            else {
+                                frame.requestFocus();
+                            }
+                        }
+                    }
+                });
+                mainPanel.addSpanningComponent(imagePanel);
             }
         }
 

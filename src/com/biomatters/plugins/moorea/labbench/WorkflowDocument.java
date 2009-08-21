@@ -209,6 +209,11 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
             break;
         }
+        Collections.sort(parts, new Comparator<ReactionPart>(){
+            public int compare(ReactionPart o1, ReactionPart o2) {
+                return (int)(o1.getReaction().getCreated().getTime() - o2.getReaction().getCreated().getTime());
+            }
+        });
     }
 
     public static class ReactionPart extends Part {

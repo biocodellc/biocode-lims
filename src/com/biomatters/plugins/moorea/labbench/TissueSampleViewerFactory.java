@@ -1,9 +1,9 @@
 package com.biomatters.plugins.moorea.labbench;
 
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 
 import javax.swing.*;
@@ -56,12 +56,16 @@ public class TissueSampleViewerFactory extends DocumentViewerFactory{
                 else {
                     html = doc.getTissueHTML();
                 }
+                if(html == null) {
+                    return null;
+                }
                 StringBuilder htmlBuilder = new StringBuilder("<html>");
                 htmlBuilder.append(GuiUtilities.getHtmlHead());
                 htmlBuilder.append("<body>");
                 htmlBuilder.append(html);
                 htmlBuilder.append("</body></html>");
                 JEditorPane editorPane = new JEditorPane("text/html", htmlBuilder.toString());
+                editorPane.setEditable(false);
                 JScrollPane scroller = new JScrollPane(editorPane);
                 return scroller;
             }

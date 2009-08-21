@@ -4,9 +4,9 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.TextAreaOption;
 
-import java.util.List;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -51,20 +51,20 @@ public class PCRCocktail extends Cocktail{
         bufferConcOption.setUnits("uM");
         Options.IntegerOption mgOption = options.addIntegerOption("mg", "Mg", 1, 0, Integer.MAX_VALUE);
         mgOption.setUnits("ul");
-        Options.IntegerOption mgConcOption = options.addIntegerOption("mgConc", "Mg Concentration", 0, 0, Integer.MAX_VALUE);
-        mgConcOption.setUnits("uM");
+        Options.IntegerOption mgConcOption = options.addIntegerOption("mgConc", "Mg Concentration", 25, 0, Integer.MAX_VALUE);
+        mgConcOption.setUnits("mM");
         Options.IntegerOption bsaOption = options.addIntegerOption("bsa", "BSA", 1, 0, Integer.MAX_VALUE);
         bsaOption.setUnits("ul");
         Options.IntegerOption bsaConcOption = options.addIntegerOption("bsaConc", "bsa Concentration", 0, 0, Integer.MAX_VALUE);
         bsaConcOption.setUnits("uM");
         Options.IntegerOption dntpOption = options.addIntegerOption("dntp", "dNTPs", 1, 0, Integer.MAX_VALUE);
         dntpOption.setUnits("ul");
-        Options.IntegerOption dntpConcOption = options.addIntegerOption("dntpConc", "dntp Concentration", 0, 0, Integer.MAX_VALUE);
-        dntpConcOption.setUnits("uM");
+        Options.IntegerOption dntpConcOption = options.addIntegerOption("dntpConc", "dntp Concentration", 10, 0, Integer.MAX_VALUE);
+        dntpConcOption.setUnits("mM");
         Options.IntegerOption taqOption = options.addIntegerOption("taq", "TAQ", 1, 0, Integer.MAX_VALUE);
         taqOption.setUnits("ul");
-        Options.IntegerOption taqConcOption = options.addIntegerOption("taqConc", "taq Concentration", 0, 0, Integer.MAX_VALUE);
-        taqConcOption.setUnits("uM");
+        Options.IntegerOption taqConcOption = options.addIntegerOption("taqConc", "taq Concentration", 5, 0, Integer.MAX_VALUE);
+        taqConcOption.setUnits("Units/ul");
         TextAreaOption areaOption = new TextAreaOption("notes", "Notes", "");
         options.addCustomOption(areaOption);
     }

@@ -12,6 +12,7 @@ import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.labbench.fims.GeneiousFimsConnection;
 import com.biomatters.plugins.moorea.labbench.fims.MooreaFimsConnection;
+import com.biomatters.plugins.moorea.labbench.fims.TAPIRFimsConnection;
 import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.moorea.labbench.plates.GelImage;
 import com.biomatters.plugins.moorea.labbench.plates.Plate;
@@ -117,7 +118,7 @@ public class MooreaLabBenchService extends DatabaseService {
         return new FIMSConnection[] {
                 new GeneiousFimsConnection(),
                 new MooreaFimsConnection(),
-                //new TAPIRFimsConnection()
+                new TAPIRFimsConnection()
         };
     }
 
@@ -1056,7 +1057,7 @@ public class MooreaLabBenchService extends DatabaseService {
         limsConnection.deleteRecords("pcr", "workflow", workflows);
         limsConnection.deleteRecords("pcr", "extractionId", extractionNames);
         limsConnection.deleteRecords("cyclesequencing", "workflow", workflows);
-        limsConnection.deleteRecords("cycleSequencing", "extractionId", extractionNames);
+        limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames);
         limsConnection.deleteRecords("workflow", "id", workflows);
         limsConnection.deleteRecords("extraction", "id", ids);
     }

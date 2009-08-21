@@ -1,14 +1,14 @@
 package com.biomatters.plugins.moorea.labbench.plates;
 
-import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.labbench.Workflow;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.labbench.Workflow;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
 
 import javax.swing.*;
@@ -16,14 +16,14 @@ import javax.swing.event.ChangeListener;
 import javax.swing.text.Caret;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.AdjustmentListener;
 import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
-import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -67,9 +67,9 @@ public class PlateBulkEditor {
         final DocumentField fieldToCheck = getFieldToCheck(p);
 
         GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(PlateBulkEditor.class), false, true);
-        toolbar.addAction(new GeneiousAction("Swap Direction", "Swap the direction the wells are read from (between 'across then down', or 'down then across')", MooreaPlugin.getIcons("swapDirection_16.png")){
+        GeneiousAction swapAction = new GeneiousAction("Swap Direction", "Swap the direction the wells are read from (between 'across then down', or 'down then across')", MooreaPlugin.getIcons("swapDirection_16.png")) {
             public void actionPerformed(ActionEvent e) {
-                switch(direction.get()) {
+                switch (direction.get()) {
                     case ACROSS_AND_DOWN:
                         direction.set(Direction.DOWN_AND_ACROSS);
                         break;
@@ -77,11 +77,12 @@ public class PlateBulkEditor {
                         direction.set(Direction.ACROSS_AND_DOWN);
                         break;
                 }
-                for(DocumentFieldEditor editor : editors) {
+                for (DocumentFieldEditor editor : editors) {
                     editor.setDirection(direction.get());
                 }
             }
-        });
+        };
+        toolbar.addAction(swapAction);
         if(p.getReactionType() == Reaction.Type.Extraction) {
             toolbar.addAction(new GeneiousAction("Get Tissue Id's from Barcodes", "Use 2D barcode tube data to get tissue sample ids from the FIMS", MooreaPlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
@@ -149,6 +150,7 @@ public class PlateBulkEditor {
         JPanel holderPanel = new JPanel(new BorderLayout());
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
+        swapAction.actionPerformed(null);
         if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Plate", owner), holderPanel) == Dialogs.CANCEL) {
             return;    
         }

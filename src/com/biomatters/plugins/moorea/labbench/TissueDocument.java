@@ -68,7 +68,11 @@ public class TissueDocument implements PluginDocument {
         StringBuilder htmlBuilder = new StringBuilder();
         htmlBuilder.append("<h1>"+getName()+"</h1>\n");
         htmlBuilder.append("<table border=\"0\">\n");
-        for(DocumentField field : fimsResults.getFimsAttributes()) {
+        List<DocumentField> fimsAttributes = fimsResults.getFimsAttributes();
+        if(fimsAttributes == null) {
+            return null;
+        }
+        for(DocumentField field : fimsAttributes) {
             String name = field.getName();
             Object value = fimsResults.getFimsAttributeValue(field.getCode());
             htmlBuilder.append("<tr><td align=\"right\"><b>"+name+":</b></td><td>"+value+"</td></tr>\n");
@@ -81,7 +85,11 @@ public class TissueDocument implements PluginDocument {
         StringBuilder htmlBuilder = new StringBuilder();
         htmlBuilder.append("<h1>"+getName()+"</h1>\n");
         htmlBuilder.append("<table border=\"0\">\n");
-        for(DocumentField field : fimsResults.getTaxonomyAttributes()) {
+        List<DocumentField> taxonomyAttributes = fimsResults.getTaxonomyAttributes();
+        if(taxonomyAttributes == null) {
+            return null;
+        }
+        for(DocumentField field : taxonomyAttributes) {
             String name = field.getName();
             Object value = fimsResults.getFimsAttributeValue(field.getCode());
             htmlBuilder.append("<tr><td align=\"right\"><b>"+name+":</b></td><td>"+value+"</td></tr>\n");

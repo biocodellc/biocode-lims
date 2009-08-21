@@ -2,8 +2,10 @@ package com.biomatters.plugins.moorea.labbench.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
+import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
@@ -316,6 +318,29 @@ public class LIMSConnection {
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
         Set<Integer> plateIds = new HashSet<Integer>();
+
+        if(query instanceof BasicSearchQuery) {
+            String value = ((BasicSearchQuery)query).getSearchText();
+            List<DocumentField> searchFields = getSearchAttributes();
+            List<Query> queryTerms = new ArrayList<Query>();
+            for(DocumentField field : searchFields) {
+                if(String.class.isAssignableFrom(field.getValueType())) {
+                    if(field.isEnumeratedField()) {
+                        boolean hasValue = false;
+                        for(String s : field.getEnumerationValues()) {
+                            if(s.equalsIgnoreCase(value)) {
+                                hasValue = true;
+                            }
+                        }
+                        if(!hasValue)
+                            continue;
+                    }
+                    queryTerms.add(Query.Factory.createFieldQuery(field, Condition.CONTAINS, value));
+                }
+            }
+            query = Query.Factory.createOrQuery(queryTerms.toArray(new Query[queryTerms.size()]), Collections.EMPTY_MAP);
+        }
+
         if(query instanceof CompoundSearchQuery) {
             refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name"));
             operator = ((CompoundSearchQuery)query).getOperator();
