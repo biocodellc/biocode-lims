@@ -18,6 +18,9 @@ public class VerifyTaxonomyResultsDocument extends AbstractPluginDocument {
      * Map of query to results
      */
     private List<VerifyResult> results;
+    private Element binningOptionsValues = null;
+
+    public static final String BINNING_ELEMENT_NAME = "binningParameters";
 
     public VerifyTaxonomyResultsDocument() {
     }
@@ -52,6 +55,11 @@ public class VerifyTaxonomyResultsDocument extends AbstractPluginDocument {
             resultsElement.addContent(result.toXML());
         }
         element.addContent(resultsElement);
+        Element binningElement = new Element(BINNING_ELEMENT_NAME);
+        if (binningOptionsValues != null) {
+            binningElement.addContent(binningOptionsValues.cloneContent());
+        }
+        element.addContent(binningElement);
         return element;
     }
 
@@ -62,5 +70,14 @@ public class VerifyTaxonomyResultsDocument extends AbstractPluginDocument {
         for (Element result : root.getChild("results").getChildren()) {
             results.add(new VerifyResult(result));
         }
+        binningOptionsValues = root.getChild(BINNING_ELEMENT_NAME);
+    }
+
+    public Element getBinningOptionsValues() {
+        return binningOptionsValues;
+    }
+
+    public void setBinningOptionsValues(Element binningOptionsValues) {
+        this.binningOptionsValues = binningOptionsValues;
     }
 }

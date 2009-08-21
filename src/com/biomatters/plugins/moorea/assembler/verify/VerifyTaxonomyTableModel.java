@@ -41,18 +41,24 @@ public class VerifyTaxonomyTableModel implements TableModel {
     private JComponent dialogParent = null;
 
     private final VerifyBinningOptions binningOptions;
+    private final AnnotatedPluginDocument resultsDocument;
 
     private static final Color HTML_GREEN = new Color(0, 128, 0);
     private static final Color ORANGEY = new Color(233, 160, 45);
 
-    public VerifyTaxonomyTableModel(VerifyTaxonomyResultsDocument results, VerifyBinningOptions overrideBinningOptions) {
-        for (VerifyResult entry : results.getResults()) {
+    public VerifyTaxonomyTableModel(AnnotatedPluginDocument results, VerifyBinningOptions overrideBinningOptions) {
+        resultsDocument = results;
+        VerifyTaxonomyResultsDocument resultsPluginDocument = (VerifyTaxonomyResultsDocument) results.getDocumentOrCrash();
+        for (VerifyResult entry : resultsPluginDocument.getResults()) {
             rows.add(entry);
         }
         if (overrideBinningOptions != null) {
             binningOptions = overrideBinningOptions;
         } else {
             binningOptions = new VerifyBinningOptions();
+            if (resultsPluginDocument.getBinningOptionsValues() != null) {
+                binningOptions.valuesFromXML(resultsPluginDocument.getBinningOptionsValues());
+            }
         }
         saveAction.setEnabled(false);
         goToAssemblyAction.setEnabled(false);
@@ -200,6 +206,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
             boolean choice = Dialogs.showOptionsDialog(binningOptions, "Binning Parameters", false, dialogParent);
             if (!choice) {
                 binningOptions.valuesFromXML(oldValues);
+            } else {
+                Element currentDocumentBinning = ((VerifyTaxonomyResultsDocument) resultsDocument.getDocumentOrCrash()).getBinningOptionsValues();
+                saveAction.setEnabled(currentDocumentBinning == null || !currentDocumentBinning.equals(binningOptions.valuesToXML(VerifyTaxonomyResultsDocument.BINNING_ELEMENT_NAME)));
             }
             fireListeners();
         }
@@ -208,7 +217,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
     private final GeneiousAction saveAction = new GeneiousAction("Save",
             "Save the current binning parameters", IconUtilities.getIcons("save16.png")) {
         public void actionPerformed(ActionEvent e) {
-
+            ((VerifyTaxonomyResultsDocument) resultsDocument.getDocumentOrCrash()).setBinningOptionsValues(binningOptions.valuesToXML(VerifyTaxonomyResultsDocument.BINNING_ELEMENT_NAME));
+            resultsDocument.saveDocument();
+            setEnabled(false);
         }
     };
 

@@ -32,7 +32,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
     }
 
     public TableModel getTableModel(AnnotatedPluginDocument[] docs) {
-        return new VerifyTaxonomyTableModel((VerifyTaxonomyResultsDocument)docs[0].getDocumentOrCrash(), overrideBinningOptions);
+        return new VerifyTaxonomyTableModel(docs[0], overrideBinningOptions);
     }
 
     @Override
@@ -42,7 +42,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowHeight(table.getRowHeight() * 5);
         TableSorter sorter = (TableSorter) table.getModel();
-        sorter.setSortingStatus(0, TableSorter.DESCENDING);
+        sorter.setSortingStatus(0, overrideBinningOptions == null ? TableSorter.DESCENDING : TableSorter.ASCENDING);
         final VerifyTaxonomyTableModel verifyTaxonomyModel = (VerifyTaxonomyTableModel) sorter.getTableModel();
         verifyTaxonomyModel.setTable(table);
         table.addMouseListener(new MouseAdapter() {
