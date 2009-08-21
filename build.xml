@@ -48,10 +48,7 @@
       </jar>
       <copy todir="${plugin-build}/${plugin-name}">
          <fileset dir="${lib}"/>
-         <fileset dir="${resources}">
-            <exclude name="plugin.properties"/>
-         </fileset>
-          <fileset dir="">
+         <fileset dir="">
             <include name="plugin.properties"/>
          </fileset>
       </copy>
