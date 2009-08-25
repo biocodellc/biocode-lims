@@ -41,7 +41,6 @@ public class MooreaUtilities {
             if(letter < 65 || letter > 90) {
                 throw new IllegalArgumentException("wellName must be in the form A1, or A01");
             }
-            letter -= 65;
             this.letter = letter;
 
             int number;
