@@ -47,7 +47,7 @@ import java.util.prefs.Preferences;
  *          Created on 9/07/2009 6:22:53 PM
  */
 public class ReactionUtilities {
-    private static String PRO_VERSION_INFO = "<html><b>All</b></html>";
+    private static String PRO_VERSION_INFO = "<html><b>All Fields</b></html>";
     private static String FREE_VERSION_INFO = "Editing in Geneious Pro only";
 
 

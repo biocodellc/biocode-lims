@@ -509,8 +509,8 @@ public abstract class Reaction implements XMLSerializable{
                 updateStatement.close();
                 break;
             case PCR:
-                insertSQL = "INSERT INTO pcr (prName, prSequence, prAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrAmount, revPrSequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, prAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrAmount=?, revPrSequence=?, date=pcr.date WHERE id=?";
+                insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=pcr.date WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -519,86 +519,6 @@ public abstract class Reaction implements XMLSerializable{
                         progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
                     }
                     if (!reaction.isEmpty() && reaction.plateId >= 0) {
-                        PreparedStatement statement;
-                        if(reaction.getId() >= 0) { //the reaction is already in the database
-                            statement = updateStatement;
-                            statement.setInt(17, reaction.getId());
-                        }
-                        else {
-                            statement = insertStatement;
-                        }
-
-                        ReactionOptions options = reaction.getOptions();
-                        Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
-                        if(!(value instanceof Options.OptionValue)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
-                        }
-                        Options.OptionValue primerOptionValue = (Options.OptionValue) value;
-                        statement.setString(1, primerOptionValue.getLabel());
-                        statement.setString(2, primerOptionValue.getDescription());
-                        statement.setInt(3, (Integer)options.getValue("prAmount"));
-
-                        Object value2 = options.getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
-                        if(!(value instanceof Options.OptionValue)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
-                        }
-                        Options.OptionValue primerOptionValue2 = (Options.OptionValue) value2;
-                        statement.setString(14, primerOptionValue2.getLabel());
-                        statement.setString(16, primerOptionValue2.getDescription());
-                        statement.setInt(15, (Integer)options.getValue("revPrAmount"));
-//                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
-//                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
-//                        }
-                        //statement.setInt(4, reaction.getWorkflow() != null ? reaction.getWorkflow().getId() : 0);
-                        if(reaction.getWorkflow() != null) {
-                            statement.setInt(4, reaction.getWorkflow().getId());
-                        }
-                        else {
-                            statement.setObject(4, null);
-                        }
-                        statement.setInt(5, reaction.getPlateId());
-                        statement.setInt(6, reaction.getPosition());
-                        int cocktailId = -1;
-                        Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
-                        try {
-                            cocktailId = Integer.parseInt(cocktailValue.getName());
-                        }
-                        catch(NumberFormatException ex) {
-                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
-                        }
-                        if(cocktailId < 0) {
-                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
-                        }
-                        statement.setInt(7, cocktailId);
-                        statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
-                        if(reaction.getThermocycle() != null) {
-                            statement.setInt(9, reaction.getThermocycle().getId());
-                        }
-                        else {
-                            statement.setInt(9, -1);
-                        }
-                        statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
-                        statement.setString(11, options.getValueAsString("cleanupMethod"));
-                        statement.setString(12, reaction.getExtractionId());
-                        statement.setString(13, options.getValueAsString("notes"));
-                        statement.execute();
-                    }
-                }
-                insertStatement.close();
-                updateStatement.close();
-                break;
-            case CycleSequencing:
-                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, primerAmount, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, primerAmount=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cyclesequencing.date WHERE id=?";
-                insertStatement = connection.prepareStatement(insertSQL);
-                updateStatement = connection.prepareStatement(updateSQL);
-                for (int i = 0; i < reactions.length; i++) {
-                    Reaction reaction = reactions[i];
-                    if(progress != null) {
-                        progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
-                    }
-                    if (!reaction.isEmpty() && reaction.plateId >= 0) {
-
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
@@ -616,15 +536,28 @@ public abstract class Reaction implements XMLSerializable{
                         Options.OptionValue primerOptionValue = (Options.OptionValue) value;
                         statement.setString(1, primerOptionValue.getLabel());
                         statement.setString(2, primerOptionValue.getDescription());
-                        statement.setInt(3, (Integer)options.getValue("prAmount"));
+                        //statement.setInt(3, (Integer)options.getValue("prAmount"));
+
+                        Object value2 = options.getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
+                        if(!(value instanceof Options.OptionValue)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        }
+                        Options.OptionValue primerOptionValue2 = (Options.OptionValue) value2;
+                        statement.setString(13, primerOptionValue2.getLabel());
+                        statement.setString(14, primerOptionValue2.getDescription());
+//                        statement.setInt(14, (Integer)options.getValue("revPrAmount"));
+//                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+//                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
+//                        }
+                        //statement.setInt(4, reaction.getWorkflow() != null ? reaction.getWorkflow().getId() : 0);
                         if(reaction.getWorkflow() != null) {
-                            statement.setInt(4, reaction.getWorkflow().getId());
+                            statement.setInt(3, reaction.getWorkflow().getId());
                         }
                         else {
-                            statement.setObject(4, null);
+                            statement.setObject(3, null);
                         }
-                        statement.setInt(5, reaction.getPlateId());
-                        statement.setInt(6, reaction.getPosition());
+                        statement.setInt(4, reaction.getPlateId());
+                        statement.setInt(5, reaction.getPosition());
                         int cocktailId = -1;
                         Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
                         try {
@@ -636,18 +569,85 @@ public abstract class Reaction implements XMLSerializable{
                         if(cocktailId < 0) {
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
-                        statement.setInt(7, cocktailId);
-                        statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        statement.setInt(6, cocktailId);
+                        statement.setString(7, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
                         if(reaction.getThermocycle() != null) {
-                            statement.setInt(9, reaction.getThermocycle().getId());
+                            statement.setInt(8, reaction.getThermocycle().getId());
                         }
                         else {
-                            statement.setInt(9, -1);
+                            statement.setInt(8, -1);
                         }
-                        statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
-                        statement.setString(11, options.getValueAsString("cleanupMethod"));
-                        statement.setString(12, reaction.getExtractionId());
-                        statement.setString(13, options.getValueAsString("notes"));
+                        statement.setBoolean(9, (Boolean)options.getValue("cleanupPerformed"));
+                        statement.setString(10, options.getValueAsString("cleanupMethod"));
+                        statement.setString(11, reaction.getExtractionId());
+                        statement.setString(12, options.getValueAsString("notes"));
+                        statement.execute();
+                    }
+                }
+                insertStatement.close();
+                updateStatement.close();
+                break;
+            case CycleSequencing:
+                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cyclesequencing.date WHERE id=?";
+                insertStatement = connection.prepareStatement(insertSQL);
+                updateStatement = connection.prepareStatement(updateSQL);
+                for (int i = 0; i < reactions.length; i++) {
+                    Reaction reaction = reactions[i];
+                    if(progress != null) {
+                        progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                    }
+                    if (!reaction.isEmpty() && reaction.plateId >= 0) {
+
+                        PreparedStatement statement;
+                        if(reaction.getId() >= 0) { //the reaction is already in the database
+                            statement = updateStatement;
+                            statement.setInt(14, reaction.getId());
+                        }
+                        else {
+                            statement = insertStatement;
+                        }
+
+                        ReactionOptions options = reaction.getOptions();
+                        Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
+                        if(!(value instanceof Options.OptionValue)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        }
+                        Options.OptionValue primerOptionValue = (Options.OptionValue) value;
+                        statement.setString(1, primerOptionValue.getLabel());
+                        statement.setString(2, primerOptionValue.getDescription());
+                        //statement.setInt(3, (Integer)options.getValue("prAmount"));
+                        if(reaction.getWorkflow() != null) {
+                            statement.setInt(3, reaction.getWorkflow().getId());
+                        }
+                        else {
+                            statement.setObject(3, null);
+                        }
+                        statement.setInt(4, reaction.getPlateId());
+                        statement.setInt(5, reaction.getPosition());
+                        int cocktailId = -1;
+                        Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
+                        try {
+                            cocktailId = Integer.parseInt(cocktailValue.getName());
+                        }
+                        catch(NumberFormatException ex) {
+                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
+                        }
+                        if(cocktailId < 0) {
+                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                        }
+                        statement.setInt(6, cocktailId);
+                        statement.setString(7, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        if(reaction.getThermocycle() != null) {
+                            statement.setInt(8, reaction.getThermocycle().getId());
+                        }
+                        else {
+                            statement.setInt(8, -1);
+                        }
+                        statement.setBoolean(9, (Boolean)options.getValue("cleanupPerformed"));
+                        statement.setString(10, options.getValueAsString("cleanupMethod"));
+                        statement.setString(11, reaction.getExtractionId());
+                        statement.setString(12, options.getValueAsString("notes"));
                         List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
                         String sequenceString = "";
                         if(sequences != null && sequences.size() > 0) {
@@ -663,7 +663,7 @@ public abstract class Reaction implements XMLSerializable{
                             }
                         }
 
-                        statement.setString(14, sequenceString);
+                        statement.setString(13, sequenceString);
                         statement.execute();
                     }
                 }

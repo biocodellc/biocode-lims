@@ -1,24 +1,23 @@
 package com.biomatters.plugins.moorea.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import org.jdom.Element;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListDataListener;
 import javax.swing.event.ListDataEvent;
-import java.util.List;
+import javax.swing.event.ListDataListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-
-import org.jdom.Element;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -40,11 +39,11 @@ public abstract class Cocktail implements XMLSerializable {
 
     protected abstract void setName(String name);
 
-    public int getReactionVolume(Options options) {
-        int sum = 0;
+    public double getReactionVolume(Options options) {
+        double sum = 0;
         for (Options.Option o : options.getOptions()) {
-            if (o instanceof Options.IntegerOption) {
-                sum += (Integer) o.getValue();
+            if (o instanceof Options.DoubleOption && o.getLabel().toLowerCase().contains("amount")) {
+                sum += (Double) o.getValue();
             }
         }
         return sum;

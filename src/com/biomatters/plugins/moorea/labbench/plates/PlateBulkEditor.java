@@ -112,20 +112,21 @@ public class PlateBulkEditor {
                 }
             });
         }
+        GeneiousAction autodetectAction = null;
         if(fieldToCheck != null) {
-            toolbar.addAction(new GeneiousAction("Autodetect workflows", "Autodetect workflows from the extraction id's you have entered", MooreaPlugin.getIcons("workflow_16.png")){
+            autodetectAction = new GeneiousAction("Autodetect workflows", "Autodetect workflows from the extraction id's you have entered", MooreaPlugin.getIcons("workflow_16.png")) {
                 public void actionPerformed(ActionEvent e) {
-                    if(fieldToCheck == null) {
+                    if (fieldToCheck == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - plate type unknown!");
                         return;
                     }
                     final DocumentFieldEditor editorToCheck = getEditorForField(editors, fieldToCheck);
-                    if(editorToCheck == null) {
+                    if (editorToCheck == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the id field!");
                         return;
                     }
                     final DocumentFieldEditor workflowEditor = getEditorForField(editors, workflowField);
-                    if(workflowEditor == null) {
+                    if (workflowEditor == null) {
                         Dialogs.showMessageDialog("Could not autodetect workflows for this plate - no editor set for the workflow field!");
                         return;
                     }
@@ -137,7 +138,7 @@ public class PlateBulkEditor {
                                 Map<String, String> idToWorkflow = MooreaLabBenchService.getInstance().getWorkflowIds(idsToCheck, p.getReactionType());
                                 putMappedValuesIntoEditor(editorToCheck, workflowEditor, idToWorkflow, p);
                             } catch (SQLException e1) {
-                                Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                                Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
                                 return;
                             }
                         }
@@ -145,7 +146,8 @@ public class PlateBulkEditor {
                     MooreaLabBenchService.block("Fetching workflow ID's from the database", editorToCheck, runnable);
 
                 }
-            });
+            };
+            toolbar.addAction(autodetectAction);
         }
         JPanel holderPanel = new JPanel(new BorderLayout());
         holderPanel.add(platePanel, BorderLayout.CENTER);
@@ -160,6 +162,25 @@ public class PlateBulkEditor {
         }
 
         List<String> workflowIds = new ArrayList<String>();
+
+        //check that the user hasn't forgotten to click the autodetect workflows button
+        int workflowCount = 0;
+        for(DocumentFieldEditor editor : editors) {
+            if(editor.getField().getCode().equals(workflowField.getCode())) {
+                for(int row = 0; row < p.getRows(); row++) {
+                    for(int col = 0; col < p.getCols(); col++) {
+                        if(editor.getValue(row, col) != null && editor.getValue(row, col).toString().trim().length() > 0) {
+                            workflowCount++;
+                        }
+                    }
+                }
+            }
+        }
+        if(workflowCount == 0 && fieldToCheck != null) {
+            if(Dialogs.showYesNoDialog("You have not entered any workflows.  You should only enter no workflows if you are intending to start new workflows with these reactions.  Do you want to autodetect the workflows? (If you have forgotten to click Autodetect Workflows, click yes)", "No workflows", owner, Dialogs.DialogIcon.QUESTION)){
+                autodetectAction.actionPerformed(null);
+            }
+        }
 
         //get the workflows out of the database (mainly to check for validity in what the user's entered)
         for(DocumentFieldEditor editor : editors) {

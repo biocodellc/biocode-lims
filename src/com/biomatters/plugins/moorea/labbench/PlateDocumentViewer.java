@@ -13,6 +13,7 @@ import com.biomatters.plugins.moorea.labbench.plates.GelImage;
 import com.biomatters.plugins.moorea.labbench.plates.Plate;
 import com.biomatters.plugins.moorea.labbench.plates.PlateView;
 import com.biomatters.plugins.moorea.labbench.reaction.*;
+import jebl.math.MachineAccuracy;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -21,9 +22,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.sql.SQLException;
@@ -486,16 +485,20 @@ public class PlateDocumentViewer extends DocumentViewer{
         return new JPanel(){
             @Override
             public Dimension getPreferredSize() {
+                if (isPreferredSizeSet()) {
+                    return super.getPreferredSize();
+                }
                 return new Dimension(img.getWidth(this), img.getHeight(this));
             }
 
             @Override
             protected void paintComponent(Graphics g) {
-                double scaleFactor = 1.0;
-                if(img.getWidth(this) > getWidth() || img.getHeight(this) > getHeight()) {
-                    scaleFactor = Math.min(scaleFactor, (double)getWidth()/img.getWidth(this));
-                    scaleFactor = Math.min(scaleFactor, (double)getHeight()/img.getHeight(this));
-                }
+                g.setColor(getBackground());
+                g.fillRect(0,0,getWidth(),getHeight());
+                double scaleFactor = Double.MAX_VALUE;
+
+                scaleFactor = Math.min(scaleFactor, (double)getWidth()/img.getWidth(this));
+                scaleFactor = Math.min(scaleFactor, (double)getHeight()/img.getHeight(this));
                 ((Graphics2D)g).scale(scaleFactor, scaleFactor);
                 g.drawImage(img, 0, 0, this);
                 ((Graphics2D)g).scale(1/scaleFactor, 1/scaleFactor);
@@ -722,14 +725,46 @@ public class PlateDocumentViewer extends DocumentViewer{
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         if(e.getClickCount() == 2) {
-                            JPanel gelImagePanel = getGelImagePanel(image);
+                            final JPanel gelImagePanel = getImagePanel(image.getImage());
+                            final Dimension originalImageSize = new Dimension(gelImagePanel.getPreferredSize());
                             if(frame == null || !frame.isShowing()) {
                                 frame = new JFrame();
                                 frame.setTitle("GEL Image");
                                 frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                                 frame.setSize(640, 480);
                                 frame.setLocationRelativeTo(imagePanel);
-                                frame.getContentPane().add(new JScrollPane(gelImagePanel));
+                                final AtomicReference<Double> zoom = new AtomicReference<Double>(1.0);
+                                final ZoomPanel zoomer = new ZoomPanel();
+                                zoomer.setZoomLevel(zoom.get());
+                                zoomer.setMaximumZoomLevel(4.0);
+                                frame.getContentPane().add(zoomer, BorderLayout.NORTH);
+                                JPanel holder = new JPanel(new FlowLayout());
+                                holder.add(gelImagePanel);
+                                final JScrollPane scroller = new JScrollPane(holder);
+                                frame.getContentPane().add(scroller, BorderLayout.CENTER);
+
+                                frame.addComponentListener(new ComponentAdapter(){
+                                    @Override
+                                    public void componentResized(ComponentEvent e) {
+                                        boolean isAtMinZoom = MachineAccuracy.same(zoomer.getZoomLevel(),zoomer.getMinZoomLevel());
+                                        double newMinZoom = Math.min(1.0, Math.min(scroller.getViewport().getSize().getWidth()/originalImageSize.getWidth(), scroller.getViewport().getSize().getHeight()/originalImageSize.getHeight()));
+                                        zoomer.setMinimumAndFitToScreenZoomLevel(newMinZoom);
+                                        if(isAtMinZoom) {
+                                            zoomer.setZoomLevel(newMinZoom);
+                                        }
+                                    }
+                                });
+
+                                zoomer.addChangeListener(new ChangeListener(){
+                                    public void stateChanged(ChangeEvent e) {
+                                        Dimension preferredSize = new Dimension((int) (originalImageSize.width * zoomer.getZoomLevel()), (int) (originalImageSize.height * zoomer.getZoomLevel()));
+                                        gelImagePanel.setPreferredSize(preferredSize);
+                                        gelImagePanel.invalidate();
+                                        scroller.invalidate();
+                                        scroller.validate();
+                                    }
+                                });
+
                                 frame.setVisible(true);
                             }
                             else {

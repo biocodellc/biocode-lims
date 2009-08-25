@@ -59,7 +59,7 @@ public class PCRReaction extends Reaction {
         if(primerSequence.length() > 0) {
             primerOption.setAndAddValue(primerName, primerSequence);
         }
-        options.setValue("prAmount", r.getInt("pcr.prAmount"));
+        //options.setValue("prAmount", r.getInt("pcr.prAmount"));
 
         PrimerOption reversePrimerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
         String reversePrimerName = r.getString("pcr.revPrName");
@@ -67,7 +67,7 @@ public class PCRReaction extends Reaction {
         if(reversePrimerSequence.length() > 0) {
             reversePrimerOption.setAndAddValue(reversePrimerName, reversePrimerSequence);
         }
-        options.setValue("revPrAmount", r.getInt("pcr.revPrAmount"));
+        //options.setValue("revPrAmount", r.getInt("pcr.revPrAmount"));
 
         setCreated(r.getDate("pcr.date"));
         setPosition(r.getInt("pcr.location"));

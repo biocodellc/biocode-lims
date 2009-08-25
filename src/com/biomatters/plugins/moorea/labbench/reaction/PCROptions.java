@@ -1,21 +1,21 @@
 package com.biomatters.plugins.moorea.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.labbench.ButtonOption;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.labbench.TransactionException;
 import com.biomatters.plugins.moorea.labbench.TextAreaOption;
+import com.biomatters.plugins.moorea.labbench.TransactionException;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import java.util.List;
-import java.util.ArrayList;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -99,9 +99,9 @@ public class PCROptions extends ReactionOptions {
             public void objectChanged() {
                 int sum = 0;
                 for (Option o : getOptions()) {
-                    if (o instanceof IntegerOption) {
-                        sum += (Integer) o.getValue();
-                    }
+//                    if (o instanceof IntegerOption) {
+//                        sum += (Integer) o.getValue();
+//                    }
                     if(o.getName().equals("cocktail")) {
                         Integer cocktailId = Integer.parseInt(((Options.OptionValue)o.getValue()).getName());
                         List<Cocktail> cocktailList = MooreaLabBenchService.getInstance().getPCRCocktails();
@@ -141,12 +141,12 @@ public class PCROptions extends ReactionOptions {
         addLabel("");
         PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Forward Primer");
         addCustomOption(primerOption);
-        IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-        primerAmountOption.setUnits("ul");
+        //IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
+        //primerAmountOption.setUnits("ul");
         PrimerOption revPrimerOption = new PrimerOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer");
         addCustomOption(revPrimerOption);
-        IntegerOption revPrimerAmountOption = addIntegerOption("revPrAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-        revPrimerAmountOption.setUnits("ul");
+        //IntegerOption revPrimerAmountOption = addIntegerOption("revPrAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
+        //revPrimerAmountOption.setUnits("ul");
 
 
         List<OptionValue> cocktails = getCocktails();
