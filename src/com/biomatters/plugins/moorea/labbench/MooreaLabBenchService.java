@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
@@ -996,9 +997,11 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public void deletePlate(MooreaLabBenchService.BlockingDialog progress, Plate plate) throws SQLException {
 
+        Set<Integer> plateIds = new HashSet<Integer>();
+
         //delete the reactions...
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            deleteWorkflows(progress, plate);
+            plateIds.addAll(deleteWorkflows(progress, plate));
         }
         else {
             deleteReactions(progress, plate);
@@ -1015,7 +1018,7 @@ public class MooreaLabBenchService extends DatabaseService {
         limsConnection.deleteRecords("plate", "id", Arrays.asList(plate.getId()));
 
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            List<Plate> emptyPlates = getEmptyPlates();
+            List<Plate> emptyPlates = getEmptyPlates(plateIds);
             if(emptyPlates.size() > 0) {
                 StringBuilder message = new StringBuilder("Geneious has found the following empty plates in the database.\n  Do you want to delete them as well?\n");
                 for(Plate emptyPlate : emptyPlates) {
@@ -1036,7 +1039,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     }
 
-    private void deleteWorkflows(BlockingDialog progress, Plate plate) throws SQLException {
+    private Set<Integer> deleteWorkflows(BlockingDialog progress, Plate plate) throws SQLException {
         progress.setMessage("deleting workflows");
         if(plate.getReactionType() != Reaction.Type.Extraction) {
             throw new IllegalArgumentException("You may only delete workflows from an extraction plate!");
@@ -1058,12 +1061,16 @@ public class MooreaLabBenchService extends DatabaseService {
             }
         }
 
-        limsConnection.deleteRecords("pcr", "workflow", workflows);
-        limsConnection.deleteRecords("pcr", "extractionId", extractionNames);
-        limsConnection.deleteRecords("cyclesequencing", "workflow", workflows);
-        limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames);
+        Set<Integer> plates = new HashSet<Integer>();
+
+        plates.addAll(limsConnection.deleteRecords("pcr", "workflow", workflows));
+        plates.addAll(limsConnection.deleteRecords("pcr", "extractionId", extractionNames));
+        plates.addAll(limsConnection.deleteRecords("cyclesequencing", "workflow", workflows));
+        plates.addAll(limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames));
         limsConnection.deleteRecords("workflow", "id", workflows);
-        limsConnection.deleteRecords("extraction", "id", ids);
+        plates.addAll(limsConnection.deleteRecords("extraction", "id", ids));
+
+        return plates;
     }
 
     private void deleteReactions(BlockingDialog progress, Plate plate) throws SQLException {
@@ -1094,12 +1101,29 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     /**
+     * @param plateIds the ids of the plates to check
      * returns all the empty plates in the database...
      * @return all the empty plates in the database...
      * @throws SQLException
      */
-    private List<Plate> getEmptyPlates() throws SQLException{
+    private List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws SQLException{
+        if(plateIds == null || plateIds.size() == 0) {
+            return Collections.emptyList();
+        }
+
         String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN (select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
+
+
+        List<String> idMatches = new ArrayList<String>();
+        for(Integer num : plateIds) {
+            idMatches.add("id="+num);
+        }
+
+        String termString = StringUtilities.join(" OR ", idMatches);
+        if(termString.length() > 0) {
+            sql += " AND ("+termString+")";
+        }
+
         ResultSet resultSet = limsConnection.getConnection().createStatement().executeQuery(sql);
         List<Plate> result = new ArrayList<Plate>();
         while(resultSet.next()) {

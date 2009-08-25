@@ -81,7 +81,7 @@ public class LIMSConnection {
         }
     }
 
-    public int deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
+    public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
         List<String> terms = new ArrayList<String>();
         int count = 0;
         for(Object id : ids) {
@@ -90,13 +90,24 @@ public class LIMSConnection {
         }
 
         if(count == 0) {
-            return 0;
+            return Collections.emptySet();
         }
 
         String termString = StringUtilities.join(" OR ", terms);
 
-        PreparedStatement statement = connection.prepareStatement("DELETE FROM "+tableName+" WHERE "+termString);
-        return statement.executeUpdate();
+        Set<Integer> plateIds = new HashSet<Integer>();
+        if(tableName.equals("extraction") || tableName.equals("pcr") || tableName.equals("cyclesequencing")) {
+            PreparedStatement getPlatesStatement = connection.prepareStatement("SELECT plate FROM "+tableName+" WHERE "+termString);
+            ResultSet resultSet = getPlatesStatement.executeQuery();
+            while(resultSet.next()) {
+                plateIds.add(resultSet.getInt("plate"));
+            }
+        }
+
+        PreparedStatement deleteStatement = connection.prepareStatement("DELETE FROM "+tableName+" WHERE "+termString);
+        deleteStatement.executeUpdate();
+
+        return plateIds;
     }
 
     public ResultSet executeQuery(String sql) throws TransactionException{
