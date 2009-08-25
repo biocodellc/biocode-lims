@@ -247,7 +247,7 @@ public class Plate implements XMLSerializable {
             cols = 1;
         }
 
-        return (well.letter-65)*cols + well.number;
+        return (well.letter-65)*cols + well.number-1;
     }
 
     public PreparedStatement toSQL(Connection connection) throws SQLException{

@@ -56,6 +56,20 @@ public class PCROptions extends ReactionOptions {
         cocktailsOption.setPossibleValues(getCocktails());
     }
 
+    public Cocktail getCocktail() {
+        List<Cocktail> cocktailList = new PCRCocktail().getAllCocktailsOfType();
+        OptionValue cocktailValue = (OptionValue)cocktailOption.getValue();
+
+        int cocktailId = Integer.parseInt(cocktailValue.getName());
+
+        for(Cocktail cocktail : cocktailList) {
+            if(cocktail.getId() == cocktailId) {
+                return cocktail;
+            }
+        }
+        return null;
+    }
+
     public void initListeners() {
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);

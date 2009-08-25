@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.plugins.moorea.labbench.reaction.PCROptions;
 import com.biomatters.plugins.moorea.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.labbench.reaction.Cocktail;
 
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
@@ -40,7 +41,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public int getColumnCount() {
-                return 5;
+                return 7;
             }
 
             public String getColumnName(int columnIndex) {
@@ -68,16 +69,18 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                         return recentExtraction != null ? recentExtraction.getExtractionId() : null;
                     case 2 :
                         if(recentPCR == null) return null;
-                        int amount = (Integer)recentPCR.getFieldValue("prAmount");
-                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_OPTION_ID) + (amount > 0 ? " "+amount+"uL" : ""), recentPCR.getBackgroundColor());
+                        Cocktail cocktail = recentPCR.getCocktail();
+                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentPCR.getBackgroundColor());
                     case 3 :
                         if(recentPCR == null) return null;
-                        amount = (Integer)recentPCR.getFieldValue("revPrAmount");
-                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_REVERSE_OPTION_ID) + (amount > 0 ? " "+amount+"uL" : ""), recentPCR.getBackgroundColor());
+                        cocktail = recentPCR.getCocktail();
+                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_REVERSE_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentPCR.getBackgroundColor());
                     case 4 :
                         return recentPCR != null ? new ObjectAndColor(recentPCR.getPlateName()+" "+recentPCR.getLocationString(), recentPCR.getBackgroundColor()) : null;
                     case 5 :
-                        return recentCycleSequencing != null ? new ObjectAndColor(recentCycleSequencing.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID), recentCycleSequencing.getBackgroundColor()) : null;
+                        if(recentCycleSequencing == null) return null;
+                        cocktail = recentCycleSequencing.getCocktail();
+                        return new ObjectAndColor(recentCycleSequencing.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencing.getBackgroundColor());
                     case 6 :
                         return recentCycleSequencing != null ? new ObjectAndColor(recentCycleSequencing.getPlateName()+" "+recentCycleSequencing.getLocationString(), recentCycleSequencing.getBackgroundColor()) : null;
                 }

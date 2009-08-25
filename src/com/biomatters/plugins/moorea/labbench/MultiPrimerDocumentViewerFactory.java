@@ -4,6 +4,8 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.labbench.reaction.ReactionOptions;
+import com.biomatters.plugins.moorea.labbench.reaction.Cocktail;
 
 import javax.swing.table.TableModel;
 import javax.swing.event.TableModelListener;
@@ -118,9 +120,9 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 String s = primer.getName();
                 for (Reaction r : reactions) {
                     String primerName = ((Options.OptionValue) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer")).getName();
-                    int primerAmount = (Integer)r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "prAmount" : "revPrAmount");
+                    Cocktail cocktail = r.getOptions().getCocktail();
                     if (primerName.equals(s)) {
-                        tableValues[i][j] = new ObjectAndColor(r.getPlateName()+" "+r.getLocationString()+", "+primerAmount+"uL", r.getBackgroundColor());
+                        tableValues[i][j] = new ObjectAndColor(r.getPlateName()+" "+r.getLocationString()+(cocktail != null ? ", "+cocktail.getName() : ""), r.getBackgroundColor());
                     }
                 }
             }

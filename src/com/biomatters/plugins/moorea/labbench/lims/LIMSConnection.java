@@ -146,6 +146,11 @@ public class LIMSConnection {
     public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, List<FimsSample> samples) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
+
+        if(query instanceof BasicSearchQuery) {
+            query = generateAdvancedQueryFromBasicQuery(query);
+        }
+
         if(query instanceof CompoundSearchQuery) {
             refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type"));
             operator = ((CompoundSearchQuery)query).getOperator();
@@ -176,7 +181,7 @@ public class LIMSConnection {
             }
             sql.append(")");
             if(refinedQueries.size() > 0) {
-                sql.append(" AND ");
+                sql.append(" OR ");
             }
         }
         if(refinedQueries.size() > 0) {
@@ -252,6 +257,9 @@ public class LIMSConnection {
                     returnList.add(q);
                 }
             }
+            else {
+                returnList.add(q);
+            }
         }
 
         return returnList;
@@ -320,25 +328,7 @@ public class LIMSConnection {
         Set<Integer> plateIds = new HashSet<Integer>();
 
         if(query instanceof BasicSearchQuery) {
-            String value = ((BasicSearchQuery)query).getSearchText();
-            List<DocumentField> searchFields = getSearchAttributes();
-            List<Query> queryTerms = new ArrayList<Query>();
-            for(DocumentField field : searchFields) {
-                if(String.class.isAssignableFrom(field.getValueType())) {
-                    if(field.isEnumeratedField()) {
-                        boolean hasValue = false;
-                        for(String s : field.getEnumerationValues()) {
-                            if(s.equalsIgnoreCase(value)) {
-                                hasValue = true;
-                            }
-                        }
-                        if(!hasValue)
-                            continue;
-                    }
-                    queryTerms.add(Query.Factory.createFieldQuery(field, Condition.CONTAINS, value));
-                }
-            }
-            query = Query.Factory.createOrQuery(queryTerms.toArray(new Query[queryTerms.size()]), Collections.EMPTY_MAP);
+            query = generateAdvancedQueryFromBasicQuery(query);
         }
 
         if(query instanceof CompoundSearchQuery) {
@@ -483,6 +473,29 @@ public class LIMSConnection {
 
         return docs;
 
+    }
+
+    private Query generateAdvancedQueryFromBasicQuery(Query query) {
+        String value = ((BasicSearchQuery)query).getSearchText();
+        List<DocumentField> searchFields = getSearchAttributes();
+        List<Query> queryTerms = new ArrayList<Query>();
+        for(DocumentField field : searchFields) {
+            if(String.class.isAssignableFrom(field.getValueType())) {
+                if(field.isEnumeratedField()) {
+                    boolean hasValue = false;
+                    for(String s : field.getEnumerationValues()) {
+                        if(s.equalsIgnoreCase(value)) {
+                            hasValue = true;
+                        }
+                    }
+                    if(!hasValue)
+                        continue;
+                }
+                queryTerms.add(Query.Factory.createFieldQuery(field, Condition.CONTAINS, value));
+            }
+        }
+        query = Query.Factory.createOrQuery(queryTerms.toArray(new Query[queryTerms.size()]), Collections.EMPTY_MAP);
+        return query;
     }
 
     public void getGelImagesForPlates(Collection<Plate> plates) throws SQLException {

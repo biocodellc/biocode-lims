@@ -1260,7 +1260,7 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
-    public FimsSample getFimsSampleForCycleSequencingReaction(String plateName, String wellLocation) throws SQLException{
+    public FimsSample[] getFimsSamplesForCycleSequencingPlate(String plateName) throws SQLException{
         //step 1, query the plate record
         String query1 = "SELECT plate.size, plate.id FROM plate WHERE plate.name = ?";
         PreparedStatement statement1 = limsConnection.getConnection().prepareStatement(query1);
@@ -1272,35 +1272,31 @@ public class MooreaLabBenchService extends DatabaseService {
         int plateId = resultSet1.getInt("plate.id");
 
 
-        Plate.Size size = Plate.getSizeEnum(resultSet1.getInt("plate.size"));
-        int locationInt = Plate.getWellLocation(new MooreaUtilities.Well(wellLocation), size);
-
+        int size = resultSet1.getInt("plate.size");
 
         //step 2, get the relevant reaction record
-        String query2 = "SELECT extraction.sampleId FROM cyclesequencing, plate, extraction WHERE cyclesequencing.extractionId = extraction.extractionId AND cyclesequencing.plate = ? AND cyclesequencing.location=?";
+        String query2 = "SELECT extraction.sampleId, cyclesequencing.location FROM cyclesequencing, plate, extraction WHERE cyclesequencing.extractionId = extraction.extractionId AND cyclesequencing.plate = ?";
         PreparedStatement statement2 = limsConnection.getConnection().prepareStatement(query2);
         statement2.setInt(1, plateId);
-        statement2.setInt(2, locationInt);
         ResultSet resultSet2 = statement2.executeQuery();
-        if(!resultSet2.next()) {
-            String queryError = query2.replaceFirst("\\?", ""+plateId);
-            queryError = queryError.replaceFirst("\\?", ""+locationInt);
-            assert false : "we shouldn't fail at this point!\n sql query was: "+queryError;
-            return null;
+        List<Query> queries = new ArrayList<Query>();
+        Map<String, Integer> tissueToLocationMap = new HashMap<String, Integer>();
+        while(resultSet2.next()) {
+            tissueToLocationMap.put(resultSet2.getString("extraction.sampleId"), resultSet2.getInt("cycleSequencing.location"));
+            queries.add(Query.Factory.createFieldQuery(activeFIMSConnection.getTissueSampleDocumentField(), Condition.EQUAL, resultSet2.getString("extraction.sampleId")));
         }
 
-        String fimsSampleId = resultSet2.getString("extraction.sampleId");
-
-        //step 3 - get the fims sample from the fims database
-        Query fieldQuery = Query.Factory.createFieldQuery(activeFIMSConnection.getTissueSampleDocumentField(), Condition.EQUAL, fimsSampleId);
-
+        //step 3 - get the fims samples from the fims database
         try {
-            List<FimsSample> list = activeFIMSConnection.getMatchingSamples(fieldQuery);
-            if(list == null || list.size() != 1) {
-                assert false : "We should always get exactly one entry back from this query.  The LIMS database may be corrupt.  Please check the validity of the tissue sample "+fimsSampleId;
-                return null;
+            List<FimsSample> list = activeFIMSConnection.getMatchingSamples(Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP));
+            FimsSample[] result = new FimsSample[size];
+            for(FimsSample sample : list) {
+                Integer location = tissueToLocationMap.get(sample.getId());
+                if(location != null) {
+                    result[location] = sample; //could potentially AIOOB here, but it shouldn't unless something is broken or corrupted so I'm leaving it unchecked...
+                }
             }
-            return list.get(0);
+            return result;
         } catch (ConnectionException e) {
             if(e.getCause() instanceof SQLException){
                 throw (SQLException)e.getCause();

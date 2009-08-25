@@ -46,4 +46,8 @@ public class ExtractionOptions extends ReactionOptions{
     public Element toXML() {
         return super.toXML();    //To change body of overridden methods use File | Settings | File Templates.
     }
+
+    public Cocktail getCocktail() {
+        return null;
+    }
 }
