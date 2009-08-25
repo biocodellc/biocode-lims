@@ -1,16 +1,20 @@
 package com.biomatters.plugins.moorea.assembler.verify;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseService;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
+import com.biomatters.geneious.publicapi.documents.types.TaxonomyDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaPlugin;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Richard
@@ -46,13 +50,69 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
         VerifyTaxonomyOptions options = (VerifyTaxonomyOptions) o;
         List<AnnotatedPluginDocument> queries = options.getQueries(annotatedDocuments);
+        CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.2, 0.8);
+        progress.beginSubtask("Retrieving full taxonomies");
+        progress.setIndeterminateProgress();
+        List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> annotatedDocsWithTaxons = fillInTaxonomyFromNcbi(annotatedDocuments, progress);
+        if (progress.isCanceled()) return null;
         DatabaseService database = options.getDatabase();
-        VerifyTaxonomyCallback callback = new VerifyTaxonomyCallback(annotatedDocuments, progressListener, options.getKeywords());
+        progress.beginSubtask();
+        VerifyTaxonomyCallback callback = new VerifyTaxonomyCallback(annotatedDocsWithTaxons, progressListener, options.getKeywords());
         try {
             database.batchSequenceSearch(queries, options.getProgram(), options.getSearchOptions(), callback);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("BLAST search failed: " + e.getMessage(), e);
         }
-        return Collections.singletonList(callback.getResultsDocument());
+        VerifyTaxonomyResultsDocument resultsDocument = callback.getResultsDocument();
+        return Collections.singletonList(DocumentUtilities.createAnnotatedPluginDocument(resultsDocument));
+    }
+
+    private static final Map<String, BiocodeTaxon> TAXON_CACHE = new HashMap<String, BiocodeTaxon>();
+
+    private static List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> fillInTaxonomyFromNcbi(AnnotatedPluginDocument[] queries, CompositeProgressListener progress) throws DocumentOperationException {
+        GeneiousService taxonomyService = PluginUtilities.getGeneiousService("NCBI_taxonomy");
+        if (!(taxonomyService instanceof DatabaseService)) {
+            throw new DocumentOperationException("Could not find NCBI Taxonomy service. Make sure the NCBI Plugin is enabled.");
+        }
+        DatabaseService taxonomyDatabase = (DatabaseService) taxonomyService;
+        List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> taxons = new ArrayList<Pair<AnnotatedPluginDocument, BiocodeTaxon>>();
+        for (AnnotatedPluginDocument query : queries) {
+            if (progress.isCanceled()) return null;
+            Object taxonomyObject = query.getFieldValue(DocumentField.TAXONOMY_FIELD);
+            if (taxonomyObject == null) continue;
+            String taxonomy = taxonomyObject.toString();
+            int lastSemicolon = taxonomy.lastIndexOf(';');
+            final String lowestTaxon;
+            if (lastSemicolon == -1) {
+                lowestTaxon = taxonomy;
+            } else {
+                lowestTaxon = taxonomy.substring(lastSemicolon + 1, taxonomy.length());
+            }
+            BiocodeTaxon taxon = null;
+            if (TAXON_CACHE.containsKey(lowestTaxon.toLowerCase())) {
+                taxon = TAXON_CACHE.get(lowestTaxon.toLowerCase());
+            } else {
+                List<AnnotatedPluginDocument> taxonomyDocuments = taxonomyDatabase.retrieve(lowestTaxon);
+                if (taxonomyDocuments.isEmpty()) {
+                    //this will be reported in the output document
+                } else if (taxonomyDocuments.size() != 1) {
+                    new Thread("Tell about multiple taxa found") {
+                        public void run() {
+                            //todo pretty crude but i'm hoping this won't happen
+                            Dialogs.showMessageDialog("More than one taxon found at NCBI for " + lowestTaxon);
+                        }
+                    }.start();
+                } else {
+                    taxon = BiocodeTaxon.fromNcbiTaxon(((TaxonomyDocument) taxonomyDocuments.get(0).getDocument()).getTaxon());
+                }
+            }
+            if (taxon != null) {
+                query.setFieldValue(DocumentField.TAXONOMY_FIELD, taxon.toString());
+                query.saveDocument();
+            }
+            TAXON_CACHE.put(lowestTaxon.toLowerCase(), taxon);
+            taxons.add(new Pair<AnnotatedPluginDocument, BiocodeTaxon>(query, taxon));
+        }
+        return taxons;
     }
 }

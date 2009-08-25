@@ -18,15 +18,15 @@ import java.util.Stack;
  */
 public class VerifyTaxonomyCallback extends RetrieveCallback {
 
-    private final Stack<AnnotatedPluginDocument> queries = new Stack<AnnotatedPluginDocument>();
+    private final Stack<Pair<AnnotatedPluginDocument, BiocodeTaxon>> queries = new Stack<Pair<AnnotatedPluginDocument, BiocodeTaxon>>();
     private final String keywords;
     private final List<VerifyResult> results = new ArrayList<VerifyResult>();
     private static final DocumentField CLOSEST_GENBANK_TAXON_FIELD = DocumentField.createStringField("Closest GenBank Taxon", "The taxonomy of the most similar sequence in GenBank, determined by BLAST", "closestGenbankTaxon", true, false);
 
-    public VerifyTaxonomyCallback(AnnotatedPluginDocument[] queries, ProgressListener progressListener, String keywords) {
+    public VerifyTaxonomyCallback(List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> queries, ProgressListener progressListener, String keywords) {
         super(progressListener);
-        for (int i = queries.length - 1; i >= 0 ; i--) {
-            this.queries.push(queries[i]);
+        for (int i = queries.size() - 1; i >= 0 ; i--) {
+            this.queries.push(queries.get(i));
         }
         this.keywords = keywords;
     }
@@ -47,10 +47,11 @@ public class VerifyTaxonomyCallback extends RetrieveCallback {
 
     @Override
     public void setPropertyFields(List<DocumentField> searchResultProperties, DocumentField defaultSortingField) {
-        results.add(new VerifyResult(new ArrayList<AnnotatedPluginDocument>(), queries.pop()));
+        Pair<AnnotatedPluginDocument, BiocodeTaxon> documentTaxonPair = queries.pop();
+        results.add(new VerifyResult(new ArrayList<AnnotatedPluginDocument>(), documentTaxonPair.getItemA(), documentTaxonPair.getItemB()));
     }
 
-    AnnotatedPluginDocument getResultsDocument() {
-        return DocumentUtilities.createAnnotatedPluginDocument(new VerifyTaxonomyResultsDocument(results, keywords));
+    VerifyTaxonomyResultsDocument getResultsDocument() {
+        return new VerifyTaxonomyResultsDocument(results, keywords);
     }
 }

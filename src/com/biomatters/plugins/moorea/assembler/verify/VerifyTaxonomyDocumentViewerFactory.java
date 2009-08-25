@@ -4,7 +4,6 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.implementations.Percentage;
 import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
-import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.plugins.moorea.labbench.TableDocumentViewerFactory;
 import com.biomatters.plugins.moorea.labbench.TableSorter;
 
@@ -100,7 +99,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
                 return cellRendererComponent;
             }
         });
-        table.setDefaultRenderer(Icons.class, new DefaultTableCellRenderer() {
+        table.setDefaultRenderer(VerifyTaxonomyTableModel.IconsWithToString.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component cellRendererComponent = super.getTableCellRendererComponent(table, "", isSelected, false, row, column);
@@ -108,7 +107,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
                     JLabel label = (JLabel) cellRendererComponent;
                     label.setVerticalAlignment(JLabel.CENTER);
                     label.setHorizontalAlignment(JLabel.CENTER);
-                    label.setIcon(((Icons)value).getOriginalIcon());
+                    label.setIcon(((VerifyTaxonomyTableModel.IconsWithToString)value).icons.getOriginalIcon());
                 }
                 return cellRendererComponent;
             }

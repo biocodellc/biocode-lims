@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.plugins.moorea.labbench.TableSorter;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -174,8 +175,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
             "Show the other hits that were downloaded for this query (SuperTip: Double click in table for quick access)", IconUtilities.getIcons("nucleotideList16.png")) {
         public void actionPerformed(ActionEvent e) {
             List<VerifyResult> dummyResults = new ArrayList<VerifyResult>();
-            for (AnnotatedPluginDocument hitDocument : rows.get(selectedRow).hitDocuments) {
-                dummyResults.add(new VerifyResult(Collections.singletonList(hitDocument), rows.get(selectedRow).queryDocument));
+            VerifyResult verifyResult = rows.get(selectedRow);
+            for (AnnotatedPluginDocument hitDocument : verifyResult.hitDocuments) {
+                dummyResults.add(new VerifyResult(Collections.singletonList(hitDocument), verifyResult.queryDocument, verifyResult.queryTaxon));
             }
             JComponent tableComponent = new VerifyTaxonomyDocumentViewerFactory(binningOptions).createViewer(new AnnotatedPluginDocument[]{
                     DocumentUtilities.createAnnotatedPluginDocument(new VerifyTaxonomyResultsDocument(dummyResults, null))
@@ -241,7 +243,8 @@ public class VerifyTaxonomyTableModel implements TableModel {
         setColumnWidths(table.getColumnModel());
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
-                setSelectedRow(table.getSelectedRow());
+                TableSorter sorter = (TableSorter) table.getModel();
+                setSelectedRow(sorter.modelIndex(table.getSelectedRow()));
             }
         });
         dialogParent = table;
@@ -277,7 +280,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
     }
 
     private final VerifyColumn[] columns = new VerifyColumn[] {
-            new VerifyColumn("Bin", Icons.class, true) {
+            new VerifyColumn("Bin", IconsWithToString.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
                     if (binningOptions.getHighBinOptions().isMetBy(row, binningOptions.getKeywords())) {
@@ -313,6 +316,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
                     Object taxObject = row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD);
                     AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
                     highlight(taxonomy, ";", blastTaxonomy);
+                    if (row.queryTaxon == null) {
+                        taxonomy.set(taxonomy.get() + " (not found in NCBI Taxonomy)");
+                    }
                     return taxonomy.get();
                 }
 
@@ -384,6 +390,22 @@ public class VerifyTaxonomyTableModel implements TableModel {
                 }
             }
     };
+
+    static final class IconsWithToString {
+
+        final String toString;
+        final Icons icons;
+
+        IconsWithToString(String toString, Icons icons) {
+            this.toString = toString;
+            this.icons = icons;
+        }
+
+        @Override
+        public String toString() {
+            return toString;
+        }
+    }
 
     /**
      *

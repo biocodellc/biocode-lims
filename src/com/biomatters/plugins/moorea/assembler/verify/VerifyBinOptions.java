@@ -1,7 +1,7 @@
 package com.biomatters.plugins.moorea.assembler.verify;
 
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.types.TaxonomyDocument;
 import com.biomatters.geneious.publicapi.implementations.Percentage;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -36,12 +36,11 @@ public class VerifyBinOptions extends Options {
         prefs = Preferences.userNodeForPackage(VerifyBinOptions.class).node(isHigh ? "highBinDefaults" : "mediumBinDefaults");
 
         List<OptionValue> taxonomicLevels = new ArrayList<OptionValue>();
-        for (int i = 1; i < TaxonomyDocument.TaxonomicLevel.values().length; i++) {
-            TaxonomyDocument.TaxonomicLevel taxonomicLevel = TaxonomyDocument.TaxonomicLevel.values()[i];
-            taxonomicLevels.add(new OptionValue(taxonomicLevel.name(), taxonomicLevel.name()));
+        for (BiocodeTaxon.Level level : BiocodeTaxon.Level.values()) {
+            taxonomicLevels.add(new OptionValue(level.name(), level.name().toLowerCase()));
         }
         String defaultTaxonName = prefs.get(LOWEST_TAXON, null);
-        OptionValue defaultTaxon = taxonomicLevels.get(isHigh ? 16 : 10);
+        OptionValue defaultTaxon = taxonomicLevels.get(isHigh ? 8 : 4);
         if (defaultTaxonName != null) {
             for (OptionValue taxonomicLevel : taxonomicLevels) {
                 if (taxonomicLevel.getName().equals(defaultTaxonName)) {
@@ -81,10 +80,11 @@ public class VerifyBinOptions extends Options {
     }
 
     public boolean isMetBy(VerifyResult result, String keywords) {
-        if ((Integer)result.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH) < minLengthOption.getValue()) {
+        AnnotatedPluginDocument hitDocument = result.hitDocuments.get(0);
+        if ((Integer) hitDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH) < minLengthOption.getValue()) {
             return false;
         }
-        if (((Percentage)result.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL)).doubleValue() < minIdentityOption.getValue()) {
+        if (((Percentage) hitDocument.getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL)).doubleValue() < minIdentityOption.getValue()) {
             return false;
         }
         Bin bin = Bin.valueOf(result.queryDocument.getFieldValue(DocumentField.BIN).toString().replaceAll("<html>.*'>", "").replaceAll("</font.*html>", ""));
@@ -93,7 +93,7 @@ public class VerifyBinOptions extends Options {
             return false;
         }
         int matchingKeywords = 0;
-        String hitDefinition = result.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString().toLowerCase();
+        String hitDefinition = hitDocument.getFieldValue(DocumentField.DESCRIPTION_FIELD).toString().toLowerCase();
         String[] keywordsArray = keywords.split(",");
         for (String keyword : keywordsArray) {
             if (hitDefinition.contains(keyword.trim().toLowerCase())) {
@@ -103,7 +103,37 @@ public class VerifyBinOptions extends Options {
         if (matchingKeywords < matchingKeywordsOption.getValue()) {
             return false;
         }
-        //todo match taxon
+
+        Object hitTaxonObject = hitDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
+        BiocodeTaxon queryTaxon = result.queryTaxon;
+        if (queryTaxon == null) {
+            return false;
+        }
+        if (hitTaxonObject != null) {
+            String hitTaxon = hitTaxonObject.toString().toLowerCase();
+            BiocodeTaxon.Level lowestMatchingLevel = null;
+            while (queryTaxon != null) {
+                if (hitTaxon.contains(queryTaxon.name.toLowerCase())) {
+                    lowestMatchingLevel = queryTaxon.level;
+                    break;
+                }
+                queryTaxon = queryTaxon.parent;
+            }
+            BiocodeTaxon.Level lowestRequiredLevel = BiocodeTaxon.Level.valueOf(lowestTaxonOption.getValue().getName());
+            boolean lowestMatchingLevelReached = false;
+            for (BiocodeTaxon.Level level : BiocodeTaxon.Level.values()) {
+                if (level == lowestMatchingLevel) {
+                    lowestMatchingLevelReached = true;
+                } else if (level == lowestRequiredLevel) {
+                    if (!lowestMatchingLevelReached) {
+                        break;
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+
         return true;
     }
 
@@ -114,7 +144,7 @@ public class VerifyBinOptions extends Options {
 
         private final String icon;
         private final int rank;
-        private Icons icons;
+        private VerifyTaxonomyTableModel.IconsWithToString icons;
         private final OptionValue optionValue;
 
         Bin(String icon, int rank) {
@@ -123,9 +153,9 @@ public class VerifyBinOptions extends Options {
             this.optionValue = new OptionValue(name(), name());
         }
 
-        public Icons getIcons() {
+        public VerifyTaxonomyTableModel.IconsWithToString getIcons() {
             if (icons == null) {
-                icons = new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon)));
+                icons = new VerifyTaxonomyTableModel.IconsWithToString(icon, new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon))));
             }
             return icons;
         }
