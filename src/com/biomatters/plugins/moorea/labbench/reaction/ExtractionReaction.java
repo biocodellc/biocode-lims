@@ -51,7 +51,7 @@ public class ExtractionReaction extends Reaction{
         String s = r.getString("workflow.name");
 
         setPlateName(r.getString("plate.name"));
-        setLocationString(Plate.getWellName(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))));
+        setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
         
         
         if(s != null) {

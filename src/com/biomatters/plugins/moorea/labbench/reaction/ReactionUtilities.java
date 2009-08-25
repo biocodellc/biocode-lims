@@ -255,7 +255,7 @@ public class ReactionUtilities {
             out.println("SequencingAnalysis");
             out.println("Well\tSample Name\tComment\tResults Group 1\tInstrument Protocol 1\tAnalysis Protocol 1");
             for(Reaction r : plate.getReactions()) {
-                out.println(Plate.getAbiWellName(r.getPosition(), plate.getPlateSize())+"\t"+r.getExtractionId()+"\t\t"+options.getValue("resultsGroup")+"\t"+options.getValue("instrumentProtocol")+"\t"+options.getValue("analysisProtocol"));
+                out.println(Plate.getWell(r.getPosition(), plate.getPlateSize()).toPaddedString()+"\t"+r.getExtractionId()+"\t\t"+options.getValue("resultsGroup")+"\t"+options.getValue("instrumentProtocol")+"\t"+options.getValue("analysisProtocol"));
             }
             
         } catch (IOException e) {

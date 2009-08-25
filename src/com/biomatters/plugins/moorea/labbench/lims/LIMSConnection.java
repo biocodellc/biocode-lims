@@ -378,7 +378,7 @@ public class LIMSConnection {
         }
         if(refinedQueries.size() > 0) {
             if(plateIds.size() > 0) {
-                sql.append(" AND (");
+                sql.append(" OR (");
             }
             else{
                 sql.append(" (");

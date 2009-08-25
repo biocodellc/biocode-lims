@@ -73,7 +73,7 @@ public class CycleSequencingReaction extends Reaction{
         options.setValue("cleanupMethod", r.getBoolean("cyclesequencing.cleanupMethod"));
 
         setPlateName(r.getString("plate.name"));
-        setLocationString(Plate.getWellName(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))));
+        setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
 
         int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {

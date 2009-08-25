@@ -77,7 +77,7 @@ public class PCRReaction extends Reaction {
         options.setValue("notes", r.getString("pcr.notes"));
 
         setPlateName(r.getString("plate.name"));
-        setLocationString(Plate.getWellName(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))));
+        setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
 
         int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {

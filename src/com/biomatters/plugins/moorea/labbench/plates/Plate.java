@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.reaction.*;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import org.jdom.Element;
 
 import java.awt.*;
@@ -191,22 +192,15 @@ public class Plate implements XMLSerializable {
     }
 
     public Reaction getReaction(int row, int col) {
-        return reactions[cols * row + col];    
+        return reactions[cols * row + col];
     }
 
-    public static String getWellName(int position, Size size) {
-        return getAbiOrNormalWellName(position, size, false);
-    }
-
-    public static String getAbiWellName(int position, Size size) {
-        return getAbiOrNormalWellName(position, size, true);    
-    }
 
     public static String getWellName(int row, int col) {
         return ""+(char)(65+row)+(1+col);
     }
 
-    private static String getAbiOrNormalWellName(int position, Size size, boolean abi) {
+    public static MooreaUtilities.Well getWell(int position, Size size) {
         int cols;
         if(size != null) {
             switch(size) {
@@ -226,41 +220,15 @@ public class Plate implements XMLSerializable {
         }
         int row = position / cols;
         int col = position % cols;
-        return abi ? getAbiWellName(row, col) : getWellName(row, col);
-    }
-
-    public static String getAbiWellName(int row, int col) {
-        String colNumber = ""+ (1 + col);
-        if(colNumber.length() < 2) {
-            colNumber = "0" + colNumber;
-        }
-        return ""+(char)(65+row)+ colNumber;
+        return new MooreaUtilities.Well((char)(65+row), 1+col);
     }
 
     /**
      * wellName must be in the form A1, or A01
-     * @param wellName
+     * @param well
      * @return
      */
-    public static int getWellLocation(String wellName, Size size) {
-        if(wellName == null || wellName.length() < 2) {
-            throw new IllegalArgumentException("wellName must be in the form A1, or A01");
-        }
-        wellName = wellName.toUpperCase();
-        int letter = (int)wellName.toCharArray()[0];
-        if(letter < 65 || letter > 90) {
-            throw new IllegalArgumentException("wellName must be in the form A1, or A01");
-        }
-        letter -= 65;
-
-        int number = 0;
-        try {
-            number = Integer.parseInt(wellName.substring(1));
-        }
-        catch(NumberFormatException ex) {
-            throw new IllegalArgumentException("wellName must be in the form A1, or A01");
-        }
-
+    public static int getWellLocation(MooreaUtilities.Well well, Size size) {
         int cols;
         if(size != null) {
             switch(size) {
@@ -279,7 +247,7 @@ public class Plate implements XMLSerializable {
             cols = 1;
         }
 
-        return letter*cols * number;
+        return (well.letter-65)*cols + well.number;
     }
 
     public PreparedStatement toSQL(Connection connection) throws SQLException{
@@ -333,7 +301,7 @@ public class Plate implements XMLSerializable {
         r.setPlateId(this.id);
         r.setPlateName(getName());
         reactions[r.getPosition()] = r;
-        r.setLocationString(getWellName(r.getPosition(), plateSize));
+        r.setLocationString(getWell(r.getPosition(), plateSize).toString());
         return r;
     }
 

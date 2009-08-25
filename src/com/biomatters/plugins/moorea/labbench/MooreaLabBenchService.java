@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.moorea.MooreaPlugin;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.labbench.fims.GeneiousFimsConnection;
 import com.biomatters.plugins.moorea.labbench.fims.MooreaFimsConnection;
@@ -231,10 +232,13 @@ public class MooreaLabBenchService extends DatabaseService {
 
     private void logOut() {
         isLoggedIn = false;
-        try {
-            activeFIMSConnection.disconnect();
-        } catch (ConnectionException e1) {
-            Dialogs.showMessageDialog("Could not disconnect from " + activeFIMSConnection.getLabel() + ": " + e1.getMessage());
+        if(activeFIMSConnection != null) {
+            try {
+                activeFIMSConnection.disconnect();
+                activeFIMSConnection = null;
+            } catch (ConnectionException e1) {
+                Dialogs.showMessageDialog("Could not disconnect from " + activeFIMSConnection.getLabel() + ": " + e1.getMessage());
+            }
         }
         try {
             limsConnection.disconnect();
@@ -1269,7 +1273,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
 
         Plate.Size size = Plate.getSizeEnum(resultSet1.getInt("plate.size"));
-        int locationInt = Plate.getWellLocation(wellLocation, size);
+        int locationInt = Plate.getWellLocation(new MooreaUtilities.Well(wellLocation), size);
 
 
         //step 2, get the relevant reaction record
