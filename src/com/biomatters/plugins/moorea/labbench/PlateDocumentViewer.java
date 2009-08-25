@@ -29,6 +29,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.text.DecimalFormat;
 
 /**
  * @author Steven Stones-Havas
@@ -430,32 +431,46 @@ public class PlateDocumentViewer extends DocumentViewer{
         fudgePanel.add(new JLabel("%"));
         OptionsPanel cockatilPanel = new OptionsPanel();
         cockatilPanel.addSpanningComponent(fudgePanel);
+        String extraItem = ct.getOptions().getValueAsString("extraItem");
         for(final Options.Option option : ct.getOptions().getOptions()) {
-            if(option instanceof Options.IntegerOption) {
-                final Options.IntegerOption integerOption = (Options.IntegerOption)option;
+            if(option instanceof Options.DoubleOption) {
+                final Options.DoubleOption doubleOption = (Options.DoubleOption)option;
+
+                String optionLabel = doubleOption.getName();
+                if(option.getName().equals("extraItemAmount")) {
+                    if(extraItem == null || extraItem.length() == 0) {
+                        continue;
+                    }
+                    optionLabel = extraItem;
+                }
+
                 final JLabel label = new JLabel();
                 ChangeListener listener = new ChangeListener() {
                     public void stateChanged(ChangeEvent e) {
                         double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
-                        if(option.getLabel().toLowerCase().contains("concentration")) { //just display the concentration, it doesn't add (or need a fudge factor)
-                            label.setText(integerOption.getValue() + " " + integerOption.getUnits());    
+                        if(option.getName().toLowerCase().contains("conc")) { //just display the concentration, it doesn't add (or need a fudge factor)
+                            label.setText(doubleOption.getValue() + " " + doubleOption.getUnits());
                         }
                         else {
-                            label.setText((int) (fudgeFactor * integerOption.getValue() * count) + " " + integerOption.getUnits());
+                            double totalVol = fudgeFactor * doubleOption.getValue() * count;
+                            DecimalFormat format = new DecimalFormat("#0.0"+ " " + doubleOption.getUnits());
+                            label.setText(format.format(totalVol));
                         }
                     }
                 };
                 fudgeSpinner.addChangeListener(listener);
                 listener.stateChanged(null);
                 label.setOpaque(false);
-                cockatilPanel.addComponentWithLabel(integerOption.getLabel(), label, false);
+                cockatilPanel.addComponentWithLabel(optionLabel, label, false);
             }
         }
         final JLabel countLabel = new JLabel();
         ChangeListener changeListener = new ChangeListener(){
             public void stateChanged(ChangeEvent e) {
                 double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
-                countLabel.setText("<html><b>" + ((int)(fudgeFactor * ct.getReactionVolume(ct.getOptions()) * count)) + " ul</b></html>");
+                DecimalFormat format = new DecimalFormat("#0.0 ul");
+                double totalVol = fudgeFactor * ct.getReactionVolume(ct.getOptions()) * count;
+                countLabel.setText("<html><b>" + format.format(totalVol) + "</b></html>");
             }
         };
         fudgeSpinner.addChangeListener(changeListener);

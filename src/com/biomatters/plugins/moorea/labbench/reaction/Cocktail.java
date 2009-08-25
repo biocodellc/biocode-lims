@@ -42,7 +42,7 @@ public abstract class Cocktail implements XMLSerializable {
     public double getReactionVolume(Options options) {
         double sum = 0;
         for (Options.Option o : options.getOptions()) {
-            if (o instanceof Options.DoubleOption && o.getLabel().toLowerCase().contains("amount")) {
+            if (o instanceof Options.DoubleOption && !o.getName().toLowerCase().contains("conc")) {
                 sum += (Double) o.getValue();
             }
         }
@@ -126,8 +126,11 @@ public abstract class Cocktail implements XMLSerializable {
         });
 
         cocktailList.setSelectedIndex(0);
-                
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Cocktails", owner), editPanel).equals(Dialogs.OK)) {
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Cocktails", owner);
+        dialogOptions.setMaxWidth(Integer.MAX_VALUE);
+        dialogOptions.setMaxHeight(Integer.MAX_VALUE);
+
+        if(Dialogs.showDialog(dialogOptions, editPanel).equals(Dialogs.OK)) {
             return newCocktails;
         }
         return Collections.EMPTY_LIST;

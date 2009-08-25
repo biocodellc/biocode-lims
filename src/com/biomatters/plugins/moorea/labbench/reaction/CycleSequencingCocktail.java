@@ -26,13 +26,17 @@ public class CycleSequencingCocktail extends Cocktail{
         this();
         id = resultSet.getInt("id");
         options.setValue("name", resultSet.getString("name"));
-        options.setValue("ddh20", resultSet.getDouble("ddh2o"));
+        options.setValue("ddh2o", resultSet.getDouble("ddh2o"));
         options.setValue("buffer", resultSet.getDouble("buffer"));
         options.setValue("bigDye", resultSet.getDouble("bigDye"));
         options.setValue("notes", resultSet.getString("notes"));
         options.setValue("bufferConc", resultSet.getDouble("bufferConc"));
         options.setValue("bigDyeConc", resultSet.getDouble("bigDyeConc"));
         options.setValue("templateConc", resultSet.getDouble("templateConc"));
+        options.setValue("extraItem", resultSet.getString("extraItem"));
+        options.setValue("extraItemAmount", resultSet.getDouble("extraItemAmount"));
+        options.setValue("primerAmount", resultSet.getDouble("primerAmount"));
+        options.setValue("primerConc", resultSet.getDouble("primerConc"));
         options.setValue("extraItem", resultSet.getString("extraItem"));
         options.setValue("extraItemAmount", resultSet.getDouble("extraItemAmount"));
     }
