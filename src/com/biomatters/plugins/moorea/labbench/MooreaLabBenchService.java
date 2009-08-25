@@ -1260,7 +1260,7 @@ public class MooreaLabBenchService extends DatabaseService {
         }
     }
 
-    public FimsSample[] getFimsSamplesForCycleSequencingPlate(String plateName) throws SQLException{
+    public Map<MooreaUtilities.Well, FimsSample> getFimsSamplesForCycleSequencingPlate(String plateName) throws SQLException{
         //step 1, query the plate record
         String query1 = "SELECT plate.size, plate.id FROM plate WHERE plate.name = ?";
         PreparedStatement statement1 = limsConnection.getConnection().prepareStatement(query1);
@@ -1273,6 +1273,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
 
         int size = resultSet1.getInt("plate.size");
+        Plate.Size sizeEnum = Plate.getSizeEnum(size);
 
         //step 2, get the relevant reaction record
         String query2 = "SELECT extraction.sampleId, cyclesequencing.location FROM cyclesequencing, plate, extraction WHERE cyclesequencing.extractionId = extraction.extractionId AND cyclesequencing.plate = ?";
@@ -1289,11 +1290,12 @@ public class MooreaLabBenchService extends DatabaseService {
         //step 3 - get the fims samples from the fims database
         try {
             List<FimsSample> list = activeFIMSConnection.getMatchingSamples(Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP));
-            FimsSample[] result = new FimsSample[size];
+            Map<MooreaUtilities.Well, FimsSample> result = new HashMap<MooreaUtilities.Well, FimsSample>();
             for(FimsSample sample : list) {
                 Integer location = tissueToLocationMap.get(sample.getId());
                 if(location != null) {
-                    result[location] = sample; //could potentially AIOOB here, but it shouldn't unless something is broken or corrupted so I'm leaving it unchecked...
+                    MooreaUtilities.Well well = Plate.getWell(location, sizeEnum);
+                    result.put(well, sample);
                 }
             }
             return result;

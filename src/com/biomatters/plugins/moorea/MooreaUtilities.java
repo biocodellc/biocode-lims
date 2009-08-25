@@ -32,6 +32,26 @@ public class MooreaUtilities {
             this.number = number;
         }
 
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Well well = (Well) o;
+
+            if (letter != well.letter) return false;
+            if (number != well.number) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = (int) letter;
+            result = 31 * result + number;
+            return result;
+        }
+
         public Well(String wellName) {
             if(wellName == null || wellName.length() < 2) {
                 throw new IllegalArgumentException("wellName must be in the form A1, or A01");
