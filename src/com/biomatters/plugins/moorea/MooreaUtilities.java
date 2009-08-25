@@ -32,6 +32,28 @@ public class MooreaUtilities {
             this.number = number;
         }
 
+        public Well(String wellName) {
+            if(wellName == null || wellName.length() < 2) {
+                throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+            }
+            wellName = wellName.toUpperCase();
+            char letter = wellName.toCharArray()[0];
+            if(letter < 65 || letter > 90) {
+                throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+            }
+            letter -= 65;
+            this.letter = letter;
+
+            int number;
+            try {
+                number = Integer.parseInt(wellName.substring(1));
+            }
+            catch(NumberFormatException ex) {
+                throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+            }
+            this.number = number;
+        }
+
         /**
          *
          * @return eg. "A1"
