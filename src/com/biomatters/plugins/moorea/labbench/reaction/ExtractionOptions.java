@@ -23,7 +23,7 @@ public class ExtractionOptions extends ReactionOptions{
         addStringOption("parentExtraction", "Parent Extraction Id", "", "You may leave this field blank");
         addIntegerOption("dilution", "Dilution 1/", 5, 0, Integer.MAX_VALUE);
         Options.IntegerOption volume = addIntegerOption("volume", "Extraction Volume", 5, 0, Integer.MAX_VALUE);
-        volume.setUnits("ul");
+        volume.setUnits("uL");
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);
     }

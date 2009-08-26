@@ -156,11 +156,11 @@ public class PCROptions extends ReactionOptions {
         PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Forward Primer");
         addCustomOption(primerOption);
         //IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-        //primerAmountOption.setUnits("ul");
+        //primerAmountOption.setUnits("uL");
         PrimerOption revPrimerOption = new PrimerOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer");
         addCustomOption(revPrimerOption);
         //IntegerOption revPrimerAmountOption = addIntegerOption("revPrAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-        //revPrimerAmountOption.setUnits("ul");
+        //revPrimerAmountOption.setUnits("uL");
 
 
         List<OptionValue> cocktails = getCocktails();

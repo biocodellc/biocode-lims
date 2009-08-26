@@ -434,6 +434,10 @@ public class PlateDocumentViewer extends DocumentViewer{
         String extraItem = ct.getOptions().getValueAsString("extraItem");
         for(final Options.Option option : ct.getOptions().getOptions()) {
             if(option instanceof Options.DoubleOption) {
+                int concIndex = option.getName().toLowerCase().indexOf("conc");
+                if(concIndex >= 0 && ct.getOptions().getOption(option.getName().substring(0, concIndex)) != null) {
+                    continue;
+                }
                 final Options.DoubleOption doubleOption = (Options.DoubleOption)option;
 
                 String optionLabel = doubleOption.getName();
@@ -442,6 +446,10 @@ public class PlateDocumentViewer extends DocumentViewer{
                         continue;
                     }
                     optionLabel = extraItem;
+                }
+                Options.Option concOption = ct.getOptions().getOption(option.getName()+"Conc");
+                if(concOption != null && concOption instanceof Options.DoubleOption){
+                    optionLabel = concOption.getValue().toString() + " " + ((Options.DoubleOption)concOption).getUnits() + " " + optionLabel;
                 }
 
                 final JLabel label = new JLabel();
@@ -468,7 +476,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         ChangeListener changeListener = new ChangeListener(){
             public void stateChanged(ChangeEvent e) {
                 double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
-                DecimalFormat format = new DecimalFormat("#0.0 ul");
+                DecimalFormat format = new DecimalFormat("#0.0 uL");
                 double totalVol = fudgeFactor * ct.getReactionVolume(ct.getOptions()) * count;
                 countLabel.setText("<html><b>" + format.format(totalVol) + "</b></html>");
             }

@@ -349,6 +349,7 @@ public class ReactionUtilities {
                     for(Reaction reaction : reactions) {
                         for(final Options.Option option : options.getOptions()) {
                             if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
+                                reaction.getOptions().refreshValuesFromCaches();
                                 reaction.getOptions().setValue(option.getName(), option.getValue());
                                 changedOptionCount++;
                             }

@@ -181,7 +181,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
 
 //        IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-//        primerAmountOption.setUnits("ul");
+//        primerAmountOption.setUnits("uL");
 
 
         List<OptionValue> cocktails = getCocktails();
