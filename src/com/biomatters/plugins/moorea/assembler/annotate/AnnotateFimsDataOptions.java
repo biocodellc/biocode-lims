@@ -9,14 +9,17 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.options.NamePartOption;
 import com.biomatters.plugins.moorea.options.NameSeparatorOption;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Richard
@@ -33,10 +36,12 @@ public class AnnotateFimsDataOptions extends Options {
     private static final OptionValue BARCODE = new OptionValue("barcode", "Barcode");
     private Option<String,? extends JComponent> afterLabel;
 
+    private Map<MooreaUtilities.Well, FimsSample> plateSpecimens = null;
+
     public AnnotateFimsDataOptions() {
         super(AnnotateFimsDataOptions.class);
-        plateNameOption = addStringOption("plateName", "FIMS Plate Name:", "");
-        plateNameOption.setDescription("eg. M001");
+        plateNameOption = addStringOption("plateName", "Sequencing Plate Name:", "");
+        plateNameOption.setDescription("eg. My Sequencing Plate");
         beginAlignHorizontally(null, false);
         idType = addComboBoxOption("idType", "", new OptionValue[] {WELL_NUMBER, BARCODE}, WELL_NUMBER);
         addLabel("is");
@@ -85,40 +90,41 @@ public class AnnotateFimsDataOptions extends Options {
     }
 
     public FimsSample getTissueRecord(AnnotatedPluginDocument annotatedDocument, FIMSConnection activeFimsConnection) throws DocumentOperationException, ConnectionException {
-        DocumentField plateQueryField = activeFimsConnection.getPlateDocumentField();
-        Query plateFieldQuery = Query.Factory.createFieldQuery(plateQueryField, Condition.CONTAINS, getPlateName());
         if (idType.getValue() == BARCODE) {
-            String barcode = MooreaUtilities.getBarcodeFromFileName(annotatedDocument.getName(), getNameSeaparator(), getNamePart());
-            String tissueId = activeFimsConnection.getTissueIdsFromExtractionBarcodes(Collections.singletonList(barcode)).get(barcode);
-            if (tissueId == null) {
-                return null;
+            //noinspection ConstantIfStatement
+            if (true) {
+                throw new DocumentOperationException("FIMS data cannot be retrieved using barcodes. Please contact Biomatters if you require this functionality.");
+            } else {
+                //NOTE keeping this code around for testing purposes
+                DocumentField plateQueryField = activeFimsConnection.getPlateDocumentField();
+                Query plateFieldQuery = Query.Factory.createFieldQuery(plateQueryField, Condition.CONTAINS, getPlateName());
+                String barcode = MooreaUtilities.getBarcodeFromFileName(annotatedDocument.getName(), getNameSeaparator(), getNamePart());
+                String tissueId = activeFimsConnection.getTissueIdsFromExtractionBarcodes(Collections.singletonList(barcode)).get(barcode);
+                if (tissueId == null) {
+                    return null;
+                }
+                DocumentField tissueIdField = activeFimsConnection.getTissueSampleDocumentField();
+                Query tissueFieldQuery = Query.Factory.createFieldQuery(tissueIdField, Condition.EQUAL , tissueId);
+                Query compoundQuery = Query.Factory.createAndQuery(new Query[] {plateFieldQuery, tissueFieldQuery}, Collections.<String, Object>emptyMap());
+                List<FimsSample> samples = activeFimsConnection.getMatchingSamples(compoundQuery);
+                if (samples.size() != 1) {
+                    return null;
+                }
+                return samples.get(0);
             }
-            DocumentField tissueIdField = activeFimsConnection.getTissueSampleDocumentField();
-            Query tissueFieldQuery = Query.Factory.createFieldQuery(tissueIdField, Condition.EQUAL , tissueId);
-            Query compoundQuery = Query.Factory.createAndQuery(new Query[] {plateFieldQuery, tissueFieldQuery}, Collections.<String, Object>emptyMap());
-            List<FimsSample> samples = activeFimsConnection.getMatchingSamples(compoundQuery);
-            if (samples.size() != 1) {
-                return null;
-            }
-            return samples.get(0);
         } else {
-            DocumentField wellQueryField = activeFimsConnection.getWellDocumentField();
             MooreaUtilities.Well well = MooreaUtilities.getWellFromFileName(annotatedDocument.getName(), getNameSeaparator(), getNamePart());
             if (well == null) {
                 return null;
             }
-            Query wellFieldQueryPadded = Query.Factory.createFieldQuery(wellQueryField, Condition.EQUAL , well.toPaddedString());
-            Query wellFieldQueryUnpadded = Query.Factory.createFieldQuery(wellQueryField, Condition.EQUAL , well.toString());
-            Query compoundQuery = Query.Factory.createAndQuery(new Query[] {plateFieldQuery, wellFieldQueryPadded}, Collections.<String, Object>emptyMap());
-            Query compoundQuery2 = Query.Factory.createAndQuery(new Query[] {plateFieldQuery, wellFieldQueryUnpadded}, Collections.<String, Object>emptyMap());
-            List<FimsSample> samples = activeFimsConnection.getMatchingSamples(compoundQuery);
-            if (samples.size() != 1) {
-                samples = activeFimsConnection.getMatchingSamples(compoundQuery2);
-                if (samples.size() != 1) {
-                    return null;
+            if (plateSpecimens == null) {
+                try {
+                    plateSpecimens = MooreaLabBenchService.getInstance().getFimsSamplesForCycleSequencingPlate(getPlateName());
+                } catch (SQLException e) {
+                    throw new DocumentOperationException("Failed to retrieve FIMS data for plate " + getPlateName());
                 }
             }
-            return samples.get(0);
+            return plateSpecimens.get(well);
         }
     }
 }
