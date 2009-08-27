@@ -423,7 +423,9 @@ public class LIMSConnection {
         List<PCRReaction> pcrReactions = new ArrayList<PCRReaction>();
         List<CycleSequencingReaction> cyclesequencingReactions = new ArrayList<CycleSequencingReaction>();
         List<Integer> returnedPlateIds = new ArrayList<Integer>();
+        int count = 0;
         while(resultSet.next()) {
+            count++;
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
             if(plateMap.get(plateId) == null) {
@@ -448,6 +450,7 @@ public class LIMSConnection {
                 cyclesequencingReactions.add((CycleSequencingReaction)reaction);
             }
         }
+        System.out.println("count="+count);
         final StringBuilder totalErrors = new StringBuilder("");
         if(extractionReactions.size() > 0) {
             String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions);

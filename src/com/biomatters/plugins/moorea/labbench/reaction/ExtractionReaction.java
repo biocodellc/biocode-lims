@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.moorea.labbench.plates.Plate;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
@@ -26,7 +27,7 @@ import java.sql.Connection;
  *          <p/>
  *          Created on 12/06/2009 5:27:29 PM
  */
-public class ExtractionReaction extends Reaction{
+public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
     public ExtractionReaction(){}
 
@@ -48,15 +49,30 @@ public class ExtractionReaction extends Reaction{
         options.setValue("notes", r.getString("extraction.notes"));
         setPlateId(r.getInt("extraction.plate"));
         setPosition(r.getInt("extraction.location"));
-        String s = r.getString("workflow.name");
+        String workflowName = null;
+        try {
+            workflowName = r.getString("workflow.name");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            //ignore...
+        }
 
-        setPlateName(r.getString("plate.name"));
-        setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
+        String plateName = null;
+        try {
+            plateName = r.getString("plate.name");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            //ignore...
+        }
+        if(plateName != null) {
+            setPlateName(plateName);
+            setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
+        }
         
         
-        if(s != null) {
-            options.setValue("workflowId", s);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("pcr.extractionId")));
+        if(workflowName != null) {
+            options.setValue("workflowId", workflowName);
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId")));
             options.setValue("workflowId", getWorkflow().getName());
         }
     }
@@ -104,7 +120,7 @@ public class ExtractionReaction extends Reaction{
     }
 
 
-    public String areReactionsValid(List<? extends Reaction> reactions) {
+    public String areReactionsValid(List<ExtractionReaction> reactions) {
         if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }
@@ -166,11 +182,11 @@ public class ExtractionReaction extends Reaction{
             List<String> reactionOrs = new ArrayList<String>();
             for(Reaction r : reactions) {
                 if(r.getId() < 0) {
-                    reactionOrs.add("extractionId=?");
+                    reactionOrs.add("extraction.extractionId=?");
                 }
             }
             if(reactionOrs.size() > 0) {
-                String sql = "SELECT * FROM extraction WHERE "+StringUtilities.join(" OR ", reactionOrs);
+                String sql = "SELECT * FROM extraction, workflow WHERE workflow.extractionId=extraction.id AND ("+StringUtilities.join(" OR ", reactionOrs)+")";
                 Connection connection = MooreaLabBenchService.getInstance().getActiveLIMSConnection().getConnection();
 
                 PreparedStatement statement = connection.prepareStatement(sql);
@@ -182,10 +198,44 @@ public class ExtractionReaction extends Reaction{
                     }
                 }
                 ResultSet results = statement.executeQuery();
+                List<ExtractionReaction> extractionsThatExist = new ArrayList<ExtractionReaction>();
                 while(results.next()) {
-                    String extractionId = results.getString("extraction.extractionId");
-                    error += "The extraction "+extractionId+" already exists in the database.\n";
+                    extractionsThatExist.add(new ExtractionReaction(results));
+                    //String extractionId = results.getString("extraction.extractionId");
                 }
+
+                if(extractionsThatExist.size() > 0) {
+                    //ask the user if they want to move the extractions that are already attached to a plate.
+                    StringBuilder moveMessage = new StringBuilder("The following extractions already exist in the database.\nDo you want to move them to this plate?\n\n");
+                    for(ExtractionReaction reaction : extractionsThatExist) {
+                        moveMessage.append(reaction.getExtractionId()+"\n");
+                    }
+                    if(Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", null, Dialogs.DialogIcon.QUESTION)) {
+                        for (int i = 0; i < reactions.size(); i++) {
+                            Reaction r = reactions.get(i);
+                            for (ExtractionReaction r2 : extractionsThatExist) {
+                                if(r.getExtractionId().equals(r2.getExtractionId())) {
+                                    reactions.set(i, r2);
+                                    r2.setPlateId(r.getPlateId());
+                                    r2.setPosition(r.getPosition());
+                                    r2.setThermocycle(r.getThermocycle());
+                                    r2.setLocationString(r.getLocationString());
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        for(Reaction r : reactions) {
+                            for(Reaction r2 : extractionsThatExist) {
+                                if(r.getExtractionId().equals(r2.getExtractionId())) {
+                                    r.isError = true;
+                                    error += "The extraction "+r.getExtractionId()+" already exists in the database.\n";
+                                }
+                            }
+                        }
+                    }
+                }
+
             }
         } catch (SQLException e) {
             return "Could not qurey the LIMS database: "+e.getMessage();

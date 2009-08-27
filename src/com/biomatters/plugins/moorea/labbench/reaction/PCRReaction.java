@@ -24,7 +24,7 @@ import java.util.List;
  * Time: 10:56:30 AM
  * To change this template use File | Settings | File Templates.
  */
-public class PCRReaction extends Reaction {
+public class PCRReaction extends Reaction<PCRReaction> {
 
     private ReactionOptions options;
 
@@ -129,7 +129,7 @@ public class PCRReaction extends Reaction {
         return getOptions().getValueAsString("extractionId");
     }
 
-    public String areReactionsValid(List<? extends Reaction> reactions) {
+    public String areReactionsValid(List<PCRReaction> reactions) {
         if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }

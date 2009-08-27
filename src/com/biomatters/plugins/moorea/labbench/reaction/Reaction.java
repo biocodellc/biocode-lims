@@ -37,7 +37,7 @@ import java.util.List;
  * Time: 9:10:17 AM <br>
  * Represents a single reaction (ie a well on a plate)
  */
-public abstract class Reaction implements XMLSerializable{
+public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private boolean selected;
     private int id=-1;
     private int plateId;
@@ -313,7 +313,7 @@ public abstract class Reaction implements XMLSerializable{
 
     public abstract Color _getBackgroundColor();
 
-    public abstract String areReactionsValid(List<? extends Reaction> reactions);
+    public abstract String areReactionsValid(List<T> reactions);
 
     public Dimension getPreferredSize() {
         int y = PADDING+3;

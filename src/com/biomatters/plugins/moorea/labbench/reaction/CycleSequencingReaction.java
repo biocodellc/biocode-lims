@@ -32,7 +32,7 @@ import java.util.List;
  *          <p/>
  *          Created on 24/06/2009 6:02:38 PM
  */
-public class CycleSequencingReaction extends Reaction{
+public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     private CycleSequencingOptions options;
 
     public CycleSequencingReaction() {
@@ -158,7 +158,7 @@ public class CycleSequencingReaction extends Reaction{
         return getOptions().getValueAsString("extractionId");
     }
 
-    public String areReactionsValid(List<? extends Reaction> reactions) {
+    public String areReactionsValid(List<CycleSequencingReaction> reactions) {
         if(!MooreaLabBenchService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }
