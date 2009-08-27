@@ -1,10 +1,14 @@
 package com.biomatters.plugins.moorea;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperation;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
+import jebl.util.ProgressListener;
 
 /**
  * @author Richard
@@ -21,6 +25,27 @@ public class MooreaUtilities {
             return null;
         }
         return consensusOperation.getOptions(selectedDocuments);
+    }
+
+    /**
+     *
+     * @return generated consensus if doc is an alignment, doc if doc is a sequence, null if doc is a sequence with trace information (obviously isn't a consensus sequence)
+     */
+    public static AnnotatedPluginDocument getConsensusSequence(AnnotatedPluginDocument doc, Options consensusOptions) throws DocumentOperationException {
+        if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+            DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
+            return consensusOperation.performOperation(new AnnotatedPluginDocument[]{doc}, ProgressListener.EMPTY, consensusOptions).get(0);
+        } else { //SequenceDocument
+            SequenceDocument sequence = (SequenceDocument) doc.getDocument();
+            if (sequence instanceof NucleotideGraphSequenceDocument) {
+                NucleotideGraphSequenceDocument nucleotideGraph = (NucleotideGraphSequenceDocument) sequence;
+                if (nucleotideGraph.hasChromatogramValues(0) || nucleotideGraph.hasChromatogramValues(1) ||
+                        nucleotideGraph.hasChromatogramValues(2) || nucleotideGraph.hasChromatogramValues(3)) {
+                    return null; //the sequence can't be a consensus sequence, return null because there is no consensus sequence to add to the database
+                }
+            }
+            return doc;
+        }
     }
 
     public static final class Well {
@@ -133,5 +158,14 @@ public class MooreaUtilities {
             return null;
         }
         return nameParts[partNumber];
+    }
+
+    public static boolean isAlignmentOfContigs(AnnotatedPluginDocument alignmentDoc) throws DocumentOperationException {
+        SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)alignmentDoc.getDocument();
+        for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+            if (i == alignment.getContigReferenceSequenceIndex()) continue;
+            return !(alignment.getSequence(i) instanceof NucleotideGraphSequenceDocument);
+        }
+        return false;
     }
 }

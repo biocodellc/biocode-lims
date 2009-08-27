@@ -1,17 +1,16 @@
 package com.biomatters.plugins.moorea.labbench;
 
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
-import com.biomatters.plugins.moorea.labbench.reaction.ReactionOptions;
 import com.biomatters.plugins.moorea.labbench.reaction.Cocktail;
+import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
 
-import javax.swing.table.TableModel;
 import javax.swing.event.TableModelListener;
+import javax.swing.table.TableModel;
+import java.awt.*;
 import java.util.*;
 import java.util.List;
-import java.awt.*;
 
 /**
  * @author Steven Stones-Havas
@@ -31,7 +30,7 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
     }
 
     public String getDescription() {
-        return "An overvoew of all "+type.toString()+" reactions performed on the selected workflows";
+        return "An overview of all "+type.toString()+" reactions performed on the selected workflows";
     }
 
     public String getHelp() {

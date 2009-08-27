@@ -92,6 +92,20 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
     public List<AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options) throws DocumentOperationException {
+
+        Map<AnnotatedPluginDocument, String> docsToMark = new HashMap<AnnotatedPluginDocument, String>();
+        for (AnnotatedPluginDocument document : annotatedDocuments) {
+            if (SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass()) && MooreaUtilities.isAlignmentOfContigs(document)) {
+                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
+                for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+                    if (i == alignment.getContigReferenceSequenceIndex()) continue;
+                    docsToMark.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
+                }
+            } else {
+                docsToMark.put(document, null);
+            }
+        }
+
         LIMSConnection limsConnection = MooreaLabBenchService.getInstance().getActiveLIMSConnection();
         IssueTracker issueTracker = new IssueTracker(isAutomated);
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
@@ -99,7 +113,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         DocumentField tissueIdField = fimsConnection.getTissueSampleDocumentField();
         List<AssemblyResult> results = new ArrayList<AssemblyResult>();
         Map<Integer, AssemblyResult> workflowsWithResults = new HashMap<Integer, AssemblyResult>();
-        for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
+        for (AnnotatedPluginDocument annotatedDocument : docsToMark.keySet()) {
             progress.beginSubtask();
             if (progress.isCanceled()) {
                 break;
@@ -129,7 +143,10 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             int edits = getEdits(annotatedDocument);
             String[] trims = getTrimParameters(annotatedDocument);
 
-            String consensus = options.getConsensusSequence(annotatedDocument);
+            String consensus = docsToMark.get(annotatedDocument);
+            if (consensus == null) {
+                consensus = ((SequenceDocument) MooreaUtilities.getConsensusSequence(annotatedDocument, options.getConsensusOptions()).getDocument()).getSequenceString();
+            }
             if (isPass && consensus == null) {
                 issueTracker.setIssue(annotatedDocument, "Not a consensus sequence, cannot pass");
                 continue;

@@ -37,7 +37,7 @@ public class ExportForBoldOperation extends DocumentOperation {
     }
 
     public GeneiousActionOptions getActionOptions() {
-        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Export for BOLD Submission...").setInPopupMenu(true, 0.7);
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Export for BOLD Submission...").setInPopupMenu(true, 0.8);
         return GeneiousActionOptions.createSubmenuActionOptions(MooreaPlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 

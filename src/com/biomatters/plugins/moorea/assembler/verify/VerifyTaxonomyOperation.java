@@ -79,7 +79,10 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         for (AnnotatedPluginDocument query : queries) {
             if (progress.isCanceled()) return null;
             Object taxonomyObject = query.getFieldValue(DocumentField.TAXONOMY_FIELD);
-            if (taxonomyObject == null) continue;
+            if (taxonomyObject == null) {
+                taxons.add(new Pair<AnnotatedPluginDocument, BiocodeTaxon>(query, null));
+                continue;
+            }
             String taxonomy = taxonomyObject.toString();
             int lastSemicolon = taxonomy.lastIndexOf(';');
             final String lowestTaxon;

@@ -12,7 +12,9 @@ import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Richard
@@ -79,6 +81,8 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
                 try {
                     File file = getExportFile(directory, annotatedDocument, abiExporter);
                     abiExporter.export(file, new AnnotatedPluginDocument[] {annotatedDocument}, ProgressListener.EMPTY, null);
+                    formats.put(annotatedDocument, "ABI");
+                    names.put(annotatedDocument, file.getName());
                     continue;
                 } catch (IOException e) {
                     //try scf below
@@ -86,6 +90,8 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
                 try {
                     File file = getExportFile(directory, annotatedDocument, scfExporter);
                     scfExporter.export(file, new AnnotatedPluginDocument[] {annotatedDocument}, ProgressListener.EMPTY, null);
+                    formats.put(annotatedDocument, "SCF");
+                    names.put(annotatedDocument, file.getName());
                     continue;
                 } catch (IOException e) {
                     //fail below
@@ -97,6 +103,17 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
             throwExceptionForFailedDocuments(failures);
         }
         return null;
+    }
+
+    Map<AnnotatedPluginDocument, String> formats = new HashMap<AnnotatedPluginDocument, String>();
+    Map<AnnotatedPluginDocument, String> names = new HashMap<AnnotatedPluginDocument, String>();
+
+    public String getFormatUsedFor(AnnotatedPluginDocument document) {
+        return formats.get(document);
+    }
+
+    public String getFileNameUsedFor(AnnotatedPluginDocument document) {
+        return names.get(document);
     }
 
     private void throwExceptionForFailedDocuments(List<AnnotatedPluginDocument> failures) throws DocumentOperationException {

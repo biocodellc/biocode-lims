@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class SetReadDirectionOperation extends DocumentOperation {
     private static final Options.OptionValue FORWARD_OPTION_VALUE = new Options.OptionValue("forward", "Forward");
-    private static final DocumentField IS_FORWARD_FIELD = DocumentField.createBooleanField("Is Forward Read",
+    public static final DocumentField IS_FORWARD_FIELD = DocumentField.createBooleanField("Is Forward Read",
             "Whether this read is in the forward direction", "isForwardRead", true, false);
 
     public GeneiousActionOptions getActionOptions() {
