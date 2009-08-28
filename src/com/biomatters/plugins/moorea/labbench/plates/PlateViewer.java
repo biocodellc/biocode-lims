@@ -31,6 +31,7 @@ public class PlateViewer extends JPanel {
 
     private PlateView plateView;
     private PlateViewer selfReference = this;
+    private GTextField nameField;
 
     public PlateViewer(int numberOfReactions, Reaction.Type type) {
         plateView = new PlateView(numberOfReactions, type, true);
@@ -52,7 +53,7 @@ public class PlateViewer extends JPanel {
         toolbar.setFloatable(false);
 
         toolbar.add(new JLabel("Name:"));
-        final GTextField nameField = new GTextField(20);
+        nameField = new GTextField(20);
         nameField.addKeyListener(new KeyListener(){
             public void keyTyped(KeyEvent e) {
                 plateView.getPlate().setName(nameField.getText());
@@ -142,6 +143,7 @@ public class PlateViewer extends JPanel {
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells") {
             public void actionPerformed(ActionEvent e) {
                 PlateBulkEditor.editPlate(plateView.getPlate(), selfReference);
+                nameField.setText(plateView.getPlate().getName());
                 Runnable runnable = new Runnable() {
                     public void run() {
                         String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));

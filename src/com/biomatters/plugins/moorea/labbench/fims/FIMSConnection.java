@@ -74,4 +74,6 @@ public abstract class FIMSConnection {
 
     public abstract Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException;
 
+    public abstract Map<String, String> getTissueIdsFromFimsPlate(String plateId) throws ConnectionException;
+
 }

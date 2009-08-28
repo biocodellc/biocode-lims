@@ -397,12 +397,20 @@ public class MooreaFimsConnection extends FIMSConnection{
         return queryBuilder.toString();
     }
 
+    public Map<String, String> getTissueIdsFromFimsPlate(String plateId) throws ConnectionException{
+        if(plateId == null || plateId.length() == 0) {
+            return Collections.emptyMap();
+        }
+
+        return getFimsPlateData("biocode_extract.format_name96='"+plateId+"'", "biocode_extract.well_number96");
+    }
+
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
         if(extractionIds == null || extractionIds.size() == 0) {
             return Collections.emptyMap();
         }
 
-        StringBuilder query = new StringBuilder("SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode.bnhm_id FROM biocode_extract, biocode_tissue, biocode WHERE biocode_extract.bnhm_id = biocode_tissue.bnhm_id AND biocode.bnhm_id = biocode_extract.bnhm_id AND (");
+        StringBuilder query = new StringBuilder("(");
 
         List<String> queryTerms = new ArrayList<String>();
         for(String s : extractionIds) {
@@ -411,19 +419,21 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         query.append(StringUtilities.join(" OR ", queryTerms));
         query.append(");");
+        return getFimsPlateData(query.toString(), "biocode_extract.extract_barcode");
+    }
+
+    private Map<String, String> getFimsPlateData(String andQuery, String colToUseForKey) throws ConnectionException {
+        String query = "SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_extract.format_name96, biocode_extract.well_number96 FROM biocode_extract, biocode_tissue WHERE biocode_extract.from_tissue_seq_num = biocode_tissue.seq_num  AND "+andQuery;
+
         try {
             PreparedStatement statement = connection.prepareStatement(query.toString());
-//            for (int i = 0; i < extractionIds.size(); i++) {
-//                String s = extractionIds.get(i);
-//                statement.setString(i+1, s);
-//            }
             ResultSet resultSet = statement.executeQuery();
             Map<String, String> result = new HashMap<String, String>();
             while(resultSet.next()) {
-                result.put(resultSet.getString("biocode_extract.extract_barcode"), resultSet.getString("biocode.bnhm_id")+"."+resultSet.getString("biocode_tissue.tissue_num"));
+                result.put(resultSet.getString(colToUseForKey), resultSet.getString("biocode_tissue.bnhm_id")+"."+resultSet.getString("biocode_tissue.tissue_num"));
             }
             return result;
-            
+
         } catch (SQLException e) {
             e.printStackTrace();
             throw new ConnectionException("Error fetching tissue data from FIMS", e);

@@ -66,6 +66,10 @@ public class GeneiousFimsConnection extends FIMSConnection{
     }
 
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
-        return Collections.EMPTY_MAP;
+        return Collections.emptyMap();
+    }
+
+    public Map<String, String> getTissueIdsFromFimsPlate(String plateId) throws ConnectionException{
+        return Collections.emptyMap();
     }
 }

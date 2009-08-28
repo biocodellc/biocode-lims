@@ -99,6 +99,22 @@ public class MooreaUtilities {
         }
 
         /**
+         * zero indexed...
+         * @return
+         */
+        public int row() {
+            return ((int)letter)-65;
+        }
+
+        /**
+         * zero indexed...
+         * @return
+         */
+        public int col() {
+            return number-1;
+        }
+
+        /**
          *
          * @return eg. "A1"
          */

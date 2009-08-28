@@ -2,10 +2,12 @@ package com.biomatters.plugins.moorea.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
+import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaPlugin;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.Workflow;
@@ -38,7 +40,7 @@ public class PlateBulkEditor {
     }
 
     public static void editPlate(final Plate p, JComponent owner) {
-        JPanel platePanel = new JPanel();
+        final JPanel platePanel = new JPanel();
         final AtomicReference<Direction> direction = new AtomicReference<Direction>(Direction.ACROSS_AND_DOWN);
         platePanel.setLayout(new BoxLayout(platePanel, BoxLayout.X_AXIS));
         List<DocumentField> defaultFields = getDefaultFields(p);
@@ -84,29 +86,42 @@ public class PlateBulkEditor {
         };
         toolbar.addAction(swapAction);
         if(p.getReactionType() == Reaction.Type.Extraction) {
-            toolbar.addAction(new GeneiousAction("Get Tissue Id's from Barcodes", "Use 2D barcode tube data to get tissue sample ids from the FIMS", MooreaPlugin.getIcons("barcode_16.png")) {
+            toolbar.addAction(new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", MooreaPlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
-                    DocumentField barcodeField = new DocumentField("Tissue Barcode", "", "barcode", String.class, false, false);
-                    DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
-                    final DocumentFieldEditor barcodeEditor = new DocumentFieldEditor(barcodeField, p, direction.get());
-                    final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
-                    if(tissueEditor == null) {
-                        Dialogs.showMessageDialog("Could not autodetect tissue id's for this plate - no editor set for the id field!");
-                        return;
-                    }
-                    if(Dialogs.showOkCancelDialog(barcodeEditor, "Enter Barcode Ids", tissueEditor, Dialogs.DialogIcon.NO_ICON)) {
-                        barcodeEditor.valuesFromTextView();
-                        final List<String> idsToCheck = getIdsToCheck(barcodeEditor, p);
-                            Runnable runnable = new Runnable() {
-                                public void run() {
-                                    try {
-                                        Map<String, String> barcodeToId = MooreaLabBenchService.getInstance().getActiveFIMSConnection().getTissueIdsFromExtractionBarcodes(idsToCheck);
-                                        putMappedValuesIntoEditor(barcodeEditor, tissueEditor, barcodeToId, p);
-                                    } catch (ConnectionException e1) {
-                                        Dialogs.showMessageDialog("Could not get Workflow IDs from the database: "+e1.getMessage());
+                    final JTextField tf = new GTextField();
+                    if(Dialogs.showInputDialog("Enter the plate id", "Get FIMS plate", platePanel, tf)) {
+                        final String plateId = tf.getText();
+                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);                       
+                        final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+
+
+                        Runnable runnable = new Runnable() {
+                            public void run() {
+                                try {
+                                    Map<String, String> tissueIds = MooreaLabBenchService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsPlate(plateId);
+                                    if(tissueIds.size() == 0) {
+                                        Dialogs.showMessageDialog("Plate "+plateId+" not found in the database.", "Plate not found", tissueEditor, Dialogs.DialogIcon.INFORMATION);
+                                        return;
                                     }
+                                    tissueEditor.setText("");
+                                    tissueEditor.valuesFromTextView();
+                                    for(Map.Entry<String, String> entry : tissueIds.entrySet()) {
+                                        MooreaUtilities.Well well = new MooreaUtilities.Well(entry.getKey());
+                                        try {
+                                            tissueEditor.setValue(well.row(), well.col(), entry.getValue());
+                                        } catch (Exception e1) {
+                                            e1.printStackTrace();
+                                        }
+                                    }
+                                    tissueEditor.textViewFromValues();
+                                    p.setName(plateId);
+
+                                } catch (ConnectionException e1) {
+                                    e1.printStackTrace();
+                                    Dialogs.showMessageDialog("Could not get Tissue IDs from the FIMS database: "+e1.getMessage());
                                 }
-                            };
+                            }
+                        };
                         MooreaLabBenchService.block("Fetching tissue ID's from the FIMS database", tissueEditor, runnable);
                     }
                 }
@@ -369,10 +384,14 @@ public class PlateBulkEditor {
             add(new JLabel(field.getName()), BorderLayout.NORTH);
         }
 
+        public void setText(String text) {
+            valueArea.setText(text);
+        }
+
         public void textViewFromValues() {
             StringBuilder valuesBuilder = new StringBuilder();
             StringBuilder lineNumbersBuilder = new StringBuilder();
-            if(direction == Direction.ACROSS_AND_DOWN) {
+            if(direction == Direction.DOWN_AND_ACROSS) {
                 for(int row = 0; row < plate.getRows(); row++) {
                     for(int col = 0; col < plate.getCols(); col++) {
                         valuesBuilder.append(values[row][col]+"\n");
