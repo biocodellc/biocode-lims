@@ -8,6 +8,8 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
@@ -16,11 +18,15 @@ import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * @author Richard
@@ -78,9 +84,10 @@ public class ExportForBarstoolOperation extends DocumentOperation {
                 }
             }
         }
+        
 
         progress.beginSubtask("Exporting traces");
-        List<AnnotatedPluginDocument> traceDocs = new ArrayList<AnnotatedPluginDocument>();
+        Map<AnnotatedPluginDocument, AnnotatedPluginDocument> traceDocsMap = new HashMap<AnnotatedPluginDocument, AnnotatedPluginDocument>();
         for (AnnotatedPluginDocument contigDoc : contigDocuments) {
             SequenceAlignmentDocument contig = (SequenceAlignmentDocument)contigDoc.getDocument();
             for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
@@ -92,13 +99,28 @@ public class ExportForBarstoolOperation extends DocumentOperation {
                 if (!DefaultNucleotideGraphSequence.class.isAssignableFrom(referencedDoc.getDocumentClass())) {
                     throw new DocumentOperationException("The contig " + contigDoc.getName() + " references a sequence which is not a chromatogram: " + contig.getSequence(i).getName() + ".");
                 }
-                traceDocs.add(referencedDoc);
+                traceDocsMap.put(referencedDoc, contigDoc);
             }
         }
+        List<AnnotatedPluginDocument> traceDocs = new ArrayList<AnnotatedPluginDocument>(traceDocsMap.keySet());
         BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
         Options chromatogramExportOptions = chromatogramExportOperation.getOptions(traceDocs);
         chromatogramExportOptions.setValue("exportTo", tracesFolder.toString());
         chromatogramExportOperation.performOperation(traceDocs, progress, chromatogramExportOptions);
+
+        ZipOutputStream out = null;
+        try {
+            File zipFile = new File(options.getFolder(), options.getSubmissionName() + "_traces.zip");
+            out = new ZipOutputStream(new FileOutputStream(zipFile));
+            zipDirectory(tracesFolder.getParentFile(), tracesFolder, out);
+        } catch (IOException e) {
+            throw new DocumentOperationException("Failed to zip traces: " + e.getMessage(), e);
+        } finally {
+            if (out != null) {
+                GeneralUtilities.attemptClose(out);
+            }
+        }
+        FileUtilities.deleteDirectory(tracesFolder, progress);
 
         //todo check for existing files
 
@@ -118,7 +140,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
 
             progress.beginSubtask("Generating trace information table");
             TabDelimitedExport.export(new File(options.getFolder(), options.getSubmissionName() + "_traces.txt"),
-                    new TraceExportTableModel(traceDocs, options, chromatogramExportOperation, noReadDirectionValue));
+                    new TraceExportTableModel(traceDocsMap, options, chromatogramExportOperation, noReadDirectionValue));
         } catch (IOException e) {
             throw new DocumentOperationException("Tab delimited export failed: " + e.getMessage(), e);
         }
@@ -220,5 +242,39 @@ public class ExportForBarstoolOperation extends DocumentOperation {
     @Override
     public boolean isDocumentGenerator() {
         return false;
+    }
+
+    private static void zipDirectory(File rootDirectory, File directory, ZipOutputStream out) throws IOException {
+        byte[] buf = new byte[1024];
+        FileInputStream in = null;
+        String relativeDirectory = rootDirectory.equals(directory)? "":
+                directory.getPath().substring(rootDirectory.getPath().length() + 1) + File.separator;
+        try {
+            for (File file: directory.listFiles()) {
+                if (file.getName().equals(".svn")) {
+                    continue;
+                }
+                String path = relativeDirectory.replace('\\', '/') + file.getName();
+                if(file.isDirectory())  {
+                    String dirname = path + "/";
+                    out.putNextEntry(new ZipEntry(dirname));
+                    out.closeEntry();
+                    zipDirectory(rootDirectory, file, out);
+                } else {
+                    in = new FileInputStream(file);
+                    out.putNextEntry(new ZipEntry(path));
+
+                    int len;
+                    while ((len = in.read(buf)) > 0) {
+                        out.write(buf, 0, len);
+                    }
+
+                    out.closeEntry();
+                    in.close();
+                }
+            }
+        } finally {
+            GeneralUtilities.attemptClose(in);
+        }
     }
 }

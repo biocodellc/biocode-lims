@@ -4,7 +4,8 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * @author Richard
@@ -13,13 +14,22 @@ import java.util.List;
 public class TraceExportTableModel extends TabDelimitedExport.ExportTableModel {
 
     private static final String[] COLUMN_NAMES = {"Template_ID", "Trace_file", "Trace_format", "Center_Project", "Program_ID", "Trace_End"};
+    private final Map<AnnotatedPluginDocument, AnnotatedPluginDocument> contigsMap;
     private final ExportForBarstoolOptions options;
     private final BatchChromatogramExportOperation chromatogramExportOperation;
     private final String noReadDirectionValue;
 
-    public TraceExportTableModel(List<AnnotatedPluginDocument> traceDocs, ExportForBarstoolOptions options,
+    /**
+     *
+     * @param contigsMap map of trace docs to contigs they came from
+     * @param options
+     * @param chromatogramExportOperation
+     * @param noReadDirectionValue
+     */
+    public TraceExportTableModel(Map<AnnotatedPluginDocument, AnnotatedPluginDocument> contigsMap, ExportForBarstoolOptions options,
                                  BatchChromatogramExportOperation chromatogramExportOperation, String noReadDirectionValue) {
-        super(traceDocs);
+        super(new ArrayList<AnnotatedPluginDocument>(contigsMap.keySet()));
+        this.contigsMap = contigsMap;
         this.options = options;
         this.chromatogramExportOperation = chromatogramExportOperation;
         this.noReadDirectionValue = noReadDirectionValue;
@@ -39,7 +49,8 @@ public class TraceExportTableModel extends TabDelimitedExport.ExportTableModel {
     Object getValue(AnnotatedPluginDocument doc, int columnIndex) {
         switch (columnIndex) {
             case 0:
-                return options.getSequenceId(doc);
+                //todo wrong doc!
+                return options.getSequenceId(contigsMap.get(doc));
             case 1:
                 return options.getTracesFolderName() + "/" + chromatogramExportOperation.getFileNameUsedFor(doc);
             case 2:
