@@ -1,20 +1,20 @@
 package com.biomatters.plugins.moorea.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.DocumentType;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentSearchCache;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAnnotation;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAnnotationInterval;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentType;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.SequenceUtilities;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
-import java.util.List;
-import java.util.Date;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -26,7 +26,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
     private OligoSequenceDocument extraPrimer;
     private SimpleListener primerListener;
 
-    private static final Options.OptionValue NO_PRIMER_VALUE = new Options.OptionValue("No Primer", "No Primer", "");
+    public static final Options.OptionValue NO_PRIMER_VALUE = new Options.OptionValue("No Primer", "No Primer", "");
 
     private static final Options.OptionValue[] noValue = new Options.OptionValue[] {
             new Options.OptionValue("noValues", "No primers found in your database")
@@ -124,7 +124,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
             }
 
             String sequenceQualifierValue = annotation.getQualifierValue("Sequence"); //the primer sequence may actually be different to the target sequence (eg. due to mismatches).
-            if(sequenceQualifierValue != null) {
+            if(sequenceQualifierValue != null && sequenceQualifierValue.length() > 0) {
                 primerSeqString = sequenceQualifierValue;
             } else {
                 if(to > originalSequenceString.length()){

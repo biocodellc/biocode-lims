@@ -1,6 +1,9 @@
 package com.biomatters.plugins.moorea.submission.genbank.barstool;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.plugins.moorea.assembler.verify.Pair;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
+import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
 
 import java.util.List;
 
@@ -10,30 +13,45 @@ import java.util.List;
  */
 public class SourceExportTableModel extends TabDelimitedExport.ExportTableModel {
 
-    private final ExportForBarstoolOptions options;
+    private final List<Pair<String,String>> sourceFields;
+    private final List<Pair<String,String>> fixedSourceFields;
+    private final FIMSConnection fimsConnection;
+    private final boolean includeLatLong;
 
     public SourceExportTableModel(List<AnnotatedPluginDocument> docs, ExportForBarstoolOptions options) {
         super(docs);
-        this.options = options;
+        sourceFields = options.getSourceFields();
+        fixedSourceFields = options.getFixedSourceFields();
+        includeLatLong = options.isIncludeLatLong();
+        fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
     }
 
     int getColumnCount() {
-        return options.getSourceFields().size() + options.getFixedSourceFields().size();
+        return sourceFields.size() + fixedSourceFields.size() + (includeLatLong ? 1 : 0);
     }
 
     String getColumnName(int columnIndex) {
-        if (columnIndex < options.getSourceFields().size()) {
-            return options.getSourceFields().get(columnIndex).getItemA();
+        if (columnIndex < sourceFields.size()) {
+            return sourceFields.get(columnIndex).getItemA();
+        } else if (columnIndex < sourceFields.size() + fixedSourceFields.size()) {
+            return fixedSourceFields.get(columnIndex - sourceFields.size()).getItemA();
         } else {
-            return options.getFixedSourceFields().get(columnIndex - options.getSourceFields().size()).getItemA();
+            return "Lat_Lon";
         }
     }
 
     Object getValue(AnnotatedPluginDocument doc, int columnIndex) {
-        if (columnIndex < options.getSourceFields().size()) {
-            return doc.getFieldValue(options.getSourceFields().get(columnIndex).getItemB());
+        if (columnIndex < sourceFields.size()) {
+            Object value = doc.getFieldValue(sourceFields.get(columnIndex).getItemB());
+            if (value == null && sourceFields.get(columnIndex).getItemA().equals(ExportForBarstoolOptions.NOTE)) {
+                //allowed to be null
+                value = "";
+            }
+            return value;
+        } else if (columnIndex < sourceFields.size() + fixedSourceFields.size()) {
+            return fixedSourceFields.get(columnIndex - sourceFields.size()).getItemB();
         } else {
-            return options.getFixedSourceFields().get(columnIndex - options.getSourceFields().size()).getItemB();
+            return fimsConnection.getLatLong(doc).toBarstoolFormat();
         }
     }
 }

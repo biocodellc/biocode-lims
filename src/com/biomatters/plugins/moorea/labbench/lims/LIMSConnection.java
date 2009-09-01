@@ -268,7 +268,7 @@ public class LIMSConnection {
                     returnList.add(q);
                 }
             }
-            else {
+            else if (q != null) {
                 returnList.add(q);
             }
         }

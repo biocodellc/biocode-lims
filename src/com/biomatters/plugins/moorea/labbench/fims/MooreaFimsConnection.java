@@ -4,10 +4,12 @@ import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm
 import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
@@ -33,6 +35,8 @@ public class MooreaFimsConnection extends FIMSConnection{
     private static final DocumentField MOOREA_PLATE_NAME_FIELD = new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false);
     private static final DocumentField MOOREA_WELL_NUMBER_FIELD = new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false);
     private static final DocumentField MOOREA_TISSUE_BARCODE_FIELD = new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false);
+    private static final DocumentField LONGITUDE_FIELD = new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Double.class, false, false);
+    private static final DocumentField LATITUDE_FIELD = new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Double.class, false, false);
 
     public String getLabel() {
         return "Moorea FIMS";
@@ -145,7 +149,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, false, false));
         fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, false, false));
-        fields.add(new DocumentField("Specimen Num Collector", "", "biocode.Specimen_Num_Collector", String.class, false, false));
+        fields.add(new DocumentField("Specimen Num Collector", "", "biocode.Specimen_Num_Collector", String.class, false, true));
 
         fields.add(MOOREA_PLATE_NAME_FIELD);
         fields.add(MOOREA_WELL_NUMBER_FIELD);
@@ -164,8 +168,8 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Lowest Taxon", "", "biocode.LowestTaxon", String.class, true, false));
         fields.add(new DocumentField("Lowest Taxon Level", "", "biocode.LowestTaxonLevel", String.class, true, false));
 
-        fields.add(new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Double.class, false, false));
-        fields.add(new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Double.class, false, false));
+        fields.add(LONGITUDE_FIELD);
+        fields.add(LATITUDE_FIELD);
 
         fields.add(new DocumentField("Minimum Elevation", "", "biocode_collecting_event.MinElevationMeters", Integer.class, false, false));
         fields.add(new DocumentField("Maximum Elevation", "", "biocode_collecting_event.MaxElevationMeters", Integer.class, false, false));
@@ -181,6 +185,15 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.addAll(getCollectionAttributes());
         fields.addAll(getTaxonomyAttributes());
         return fields;
+    }
+
+    public MooreaUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
+        Object latObject = annotatedDocument.getFieldValue(LATITUDE_FIELD);
+        Object longObject = annotatedDocument.getFieldValue(LONGITUDE_FIELD);
+        if (latObject == null || longObject == null) {
+            return null;
+        }
+        return new MooreaUtilities.LatLong((Double)latObject, (Double)longObject);
     }
 
     public List<FimsSample> getMatchingSamples(Query query) throws ConnectionException{

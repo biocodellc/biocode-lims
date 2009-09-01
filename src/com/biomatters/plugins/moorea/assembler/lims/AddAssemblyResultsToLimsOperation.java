@@ -2,9 +2,7 @@ package com.biomatters.plugins.moorea.assembler.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
@@ -14,8 +12,6 @@ import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtili
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
-import com.biomatters.plugins.moorea.labbench.ConnectionException;
-import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.WorkflowDocument;
 import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
@@ -125,7 +121,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 continue;
             }
 
-            WorkflowDocument workflow = getMostRecentWorkflow(limsConnection, fimsConnection, tissueId);
+            WorkflowDocument workflow = MooreaUtilities.getMostRecentWorkflow(limsConnection, fimsConnection, tissueId);
             if (workflow == null) {
                 issueTracker.setIssue(annotatedDocument, "No workflow record found in LIMS");
                 continue;
@@ -333,29 +329,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             trims[index] = trimParams;
         }
         return trims;
-    }
-
-    private static WorkflowDocument getMostRecentWorkflow(LIMSConnection limsConnection, FIMSConnection fimsConnection, Object tissueId) throws DocumentOperationException {
-        WorkflowDocument mostRecent = null;
-        try {
-            Query fimsQuery = Query.Factory.createFieldQuery(fimsConnection.getTissueSampleDocumentField(), Condition.CONTAINS, tissueId);
-            List<FimsSample> tissues = fimsConnection.getMatchingSamples(fimsQuery);
-            if (tissues.size() != 1) {
-                return null;
-            }
-
-            List<WorkflowDocument> workflows = limsConnection.getMatchingWorkflowDocuments(null, tissues);
-            for (WorkflowDocument workflow : workflows) {
-                if (mostRecent == null || workflow.getCreationDate().after(mostRecent.getCreationDate())) {
-                    mostRecent = workflow;
-                }
-            }
-        } catch (SQLException e) {
-            throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
-        } catch (ConnectionException e) {
-            throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
-        }
-        return mostRecent;
     }
 
     private static final class IssueTracker {

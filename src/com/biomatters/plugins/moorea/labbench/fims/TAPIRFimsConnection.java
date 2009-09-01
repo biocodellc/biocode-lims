@@ -4,9 +4,11 @@ import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm
 import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.fims.tapir.TAPIRClient;
@@ -78,6 +80,11 @@ public class TAPIRFimsConnection extends FIMSConnection{
 
     public List<DocumentField> getSearchAttributes() {
         return searchAttributes;
+    }
+
+    public MooreaUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
+        //todo
+        return null;
     }
 
     public List<DocumentField> getCollectionAttributes() {

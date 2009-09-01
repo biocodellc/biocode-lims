@@ -14,6 +14,7 @@ import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
+import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -52,6 +53,9 @@ public class ExportForBarstoolOperation extends DocumentOperation {
 
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
+        if (!MooreaLabBenchService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(MooreaUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         return new ExportForBarstoolOptions(documents);
     }
 
@@ -120,7 +124,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
                 GeneralUtilities.attemptClose(out);
             }
         }
-        FileUtilities.deleteDirectory(tracesFolder, progress);
+        FileUtilities.deleteDirectory(tracesFolder, ProgressListener.EMPTY);
 
         //todo check for existing files
 
@@ -144,6 +148,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
         } catch (IOException e) {
             throw new DocumentOperationException("Tab delimited export failed: " + e.getMessage(), e);
         }
+        //todo clean up on fail/cancel
         return null;
     }
 
@@ -220,7 +225,11 @@ public class ExportForBarstoolOperation extends DocumentOperation {
             }
 
             consensusDoc.setName(options.getSequenceId(contigDoc));
-            consensusDoc.setFieldValue(DocumentField.DESCRIPTION_FIELD, "[organism=" + options.getOrganismName(contigDoc) + "]");
+            String organism = options.getOrganismName(contigDoc);
+            if (organism == null) {
+                throw new DocumentOperationException("Organism cannot be determined for " + contigDoc.getName() + ". It must have either an Organism or Taxonomy value.");
+            }
+            consensusDoc.setFieldValue(DocumentField.DESCRIPTION_FIELD, "[organism=" + organism + "]");
             consensusDoc.save();
             consensusDocs.add(consensusDoc);
         }

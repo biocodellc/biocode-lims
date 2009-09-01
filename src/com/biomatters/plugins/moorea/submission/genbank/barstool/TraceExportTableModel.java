@@ -49,7 +49,6 @@ public class TraceExportTableModel extends TabDelimitedExport.ExportTableModel {
     Object getValue(AnnotatedPluginDocument doc, int columnIndex) {
         switch (columnIndex) {
             case 0:
-                //todo wrong doc!
                 return options.getSequenceId(contigsMap.get(doc));
             case 1:
                 return options.getTracesFolderName() + "/" + chromatogramExportOperation.getFileNameUsedFor(doc);

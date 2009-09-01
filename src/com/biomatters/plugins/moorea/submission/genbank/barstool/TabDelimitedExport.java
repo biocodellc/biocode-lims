@@ -1,10 +1,14 @@
 package com.biomatters.plugins.moorea.submission.genbank.barstool;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -13,7 +17,9 @@ import java.util.List;
  */
 public class TabDelimitedExport {
 
-    static void export(File file, ExportTableModel model) throws IOException {
+    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("dd-MMM-yyyy");
+
+    static void export(File file, ExportTableModel model) throws IOException, DocumentOperationException {
         StringBuilder s = new StringBuilder();
         for (int y = -1; y < model.getRowCount(); y ++) {
             for (int x = 0; x < model.getColumnCount(); x ++) {
@@ -24,9 +30,17 @@ public class TabDelimitedExport {
                     s.append(model.getColumnName(x));
                 } else {
                     Object value = model.getValueAt(y, x);
-                    if (value != null) {
-                        s.append(value);
+                    if (value == null) {
+                        //todo prompt to continue anyway
+                        throw new DocumentOperationException(model.getColumnName(x) + " is missing for one or more of the selected documents");
                     }
+                    if (value instanceof Date) {
+                        synchronized (DATE_FORMAT) {
+                            value = DATE_FORMAT.format((Date)value);
+                        }
+                    }
+                    //todo author format?
+                    s.append(value);
                 }
             }
             if (y != model.getRowCount() - 1) {

@@ -1,6 +1,8 @@
 package com.biomatters.plugins.moorea;
 
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
@@ -8,7 +10,15 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperation;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
+import com.biomatters.plugins.moorea.labbench.ConnectionException;
+import com.biomatters.plugins.moorea.labbench.FimsSample;
+import com.biomatters.plugins.moorea.labbench.WorkflowDocument;
+import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
 import jebl.util.ProgressListener;
+
+import java.sql.SQLException;
+import java.util.List;
 
 /**
  * @author Richard
@@ -46,6 +56,29 @@ public class MooreaUtilities {
             }
             return doc;
         }
+    }
+
+    public static WorkflowDocument getMostRecentWorkflow(LIMSConnection limsConnection, FIMSConnection fimsConnection, Object tissueId) throws DocumentOperationException {
+        WorkflowDocument mostRecent = null;
+        try {
+            Query fimsQuery = Query.Factory.createFieldQuery(fimsConnection.getTissueSampleDocumentField(), Condition.CONTAINS, tissueId);
+            List<FimsSample> tissues = fimsConnection.getMatchingSamples(fimsQuery);
+            if (tissues.size() != 1) {
+                return null;
+            }
+
+            List<WorkflowDocument> workflows = limsConnection.getMatchingWorkflowDocuments(null, tissues);
+            for (WorkflowDocument workflow : workflows) {
+                if (mostRecent == null || workflow.getCreationDate().after(mostRecent.getCreationDate())) {
+                    mostRecent = workflow;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+        } catch (ConnectionException e) {
+            throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
+        }
+        return mostRecent;
     }
 
     public static final class Well {
@@ -130,6 +163,21 @@ public class MooreaUtilities {
         public String toPaddedString() {
             String number = "" + this.number;
             return "" + letter + (number.length() < 2 ? "0" : "") + number;
+        }
+    }
+
+    public static final class LatLong {
+
+        public final double latitude;
+        public final double longitude;
+
+        public LatLong(double latitude, double longitude) {
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
+
+        public String toBarstoolFormat() {
+            return "" + Math.abs(latitude) + (latitude < 0 ? " S " : " N ") + Math.abs(longitude) + (longitude < 0 ? " W" : " E");
         }
     }
 
