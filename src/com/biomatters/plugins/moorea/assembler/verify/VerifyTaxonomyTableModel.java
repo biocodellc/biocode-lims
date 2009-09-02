@@ -244,7 +244,11 @@ public class VerifyTaxonomyTableModel implements TableModel {
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
                 TableSorter sorter = (TableSorter) table.getModel();
-                setSelectedRow(sorter.modelIndex(table.getSelectedRow()));
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow != -1) {
+                    selectedRow = sorter.modelIndex(selectedRow);
+                }
+                setSelectedRow(selectedRow);
             }
         });
         dialogParent = table;
