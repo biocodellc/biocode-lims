@@ -1,5 +1,7 @@
 package com.biomatters.plugins.moorea.submission.genbank.barstool;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GButton;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
@@ -7,8 +9,10 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.assembler.verify.Pair;
 import jebl.evolution.sequences.GeneticCode;
+import org.jdom.Element;
 
 import javax.swing.*;
+import java.awt.event.ActionEvent;
 import java.io.File;
 import java.util.*;
 
@@ -26,6 +30,8 @@ public class ExportForBarstoolOptions extends Options {
     private final StringOption baseCallerOption;
 
     private final BooleanOption latLongOption;
+
+    private final ExtraSubmissionFieldsOptions extraSubmissionFieldsOptions;
 
     private static final String SEQUENCE_ID = "Sequence_ID";
     private static final String COLLECTED_BY = "Collected_by";
@@ -104,6 +110,17 @@ public class ExportForBarstoolOptions extends Options {
         noteOption.setDescription("Any additional information that you wish to provide about the sequence");
 
         latLongOption = addBooleanOption("latLong", "Include Lat-Long", true);
+
+        extraSubmissionFieldsOptions = new ExtraSubmissionFieldsOptions(stringFields);
+        extraSubmissionFieldsOptions.restorePreferences();
+        addCustomComponent(new GButton(new AbstractAction("Additional Source Fields...") {
+            public void actionPerformed(ActionEvent e) {
+                Element valuesBefore = extraSubmissionFieldsOptions.valuesToXML("values");
+                if (!Dialogs.showOptionsDialog(extraSubmissionFieldsOptions, "Additional Source Fields", true, ExportForBarstoolOptions.this.getPanel())) {
+                    extraSubmissionFieldsOptions.valuesFromXML(valuesBefore);
+                }
+            }
+        }));
 
         boolean contigSelected = false;
         for (AnnotatedPluginDocument doc : documents) {
@@ -215,6 +232,7 @@ public class ExportForBarstoolOptions extends Options {
                 sourceFields.add(new Pair<String, String>(sourceField, value));
             }
         }
+        sourceFields.addAll(extraSubmissionFieldsOptions.getExtraFields());
         return sourceFields;
     }
 

@@ -139,14 +139,17 @@ public class ExportForBarstoolOperation extends DocumentOperation {
             progress.beginSubtask("Generating primer table");
             TabDelimitedExport.export(new File(options.getFolder(), options.getSubmissionName() + "_primers.txt"),
                     new PrimerExportTableModel(contigDocuments, options), progress);
+            if (progress.isCanceled()) return null;
 
             progress.beginSubtask("Generating source modifiers table");
             TabDelimitedExport.export(new File(options.getFolder(), options.getSubmissionName() + "_source.txt"),
                     new SourceExportTableModel(contigDocuments, options), progress);
+            if (progress.isCanceled()) return null;
 
             progress.beginSubtask("Generating trace information table");
             TabDelimitedExport.export(new File(options.getFolder(), options.getSubmissionName() + "_traces.txt"),
                     new TraceExportTableModel(traceDocsMap, options, chromatogramExportOperation, noReadDirectionValue), progress);
+            if (progress.isCanceled()) return null;
         } catch (IOException e) {
             throw new DocumentOperationException("Tab delimited export failed: " + e.getMessage(), e);
         }
