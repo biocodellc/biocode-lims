@@ -38,7 +38,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
     public void messWithTheTable(JTable table) {
         table.setSelectionBackground(new Color(180, 180, 180));
         table.setSelectionForeground(Color.black);
-        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         table.setRowHeight(table.getRowHeight() * 5);
         TableSorter sorter = (TableSorter) table.getModel();
         sorter.setSortingStatus(0, overrideBinningOptions == null ? TableSorter.DESCENDING : TableSorter.ASCENDING);

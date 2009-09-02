@@ -38,7 +38,7 @@ import java.util.prefs.Preferences;
 public class VerifyTaxonomyTableModel implements TableModel {
 
     private final List<VerifyResult> rows = new ArrayList<VerifyResult>();
-    private int selectedRow = -1;
+    private int[] selectedRows = new int[0];
     private JComponent dialogParent = null;
 
     private final VerifyBinningOptions binningOptions;
@@ -66,14 +66,10 @@ public class VerifyTaxonomyTableModel implements TableModel {
         showOtherHitsAction.setEnabled(false);
     }
 
-    /**
-     *
-     * @param i selected row or -1 for none
-     */
-    public void setSelectedRow(int i) {
-        selectedRow = i;
-        goToAssemblyAction.setEnabled(i != -1);
-        showOtherHitsAction.setEnabled(i != -1 && rows.get(selectedRow).hitDocuments.size() > 1);
+    public void setSelectedRows(int[] selectedRows) {
+        this.selectedRows = selectedRows;
+        goToAssemblyAction.setEnabled(selectedRows.length != 0);
+        showOtherHitsAction.setEnabled(selectedRows.length == 1 && rows.get(selectedRows[0]).hitDocuments.size() > 1);
     }
 
     public int getRowCount() {
@@ -161,11 +157,14 @@ public class VerifyTaxonomyTableModel implements TableModel {
         return Color.red;
     }
 
-    private final GeneiousAction goToAssemblyAction = new GeneiousAction("Go To Query",
+    private final GeneiousAction goToAssemblyAction = new GeneiousAction("Go To Queries",
             "Select the query document for the selected result", IconUtilities.getIcons("sequenceSearch16.png")) {
         public void actionPerformed(ActionEvent e) {
-            URN urn = rows.get(selectedRow).queryDocument.getURN();
-            DocumentUtilities.selectDocument(urn);
+            List<URN> urns = new ArrayList<URN>();
+            for (int selectedRow : selectedRows) {
+                urns.add(rows.get(selectedRow).queryDocument.getURN());
+            }
+            DocumentUtilities.selectDocuments(urns);
         }
     };
 
@@ -175,7 +174,8 @@ public class VerifyTaxonomyTableModel implements TableModel {
             "Show the other hits that were downloaded for this query (SuperTip: Double click in table for quick access)", IconUtilities.getIcons("nucleotideList16.png")) {
         public void actionPerformed(ActionEvent e) {
             List<VerifyResult> dummyResults = new ArrayList<VerifyResult>();
-            VerifyResult verifyResult = rows.get(selectedRow);
+            //only enabled when one row selected
+            VerifyResult verifyResult = rows.get(selectedRows[0]);
             for (AnnotatedPluginDocument hitDocument : verifyResult.hitDocuments) {
                 dummyResults.add(new VerifyResult(Collections.singletonList(hitDocument), verifyResult.queryDocument, verifyResult.queryTaxon));
             }
@@ -244,11 +244,14 @@ public class VerifyTaxonomyTableModel implements TableModel {
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
                 TableSorter sorter = (TableSorter) table.getModel();
-                int selectedRow = table.getSelectedRow();
-                if (selectedRow != -1) {
-                    selectedRow = sorter.modelIndex(selectedRow);
+                int[] selectedRows = table.getSelectedRows();
+                if (selectedRows.length != 0) {
+                    for (int i = 0; i < selectedRows.length; i++) {
+                        int row = selectedRows[i];
+                        selectedRows[i] = sorter.modelIndex(row);
+                    }
                 }
-                setSelectedRow(selectedRow);
+                setSelectedRows(selectedRows);
             }
         });
         dialogParent = table;
