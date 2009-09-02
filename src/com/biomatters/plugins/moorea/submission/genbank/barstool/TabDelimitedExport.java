@@ -3,6 +3,8 @@ package com.biomatters.plugins.moorea.submission.genbank.barstool;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import jebl.util.CompositeProgressListener;
+import jebl.util.ProgressListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,9 +21,11 @@ public class TabDelimitedExport {
 
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("dd-MMM-yyyy");
 
-    static void export(File file, ExportTableModel model) throws IOException, DocumentOperationException {
+    static void export(File file, ExportTableModel model, ProgressListener progressListener) throws IOException, DocumentOperationException {
         StringBuilder s = new StringBuilder();
+        CompositeProgressListener progress = new CompositeProgressListener(progressListener, model.getRowCount() + 1);
         for (int y = -1; y < model.getRowCount(); y ++) {
+            progress.beginSubtask();
             for (int x = 0; x < model.getColumnCount(); x ++) {
                 if (x != 0) {
                     s.append("\t");

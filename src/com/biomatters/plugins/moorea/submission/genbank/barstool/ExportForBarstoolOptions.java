@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.assembler.verify.Pair;
+import jebl.evolution.sequences.GeneticCode;
 
 import javax.swing.*;
 import java.io.File;
@@ -19,7 +20,6 @@ public class ExportForBarstoolOptions extends Options {
 
     private final StringOption submissionName;
     private final FileSelectionOption folderOption;
-//    private final BooleanOption generateTranslationsOption;
 
     private final StringOption countryOption;
     private final StringOption projectOption;
@@ -34,8 +34,10 @@ public class ExportForBarstoolOptions extends Options {
     private static final String IDENTIFIED_BY = "Identified_by";
     static final String NOTE = "Note";
 
-
     private static final String[] SOURCE_FIELDS = new String[] {SEQUENCE_ID, COLLECTED_BY, COLLECTION_DATE, SPECIMEN_VOUCHER, IDENTIFIED_BY, NOTE};
+
+    private static final OptionValue NONE = new OptionValue("none", "<html><i>None</i></html>");
+    private final ComboBoxOption<OptionValue> translationOption;
 
     public ExportForBarstoolOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
 
@@ -57,30 +59,49 @@ public class ExportForBarstoolOptions extends Options {
                 }
             }
         }
-        Collections.sort(stringFields, new Comparator<OptionValue>() {
+        Comparator<OptionValue> labelComparator = new Comparator<OptionValue>() {
             public int compare(OptionValue o1, OptionValue o2) {
                 return o1.getLabel().compareTo(o2.getLabel());
             }
-        });
+        };
+        Collections.sort(stringFields, labelComparator);
+        Collections.sort(dateFields, labelComparator);
+        List<OptionValue> stringFieldsWithNone = new ArrayList<OptionValue>(stringFields);
+        stringFieldsWithNone.add(0, NONE);
 
         folderOption = addFileSelectionOption("folder", "Folder:", "");
         folderOption.setDescription("The folder where the submission files will be saved");
         folderOption.setSelectionType(JFileChooser.DIRECTORIES_ONLY);
         submissionName = addStringOption("name", "Submission Name:", "BarSTool");
         submissionName.setDescription("Used as a base for naming the submission files");
-//        generateTranslationsOption = addBooleanOption("generateTranslation", "Export protein translations", true);
+
+        GeneticCode[] codes = GeneticCode.getGeneticCodesArray();
+        List<OptionValue> geneticCodes = new ArrayList<OptionValue>();
+        geneticCodes.add(NONE);
+        for (GeneticCode code : codes) {
+            geneticCodes.add(new OptionValue(code.getName(), code.getDescription()));
+        }
+        translationOption = addComboBoxOption("translation", "Translation:", geneticCodes, geneticCodes.get(6));
+
         addDivider("Fields");
         countryOption = addStringOption("country", "Country:", "French Polynesia");
+        countryOption.setDescription("The country of origin of DNA samples used");
         projectOption = addStringOption("project", "Project Name:", "Biocode");
-        projectOption.setDescription("a sequencing center's internal designation for a specific sequencing p roject. This field can be useful for grouping related traces.");
+        projectOption.setDescription("A sequencing center's internal designation for a specific sequencing project. This field can be useful for grouping related traces.");
         baseCallerOption = addStringOption("baseCaller", "Base Calling Program:", "");
-        baseCallerOption.setDescription("the base calling program. This field is free text. Program name, version numbers or dates are very useful. eg. phred-19980904e or abi-3.1");
-        addComboBoxOption(SEQUENCE_ID, "Sequence ID:", stringFields, stringFields.get(0));
-        addComboBoxOption(COLLECTED_BY, "Collected by:", stringFields, stringFields.get(0));
-        addComboBoxOption(COLLECTION_DATE, "Collection Date:", dateFields, dateFields.get(0));
-        addComboBoxOption(SPECIMEN_VOUCHER, "Specimen Voucher ID:", stringFields, stringFields.get(0));
-        addComboBoxOption(IDENTIFIED_BY, "Identified by:", stringFields, stringFields.get(0));
-        addComboBoxOption(NOTE, "Note:", stringFields, stringFields.get(0));
+        baseCallerOption.setDescription("The base calling program. This field is free text. Program name, version numbers or dates are very useful. eg. phred-19980904e or abi-3.1");
+        ComboBoxOption<OptionValue> sequenceIdOption = addComboBoxOption(SEQUENCE_ID, "Sequence ID:", stringFields, stringFields.get(0));
+        sequenceIdOption.setDescription("Identifies the same specimen in all the steps of a submission. Sequence_IDs must be unique within the set and may not contain spaces. ");
+        ComboBoxOption<OptionValue> collectedByOption = addComboBoxOption(COLLECTED_BY, "Collected by:", stringFields, stringFields.get(0));
+        collectedByOption.setDescription("Name of person who collected the sample");
+        ComboBoxOption<OptionValue> collectionDateOption = addComboBoxOption(COLLECTION_DATE, "Collection Date:", dateFields, dateFields.get(0));
+        collectionDateOption.setDescription("Date the specimen was collected");
+        ComboBoxOption<OptionValue> specimenVoucherOption = addComboBoxOption(SPECIMEN_VOUCHER, "Specimen Voucher ID:", stringFields, stringFields.get(0));
+        specimenVoucherOption.setDescription("An identifier of the individual or collection of the source organism and the place where it is currently stored, usually an institution");
+        ComboBoxOption<OptionValue> identifiedByOption = addComboBoxOption(IDENTIFIED_BY, "Identified by:", stringFields, stringFields.get(0));
+        identifiedByOption.setDescription("Name of the person or persons who identified by taxonomic name the organism from which the sequence was obtained");
+        ComboBoxOption<OptionValue> noteOption = addComboBoxOption(NOTE, "Note:", stringFieldsWithNone, stringFieldsWithNone.get(0));
+        noteOption.setDescription("Any additional information that you wish to provide about the sequence");
 
         latLongOption = addBooleanOption("latLong", "Include Lat-Long", true);
 
@@ -120,6 +141,23 @@ public class ExportForBarstoolOptions extends Options {
         }
         if (!folder.canWrite()) {
             return "The folder " + folder + " cannot be written to. Make sure you have sufficient permissions to access the folder.";
+        }
+        return null;
+    }
+
+    /**
+     *
+     * @return Genetic code to use for translation or null if shouldn't export translations
+     */
+    GeneticCode getGeneticCode() {
+        String geneticCodeName = translationOption.getValue().getName();
+        if (geneticCodeName.equals(NONE.getName())) {
+            return null;
+        }
+        for (GeneticCode geneticCode : GeneticCode.getGeneticCodes()) {
+            if (geneticCode.getName().equals(geneticCodeName)) {
+                return geneticCode;
+            }
         }
         return null;
     }
@@ -172,7 +210,10 @@ public class ExportForBarstoolOptions extends Options {
     List<Pair<String, String>> getSourceFields() {
         List<Pair<String,String>> sourceFields = new ArrayList<Pair<String, String>>();
         for (String sourceField : SOURCE_FIELDS) {
-            sourceFields.add(new Pair<String, String>(sourceField, getValueAsString(sourceField)));
+            String value = getValueAsString(sourceField);
+            if (!value.equals(NONE.getName())) {
+                sourceFields.add(new Pair<String, String>(sourceField, value));
+            }
         }
         return sourceFields;
     }
@@ -185,10 +226,6 @@ public class ExportForBarstoolOptions extends Options {
             return Collections.emptyList();
         }
     }
-
-//    boolean isGenerateTranslation() {
-//        return generateTranslationsOption.getValue();
-//    }
 
     public String getTracesFolderName() {
         return getSubmissionName() + "_traces";

@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.implementations.sequence.DefaultAminoAcidSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -15,6 +16,8 @@ import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
+import jebl.evolution.sequences.GeneticCode;
+import jebl.evolution.sequences.Utils;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -22,10 +25,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -62,7 +62,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] docs, ProgressListener progressListener, Options o) throws DocumentOperationException {
         ExportForBarstoolOptions options = (ExportForBarstoolOptions) o;
-        CompositeProgressListener progress = new CompositeProgressListener(progressListener, 5);
+        CompositeProgressListener progress = new CompositeProgressListener(progressListener, 6);
 
         Map<AnnotatedPluginDocument, String> contigDocumentsMap = getContigDocuments(docs);
         List<AnnotatedPluginDocument> contigDocuments = new ArrayList<AnnotatedPluginDocument>(contigDocumentsMap.keySet());
@@ -129,22 +129,24 @@ public class ExportForBarstoolOperation extends DocumentOperation {
         //todo check for existing files
 
         progress.beginSubtask("Exporting consensus sequences");
-        if (exportConsensusSequences(contigDocumentsMap, options, progress)) return null;
+        Map<AnnotatedPluginDocument, String> consensusMap = exportConsensusSequences(contigDocumentsMap, options, progress);
+        if (consensusMap == null) return null;
 
-        //todo export protein fasta?
+        progress.beginSubtask("Exporting protein translations");
+        if (exportTranslations(consensusMap, options, progress)) return null;
 
         try {
             progress.beginSubtask("Generating primer table");
             TabDelimitedExport.export(new File(options.getFolder(), options.getSubmissionName() + "_primers.txt"),
-                    new PrimerExportTableModel(contigDocuments, options));
+                    new PrimerExportTableModel(contigDocuments, options), progress);
 
             progress.beginSubtask("Generating source modifiers table");
             TabDelimitedExport.export(new File(options.getFolder(), options.getSubmissionName() + "_source.txt"),
-                    new SourceExportTableModel(contigDocuments, options));
+                    new SourceExportTableModel(contigDocuments, options), progress);
 
             progress.beginSubtask("Generating trace information table");
             TabDelimitedExport.export(new File(options.getFolder(), options.getSubmissionName() + "_traces.txt"),
-                    new TraceExportTableModel(traceDocsMap, options, chromatogramExportOperation, noReadDirectionValue));
+                    new TraceExportTableModel(traceDocsMap, options, chromatogramExportOperation, noReadDirectionValue), progress);
         } catch (IOException e) {
             throw new DocumentOperationException("Tab delimited export failed: " + e.getMessage(), e);
         }
@@ -205,10 +207,11 @@ public class ExportForBarstoolOperation extends DocumentOperation {
     /**
      * export fasta consensus sequences in format ">sequence_ID [organism=Genus species]"
      *
-     * @return true if canceled, false otherwise
+     * @return map of contig docs to consensus sequence or null if canceled
      */
-    private static boolean exportConsensusSequences(Map<AnnotatedPluginDocument, String> contigDocumentsMap, ExportForBarstoolOptions options, CompositeProgressListener progress) throws DocumentOperationException {
+    private static Map<AnnotatedPluginDocument, String> exportConsensusSequences(Map<AnnotatedPluginDocument, String> contigDocumentsMap, ExportForBarstoolOptions options, CompositeProgressListener progress) throws DocumentOperationException {
         List<AnnotatedPluginDocument> consensusDocs = new ArrayList<AnnotatedPluginDocument>();
+        Map<AnnotatedPluginDocument, String> consensusStrings = new HashMap<AnnotatedPluginDocument, String>();
         for (Map.Entry<AnnotatedPluginDocument, String> contigDocEntry : contigDocumentsMap.entrySet()) {
             AnnotatedPluginDocument contigDoc = contigDocEntry.getKey();
             AnnotatedPluginDocument consensusDoc;
@@ -232,8 +235,10 @@ public class ExportForBarstoolOperation extends DocumentOperation {
             consensusDoc.setFieldValue(DocumentField.DESCRIPTION_FIELD, "[organism=" + organism + "]");
             consensusDoc.save();
             consensusDocs.add(consensusDoc);
+
+            consensusStrings.put(contigDoc, ((SequenceDocument)consensusDoc.getDocument()).getSequenceString());
         }
-        if (progress.isCanceled()) return true;
+        if (progress.isCanceled()) return null;
         DocumentFileExporter fastaExporter = PluginUtilities.getDocumentFileExporter("fasta");
         if (fastaExporter == null) {
             throw new DocumentOperationException("FASTA exporter couldn't be loaded. Make sure the FASTA plugin is enabled");
@@ -245,7 +250,83 @@ public class ExportForBarstoolOperation extends DocumentOperation {
         } catch (IOException e) {
             throw new DocumentOperationException("Failed to export consensus sequences: " + e.getMessage(), e);
         }
+        return progress.isCanceled() ? null : consensusStrings;
+    }
+
+    /**
+     *
+     * @return true if canceled
+     */
+    private static boolean exportTranslations(Map<AnnotatedPluginDocument, String> consensusStringsMap, ExportForBarstoolOptions options, CompositeProgressListener progress) throws DocumentOperationException {
+        GeneticCode geneticCode = options.getGeneticCode();
+        if (geneticCode == null) {
+            return false;
+        }
+        List<AnnotatedPluginDocument> translationDocs = new ArrayList<AnnotatedPluginDocument>();
+        List<String> docsWithStopCodons = new ArrayList<String>();
+        for (Map.Entry<AnnotatedPluginDocument, String> consensusEntry : consensusStringsMap.entrySet()) {
+            AnnotatedPluginDocument contigDoc = consensusEntry.getKey();
+
+            String bestTranslation = null;
+            int leastStopCodons = Integer.MAX_VALUE;
+            for (TranslationFrame frame : TranslationFrame.values()) {
+                String consensus = consensusEntry.getValue();
+                if (frame.reverse) {
+                    consensus = Utils.reverseComplement(consensus);
+                }
+                consensus = consensus.substring(frame.frame - 1);
+                String translation = Utils.translate(consensus, geneticCode);
+                int stopCodons = translation.split("\\*").length - 1;
+                if (stopCodons < leastStopCodons) {
+                    leastStopCodons = stopCodons;
+                    bestTranslation = translation;
+                }
+            }
+
+            if (leastStopCodons > 0) {
+                docsWithStopCodons.add(contigDoc.getName());
+            }
+            DefaultAminoAcidSequence sequence = new DefaultAminoAcidSequence(options.getSequenceId(contigDoc), null, bestTranslation, new Date());
+            AnnotatedPluginDocument translationDoc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
+            translationDocs.add(translationDoc);
+        }
+        if (progress.isCanceled()) return true;
+        if (!docsWithStopCodons.isEmpty()) {
+            StringBuilder sb = new StringBuilder("No stop codon free translation could be found for the following sequences (using " + geneticCode.getDescription() + " genetic code):\n\n");
+            for (String docWithStopCodons : docsWithStopCodons) {
+                sb.append(docWithStopCodons).append("\n");
+            }
+            throw new DocumentOperationException(sb.toString());
+        }
+        DocumentFileExporter fastaExporter = PluginUtilities.getDocumentFileExporter("fasta");
+        if (fastaExporter == null) {
+            throw new DocumentOperationException("FASTA exporter couldn't be loaded. Make sure the FASTA plugin is enabled");
+        }
+        AnnotatedPluginDocument[] translationDocsArray = translationDocs.toArray(new AnnotatedPluginDocument[translationDocs.size()]);
+        Options fastaOptions = fastaExporter.getOptions(translationDocsArray);
+        try {
+            fastaExporter.export(new File(options.getFolder(), options.getSubmissionName() + "_translation.fasta"), translationDocsArray, progress, fastaOptions);
+        } catch (IOException e) {
+            throw new DocumentOperationException("Failed to export translations: " + e.getMessage(), e);
+        }
         return progress.isCanceled();
+    }
+
+    private enum TranslationFrame {
+        F1(1, false),
+        F2(2, false),
+        F3(3, false),
+        R1(1, true),
+        R2(2, true),
+        R3(3, true);
+
+        final int frame;
+        final boolean reverse;
+
+        private TranslationFrame(int frame, boolean reverse) {
+            this.frame = frame;
+            this.reverse = reverse;
+        }
     }
 
     @Override
