@@ -237,7 +237,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(isError) {
             element.addContent(new Element("isError").setText("true"));
         }
-        element.addContent(new Element("created").setText(MooreaLabBenchService.dateFormat.format(getCreated())));
+        synchronized (MooreaLabBenchService.dateFormat) {
+            element.addContent(new Element("created").setText(MooreaLabBenchService.dateFormat.format(getCreated())));
+        }
         element.addContent(new Element("position").setText(""+getPosition()));
         if(locationString != null) {
             element.addContent(new Element("wellLabel").setText(locationString));
@@ -278,7 +280,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             fimsSample = XMLSerializer.classFromXML(fimsElement, FimsSample.class);
         }
         try {
-            setCreated(MooreaLabBenchService.dateFormat.parse(element.getChildText("created")));
+            synchronized (MooreaLabBenchService.dateFormat) {
+                setCreated(MooreaLabBenchService.dateFormat.parse(element.getChildText("created")));
+            }
         } catch (ParseException e) {
             assert false : "Could not read the date "+element.getChildText("created");
             setCreated(new Date());

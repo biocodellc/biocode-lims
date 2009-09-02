@@ -312,13 +312,16 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
 
         public String getName() {
-            switch(reaction.getType()) {
-                case Extraction:
-                    return "Extraction Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
-                case PCR:
-                    return "PCR Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
-                case CycleSequencing:
-                    return "Cycle Sequencing Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
+            synchronized(MooreaLabBenchService.dateFormat) {
+                switch(reaction.getType()) {
+                    case Extraction:
+                        return "Extraction Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
+                    case PCR:
+                        return "PCR Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
+                    case CycleSequencing:
+                        return "Cycle Sequencing Reaction: "+MooreaLabBenchService.dateFormat.format(reaction.getCreated());
+
+                }
             }
             return "Unknown Reaction";
         }

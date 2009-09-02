@@ -60,7 +60,7 @@ public class MooreaLabBenchService extends DatabaseService {
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
 
-    public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);
+    public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
 
     private MooreaLabBenchService() {
     }
