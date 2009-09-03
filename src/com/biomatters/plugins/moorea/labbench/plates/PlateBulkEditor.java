@@ -419,7 +419,7 @@ public class PlateBulkEditor {
         public void valuesFromTextView() {
             String[] stringValues = valueArea.getText().split("\n");
             int index = 0;
-            if(direction == Direction.ACROSS_AND_DOWN) {
+            if(direction == Direction.DOWN_AND_ACROSS) {
                 for(int row = 0; row < plate.getRows(); row++) {
                     for(int col = 0; col < plate.getCols(); col++) {
                         String value;
