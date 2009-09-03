@@ -840,11 +840,21 @@ public class MooreaLabBenchService extends DatabaseService {
     }
 
     public List<Cocktail> getPCRCocktails() {
-        return PCRCocktails;
+        List<Cocktail> cocktailList = new ArrayList<Cocktail>();
+        cocktailList.add(new PCRCocktail("No Cocktail"));
+        if(PCRCocktails != null) {
+            cocktailList.addAll(PCRCocktails);
+        }
+        return cocktailList;
     }
 
     public List<Cocktail> getCycleSequencingCocktails() {
-        return cyclesequencingCocktails;
+        List<Cocktail> cocktailList = new ArrayList<Cocktail>();
+        cocktailList.add(new CycleSequencingCocktail("No Cocktail"));
+        if(cyclesequencingCocktails != null) {
+            cocktailList.addAll(cyclesequencingCocktails);
+        }
+        return cocktailList;
     }
 
     public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{

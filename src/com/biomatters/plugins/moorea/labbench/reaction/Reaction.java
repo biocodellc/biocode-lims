@@ -182,6 +182,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(isEmpty()) {
             return Collections.EMPTY_LIST;
         }
+        if("F5".equals(getLocationString())) {
+            System.out.println("This is it!");
+        }
         return displayableFields != null ? displayableFields : Collections.EMPTY_LIST;
     };
 

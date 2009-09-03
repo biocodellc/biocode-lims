@@ -22,6 +22,11 @@ public class CycleSequencingCocktail extends Cocktail{
         getOptions();
     }
 
+    public CycleSequencingCocktail(String name) {
+        this();
+        options.setValue("name", name);
+    }
+
     public CycleSequencingCocktail(ResultSet resultSet) throws SQLException{
         this();
         id = resultSet.getInt("id");

@@ -303,6 +303,9 @@ public class ReactionUtilities {
         Vector<DocumentField> availableFieldsVector = new Vector<DocumentField>();
         for(Reaction r : reactions) {//todo: may be slow
             List<DocumentField> displayableFields = r.getFieldsToDisplay();
+            if(displayableFields == null || displayableFields.size() == 0) {
+                displayableFields = r.getDefaultDisplayedFields();
+            }
             for(DocumentField df : displayableFields) {
                 if(!selectedFieldsVector.contains(df)) {
                     selectedFieldsVector.add(df);
