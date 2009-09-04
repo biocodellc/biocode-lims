@@ -105,7 +105,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         LIMSConnection limsConnection = MooreaLabBenchService.getInstance().getActiveLIMSConnection();
         IssueTracker issueTracker = new IssueTracker(isAutomated);
         FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
-        CompositeProgressListener progress = new CompositeProgressListener(progressListener, annotatedDocuments.length);
+        CompositeProgressListener progress = new CompositeProgressListener(progressListener, docsToMark.size());
         DocumentField tissueIdField = fimsConnection.getTissueSampleDocumentField();
         List<AssemblyResult> results = new ArrayList<AssemblyResult>();
         Map<Integer, AssemblyResult> workflowsWithResults = new HashMap<Integer, AssemblyResult>();
@@ -140,7 +140,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             String[] trims = getTrimParameters(annotatedDocument);
 
             String consensus = docsToMark.get(annotatedDocument);
-            if (consensus == null) {
+            if (consensus == null && SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
                 consensus = ((SequenceDocument) MooreaUtilities.getConsensusSequence(annotatedDocument, options.getConsensusOptions()).getDocument()).getSequenceString();
             }
             if (isPass && consensus == null) {
@@ -228,7 +228,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         progress.beginSubtask("Saving to LIMS");
         Connection connection = MooreaLabBenchService.getInstance().getActiveLIMSConnection().getConnection();
-        progress = new CompositeProgressListener(progress, annotatedDocuments.length);
+        progress = new CompositeProgressListener(progress, assemblyResults.size());
         if (progress.getRootProgressListener() instanceof ProgressFrame) {
             ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
         }

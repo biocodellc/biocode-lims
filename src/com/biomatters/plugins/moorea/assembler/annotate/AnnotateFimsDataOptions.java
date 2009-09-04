@@ -120,6 +120,9 @@ public class AnnotateFimsDataOptions extends Options {
             if (plateSpecimens == null) {
                 try {
                     plateSpecimens = MooreaLabBenchService.getInstance().getFimsSamplesForCycleSequencingPlate(getPlateName());
+                    if (plateSpecimens == null) {
+                        throw new DocumentOperationException("The cycle sequencing plate \"" + getPlateName() + "\" could not found in the LIMS. Please check the name is correct.");
+                    }
                 } catch (SQLException e) {
                     throw new DocumentOperationException("Failed to retrieve FIMS data for plate " + getPlateName());
                 }

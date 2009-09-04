@@ -198,7 +198,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                     if (i == alignment.getContigReferenceSequenceIndex()) continue;
-                    contigDocumentsMap.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString());
+                    contigDocumentsMap.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
                 }
             } else {
                 contigDocumentsMap.put(document, null);

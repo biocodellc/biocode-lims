@@ -142,6 +142,7 @@ public class MooreaFimsSample implements FimsSample {
 
             Calendar cal = Calendar.getInstance();
             cal.set(year, month, day, 0, 0, 0);
+            cal.set(Calendar.MILLISECOND, 0);
             return cal.getTime();
         }
         if("tissueId".equals(attributeName)) {
