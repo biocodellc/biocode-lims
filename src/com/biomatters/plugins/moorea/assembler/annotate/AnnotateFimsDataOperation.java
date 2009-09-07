@@ -75,14 +75,32 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
                 annotatedDocument.setFieldValue(documentField, tissue.getFimsAttributeValue(documentField.getCode()));
             }
             StringBuilder taxonomy = new StringBuilder();
+            String genus = null;
+            String species = null;
             for (DocumentField documentField : tissue.getTaxonomyAttributes()) {
                 Object taxon = tissue.getFimsAttributeValue(documentField.getCode());
+                if (documentField.getName().equalsIgnoreCase("genus")) {
+                    genus = (String)taxon;
+                }
+                if (documentField.getName().toLowerCase().contains("speci")) {
+                    species = (String)taxon;
+                    break;
+                }
                 if (taxon != null) {
-                    taxonomy.append(taxon.toString()).append("; ");
+                    taxonomy.append(taxon).append("; ");
                 }
             }
             if (taxonomy.length() > 0) {
                 annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy.substring(0, taxonomy.length() - 2));
+            }
+            Object organism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
+            if (organism != null && !((String)organism).contains(" ")) {
+                //the database seems to have cases where just the Genus has been entered in the organism column eventhough the species has been entered in the taxonomy columns -> Throw that crap away
+                organism = null;
+                annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
+            }
+            if (organism == null && genus != null && species != null) {
+                annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + " " + species);
             }
             annotatedDocument.save();
         }
