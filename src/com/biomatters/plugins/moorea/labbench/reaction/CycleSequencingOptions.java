@@ -178,6 +178,8 @@ public class CycleSequencingOptions extends ReactionOptions {
         PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer");
         addCustomOption(primerOption);
 
+        OptionValue[] directionValues = new OptionValue[] {new OptionValue("forward", "Forward"), new OptionValue("reverse", "Reverse")};
+        addComboBoxOption("direction", "Direction", directionValues, directionValues[0]);
 
 
 //        IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);

@@ -65,6 +65,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         String primerName = r.getString("cyclesequencing.primerName");
         String primerSequence = r.getString("cyclesequencing.primerSequence");
         primerOption.setAndAddValue(primerName, primerSequence);
+        options.setValue("direction", r.getString("direction"));
         //options.setValue("prAmount", r.getInt("cyclesequencing.primerAmount"));
         options.setValue("notes", r.getString("cyclesequencing.notes"));
         options.setValue("runStatus", r.getString("cyclesequencing.progress"));

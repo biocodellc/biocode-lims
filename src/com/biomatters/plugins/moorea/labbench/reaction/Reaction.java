@@ -592,8 +592,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 updateStatement.close();
                 break;
             case CycleSequencing:
-                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cyclesequencing.date WHERE id=?";
+                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cyclesequencing.date WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -606,7 +606,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(14, reaction.getId());
+                            statement.setInt(15, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -620,15 +620,16 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         Options.OptionValue primerOptionValue = (Options.OptionValue) value;
                         statement.setString(1, primerOptionValue.getLabel());
                         statement.setString(2, primerOptionValue.getDescription());
+                        statement.setString(3, options.getValueAsString("direction"));
                         //statement.setInt(3, (Integer)options.getValue("prAmount"));
                         if(reaction.getWorkflow() != null) {
-                            statement.setInt(3, reaction.getWorkflow().getId());
+                            statement.setInt(4, reaction.getWorkflow().getId());
                         }
                         else {
-                            statement.setObject(3, null);
+                            statement.setObject(4, null);
                         }
-                        statement.setInt(4, reaction.getPlateId());
-                        statement.setInt(5, reaction.getPosition());
+                        statement.setInt(5, reaction.getPlateId());
+                        statement.setInt(6, reaction.getPosition());
                         int cocktailId = -1;
                         Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
                         try {
@@ -640,18 +641,18 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(cocktailId < 0) {
                             throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
-                        statement.setInt(6, cocktailId);
-                        statement.setString(7, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        statement.setInt(7, cocktailId);
+                        statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
                         if(reaction.getThermocycle() != null) {
-                            statement.setInt(8, reaction.getThermocycle().getId());
+                            statement.setInt(9, reaction.getThermocycle().getId());
                         }
                         else {
-                            statement.setInt(8, -1);
+                            statement.setInt(9, -1);
                         }
-                        statement.setBoolean(9, (Boolean)options.getValue("cleanupPerformed"));
-                        statement.setString(10, options.getValueAsString("cleanupMethod"));
-                        statement.setString(11, reaction.getExtractionId());
-                        statement.setString(12, options.getValueAsString("notes"));
+                        statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
+                        statement.setString(11, options.getValueAsString("cleanupMethod"));
+                        statement.setString(12, reaction.getExtractionId());
+                        statement.setString(13, options.getValueAsString("notes"));
                         List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
                         String sequenceString = "";
                         if(sequences != null && sequences.size() > 0) {
@@ -667,7 +668,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                             }
                         }
 
-                        statement.setString(13, sequenceString);
+                        statement.setString(14, sequenceString);
                         statement.execute();
                     }
                 }
