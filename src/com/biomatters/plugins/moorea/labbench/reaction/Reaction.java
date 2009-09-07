@@ -182,9 +182,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(isEmpty()) {
             return Collections.EMPTY_LIST;
         }
-        if("F5".equals(getLocationString())) {
-            System.out.println("This is it!");
-        }
         return displayableFields != null ? displayableFields : Collections.EMPTY_LIST;
     };
 
@@ -574,7 +571,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                             throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
                         }
                         if(cocktailId < 0) {
-                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                            throw new SQLException("The reaction " + reaction.getPosition() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
                         statement.setInt(6, cocktailId);
                         statement.setString(7, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
@@ -638,10 +635,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                             cocktailId = Integer.parseInt(cocktailValue.getName());
                         }
                         catch(NumberFormatException ex) {
-                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
+                            throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
                         }
                         if(cocktailId < 0) {
-                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                            throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
                         statement.setInt(6, cocktailId);
                         statement.setString(7, ((Options.OptionValue)options.getValue("runStatus")).getLabel());

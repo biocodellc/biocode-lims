@@ -131,7 +131,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 continue;
             }
             Cocktail c = r.getCocktail();
-            if(c != null) {
+            if(c != null && c.getId() > 0) {
                 int count = 1;
                 Integer existing = cocktailCount.get(c);
                 if(existing != null) {

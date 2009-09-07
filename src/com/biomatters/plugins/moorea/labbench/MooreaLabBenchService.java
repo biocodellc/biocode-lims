@@ -841,7 +841,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public List<Cocktail> getPCRCocktails() {
         List<Cocktail> cocktailList = new ArrayList<Cocktail>();
-        cocktailList.add(new PCRCocktail("No Cocktail"));
+        //cocktailList.add(new PCRCocktail("No Cocktail"));
         if(PCRCocktails != null) {
             cocktailList.addAll(PCRCocktails);
         }
@@ -850,7 +850,7 @@ public class MooreaLabBenchService extends DatabaseService {
 
     public List<Cocktail> getCycleSequencingCocktails() {
         List<Cocktail> cocktailList = new ArrayList<Cocktail>();
-        cocktailList.add(new CycleSequencingCocktail("No Cocktail"));
+        //cocktailList.add(new CycleSequencingCocktail("No Cocktail"));
         if(cyclesequencingCocktails != null) {
             cocktailList.addAll(cyclesequencingCocktails);
         }
