@@ -48,7 +48,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     private Options init(ResultSet r) throws SQLException {
         setPlateId(r.getInt("cyclesequencing.plate"));
         setPosition(r.getInt("cyclesequencing.location"));
-        setCreated(r.getDate("cyclesequencing.date"));
+        setCreated(r.getTimestamp("cyclesequencing.date"));
         setId(r.getInt("cyclesequencing.id"));
         Options options = getOptions();
         options.setValue("extractionId", r.getString("cyclesequencing.extractionId"));

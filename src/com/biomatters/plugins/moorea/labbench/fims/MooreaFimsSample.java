@@ -7,6 +7,7 @@ import org.jdom.Element;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -93,8 +94,8 @@ public class MooreaFimsSample implements FimsSample {
             value = resultSet.getString(code);
         }
         else if(valueType.equals(Date.class)) {
-            java.sql.Date date = resultSet.getDate(code);
-            value = new Date(date.getTime());
+            Timestamp timestamp = resultSet.getTimestamp(code);
+            value = new Date(timestamp.getTime());
         }
         else {
             throw new IllegalArgumentException("The class "+valueType+" is not supported!");

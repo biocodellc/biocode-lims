@@ -69,7 +69,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         }
         //options.setValue("revPrAmount", r.getInt("pcr.revPrAmount"));
 
-        setCreated(r.getDate("pcr.date"));
+        setCreated(r.getTimestamp("pcr.date"));
         setPosition(r.getInt("pcr.location"));
         options.setValue("cocktail", r.getString("pcr.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("pcr.cleanupPerformed"));

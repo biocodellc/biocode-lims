@@ -15,11 +15,11 @@ import com.biomatters.plugins.moorea.labbench.ConnectionException;
 
 import java.util.*;
 import java.util.List;
+import java.util.Date;
 import java.awt.*;
-import java.sql.SQLException;
-import java.sql.ResultSet;
-import java.sql.PreparedStatement;
-import java.sql.Connection;
+import java.sql.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * @author Steven Stones-Havas
@@ -34,12 +34,11 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     public ExtractionReaction(ResultSet r) throws SQLException{
         ReactionOptions options = getOptions();
         init(r, options);
-        System.out.println(getWorkflow());
     }
 
     private void init(ResultSet r, Options options) throws SQLException {
         setId(r.getInt("extraction.id"));
-        setCreated(r.getDate("extraction.date"));
+        setCreated(r.getTimestamp("extraction.date"));
         options.setValue("sampleId", r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
         options.setValue("extractionMethod", r.getString("extraction.method"));
