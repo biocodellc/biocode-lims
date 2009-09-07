@@ -1,22 +1,18 @@
 package com.biomatters.plugins.moorea.assembler.annotate;
 
-import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
-import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.sql.SQLException;
 
 /**
  * @author Richard
@@ -37,7 +33,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
         return new DocumentSelectionSignature[] {
-                new DocumentSelectionSignature(PluginDocument.class, 1, Integer.MAX_VALUE)
+                new DocumentSelectionSignature(NucleotideSequenceDocument.class, 1, Integer.MAX_VALUE)
         };
     }
 
@@ -46,7 +42,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         if (!MooreaLabBenchService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(MooreaUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        return new AnnotateFimsDataOptions();
+        return new AnnotateFimsDataOptions(documents);
     }
 
     @Override
@@ -57,24 +53,18 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
         AnnotateFimsDataOptions options = (AnnotateFimsDataOptions) o;
-        MooreaLabBenchService mooreaLabBenchService = MooreaLabBenchService.getInstance();
-        FIMSConnection activeFIMSConnection = mooreaLabBenchService.getActiveFIMSConnection();
-        CompositeProgressListener compositeProgress = new CompositeProgressListener(progressListener, annotatedDocuments.length);
-        if (compositeProgress.getRootProgressListener() instanceof ProgressFrame) {
-            ((ProgressFrame)compositeProgress.getRootProgressListener()).setCancelButtonLabel("Stop");
-        }
+        progressListener.setIndeterminateProgress();
+        progressListener.setMessage("Accessing FIMS...");
         List<String> failBlog = new ArrayList<String>();
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-            compositeProgress.beginSubtask();
-            if (compositeProgress.isCanceled()) {
-                break;
-            }
-
             FimsSample tissue;
             try {
-                tissue = options.getTissueRecord(annotatedDocument, activeFIMSConnection);
+                tissue = options.getTissueRecord(annotatedDocument);
             } catch (ConnectionException e) {
                 throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
+            }
+            if (progressListener.isCanceled()) {
+                break;
             }
             if (tissue == null) {
                 failBlog.add(annotatedDocument.getName());

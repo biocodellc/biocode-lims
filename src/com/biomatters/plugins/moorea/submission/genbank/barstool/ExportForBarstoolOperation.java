@@ -14,7 +14,6 @@ import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.assembler.BatchChromatogramExportOperation;
-import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import jebl.evolution.sequences.GeneticCode;
 import jebl.evolution.sequences.Utils;
@@ -66,7 +65,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
 
         Map<AnnotatedPluginDocument, String> contigDocumentsMap = getContigDocuments(docs);
         List<AnnotatedPluginDocument> contigDocuments = new ArrayList<AnnotatedPluginDocument>(contigDocumentsMap.keySet());
-        String noReadDirectionValue = getNoReadDirectionValue(contigDocumentsMap);
+        String noReadDirectionValue = MooreaUtilities.getNoReadDirectionValue(contigDocumentsMap.keySet()).getBarstoolString();
 
         File tracesFolder = new File(options.getFolder(), options.getTracesFolderName());
         if (!tracesFolder.exists()) {
@@ -155,40 +154,6 @@ public class ExportForBarstoolOperation extends DocumentOperation {
         }
         //todo clean up on fail/cancel
         return null;
-    }
-
-    private static String getNoReadDirectionValue(Map<AnnotatedPluginDocument, String> contigDocumentsMap) throws DocumentOperationException {
-        String noReadDirectionValue = "N";
-        for (AnnotatedPluginDocument contigDoc : contigDocumentsMap.keySet()) {
-            SequenceAlignmentDocument contig = (SequenceAlignmentDocument) contigDoc.getDocument();
-            for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
-                if (i == contig.getContigReferenceSequenceIndex()) continue;
-                AnnotatedPluginDocument traceDoc = contig.getReferencedDocument(i);
-                if (traceDoc == null) {
-                    throw new DocumentOperationException("The contig " + contigDoc.getName() + " is missing a reference for sequence " + contig.getSequence(i).getName() + ".");
-                }
-                Object isForwardValue = traceDoc.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
-                if (isForwardValue == null) {
-                    continue;
-                }
-                if ((Boolean)isForwardValue) {
-                    if (noReadDirectionValue.equals("F")) {
-                        noReadDirectionValue = "N"; //both forward and reverse marked
-                        break;
-                    } else {
-                        noReadDirectionValue = "R";
-                    }
-                } else {
-                    if (noReadDirectionValue.equals("R")) {
-                        noReadDirectionValue = "N"; //both forward and reverse marked
-                        break;
-                    } else {
-                        noReadDirectionValue = "F";
-                    }
-                }
-            }
-        }
-        return noReadDirectionValue;
     }
 
     private static Map<AnnotatedPluginDocument, String> getContigDocuments(AnnotatedPluginDocument[] docs) throws DocumentOperationException {

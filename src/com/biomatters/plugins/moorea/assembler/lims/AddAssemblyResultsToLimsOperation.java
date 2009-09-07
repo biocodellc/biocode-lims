@@ -149,6 +149,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             List<NucleotideSequenceDocument> chromatograms = new ArrayList<NucleotideSequenceDocument>();
             CycleSequencingReaction cycleSequencing = (CycleSequencingReaction) workflow.getMostRecentReaction(Reaction.Type.CycleSequencing);
+            //todo WRONG! need to get the right plate (fwd or rev), not just the most recent one.
             if (cycleSequencing == null) {
                 issueTracker.setIssue(annotatedDocument, "No cycle sequencing event found in LIMS");
                 continue;

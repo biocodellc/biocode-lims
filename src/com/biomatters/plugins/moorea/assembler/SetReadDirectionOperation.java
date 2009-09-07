@@ -38,6 +38,7 @@ public class SetReadDirectionOperation extends DocumentOperation {
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments,
                                                           ProgressListener progressListener, Options options) throws DocumentOperationException {
         progressListener.setIndeterminateProgress();
+        progressListener.setMessage("Setting read direction...");
         boolean isForward = options.getValue("readDirection").equals(FORWARD_OPTION_VALUE);
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
             if (progressListener.isCanceled()) {

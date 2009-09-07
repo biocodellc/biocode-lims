@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperation;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
+import com.biomatters.plugins.moorea.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
 import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.WorkflowDocument;
@@ -18,6 +19,9 @@ import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
 import jebl.util.ProgressListener;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -81,6 +85,69 @@ public class MooreaUtilities {
         return mostRecent;
     }
 
+    public enum ReadDirection {
+        NONE("N"), FORWARD("F"), REVERSE("R");
+
+        private final String barstoolString;
+
+        ReadDirection(String barstoolString) {
+            this.barstoolString = barstoolString;
+        }
+
+        public String getBarstoolString() {
+            return barstoolString;
+        }
+    }
+
+    public static ReadDirection getNoReadDirectionValue(Collection<AnnotatedPluginDocument> documents) throws DocumentOperationException {
+        ReadDirection noReadDirectionValue = ReadDirection.NONE;
+        for (AnnotatedPluginDocument document : documents) {
+            List<AnnotatedPluginDocument> traceDocs;
+            if (SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass())) {
+                traceDocs = new ArrayList<AnnotatedPluginDocument>();
+                SequenceAlignmentDocument contig = (SequenceAlignmentDocument) document.getDocument();
+                for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
+                    if (i == contig.getContigReferenceSequenceIndex()) continue;
+                    AnnotatedPluginDocument traceDoc = contig.getReferencedDocument(i);
+                    if (traceDoc == null) {
+                        throw new DocumentOperationException("The contig " + document.getName() + " is missing a reference for sequence " + contig.getSequence(i).getName() + ".");
+                    }
+                    traceDocs.add(traceDoc);
+                }
+            } else {
+                traceDocs = Collections.singletonList(document);
+            }
+            boolean bothFound = false;
+            for (AnnotatedPluginDocument traceDoc : traceDocs) {
+                Object isForwardValue = traceDoc.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
+                if (isForwardValue == null) {
+                    continue;
+                }
+                if ((Boolean)isForwardValue) {
+                    if (noReadDirectionValue == ReadDirection.FORWARD) {
+                        noReadDirectionValue = ReadDirection.NONE;
+                        bothFound = true;
+                        break;
+                    } else {
+                        noReadDirectionValue = ReadDirection.REVERSE;
+                    }
+                } else {
+                    if (noReadDirectionValue == ReadDirection.REVERSE) {
+                        noReadDirectionValue = ReadDirection.NONE;
+                        bothFound = true;
+                        break;
+                    } else {
+                        noReadDirectionValue = ReadDirection.FORWARD;
+                    }
+                }
+            }
+            if (bothFound) {
+                break;
+            }
+        }
+        return noReadDirectionValue;
+    }
+
     public static final class Well {
         public final char letter;
         public final int number;
@@ -98,6 +165,7 @@ public class MooreaUtilities {
             Well well = (Well) o;
 
             if (letter != well.letter) return false;
+            //noinspection RedundantIfStatement
             if (number != well.number) return false;
 
             return true;
