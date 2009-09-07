@@ -37,8 +37,8 @@ public class BiocodeTaxon implements XMLSerializable {
         SUBTRIBE,
         GENUS,
         SUBGENUS,
-        SPECIES,
-        SUBSPECIES
+//        SPECIES,
+//        SUBSPECIES
     }
 
     public BiocodeTaxon(Element root) {

@@ -6,11 +6,11 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.types.TaxonomyDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaPlugin;
+import com.biomatters.plugins.moorea.MooreaUtilities;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -36,7 +36,6 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
         return new DocumentSelectionSignature[] {
-                new DocumentSelectionSignature(NucleotideSequenceDocument.class, 1, Integer.MAX_VALUE),
                 new DocumentSelectionSignature(SequenceAlignmentDocument.class, 1, Integer.MAX_VALUE)
         };
     }
@@ -47,13 +46,14 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     }
 
     @Override
-    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
+    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocs, ProgressListener progressListener, Options o) throws DocumentOperationException {
         VerifyTaxonomyOptions options = (VerifyTaxonomyOptions) o;
-        List<AnnotatedPluginDocument> queries = options.getQueries(annotatedDocuments);
+        Map<AnnotatedPluginDocument, String> contigMap = MooreaUtilities.getContigDocuments(annotatedDocs);
+        List<AnnotatedPluginDocument> queries = options.getQueries(contigMap);
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.2, 0.8);
         progress.beginSubtask("Retrieving full taxonomies");
         progress.setIndeterminateProgress();
-        List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> annotatedDocsWithTaxons = fillInTaxonomyFromNcbi(annotatedDocuments, progress);
+        List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> annotatedDocsWithTaxons = fillInTaxonomyFromNcbi(contigMap.keySet(), progress);
         if (progress.isCanceled()) return null;
         DatabaseService database = options.getDatabase();
         progress.beginSubtask();
@@ -69,14 +69,14 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
 
     private static final Map<String, BiocodeTaxon> TAXON_CACHE = new HashMap<String, BiocodeTaxon>();
 
-    private static List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> fillInTaxonomyFromNcbi(AnnotatedPluginDocument[] queries, CompositeProgressListener progress) throws DocumentOperationException {
+    private static List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> fillInTaxonomyFromNcbi(Set<AnnotatedPluginDocument> contigs, CompositeProgressListener progress) throws DocumentOperationException {
         GeneiousService taxonomyService = PluginUtilities.getGeneiousService("NCBI_taxonomy");
         if (!(taxonomyService instanceof DatabaseService)) {
             throw new DocumentOperationException("Could not find NCBI Taxonomy service. Make sure the NCBI Plugin is enabled.");
         }
         DatabaseService taxonomyDatabase = (DatabaseService) taxonomyService;
         List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> taxons = new ArrayList<Pair<AnnotatedPluginDocument, BiocodeTaxon>>();
-        for (AnnotatedPluginDocument query : queries) {
+        for (AnnotatedPluginDocument query : contigs) {
             if (progress.isCanceled()) return null;
             Object taxonomyObject = query.getFieldValue(DocumentField.TAXONOMY_FIELD);
             if (taxonomyObject == null) {

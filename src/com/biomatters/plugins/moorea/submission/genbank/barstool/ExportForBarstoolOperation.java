@@ -63,7 +63,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
         ExportForBarstoolOptions options = (ExportForBarstoolOptions) o;
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 6);
 
-        Map<AnnotatedPluginDocument, String> contigDocumentsMap = getContigDocuments(docs);
+        Map<AnnotatedPluginDocument, String> contigDocumentsMap = MooreaUtilities.getContigDocuments(docs);
         List<AnnotatedPluginDocument> contigDocuments = new ArrayList<AnnotatedPluginDocument>(contigDocumentsMap.keySet());
         String noReadDirectionValue = MooreaUtilities.getNoReadDirectionValue(contigDocumentsMap.keySet()).getBarstoolString();
 
@@ -154,22 +154,6 @@ public class ExportForBarstoolOperation extends DocumentOperation {
         }
         //todo clean up on fail/cancel
         return null;
-    }
-
-    private static Map<AnnotatedPluginDocument, String> getContigDocuments(AnnotatedPluginDocument[] docs) throws DocumentOperationException {
-        Map<AnnotatedPluginDocument, String> contigDocumentsMap = new HashMap<AnnotatedPluginDocument, String>();
-        for (AnnotatedPluginDocument document : docs) {
-            if (MooreaUtilities.isAlignmentOfContigs(document)) {
-                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
-                for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
-                    if (i == alignment.getContigReferenceSequenceIndex()) continue;
-                    contigDocumentsMap.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
-                }
-            } else {
-                contigDocumentsMap.put(document, null);
-            }
-        }
-        return contigDocumentsMap;
     }
 
     /**

@@ -19,10 +19,7 @@ import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
 import jebl.util.ProgressListener;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Richard
@@ -83,6 +80,28 @@ public class MooreaUtilities {
             throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
         }
         return mostRecent;
+    }
+
+    /**
+     *
+     * @param docs any mixture of contigs and alignments referencing contigs
+     * @return all contigs in the selected documents (referenced or otherwise) mapped to the consensus sequence that should be used for each or null if a consensus should be generated
+     * @throws DocumentOperationException
+     */
+    public static Map<AnnotatedPluginDocument, String> getContigDocuments(AnnotatedPluginDocument[] docs) throws DocumentOperationException {
+        Map<AnnotatedPluginDocument, String> contigDocumentsMap = new HashMap<AnnotatedPluginDocument, String>();
+        for (AnnotatedPluginDocument document : docs) {
+            if (isAlignmentOfContigs(document)) {
+                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
+                for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+                    if (i == alignment.getContigReferenceSequenceIndex()) continue;
+                    contigDocumentsMap.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
+                }
+            } else {
+                contigDocumentsMap.put(document, null);
+            }
+        }
+        return contigDocumentsMap;
     }
 
     public enum ReadDirection {

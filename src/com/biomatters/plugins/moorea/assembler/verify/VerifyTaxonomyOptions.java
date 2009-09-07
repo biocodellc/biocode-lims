@@ -3,13 +3,17 @@ package com.biomatters.plugins.moorea.assembler.verify;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseService;
 import com.biomatters.geneious.publicapi.databaseservice.SequenceDatabaseSuperService;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import jebl.util.ProgressListener;
 import org.virion.jam.util.SimpleListener;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Richard
@@ -84,29 +88,37 @@ public class VerifyTaxonomyOptions extends Options {
         programOption.addChangeListener(programListener);
         programListener.objectChanged();
 
-        boolean isAlignments = SequenceAlignmentDocument.class.isAssignableFrom(documents[0].getDocumentClass());
-        if (isAlignments) {
+        boolean contigSelected = false;
+        for (AnnotatedPluginDocument doc : documents) {
+            if (!MooreaUtilities.isAlignmentOfContigs(doc)) {
+                contigSelected = true;
+                break;
+            }
+        }
+        if (contigSelected) {
             //todo check sequence type
             Options consensusOptions = MooreaUtilities.getConsensusOptions(documents);
             if (consensusOptions == null) {
-                throw new DocumentOperationException("The consensus plugin must be installed to be able to verify");
+                throw new DocumentOperationException("The consensus plugin must be installed to be able to add assemblies to LIMS");
             }
+            consensusOptions.setValue("removeGaps", true);
             addChildOptions("consensus", "Consensus", null, consensusOptions);
         }
     }
 
-    public List<AnnotatedPluginDocument> getQueries(AnnotatedPluginDocument[] annotatedDocuments) throws DocumentOperationException {
-        List<AnnotatedPluginDocument> queries;
-        if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocuments[0].getDocumentClass())) {
-            Options consensusOptions = getChildOptions().get("consensus");
-            DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
-            queries = consensusOperation.performOperation(annotatedDocuments, ProgressListener.EMPTY, consensusOptions);
-            for (int i = 0; i < queries.size(); i++) {
-                //we don't want " consensus sequence" appended to every query doc
-                queries.get(i).setName(annotatedDocuments[i].getName());
+    public List<AnnotatedPluginDocument> getQueries(Map<AnnotatedPluginDocument, String> contigMap) throws DocumentOperationException {
+        List<AnnotatedPluginDocument> queries = new ArrayList<AnnotatedPluginDocument>();
+        Options consensusOptions = getChildOptions().get("consensus");
+        DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
+
+        for (Map.Entry<AnnotatedPluginDocument, String> contigEntry : contigMap.entrySet()) {
+            if (contigEntry.getValue() != null) {
+                queries.add(DocumentUtilities.createAnnotatedPluginDocument(new DefaultNucleotideSequence(contigEntry.getKey().getName(), contigEntry.getValue())));
+            } else {
+                AnnotatedPluginDocument query = consensusOperation.performOperation(new AnnotatedPluginDocument[]{contigEntry.getKey()}, ProgressListener.EMPTY, consensusOptions).get(0);
+                query.setName(contigEntry.getKey().getName());
+                queries.add(query);
             }
-        } else {
-            queries = Arrays.asList(annotatedDocuments);
         }
         return queries;
     }
