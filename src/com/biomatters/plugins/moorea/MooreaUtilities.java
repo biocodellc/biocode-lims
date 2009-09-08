@@ -3,6 +3,7 @@ package com.biomatters.plugins.moorea;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
@@ -29,6 +30,9 @@ public class MooreaUtilities {
 
     public static final String NOT_CONNECTED_ERROR_MESSAGE = "<html><b>You must connect to the lab bench service first.</b><br><br>" +
             "To connect, right-click on the Moorea Biocode service in the Sources panel to the left.";
+
+    public static final DocumentField SEQUENCING_PLATE_FIELD = DocumentField.createStringField("Sequencing Plate", "Name of the cycle sequencing plate in the LIMS that this read was created from", "sequencingPlateName", false, false);
+    public static final DocumentField SEQUENCING_WELL_FIELD = DocumentField.createStringField("Sequencing Well", "Well location on the cycle sequencing plate in the LIMS that this read was created from", "sequencingPlateWell", false, false);
 
     public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
         DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");

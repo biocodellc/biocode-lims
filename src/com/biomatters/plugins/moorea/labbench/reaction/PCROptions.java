@@ -145,12 +145,8 @@ public class PCROptions extends ReactionOptions {
         addStringOption("workflowId", "Workflow ID", "");
 
 
-        OptionValue[] passedValues = new OptionValue[] {
-                new OptionValue("not run", "not run"),
-                new OptionValue("passed", "passed"),
-                new OptionValue("failed", "failed"),
-        };
-        addComboBoxOption("runStatus", "Reaction state", passedValues, passedValues[0]);
+        OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, PASSED_VALUE, FAILED_VALUE };
+        addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
         addLabel("");
         PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Forward Primer");

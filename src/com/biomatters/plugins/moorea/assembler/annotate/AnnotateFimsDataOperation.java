@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.ConnectionException;
-import com.biomatters.plugins.moorea.labbench.FimsSample;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import jebl.util.ProgressListener;
 
@@ -28,7 +27,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
     }
 
     public String getHelp() {
-        return "Select one or more sequences or assemblies to attempt to annotate them with data from the FIMS (Field Information Management System).";
+        return "Select one or more sequencing reads to attempt to annotate them with data from the FIMS (Field Information Management System).";
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
@@ -57,28 +56,30 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         progressListener.setMessage("Accessing FIMS...");
         List<String> failBlog = new ArrayList<String>();
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-            FimsSample tissue;
+            AnnotateFimsDataOptions.FimsData fimsData;
             try {
-                tissue = options.getTissueRecord(annotatedDocument);
+                fimsData = options.getFimsData(annotatedDocument);
             } catch (ConnectionException e) {
                 throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
             }
             if (progressListener.isCanceled()) {
                 break;
             }
-            if (tissue == null) {
+            if (fimsData.fimsSample == null) {
                 failBlog.add(annotatedDocument.getName());
                 continue;
             }
 
-            for (DocumentField documentField : tissue.getFimsAttributes()) {
-                annotatedDocument.setFieldValue(documentField, tissue.getFimsAttributeValue(documentField.getCode()));
+            for (DocumentField documentField : fimsData.fimsSample.getFimsAttributes()) {
+                annotatedDocument.setFieldValue(documentField, fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
             }
+            annotatedDocument.setFieldValue(MooreaUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
+            annotatedDocument.setFieldValue(MooreaUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
             StringBuilder taxonomy = new StringBuilder();
             String genus = null;
             String species = null;
-            for (DocumentField documentField : tissue.getTaxonomyAttributes()) {
-                Object taxon = tissue.getFimsAttributeValue(documentField.getCode());
+            for (DocumentField documentField : fimsData.fimsSample.getTaxonomyAttributes()) {
+                Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
                 if (documentField.getName().equalsIgnoreCase("genus")) {
                     genus = (String)taxon;
                 }

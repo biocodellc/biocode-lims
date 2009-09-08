@@ -1,7 +1,7 @@
 package com.biomatters.plugins.moorea.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import org.jdom.Element;
 
 /**
@@ -11,6 +11,12 @@ import org.jdom.Element;
  *          Created on 14/07/2009 7:15:35 PM
  */
 public abstract class ReactionOptions extends Options {
+
+    public static final String RUN_STATUS = "runStatus";
+    public static final OptionValue NOT_RUN_VALUE = new OptionValue("not run", "not run");
+    public static final OptionValue PASSED_VALUE = new OptionValue("passed", "passed");
+    public static final OptionValue FAILED_VALUE = new OptionValue("failed", "failed");
+
     public ReactionOptions() {
     }
 

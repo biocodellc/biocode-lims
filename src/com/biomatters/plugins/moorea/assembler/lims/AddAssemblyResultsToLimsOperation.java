@@ -2,6 +2,7 @@ package com.biomatters.plugins.moorea.assembler.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
@@ -13,11 +14,13 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.moorea.MooreaPlugin;
 import com.biomatters.plugins.moorea.MooreaUtilities;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
-import com.biomatters.plugins.moorea.labbench.WorkflowDocument;
-import com.biomatters.plugins.moorea.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.moorea.labbench.PlateDocument;
+import com.biomatters.plugins.moorea.labbench.Workflow;
 import com.biomatters.plugins.moorea.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.moorea.labbench.plates.Plate;
 import com.biomatters.plugins.moorea.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.moorea.labbench.reaction.Reaction;
+import com.biomatters.plugins.moorea.labbench.reaction.ReactionOptions;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -25,10 +28,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Richard
@@ -51,7 +51,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
     public String getHelp() {
-        return "Select one or more assemblies or consensus sequences to mark them as " + (isPass ? "passed" : "failed") + " on the relevant workflows in " +
+        return "Select one or more sequences, contigs or alignments of contigs to mark them as " + (isPass ? "passed" : "failed") + " on the relevant workflows in " +
                 "the LIMS (labratory information management system).";
     }
 
@@ -102,11 +102,10 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
         }
 
+        Map<String, Plate> sequencingPlateCache = new HashMap<String, Plate>();
         LIMSConnection limsConnection = MooreaLabBenchService.getInstance().getActiveLIMSConnection();
         IssueTracker issueTracker = new IssueTracker(isAutomated);
-        FIMSConnection fimsConnection = MooreaLabBenchService.getInstance().getActiveFIMSConnection();
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, docsToMark.size());
-        DocumentField tissueIdField = fimsConnection.getTissueSampleDocumentField();
         List<AssemblyResult> results = new ArrayList<AssemblyResult>();
         Map<Integer, AssemblyResult> workflowsWithResults = new HashMap<Integer, AssemblyResult>();
         for (AnnotatedPluginDocument annotatedDocument : docsToMark.keySet()) {
@@ -115,23 +114,13 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 break;
             }
 
-            Object tissueId = annotatedDocument.getFieldValue(tissueIdField);
-            if (tissueId == null) {
-                issueTracker.setIssue(annotatedDocument, "FIMS data not annotated on document");
-                continue;
-            }
+            AssemblyResult assemblyResult = new AssemblyResult();
 
-            WorkflowDocument workflow = MooreaUtilities.getMostRecentWorkflow(limsConnection, fimsConnection, tissueId);
-            if (workflow == null) {
-                issueTracker.setIssue(annotatedDocument, "No workflow record found in LIMS");
+            String errorString = getChromatogramProperties(sequencingPlateCache, limsConnection, annotatedDocument, assemblyResult);
+            if (errorString != null) {
+                issueTracker.setIssue(annotatedDocument, errorString);
                 continue;
             }
-            int workflowId = workflow.getId();
-            if (workflowId == -1) {
-                issueTracker.setIssue(annotatedDocument, "No workflow record found in LIMS");
-                continue;
-            }
-            String extractionId = workflow.getMostRecentReaction(Reaction.Type.Extraction).getExtractionId();
 
             Double coverage = (Double) annotatedDocument.getFieldValue(DocumentField.CONTIG_MEAN_COVERAGE);
             Integer disagreements = (Integer) annotatedDocument.getFieldValue(DocumentField.DISAGREEMENTS);
@@ -147,41 +136,22 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 issueTracker.setIssue(annotatedDocument, "Not a consensus sequence, cannot pass");
                 continue;
             }
-            List<NucleotideSequenceDocument> chromatograms = new ArrayList<NucleotideSequenceDocument>();
-            CycleSequencingReaction cycleSequencing = (CycleSequencingReaction) workflow.getMostRecentReaction(Reaction.Type.CycleSequencing);
-            //todo WRONG! need to get the right plate (fwd or rev), not just the most recent one.
-            if (cycleSequencing == null) {
-                issueTracker.setIssue(annotatedDocument, "No cycle sequencing event found in LIMS");
-                continue;
-            }
-            if (options.isAddChromatograms()) {
-                if (consensus == null) {
-                    chromatograms.add((NucleotideSequenceDocument)annotatedDocument.getDocument());
-                } else {
-                    SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)annotatedDocument.getDocument();
-                    if (alignment.getNumberOfSequences() < 3) {
-                        for (int i = 0; i < alignment.getNumberOfSequences(); i++) {
-                            if (i == alignment.getContigReferenceSequenceIndex()) continue;
-                            AnnotatedPluginDocument reference = alignment.getReferencedDocument(i);
-                            if (reference == null || !NucleotideSequenceDocument.class.isAssignableFrom(reference.getDocumentClass())) continue;
-                            chromatograms.add((NucleotideSequenceDocument)reference.getDocument());
-                        }
-                    }
-                }
-            }
-            if (workflowsWithResults.containsKey(workflowId)) {
+
+            if (workflowsWithResults.containsKey(assemblyResult.workflowId)) {
                 if (isPass) {
                     issueTracker.setIssue(annotatedDocument, "Another selected result matches same workflow");
                     continue;
                 } else {
-                    workflowsWithResults.get(workflowId).addChromatograms(chromatograms);
+                    AssemblyResult existingAssemblyResult = workflowsWithResults.get(assemblyResult.workflowId);
+                    for (Map.Entry<CycleSequencingReaction, List<NucleotideSequenceDocument>> chromatogramEntry : assemblyResult.getReactions().entrySet()) {
+                        existingAssemblyResult.addReaction(chromatogramEntry.getKey(), chromatogramEntry.getValue());
+                    }
                     continue;
                 }
             }
 
-
-            AssemblyResult assemblyResult = new AssemblyResult(extractionId, workflowId, consensus, coverage, disagreements, trims, edits, cycleSequencing, chromatograms);
-            workflowsWithResults.put(workflowId, assemblyResult);
+            assemblyResult.setContigProperties(consensus, coverage, disagreements, trims, edits);
+            workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
             results.add(assemblyResult);
         }
         if (!issueTracker.promptToContinue(!results.isEmpty())) {
@@ -190,33 +160,143 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return results;
     }
 
+    private String getChromatogramProperties(Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
+                                             AnnotatedPluginDocument annotatedDocument, AssemblyResult assemblyResult) throws DocumentOperationException {
+        List<AnnotatedPluginDocument> chromatograms = new ArrayList<AnnotatedPluginDocument>();
+        if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
+            SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)annotatedDocument.getDocument();
+            for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+                if (i == alignment.getContigReferenceSequenceIndex()) continue;
+                AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
+                if (referencedDocument == null) {
+                    throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" is missing a referened document");
+                }
+                if (!NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
+                    throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" contains a sequence which is not DNA");
+                }
+                chromatograms.add(referencedDocument);
+            }
+        } else {
+            chromatograms.add(annotatedDocument);
+        }
+
+        for (AnnotatedPluginDocument chromatogram : chromatograms) {
+            String plateName = (String)chromatogram.getFieldValue(MooreaUtilities.SEQUENCING_PLATE_FIELD);
+            if (plateName == null) {
+                return "FIMS data not annotated on referenced sequence (plate name)";
+            }
+
+            Plate plate;
+            if (sequencingPlateCache.containsKey(plateName)) {
+                plate = sequencingPlateCache.get(plateName);
+            } else {
+                Query q = Query.Factory.createQuery(plateName);
+                List<PlateDocument> plateDocuments;
+                try {
+                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                }
+                if (plateDocuments.isEmpty()) {
+                    sequencingPlateCache.put(plateName, null);
+                    return "No plate found with name \"" + plateName + "\"";
+                }
+                if (plateDocuments.size() != 1) {
+                    sequencingPlateCache.put(plateName, null);
+                    return "Multiple plates found matching name \"" + plateName + "\"";
+                }
+                PlateDocument plateDocument = plateDocuments.get(0);
+                if (plateDocument.getPlate().getReactionType() != Reaction.Type.CycleSequencing) {
+                    sequencingPlateCache.put(plateName, null);
+                    return "Plate \"" + plateName + "\" is not a sequencing plate";
+                }
+                plate = plateDocument.getPlate();
+                sequencingPlateCache.put(plateName, plate);
+            }
+            if (plate == null) {
+                return "Cannot find sequencing plate \"" + plateName + "\"";
+            }
+
+            String wellName = (String) chromatogram.getFieldValue(MooreaUtilities.SEQUENCING_WELL_FIELD);
+            if (wellName == null) {
+                return "FIMS data not annotated on referenced sequence (well name)";
+            }
+            MooreaUtilities.Well well = new MooreaUtilities.Well(wellName);
+
+            Reaction reaction = plate.getReaction(well.row(), well.col());
+            if (reaction == null) {
+                return "No reaction found in well " + well.toPaddedString();
+            }
+            if (!(reaction instanceof CycleSequencingReaction)) {
+                return "Reaction is not cycle sequencing";
+            }
+
+            Workflow workflow = reaction.getWorkflow();
+            if (workflow == null) {
+                return "No workflow record found in LIMS";
+            }
+            if (assemblyResult.workflowId != null && workflow.getId() != assemblyResult.workflowId) {
+                return "Reads have different workflow IDs";
+            }
+            if (workflow.getId() == -1) {
+                return "No workflow ID found in LIMS";
+            }
+            assemblyResult.workflowId = workflow.getId();
+
+            if (reaction.getExtractionId() == null) {
+                return "Extraction ID missing for workflow";
+            }
+            if (assemblyResult.extractionId != null && !reaction.getExtractionId().equals(assemblyResult.extractionId)) {
+                return "Reads have different workflow IDs";
+            }
+            assemblyResult.extractionId = reaction.getExtractionId();
+
+            assemblyResult.addReaction((CycleSequencingReaction) reaction, Collections.singletonList((NucleotideSequenceDocument) chromatogram.getDocument()));
+        }
+        return null;
+    }
+
+    /**
+     * Assembly results for a single workflow. May involve several sequencing reactions though (normally a forward and reverse)
+     */
     private static final class AssemblyResult {
 
-        public final String extractionId;
-        public final int workflowId;
-        public final String consensus;
-        public final Double coverage;
-        public final Integer disagreements;
-        public final String[] trims;
-        public final int edits;
-        public final CycleSequencingReaction cycleSequencing;
-        public final List<NucleotideSequenceDocument> chromatograms;
+        public String extractionId;
+        public Integer workflowId;
+        public String consensus;
+        public Double coverage;
+        public Integer disagreements;
+        public String[] trims;
+        public int edits;
 
-        private AssemblyResult(String extractionId, int workflowId, String consensus,
-                               Double coverage, Integer disagreements, String[] trims, int edits, CycleSequencingReaction cycleSequencing, List<NucleotideSequenceDocument> chromatograms) {
-            this.extractionId = extractionId;
-            this.workflowId = workflowId;
+        private Map<Integer, List<NucleotideSequenceDocument>> chromatograms = new HashMap<Integer, List<NucleotideSequenceDocument>>();
+        private Map<Integer, CycleSequencingReaction> reactionsById = new HashMap<Integer, CycleSequencingReaction>();
+
+        public void setContigProperties(String consensus, Double coverage, Integer disagreements, String[] trims, int edits) {
             this.consensus = consensus;
             this.coverage = coverage;
             this.disagreements = disagreements;
             this.trims = trims;
             this.edits = edits;
-            this.cycleSequencing = cycleSequencing;
-            this.chromatograms = chromatograms;
         }
 
-        public void addChromatograms(List<NucleotideSequenceDocument> chromatograms) {
-            this.chromatograms.addAll(chromatograms);
+        public void addReaction(CycleSequencingReaction cycleSequencingReaction, List<NucleotideSequenceDocument> chromatograms) {
+            List<NucleotideSequenceDocument> currentChromatograms = this.chromatograms.get(cycleSequencingReaction.getId());
+            if (currentChromatograms == null) {
+                currentChromatograms = new ArrayList<NucleotideSequenceDocument>();
+                this.chromatograms.put(cycleSequencingReaction.getId(), currentChromatograms);
+                this.reactionsById.put(cycleSequencingReaction.getId(), cycleSequencingReaction);
+            }
+            currentChromatograms.addAll(chromatograms);
+        }
+
+        public Map<CycleSequencingReaction, List<NucleotideSequenceDocument>> getReactions() {
+            Map<CycleSequencingReaction, List<NucleotideSequenceDocument>> returnChromatograms = new HashMap<CycleSequencingReaction, List<NucleotideSequenceDocument>>();
+            for (Map.Entry<Integer, List<NucleotideSequenceDocument>> entry : chromatograms.entrySet()) {
+                returnChromatograms.put(reactionsById.get(entry.getKey()), entry.getValue());
+            }
+            return returnChromatograms;
         }
     }
 
@@ -274,8 +354,14 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
                 statement.execute();
 
-                result.cycleSequencing.addSequences(result.chromatograms);
-                Reaction.saveReactions(new Reaction[] {result.cycleSequencing}, Reaction.Type.CycleSequencing, connection, null);
+                for (Map.Entry<CycleSequencingReaction, List<NucleotideSequenceDocument>> entry : result.getReactions().entrySet()) {
+                    if (options.isAddChromatograms()) {
+                        entry.getKey().addSequences(entry.getValue());
+                    }
+                    entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+                    Reaction.saveReactions(new Reaction[] {entry.getKey()}, Reaction.Type.CycleSequencing, connection, null);
+                }
+
             } catch (SQLException e) {
                 throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
             }

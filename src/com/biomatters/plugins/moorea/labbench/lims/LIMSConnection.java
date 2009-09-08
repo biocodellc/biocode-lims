@@ -351,7 +351,7 @@ public class LIMSConnection {
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((workflowDocuments == null || workflowDocuments.size() == 0) && refinedQueries.size() == 0) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
         StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
@@ -359,11 +359,13 @@ public class LIMSConnection {
                 "LEFT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
                 "WHERE");
 
-        for(WorkflowDocument doc : workflowDocuments) {
-            for(int i=0; i < doc.getNumberOfParts(); i++) {
-                WorkflowDocument.ReactionPart p = (WorkflowDocument.ReactionPart)doc.getPart(i);
-                Reaction reaction = p.getReaction();
-                plateIds.add(reaction.getPlateId());
+        if (workflowDocuments != null) {
+            for(WorkflowDocument doc : workflowDocuments) {
+                for(int i=0; i < doc.getNumberOfParts(); i++) {
+                    WorkflowDocument.ReactionPart p = (WorkflowDocument.ReactionPart)doc.getPart(i);
+                    Reaction reaction = p.getReaction();
+                    plateIds.add(reaction.getPlateId());
+                }
             }
         }
         if(plateIds.size() > 0) {

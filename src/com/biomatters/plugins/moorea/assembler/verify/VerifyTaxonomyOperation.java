@@ -31,7 +31,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     }
 
     public String getHelp() {
-        return "Select one or more sequences or assemblies to verify taxonomy and locus using a batch BLAST.";
+        return "Select one or more contigs or alignments of contigs to verify taxonomy and locus using a batch BLAST.";
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {

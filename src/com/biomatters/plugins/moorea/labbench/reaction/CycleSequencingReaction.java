@@ -42,7 +42,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     public CycleSequencingReaction(ResultSet r) throws SQLException {
         this();
         init(r);
-        System.out.println(getWorkflow());
+//        System.out.println(getWorkflow());
     }
 
     private Options init(ResultSet r) throws SQLException {
@@ -59,7 +59,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         }
 
 
-        options.getOption("runStatus").setValueFromString(r.getString("cyclesequencing.progress"));
+        options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("cyclesequencing.progress"));
 
         PrimerOption primerOption = (PrimerOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
         String primerName = r.getString("cyclesequencing.primerName");
@@ -68,7 +68,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         options.setValue("direction", r.getString("direction"));
         //options.setValue("prAmount", r.getInt("cyclesequencing.primerAmount"));
         options.setValue("notes", r.getString("cyclesequencing.notes"));
-        options.setValue("runStatus", r.getString("cyclesequencing.progress"));
+        options.setValue(ReactionOptions.RUN_STATUS, r.getString("cyclesequencing.progress"));
         options.setValue("cocktail", r.getString("cyclesequencing.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("cyclesequencing.cleanupPerformed"));
         options.setValue("cleanupMethod", r.getBoolean("cyclesequencing.cleanupMethod"));
@@ -145,7 +145,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     public Color _getBackgroundColor() {
-        String runStatus = options.getValueAsString("runStatus");
+        String runStatus = options.getValueAsString(ReactionOptions.RUN_STATUS);
         if(runStatus.equals("none"))
                 return Color.white;
         else if(runStatus.equals("passed"))

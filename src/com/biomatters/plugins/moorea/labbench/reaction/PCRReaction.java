@@ -35,7 +35,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
     public PCRReaction(ResultSet r) throws SQLException{
         this();
         init(r);
-        System.out.println(getWorkflow());
+//        System.out.println(getWorkflow());
     }
 
     private Options init(ResultSet r) throws SQLException {
@@ -51,7 +51,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
             options.setValue("workflowId", getWorkflow().getName());
         }
 
-        options.getOption("runStatus").setValueFromString(r.getString("pcr.progress"));
+        options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("pcr.progress"));
 
         PrimerOption primerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
         String primerName = r.getString("pcr.prName");
@@ -251,7 +251,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
     }
 
     public Color _getBackgroundColor() {
-        String runStatus = options.getValueAsString("runStatus");
+        String runStatus = options.getValueAsString(ReactionOptions.RUN_STATUS);
         if(runStatus.equals("none"))
                 return Color.white;
         else if(runStatus.equals("passed"))

@@ -574,7 +574,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                             throw new SQLException("The reaction " + reaction.getPosition() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
                         statement.setInt(6, cocktailId);
-                        statement.setString(7, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        statement.setString(7, ((Options.OptionValue)options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
                         if(reaction.getThermocycle() != null) {
                             statement.setInt(8, reaction.getThermocycle().getId());
                         }
@@ -642,7 +642,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                             throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                         }
                         statement.setInt(7, cocktailId);
-                        statement.setString(8, ((Options.OptionValue)options.getValue("runStatus")).getLabel());
+                        statement.setString(8, ((Options.OptionValue)options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
                         if(reaction.getThermocycle() != null) {
                             statement.setInt(9, reaction.getThermocycle().getId());
                         }

@@ -36,8 +36,11 @@ public class AnnotateFimsDataOptions extends Options {
 
     private final AtomicBoolean loadedPlates = new AtomicBoolean(false);
     private Map<MooreaUtilities.Well, FimsSample> forwardPlateSpecimens = null;
+    private String actualForwardPlateName = null;
     private Map<MooreaUtilities.Well, FimsSample> reversePlateSpecimens = null;
+    private String actualReversePlateName = null;
     private Map<MooreaUtilities.Well, FimsSample> noDirectionPlateSpecimens = null;
+    private String actualNoDirectionPlateName = null;
     private final MooreaUtilities.ReadDirection noReadDirectionValue;
 
     public AnnotateFimsDataOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
@@ -99,7 +102,11 @@ public class AnnotateFimsDataOptions extends Options {
         return nameSeparatorOption.getSeparatorString();
     }
 
-    public FimsSample getTissueRecord(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException, ConnectionException {
+    /**
+     *
+     * @return never null
+     */
+    public FimsData getFimsData(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException, ConnectionException {
         if (idType.getValue() == BARCODE) {
 //            if (true) {
                 throw new DocumentOperationException("FIMS data cannot be retrieved using barcodes. Please contact Biomatters if you require this functionality.");
@@ -127,6 +134,7 @@ public class AnnotateFimsDataOptions extends Options {
             }
             loadPlateSpecimens();
             FimsSample fimsSample;
+            String sequencingPlateName;
             Object isForwardValue = annotatedDocument.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
             if (isForwardValue == null) {
                 if (noDirectionPlateSpecimens == null) {
@@ -134,12 +142,28 @@ public class AnnotateFimsDataOptions extends Options {
                     throw new DocumentOperationException("Could not determine direction of reads, make sure you have run Set Read Direction first.");
                 }
                 fimsSample = noDirectionPlateSpecimens.get(well);
+                sequencingPlateName = actualNoDirectionPlateName;
             } else if ((Boolean)isForwardValue) {
                 fimsSample = forwardPlateSpecimens.get(well);
+                sequencingPlateName = actualForwardPlateName;
             } else {
                 fimsSample = reversePlateSpecimens.get(well);
+                sequencingPlateName = actualReversePlateName;
             }
-            return fimsSample;
+            return new FimsData(fimsSample, sequencingPlateName, well);
+        }
+    }
+
+    static final class FimsData {
+
+        final FimsSample fimsSample;
+        final String sequencingPlateName;
+        final MooreaUtilities.Well well;
+
+        FimsData(FimsSample fimsSample, String sequencingPlateName, MooreaUtilities.Well well) {
+            this.fimsSample = fimsSample;
+            this.sequencingPlateName = sequencingPlateName;
+            this.well = well;
         }
     }
 
@@ -157,10 +181,13 @@ public class AnnotateFimsDataOptions extends Options {
             String reversePlateName = getReversePlateName().trim();
             try {
                 forwardPlateSpecimens = MooreaLabBenchService.getInstance().getFimsSamplesForCycleSequencingPlate(forwardPlateName);
+                actualForwardPlateName = forwardPlateName;
                 if (reversePlateName.equals("") || reversePlateName.equals(forwardPlateName)) {
                     reversePlateSpecimens = forwardPlateSpecimens;
+                    actualReversePlateName = forwardPlateName;
                 } else {
                     reversePlateSpecimens = MooreaLabBenchService.getInstance().getFimsSamplesForCycleSequencingPlate(reversePlateName);
+                    actualReversePlateName = reversePlateName;
                 }
 
                 if (forwardPlateSpecimens == null) {
@@ -172,15 +199,18 @@ public class AnnotateFimsDataOptions extends Options {
                 switch (noReadDirectionValue) {
                     case FORWARD:
                         noDirectionPlateSpecimens = forwardPlateSpecimens;
+                        actualNoDirectionPlateName = forwardPlateName;
                         break;
                     case REVERSE:
                         noDirectionPlateSpecimens = reversePlateSpecimens;
+                        actualNoDirectionPlateName = reversePlateName;
                         break;
                     case NONE:
                         if (forwardPlateSpecimens != reversePlateSpecimens) {
                             noDirectionPlateSpecimens = null;
                         } else {
                             noDirectionPlateSpecimens = forwardPlateSpecimens;
+                            actualNoDirectionPlateName = forwardPlateName;
                         }
                         break;
                 }
