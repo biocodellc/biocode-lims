@@ -30,14 +30,12 @@ public class AddAssemblyResultsToLimsOptions extends Options {
             }
         }
         if (contigSelected) {
-            //todo check sequence type
             Options consensusOptions = MooreaUtilities.getConsensusOptions(documents);
             if (consensusOptions == null) {
                 throw new DocumentOperationException("The consensus plugin must be installed to be able to add assemblies to LIMS");
             }
             addChildOptions("consensus", "Consensus", null, consensusOptions);
         }
-        //todo update taxonomy?
     }
 
     Options getConsensusOptions() {

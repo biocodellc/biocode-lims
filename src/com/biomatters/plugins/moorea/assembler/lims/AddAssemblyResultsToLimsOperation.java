@@ -91,7 +91,17 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         Map<AnnotatedPluginDocument, String> docsToMark = new HashMap<AnnotatedPluginDocument, String>();
         for (AnnotatedPluginDocument document : annotatedDocuments) {
-            if (SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass()) && MooreaUtilities.isAlignmentOfContigs(document)) {
+            boolean isAlignment = SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass());
+            if (isAlignment) {
+                if (!(((SequenceAlignmentDocument)document.getDocument()).getSequence(0) instanceof NucleotideSequenceDocument)) {
+                    throw new DocumentOperationException("Selected alignment \"" + document.getName() + "\" is not an alignment of DNA sequences");
+                }
+            } else if (!NucleotideSequenceDocument.class.isAssignableFrom(document.getDocumentClass())) {
+                throw new DocumentOperationException("Selected sequence \"" + document.getName() + "\" is not DNA");
+
+            }
+
+            if (isAlignment && MooreaUtilities.isAlignmentOfContigs(document)) {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                     if (i == alignment.getContigReferenceSequenceIndex()) continue;

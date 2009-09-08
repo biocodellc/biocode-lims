@@ -101,7 +101,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
                 } else if (taxonomyDocuments.size() != 1) {
                     new Thread("Tell about multiple taxa found") {
                         public void run() {
-                            //todo pretty crude but i'm hoping this won't happen
+                            //pretty crude but i'm hoping this won't happen
                             Dialogs.showMessageDialog("More than one taxon found at NCBI for " + lowestTaxon);
                         }
                     }.start();
