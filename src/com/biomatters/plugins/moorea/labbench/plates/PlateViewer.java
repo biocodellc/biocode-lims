@@ -4,20 +4,25 @@ import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
+import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GTextField;
+import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.plugins.moorea.labbench.reaction.*;
 import com.biomatters.plugins.moorea.labbench.MooreaLabBenchService;
 import com.biomatters.plugins.moorea.labbench.TransactionException;
 import com.biomatters.plugins.moorea.labbench.BadDataException;
+import com.biomatters.plugins.moorea.MooreaPlugin;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
+import java.util.prefs.Preferences;
 import java.sql.SQLException;
 
 /**
@@ -47,12 +52,14 @@ public class PlateViewer extends JPanel {
         setLayout(new BorderLayout());
 
         final JScrollPane scroller = new JScrollPane(plateView);
+        scroller.setBorder(new EmptyBorder(0,0,0,0));
 
-        final JToolBar toolbar = new JToolBar();
-        toolbar.setLayout(new FlowLayout(FlowLayout.LEFT));
-        toolbar.setFloatable(false);
+        final JPanel leftToolbar = new JPanel();
+        final GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(this.getClass()), false, true, true);
+        //toolbar.setLayout(new FlowLayout(FlowLayout.LEFT));
+        leftToolbar.setOpaque(false);
 
-        toolbar.add(new JLabel("Name:"));
+        leftToolbar.add(new JLabel("Name:"));
         nameField = new GTextField(20);
         nameField.addKeyListener(new KeyListener(){
             public void keyTyped(KeyEvent e) {
@@ -67,7 +74,7 @@ public class PlateViewer extends JPanel {
                 plateView.getPlate().setName(nameField.getText());
             }
         });
-        toolbar.add(nameField);
+        leftToolbar.add(nameField);
 
         if (plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
             final DefaultComboBoxModel thermocycleModel = new DefaultComboBoxModel();
@@ -83,10 +90,10 @@ public class PlateViewer extends JPanel {
             };
             thermocycleCombo.addItemListener(thermocycleComboListener);
             thermocycleComboListener.itemStateChanged(null);
-            toolbar.add(new JLabel("Thermocycle: "));
-            toolbar.add(thermocycleCombo);
+            leftToolbar.add(new JLabel("Thermocycle: "));
+            leftToolbar.add(thermocycleCombo);
 
-            final GeneiousAction thermocycleAction = new GeneiousAction("View/Edit Thermocycles") {
+            final GeneiousAction thermocycleAction = new GeneiousAction("View/Edit Thermocycles", "Create new Thermocycles, or view existing ones", MooreaPlugin.getIcons("thermocycle_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);
                     if (newThermocycles.size() > 0) {
@@ -125,22 +132,23 @@ public class PlateViewer extends JPanel {
                     }
                 }
             };
-            toolbar.add(thermocycleAction);
+            toolbar.addAction(thermocycleAction);
 
-            final GeneiousAction gelAction = new GeneiousAction("Attach GEL image") {
+            final GeneiousAction gelAction = new GeneiousAction("Attach GEL image", "Attach GEL images to this plate", MooreaPlugin.getIcons("addImage_16.png")) {
             public void actionPerformed(ActionEvent e) {
                     List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
                     plateView.getPlate().setImages(gelimages);
                 }
             };
-            toolbar.add(gelAction);
+            toolbar.addAction(gelAction);
         }
 
 
 
-        toolbar.addSeparator(new Dimension(1, 24));
+        //toolbar.addSeparator(new Dimension(1, 24));
+        toolbar.addAction(new GeneiousAction.Divider());
 
-        final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells") {
+        final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells", "Paste data into the wells from a spreadsheet", MooreaPlugin.getIcons("bulkEdit_16.png")) {
             public void actionPerformed(ActionEvent e) {
                 PlateBulkEditor.editPlate(plateView.getPlate(), selfReference);
                 nameField.setText(plateView.getPlate().getName());
@@ -158,18 +166,18 @@ public class PlateViewer extends JPanel {
                 plateView.repaint();
             }
         };
-        toolbar.add(bulkEditAction);
+        toolbar.addAction(bulkEditAction);
 
-        final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk-add traces") {
+        final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk-add traces", "Import trace files, and attach them to wells", StandardIcons.nucleotide.getIcons()) {
             public void actionPerformed(ActionEvent e) {
                 ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
             }
         };
         if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
-            toolbar.add(bulkChromatAction);
+            toolbar.addAction(bulkChromatAction);
         }
 
-        final GeneiousAction editAction = new GeneiousAction("Edit selected wells") {
+        final GeneiousAction editAction = new GeneiousAction("Edit selected wells", "", StandardIcons.edit.getIcons()) {
             public void actionPerformed(ActionEvent e) {
                 ReactionUtilities.editReactions(plateView.getSelectedReactions(), false, plateView, false, true);
                 plateView.invalidate();
@@ -177,7 +185,7 @@ public class PlateViewer extends JPanel {
                 plateView.repaint();
             }
         };
-        toolbar.add(editAction);
+        toolbar.addAction(editAction);
         ListSelectionListener toolbarListener = new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
                 editAction.setEnabled(plateView.getSelectedReactions().size() > 0);
@@ -186,19 +194,26 @@ public class PlateViewer extends JPanel {
         plateView.addSelectionListener(toolbarListener);
         toolbarListener.valueChanged(null);
 
-        toolbar.addSeparator();
-        final GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
-            public void actionPerformed(ActionEvent e) {
-                ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
-            }
-        };
-        toolbar.add(exportPlateAction);
+        //toolbar.addSeparator();
+        toolbar.addAction(new GeneiousAction.Divider());
+        if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
+            final GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
+                public void actionPerformed(ActionEvent e) {
+                    ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
+                }
+            };
+            toolbar.addAction(exportPlateAction);
+        }
 
 
 
         add(scroller, BorderLayout.CENTER);
 
-        add(toolbar, BorderLayout.NORTH);
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(leftToolbar, BorderLayout.WEST);
+        topPanel.add(toolbar, BorderLayout.CENTER);
+
+        add(topPanel, BorderLayout.NORTH);
 
     }
 
