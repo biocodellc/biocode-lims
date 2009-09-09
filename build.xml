@@ -4,7 +4,7 @@
 
 <!--   <property name="build-for-current" value="COMMENT THIS PROPERTY OUT to exclude from test-currentRelease"/> -->
    <property file="plugin.properties"/>
-   <property name="plugin.name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
+   <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
    <property name="plugin-build" location="build"/>
    <property name="classes" location="bin"/>
    <property name="lib" location="lib"/>
@@ -36,7 +36,7 @@
    <!--</target>-->
 
    <target name="install-for-test" depends="build">
-      <move file="${plugin-build}/${plugin.name}" todir="${build.plugins}"/>
+      <move file="${plugin-build}/${plugin-name}" todir="${build.plugins}"/>
    </target>
 
    <target name="build" depends="compile">
