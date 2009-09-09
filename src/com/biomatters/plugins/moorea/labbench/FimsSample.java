@@ -18,7 +18,7 @@ public interface FimsSample extends XMLSerializable {
 
     public String getSpecimenId();
 
-    public String getFimsConnectionId();
+    public String getFimsConnectionId();//todo: seems unused - remove it!
 
     public List<DocumentField> getFimsAttributes();
 
