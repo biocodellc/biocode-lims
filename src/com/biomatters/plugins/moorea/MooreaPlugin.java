@@ -172,7 +172,7 @@ public class MooreaPlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
                 new ExportForBoldOperation(),
-                new ExportForBarstoolOperation()
+                new ExportForBarstoolOperation(false)
         };
     }
 

@@ -1,5 +1,6 @@
 package com.biomatters.plugins.moorea.submission.genbank.barstool;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
@@ -21,9 +22,10 @@ public class TabDelimitedExport {
 
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("dd-MMM-yyyy");
 
-    static void export(File file, ExportTableModel model, ProgressListener progressListener) throws IOException, DocumentOperationException {
+    static void export(File file, ExportTableModel model, ProgressListener progressListener, boolean isAutomated) throws IOException, DocumentOperationException {
         StringBuilder s = new StringBuilder();
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, model.getRowCount() + 1);
+        boolean[] promptedAboutMissingValues = new boolean[model.getColumnCount()];
         for (int y = -1; y < model.getRowCount(); y ++) {
             progress.beginSubtask();
             for (int x = 0; x < model.getColumnCount(); x ++) {
@@ -35,8 +37,18 @@ public class TabDelimitedExport {
                 } else {
                     Object value = model.getValueAt(y, x);
                     if (value == null) {
-                        //todo prompt to continue anyway
-                        throw new DocumentOperationException(model.getColumnName(x) + " is missing for one or more of the selected documents");
+                        if (!promptedAboutMissingValues[x] && !isAutomated) {
+                            promptedAboutMissingValues[x] = true;
+                            String continueButton = "Continue";
+                            Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {continueButton, "Cancel"}, "Missing Value", null, Dialogs.DialogIcon.WARNING);
+                            String message = "<html><b>" + model.getColumnName(x) + " is missing for one or more of the selected documents.</b><br><br>" +
+                                    "If you choose to continue, the value will be left empty in the submission files.</html>";
+                            Object choice = Dialogs.showDialog(dialogOptions, message);
+                            if (!choice.equals(continueButton)) {
+                                throw new DocumentOperationException.Canceled();
+                            }
+                        }
+                        continue;
                     }
                     if (value instanceof Date) {
                         synchronized (DATE_FORMAT) {
