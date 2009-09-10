@@ -87,7 +87,7 @@ public class ExportForBarstoolOptions extends Options {
         for (GeneticCode code : codes) {
             geneticCodes.add(new OptionValue(code.getName(), code.getDescription()));
         }
-        translationOption = addComboBoxOption("translation", "Translation:", geneticCodes, geneticCodes.get(6));
+        translationOption = addComboBoxOption("translation", "Genetic Code:", geneticCodes, geneticCodes.get(6));
 
         addDivider("Fields");
         countryOption = addStringOption("country", "Country:", "French Polynesia");
