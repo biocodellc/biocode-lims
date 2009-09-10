@@ -56,18 +56,12 @@ public abstract class FIMSConnection {
 
     public abstract DocumentField getTissueSampleDocumentField();
 
-    public abstract DocumentField getTissueBarcodeDocumentField();
-
-    public DocumentField getPlateDocumentField() {
-        return new DocumentField("Plate Name (FIMS)", "", "format_name96", String.class, true, false);
-    }
-
-    public DocumentField getWellDocumentField() {
-        return new DocumentField("Well Number (FIMS)", "", "well_number96", String.class, true, false);
-    }
-
     public abstract List<DocumentField> getCollectionAttributes();
 
+    /**
+     *
+     * @return list of taxonomy fields in order of highest level (eg kingdom) to lowest (eg. species).
+     */
     public abstract List<DocumentField> getTaxonomyAttributes();
 
     public abstract List<DocumentField> getSearchAttributes();

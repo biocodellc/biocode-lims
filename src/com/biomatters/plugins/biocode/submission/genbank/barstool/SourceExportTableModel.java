@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.submission.genbank.barstool;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.verify.Pair;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
@@ -51,7 +52,12 @@ public class SourceExportTableModel extends TabDelimitedExport.ExportTableModel 
         } else if (columnIndex < sourceFields.size() + fixedSourceFields.size()) {
             return fixedSourceFields.get(columnIndex - sourceFields.size()).getItemB();
         } else {
-            return fimsConnection.getLatLong(doc).toBarstoolFormat();
+            BiocodeUtilities.LatLong latLong = fimsConnection.getLatLong(doc);
+            if (latLong != null) {
+                return latLong.toBarstoolFormat();
+            } else {
+                return "";
+            }
         }
     }
 }

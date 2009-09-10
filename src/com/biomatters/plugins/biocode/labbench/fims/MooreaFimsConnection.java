@@ -10,9 +10,9 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PasswordOption;
 
 import java.sql.*;
@@ -126,20 +126,6 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     public DocumentField getTissueSampleDocumentField() {
         return MOOREA_TISSUE_ID_FIELD;
-    }
-
-    public DocumentField getTissueBarcodeDocumentField() {
-        return MOOREA_TISSUE_BARCODE_FIELD;
-    }
-
-    @Override
-    public DocumentField getPlateDocumentField() {
-        return MOOREA_PLATE_NAME_FIELD;
-    }
-
-    @Override
-    public DocumentField getWellDocumentField() {
-        return MOOREA_WELL_NUMBER_FIELD;
     }
 
     public List<DocumentField> getCollectionAttributes() {

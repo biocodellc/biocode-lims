@@ -7,8 +7,8 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
@@ -1404,31 +1404,31 @@ public class BiocodeService extends DatabaseService {
         return result;
     }
 
-    public Map<String, String> getTissueIdsFromBarcodes(List<String> barcodeIds) throws ConnectionException {
-        if(activeFIMSConnection == null) {
-            return Collections.emptyMap();
-        }
-
-        DocumentField barcodeField = activeFIMSConnection.getTissueBarcodeDocumentField();
-        DocumentField tissueField = activeFIMSConnection.getTissueSampleDocumentField();
-
-
-        Query[] queries = new Query[barcodeIds.size()];
-        for(int i=0; i < barcodeIds.size(); i++) {
-            queries[i] = Query.Factory.createFieldQuery(barcodeField, Condition.EQUAL, barcodeIds.get(i));
-        }
-
-        Query orQuery = Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap());
-
-        List<FimsSample> samples = activeFIMSConnection.getMatchingSamples(orQuery);
-
-        Map<String, String> result = new HashMap<String, String>();
-        for(FimsSample sample : samples) {
-            result.put(""+sample.getFimsAttributeValue(barcodeField.getCode()), ""+sample.getFimsAttributeValue(tissueField.getCode()));
-        }
-
-        return result;
-    }
+//    public Map<String, String> getTissueIdsFromBarcodes(List<String> barcodeIds) throws ConnectionException {
+//        if(activeFIMSConnection == null) {
+//            return Collections.emptyMap();
+//        }
+//
+//        DocumentField barcodeField = activeFIMSConnection.getTissueBarcodeDocumentField();
+//        DocumentField tissueField = activeFIMSConnection.getTissueSampleDocumentField();
+//
+//
+//        Query[] queries = new Query[barcodeIds.size()];
+//        for(int i=0; i < barcodeIds.size(); i++) {
+//            queries[i] = Query.Factory.createFieldQuery(barcodeField, Condition.EQUAL, barcodeIds.get(i));
+//        }
+//
+//        Query orQuery = Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap());
+//
+//        List<FimsSample> samples = activeFIMSConnection.getMatchingSamples(orQuery);
+//
+//        Map<String, String> result = new HashMap<String, String>();
+//        for(FimsSample sample : samples) {
+//            result.put(""+sample.getFimsAttributeValue(barcodeField.getCode()), ""+sample.getFimsAttributeValue(tissueField.getCode()));
+//        }
+//
+//        return result;
+//    }
 
     public static class BlockingDialog extends JDialog {
         private String message;

@@ -1,31 +1,30 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
 import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import jxl.Cell;
+import jxl.Sheet;
+import jxl.Workbook;
+import jxl.read.biff.BiffException;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.util.prefs.Preferences;
-import java.io.File;
-import java.io.IOException;
-
-import org.virion.jam.util.SimpleListener;
-import jxl.Workbook;
-import jxl.Sheet;
-import jxl.Cell;
-import jxl.read.biff.BiffException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -171,10 +170,6 @@ public class GeneiousFimsConnection extends FIMSConnection{
 
     public DocumentField getTissueSampleDocumentField() {
         return getTableCol(fields, tissueCol);
-    }
-
-    public DocumentField getTissueBarcodeDocumentField() {
-        return getTableCol(fields, specimenCol);
     }
 
     public List<DocumentField> getCollectionAttributes() {
