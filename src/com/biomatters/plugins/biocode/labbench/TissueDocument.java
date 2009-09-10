@@ -69,7 +69,7 @@ public class TissueDocument implements PluginDocument {
         htmlBuilder.append("<h1>"+getName()+"</h1>\n");
         htmlBuilder.append("<table border=\"0\">\n");
         List<DocumentField> fimsAttributes = fimsResults.getFimsAttributes();
-        if(fimsAttributes == null) {
+        if(fimsAttributes == null || fimsAttributes.size() == 0) {
             return null;
         }
         for(DocumentField field : fimsAttributes) {
@@ -86,7 +86,7 @@ public class TissueDocument implements PluginDocument {
         htmlBuilder.append("<h1>"+getName()+"</h1>\n");
         htmlBuilder.append("<table border=\"0\">\n");
         List<DocumentField> taxonomyAttributes = fimsResults.getTaxonomyAttributes();
-        if(taxonomyAttributes == null) {
+        if(taxonomyAttributes == null || taxonomyAttributes.size() == 0) {
             return null;
         }
         for(DocumentField field : taxonomyAttributes) {

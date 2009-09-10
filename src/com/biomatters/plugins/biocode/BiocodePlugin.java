@@ -100,6 +100,9 @@ public class BiocodePlugin extends GeneiousPlugin {
         URL workflowDocumentIcon = BiocodePlugin.class.getResource("workflowDocument_32.png");
         putUrlIntoIconsMap(workflowDocumentIcon, "workflowDocument_32.png");
 
+        URL plateDocumentIcon = BiocodePlugin.class.getResource("plateDocument_32.png");
+        putUrlIntoIconsMap(plateDocumentIcon, "plateDocument_32.png");
+
         URL swapDirectionIcon = BiocodePlugin.class.getResource("swapDirection_16.png");
         putUrlIntoIconsMap(swapDirectionIcon, "swapDirection_16.png");
 
@@ -180,7 +183,8 @@ public class BiocodePlugin extends GeneiousPlugin {
     public DocumentType[] getDocumentTypes() {
         return new DocumentType[] {
                 new DocumentType("Tissue Sample", TissueDocument.class, BiocodePlugin.getIcons("specimenDocument_24.png")),
-                new DocumentType("Workflow Document", WorkflowDocument.class, BiocodePlugin.getIcons("workflowDocument_32.png"))
+                new DocumentType("Workflow Document", WorkflowDocument.class, BiocodePlugin.getIcons("workflowDocument_32.png")),
+                new DocumentType("Plate Document", PlateDocument.class, BiocodePlugin.getIcons("plateDocument_32.png"))
         };
     }
 }
