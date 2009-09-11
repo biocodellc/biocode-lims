@@ -332,7 +332,9 @@ public class Plate implements XMLSerializable {
         id = Integer.parseInt(element.getChildText("id"));
         rows = Integer.parseInt(element.getChildText("rows"));
         cols = Integer.parseInt(element.getChildText("cols"));
-        plateSize = Size.valueOf(element.getChildText("plateSize"));
+        if(element.getChild("plateSize") != null) {
+            plateSize = Size.valueOf(element.getChildText("plateSize"));
+        }
         type = Reaction.Type.valueOf(element.getChildText("type"));
         int size = Integer.parseInt(element.getChildText("size"));
         isDeleted = "true".equals(element.getChildText("isDeleted"));
@@ -376,7 +378,9 @@ public class Plate implements XMLSerializable {
         plateElement.addContent(new Element("size").setText(""+reactions.length));
         plateElement.addContent(new Element("rows").setText(""+rows));
         plateElement.addContent(new Element("cols").setText(""+cols));
-        plateElement.addContent(new Element("plateSize").setText(plateSize.toString()));
+        if(plateSize != null) {
+            plateElement.addContent(new Element("plateSize").setText(plateSize.toString()));
+        }
         plateElement.addContent(new Element("isDeleted").setText(""+isDeleted));
         if(getThermocycle() != null) {
             plateElement.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
