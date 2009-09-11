@@ -25,7 +25,6 @@ public class ExportForBarstoolOptions extends Options {
     private final StringOption submissionName;
     private final FileSelectionOption folderOption;
 
-    private final StringOption countryOption;
     private final StringOption projectOption;
     private final StringOption baseCallerOption;
 
@@ -36,11 +35,12 @@ public class ExportForBarstoolOptions extends Options {
     private static final String SEQUENCE_ID = "Sequence_ID";
     private static final String COLLECTED_BY = "Collected_by";
     private static final String COLLECTION_DATE = "Collection_date";
+    private static final String COUNTRY = "Country";
     private static final String SPECIMEN_VOUCHER = "Specimen_voucher";
     private static final String IDENTIFIED_BY = "Identified_by";
     static final String NOTE = "Note";
 
-    private static final String[] SOURCE_FIELDS = new String[] {SEQUENCE_ID, COLLECTED_BY, COLLECTION_DATE, SPECIMEN_VOUCHER, IDENTIFIED_BY, NOTE};
+    private static final String[] SOURCE_FIELDS = new String[] {SEQUENCE_ID, COLLECTED_BY, COLLECTION_DATE, COUNTRY, SPECIMEN_VOUCHER, IDENTIFIED_BY, NOTE};
 
     private static final OptionValue NONE = new OptionValue("none", "<html><i>None</i></html>");
     private final ComboBoxOption<OptionValue> translationOption;
@@ -74,6 +74,7 @@ public class ExportForBarstoolOptions extends Options {
         Collections.sort(dateFields, labelComparator);
         List<OptionValue> stringFieldsWithNone = new ArrayList<OptionValue>(stringFields);
         stringFieldsWithNone.add(0, NONE);
+        dateFields.add(0, NONE);
 
         folderOption = addFileSelectionOption("folder", "Folder:", "");
         folderOption.setDescription("The folder where the submission files will be saved");
@@ -90,21 +91,21 @@ public class ExportForBarstoolOptions extends Options {
         translationOption = addComboBoxOption("translation", "Genetic Code:", geneticCodes, geneticCodes.get(6));
 
         addDivider("Fields");
-        countryOption = addStringOption("country", "Country:", "French Polynesia");
-        countryOption.setDescription("The country of origin of DNA samples used");
         projectOption = addStringOption("project", "Project Name:", "Biocode");
         projectOption.setDescription("A sequencing center's internal designation for a specific sequencing project. This field can be useful for grouping related traces.");
         baseCallerOption = addStringOption("baseCaller", "Base Calling Program:", "");
         baseCallerOption.setDescription("The base calling program. This field is free text. Program name, version numbers or dates are very useful. eg. phred-19980904e or abi-3.1");
         ComboBoxOption<OptionValue> sequenceIdOption = addComboBoxOption(SEQUENCE_ID, "Sequence ID:", stringFields, stringFields.get(0));
         sequenceIdOption.setDescription("Identifies the same specimen in all the steps of a submission. Sequence_IDs must be unique within the set and may not contain spaces. ");
-        ComboBoxOption<OptionValue> collectedByOption = addComboBoxOption(COLLECTED_BY, "Collected by:", stringFields, stringFields.get(0));
+        ComboBoxOption<OptionValue> collectedByOption = addComboBoxOption(COLLECTED_BY, "Collected by:", stringFieldsWithNone, stringFieldsWithNone.get(0));
         collectedByOption.setDescription("Name of person who collected the sample");
         ComboBoxOption<OptionValue> collectionDateOption = addComboBoxOption(COLLECTION_DATE, "Collection Date:", dateFields, dateFields.get(0));
         collectionDateOption.setDescription("Date the specimen was collected");
+        ComboBoxOption<OptionValue> countryOption = addComboBoxOption(COUNTRY, "Country:", stringFields, stringFields.get(0));
+        countryOption.setDescription("The country of origin of DNA samples used");
         ComboBoxOption<OptionValue> specimenVoucherOption = addComboBoxOption(SPECIMEN_VOUCHER, "Specimen Voucher ID:", stringFields, stringFields.get(0));
         specimenVoucherOption.setDescription("An identifier of the individual or collection of the source organism and the place where it is currently stored, usually an institution");
-        ComboBoxOption<OptionValue> identifiedByOption = addComboBoxOption(IDENTIFIED_BY, "Identified by:", stringFields, stringFields.get(0));
+        ComboBoxOption<OptionValue> identifiedByOption = addComboBoxOption(IDENTIFIED_BY, "Identified by:", stringFieldsWithNone, stringFieldsWithNone.get(0));
         identifiedByOption.setDescription("Name of the person or persons who identified by taxonomic name the organism from which the sequence was obtained");
         ComboBoxOption<OptionValue> noteOption = addComboBoxOption(NOTE, "Note:", stringFieldsWithNone, stringFieldsWithNone.get(0));
         noteOption.setDescription("Any additional information that you wish to provide about the sequence");
@@ -236,12 +237,7 @@ public class ExportForBarstoolOptions extends Options {
     }
 
     List<Pair<String, String>> getFixedSourceFields() {
-        String country = countryOption.getValue();
-        if (country.length() > 0) {
-            return Collections.singletonList(new Pair<String, String>("Country", country));
-        } else {
-            return Collections.emptyList();
-        }
+        return Collections.emptyList();
     }
 
     public String getTracesFolderName() {
