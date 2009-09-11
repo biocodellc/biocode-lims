@@ -148,11 +148,15 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Collection time", "", "biocode_collecting_event.CollectionTime", Date.class, true, false));
         fields.add(new DocumentField("Identified By", "", "biocode.IdentifiedBy", String.class, true, false));
 
+        fields.add(new DocumentField("Specimen Notes", "", "biocode.notes", String.class, false, false));
+
         fields.add(DocumentField.ORGANISM_FIELD);
         fields.add(DocumentField.COMMON_NAME_FIELD);
 
         fields.add(new DocumentField("Lowest Taxon", "", "biocode.LowestTaxon", String.class, true, false));
         fields.add(new DocumentField("Lowest Taxon Level", "", "biocode.LowestTaxonLevel", String.class, true, false));
+
+        //fields.add(new DocumentField("Taxon Notes", "", "biocode_collecting_event.TaxonNotes", String.class, false, false));
 
         fields.add(new DocumentField("Country", "", "biocode_collecting_event.Country", String.class, false, false));
 
