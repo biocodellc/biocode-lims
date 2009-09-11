@@ -118,7 +118,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
 
     public List<DocumentField> getDefaultDisplayedFields() {
         return Arrays.asList(new DocumentField[] {
-                new DocumentField("Tissue ID", "", "tissueId", String.class, true, false),
+                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
                 new DocumentField("Forward Primer", "", PCROptions.PRIMER_OPTION_ID, String.class, true, false),
                 new DocumentField("Reverse Primer", "", PCROptions.PRIMER_REVERSE_OPTION_ID, String.class, true, false),
                 new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)

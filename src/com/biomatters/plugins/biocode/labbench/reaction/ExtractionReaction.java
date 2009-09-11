@@ -105,7 +105,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
     public List<DocumentField> getDefaultDisplayedFields() {
         return Arrays.asList(
-                new DocumentField("Sample Id", "", "sampleId", String.class, false, false),
+                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
                 new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)
         );
     }

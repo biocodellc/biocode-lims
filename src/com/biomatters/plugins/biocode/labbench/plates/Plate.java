@@ -376,7 +376,10 @@ public class Plate implements XMLSerializable {
         plateElement.addContent(new Element("name").setText(getName()));
         plateElement.addContent(new Element("type").setText(type.toString()));
         plateElement.addContent(new Element("size").setText(""+reactions.length));
-        plateElement.addContent(new Element("rows").setText(""+rows));
+        String rowString = "" + rows;
+        Element rowElement = new Element("rows");
+        rowElement.setText(rowString);
+        plateElement.addContent(rowElement);
         plateElement.addContent(new Element("cols").setText(""+cols));
         if(plateSize != null) {
             plateElement.addContent(new Element("plateSize").setText(plateSize.toString()));
