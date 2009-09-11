@@ -33,7 +33,7 @@ import java.util.prefs.Preferences;
  * Time: 8:00:41 AM
  * To change this template use File | Settings | File Templates.
  */
-public class GeneiousFimsConnection extends FIMSConnection{
+public class ExcelFimsConnection extends FIMSConnection{
     Preferences prefs = Preferences.userNodeForPackage(this.getClass());
 
     private Workbook workbook;
@@ -43,7 +43,7 @@ public class GeneiousFimsConnection extends FIMSConnection{
     int specimenCol;
 
     public String getName() {
-        return "geneious";
+        return "excel";
     }
 
     public String getDescription() {
@@ -66,15 +66,30 @@ public class GeneiousFimsConnection extends FIMSConnection{
 
         final Options.ComboBoxOption<Options.OptionValue> specimenId = options.addComboBoxOption("specimenId", "Specimen ID field", cols, cols.get(0));
 
+        options.addLabel(" ");
+        options.addLabel("Specify your taxonomy fields, in order of highest to lowest");
+        Options taxonomyOptions = new Options(this.getClass());
+        taxonomyOptions.beginAlignHorizontally("", false);
+        final Options.ComboBoxOption<Options.OptionValue> taxCol = taxonomyOptions.addComboBoxOption("taxCol", "Field", cols, cols.get(0));
+        taxonomyOptions.endAlignHorizontally();
+
+        final Options.MultipleOptions taxOptions = options.addMultipleOptions("taxFields", taxonomyOptions, false);
 
         fileLocation.addChangeListener(new SimpleListener(){
             public void objectChanged() {
                 List<Options.OptionValue> newCols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null);
                 tissueId.setPossibleValues(newCols);
                 specimenId.setPossibleValues(newCols);
+                taxCol.setPossibleValues(newCols);
+                for(Options options : taxOptions.getValues()) {
+                    for(Options.Option option : options.getOptions()) {
+                        if(option instanceof Options.ComboBoxOption) {
+                            ((Options.ComboBoxOption)option).setPossibleValues(newCols);
+                        }
+                    }
+                }
             }
         });
-
 
         return options;
     }
@@ -112,6 +127,7 @@ public class GeneiousFimsConnection extends FIMSConnection{
     }
 
     private List<DocumentField> fields;
+     List<DocumentField> taxonomyFields;
 
     public void connect(Options options) throws ConnectionException {
         String excelFileLocation = options.getValueAsString("excelFile");
@@ -125,6 +141,7 @@ public class GeneiousFimsConnection extends FIMSConnection{
         tissueCol = Integer.parseInt(((Options.OptionValue)options.getValue("tissueId")).getName());
         specimenCol = Integer.parseInt(((Options.OptionValue)options.getValue("specimenId")).getName());
         fields = new ArrayList<DocumentField>();
+        taxonomyFields = new ArrayList<DocumentField>();
 
         try {
             workbook = Workbook.getWorkbook(excelFile);
@@ -132,11 +149,20 @@ public class GeneiousFimsConnection extends FIMSConnection{
 
             Sheet sheet = workbook.getSheet(0);
 
+            List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
+            for(Options taxOptionsValue : taxOptions){
+                Options.OptionValue colValue = (Options.OptionValue)((Options.ComboBoxOption)taxOptionsValue.getOption("taxCol")).getValue();
+                taxonomyFields.add(new DocumentField(colValue.getLabel(), colValue.getLabel(), colValue.getName(), String.class, true, false));
+            }
+
             for(int i=0; i < sheet.getColumns(); i++) {
                 Cell cell = sheet.getCell(i,0);
                 String cellContents = cell.getContents();
                 if(cellContents.length() > 0) {
-                    fields.add(new DocumentField(cellContents, cellContents, ""+i, String.class, true, false));
+                    DocumentField field = new DocumentField(cellContents, cellContents, "" + i, String.class, true, false);
+                    if(!taxonomyFields.contains(field)) {
+                        fields.add(field);
+                    }
                 }
             }
         } catch (BiffException e) {
@@ -177,7 +203,7 @@ public class GeneiousFimsConnection extends FIMSConnection{
     }
 
     public List<DocumentField> getTaxonomyAttributes() {
-        return Collections.emptyList();
+        return taxonomyFields;
     }
 
     public List<FimsSample> getMatchingSamples(Query query) {
@@ -247,7 +273,7 @@ public class GeneiousFimsConnection extends FIMSConnection{
                         colMatch = false;
                 }
                 if(colMatch && operator == CompoundSearchQuery.Operator.OR) {
-                    result.add(new GeneiousFimsSample(sheet, i, this));
+                    result.add(new ExcelFimsSample(sheet, i, this));
                 }
                 else if(!colMatch && operator == CompoundSearchQuery.Operator.AND) {
                     break;

@@ -15,14 +15,16 @@ import jxl.Sheet;
  *          <p/>
  *          Created on 9/09/2009 6:41:55 PM
  */
-public class GeneiousFimsSample implements FimsSample {
+public class ExcelFimsSample implements FimsSample {
     private Map<String, String> values;
     private List<DocumentField> fields;
+    private List<DocumentField> taxFields;
     private int tissueCol, specimenCol;
 
-    public GeneiousFimsSample(Sheet sheet, int row, GeneiousFimsConnection fimsConnection) {
+    public ExcelFimsSample(Sheet sheet, int row, ExcelFimsConnection fimsConnection) {
         values = new HashMap<String, String>();
-        fields = fimsConnection.getSearchAttributes();
+        fields = fimsConnection.getCollectionAttributes();
+        taxFields = fimsConnection.getTaxonomyAttributes();
         tissueCol = fimsConnection.tissueCol;
         specimenCol = fimsConnection.specimenCol;
 
@@ -30,9 +32,14 @@ public class GeneiousFimsSample implements FimsSample {
             String value = sheet.getCell(Integer.parseInt(field.getCode()), row).getContents();
             values.put(field.getCode(), value);
         }
+        for(DocumentField field : taxFields) {
+            String value = sheet.getCell(Integer.parseInt(field.getCode()), row).getContents();
+            values.put(field.getCode(), value);
+        }
+        System.out.println(values.size());
     }
 
-    public GeneiousFimsSample(Element e) throws XMLSerializationException {
+    public ExcelFimsSample(Element e) throws XMLSerializationException {
         fromXML(e);
     }
 
@@ -54,7 +61,7 @@ public class GeneiousFimsSample implements FimsSample {
     }
 
     public List<DocumentField> getTaxonomyAttributes() {
-        return Collections.EMPTY_LIST;
+        return taxFields;
     }
 
     public Object getFimsAttributeValue(String attributeName) {
@@ -71,6 +78,12 @@ public class GeneiousFimsSample implements FimsSample {
             fieldsElement.addContent(field.toXML());
         }
         e.addContent(fieldsElement);
+
+        Element taxFieldsElement = new Element("taxFields");
+        for(DocumentField field : taxFields) {
+            taxFieldsElement.addContent(field.toXML());
+        }
+        e.addContent(taxFieldsElement);
 
         Element values = new Element("values");
         for(Map.Entry entry : this.values.entrySet()) {
@@ -90,12 +103,20 @@ public class GeneiousFimsSample implements FimsSample {
             tissueCol = Integer.parseInt(element.getChildText("tissueCol"));
             specimenCol = Integer.parseInt(element.getChildText("specimenCol"));
             fields = new ArrayList<DocumentField>();
+            taxFields = new ArrayList<DocumentField>();
 
             Element fieldsElement = element.getChild("fields");
             for(Element fieldChild : fieldsElement.getChildren()) {
                 DocumentField field = new DocumentField();
                 field.fromXML(fieldChild);
                 fields.add(field);
+            }
+
+            Element taxFieldsElement = element.getChild("taxFields");
+            for(Element fieldChild : taxFieldsElement.getChildren()) {
+                DocumentField field = new DocumentField();
+                field.fromXML(fieldChild);
+                taxFields.add(field);
             }
 
             values = new HashMap<String, String>();
@@ -115,6 +136,11 @@ public class GeneiousFimsSample implements FimsSample {
 
     private DocumentField getDocumentField(String fieldCode) {
         for(DocumentField field : fields) {
+            if(field.getCode().equals(fieldCode)) {
+                return field;
+            }
+        }
+        for(DocumentField field : taxFields) {
             if(field.getCode().equals(fieldCode)) {
                 return field;
             }
