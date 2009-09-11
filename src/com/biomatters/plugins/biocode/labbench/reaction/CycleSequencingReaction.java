@@ -133,8 +133,14 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     public List<DocumentField> getDefaultDisplayedFields() {
+        if(BiocodeService.getInstance().isLoggedIn()) {
+            return Arrays.asList(new DocumentField[] {
+                    BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
+                    new DocumentField("Primer", "", CycleSequencingOptions.PRIMER_OPTION_ID, String.class, true, false),
+                    new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
+            });
+        }
         return Arrays.asList(new DocumentField[] {
-                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
                 new DocumentField("Primer", "", CycleSequencingOptions.PRIMER_OPTION_ID, String.class, true, false),
                 new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
         });
