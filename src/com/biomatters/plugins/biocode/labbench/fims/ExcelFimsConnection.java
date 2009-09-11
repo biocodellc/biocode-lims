@@ -191,7 +191,10 @@ public class ExcelFimsConnection extends FIMSConnection{
     }
 
     public List<DocumentField> getSearchAttributes() {
-        return fields;
+        List<DocumentField> searchAttributes = new ArrayList<DocumentField>();
+        searchAttributes.addAll(fields);
+        searchAttributes.addAll(taxonomyFields);
+        return searchAttributes;
     }
 
     public DocumentField getTissueSampleDocumentField() {

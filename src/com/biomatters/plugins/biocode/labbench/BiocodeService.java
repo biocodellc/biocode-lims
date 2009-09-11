@@ -282,7 +282,13 @@ public class BiocodeService extends DatabaseService {
 
             ClassLoader loader;
             try {
-                URL driverUrl = new File(driverFileName).toURL();
+                File driverFile = new File(driverFileName);
+                if(!driverFile.exists() || driverFile.isDirectory()) {
+                    Dialogs.showMessageDialog("You need to specify a valid MySql Driver!");
+                    logOut();
+                    return;
+                }
+                URL driverUrl = driverFile.toURL();
                 loader = new URLClassLoader(new URL[]{driverUrl}, getClass().getClassLoader());
             } catch (MalformedURLException ex) {
                 Dialogs.showMessageDialog("Could not load the MySql Driver!");
@@ -296,13 +302,13 @@ public class BiocodeService extends DatabaseService {
                 Class driverClass = loader.loadClass("com.mysql.jdbc.Driver");
                 driver = (Driver) driverClass.newInstance();
             } catch (ClassNotFoundException e1) {
-                error = "Could not find driver class";
+                error = "Could not find MySQL driver class";
             } catch (IllegalAccessException e1) {
-                error = "Could not access driver class";
+                error = "Could not access MySQL driver class";
             } catch (InstantiationException e1) {
-                error = "Could not instantiate driver class";
+                error = "Could not instantiate MySQL driver class";
             } catch (ClassCastException e1) {
-                error = "Driver class exists, but is not an SQL driver";
+                error = "MySQL Driver class exists, but is not an SQL driver";
             }
 
             if (error != null) {
@@ -342,6 +348,13 @@ public class BiocodeService extends DatabaseService {
                     }
 
                     try {
+                        if(!(activeFIMSConnection instanceof MooreaFimsConnection) && LIMSOptions.getValueAsString("server").equalsIgnoreCase("darwin.berkeley.edu")) {
+                            Dialogs.showMessageDialog("You cannot connect to the Moorea Lab Bench database using a field database other than the Moorea FIMS");
+                            logOut();
+                            unBlock();
+                            return;
+                        }
+
                         block("Connecting to the LIMS", null);
                         limsConnection.connect(LIMSOptions);
                         block("Building Caches", null);
