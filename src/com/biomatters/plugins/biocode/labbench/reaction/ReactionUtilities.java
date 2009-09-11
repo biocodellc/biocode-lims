@@ -11,8 +11,8 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
@@ -335,7 +335,11 @@ public class ReactionUtilities {
             componentToDisplay = tabs;
         }
 
-        if(Dialogs.showOkCancelDialog(componentToDisplay, "Well Options", owner, Dialogs.DialogIcon.NO_ICON)) {
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Well Options", owner, Dialogs.DialogIcon.NO_ICON);
+        dialogOptions.setMaxWidth(800);
+        dialogOptions.setMaxHeight(800);
+        Object choice = Dialogs.showDialog(dialogOptions, componentToDisplay);
+        if(choice == Dialogs.OK) {
             int changedOptionCount = 0;
             if(!justEditDisplayableFields || justEditOptions) {
                 Element optionsElement = XMLSerializer.classToXML("options", options);
@@ -704,7 +708,7 @@ public class ReactionUtilities {
         selectedListBoxPanel.add(label2, BorderLayout.NORTH);
         selectedListBoxPanel.setOpaque(false);
 
-        JSplitPane fieldsSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, availableListBoxPanel, selectedListBoxPanel);
+        final JSplitPane fieldsSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, availableListBoxPanel, selectedListBoxPanel);
         fieldsSplit.setBorder(new EmptyBorder(0,0,0,0));
         fieldsSplit.setUI(new BasicSplitPaneUI(){
             @Override
@@ -727,6 +731,13 @@ public class ReactionUtilities {
         fieldsSplit.setOpaque(false);
         fieldsSplit.setContinuousLayout(true);
         fieldsPanel.add(fieldsSplit);
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                //this doesn't have an effect unless the split pane is showing
+                fieldsSplit.setDividerLocation(0.5);
+            }
+        });
+        fieldsSplit.setResizeWeight(0.5);
         fieldsPanel.setOpaque(false);
         fieldsPanel.setBorder(new EmptyBorder(10,10,10,10));
 

@@ -1,15 +1,15 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.components.GTextField;
+import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
@@ -164,6 +164,7 @@ public class PlateBulkEditor {
             };
             toolbar.addAction(autodetectAction);
         }
+        platePanel.setPreferredSize(new Dimension(600, platePanel.getPreferredSize().height));
         JPanel holderPanel = new JPanel(new BorderLayout());
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
