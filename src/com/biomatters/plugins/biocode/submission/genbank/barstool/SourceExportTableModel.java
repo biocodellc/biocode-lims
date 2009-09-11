@@ -6,6 +6,9 @@ import com.biomatters.plugins.biocode.assembler.verify.Pair;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -18,6 +21,7 @@ public class SourceExportTableModel extends TabDelimitedExport.ExportTableModel 
     private final List<Pair<String,String>> fixedSourceFields;
     private final FIMSConnection fimsConnection;
     private final boolean includeLatLong;
+    private final DateFormat dateFormat;
 
     public SourceExportTableModel(List<AnnotatedPluginDocument> docs, ExportForBarstoolOptions options) {
         super(docs);
@@ -25,6 +29,7 @@ public class SourceExportTableModel extends TabDelimitedExport.ExportTableModel 
         fixedSourceFields = options.getFixedSourceFields();
         includeLatLong = options.isIncludeLatLong();
         fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        dateFormat = options.getDateFormat();
     }
 
     int getColumnCount() {
@@ -44,9 +49,17 @@ public class SourceExportTableModel extends TabDelimitedExport.ExportTableModel 
     Object getValue(AnnotatedPluginDocument doc, int columnIndex) {
         if (columnIndex < sourceFields.size()) {
             Object value = doc.getFieldValue(sourceFields.get(columnIndex).getItemB());
+
             if (value == null && sourceFields.get(columnIndex).getItemA().equals(ExportForBarstoolOptions.NOTE)) {
                 //allowed to be null
                 value = "";
+            }
+            if (value != null && sourceFields.get(columnIndex).getItemA().toLowerCase().contains("date") && !(value instanceof Date)) {
+                try {
+                    value = dateFormat.parse(value.toString());
+                } catch (ParseException e) {
+                    value = null;
+                }
             }
             return value;
         } else if (columnIndex < sourceFields.size() + fixedSourceFields.size()) {

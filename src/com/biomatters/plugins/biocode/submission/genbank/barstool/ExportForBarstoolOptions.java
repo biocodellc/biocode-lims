@@ -10,10 +10,13 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.verify.Pair;
 import jebl.evolution.sequences.GeneticCode;
 import org.jdom.Element;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -27,6 +30,7 @@ public class ExportForBarstoolOptions extends Options {
 
     private final StringOption projectOption;
     private final StringOption baseCallerOption;
+    private final StringOption dateFormatOption;
 
     private final BooleanOption latLongOption;
 
@@ -48,7 +52,7 @@ public class ExportForBarstoolOptions extends Options {
     public ExportForBarstoolOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
 
         Set<DocumentField> fieldsSeen = new HashSet<DocumentField>();
-        List<OptionValue> stringFields = new ArrayList<OptionValue>();
+        final List<OptionValue> stringFields = new ArrayList<OptionValue>();
         List<OptionValue> dateFields = new ArrayList<OptionValue>();
 //        List<OptionValue> numberFields = new ArrayList<OptionValue>();
         for (AnnotatedPluginDocument document : documents) {
@@ -75,6 +79,8 @@ public class ExportForBarstoolOptions extends Options {
         List<OptionValue> stringFieldsWithNone = new ArrayList<OptionValue>(stringFields);
         stringFieldsWithNone.add(0, NONE);
         dateFields.add(0, NONE);
+        List<OptionValue> dateAndStringFields = new ArrayList<OptionValue>(dateFields);
+        dateAndStringFields.addAll(stringFields);
 
         folderOption = addFileSelectionOption("folder", "Folder:", "");
         folderOption.setDescription("The folder where the submission files will be saved");
@@ -89,6 +95,7 @@ public class ExportForBarstoolOptions extends Options {
             geneticCodes.add(new OptionValue(code.getName(), code.getDescription()));
         }
         translationOption = addComboBoxOption("translation", "Genetic Code:", geneticCodes, geneticCodes.get(6));
+        translationOption.setDescription("Genetic code used to generate translations (frame is determined automatically). Select None to not export translations.");
 
         addDivider("Fields");
         projectOption = addStringOption("project", "Project Name:", "Biocode");
@@ -99,8 +106,18 @@ public class ExportForBarstoolOptions extends Options {
         sequenceIdOption.setDescription("Identifies the same specimen in all the steps of a submission. Sequence_IDs must be unique within the set and may not contain spaces. ");
         ComboBoxOption<OptionValue> collectedByOption = addComboBoxOption(COLLECTED_BY, "Collected by:", stringFieldsWithNone, stringFieldsWithNone.get(0));
         collectedByOption.setDescription("Name of person who collected the sample");
-        ComboBoxOption<OptionValue> collectionDateOption = addComboBoxOption(COLLECTION_DATE, "Collection Date:", dateFields, dateFields.get(0));
+
+        final ComboBoxOption<OptionValue> collectionDateOption = addComboBoxOption(COLLECTION_DATE, "Collection Date:", dateAndStringFields, dateAndStringFields.get(0));
         collectionDateOption.setDescription("Date the specimen was collected");
+        dateFormatOption = addStringOption("dateFormat", "Date Format:", "MM-dd-yyyy");
+        dateFormatOption.setEnabled(false);
+        dateFormatOption.setFillHorizontalSpace(false);
+        collectionDateOption.addChangeListener(new SimpleListener() {
+            public void objectChanged() {
+                dateFormatOption.setEnabled(stringFields.contains(collectionDateOption.getValue()));
+            }
+        });
+
         ComboBoxOption<OptionValue> countryOption = addComboBoxOption(COUNTRY, "Country:", stringFields, stringFields.get(0));
         countryOption.setDescription("The country of origin of DNA samples used");
         ComboBoxOption<OptionValue> specimenVoucherOption = addComboBoxOption(SPECIMEN_VOUCHER, "Specimen Voucher ID:", stringFields, stringFields.get(0));
@@ -218,6 +235,10 @@ public class ExportForBarstoolOptions extends Options {
 
     boolean isIncludeLatLong() {
         return latLongOption.getValue();
+    }
+
+    DateFormat getDateFormat() {
+        return new SimpleDateFormat(dateFormatOption.getValue());
     }
 
     /**
