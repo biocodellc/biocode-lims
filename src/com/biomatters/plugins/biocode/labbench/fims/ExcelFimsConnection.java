@@ -70,7 +70,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         options.addLabel("Specify your taxonomy fields, in order of highest to lowest");
         Options taxonomyOptions = new Options(this.getClass());
         taxonomyOptions.beginAlignHorizontally("", false);
-        final Options.ComboBoxOption<Options.OptionValue> taxCol = taxonomyOptions.addComboBoxOption("taxCol", "Field", cols, cols.get(0));
+        final Options.ComboBoxOption<Options.OptionValue> taxCol = taxonomyOptions.addComboBoxOption("taxCol", "", cols, cols.get(0));
         taxonomyOptions.endAlignHorizontally();
 
         final Options.MultipleOptions taxOptions = options.addMultipleOptions("taxFields", taxonomyOptions, false);
