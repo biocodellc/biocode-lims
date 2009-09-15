@@ -1,11 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.documents.Condition;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -14,15 +10,12 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
 
 import java.awt.*;
-import java.io.IOException;
-import java.io.StringReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.PreparedStatement;
+import java.sql.Connection;
 import java.util.*;
 import java.util.List;
 
@@ -86,24 +79,24 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
         }
 
-        String sequenceString = r.getString("cyclesequencing.sequences");
-        if(sequenceString != null && sequenceString.length() > 0) {
-            SAXBuilder builder = new SAXBuilder();
-            try {
-                Element sequenceElement = builder.build(new StringReader(sequenceString)).detachRootElement();
-                DefaultSequenceListDocument defaultSequenceListDocument = XMLSerializer.classFromXML(sequenceElement, DefaultSequenceListDocument.class);
-                ((CycleSequencingOptions)options).setSequences(defaultSequenceListDocument.getNucleotideSequences());
-            } catch (JDOMException e) {
-                e.printStackTrace();
-                throw new SQLException("Could not deserialize the sequences: "+e.getMessage());
-            } catch (IOException e) {
-                e.printStackTrace();
-                throw new SQLException("Could not read the sequences: "+e.getMessage());
-            } catch (XMLSerializationException e) {
-                e.printStackTrace();
-                throw new SQLException("Couldn't deserialize the sequences: "+e.getMessage());
-            }
-        }
+//        String sequenceString = r.getString("cyclesequencing.sequences");
+//        if(sequenceString != null && sequenceString.length() > 0) {
+//            SAXBuilder builder = new SAXBuilder();
+//            try {
+//                Element sequenceElement = builder.build(new StringReader(sequenceString)).detachRootElement();
+//                DefaultSequenceListDocument defaultSequenceListDocument = XMLSerializer.classFromXML(sequenceElement, DefaultSequenceListDocument.class);
+//                ((CycleSequencingOptions)options).setSequences(defaultSequenceListDocument.getNucleotideSequences());
+//            } catch (JDOMException e) {
+//                e.printStackTrace();
+//                throw new SQLException("Could not deserialize the sequences: "+e.getMessage());
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//                throw new SQLException("Could not read the sequences: "+e.getMessage());
+//            } catch (XMLSerializationException e) {
+//                e.printStackTrace();
+//                throw new SQLException("Couldn't deserialize the sequences: "+e.getMessage());
+//            }
+//        }
         return options;
     }
 
@@ -111,7 +104,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return Type.CycleSequencing;
     }
 
-    public ReactionOptions getOptions() {
+    public ReactionOptions _getOptions() {
         return options;
     }
 
@@ -146,8 +139,13 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         });
     }
 
-    public void addSequences(List<NucleotideSequenceDocument> sequences) {
-        options.addSequences(sequences);
+    public void addSequences(List<NucleotideSequenceDocument> sequences, List<ReactionUtilities.MemoryFile> rawTraces) {
+        if(sequences != null) {
+            options.addSequences(sequences);
+        }
+        if(rawTraces != null) {
+            options.addRawTraces(rawTraces);
+        }
     }
 
     public Color _getBackgroundColor() {
@@ -163,6 +161,25 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
     public String getExtractionId() {
         return getOptions().getValueAsString("extractionId");
+    }
+
+    List<ReactionUtilities.MemoryFile> getChromats() throws SQLException {
+        if(getId() < 0) {
+            return new ArrayList<ReactionUtilities.MemoryFile>();
+        }
+
+        String sql = "SELECT * FROM traces WHERE reaction = ?";
+
+        Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setInt(1, getId());
+        ResultSet set = statement.executeQuery();
+
+        List<ReactionUtilities.MemoryFile> result = new ArrayList<ReactionUtilities.MemoryFile>();
+        while(set.next()) {
+            result.add(new ReactionUtilities.MemoryFile(set.getString("name"), set.getBytes("data")));
+        }
+        return result;
     }
 
     public String areReactionsValid(List<CycleSequencingReaction> reactions) {

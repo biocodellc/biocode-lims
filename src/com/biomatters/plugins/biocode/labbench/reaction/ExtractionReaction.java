@@ -79,7 +79,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
     private ReactionOptions options;
 
-    public ReactionOptions getOptions() {
+    public ReactionOptions _getOptions() {
         if(options == null) {
             options = new ExtractionOptions();
         }

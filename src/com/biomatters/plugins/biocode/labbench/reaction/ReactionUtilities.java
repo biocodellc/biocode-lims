@@ -31,10 +31,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -177,11 +174,45 @@ public class ReactionUtilities {
                             break;
                         }
                         List<NucleotideSequenceDocument> sequences = getSequencesFromAnnotatedPluginDocuments(annotatedDocuments);
-                        r.addSequences(sequences);
+                        List<MemoryFile> files = new ArrayList<MemoryFile>();
+
+                        try {
+                            files.add(loadFileIntoMemory(f));
+                        } catch (IOException e) {
+                            assert false : e.getMessage();
+                            //todo: handle
+                            e.printStackTrace();
+                        }
+
+
+                        r.addSequences(sequences, files);
                     }
                 }
             }
         }
+    }
+
+    public static MemoryFile loadFileIntoMemory(File f) throws IOException{
+        return new MemoryFile(f.getName(), getBytesFromFile(f));
+    }
+
+    private static byte[] getBytesFromFile(File f) throws IOException{
+        if(!f.exists()) {
+            throw new IllegalArgumentException("The file does not exist!");
+        }
+        if(f.isDirectory()) {
+            throw new IllegalArgumentException("The file is a directory!");
+        }
+        if(f.length() > (long)Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("The file is too long!");
+        }
+
+
+        byte[] result = new byte[(int)f.length()];
+        FileInputStream in = new FileInputStream(f);
+        in.read(result);
+        in.close();
+        return result;
     }
 
     public static List<AnnotatedPluginDocument> importDocuments(File[] sequenceFiles, ProgressListener progress) throws IOException, DocumentImportException {
@@ -279,8 +310,8 @@ public class ReactionUtilities {
         try {
             options = XMLSerializer.clone(reactions.get(0).getOptions());
             options.refreshValuesFromCaches();
+            options.setReaction(reactions.get(0));//hack for cycle sequencing traces
         } catch (XMLSerializationException e) {
-            //assert false : e.getMessage(); //there's no way I can see that this would happen, so I'm making it an assert
             //e.printStackTrace();
             //options = reactions.get(0).getOptions();
             throw new RuntimeException(e);
@@ -744,4 +775,21 @@ public class ReactionUtilities {
         return fieldsPanel;
     }
 
+    static class MemoryFile{
+        private String name;
+        private byte[] data;
+
+        public MemoryFile(String name, byte[] data) {
+            this.name = name;
+            this.data = data;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public byte[] getData() {
+            return data;
+        }
+    }
 }

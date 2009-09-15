@@ -34,6 +34,7 @@ import org.jdom.Element;
  */
 public class TracesEditor {
     private List<NucleotideSequenceDocument> sequences;
+    private List<ReactionUtilities.MemoryFile> rawTraces;
     private DocumentViewerFactory factory;
     private JPanel holder = new JPanel(new BorderLayout());
     private JPanel sequenceHolder = new JPanel(new GridLayout(1,1));
@@ -43,7 +44,7 @@ public class TracesEditor {
     private DocumentViewer documentViewer;
     private String name;
 
-    public TracesEditor(List<NucleotideSequenceDocument> sequencesa, String reactionName) {
+    public TracesEditor(final List<NucleotideSequenceDocument> sequencesa, final List<ReactionUtilities.MemoryFile> memoryFiles, String reactionName) {
         this.name = reactionName;
         sequenceHolder.setPreferredSize(new Dimension(640,480));
         addSequenceAction = new GeneiousAction("Add sequence(s)") {
@@ -61,6 +62,9 @@ public class TracesEditor {
                                 if (!progress.isCanceled()) {
                                     updatePanel(pluginDocuments);
                                 }
+                                for(File f : sequenceFiles) {
+                                    rawTraces.add(ReactionUtilities.loadFileIntoMemory(f));
+                                }
                             } catch (IOException e1) {
                                 showMessageDialog("Could not import your documents: " + e1.getMessage());
                             } catch (DocumentImportException e1) {
@@ -76,9 +80,11 @@ public class TracesEditor {
         removeSequencesAction = new GeneiousAction("Remove sequence(s)") {
             public void actionPerformed(ActionEvent e) {
                 for(SequenceDocument selectedDoc : sequenceSelection.getSelectedSequences()) {
-                    for(NucleotideSequenceDocument doc : sequences) {
-                        if(doc.getName().equals(selectedDoc.getName()) && doc.getSequenceString().equalsIgnoreCase(selectedDoc.getSequenceString())) {
-                            sequences.remove(doc);
+                    for (int i = 0; i < sequences.size(); i++) {
+                        NucleotideSequenceDocument doc = sequences.get(i);
+                        if (doc.getName().equals(selectedDoc.getName()) && doc.getSequenceString().equalsIgnoreCase(selectedDoc.getSequenceString())) {
+                            sequences.remove(i);
+                            rawTraces.remove(i);
                             break;
                         }
                     }
@@ -93,15 +99,12 @@ public class TracesEditor {
                 if(selectedFolder != null){
                     Set<SequenceDocument> sequences = sequenceSelection.getSelectedSequences();
                     ArrayList<NucleotideSequenceDocument> sequenceList = new ArrayList<NucleotideSequenceDocument>();
-                    for(SequenceDocument doc : sequences) {
-                        sequenceList.add((NucleotideSequenceDocument)doc);
-                    }
-                    DefaultSequenceListDocument listDocument = DefaultSequenceListDocument.forNucleotideSequences(sequenceList);
-                    if(name != null) {
-                        listDocument.setName(name+" reads");
-                    }
+
                     try {
-                        selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(listDocument), ProgressListener.EMPTY).setUnread(true);
+                        for(SequenceDocument doc : sequences) {
+                            selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(doc), ProgressListener.EMPTY).setUnread(true);
+                        }
+
                     } catch (DatabaseServiceException e1) {
                         Dialogs.showMessageDialog(e1.getMessage());
                     }
@@ -123,7 +126,8 @@ public class TracesEditor {
         };
 
 
-        this.sequences = sequencesa;
+        this.sequences = new ArrayList<NucleotideSequenceDocument>(sequencesa);
+        this.rawTraces = new ArrayList<ReactionUtilities.MemoryFile>(memoryFiles);
         boolean faked = false;
         DefaultSequenceListDocument sequenceList;
         if(sequences == null || sequences.size() == 0) {
@@ -226,8 +230,8 @@ public class TracesEditor {
         return sequences;
     }
 
-    public void setSequences(List<NucleotideSequenceDocument> sequences) {
-        this.sequences = sequences;
+    public List<ReactionUtilities.MemoryFile> getRawTraces() {
+        return rawTraces;
     }
 
     private static DocumentViewer createViewer(DefaultSequenceListDocument sequenceList, DocumentViewerFactory factory) {

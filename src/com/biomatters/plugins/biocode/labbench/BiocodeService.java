@@ -1459,6 +1459,9 @@ public class BiocodeService extends DatabaseService {
         }
 
         private static Window getParentFrame(Component component) {
+            if(component == null) {
+                return null;
+            }
             if(component instanceof Window) {
                 return (Window)component;
             }

@@ -366,7 +366,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
                 for (Map.Entry<CycleSequencingReaction, List<NucleotideSequenceDocument>> entry : result.getReactions().entrySet()) {
                     if (options.isAddChromatograms()) {
-                        entry.getKey().addSequences(entry.getValue());
+                        entry.getKey().addSequences(entry.getValue(), null);//todo: need to add the raw files from disk here!
                     }
                     entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
                     Reaction.saveReactions(new Reaction[] {entry.getKey()}, Reaction.Type.CycleSequencing, connection, null);

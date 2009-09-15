@@ -24,6 +24,7 @@ import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.ResultSet;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -131,7 +132,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private Rectangle location = new Rectangle(0,0,0,0);
 
 
-    public abstract ReactionOptions getOptions();
+    public final ReactionOptions getOptions() {
+        ReactionOptions options = _getOptions();
+        if(options != null) {
+            options.setReaction(this);
+        }
+        return options;
+    }
+
+    public abstract ReactionOptions _getOptions();
 
     public abstract void setOptions(ReactionOptions op);
 
@@ -594,8 +603,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             case CycleSequencing:
                 insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cyclesequencing.date WHERE id=?";
+                String clearTracesSQL = "DELETE FROM traces WHERE reaction=?";
+                String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
+
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
+                PreparedStatement clearTracesStatement = connection.prepareStatement(clearTracesSQL);
+                PreparedStatement insertTracesStatement = connection.prepareStatement(insertTracesSQL);
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
@@ -670,6 +684,25 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
                         statement.setString(14, sequenceString);
                         statement.execute();
+                        if(((CycleSequencingOptions)reaction.getOptions()).getSequences() != null) {
+                            int reactionId = reaction.getId();
+                            if(reactionId > 0) {
+                                clearTracesStatement.setInt(1, reactionId);
+                                clearTracesStatement.execute();
+                            }
+                            else {
+                                ResultSet reactionIdResultSet = connection.createStatement().executeQuery("SELECT LAST_INSERT_ID()");
+                                reactionIdResultSet.next();
+                                reactionId = reactionIdResultSet.getInt(1);
+                            }
+
+                            for(ReactionUtilities.MemoryFile file : ((CycleSequencingOptions)reaction.getOptions()).getRawTraces()) {
+                                insertTracesStatement.setInt(1, reactionId);
+                                insertTracesStatement.setString(2, file.getName());
+                                insertTracesStatement.setBytes(3, file.getData());
+                                insertTracesStatement.execute();
+                            }
+                        }
                     }
                 }
                 insertStatement.close();

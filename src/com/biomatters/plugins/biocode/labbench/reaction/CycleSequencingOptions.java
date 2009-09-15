@@ -4,11 +4,15 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
+import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.Base64Coder;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
@@ -22,6 +26,12 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.sql.SQLException;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import jebl.util.ProgressListener;
 
 /**
  * @author Steven Stones-Havas
@@ -41,6 +51,7 @@ public class CycleSequencingOptions extends ReactionOptions {
     static final String TRACES_BUTTON_ID = "traces";
 
     private List<NucleotideSequenceDocument> sequences;
+    private List<ReactionUtilities.MemoryFile> rawTraces;
 
     public CycleSequencingOptions(Class c) {
         super(c);
@@ -51,8 +62,13 @@ public class CycleSequencingOptions extends ReactionOptions {
     public CycleSequencingOptions(Element e) throws XMLSerializationException {
         super(e);
         Element sequencesElement = e.getChild("sequences");
-        if(sequencesElement != null) {
+        Element rawTracesElement = e.getChild("rawTraces");
+        if(sequencesElement != null && rawTracesElement != null) {
             sequences = XMLSerializer.classFromXML(sequencesElement, DefaultSequenceListDocument.class).getNucleotideSequences();
+            rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+            for(Element el : rawTracesElement.getChildren("trace")){
+                rawTraces.add(new ReactionUtilities.MemoryFile(el.getAttributeValue("name"), Base64Coder.decode(el.getText().toCharArray())));
+            }
         }
         initListeners();
     }
@@ -122,9 +138,28 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         tracesButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                TracesEditor editor = new TracesEditor(sequences==null ? Collections.EMPTY_LIST : sequences, getValueAsString("extractionId"));
+                if(reaction == null) {
+                    Dialogs.showMessageDialog("These options are not linked to a reaction, so you cannot view the traces.", "Cannot view traces", tracesButton.getComponent(), Dialogs.DialogIcon.INFORMATION);
+                    return;
+                }
+                if(reaction.getId() > 0) {
+                    if(sequences == null || rawTraces == null) {
+                        if(!Dialogs.showYesNoDialog("You have not downloaded the sequences for this reaction from the database yet.  Would you like to do so now?", "Download sequences", tracesButton.getComponent(), Dialogs.DialogIcon.QUESTION)) {
+                            return;
+                        }
+                        Runnable r = new Runnable() {
+                            public void run() {
+                                getChromats();
+                            }
+                        };
+                        BiocodeService.block("Downloading sequences", tracesButton.getComponent(), r);
+
+                    }
+                }
+                TracesEditor editor = new TracesEditor(sequences==null ? Collections.EMPTY_LIST : sequences, rawTraces==null ? Collections.EMPTY_LIST : rawTraces, getValueAsString("extractionId"));
                 if(editor.showDialog(tracesButton.getComponent())) {
                     sequences = editor.getSequences();
+                    rawTraces = editor.getRawTraces();
                 }
 
             }
@@ -158,6 +193,61 @@ public class CycleSequencingOptions extends ReactionOptions {
             }
         }
         labelListener.objectChanged();
+    }
+
+    private void getChromats() {
+        try {
+            rawTraces = ((CycleSequencingReaction) reaction).getChromats();
+            sequences = new ArrayList<NucleotideSequenceDocument>();
+
+            List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
+            File tempFolder = null;
+
+            for(ReactionUtilities.MemoryFile mFile : rawTraces) {
+                if(tempFolder == null) {
+                    tempFolder = File.createTempFile(getValueAsString("extractionId"), "");
+                    if(tempFolder.exists()) {
+                        tempFolder.delete();
+                    }
+                    if(!tempFolder.mkdir()){
+                        throw new IOException("could not create the temp dir!");
+                    }
+                }
+
+                //write the data to a temp file (because Geneious file importers can't read an in-memory stream
+                File abiFile = new File(tempFolder, mFile.getName());
+                FileOutputStream out = new FileOutputStream(abiFile);
+                out.write(mFile.getData());
+                out.close();
+
+                //import the file
+                List<AnnotatedPluginDocument> pluginDocuments = PluginUtilities.importDocuments(abiFile, ProgressListener.EMPTY);
+                docs.addAll(pluginDocuments);
+                if(!abiFile.delete()){
+                    abiFile.deleteOnExit();
+                }
+            }
+            if(tempFolder != null && !tempFolder.delete()){
+                tempFolder.deleteOnExit();
+            }
+
+            for(AnnotatedPluginDocument adoc : docs) {
+                PluginDocument doc = adoc.getDocumentOrNull();
+                if(doc == null) {
+                    //todo: handle
+                }
+                if(!(doc instanceof NucleotideSequenceDocument)) {
+                    //todo: handle
+                }
+                sequences.add((NucleotideSequenceDocument)doc);
+            }
+        } catch (SQLException e1) {
+            Dialogs.showMessageDialog("Could not get the sequences: "+e1.getMessage());
+        } catch (IOException e1) {
+            Dialogs.showMessageDialog("Could not import the sequences: "+e1.getMessage());
+        } catch (DocumentImportException e1) {
+            Dialogs.showMessageDialog("Could not import the sequences: "+e1.getMessage());
+        }
     }
 
     public void init() {
@@ -219,8 +309,8 @@ public class CycleSequencingOptions extends ReactionOptions {
         return sequences;
     }
 
-    public void setSequences(List<NucleotideSequenceDocument> sequences) {
-        this.sequences = sequences;
+    public List<ReactionUtilities.MemoryFile> getRawTraces() {
+        return rawTraces;
     }
 
     public void addSequences(List<NucleotideSequenceDocument> sequences) {
@@ -230,6 +320,13 @@ public class CycleSequencingOptions extends ReactionOptions {
         else {
             this.sequences.addAll(sequences);
         }
+    }
+
+    public void addRawTraces(List<ReactionUtilities.MemoryFile> files) {
+        if(this.rawTraces == null) {
+            this.rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+        }
+        this.rawTraces.addAll(files);
     }
 
     private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
@@ -248,6 +345,16 @@ public class CycleSequencingOptions extends ReactionOptions {
         if(sequences != null) {
             DefaultSequenceListDocument list = DefaultSequenceListDocument.forNucleotideSequences(sequences);
             element.addContent(XMLSerializer.classToXML("sequences", list));
+        }
+        if(rawTraces != null) {
+            Element tracesElement = new Element("rawTraces");
+            for(ReactionUtilities.MemoryFile file : rawTraces) {
+                Element traceElement = new Element("trace");
+                traceElement.setAttribute("name", file.getName());
+                traceElement.setText(new String(Base64Coder.encode(file.getData())));
+                tracesElement.addContent(traceElement);
+            }
+            element.addContent(tracesElement);
         }
         return element;
     }

@@ -149,6 +149,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             thermocycleAction.setEnabled(buttonsEnabled);
             editThermocycleAction.setEnabled(buttonsEnabled);
             gelAction.setEnabled(buttonsEnabled);
+            addTracesAction.setEnabled(buttonsEnabled);
         }
         editAction.setEnabled(plateView.getSelectedReactions().size() > 0 && !plateView.getPlate().isDeleted());
         //bulkEditAction.setEnabled(buttonsEnabled);
@@ -259,6 +260,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                             editThermocycleAction,
                             gelAction,
                             editAction,
+                            addTracesAction,
                             exportPlateAction
                     ));
                 }
@@ -342,6 +344,13 @@ public class PlateDocumentViewer extends DocumentViewer{
             ReactionUtilities.editReactions(plateView.getSelectedReactions(), isLocal, plateView, false, false);
             saveAction.setEnabled(true);
             updatePanel();
+        }
+    };
+
+    GeneiousAction addTracesAction = new GeneiousAction("Bulk add traces", null, StandardIcons.nucleotide.getIcons()) {
+        public void actionPerformed(ActionEvent e) {
+            ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
+            saveAction.setEnabled(true);
         }
     };
 

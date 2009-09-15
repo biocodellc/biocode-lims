@@ -38,7 +38,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
 //        System.out.println(getWorkflow());
     }
 
-    private Options init(ResultSet r) throws SQLException {
+    private void init(ResultSet r) throws SQLException {
         setId(r.getInt("pcr.id"));
         setPlateId(r.getInt("pcr.plate"));
         ReactionOptions options = getOptions();
@@ -88,10 +88,9 @@ public class PCRReaction extends Reaction<PCRReaction> {
                 }
             }
         }
-        return options;
     }
 
-    public ReactionOptions getOptions() {
+    public ReactionOptions _getOptions() {
         return options;
     }
 
