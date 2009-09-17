@@ -775,7 +775,7 @@ public class ReactionUtilities {
         return fieldsPanel;
     }
 
-    static class MemoryFile{
+    public static class MemoryFile{
         private String name;
         private byte[] data;
 

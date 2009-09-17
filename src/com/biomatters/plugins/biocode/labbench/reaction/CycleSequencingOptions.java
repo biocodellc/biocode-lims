@@ -144,9 +144,9 @@ public class CycleSequencingOptions extends ReactionOptions {
                 }
                 if(reaction.getId() > 0) {
                     if(sequences == null || rawTraces == null) {
-                        if(!Dialogs.showYesNoDialog("You have not downloaded the sequences for this reaction from the database yet.  Would you like to do so now?", "Download sequences", tracesButton.getComponent(), Dialogs.DialogIcon.QUESTION)) {
-                            return;
-                        }
+//                        if(!Dialogs.showYesNoDialog("You have not downloaded the sequences for this reaction from the database yet.  Would you like to do so now?", "Download sequences", tracesButton.getComponent(), Dialogs.DialogIcon.QUESTION)) {
+//                            return;
+//                        }
                         Runnable r = new Runnable() {
                             public void run() {
                                 getChromats();
@@ -195,52 +195,64 @@ public class CycleSequencingOptions extends ReactionOptions {
         labelListener.objectChanged();
     }
 
+    public void addChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+        List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
+        File tempFolder = null;
+        if(rawTraces == null) {
+            rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+        }
+        if(sequences == null) {
+            sequences = new ArrayList<NucleotideSequenceDocument>();
+        }
+
+        for(ReactionUtilities.MemoryFile mFile : files) {
+            if(tempFolder == null) {
+                tempFolder = File.createTempFile(getValueAsString("extractionId"), "");
+                if(tempFolder.exists()) {
+                    tempFolder.delete();
+                }
+                if(!tempFolder.mkdir()){
+                    throw new IOException("could not create the temp dir!");
+                }
+            }
+
+            //write the data to a temp file (because Geneious file importers can't read an in-memory stream
+            File abiFile = new File(tempFolder, mFile.getName());
+            FileOutputStream out = new FileOutputStream(abiFile);
+            out.write(mFile.getData());
+            out.close();
+
+            //import the file
+            List<AnnotatedPluginDocument> pluginDocuments = PluginUtilities.importDocuments(abiFile, ProgressListener.EMPTY);
+            docs.addAll(pluginDocuments);
+            rawTraces.add(mFile);
+            if(!abiFile.delete()){
+                abiFile.deleteOnExit();
+            }           
+        }
+        if(tempFolder != null && !tempFolder.delete()){
+            tempFolder.deleteOnExit();
+        }
+
+        for(AnnotatedPluginDocument adoc : docs) {
+            PluginDocument doc = adoc.getDocumentOrNull();
+            if(doc == null) {
+                //todo: handle
+            }
+            if(!(doc instanceof NucleotideSequenceDocument)) {
+                //todo: handle
+            }
+            sequences.add((NucleotideSequenceDocument)doc);
+        }
+    }
+
     private void getChromats() {
         try {
-            rawTraces = ((CycleSequencingReaction) reaction).getChromats();
+            List<ReactionUtilities.MemoryFile> chromatFiles = ((CycleSequencingReaction) reaction).getChromats();
+            rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
             sequences = new ArrayList<NucleotideSequenceDocument>();
+            addChromats(chromatFiles);
 
-            List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
-            File tempFolder = null;
-
-            for(ReactionUtilities.MemoryFile mFile : rawTraces) {
-                if(tempFolder == null) {
-                    tempFolder = File.createTempFile(getValueAsString("extractionId"), "");
-                    if(tempFolder.exists()) {
-                        tempFolder.delete();
-                    }
-                    if(!tempFolder.mkdir()){
-                        throw new IOException("could not create the temp dir!");
-                    }
-                }
-
-                //write the data to a temp file (because Geneious file importers can't read an in-memory stream
-                File abiFile = new File(tempFolder, mFile.getName());
-                FileOutputStream out = new FileOutputStream(abiFile);
-                out.write(mFile.getData());
-                out.close();
-
-                //import the file
-                List<AnnotatedPluginDocument> pluginDocuments = PluginUtilities.importDocuments(abiFile, ProgressListener.EMPTY);
-                docs.addAll(pluginDocuments);
-                if(!abiFile.delete()){
-                    abiFile.deleteOnExit();
-                }
-            }
-            if(tempFolder != null && !tempFolder.delete()){
-                tempFolder.deleteOnExit();
-            }
-
-            for(AnnotatedPluginDocument adoc : docs) {
-                PluginDocument doc = adoc.getDocumentOrNull();
-                if(doc == null) {
-                    //todo: handle
-                }
-                if(!(doc instanceof NucleotideSequenceDocument)) {
-                    //todo: handle
-                }
-                sequences.add((NucleotideSequenceDocument)doc);
-            }
         } catch (SQLException e1) {
             Dialogs.showMessageDialog("Could not get the sequences: "+e1.getMessage());
         } catch (IOException e1) {

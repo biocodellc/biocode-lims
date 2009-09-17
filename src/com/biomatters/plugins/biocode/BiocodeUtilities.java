@@ -8,20 +8,26 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSeque
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
-import com.biomatters.geneious.publicapi.plugin.DocumentOperation;
-import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
+import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import jebl.util.ProgressListener;
 
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
 import java.util.*;
+import java.io.IOException;
 
 /**
  * @author Richard
@@ -85,6 +91,26 @@ public class BiocodeUtilities {
             throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
         }
         return mostRecent;
+    }
+
+    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions) throws SQLException, IOException, DocumentImportException{
+        List<String> idQueries = new ArrayList<String>();
+        for(Reaction r : reactions) {
+            idQueries.add("reaction="+r.getId());
+        }
+
+        Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement();
+        ResultSet resultSet = statement.executeQuery("SELECT * FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
+        while(resultSet.next()) {
+            ReactionUtilities.MemoryFile memoryFile = new ReactionUtilities.MemoryFile(resultSet.getString("name"), resultSet.getBytes("data"));
+            int id = resultSet.getInt("reaction");
+            //todo: there might be multiple instances of the same reaction in this list, so we loop through everything each time.  maybe we could sort the list if this is too slow?
+            for(CycleSequencingReaction r : reactions) {
+                if(r.getId() == id) {
+                    ((CycleSequencingOptions)r.getOptions()).addChromats(Collections.singletonList(memoryFile));
+                }
+            }
+        }
     }
 
     /**
