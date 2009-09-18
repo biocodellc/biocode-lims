@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOperation;
+import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFromLimsOperation;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyDocumentViewerFactory;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
@@ -59,7 +60,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "1.2";
+        return "1.3";
     }
 
     public String getMinimumApiVersion() {
@@ -168,6 +169,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     public DocumentOperation[] getDocumentOperations() {
         return new DocumentOperation[] {
                 new NewPlateDocumentOperation(),
+                new DownloadChromatogramsFromLimsOperation(false),
                 new SetReadDirectionOperation(),
                 new BatchChromatogramExportOperation(),
                 new VerifyTaxonomyOperation(),

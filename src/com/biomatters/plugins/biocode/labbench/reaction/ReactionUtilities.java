@@ -31,7 +31,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -66,12 +69,8 @@ public class ReactionUtilities {
         }
 
         Options options = new Options(ReactionUtilities.class);
-        Options.FileSelectionOption selectionOption = options.addFileSelectionOption("inputFolder", "Folder containing chromats", "", new String[0], "Browse...", new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                File file = new File(dir, name);
-                return file.exists() && file.isDirectory();
-            }
-        });
+        Options.FileSelectionOption selectionOption = options.addFileSelectionOption("inputFolder", "Folder containing chromats", "", new String[0], "Browse...");
+        selectionOption.setSelectionType(JFileChooser.DIRECTORIES_ONLY);
 
 
         options.beginAlignHorizontally(null, false);

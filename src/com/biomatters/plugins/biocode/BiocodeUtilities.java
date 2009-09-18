@@ -11,23 +11,24 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
+import java.io.IOException;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.ResultSet;
 import java.util.*;
-import java.io.IOException;
 
 /**
  * @author Richard
@@ -93,7 +94,7 @@ public class BiocodeUtilities {
         return mostRecent;
     }
 
-    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions) throws SQLException, IOException, DocumentImportException{
+    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions, ProgressListener progressListener) throws SQLException, IOException, DocumentImportException{
         List<String> idQueries = new ArrayList<String>();
         for(Reaction r : reactions) {
             idQueries.add("reaction="+r.getId());
@@ -101,13 +102,21 @@ public class BiocodeUtilities {
 
         Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement();
         ResultSet resultSet = statement.executeQuery("SELECT * FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
+        Map<Integer, ReactionUtilities.MemoryFile> results = new HashMap<Integer, ReactionUtilities.MemoryFile>();
         while(resultSet.next()) {
+            if (progressListener.isCanceled()) return;
             ReactionUtilities.MemoryFile memoryFile = new ReactionUtilities.MemoryFile(resultSet.getString("name"), resultSet.getBytes("data"));
             int id = resultSet.getInt("reaction");
+            results.put(id, memoryFile);
+        }
+        CompositeProgressListener progress = new CompositeProgressListener(progressListener, results.size());
+        for (Map.Entry<Integer, ReactionUtilities.MemoryFile> result : results.entrySet()) {
+            progress.beginSubtask();
+            if (progress.isCanceled()) return;
             //todo: there might be multiple instances of the same reaction in this list, so we loop through everything each time.  maybe we could sort the list if this is too slow?
             for(CycleSequencingReaction r : reactions) {
-                if(r.getId() == id) {
-                    ((CycleSequencingOptions)r.getOptions()).addChromats(Collections.singletonList(memoryFile));
+                if(r.getId() == result.getKey()) {
+                    ((CycleSequencingOptions)r.getOptions()).addChromats(Collections.singletonList(result.getValue()));
                 }
             }
         }

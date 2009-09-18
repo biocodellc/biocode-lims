@@ -6,8 +6,8 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDo
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import jebl.util.ProgressListener;
 
 import java.util.ArrayList;
@@ -51,17 +51,28 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
-        AnnotateFimsDataOptions options = (AnnotateFimsDataOptions) o;
+        final AnnotateFimsDataOptions options = (AnnotateFimsDataOptions) o;
+        FimsDataGetter fimsDataGetter = new FimsDataGetter() {
+            @Override
+            public AnnotateFimsDataOptions.FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                try {
+                    return options.getFimsData(document);
+                } catch (ConnectionException e) {
+                    throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
+                }
+            }
+        };
+        annotateFimsData(annotatedDocuments, progressListener, fimsDataGetter);
+        return null;
+    }
+
+    public static void annotateFimsData(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, FimsDataGetter fimsDataGetter) throws DocumentOperationException {
         progressListener.setIndeterminateProgress();
         progressListener.setMessage("Accessing FIMS...");
         List<String> failBlog = new ArrayList<String>();
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
             AnnotateFimsDataOptions.FimsData fimsData;
-            try {
-                fimsData = options.getFimsData(annotatedDocument);
-            } catch (ConnectionException e) {
-                throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
-            }
+            fimsData = fimsDataGetter.getFimsData(annotatedDocument);
             if (progressListener.isCanceled()) {
                 break;
             }
@@ -107,13 +118,16 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         }
         if (!failBlog.isEmpty()) {
             StringBuilder b = new StringBuilder("<html>");
-            b.append("Tissue records could not be found for the following sequences:<br><br>");
+            b.append("Tissue records could not be found for the following sequences (the wells may have been empty):<br><br>");
             for (String s : failBlog) {
                 b.append(s).append("<br>");
             }
             b.append("</html>");
             throw new DocumentOperationException(b.toString());
         }
-        return null;
+    }
+
+    public static abstract class FimsDataGetter {
+        public abstract AnnotateFimsDataOptions.FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException;
     }
 }

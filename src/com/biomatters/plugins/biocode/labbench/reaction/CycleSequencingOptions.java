@@ -2,36 +2,35 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
-import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
-import com.biomatters.plugins.biocode.labbench.ButtonOption;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 import com.biomatters.plugins.biocode.labbench.TransactionException;
+import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.sql.SQLException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-
-import jebl.util.ProgressListener;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -52,6 +51,9 @@ public class CycleSequencingOptions extends ReactionOptions {
 
     private List<NucleotideSequenceDocument> sequences;
     private List<ReactionUtilities.MemoryFile> rawTraces;
+
+    public static final String FORWARD_VALUE = "forward";
+    public static final String DIRECTION = "direction";
 
     public CycleSequencingOptions(Class c) {
         super(c);
@@ -207,7 +209,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         for(ReactionUtilities.MemoryFile mFile : files) {
             if(tempFolder == null) {
-                tempFolder = File.createTempFile(getValueAsString("extractionId"), "");
+                tempFolder = File.createTempFile("biocode_" + getValueAsString("extractionId"), "");
                 if(tempFolder.exists()) {
                     tempFolder.delete();
                 }
@@ -275,8 +277,8 @@ public class CycleSequencingOptions extends ReactionOptions {
         PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer");
         addCustomOption(primerOption);
 
-        OptionValue[] directionValues = new OptionValue[] {new OptionValue("forward", "Forward"), new OptionValue("reverse", "Reverse")};
-        addComboBoxOption("direction", "Direction", directionValues, directionValues[0]);
+        OptionValue[] directionValues = new OptionValue[] {new OptionValue(FORWARD_VALUE, "Forward"), new OptionValue("reverse", "Reverse")};
+        addComboBoxOption(DIRECTION, "Direction", directionValues, directionValues[0]);
 
 
 //        IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);

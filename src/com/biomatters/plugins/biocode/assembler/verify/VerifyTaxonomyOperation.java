@@ -25,7 +25,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Verify Taxonomy...",
                 "Perform a batch BLAST search to verify the taxonomy and locus of sequencing results")
-                .setInPopupMenu(true, 0.3)
+                .setInPopupMenu(true, 0.7)
                 .setProOnly(true);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }

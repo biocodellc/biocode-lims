@@ -5,9 +5,9 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
 import org.virion.jam.util.SimpleListener;
@@ -154,13 +154,13 @@ public class AnnotateFimsDataOptions extends Options {
         }
     }
 
-    static final class FimsData {
+    public static final class FimsData {
 
-        final FimsSample fimsSample;
-        final String sequencingPlateName;
-        final BiocodeUtilities.Well well;
+        FimsSample fimsSample;
+        String sequencingPlateName;
+        BiocodeUtilities.Well well;
 
-        FimsData(FimsSample fimsSample, String sequencingPlateName, BiocodeUtilities.Well well) {
+        public FimsData(FimsSample fimsSample, String sequencingPlateName, BiocodeUtilities.Well well) {
             this.fimsSample = fimsSample;
             this.sequencingPlateName = sequencingPlateName;
             this.well = well;

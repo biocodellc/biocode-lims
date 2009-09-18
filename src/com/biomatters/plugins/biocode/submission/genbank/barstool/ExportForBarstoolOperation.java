@@ -24,7 +24,7 @@ public class ExportForBarstoolOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Export for BarSTool Submission...")
-                .setInPopupMenu(true, 0.7);
+                .setInPopupMenu(true, 0.8);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 

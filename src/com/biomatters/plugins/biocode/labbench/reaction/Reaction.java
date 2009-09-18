@@ -7,9 +7,9 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import org.jdom.Element;
 import org.jdom.output.Format;
@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -224,6 +224,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             return Color.orange.brighter();
         }
         return _getBackgroundColor();
+    }
+
+    public FimsSample getFimsSample() {
+        return fimsSample;
     }
 
     public Element toXML() {
