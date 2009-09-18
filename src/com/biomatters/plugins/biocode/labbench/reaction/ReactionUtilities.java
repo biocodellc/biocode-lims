@@ -196,7 +196,7 @@ public class ReactionUtilities {
         return new MemoryFile(f.getName(), getBytesFromFile(f));
     }
 
-    private static byte[] getBytesFromFile(File f) throws IOException{
+    public static byte[] getBytesFromFile(File f) throws IOException{
         if(!f.exists()) {
             throw new IllegalArgumentException("The file does not exist!");
         }

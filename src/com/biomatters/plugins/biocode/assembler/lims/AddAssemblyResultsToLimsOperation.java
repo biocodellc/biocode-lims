@@ -13,6 +13,7 @@ import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtili
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.Workflow;
@@ -21,9 +22,12 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -153,7 +157,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     continue;
                 } else {
                     AssemblyResult existingAssemblyResult = workflowsWithResults.get(assemblyResult.workflowId);
-                    for (Map.Entry<CycleSequencingReaction, List<NucleotideSequenceDocument>> chromatogramEntry : assemblyResult.getReactions().entrySet()) {
+                    for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> chromatogramEntry : assemblyResult.getReactions().entrySet()) {
                         existingAssemblyResult.addReaction(chromatogramEntry.getKey(), chromatogramEntry.getValue());
                     }
                     continue;
@@ -262,7 +266,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             assemblyResult.extractionId = reaction.getExtractionId();
 
-            assemblyResult.addReaction((CycleSequencingReaction) reaction, Collections.singletonList((NucleotideSequenceDocument) chromatogram.getDocument()));
+            assemblyResult.addReaction((CycleSequencingReaction) reaction, Collections.singletonList(chromatogram));
         }
         return null;
     }
@@ -280,7 +284,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         public String[] trims;
         public int edits;
 
-        private Map<Integer, List<NucleotideSequenceDocument>> chromatograms = new HashMap<Integer, List<NucleotideSequenceDocument>>();
+        private Map<Integer, List<AnnotatedPluginDocument>> chromatograms = new HashMap<Integer, List<AnnotatedPluginDocument>>();
         private Map<Integer, CycleSequencingReaction> reactionsById = new HashMap<Integer, CycleSequencingReaction>();
 
         public void setContigProperties(String consensus, Double coverage, Integer disagreements, String[] trims, int edits) {
@@ -291,19 +295,19 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             this.edits = edits;
         }
 
-        public void addReaction(CycleSequencingReaction cycleSequencingReaction, List<NucleotideSequenceDocument> chromatograms) {
-            List<NucleotideSequenceDocument> currentChromatograms = this.chromatograms.get(cycleSequencingReaction.getId());
+        public void addReaction(CycleSequencingReaction cycleSequencingReaction, List<AnnotatedPluginDocument> chromatograms) {
+            List<AnnotatedPluginDocument> currentChromatograms = this.chromatograms.get(cycleSequencingReaction.getId());
             if (currentChromatograms == null) {
-                currentChromatograms = new ArrayList<NucleotideSequenceDocument>();
+                currentChromatograms = new ArrayList<AnnotatedPluginDocument>();
                 this.chromatograms.put(cycleSequencingReaction.getId(), currentChromatograms);
                 this.reactionsById.put(cycleSequencingReaction.getId(), cycleSequencingReaction);
             }
             currentChromatograms.addAll(chromatograms);
         }
 
-        public Map<CycleSequencingReaction, List<NucleotideSequenceDocument>> getReactions() {
-            Map<CycleSequencingReaction, List<NucleotideSequenceDocument>> returnChromatograms = new HashMap<CycleSequencingReaction, List<NucleotideSequenceDocument>>();
-            for (Map.Entry<Integer, List<NucleotideSequenceDocument>> entry : chromatograms.entrySet()) {
+        public Map<CycleSequencingReaction, List<AnnotatedPluginDocument>> getReactions() {
+            Map<CycleSequencingReaction, List<AnnotatedPluginDocument>> returnChromatograms = new HashMap<CycleSequencingReaction, List<AnnotatedPluginDocument>>();
+            for (Map.Entry<Integer, List<AnnotatedPluginDocument>> entry : chromatograms.entrySet()) {
                 returnChromatograms.put(reactionsById.get(entry.getKey()), entry.getValue());
             }
             return returnChromatograms;
@@ -364,11 +368,37 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
                 statement.execute();
 
-                for (Map.Entry<CycleSequencingReaction, List<NucleotideSequenceDocument>> entry : result.getReactions().entrySet()) {
+                BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
+                Options chromatogramExportOptions = null;
+                File tempFolder;
+                try {
+                    tempFolder = PluginUtilities.createTempFile("chromat", ".ab1").getParentFile();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
                     if (options.isAddChromatograms()) {
-                        entry.getKey().addSequences(entry.getValue(), null);//todo: need to add the raw files from disk here!
+                        if (chromatogramExportOptions == null) {
+                            chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());;
+                            chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
+                        }
+                        List<NucleotideSequenceDocument> sequences = new ArrayList<NucleotideSequenceDocument>();
+                        List<ReactionUtilities.MemoryFile> rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+                        for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
+                            sequences.add((NucleotideSequenceDocument)chromatogramDocument.getDocument());
+                            chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
+                            File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
+                            try {
+                                rawTraces.add(ReactionUtilities.loadFileIntoMemory(exportedFile));
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                        entry.getKey().addSequences(sequences, rawTraces);
                     }
                     entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+                    //todo: only call this once for all reactions
                     Reaction.saveReactions(new Reaction[] {entry.getKey()}, Reaction.Type.CycleSequencing, connection, null);
                 }
 
