@@ -55,9 +55,9 @@ public class MooreaFimsSample implements FimsSample {
     }
 
     private void initialiseAttributeFields(FIMSConnection fimsConnection) {
-        fimsAttributes = new HashMap<String, DocumentField>();
-        taxonomyFimsAttributes = new HashMap<String, DocumentField>();
-        hiddenFimsAttributes = new HashMap<String, DocumentField>();
+        fimsAttributes = new LinkedHashMap<String, DocumentField>();
+        taxonomyFimsAttributes = new LinkedHashMap<String, DocumentField>();
+        hiddenFimsAttributes = new LinkedHashMap<String, DocumentField>();
 
 
         if(fimsConnection == null) {
@@ -209,9 +209,6 @@ public class MooreaFimsSample implements FimsSample {
 
     public void fromXML(Element element) throws XMLSerializationException {
         try {
-            fimsAttributes = new HashMap<String, DocumentField>();
-            taxonomyFimsAttributes = new HashMap<String, DocumentField>();
-            hiddenFimsAttributes = new HashMap<String, DocumentField>();
 
             fimsConnectionId = element.getAttributeValue("fimsConnection");
             initialiseAttributeFields(BiocodeService.getInstance().getActiveFIMSConnection());
