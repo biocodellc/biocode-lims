@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.jdom.Element;
 
 import java.sql.ResultSet;
@@ -18,9 +19,9 @@ import java.util.*;
  */
 public class MooreaFimsSample implements FimsSample {
     private Map<String, Object> values;
-    private List<DocumentField> fimsAttributes;
-    private List<DocumentField> taxonomyFimsAttributes;
-    private List<DocumentField> hiddenFimsAttributes;
+    private Map<String, DocumentField> fimsAttributes;
+    private Map<String, DocumentField> taxonomyFimsAttributes;
+    private Map<String, DocumentField> hiddenFimsAttributes;
     private String fimsConnectionId;
     private static final DocumentField[] extraHiddenFields = new DocumentField[] {
         new DocumentField("Year Collected", "", "biocode_collecting_event.YearCollected", Integer.class, true, false),
@@ -37,24 +38,45 @@ public class MooreaFimsSample implements FimsSample {
 
     public MooreaFimsSample(ResultSet resultSet, FIMSConnection fimsConnection) throws SQLException{
         values = new HashMap<String, Object>();
-        fimsAttributes = fimsConnection.getCollectionAttributes();
-        taxonomyFimsAttributes = fimsConnection.getTaxonomyAttributes();
+        initialiseAttributeFields(fimsConnection);
         fimsConnectionId = fimsConnection.getName();
-        for(DocumentField field : fimsAttributes) {
+        for(DocumentField field : fimsAttributes.values()) {
             putField(resultSet, field);
         }
-        for(DocumentField field : taxonomyFimsAttributes) {
+        for(DocumentField field : taxonomyFimsAttributes.values()) {
             putField(resultSet, field);
         }
 
-        //special case
-        hiddenFimsAttributes = new ArrayList<DocumentField>();
         for(DocumentField field : extraHiddenFields) {
             values.put(field.getCode(), getResult(resultSet, field.getCode(), field.getValueType()));
-            hiddenFimsAttributes.add(field);
         }
 
         
+    }
+
+    private void initialiseAttributeFields(FIMSConnection fimsConnection) {
+        fimsAttributes = new HashMap<String, DocumentField>();
+        taxonomyFimsAttributes = new HashMap<String, DocumentField>();
+        hiddenFimsAttributes = new HashMap<String, DocumentField>();
+
+
+        if(fimsConnection == null) {
+            return;
+        }
+
+        List<DocumentField> collectionAttributeList = fimsConnection.getCollectionAttributes();
+        for(DocumentField field : collectionAttributeList) {
+            fimsAttributes.put(field.getCode(), field);
+        }
+        List<DocumentField> taxonomyAttributeList = fimsConnection.getTaxonomyAttributes();
+        for(DocumentField field : taxonomyAttributeList) {
+            taxonomyFimsAttributes.put(field.getCode(), field);
+        }
+
+                //special case
+        for(DocumentField field : extraHiddenFields) {
+            hiddenFimsAttributes.put(field.getCode(), field);
+        }
     }
 
     private void putField(ResultSet resultSet, DocumentField field) throws SQLException {
@@ -128,11 +150,11 @@ public class MooreaFimsSample implements FimsSample {
     }
 
     public List<DocumentField> getFimsAttributes() {
-        return fimsAttributes;
+        return new ArrayList<DocumentField>(fimsAttributes.values());
     }
 
     public List<DocumentField> getTaxonomyAttributes() {
-        return taxonomyFimsAttributes;
+        return new ArrayList<DocumentField>(taxonomyFimsAttributes.values());
     }
 
     public Object getFimsAttributeValue(String attributeName) {
@@ -156,21 +178,21 @@ public class MooreaFimsSample implements FimsSample {
         Element e = new Element("FimsSample");
         e.setAttribute("fimsConnection", fimsConnectionId);
 
-        Element fields = new Element("collectionFields");
-        for(DocumentField field : fimsAttributes) {
-            fields.addContent(field.toXML());
-        }
-        Element fields2 = new Element("taxonomyFields");
-        for(DocumentField field : taxonomyFimsAttributes) {
-            fields2.addContent(field.toXML());
-        }
-        Element fields3 = new Element("hiddenFields");
-        for(DocumentField field : hiddenFimsAttributes) {
-            fields3.addContent(field.toXML());
-        }
-        e.addContent(fields);
-        e.addContent(fields2);
-        e.addContent(fields3);
+//        Element fields = new Element("collectionFields");
+//        for(DocumentField field : fimsAttributes.values()) {
+//            fields.addContent(field.toXML());
+//        }
+//        Element fields2 = new Element("taxonomyFields");
+//        for(DocumentField field : taxonomyFimsAttributes.values()) {
+//            fields2.addContent(field.toXML());
+//        }
+//        Element fields3 = new Element("hiddenFields");
+//        for(DocumentField field : hiddenFimsAttributes.values()) {
+//            fields3.addContent(field.toXML());
+//        }
+//        e.addContent(fields);
+//        e.addContent(fields2);
+//        e.addContent(fields3);
 
         Element values = new Element("values");
         for(Map.Entry entry : this.values.entrySet()) {
@@ -187,32 +209,33 @@ public class MooreaFimsSample implements FimsSample {
 
     public void fromXML(Element element) throws XMLSerializationException {
         try {
-            fimsAttributes = new ArrayList<DocumentField>();
-            taxonomyFimsAttributes = new ArrayList<DocumentField>();
-            hiddenFimsAttributes = new ArrayList<DocumentField>();
+            fimsAttributes = new HashMap<String, DocumentField>();
+            taxonomyFimsAttributes = new HashMap<String, DocumentField>();
+            hiddenFimsAttributes = new HashMap<String, DocumentField>();
 
             fimsConnectionId = element.getAttributeValue("fimsConnection");
+            initialiseAttributeFields(BiocodeService.getInstance().getActiveFIMSConnection());
 
-            Element fields = element.getChild("collectionFields");
-            for(Element fieldChild : fields.getChildren()) {
-                DocumentField field = new DocumentField();
-                field.fromXML(fieldChild);
-                fimsAttributes.add(field);
-            }
-
-            Element fields2 = element.getChild("taxonomyFields");
-            for(Element fieldChild : fields2.getChildren()) {
-                DocumentField field = new DocumentField();
-                field.fromXML(fieldChild);
-                taxonomyFimsAttributes.add(field);
-            }
-
-            Element fields3 = element.getChild("hiddenFields");
-            for(Element fieldChild : fields3.getChildren()) {
-                DocumentField field = new DocumentField();
-                field.fromXML(fieldChild);
-                hiddenFimsAttributes.add(field);
-            }
+//            Element fields = element.getChild("collectionFields");
+//            for(Element fieldChild : fields.getChildren()) {
+//                DocumentField field = new DocumentField();
+//                field.fromXML(fieldChild);
+//                fimsAttributes.put(field.getCode(), field);
+//            }
+//
+//            Element fields2 = element.getChild("taxonomyFields");
+//            for(Element fieldChild : fields2.getChildren()) {
+//                DocumentField field = new DocumentField();
+//                field.fromXML(fieldChild);
+//                taxonomyFimsAttributes.put(field.getCode(), field);
+//            }
+//
+//            Element fields3 = element.getChild("hiddenFields");
+//            for(Element fieldChild : fields3.getChildren()) {
+//                DocumentField field = new DocumentField();
+//                field.fromXML(fieldChild);
+//                hiddenFimsAttributes.put(field.getCode(), field);
+//            }
 
             values = new HashMap<String, Object>();
             Element valuesElement = element.getChild("values");
@@ -224,30 +247,21 @@ public class MooreaFimsSample implements FimsSample {
                 Object value = getObjectFromString(field, e.getChildText("value"));
                 values.put(field.getCode(), value);
             }
-        } catch (XMLSerializationException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         } catch (IllegalStateException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
     }
 
     private DocumentField getDocumentField(String fieldCode) {
-        for(DocumentField field : fimsAttributes) {
-            if(field.getCode().equals(fieldCode)) {
-                return field;
-            }
+        DocumentField field1 = fimsAttributes.get(fieldCode);
+        if(field1 != null) {
+            return field1;
         }
-        for(DocumentField field : taxonomyFimsAttributes) {
-            if(field.getCode().equals(fieldCode)) {
-                return field;
-            }
+        DocumentField field2 = taxonomyFimsAttributes.get(fieldCode);
+        if(field2 != null) {
+            return field2;
         }
-        for(DocumentField field : hiddenFimsAttributes) {
-            if(field.getCode().equals(fieldCode)) {
-                return field;
-            }
-        }
-        return null;
+        return hiddenFimsAttributes.get(fieldCode);
     }
 
     private static Object getObjectFromString(DocumentField field, String stringValue) {

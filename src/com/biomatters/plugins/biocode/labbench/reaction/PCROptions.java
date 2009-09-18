@@ -57,7 +57,7 @@ public class PCROptions extends ReactionOptions {
     }
 
     public Cocktail getCocktail() {
-        List<Cocktail> cocktailList = new PCRCocktail().getAllCocktailsOfType();
+        List<? extends Cocktail> cocktailList = Cocktail.getAllCocktailsOfType(Reaction.Type.PCR);
         OptionValue cocktailValue = (OptionValue)cocktailOption.getValue();
 
         int cocktailId = Integer.parseInt(cocktailValue.getName());
@@ -77,7 +77,7 @@ public class PCROptions extends ReactionOptions {
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new PCRCocktail().getAllCocktailsOfType(), PCRCocktail.class, cocktailOption.getComponent());
+                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(Cocktail.getAllCocktailsOfType(Reaction.Type.PCR), PCRCocktail.class, cocktailOption.getComponent());
                 if (newCocktails.size() > 0) {
                     Runnable runnable = new Runnable() {
                         public void run() {
@@ -181,9 +181,9 @@ public class PCROptions extends ReactionOptions {
 
     private List<OptionValue> getCocktails() {
         List<OptionValue> cocktails = new ArrayList<OptionValue>();
-        List<Cocktail> cocktailList = new PCRCocktail().getAllCocktailsOfType();
+        List<? extends Cocktail> cocktailList = Cocktail.getAllCocktailsOfType(Reaction.Type.PCR);
         for (int i = 0; i < cocktailList.size(); i++) {
-            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
+            Cocktail cocktail = cocktailList.get(i);
             cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
         }
         if(cocktailList.size() == 0) {
@@ -194,8 +194,9 @@ public class PCROptions extends ReactionOptions {
 
     private void updateCocktailOption(ComboBoxOption<OptionValue> cocktailOption) {
         List<OptionValue> cocktails = new ArrayList<OptionValue>();
-        for (int i = 0; i < new PCRCocktail().getAllCocktailsOfType().size(); i++) {
-            Cocktail cocktail = new PCRCocktail().getAllCocktailsOfType().get(i);
+        List<? extends Cocktail> cocktailList = Cocktail.getAllCocktailsOfType(Reaction.Type.PCR);
+        for (int i = 0; i < cocktailList.size(); i++) {
+            Cocktail cocktail = cocktailList.get(i);
             cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
         }
         if(cocktails.size() == 0) {

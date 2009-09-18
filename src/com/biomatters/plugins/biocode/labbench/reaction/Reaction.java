@@ -707,6 +707,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 }
                 insertStatement.close();
                 updateStatement.close();
+                insertTracesStatement.close();
                 break;
         }
     }

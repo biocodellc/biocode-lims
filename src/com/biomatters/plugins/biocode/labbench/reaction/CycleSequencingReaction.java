@@ -29,7 +29,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     private CycleSequencingOptions options;
 
     public CycleSequencingReaction() {
-        options = new CycleSequencingOptions(this.getClass());
+
     }
 
     public CycleSequencingReaction(ResultSet r) throws SQLException {
@@ -105,6 +105,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     public ReactionOptions _getOptions() {
+        if(options == null) {
+            options = new CycleSequencingOptions(this.getClass());
+        }
         return options;
     }
 
@@ -117,7 +120,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
     public Cocktail getCocktail() {
         String cocktailId = ((Options.OptionValue)getOptions().getOption("cocktail").getValue()).getName();
-        for(Cocktail c : new CycleSequencingCocktail().getAllCocktailsOfType()) {
+        for(Cocktail c : Cocktail.getAllCocktailsOfType(getType())) {
             if((""+c.getId()).equals(cocktailId)) {
                 return c;
             }
@@ -179,6 +182,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         while(set.next()) {
             result.add(new ReactionUtilities.MemoryFile(set.getString("name"), set.getBytes("data")));
         }
+        statement.close();
         return result;
     }
 

@@ -29,7 +29,6 @@ public class PCRReaction extends Reaction<PCRReaction> {
     private ReactionOptions options;
 
     public PCRReaction() {
-        options = new PCROptions(this.getClass());
     }
 
     public PCRReaction(ResultSet r) throws SQLException{
@@ -91,6 +90,9 @@ public class PCRReaction extends Reaction<PCRReaction> {
     }
 
     public ReactionOptions _getOptions() {
+        if(options == null) {
+            options = new PCROptions(this.getClass());
+        }
         return options;
     }
 
@@ -107,7 +109,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
 
     public Cocktail getCocktail() {
         String cocktailId = ((Options.OptionValue)getOptions().getOption("cocktail").getValue()).getName();
-        for(Cocktail c : new PCRCocktail().getAllCocktailsOfType()) {
+        for(Cocktail c : Cocktail.getAllCocktailsOfType(Reaction.Type.PCR)) {
             if((""+c.getId()).equals(cocktailId)) {
                 return c;
             }

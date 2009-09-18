@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -49,7 +50,17 @@ public abstract class Cocktail implements XMLSerializable {
         return sum;
     }
 
-    public abstract List<? extends Cocktail> getAllCocktailsOfType();
+    public static List<? extends Cocktail> getAllCocktailsOfType(Reaction.Type type) {
+        if(type == Reaction.Type.PCR) {
+            return BiocodeService.getInstance().getPCRCocktails();
+        }
+        else if(type == Reaction.Type.CycleSequencing) {
+            return BiocodeService.getInstance().getCycleSequencingCocktails();
+        }
+        else {
+            throw new IllegalArgumentException("Only PCR and Cycle Sequencing reacitons have cocktails");
+        }
+    }
 
     public abstract Cocktail createNewCocktail();
 

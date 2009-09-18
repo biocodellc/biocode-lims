@@ -673,6 +673,7 @@ public class BiocodeService extends DatabaseService {
             while(resultSet.next()) {
                 cocktails.add(new PCRCocktail(resultSet));    
             }
+            resultSet.getStatement().close();
         }
         catch(SQLException ex) {
             throw new TransactionException("Could not query PCR Cocktails from the database");
@@ -687,6 +688,7 @@ public class BiocodeService extends DatabaseService {
             while(resultSet.next()) {
                 cocktails.add(new CycleSequencingCocktail(resultSet));    
             }
+            resultSet.getStatement().close();
         }
         catch(SQLException ex) {
             throw new TransactionException("Could not query CycleSequencing Cocktails from the database");
@@ -707,6 +709,7 @@ public class BiocodeService extends DatabaseService {
                 tCycles.add(Thermocycle.fromSQL(resultSet));
                 resultSet.previous();
             }
+            resultSet.getStatement().close();
         }
         catch(SQLException ex) {
             throw new TransactionException("could not read thermocycles from the database", ex);
@@ -757,6 +760,7 @@ public class BiocodeService extends DatabaseService {
                     statement.execute();
                     if(!autoCommit)
                         connection.commit();
+                    statement.close();
                 }
                 catch(SQLException ex) {
                     connection.rollback(savepoint);
@@ -910,6 +914,7 @@ public class BiocodeService extends DatabaseService {
             results.put(resultSet.getString("extractionId"), resultSet.getString("tissue"));
         }
 
+        statement.close();
         return results;
     }
 
@@ -938,6 +943,9 @@ public class BiocodeService extends DatabaseService {
             }
             if(!autoCommit)
                 connection.commit();
+            statement.close();
+            statement2.close();
+            statement3.close();
             return workflows;
         }
         catch(SQLException ex) {
@@ -1150,7 +1158,9 @@ public class BiocodeService extends DatabaseService {
         ResultSet resultSet = limsConnection.getConnection().createStatement().executeQuery(sql);
         List<Plate> result = new ArrayList<Plate>();
         while(resultSet.next()) {
-            result.add(new Plate(resultSet));
+            Plate plate = new Plate(resultSet);
+            plate.initialiseReactions();
+            result.add(plate);
         }
         return result;
     }
@@ -1273,20 +1283,25 @@ public class BiocodeService extends DatabaseService {
         //update the plate
         PreparedStatement statement = plate.toSQL(connection);
         statement.execute();
+        statement.close();
         if(plate.getId() < 0) {
             PreparedStatement statement1 = connection.prepareStatement("SELECT last_insert_id()");
             ResultSet resultSet = statement1.executeQuery();
             resultSet.next();
             int plateId = resultSet.getInt(1);
             plate.setId(plateId);
+            statement1.close();
         }
 
         //replace the images
         PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
         deleteImagesStatement.execute();
         for(GelImage image : plate.getImages()) {
-            image.toSql(connection).execute();
+            PreparedStatement statement1 = image.toSql(connection);
+            statement1.execute();
+            statement1.close();
         }
+        deleteImagesStatement.close();
 
         Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
     }
@@ -1301,6 +1316,7 @@ public class BiocodeService extends DatabaseService {
             if(plateCheckStatement.executeQuery().next()) {
                 throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
             }
+            plateCheckStatement.close();
         }
         if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
             throw new BadDataException("The plate has no thermocycle set");
@@ -1333,6 +1349,8 @@ public class BiocodeService extends DatabaseService {
             tissueToLocationMap.put(resultSet2.getString("extraction.sampleId"), resultSet2.getInt("cycleSequencing.location"));
             queries.add(Query.Factory.createFieldQuery(activeFIMSConnection.getTissueSampleDocumentField(), Condition.EQUAL, resultSet2.getString("extraction.sampleId")));
         }
+        statement1.close();
+        statement2.close();
 
         //step 3 - get the fims samples from the fims database
         try {
@@ -1388,6 +1406,7 @@ public class BiocodeService extends DatabaseService {
         while(results.next()) {
             result.put(results.getString("id"), results.getString("workflow")/*new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("id"))*/);
         }
+        statement.close();
         return result;
     }
 
@@ -1414,6 +1433,7 @@ public class BiocodeService extends DatabaseService {
         while(results.next()) {
             result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId")));
         }
+        statement.close();
         return result;
     }
 

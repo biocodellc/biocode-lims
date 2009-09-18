@@ -199,7 +199,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     extractionsThatExist.add(new ExtractionReaction(results));
                     //String extractionId = results.getString("extraction.extractionId");
                 }
-
+                statement.close();
                 if(extractionsThatExist.size() > 0) {
                     //ask the user if they want to move the extractions that are already attached to a plate.
                     StringBuilder moveMessage = new StringBuilder("The following extractions already exist in the database.\nDo you want to move them to this plate?\n\n");

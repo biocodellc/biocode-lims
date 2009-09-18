@@ -52,10 +52,10 @@ public class Plate implements XMLSerializable {
         plateSize = getSizeEnum(size);
         name = resultSet.getString("plate.name");
         if(plateSize != null) {
-            init(plateSize, type);
+            init(plateSize, type, false);
         }
         else {
-            init(size, 1, type);
+            init(size, 1, type, false);
         }
         int thermocycleId = resultSet.getInt("plate.thermocycle");
         setThermocycleFromId(thermocycleId);
@@ -92,26 +92,26 @@ public class Plate implements XMLSerializable {
     }
 
     public Plate(int numberOfWells, Reaction.Type type) {
-        init(numberOfWells, 1, type);
+        init(numberOfWells, 1, type, true);
     }
 
 
     public Plate(Plate.Size size, Reaction.Type type) {
         this.type = type;
         this.plateSize = size;
-        init(size, type);
+        init(size, type, true);
     }
 
-    private void init(Size size, Reaction.Type type) {
+    private void init(Size size, Reaction.Type type, boolean initialiseReactions) {
         switch(size) {
             case w48 :
-                init(8, 6, type);
+                init(8, 6, type, initialiseReactions);
                 break;
             case w96 :
-                init(8, 12, type);
+                init(8, 12, type, initialiseReactions);
                 break;
             case w384 :
-                init(16, 24, type);
+                init(16, 24, type, initialiseReactions);
         }
     }
 
@@ -153,7 +153,9 @@ public class Plate implements XMLSerializable {
     public void setThermocycle(Thermocycle thermocycle) {
         this.thermocycle = thermocycle;
         for(Reaction r : getReactions()) {
-            r.setThermocycle(thermocycle);
+            if(r != null) {
+                r.setThermocycle(thermocycle);
+            }
         }
     }
 
@@ -165,7 +167,7 @@ public class Plate implements XMLSerializable {
         isDeleted = deleted;
     }
 
-    private void init(int rows, int cols, Reaction.Type type) {
+    private void init(int rows, int cols, Reaction.Type type, boolean initialiseReactions) {
         this.rows = rows;
         this.cols = cols;
         this.type = type;
@@ -173,9 +175,21 @@ public class Plate implements XMLSerializable {
         images = new ArrayList<GelImage>();
 
         reactions = new Reaction[rows*cols];
+        if(initialiseReactions) {
+            initialiseReactions();
+        }
+    }
+
+    /**
+     * If you have created the plate from a resultSet, you should call this method before doing anything with the plate.
+     */
+    public void initialiseReactions() {
         for(int i=0; i < rows; i++) {
             for(int j = 0; j < cols; j++) {
                 int index = cols * i + j;
+                if(reactions[index] != null) {
+                    continue;
+                }
                 final Reaction reaction = Reaction.getNewReaction(type);
                 reaction.setPlateId(id);
                 reaction.setPosition(index);
@@ -185,6 +199,7 @@ public class Plate implements XMLSerializable {
                 }
                 Dimension preferredSize = reaction.getPreferredSize();
                 reaction.setBounds(new Rectangle(1+(preferredSize.width+1)*j, 1+(preferredSize.height+1)*i, preferredSize.width, preferredSize.height));
+                reaction.setThermocycle(getThermocycle());
 
                 reactions[index] = reaction;
             }
@@ -340,15 +355,16 @@ public class Plate implements XMLSerializable {
         isDeleted = "true".equals(element.getChildText("isDeleted"));
         Size sizeEnum = getSizeEnum(size);
         if(sizeEnum != null) {
-            init(sizeEnum, type);
+            init(sizeEnum, type, false);
         }
         else {
-            init(size, 1, type);
+            init(size, 1, type, false);
         }
         for(Element e : element.getChildren("reaction")) {
             Reaction r = XMLSerializer.classFromXML(e, Reaction.class);
             reactions[r.getPosition()] = r;
         }
+        initialiseReactions();
         String thermocycleId = element.getChildText("thermocycle");
         if(thermocycleId != null) {
             setThermocycleFromId(Integer.parseInt(thermocycleId));     

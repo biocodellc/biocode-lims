@@ -105,10 +105,6 @@ public class CycleSequencingCocktail extends Cocktail{
         }
     }
 
-    public List<? extends Cocktail> getAllCocktailsOfType() {
-        return BiocodeService.getInstance().getCycleSequencingCocktails();
-    }
-
     public Cocktail createNewCocktail() {
         return new CycleSequencingCocktail();
     }

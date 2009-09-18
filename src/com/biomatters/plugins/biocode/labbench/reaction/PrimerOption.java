@@ -15,6 +15,7 @@ import org.virion.jam.util.SimpleListener;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.lang.ref.WeakReference;
 
 /**
  * @author Steven Stones-Havas
@@ -23,63 +24,99 @@ import java.util.List;
  *          Created on 9/07/2009 3:06:37 PM
  */
 public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
-    private OligoSequenceDocument extraPrimer;
+    public static final Options.OptionValue NO_PRIMER_VALUE = new Options.OptionValue("No Primer", "No Primer", "");
+
+    private SequenceAndName extraPrimer;
     private SimpleListener primerListener;
 
-    public static final Options.OptionValue NO_PRIMER_VALUE = new Options.OptionValue("No Primer", "No Primer", "");
+    private static final DocumentSearchCache<OligoSequenceDocument> searchCache = DocumentSearchCache.getDocumentSearchCacheFor(DocumentType.OLIGO_DOC_TYPE);
+
+    private static final List<WeakReference<SimpleListener>> searchCacheChangedListeners = new ArrayList<WeakReference<SimpleListener>>();
+
+    private static List<Options.OptionValue> primerValues;
+
+    private static final SimpleListener masterPrimerListener = new SimpleListener() {
+        public void objectChanged() {
+            List<AnnotatedPluginDocument> searchCacheDocuments = searchCache.getDocuments();
+            List<AnnotatedPluginDocument> documents = searchCacheDocuments == null ? null : new ArrayList<AnnotatedPluginDocument>(searchCacheDocuments);
+            primerValues = new ArrayList<Options.OptionValue>();
+            primerValues.add(NO_PRIMER_VALUE);
+
+            if (documents != null) {
+                primerValues.addAll(getOptionValues(documents));
+            }
+            for (int i = 0; i < searchCacheChangedListeners.size(); i++) {
+                WeakReference<SimpleListener> listenerReference = searchCacheChangedListeners.get(i);
+                SimpleListener listener = listenerReference.get();
+                if (listener == null) {
+                    searchCacheChangedListeners.remove(i);
+                    i--;
+                }
+                else {
+                    listener.objectChanged();
+                }
+            }
+        }
+    };
+
+    static {
+        searchCache.addDocumentsUpdatedListener(masterPrimerListener);
+    }
+
+
 
     private static final Options.OptionValue[] noValue = new Options.OptionValue[] {
             new Options.OptionValue("noValues", "No primers found in your database")
     };
 
+    private static void cleanoutSearchCachedChangeListeners() {
+        for (int i = 0; i < searchCacheChangedListeners.size(); i++) {
+                WeakReference<SimpleListener> listenerReference = searchCacheChangedListeners.get(i);
+                SimpleListener listener = listenerReference.get();
+                if (listener == null) {
+                    searchCacheChangedListeners.remove(i);
+                    i--;
+                }
+            }
+    }
+
     protected PrimerOption(Element e) throws XMLSerializationException {
         super(e);
         Element extraPrimerElement = e.getChild("ExtraPrimer");
         if(extraPrimerElement != null) {
-            extraPrimer = new OligoSequenceDocument(extraPrimerElement.getChildText("name"), "", extraPrimerElement.getChildText("sequence"), new Date());
+            extraPrimer = new SequenceAndName(extraPrimerElement.getChildText("sequence"), extraPrimerElement.getChildText("name"));
         }
         init();
     }
 
     private void init() {
-        final DocumentSearchCache<OligoSequenceDocument> searchCache = DocumentSearchCache.getDocumentSearchCacheFor(DocumentType.OLIGO_DOC_TYPE);
+        final PrimerOption selfReference = this;
         primerListener = new SimpleListener() {
             public void objectChanged() {
-                List<AnnotatedPluginDocument> searchCacheDocuments = searchCache.getDocuments();
-                List<AnnotatedPluginDocument> documents = searchCacheDocuments == null ? null : new ArrayList<AnnotatedPluginDocument>(searchCacheDocuments);
-                if (documents != null) {
-                    List<Options.OptionValue> valueList = new ArrayList<Options.OptionValue>();
-                    valueList.add(NO_PRIMER_VALUE);
-                    valueList.addAll(getOptionValues(documents));
-                    if(documents.size() > 0 || extraPrimer != null) {
-                        if(extraPrimer != null) {
-                            boolean alreadyHasPrimer = NO_PRIMER_VALUE.getName().equals(extraPrimer.getName()) && NO_PRIMER_VALUE.getDescription().equals(extraPrimer.getDescription());
-                            Options.OptionValue extraPrimerValue = getOptionValue(extraPrimer, extraPrimer.getName());
-                            for(AnnotatedPluginDocument doc : documents) {
-                                OligoSequenceDocument seq = (OligoSequenceDocument)doc.getDocumentOrCrash();
-                                Options.OptionValue seqValue = getOptionValue(seq, doc.getName());
-                                if(seqValue.getName().equals(extraPrimerValue.getName()) && seqValue.getDescription().equalsIgnoreCase(extraPrimerValue.getDescription())) {
-                                    alreadyHasPrimer = true;
-                                }
-                            }
-                            if(!alreadyHasPrimer) {
-                                valueList.add(getOptionValue(extraPrimer, extraPrimer.getName()));
-                            }
+                PrimerOption primerOption = selfReference;
+                ArrayList<Options.OptionValue> valueList = new ArrayList<Options.OptionValue>(primerValues);
+                if(extraPrimer != null) {
+                    boolean alreadyHasPrimer = NO_PRIMER_VALUE.getName().equals(extraPrimer.getName()) && NO_PRIMER_VALUE.getDescription().equals(extraPrimer.getName());
+                    Options.OptionValue extraPrimerValue = getOptionValue(extraPrimer.getSequence(), extraPrimer.getName());
+                    for(Options.OptionValue seqValue : valueList) {
+                        if(seqValue.getName().equals(extraPrimerValue.getName()) && seqValue.getDescription().equalsIgnoreCase(extraPrimerValue.getDescription())) {
+                            alreadyHasPrimer = true;
                         }
                     }
-                    setPossibleValuesReal(valueList);
-                    setDefaultValue(NO_PRIMER_VALUE);
+                    if(!alreadyHasPrimer) {
+                        valueList.add(getOptionValue(extraPrimer.getSequence(), extraPrimer.getName()));
+                    }
                 }
+                setPossibleValuesReal(valueList);
+                setDefaultValue(NO_PRIMER_VALUE);
             }
         };
         primerListener.objectChanged();
-        searchCache.addDocumentsUpdatedListener(primerListener);
-        if(searchCache.hasSearchedEntireDatabase()) {
-            primerListener.objectChanged();
-        }
+        cleanoutSearchCachedChangeListeners();
+        searchCacheChangedListeners.add(new WeakReference<SimpleListener>(primerListener));
     }
 
-    private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
+    private static List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
         ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
         for(AnnotatedPluginDocument doc : documents) {
             OligoSequenceDocument seq = (OligoSequenceDocument)doc.getDocumentOrCrash();
@@ -89,7 +126,12 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         return primerList;
     }
 
-    private Options.OptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
+    private static Options.OptionValue getOptionValue(String sequence, String name) {
+        Options.OptionValue optionValue = new Options.OptionValue(name, name, sequence);
+        return optionValue;
+    }
+
+    private static Options.OptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
         String originalSequenceString = seq.getSequenceString();
 
         SequenceAnnotation annotation = getOligoAnnotationIfValid(seq);
@@ -150,7 +192,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         Element extraPrimerElement = new Element("ExtraPrimer");
         if(extraPrimer != null) {
             extraPrimerElement.addContent(new Element("name").setText(extraPrimer.getName()));
-            extraPrimerElement.addContent(new Element("sequence").setText(extraPrimer.getSequenceString()));
+            extraPrimerElement.addContent(new Element("sequence").setText(extraPrimer.getSequence()));
         }
         else {
             Options.OptionValue value = getValue();
@@ -181,9 +223,9 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
     }
 
     public void setAndAddValue(String name, String sequence) {
-        extraPrimer = new OligoSequenceDocument(name, name, sequence, new Date());
+        extraPrimer = new SequenceAndName(sequence, name);
         primerListener.objectChanged();
-        setValue(getOptionValue(extraPrimer, name));
+        setValue(getOptionValue(sequence, name));
     }
 
     //taken from ExistingOligoOptionValue
@@ -205,5 +247,22 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
             }
         }
         return correctOligo;
+    }
+
+    private static class SequenceAndName{
+        private String sequence, name;
+
+        private SequenceAndName(String sequence, String name) {
+            this.sequence = sequence;
+            this.name = name;
+        }
+
+        public String getSequence() {
+            return sequence;
+        }
+
+        public String getName() {
+            return name;
+        }
     }
 }

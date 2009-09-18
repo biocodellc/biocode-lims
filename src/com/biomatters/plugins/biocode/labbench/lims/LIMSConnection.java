@@ -102,10 +102,12 @@ public class LIMSConnection {
             while(resultSet.next()) {
                 plateIds.add(resultSet.getInt("plate"));
             }
+            getPlatesStatement.close();
         }
 
         PreparedStatement deleteStatement = connection.prepareStatement("DELETE FROM "+tableName+" WHERE "+termString);
         deleteStatement.executeUpdate();
+        deleteStatement.close();
 
         return plateIds;
     }
@@ -253,7 +255,7 @@ public class LIMSConnection {
                 workflowDocs.put(workflowId, doc);
             }
         }
-        resultSet.close();
+        statement.close();
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
     }
 
@@ -452,6 +454,10 @@ public class LIMSConnection {
                 cyclesequencingReactions.add((CycleSequencingReaction)reaction);
             }
         }
+        statement.close();
+        for(Plate plate : plateMap.values()) {
+            plate.initialiseReactions();
+        }
         System.out.println("count="+count);
         final StringBuilder totalErrors = new StringBuilder("");
         if(extractionReactions.size() > 0) {
@@ -558,6 +564,7 @@ public class LIMSConnection {
             }
             imageList.add(image);
         }
+        statement.close();
         return map;
     }
 

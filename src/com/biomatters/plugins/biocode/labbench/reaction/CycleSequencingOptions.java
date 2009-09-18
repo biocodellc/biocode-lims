@@ -83,7 +83,7 @@ public class CycleSequencingOptions extends ReactionOptions {
     }
 
     public Cocktail getCocktail() {
-        List<Cocktail> cocktailList = new PCRCocktail().getAllCocktailsOfType();
+        List<? extends Cocktail> cocktailList = Cocktail.getAllCocktailsOfType(Reaction.Type.CycleSequencing);
         Option cocktailOption = getOption(COCKTAIL_OPTION_ID);
         OptionValue cocktailValue = (OptionValue)cocktailOption.getValue();
 
@@ -106,7 +106,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(new CycleSequencingCocktail().getAllCocktailsOfType(), CycleSequencingCocktail.class, cocktailButton.getComponent());
+                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(Cocktail.getAllCocktailsOfType(Reaction.Type.CycleSequencing), CycleSequencingCocktail.class, cocktailButton.getComponent());
                 if (newCocktails.size() > 0) {
                     Runnable runnable = new Runnable() {
                         public void run() {
@@ -307,8 +307,9 @@ public class CycleSequencingOptions extends ReactionOptions {
 
     private List<OptionValue> getCocktails() {
         List<OptionValue> cocktails = new ArrayList<OptionValue>();
-        for (int i = 0; i < new CycleSequencingCocktail().getAllCocktailsOfType().size(); i++) {
-            Cocktail cocktail = new CycleSequencingCocktail().getAllCocktailsOfType().get(i);
+        List<? extends Cocktail> cycleSequencingCocktails = Cocktail.getAllCocktailsOfType(Reaction.Type.CycleSequencing);
+        for (int i = 0; i < cycleSequencingCocktails.size(); i++) {
+            Cocktail cocktail = cycleSequencingCocktails.get(i);
             cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
         }
         if(cocktails.size() == 0) {

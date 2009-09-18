@@ -137,10 +137,6 @@ public class PCRCocktail extends Cocktail{
         return options == null ? "Untitled" : options.getValueAsString("name");
     }
 
-    public List<Cocktail> getAllCocktailsOfType() {
-        return BiocodeService.getInstance().getPCRCocktails();
-    }
-
     public Cocktail createNewCocktail() {
         return new PCRCocktail();
     }

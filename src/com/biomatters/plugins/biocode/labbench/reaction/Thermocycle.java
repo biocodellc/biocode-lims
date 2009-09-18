@@ -102,27 +102,33 @@ public class Thermocycle implements XMLSerializable {
         statement1.setString(1, getName());
         statement1.setString(2, getNotes());
         statement1.execute();
+        statement1.close();
 
         //get the id of the thermocycle record
         PreparedStatement statement = conn.prepareStatement("SELECT last_insert_id() AS new_id;\n");
         ResultSet resultSet = statement.executeQuery();
         resultSet.next();
         int thermoId = resultSet.getInt("new_id");
+        statement.close();
 
         for(Cycle cycle : getCycles()) {
             //create a cycle record
-            conn.prepareStatement("INSERT INTO cycle (thermocycleid, repeats) VALUES (" + thermoId + ", " + cycle.getRepeats() + ");\n").execute();
+            PreparedStatement statement2 = conn.prepareStatement("INSERT INTO cycle (thermocycleid, repeats) VALUES (" + thermoId + ", " + cycle.getRepeats() + ");\n");
+            statement2.execute();
+            statement2.close();
 
             //get the id of the cycle record
             statement = conn.prepareStatement("SELECT last_insert_id() AS new_cycle_id;\n");
             resultSet = statement.executeQuery();
             resultSet.next();
             int cycleId = resultSet.getInt("new_cycle_id");
-
+            statement.close();
 
             for(State state : cycle.getStates()) {
                 //create the state record
-                conn.prepareStatement("INSERT INTO state (cycleid, temp, length) VALUES (" + cycleId + ", " + state.getTemp() + ", " + state.getTime() + ");\n").execute();
+                PreparedStatement statement3 = conn.prepareStatement("INSERT INTO state (cycleid, temp, length) VALUES (" + cycleId + ", " + state.getTemp() + ", " + state.getTime() + ");\n");
+                statement3.execute();
+                statement3.close();
             }
         }
         return thermoId;

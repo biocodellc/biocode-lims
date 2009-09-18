@@ -437,6 +437,7 @@ public class MooreaFimsConnection extends FIMSConnection{
             while(resultSet.next()) {
                 result.put(resultSet.getString(colToUseForKey), resultSet.getString("biocode_tissue.bnhm_id")+"."+resultSet.getString("biocode_tissue.tissue_num"));
             }
+            statement.close();
             return result;
 
         } catch (SQLException e) {
