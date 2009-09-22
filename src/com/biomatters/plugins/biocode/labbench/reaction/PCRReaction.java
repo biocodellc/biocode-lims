@@ -137,6 +137,10 @@ public class PCRReaction extends Reaction<PCRReaction> {
         return getOptions().getValueAsString("extractionId");
     }
 
+    public void setExtractionId(String s) {
+        getOptions().setValue("extractionId", s);
+    }
+
     public String areReactionsValid(List<PCRReaction> reactions) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";

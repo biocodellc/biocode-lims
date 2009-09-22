@@ -217,6 +217,10 @@ public class PlateViewer extends JPanel {
 
     }
 
+    public Plate getPlate() {
+        return plateView.getPlate();
+    }
+
     private List<Thermocycle> getThermocycles() {
         switch (plateView.getPlate().getReactionType()) {
             case PCR:
@@ -332,4 +336,7 @@ public class PlateViewer extends JPanel {
     }
 
 
+    public void setPlate(Plate plate) {
+        plateView.setPlate(plate);
+    }
 }

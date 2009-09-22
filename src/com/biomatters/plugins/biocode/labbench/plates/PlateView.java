@@ -293,4 +293,7 @@ public class PlateView extends JPanel {
     }
 
 
+    public void setPlate(Plate plate) {
+        this.plate = plate;
+    }
 }

@@ -166,6 +166,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return getOptions().getValueAsString("extractionId");
     }
 
+    public void setExtractionId(String s) {
+        getOptions().setValue("extractionId", s);
+    }
+
     List<ReactionUtilities.MemoryFile> getChromats() throws SQLException {
         if(getId() < 0) {
             return new ArrayList<ReactionUtilities.MemoryFile>();

@@ -218,6 +218,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public abstract String getExtractionId();
+
+    public abstract void setExtractionId(String s);
     
     public final Color getBackgroundColor() {
         if(isError) {

@@ -77,6 +77,11 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return getOptions().getValueAsString("extractionId");
     }
 
+    public void setExtractionId(String s) {
+        getOptions().setValue("extractionId", s);
+    }
+    
+
     private ReactionOptions options;
 
     public ReactionOptions _getOptions() {
@@ -257,4 +262,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return null;
     }
 
+    public void setTissueId(String id) {
+        getOptions().setValue("sampleId", id);
+    }
 }
