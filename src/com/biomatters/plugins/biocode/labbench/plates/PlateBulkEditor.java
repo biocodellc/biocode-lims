@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeListener;
 import javax.swing.text.Caret;
 import java.awt.*;
@@ -85,12 +86,45 @@ public class PlateBulkEditor {
             }
         };
         toolbar.addAction(swapAction);
-        if(p.getReactionType() == Reaction.Type.Extraction) {
+        if(p.getReactionType() == Reaction.Type.Extraction && p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384) {
             toolbar.addAction(new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", BiocodePlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
-                    final JTextField tf = new GTextField();
-                    if(Dialogs.showInputDialog("Enter the plate id", "Get FIMS plate", platePanel, tf)) {
-                        final String plateId = tf.getText();
+                    //the holder for the textfields
+                    List<JTextField> jTextFields = new ArrayList<JTextField>();
+                    JPanel textFieldPanel = new JPanel();
+
+                    final boolean size96 = p.getPlateSize() == Plate.Size.w96;
+                    if(size96) {
+                        textFieldPanel.setBorder(new EmptyBorder(0,0,0,0));
+                        JTextField tf1 = new JTextField();
+                        jTextFields.add(tf1);
+                        textFieldPanel.add(tf1);
+                    }
+                    else {
+                        textFieldPanel.setLayout(new GridLayout(2,2,2,2));
+                        JTextField tf1 = new GTextField(); //top left
+                        JTextField tf2 = new GTextField(); //top right
+                        JTextField tf3 = new GTextField(); //bottom left
+                        JTextField tf4 = new GTextField(); //bottom right
+                        jTextFields.add(tf1);
+                        jTextFields.add(tf2);
+                        jTextFields.add(tf3);
+                        jTextFields.add(tf4);
+                        textFieldPanel.add(tf1);
+                        textFieldPanel.add(tf2);
+                        textFieldPanel.add(tf3);
+                        textFieldPanel.add(tf4);
+                    }
+                    final JRadioButton tissueButton = new JRadioButton("Tissue Plate", true);
+                    final JRadioButton extractionButton = new JRadioButton("Extraction Plate", false);
+                    ButtonGroup group = new ButtonGroup();
+                    group.add(extractionButton);
+                    group.add(tissueButton);
+                    if(Dialogs.showInputDialog("", "Get FIMS plate", platePanel, tissueButton, extractionButton, new JLabel(" "), new JLabel("Enter the plate ID"+(size96 ? "" : "s")), textFieldPanel)) {
+                        final List<String> plateIds = new ArrayList<String>();
+                        for(JTextField field : jTextFields) {
+                            plateIds.add(field.getText());
+                        }
                         DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);                       
                         final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
 
@@ -98,23 +132,29 @@ public class PlateBulkEditor {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    Map<String, String> tissueIds = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsPlate(plateId);
-                                    if(tissueIds.size() == 0) {
-                                        Dialogs.showMessageDialog("Plate "+plateId+" not found in the database.", "Plate not found", tissueEditor, Dialogs.DialogIcon.INFORMATION);
-                                        return;
-                                    }
-                                    tissueEditor.setText("");
-                                    tissueEditor.valuesFromTextView();
-                                    for(Map.Entry<String, String> entry : tissueIds.entrySet()) {
-                                        BiocodeUtilities.Well well = new BiocodeUtilities.Well(entry.getKey());
-                                        try {
-                                            tissueEditor.setValue(well.row(), well.col(), entry.getValue());
-                                        } catch (Exception e1) {
-                                            e1.printStackTrace();
+                                    List<Map<String, String>> tissueIds = new ArrayList<Map<String, String>>();
+                                    for(String plateId : plateIds) {
+                                        if(extractionButton.isSelected()) {
+                                            tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsExtractionPlate(plateId));
+                                        }
+                                        else {
+                                            tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateId));
                                         }
                                     }
-                                    tissueEditor.textViewFromValues();
-                                    p.setName(plateId);
+
+                                    for (int i = 0; i < tissueIds.size(); i++) {
+                                        if (tissueIds.get(i).size() == 0 && plateIds.get(i).length() > 0) {
+                                            Dialogs.showMessageDialog("Plate " + plateIds.get(i) + " not found in the database.", "Plate not found", tissueEditor, Dialogs.DialogIcon.INFORMATION);
+                                            return;
+                                        }
+                                    }
+
+                                    if(size96) {
+                                        populateWells96(tissueIds.get(0), tissueEditor, p, plateIds.get(0));
+                                    }
+                                    else {
+                                        populateWells384(tissueIds, tissueEditor, p);
+                                    }
 
                                 } catch (ConnectionException e1) {
                                     e1.printStackTrace();
@@ -126,6 +166,43 @@ public class PlateBulkEditor {
                     }
                 }
             });
+        }
+        if(p.getReactionType() == Reaction.Type.Extraction) {
+            GeneiousAction autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
+                public void actionPerformed(ActionEvent e) {
+                    DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                    final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+
+                    DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
+                    final DocumentFieldEditor extractionEditor = getEditorForField(editors, extractionField);
+
+                    List<String> tissueIds = getIdsToCheck(tissueEditor, p);
+
+                    try {
+                        Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
+                        for(int row=0; row < p.getRows(); row++) {
+                            for(int col=0; col < p.getCols(); col++) {
+                                Object value = tissueEditor.getValue(row, col);
+                                if(value != null && value.toString().trim().length() > 0) {
+                                    int i = 1;
+                                    while(extractionIds.contains(value+"."+i)) {
+                                        i++;   
+                                    }
+                                    String valueString = value + "." + i;
+                                    extractionEditor.setValue(row, col, valueString);
+                                    extractionIds.add(valueString);
+                                }
+                            }
+                        }
+                        extractionEditor.textViewFromValues();
+                        
+                    } catch (SQLException e1) {
+                        //todo: handle
+                        //todo: multithread
+                    }
+                }
+            };
+            toolbar.addAction(autoGenerateIds);
         }
         GeneiousAction autodetectAction = null;
         if(fieldToCheck != null) {
@@ -229,6 +306,7 @@ public class PlateBulkEditor {
 
                 for(DocumentFieldEditor editor : editors) {
                     Object value = editor.getValue(row, col);
+                    options.setValue(editor.getField().getCode(), ""); //erase records if the user has blanked out the line...
                     if(value != null) {
                         if(editor.getField().getCode().equals(workflowField.getCode()) && workflows != null) {
                             Workflow workflow = workflows.get(value);
@@ -249,6 +327,46 @@ public class PlateBulkEditor {
         if(badWorkflows.length() > 0) {
             Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
         }
+    }
+
+
+    private static void populateWells384(List<Map<String, String>> ids, DocumentFieldEditor editorField, Plate p){
+        if(ids.size() != 4) {
+            throw new IllegalArgumentException("You must have 4 maps!");
+        }
+
+        editorField.setText("");
+        editorField.valuesFromTextView();
+
+        for(int i=0; i < ids.size(); i++) {
+            int xoffset = i % 2 == 0 ? 0 : 1;
+            int yOffset = i > 1 ? 1 : 0;
+            for(Map.Entry<String, String> entry : ids.get(i).entrySet()) {
+                BiocodeUtilities.Well well = new BiocodeUtilities.Well(entry.getKey());
+                try {
+                    editorField.setValue(well.row()*2 + yOffset, well.col()*2 + xoffset, entry.getValue());
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            }
+            editorField.textViewFromValues();
+        }
+
+    }
+
+    private static void populateWells96(Map<String, String> ids, DocumentFieldEditor editorField, Plate p, String plateId) {
+        editorField.setText("");
+        editorField.valuesFromTextView();
+        for(Map.Entry<String, String> entry : ids.entrySet()) {
+            BiocodeUtilities.Well well = new BiocodeUtilities.Well(entry.getKey());
+            try {
+                editorField.setValue(well.row(), well.col(), entry.getValue());
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+        }
+        editorField.textViewFromValues();
+        p.setName(plateId);
     }
 
     private static void putMappedValuesIntoEditor(DocumentFieldEditor sourceEditor, DocumentFieldEditor destEditor, Map<String, String> mappedValues, Plate plate) {

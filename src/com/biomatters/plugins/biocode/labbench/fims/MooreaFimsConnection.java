@@ -402,7 +402,30 @@ public class MooreaFimsConnection extends FIMSConnection{
         return queryBuilder.toString();
     }
 
-    public Map<String, String> getTissueIdsFromFimsPlate(String plateId) throws ConnectionException{
+    public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
+        if(plateId == null || plateId.length() == 0) {
+            return Collections.emptyMap();
+        }
+
+        String query = "SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_tissue.well_number96 FROM biocode_tissue WHERE biocode_tissue.format_name96='"+plateId+"'";
+
+        try {
+            PreparedStatement statement = connection.prepareStatement(query.toString());
+            ResultSet resultSet = statement.executeQuery();
+            Map<String, String> result = new HashMap<String, String>();
+            while(resultSet.next()) {
+                result.put(resultSet.getString("biocode_tissue.well_number96"), resultSet.getString("biocode_tissue.bnhm_id")+"."+resultSet.getString("biocode_tissue.tissue_num"));
+            }
+            statement.close();
+            return result;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new ConnectionException("Error fetching tissue data from FIMS", e);
+        }
+    }
+
+    public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException{
         if(plateId == null || plateId.length() == 0) {
             return Collections.emptyMap();
         }
@@ -428,7 +451,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     private Map<String, String> getFimsPlateData(String andQuery, String colToUseForKey) throws ConnectionException {
-        String query = "SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_extract.format_name96, biocode_extract.well_number96 FROM biocode_extract, biocode_tissue WHERE biocode_extract.from_tissue_seq_num = biocode_tissue.seq_num  AND "+andQuery;
+        String query = "SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_extract.format_name96, biocode_extract.well_number96, biocode_tissue.well_number96 FROM biocode_extract, biocode_tissue WHERE biocode_extract.from_tissue_seq_num = biocode_tissue.seq_num  AND "+andQuery;
 
         try {
             PreparedStatement statement = connection.prepareStatement(query.toString());

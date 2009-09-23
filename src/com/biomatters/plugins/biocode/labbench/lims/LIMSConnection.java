@@ -619,6 +619,31 @@ public class LIMSConnection {
         return new QueryTermSurrounder(prepend, append, join);
     }
 
+    public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws SQLException{
+        
+        List<String> queries = new ArrayList<String>();
+        for(String s : tissueIds) {
+            queries.add("extractionId LIKE ?");
+        }
+
+        String sql = "SELECT extractionId FROM extraction WHERE "+StringUtilities.join(" OR ", queries);
+
+        PreparedStatement statement = connection.prepareStatement(sql);
+        for (int i = 0; i < tissueIds.size(); i++) {
+            statement.setString(i+1, tissueIds.get(i)+"%");
+        }
+
+        ResultSet set = statement.executeQuery();
+        Set<String> result = new HashSet<String>();
+
+        while(set.next()) {
+            result.add(set.getString("extractionId"));
+        }
+
+
+        return result;
+    }
+
     private static class QueryTermSurrounder{
         private final String prepend, append, join;
 

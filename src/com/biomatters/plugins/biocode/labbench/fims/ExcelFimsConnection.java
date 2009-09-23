@@ -293,7 +293,11 @@ public class ExcelFimsConnection extends FIMSConnection{
         return Collections.emptyMap();
     }
 
-    public Map<String, String> getTissueIdsFromFimsPlate(String plateId) throws ConnectionException{
+    public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException{
+        return Collections.emptyMap();
+    }
+
+    public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
         return Collections.emptyMap();
     }
 
