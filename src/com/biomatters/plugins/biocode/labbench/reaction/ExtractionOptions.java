@@ -19,8 +19,9 @@ public class ExtractionOptions extends ReactionOptions{
     public ExtractionOptions() {
         addStringOption("sampleId", "Tissue Sample Id", "");
         addStringOption("extractionId", "Extraction Id", "");
+        addStringOption("extractionBarcode", "Extraction Barcode", "", "May be blank");
         addStringOption("extractionMethod", "Extraction Method", "");
-        addStringOption("parentExtraction", "Parent Extraction Id", "", "You may leave this field blank");
+        addStringOption("parentExtraction", "Parent Extraction Id", "", "May be blank");
         addIntegerOption("dilution", "Dilution 1/", 5, 0, Integer.MAX_VALUE);
         Options.IntegerOption volume = addIntegerOption("volume", "Extraction Volume", 5, 0, Integer.MAX_VALUE);
         volume.setUnits("uL");

@@ -492,8 +492,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingDialog progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, plate=?, location=?, notes=?, date=extraction.date WHERE id=?";
+                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, date=extraction.date WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 insertStatement.addBatch();
@@ -518,9 +518,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setString(4, options.getValueAsString("parentExtraction"));
                         statement.setString(5, options.getValueAsString("sampleId"));
                         statement.setString(6, options.getValueAsString("extractionId"));
-                        statement.setInt(7, reaction.getPlateId());
-                        statement.setInt(8, reaction.getPosition());
-                        statement.setString(9, options.getValueAsString("notes"));
+                        statement.setString(7, options.getValueAsString("extractionBarcode"));
+                        statement.setInt(8, reaction.getPlateId());
+                        statement.setInt(9, reaction.getPosition());
+                        statement.setString(10, options.getValueAsString("notes"));
                         statement.execute();
                     }
                 }

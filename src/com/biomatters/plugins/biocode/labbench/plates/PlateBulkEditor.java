@@ -413,6 +413,7 @@ public class PlateBulkEditor {
                 return Arrays.asList(
                     new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
                     new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
                     new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
                 );
             case PCR://drop through
