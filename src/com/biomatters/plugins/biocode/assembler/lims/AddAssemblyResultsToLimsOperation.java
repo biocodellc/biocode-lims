@@ -398,9 +398,10 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                         entry.getKey().addSequences(sequences, rawTraces);
                     }
                     entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
-                    //todo: only call this once for all reactions
-                    Reaction.saveReactions(new Reaction[] {entry.getKey()}, Reaction.Type.CycleSequencing, connection, null);
                 }
+
+                Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
+                Reaction.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, connection, null);
 
                 statement.close();
             } catch (SQLException e) {
