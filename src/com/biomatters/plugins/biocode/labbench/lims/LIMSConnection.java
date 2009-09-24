@@ -50,8 +50,6 @@ public class LIMSConnection {
         Properties properties = new Properties();
         properties.put("user", LIMSOptions.getValueAsString("username"));
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
-        properties.put("socketTimeout", 20);
-        properties.put("connectTimeout", 20);
         try {
             DriverManager.setLoginTimeout(20);
             connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
