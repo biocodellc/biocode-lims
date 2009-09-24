@@ -132,58 +132,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
     }
 
     private static Options.OptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
-        String originalSequenceString = seq.getSequenceString();
-
-        SequenceAnnotation annotation = getOligoAnnotationIfValid(seq);
-
-        String primerSeqString;
-        if(annotation != null) {
-            boolean isPrimerAnnotation =
-                    annotation.getType().equals(SequenceAnnotation.TYPE_PRIMER_BIND) ||
-                    annotation.getType().equals(SequenceAnnotation.TYPE_PRIMER_BIND_REVERSE) ||
-                    annotation.getType().equals(SequenceAnnotation.TYPE_DNA_PROBE);
-            if(!isPrimerAnnotation || annotation.getIntervals().size() != 1) {
-                return null;
-            }
-
-            int from = annotation.getIntervals().get(0).getFrom();
-            int to = annotation.getIntervals().get(0).getTo();
-
-            // If the user has created his/her own primer_bind annotations then they can be in the reverse
-            // direction, so we have to deal with that when getting the annotation sequence.
-            boolean reversed = false;
-            if(from > to) {
-                int temp = from;
-                from = to;
-                to = temp;
-                reversed = true;
-            }
-
-            if (!seq.isCircular()) {
-                if (from < 1 || to > originalSequenceString.length()) {
-                    return null;  // Part of the primer is missing....
-                }
-            }
-
-            String sequenceQualifierValue = annotation.getQualifierValue("Sequence"); //the primer sequence may actually be different to the target sequence (eg. due to mismatches).
-            if(sequenceQualifierValue != null && sequenceQualifierValue.length() > 0) {
-                primerSeqString = sequenceQualifierValue;
-            } else {
-                if(to > originalSequenceString.length()){
-                    primerSeqString = originalSequenceString.substring(from - 1) + originalSequenceString.substring(0, to - originalSequenceString.length());
-                } else {
-                    primerSeqString = originalSequenceString.substring(from - 1, to);
-                }
-                if(reversed){
-                    primerSeqString = jebl.evolution.sequences.Utils.reverseComplement(primerSeqString);
-                }
-            }
-
-        } else {
-            primerSeqString = originalSequenceString;
-        }
-        Options.OptionValue optionValue = new Options.OptionValue(overrideName, overrideName, primerSeqString);
-        return optionValue;
+        return new Options.OptionValue(overrideName, overrideName, seq.getPrimerSequence().toString());
     }
 
     @Override
