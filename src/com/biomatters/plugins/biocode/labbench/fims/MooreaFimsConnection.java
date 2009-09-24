@@ -78,8 +78,6 @@ public class MooreaFimsConnection extends FIMSConnection{
         Properties properties = new Properties();
         properties.put("user", options.getValueAsString("username"));
         properties.put("password", ((PasswordOption)options.getOption("password")).getPassword());
-        properties.put("socketTimeout", 20);
-        properties.put("connectTimeout", 20);
         try {
             DriverManager.setLoginTimeout(20);
             connection = driver.connect("jdbc:mysql://"+options.getValueAsString("serverUrl")+":"+options.getValueAsString("serverPort"), properties);
