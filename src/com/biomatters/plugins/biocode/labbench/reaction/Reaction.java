@@ -483,6 +483,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public void setWorkflow(Workflow workflow) {
         this.workflow = workflow;
+        getOptions().setValue("workflowId", workflow != null ? workflow.getName() : "");
     }
 
     public Date getDate() {

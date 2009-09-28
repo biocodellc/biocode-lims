@@ -188,6 +188,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     private void copyReaction(Reaction srcReaction, Reaction destReaction) {
         destReaction.setExtractionId(srcReaction.getExtractionId());
+        destReaction.setWorkflow(srcReaction.getWorkflow());
         if(destReaction.getType() == Reaction.Type.Extraction) {
             FimsSample fimsSample = srcReaction.getFimsSample();
             if(fimsSample != null) {
