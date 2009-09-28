@@ -182,7 +182,7 @@ public class NewPlateOptions extends Options{
             if(getPlateSize() == Plate.Size.w96 && plateSize != Plate.Size.w384 && documents.length > 1){
                 return "You can only create 96 well plates from a single 96 or 384 well plate document";
             }
-            if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w96) {
+            if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w96 && plateSize != Plate.Size.w384) {
                 return "You can only create 384 well plates from a single 384 well or up to 4 96 well plate documents";
             }
             if(getPlateSize() != Plate.Size.w96 && getPlateSize() != Plate.Size.w384) {
