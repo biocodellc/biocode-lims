@@ -35,9 +35,20 @@ public class Plate implements XMLSerializable {
     private boolean isDeleted = false;
 
     public enum Size {
-        w48,
-        w96,
-        w384
+        w48("48"),
+        w96("96"),
+        w384("384");
+        private String niceName;
+
+        private Size(String s) {
+            this.niceName = s;
+        }
+
+
+        @Override
+        public String toString() {
+            return niceName;
+        }
     }
 
     public Plate(Element e) throws XMLSerializationException{
@@ -210,6 +221,9 @@ public class Plate implements XMLSerializable {
         return reactions[cols * row + col];
     }
 
+    public Reaction getReaction(BiocodeUtilities.Well well) {
+        return reactions[cols * well.row() + well.col()];
+    }
 
     public static String getWellName(int row, int col) {
         return ""+(char)(65+row)+(1+col);
@@ -390,7 +404,7 @@ public class Plate implements XMLSerializable {
         Element plateElement = new Element("Plate");
         plateElement.addContent(new Element("id").setText(""+id));
         plateElement.addContent(new Element("name").setText(getName()));
-        plateElement.addContent(new Element("type").setText(type.toString()));
+        plateElement.addContent(new Element("type").setText(type.name()));
         plateElement.addContent(new Element("size").setText(""+reactions.length));
         String rowString = "" + rows;
         Element rowElement = new Element("rows");
@@ -398,7 +412,7 @@ public class Plate implements XMLSerializable {
         plateElement.addContent(rowElement);
         plateElement.addContent(new Element("cols").setText(""+cols));
         if(plateSize != null) {
-            plateElement.addContent(new Element("plateSize").setText(plateSize.toString()));
+            plateElement.addContent(new Element("plateSize").setText(plateSize.name()));
         }
         plateElement.addContent(new Element("isDeleted").setText(""+isDeleted));
         if(getThermocycle() != null) {

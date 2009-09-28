@@ -492,7 +492,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingDialog progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, date=extraction.date WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);

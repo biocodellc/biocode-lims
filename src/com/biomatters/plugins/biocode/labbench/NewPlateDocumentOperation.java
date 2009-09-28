@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -35,7 +34,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     public DocumentSelectionSignature[] getSelectionSignatures() {
         return new DocumentSelectionSignature[]{
                 new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[0]),
-                new DocumentSelectionSignature(PlateDocument.class,1,1)
+                new DocumentSelectionSignature(PlateDocument.class,1,4)
         };
     }
 
@@ -46,128 +45,72 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
-        if(!BiocodeService.getInstance().isLoggedIn()) {
-            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
-        }
-
-        Options options = new Options(this.getClass());
-        Options.OptionValue[] plateValues = new Options.OptionValue[] {
-                new Options.OptionValue("individualReactions", "Individual Reactions"),
-                new Options.OptionValue("48Plate", "48 well plate"),
-                new Options.OptionValue("96Plate", "96 well plate"),
-                new Options.OptionValue("384Plate", "384 well plate")
-        };
-
-        Options.OptionValue[] typeValues = new Options.OptionValue[] {
-                new Options.OptionValue("extraction", "Extraction"),
-                new Options.OptionValue("pcr", "PCR"),
-                new Options.OptionValue("cyclesequencing", "Cycle Sequencing")
-        };
-
-        Options.BooleanOption fromExistingOption = null;
-        if(documents.length > 0) {
-            fromExistingOption = options.addBooleanOption("fromExisting", "Create plate from existing document", false);
-        }
-
-        options.addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
-        final Options.RadioOption<Options.OptionValue> plateOption = options.addRadioOption("plateType", "", plateValues, plateValues[2], Options.Alignment.VERTICAL_ALIGN);
-
-
-        final Options.IntegerOption reactionNumber = options.addIntegerOption("reactionNumber", "Number of reactions", 1, 1, 26);
-        plateOption.addDependent(plateValues[0], reactionNumber, true);
-        
-
-        if(fromExistingOption != null) {
-            final Options.BooleanOption fromExistingOption1 = fromExistingOption;
-            SimpleListener fromExistingListener = new SimpleListener() {
-                public void objectChanged() {
-                    plateOption.setEnabled(!fromExistingOption1.getValue());
-                    reactionNumber.setEnabled(!fromExistingOption1.getValue());
-                }
-            };
-            fromExistingOption.addChangeListener(fromExistingListener);
-            fromExistingListener.objectChanged();
-        }
-
-
-        return options;
+        return new NewPlateOptions(documents);
     }
 
     @Override
-    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
+    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] documents, ProgressListener progressListener, Options optionsa) throws DocumentOperationException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
 
-        Plate.Size size = null;
-        Options.OptionValue plateSize = (Options.OptionValue)options.getValue("plateType");
-        Options.OptionValue reactionType = (Options.OptionValue)options.getValue("reactionType");
+        NewPlateOptions options = (NewPlateOptions)optionsa;
 
-        Reaction.Type type = null;
+        //analyse the documents
+        Plate.Size pSize = null;
+        for(AnnotatedPluginDocument doc : documents) {
+            PlateDocument plateDoc = (PlateDocument)doc.getDocument();
+            Plate.Size size = plateDoc.getPlate().getPlateSize();
+            if(pSize != null && size != pSize) {
+                throw new DocumentOperationException("All plates must be of the same size");
+            }
+            pSize = size;
+        }
+        final Plate.Size plateSize = pSize;
 
-        if("true".equals(options.getValueAsString("fromExisting"))) {
-            PlateDocument plateDoc = (PlateDocument)annotatedDocuments[0].getDocument();
-            Plate plate = plateDoc.getPlate();
-            size = plate.getPlateSize();
-        }
-        else {
-            if(plateSize.getName().equals("48Plate")) {
-                size = Plate.Size.w48;
-            }
-            else if(plateSize.getName().equals("96Plate")) {
-                size = Plate.Size.w96;
-            }
-            else if(plateSize.getName().equals("384Plate")) {
-                size = Plate.Size.w384;
-            }
-        }
-        if(reactionType.getName().equals("extraction")) {
-            type = Reaction.Type.Extraction;
-        }
-        else if(reactionType.getName().equals("pcr")) {
-            type = Reaction.Type.PCR;
-        }
-        else if(reactionType.getName().equals("cyclesequencing")) {
-            type = Reaction.Type.CycleSequencing;
-        }
+        Plate.Size sizeFromOptions = options.getPlateSize();
+        Reaction.Type typeFromOptions = options.getReactionType();
+        boolean fromExisting = options.isFromExisting();
 
         PlateViewer plateViewer;
-        if(size != null) {
-            plateViewer = new PlateViewer(size, type);
+        if(sizeFromOptions != null) {
+            plateViewer = new PlateViewer(sizeFromOptions, typeFromOptions);
         }
         else {
-            plateViewer = new PlateViewer((Integer)options.getValue("reactionNumber"), type);
+            plateViewer = new PlateViewer((Integer)options.getValue("reactionNumber"), typeFromOptions);
         }
 
-        if("true".equals(options.getValueAsString("fromExisting"))) {
-            PlateDocument plateDoc = (PlateDocument)annotatedDocuments[0].getDocument();
+        if(fromExisting) {
+            PlateDocument plateDoc = (PlateDocument)documents[0].getDocument();
             Plate plate = plateDoc.getPlate();
             Plate editingPlate = plateViewer.getPlate();
-            assert plate.getPlateSize() == editingPlate.getPlateSize();
-            if(plate.getReactionType() == editingPlate.getReactionType()) { //copy everything
-                plate.setId(-1);
-                for(Reaction reaction : plate.getReactions()) {
-                    reaction.setId(-1);
-                }
-                plateViewer.setPlate(plate);
+
+
+            if(plateSize == sizeFromOptions) {
+                copyPlateOfSameSize(plateViewer, plate, editingPlate);
             }
-            else {
-                Reaction[] plateReactions = plate.getReactions();
-                Reaction[] editingPlateReactions = editingPlate.getReactions();
-                for(int i=0; i < plateReactions.length; i++) {
-                    editingPlateReactions[i].setExtractionId(plateReactions[i].getExtractionId());
-                    if(editingPlate.getReactionType() == Reaction.Type.Extraction) {
-                        FimsSample fimsSample = plateReactions[i].getFimsSample();
-                        if(fimsSample != null) {
-                            ((ExtractionReaction)editingPlateReactions[i]).setTissueId(fimsSample.getId());
+            else if(sizeFromOptions == Plate.Size.w96){
+                copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"));
+                
+            }
+            else if(sizeFromOptions == Plate.Size.w384) {
+                Plate[] plates = new Plate[4];
+                for (int i = 0; i < plates.length; i++) {
+                    Options.OptionValue docName = (Options.OptionValue)options.getValue("fromQuadrant.q" + (i + 1));
+                    for(AnnotatedPluginDocument doc : documents) {
+                        if(doc.getURN().toString().equals(docName.getName())){
+                            PlateDocument pDoc = (PlateDocument) doc.getDocument();
+                            plates[i] = pDoc.getPlate();
                         }
                     }
                 }
+
+                copy96To384(plates, editingPlate);
             }
 
-            Reaction[] plateReactions = plateViewer.getPlate().getReactions();
             progressListener.setMessage("Checking with the database");
             progressListener.setIndeterminateProgress();
+            Reaction[] plateReactions = editingPlate.getReactions();
             plateReactions[0].areReactionsValid(Arrays.asList(plateReactions));
             progressListener.setProgress(1.0);
             if(progressListener.isCanceled()) {
@@ -178,5 +121,78 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         plateViewer.displayInFrame(true, GuiUtilities.getMainFrame());
 
         return null;
+    }
+
+    private void copy96To384(Plate[] srcPlates, Plate destPlate) {
+        if(destPlate.getPlateSize() != Plate.Size.w384) {
+            throw new IllegalArgumentException("The destination plate must be a 384 well plate");
+        }
+
+        for(int quadrant = 0; quadrant < srcPlates.length; quadrant++) {
+            if(srcPlates[quadrant] == null) {
+                continue;
+            }
+            Plate srcPlate = srcPlates[quadrant];
+            Reaction[] srcReactions = srcPlate.getReactions();
+            for(int i=0; i < srcReactions.length; i++) {
+                int xoffset = quadrant % 2 == 0 ? 0 : 1;
+                int yOffset = quadrant > 1 ? 1 : 0;
+                for(int col = 0; col < srcPlate.getCols(); col++) {
+                    for(int row = 0; row < srcPlate.getRows(); row++) {
+                        Reaction srcReaction = srcPlate.getReaction(row, col);
+                        Reaction destReaction = destPlate.getReaction(row*2 + yOffset, col*2 + xoffset);
+                        copyReaction(srcReaction, destReaction);
+                    }
+                }
+            }
+        }
+    }
+
+    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant) {
+        quadrant = quadrant-1;//zero-index it
+        Reaction[] srcReactions = srcPlate.getReactions();
+        for(int i=0; i < srcReactions.length; i++) {
+            int xoffset = quadrant % 2 == 0 ? 0 : 1;
+            int yOffset = quadrant > 1 ? 1 : 0;
+            for(int col = 0; col < destPlate.getCols(); col++) {
+                for(int row = 0; row < destPlate.getRows(); row++) {
+                    Reaction destReaction = destPlate.getReaction(row, col);
+                    Reaction srcReaction = srcPlate.getReaction(row*2 + yOffset, col*2 + xoffset);
+                    copyReaction(srcReaction, destReaction);
+                }
+            }
+        }
+
+    }
+
+    private void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate) {
+        if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
+            throw new IllegalArgumentException("Plates were of different sizes");
+        }
+
+        if(srcPlate.getReactionType() == destPlate.getReactionType()) { //copy everything
+            srcPlate.setId(-1);
+            for(Reaction reaction : srcPlate.getReactions()) {
+                reaction.setId(-1);
+            }
+            plateViewer.setPlate(srcPlate);
+        }
+        else {
+            Reaction[] srcReactions = srcPlate.getReactions();
+            Reaction[] destReactions = destPlate.getReactions();
+            for(int i=0; i < srcReactions.length; i++) {
+                copyReaction(srcReactions[i], destReactions[i]);
+            }
+        }
+    }
+
+    private void copyReaction(Reaction srcReaction, Reaction destReaction) {
+        destReaction.setExtractionId(srcReaction.getExtractionId());
+        if(destReaction.getType() == Reaction.Type.Extraction) {
+            FimsSample fimsSample = srcReaction.getFimsSample();
+            if(fimsSample != null) {
+                ((ExtractionReaction) destReaction).setTissueId(fimsSample.getId());
+            }
+        }
     }
 }
