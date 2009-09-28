@@ -81,6 +81,7 @@ public class NewPlateOptions extends Options{
         addChildOptions("quadrant", "Quadrant", "The quadrant of the 384 well plate to take the reactions from", quadrantOptions);
 
         final Options docChooserOptions = new Options(this.getClass());
+        docChooserOptions.setVisible(false);
         List<OptionValue> docValues = getDocumentOptionValues(documents);
         docChooserOptions.beginAlignHorizontally("", true);
         Options.ComboBoxOption<Options.OptionValue> q1Option = docChooserOptions.addComboBoxOption("q1", "q1", docValues, docValues.get(0));
