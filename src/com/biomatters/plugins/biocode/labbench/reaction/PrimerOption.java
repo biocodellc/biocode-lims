@@ -177,7 +177,27 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         setValue(getOptionValue(sequence, name));
     }
 
-    //taken from ExistingOligoOptionValue
+    @Override
+    protected String getExtraPersistentInformation() {
+        if(extraPrimer != null) {
+            return extraPrimer.getName()+"\n"+extraPrimer.getSequence()+"\n"+
+                    (getValue().getLabel().equals(extraPrimer.getName()) && getValue().getDescription().equals(extraPrimer.getSequence())); //is the extra primer the value?
+        }
+        return null;
+    }
+
+    @Override
+    protected void setExtraPersistentInformation(String extras) {
+        if(extras != null) {
+            String[] primerParts = extras.split("\n");
+            extraPrimer = new SequenceAndName(primerParts[1], primerParts[0]);
+            primerListener.objectChanged();
+            if(Boolean.parseBoolean(primerParts[2])) {
+                setValue(getOptionValue(extraPrimer.getSequence(), extraPrimer.getName()));
+            }
+        }
+    }
+
     private static SequenceAnnotation getOligoAnnotationIfValid(OligoSequenceDocument originalDoc) {
         SequenceAnnotation correctOligo = null;
         List<SequenceAnnotation> oligoAnnotations = new ArrayList<SequenceAnnotation>();
