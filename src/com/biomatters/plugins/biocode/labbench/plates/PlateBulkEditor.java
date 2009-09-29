@@ -177,6 +177,8 @@ public class PlateBulkEditor {
 
                     DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
                     final DocumentFieldEditor extractionEditor = getEditorForField(editors, extractionField);
+                    extractionEditor.setText("");
+                    extractionEditor.valuesFromTextView();
 
                     DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
                     final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, extractionBarcodeField);
