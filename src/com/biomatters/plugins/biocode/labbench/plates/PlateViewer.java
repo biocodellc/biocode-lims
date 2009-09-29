@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
@@ -299,6 +300,7 @@ public class PlateViewer extends JPanel {
                 if(owner != null) {
                     frame.setLocationRelativeTo(owner);
                 }
+                GuiUtilities.ensureWindowIsOnScreen(frame);
                 frame.setVisible(true);
             }
         };
