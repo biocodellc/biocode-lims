@@ -268,7 +268,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             Element workflowElement = XMLSerializer.classToXML("workflow", workflow);
             element.addContent(workflowElement);
         }
-        element.addContent(XMLSerializer.classToXML("options", getOptions()));
+        element.addContent(getOptions().valuesToXML("options"));
         return element;
     }
 
@@ -327,7 +327,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         for(Element e : element.getChildren("displayableField")) {
             displayableFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
         }
-        setOptions(XMLSerializer.classFromXML(element.getChild("options"), ReactionOptions.class));
+        Options options = getOptions();
+        options.valuesFromXML(element.getChild("options"));
+        //setOptions(XMLSerializer.classFromXML(element.getChild("options"), ReactionOptions.class));
     }
 
     public abstract Color _getBackgroundColor();
