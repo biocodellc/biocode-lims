@@ -172,9 +172,14 @@ public class PlateBulkEditor {
                 public void actionPerformed(ActionEvent e) {
                     DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
                     final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+                    tissueEditor.valuesFromTextView();
 
                     DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
                     final DocumentFieldEditor extractionEditor = getEditorForField(editors, extractionField);
+
+                    DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+                    final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, extractionBarcodeField);
+                    extractionBarcodeEditor.valuesFromTextView();
 
                     List<String> tissueIds = getIdsToCheck(tissueEditor, p);
 
@@ -183,12 +188,23 @@ public class PlateBulkEditor {
                         for(int row=0; row < p.getRows(); row++) {
                             for(int col=0; col < p.getCols(); col++) {
                                 Object value = tissueEditor.getValue(row, col);
+                                Object barcodeValue = extractionBarcodeEditor.getValue(row, col);
                                 if(value != null && value.toString().trim().length() > 0) {
                                     int i = 1;
                                     while(extractionIds.contains(value+"."+i)) {
                                         i++;   
                                     }
                                     String valueString = value + "." + i;
+                                    extractionEditor.setValue(row, col, valueString);
+                                    extractionIds.add(valueString);
+                                }
+                                else if(barcodeValue != null && barcodeValue.toString().length() > 0) {
+                                    String emptyValue = "noTissue";
+                                    int i = 1;
+                                    while(extractionIds.contains(emptyValue+i)) {
+                                        i++;
+                                    }
+                                    String valueString = emptyValue + i;
                                     extractionEditor.setValue(row, col, valueString);
                                     extractionIds.add(valueString);
                                 }
@@ -394,6 +410,7 @@ public class PlateBulkEditor {
                 }
             }
         }
+        idsToCheck.add("noTissue");
         return idsToCheck;
     }
 
