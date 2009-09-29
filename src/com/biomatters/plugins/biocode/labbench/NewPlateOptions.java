@@ -1,17 +1,16 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-
-import java.util.List;
-import java.util.Arrays;
-import java.util.ArrayList;
-
 import org.virion.jam.util.SimpleListener;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -175,7 +174,7 @@ public class NewPlateOptions extends Options{
         }
 
         if(fourPlates && getPlateSize() != Plate.Size.w384) {
-            return "You may only combine plate documents into 384 well plates.  Select \"384 well plate\".";
+            return "Several plate documents can only be combined into a 384 well plate.  Select \"384 well plate\".";
         }
 
         if(isFromExisting()) {
