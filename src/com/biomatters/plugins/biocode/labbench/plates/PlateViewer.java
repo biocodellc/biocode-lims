@@ -1,30 +1,34 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
-import com.biomatters.geneious.publicapi.plugin.TestGeneious;
-import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
-import com.biomatters.geneious.publicapi.utilities.StandardIcons;
-import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
-import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
+import com.biomatters.geneious.publicapi.plugin.TestGeneious;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.StandardIcons;
+import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TransactionException;
-import com.biomatters.plugins.biocode.labbench.BadDataException;
-import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.Thermocycle;
+import com.biomatters.plugins.biocode.labbench.reaction.ThermocycleEditor;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.*;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.prefs.Preferences;
-import java.sql.SQLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -54,6 +58,8 @@ public class PlateViewer extends JPanel {
 
         final JScrollPane scroller = new JScrollPane(plateView);
         scroller.setBorder(new EmptyBorder(0,0,0,0));
+        scroller.getVerticalScrollBar().setUnitIncrement(20);
+        scroller.getHorizontalScrollBar().setUnitIncrement(20);
 
         final JPanel leftToolbar = new JPanel();
         final GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(this.getClass()), false, true, true);

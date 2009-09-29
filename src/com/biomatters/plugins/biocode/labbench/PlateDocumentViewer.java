@@ -26,10 +26,10 @@ import java.awt.event.*;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.text.DecimalFormat;
 
 /**
  * @author Steven Stones-Havas
@@ -722,6 +722,8 @@ public class PlateDocumentViewer extends DocumentViewer{
         jScrollPane.setBorder(null);
         jScrollPane.setPreferredSize(new Dimension(1, jScrollPane.getPreferredSize().height+20));
         jScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        jScrollPane.getVerticalScrollBar().setUnitIncrement(20);
+        jScrollPane.getHorizontalScrollBar().setUnitIncrement(20);
         mainPanel.addSpanningComponent(jScrollPane);
 
         updateCocktailCount();
