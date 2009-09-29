@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -9,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import jebl.util.ProgressListener;
 
 import java.util.List;
@@ -194,6 +197,18 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             if(fimsSample != null) {
                 ((ExtractionReaction) destReaction).setTissueId(fimsSample.getId());
             }
+        }
+        if(destReaction.getType() == srcReaction.getType()) { //copy everything
+            ReactionOptions op = null;
+            try {
+                //clone it...
+                op = XMLSerializer.classFromXML(XMLSerializer.classToXML("Options", srcReaction.getOptions()), ReactionOptions.class);
+                destReaction.setOptions(op);
+            } catch (XMLSerializationException e) {
+                e.printStackTrace();
+                assert false : e.getMessage(); //this shouldn't really happen since we're not actually writing anything out...
+            }
+
         }
     }
 }
