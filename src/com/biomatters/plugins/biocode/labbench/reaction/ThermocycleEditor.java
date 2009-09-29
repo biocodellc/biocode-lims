@@ -405,7 +405,7 @@ public class ThermocycleEditor extends JPanel {
         addButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
                 ThermocycleEditor editor = new ThermocycleEditor();
-                if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "New Thermocycle", splitPane), editor).equals(Dialogs.OK)) {
+                if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK, Cancel"}, "New Thermocycle", splitPane), editor).equals("OK")) {
                     Thermocycle newThermocycle = editor.getThermocycle();
                     newThermocycles.add(newThermocycle);
                     for(ListDataListener listener : listModel.getListDataListeners()){
@@ -444,7 +444,7 @@ public class ThermocycleEditor extends JPanel {
 
         thermocycleList.setSelectedIndex(0);
 
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Thermocycles", owner), editPanel).equals(Dialogs.OK)) {
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK, Cancel"}, "Edit Thermocycles", owner), editPanel).equals("OK")) {
             return newThermocycles;
         }
         return Collections.EMPTY_LIST;

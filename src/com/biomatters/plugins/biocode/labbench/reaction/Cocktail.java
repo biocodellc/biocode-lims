@@ -137,11 +137,11 @@ public abstract class Cocktail implements XMLSerializable {
         });
 
         cocktailList.setSelectedIndex(0);
-        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Cocktails", owner);
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Cocktails", owner);
         dialogOptions.setMaxWidth(Integer.MAX_VALUE);
         dialogOptions.setMaxHeight(Integer.MAX_VALUE);
 
-        if(Dialogs.showDialog(dialogOptions, editPanel).equals(Dialogs.OK)) {
+        if(Dialogs.showDialog(dialogOptions, editPanel).equals("OK")) {
             return newCocktails;
         }
         return Collections.EMPTY_LIST;

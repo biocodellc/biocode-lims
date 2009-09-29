@@ -365,11 +365,11 @@ public class ReactionUtilities {
             componentToDisplay = tabs;
         }
 
-        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Well Options", owner, Dialogs.DialogIcon.NO_ICON);
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Well Options", owner, Dialogs.DialogIcon.NO_ICON);
         dialogOptions.setMaxWidth(800);
         dialogOptions.setMaxHeight(800);
         Object choice = Dialogs.showDialog(dialogOptions, componentToDisplay);
-        if(choice == Dialogs.OK) {
+        if(choice.equals("OK")) {
             int changedOptionCount = 0;
             if(!justEditDisplayableFields || justEditOptions) {
                 Element optionsElement = XMLSerializer.classToXML("options", options);

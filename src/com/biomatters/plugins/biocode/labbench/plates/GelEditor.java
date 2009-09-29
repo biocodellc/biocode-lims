@@ -138,7 +138,7 @@ public class GelEditor {
 
         gelimageList.setSelectedIndex(0);
                 
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Gelimages", owner), editPanel).equals(Dialogs.OK)) {
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Gelimages", owner), editPanel).equals("OK")) {
             return gelimages;
         }
         return gels;

@@ -263,7 +263,7 @@ public class PlateBulkEditor {
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
         swapAction.actionPerformed(null);
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Edit Plate", owner), holderPanel) == Dialogs.CANCEL) {
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
             return;    
         }
 
