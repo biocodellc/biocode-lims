@@ -95,8 +95,9 @@ public class PlateBulkEditor {
 
                     final boolean size96 = p.getPlateSize() == Plate.Size.w96;
                     if(size96) {
+                        textFieldPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
                         textFieldPanel.setBorder(new EmptyBorder(0,0,0,0));
-                        JTextField tf1 = new JTextField();
+                        JTextField tf1 = new JTextField(15);
                         jTextFields.add(tf1);
                         textFieldPanel.add(tf1);
                     }
