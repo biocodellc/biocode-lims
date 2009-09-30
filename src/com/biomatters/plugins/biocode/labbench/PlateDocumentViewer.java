@@ -83,6 +83,12 @@ public class PlateDocumentViewer extends DocumentViewer{
                                 else {
                                     BiocodeService.getInstance().saveReactions(dialog, plateView.getPlate());
                                 }
+
+                                if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
+                                    for(Reaction r : plateView.getPlate().getReactions()) {
+                                        ((CycleSequencingReaction)r).purgeChromats();
+                                    }
+                                }
                             } catch (SQLException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());    
                             } catch(BadDataException e2) {

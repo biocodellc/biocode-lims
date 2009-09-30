@@ -293,4 +293,8 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         }
         return null;
     }
+
+    public void purgeChromats() {
+        options.purgeChromats();
+    }
 }

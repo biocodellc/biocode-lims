@@ -97,7 +97,12 @@ public class BiocodeUtilities {
     public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions, ProgressListener progressListener) throws SQLException, IOException, DocumentImportException{
         List<String> idQueries = new ArrayList<String>();
         for(Reaction r : reactions) {
-            idQueries.add("reaction="+r.getId());
+            if(r.getId() >= 0) {
+                idQueries.add("reaction="+r.getId());
+            }
+        }
+        if(idQueries.size() == 0) {
+            return;
         }
 
         Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement();

@@ -31,6 +31,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.lang.ref.WeakReference;
 
 /**
  * @author Steven Stones-Havas
@@ -49,8 +50,10 @@ public class CycleSequencingOptions extends ReactionOptions {
     static final String LABEL_OPTION_ID = "label";
     static final String TRACES_BUTTON_ID = "traces";
 
-    private List<NucleotideSequenceDocument> sequences;
-    private List<ReactionUtilities.MemoryFile> rawTraces;
+    private WeakReference<List<NucleotideSequenceDocument>> sequences;
+    private WeakReference<List<ReactionUtilities.MemoryFile>> rawTraces;
+    private List<NucleotideSequenceDocument> sequencesStrongReference;
+    private List<ReactionUtilities.MemoryFile> rawTracesStrongReference;
 
     public static final String FORWARD_VALUE = "forward";
     public static final String DIRECTION = "direction";
@@ -66,10 +69,15 @@ public class CycleSequencingOptions extends ReactionOptions {
         Element sequencesElement = e.getChild("sequences");
         Element rawTracesElement = e.getChild("rawTraces");
         if(sequencesElement != null && rawTracesElement != null) {
-            sequences = XMLSerializer.classFromXML(sequencesElement, DefaultSequenceListDocument.class).getNucleotideSequences();
-            rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+            List<NucleotideSequenceDocument> sequences1 = XMLSerializer.classFromXML(sequencesElement, DefaultSequenceListDocument.class).getNucleotideSequences();
+            sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequences1);
+            ArrayList<ReactionUtilities.MemoryFile> memoryFiles = new ArrayList<ReactionUtilities.MemoryFile>();
+            rawTraces = new WeakReference<List<ReactionUtilities.MemoryFile>>(memoryFiles);
+            sequencesStrongReference = sequences1;
+            rawTracesStrongReference = memoryFiles;
+
             for(Element el : rawTracesElement.getChildren("trace")){
-                rawTraces.add(new ReactionUtilities.MemoryFile(el.getAttributeValue("name"), Base64Coder.decode(el.getText().toCharArray())));
+                rawTracesStrongReference.add(new ReactionUtilities.MemoryFile(el.getAttributeValue("name"), Base64Coder.decode(el.getText().toCharArray())));
             }
         }
         initListeners();
@@ -158,10 +166,14 @@ public class CycleSequencingOptions extends ReactionOptions {
 
                     }
                 }
-                TracesEditor editor = new TracesEditor(sequences==null ? Collections.EMPTY_LIST : sequences, rawTraces==null ? Collections.EMPTY_LIST : rawTraces, getValueAsString("extractionId"));
+                TracesEditor editor = new TracesEditor((sequences==null && sequences.get() != null) ? Collections.EMPTY_LIST : sequences.get(), (rawTraces==null && rawTraces.get() != null) ? Collections.EMPTY_LIST : rawTraces.get(), getValueAsString("extractionId"));
                 if(editor.showDialog(tracesButton.getComponent())) {
-                    sequences = editor.getSequences();
-                    rawTraces = editor.getRawTraces();
+                    List<NucleotideSequenceDocument> sequences = editor.getSequences();
+                    CycleSequencingOptions.this.sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequences);
+                    List<ReactionUtilities.MemoryFile> memoryFiles = editor.getRawTraces();
+                    rawTraces = new WeakReference<List<ReactionUtilities.MemoryFile>>(memoryFiles);
+                    sequencesStrongReference = editor.getSequences();
+                    rawTracesStrongReference = memoryFiles;
                 }
 
             }
@@ -201,10 +213,12 @@ public class CycleSequencingOptions extends ReactionOptions {
         List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
         File tempFolder = null;
         if(rawTraces == null) {
-            rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+            rawTracesStrongReference = new ArrayList<ReactionUtilities.MemoryFile>();
+            rawTraces = new WeakReference<List<ReactionUtilities.MemoryFile>>(rawTracesStrongReference);
         }
         if(sequences == null) {
-            sequences = new ArrayList<NucleotideSequenceDocument>();
+            sequencesStrongReference = new ArrayList<NucleotideSequenceDocument>();
+            sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequencesStrongReference);
         }
 
         for(ReactionUtilities.MemoryFile mFile : files) {
@@ -227,7 +241,7 @@ public class CycleSequencingOptions extends ReactionOptions {
             //import the file
             List<AnnotatedPluginDocument> pluginDocuments = PluginUtilities.importDocuments(abiFile, ProgressListener.EMPTY);
             docs.addAll(pluginDocuments);
-            rawTraces.add(mFile);
+            rawTracesStrongReference.add(mFile);
             if(!abiFile.delete()){
                 abiFile.deleteOnExit();
             }           
@@ -244,15 +258,17 @@ public class CycleSequencingOptions extends ReactionOptions {
             if(!(doc instanceof NucleotideSequenceDocument)) {
                 //todo: handle
             }
-            sequences.add((NucleotideSequenceDocument)doc);
+            sequencesStrongReference.add((NucleotideSequenceDocument)doc);
         }
     }
 
     private void getChromats() {
         try {
             List<ReactionUtilities.MemoryFile> chromatFiles = ((CycleSequencingReaction) reaction).getChromats();
-            rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
-            sequences = new ArrayList<NucleotideSequenceDocument>();
+            rawTracesStrongReference = new ArrayList<ReactionUtilities.MemoryFile>();
+            sequencesStrongReference = new ArrayList<NucleotideSequenceDocument>();
+            rawTraces = new WeakReference<List<ReactionUtilities.MemoryFile>>(rawTracesStrongReference);
+            sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequencesStrongReference);
             addChromats(chromatFiles);
 
         } catch (SQLException e1) {
@@ -321,27 +337,27 @@ public class CycleSequencingOptions extends ReactionOptions {
     }
 
     public List<NucleotideSequenceDocument> getSequences() {
-        return sequences;
+        return sequences.get();
     }
 
     public List<ReactionUtilities.MemoryFile> getRawTraces() {
-        return rawTraces;
+        return rawTraces.get();
     }
 
     public void addSequences(List<NucleotideSequenceDocument> sequences) {
-        if(this.sequences == null) {
-            this.sequences = new ArrayList<NucleotideSequenceDocument>(sequences);
+        if(this.sequences == null || this.sequences.get() == null) {
+            sequencesStrongReference = new ArrayList<NucleotideSequenceDocument>();
+            this.sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequencesStrongReference);
         }
-        else {
-            this.sequences.addAll(sequences);
-        }
+        this.sequences.get().addAll(sequences);
     }
 
     public void addRawTraces(List<ReactionUtilities.MemoryFile> files) {
-        if(this.rawTraces == null) {
-            this.rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+        if(this.rawTraces == null || this.rawTraces.get() == null) {
+            rawTracesStrongReference = new ArrayList<ReactionUtilities.MemoryFile>();
+            this.rawTraces = new WeakReference<List<ReactionUtilities.MemoryFile>>(rawTracesStrongReference);
         }
-        this.rawTraces.addAll(files);
+        this.rawTraces.get().addAll(files);
     }
 
     private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
@@ -357,13 +373,13 @@ public class CycleSequencingOptions extends ReactionOptions {
     @Override
     public Element toXML() {
         Element element = super.toXML();
-        if(sequences != null) {
-            DefaultSequenceListDocument list = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+        if(sequences != null && sequences.get() != null) {
+            DefaultSequenceListDocument list = DefaultSequenceListDocument.forNucleotideSequences(sequences.get());
             element.addContent(XMLSerializer.classToXML("sequences", list));
         }
-        if(rawTraces != null) {
+        if(rawTraces != null && rawTraces.get() != null) {
             Element tracesElement = new Element("rawTraces");
-            for(ReactionUtilities.MemoryFile file : rawTraces) {
+            for(ReactionUtilities.MemoryFile file : rawTraces.get()) {
                 Element traceElement = new Element("trace");
                 traceElement.setAttribute("name", file.getName());
                 traceElement.setText(new String(Base64Coder.encode(file.getData())));
@@ -372,5 +388,13 @@ public class CycleSequencingOptions extends ReactionOptions {
             element.addContent(tracesElement);
         }
         return element;
+    }
+
+    /**
+     * nullify the strong reference to trace documents to free up memory!.
+     */
+    public void purgeChromats() {
+        sequencesStrongReference = null;
+        rawTracesStrongReference = null;
     }
 }

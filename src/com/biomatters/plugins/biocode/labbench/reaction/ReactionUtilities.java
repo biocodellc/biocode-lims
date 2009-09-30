@@ -39,6 +39,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
+import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -136,6 +137,19 @@ public class ReactionUtilities {
      * @param folder
      */
     private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int wellPart, boolean checkPlate, File folder) {
+        try {
+            BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
+        } catch (SQLException e) {
+            Dialogs.showMessageDialog("Error reading existing sequences from database: "+e.getMessage());
+            return;
+        } catch (IOException e) {
+            Dialogs.showMessageDialog("Error writing temporary sequences to disk: "+e.getMessage());
+            return;
+        } catch (DocumentImportException e) {
+            Dialogs.showMessageDialog("Error importing existing sequences: "+e.getMessage());
+            return;
+        }
+
         for(File f : folder.listFiles()) {
             if(f.isHidden()) {
                 continue;

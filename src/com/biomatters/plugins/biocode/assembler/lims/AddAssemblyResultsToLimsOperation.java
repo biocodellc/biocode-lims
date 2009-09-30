@@ -317,9 +317,22 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
         AddAssemblyResultsToLimsOptions options = (AddAssemblyResultsToLimsOptions) o;
-        CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.8, 0.2);
+        CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.4, 0.4, 0.2);
         progress.beginSubtask("Checking results");
         List<AssemblyResult> assemblyResults = getAssemblyResults(annotatedDocuments, progress, options);
+
+        progress.beginSubtask("Downloading existing traces");
+        for(AssemblyResult result : assemblyResults) {
+            try {
+                BiocodeUtilities.downloadTracesForReactions(new ArrayList<CycleSequencingReaction>(result.reactionsById.values()), progress);
+            } catch (IOException e) {
+                throw new DocumentOperationException("Could not write temporary files to disk: "+e.getMessage());
+            } catch (DocumentImportException e) {
+                throw new DocumentOperationException("Could not import the traces: "+e.getMessage());
+            } catch (SQLException e) {
+                throw new DocumentOperationException("Could not get existing traces from the database: "+e.getMessage());
+            }
+        }
 
         progress.beginSubtask("Saving to LIMS");
         Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
