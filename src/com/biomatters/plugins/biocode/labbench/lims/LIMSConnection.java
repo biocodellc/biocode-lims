@@ -32,6 +32,9 @@ public class LIMSConnection {
     private static final int EXPECTED_SERVER_VERSION = 3;
     Driver driver;
     Connection connection;
+    public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
+    public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
+    public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
 
     public Options getConnectionOptions() {
         Options LIMSOptions = new Options(this.getClass());
@@ -150,9 +153,9 @@ public class LIMSConnection {
 
     public List<DocumentField> getSearchAttributes() {
         return Arrays.asList(
-                new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false),
-                new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false),
-                DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false)
+                PLATE_NAME_FIELD,
+                WORKFLOW_NAME_FIELD,
+                PLATE_TYPE_FIELD
         );
     }
 

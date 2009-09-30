@@ -232,6 +232,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                     name.set(tc.getName());
                 }
             }
+            actions.add(new GeneiousAction.Divider());
+            actions.add(editThermocycleAction);
         }
         thermocycleAction = new GeneiousAction.SubMenu(new GeneiousActionOptions("Thermocycle: "+name.get(), null, BiocodePlugin.getIcons("thermocycle_16.png")), actions);
         thermocycleAction.setProOnly(true);
@@ -263,7 +265,6 @@ public class PlateDocumentViewer extends DocumentViewer{
                 else {
                     actions.addAll(Arrays.asList(
                             thermocycleAction,
-                            editThermocycleAction,
                             gelAction,
                             editAction,
                             addTracesAction,
@@ -372,7 +373,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 //        }
 //    };
 
-    GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
+    GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file", "Generate an input file for ABI sequences", BiocodePlugin.getIcons("abi_16.png")) {
         public void actionPerformed(ActionEvent e) {
             ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
         }

@@ -113,6 +113,9 @@ public class BiocodePlugin extends GeneiousPlugin {
         URL workflowIcon = BiocodePlugin.class.getResource("workflow_16.png");
         putUrlIntoIconsMap(workflowIcon, "workflow_16.png");
 
+        URL abiIcon = BiocodePlugin.class.getResource("abi_16.png");
+        putUrlIntoIconsMap(abiIcon, "abi_16.png");
+
         URL biocodeIconS = BiocodePlugin.class.getResource("biocode16.png");
         URL biocodeIconL = BiocodePlugin.class.getResource("biocode24.png");
         putUrlIntoIconsMap(biocodeIconS, biocodeIconL, "biocode24.png");
