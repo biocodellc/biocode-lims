@@ -417,6 +417,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 Reaction.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, connection, null);
 
                 statement.close();
+
+                for(CycleSequencingReaction reaction : result.reactionsById.values()) {
+                    reaction.purgeChromats();
+                }
+
             } catch (SQLException e) {
                 throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
             }
