@@ -12,10 +12,9 @@ import com.biomatters.geneious.publicapi.utilities.SequenceUtilities;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -133,7 +132,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
 
 //    todo: replace the method below with this one when we release 4.8
 //    private static Options.OptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
-//        return new Options.OptionValue(overrideName, overrideName, seq.getPrimerSequence().toString());
+//        return new Options.OptionValue(overrideName, overrideName, seq.getBindingSequence().toString());
 //    }
 
     private static Options.OptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
