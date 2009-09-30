@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.assembler.download;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -77,7 +78,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         for (String plateName : plateNames) {
             reactionsProgress.beginSubtask(plateName);
             if (reactionsProgress.isCanceled()) return null;
-            Query q = Query.Factory.createQuery(plateName);
+            Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);
             List<PlateDocument> plateDocuments;
 
             try {
@@ -137,6 +138,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 fimsData.put(traceDocument, fimsDataForReactions.get(reaction));
                 chromatogramDocuments.add(traceDocument);
             }
+            reaction.purgeChromats();
         }
         if (progress.isCanceled()) return null;
         AnnotateFimsDataOperation.FimsDataGetter fimsDataGetter = new AnnotateFimsDataOperation.FimsDataGetter() {
@@ -164,6 +166,6 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
     @Override
     public double getFractionOfTimeToSaveResults() {
-        return 0.1;
+        return 0.3;
     }
 }
