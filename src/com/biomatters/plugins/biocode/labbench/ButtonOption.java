@@ -56,7 +56,15 @@ public class ButtonOption extends Options.Option<String, JPanel> {
     }
 
     protected JPanel createComponent() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT)){
+            @Override
+            public void setEnabled(boolean enabled) {
+                super.setEnabled(enabled);
+                for(Component c : getComponents()) {
+                    c.setEnabled(enabled);
+                }
+            }
+        };
         panel.setOpaque(false);
         JButton button = new JButton(getDefaultValue());
         button.setOpaque(false);

@@ -57,6 +57,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         this.isLocal = local;
         Plate plate = null;
         deletePlateAction.setProOnly(true);
+        addTracesAction.setProOnly(true);
         try {
             plate = new Plate(plateDoc.getPlate().toXML());
         } catch (XMLSerializationException e) {
@@ -104,6 +105,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
         };
         saveAction.setIcons(StandardIcons.save.getIcons());
+        saveAction.setProOnly(true);
 
         plateView.addSelectionListener(new ListSelectionListener(){
             public void valueChanged(ListSelectionEvent e) {
@@ -266,7 +268,11 @@ public class PlateDocumentViewer extends DocumentViewer{
                     actions.addAll(Arrays.asList(
                             thermocycleAction,
                             gelAction,
-                            editAction,
+                            editAction
+                    ));
+                }
+                if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
+                    actions.addAll(Arrays.asList(
                             addTracesAction,
                             exportPlateAction
                     ));

@@ -5,10 +5,7 @@ import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
-import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
-import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -249,12 +246,19 @@ public class WorkflowDocument extends MuitiPartDocument {
             final JPanel holder = new JPanel(new BorderLayout());
             holder.setOpaque(false);
             holder.add(optionsPanel.get(), BorderLayout.CENTER);
-            JButton editButton = new JButton("Edit");
+            final JButton editButton = new JButton("Edit");
             editButton.setOpaque(false);
+            final SimpleListener licenseListener = new SimpleListener() {
+                public void objectChanged() {
+                    editButton.setEnabled(License.isProVersion());
+                    editButton.setText(License.proOnlyName("Edit"));
+                }
+            };
             editButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
                     ReactionUtilities.editReactions(Arrays.asList(reaction), false, panel, true, false);
+                    SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
                     if(reaction.hasError()) {
                         try {
                             reaction.setOptions(XMLSerializer.classFromXML(oldOptions, ReactionOptions.class));
@@ -272,6 +276,8 @@ public class WorkflowDocument extends MuitiPartDocument {
                     }
                 }
             });
+            License.addWeakLicenseTypeChangeListener(licenseListener);
+            licenseListener.objectChanged();
             JPanel editPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
             editPanel.setOpaque(false);
             editPanel.add(editButton);
