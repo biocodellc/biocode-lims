@@ -29,7 +29,7 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class LIMSConnection {
-    private static final int EXPECTED_SERVER_VERSION = 3;
+    private static final int EXPECTED_SERVER_VERSION = 4;
     Driver driver;
     Connection connection;
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
