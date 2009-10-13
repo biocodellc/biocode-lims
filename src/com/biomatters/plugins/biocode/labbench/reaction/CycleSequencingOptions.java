@@ -337,11 +337,11 @@ public class CycleSequencingOptions extends ReactionOptions {
     }
 
     public List<NucleotideSequenceDocument> getSequences() {
-        return sequences.get();
+        return sequences == null ? Collections.EMPTY_LIST : sequences.get();
     }
 
     public List<ReactionUtilities.MemoryFile> getRawTraces() {
-        return rawTraces.get();
+        return rawTraces == null ? Collections.EMPTY_LIST : rawTraces.get();
     }
 
     public void addSequences(List<NucleotideSequenceDocument> sequences) {
