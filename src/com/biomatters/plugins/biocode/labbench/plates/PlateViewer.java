@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GComboBox;
 import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
@@ -89,7 +90,7 @@ public class PlateViewer extends JPanel {
                 thermocycleModel.addElement(cycle);
             }
 
-            final JComboBox thermocycleCombo = new JComboBox(thermocycleModel);
+            final JComboBox thermocycleCombo = new GComboBox(thermocycleModel);
             ItemListener thermocycleComboListener = new ItemListener() {
                 public void itemStateChanged(ItemEvent e) {
                     plateView.getPlate().setThermocycle((Thermocycle) thermocycleCombo.getSelectedItem());
