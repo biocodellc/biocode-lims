@@ -15,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 /**
  * @author Steven Stones-Havas
@@ -127,7 +128,11 @@ public class Plate implements XMLSerializable {
     }
 
     public List<GelImage> getImages() {
-        return images;
+        return images != null ? images : Collections.EMPTY_LIST;
+    }
+
+    public boolean gelImagesHaveBeenDownloaded() {
+        return images != null;
     }
 
     public void setImages(List<GelImage> images) {
@@ -183,7 +188,7 @@ public class Plate implements XMLSerializable {
         this.cols = cols;
         this.type = type;
 
-        images = new ArrayList<GelImage>();
+        //images = new ArrayList<GelImage>();
 
         reactions = new Reaction[rows*cols];
         if(initialiseReactions) {
@@ -343,8 +348,10 @@ public class Plate implements XMLSerializable {
         for(Reaction reaction : reactions) {
             reaction.setPlateId(id);
         }
-        for(GelImage image : images) {
-            image.setPlate(id);
+        if(images != null) {
+            for(GelImage image : images) {
+                image.setPlate(id);
+            }
         }
     }
 
@@ -383,9 +390,12 @@ public class Plate implements XMLSerializable {
         if(thermocycleId != null) {
             setThermocycleFromId(Integer.parseInt(thermocycleId));     
         }
-        images = new ArrayList<GelImage>();
-        for(Element gelImageElement : element.getChildren("gelImage")) {
-            images.add(XMLSerializer.classFromXML(gelImageElement, GelImage.class));
+        List<Element> imagesList = element.getChildren("gelImage");
+        if(imagesList != null && imagesList.size() > 0) {
+            images = new ArrayList<GelImage>();
+            for(Element gelImageElement : imagesList) {
+                images.add(XMLSerializer.classFromXML(gelImageElement, GelImage.class));
+            }
         }
     }
 
@@ -421,8 +431,10 @@ public class Plate implements XMLSerializable {
         for(Reaction r : reactions) {
             plateElement.addContent(XMLSerializer.classToXML("reaction",r));
         }
-        for(GelImage gi : images) {
-            plateElement.addContent(XMLSerializer.classToXML("gelImage", gi));
+        if(images != null) {
+            for(GelImage gi : images) {
+                plateElement.addContent(XMLSerializer.classToXML("gelImage", gi));
+            }
         }
 
         

@@ -188,7 +188,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         return new BiocodeUtilities.LatLong((Double)latObject, (Double)longObject);
     }
 
-    public List<FimsSample> getMatchingSamples(Query query) throws ConnectionException{
+    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{
         StringBuilder queryBuilder = new StringBuilder();
         
 

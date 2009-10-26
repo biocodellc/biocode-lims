@@ -129,7 +129,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
-        List<Query> queries = new ArrayList<Query>();
+        Set<String> samplesToGet = new HashSet<String>();
 
         for(Reaction reaction : reactions) {
             ReactionOptions option = reaction.getOptions();
@@ -138,21 +138,17 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
                 continue;
             }
-            Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissueId);
-            if(!queries.contains(fieldQuery)) {
-                 queries.add(fieldQuery);
-            }
+            samplesToGet.add(tissueId);
         }
 
-        if(queries.size() == 0) {
+        if(samplesToGet.size() == 0) {
             return null;
         }
-        Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
 
         String error = "";
 
         try {
-            List<FimsSample> docList = fimsConnection.getMatchingSamples(orQuery);
+            List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
             Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
             for(FimsSample sample : docList) {
                 docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);

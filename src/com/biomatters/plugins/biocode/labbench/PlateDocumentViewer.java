@@ -219,6 +219,9 @@ public class PlateDocumentViewer extends DocumentViewer{
                 return;
             }
             for(final Thermocycle tc : cycles) {
+                if(tc.getName() == null) {
+                    continue;
+                }
                 GeneiousAction action = new GeneiousAction(tc.getName()) {
                     public void actionPerformed(ActionEvent e) {
                         if(tc.getId() != plateView.getPlate().getThermocycle().getId()) {
@@ -303,6 +306,18 @@ public class PlateDocumentViewer extends DocumentViewer{
                 Dialogs.showMessageDialog("Please log in");
                 return;
             }
+            if(!plateView.getPlate().gelImagesHaveBeenDownloaded()) {
+                BiocodeService.block("Downloading existing GEL images", container, new Runnable() {
+                    public void run() {
+                        try {
+                            BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
+                        } catch (SQLException e1) {
+                            Dialogs.showMessageDialog(e1.getMessage());
+                        }
+                    }
+                });
+            }
+
             List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), container);
             plateView.getPlate().setImages(gelimages);
             saveAction.setEnabled(true);
@@ -512,12 +527,36 @@ public class PlateDocumentViewer extends DocumentViewer{
         return cockatilPanel;
     }
 
-    private JPanel getGelImagePanel(GelImage gelImage) {
+    private JPanel getGelImagePanel(GelImage gelImage, boolean scrollPaneAroundImage) {
         final Image img = gelImage.getImage();
-        JPanel imagePanel = getImagePanel(img);
-        JPanel holderPanel = new JPanel(new BorderLayout());
+        final JPanel imagePanel = getImagePanel(img);
+        JPanel holderPanel = new JPanel(new BorderLayout()){  //delegate mouse listeners to the image panel (it's what we want people to click on)
+            @Override
+            public void addMouseListener(MouseListener l) {
+                imagePanel.addMouseListener(l);
+            }
+
+            @Override
+            public void removeMouseListener(MouseListener l) {
+                imagePanel.removeMouseListener(l);
+            }
+
+            @Override
+            public MouseListener[] getMouseListeners() {
+                return imagePanel.getMouseListeners();
+            }
+        };
         holderPanel.setOpaque(false);
-        holderPanel.add(imagePanel, BorderLayout.CENTER);
+        if(scrollPaneAroundImage) {
+            JScrollPane scroller = new JScrollPane(imagePanel);
+            scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+            scroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            scroller.setPreferredSize(new Dimension(1, imagePanel.getPreferredSize().height));
+            holderPanel.add(scroller, BorderLayout.CENTER);
+        }
+        else {
+            holderPanel.add(imagePanel, BorderLayout.CENTER);
+        }
         JTextArea notes = new JTextArea(gelImage.getNotes());
         notes.setWrapStyleWord(true);
         notes.setLineWrap(true);
@@ -688,7 +727,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
                 if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0 && (Boolean)options.getValue("printImages")) {
                     for(GelImage image : plateView.getPlate().getImages()) {
-                        JPanel imagePanel = getGelImagePanel(image);
+                        JPanel imagePanel = getGelImagePanel(image, false);
 
                         Dimension preferredSize = imagePanel.getPreferredSize();
                         if(preferredSize.height > availableHeight) {
@@ -731,9 +770,13 @@ public class PlateDocumentViewer extends DocumentViewer{
         OptionsPanel mainPanel = new OptionsPanel(true, false);
         mainPanel.setOpaque(false);
         mainPanel.addDividerWithLabel("Plate");
-        JScrollPane jScrollPane = new JScrollPane(plateView);
+        JScrollPane jScrollPane = new JScrollPane(plateView){
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(1, super.getPreferredSize().height + (getHorizontalScrollBar() != null ? getHorizontalScrollBar().getHeight() : 0));//constrain the width to the panel width...
+            }
+        };
         jScrollPane.setBorder(null);
-        jScrollPane.setPreferredSize(new Dimension(1, jScrollPane.getPreferredSize().height+20));
         jScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         jScrollPane.getVerticalScrollBar().setUnitIncrement(20);
         jScrollPane.getHorizontalScrollBar().setUnitIncrement(20);
@@ -765,7 +808,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0) {
             mainPanel.addDividerWithLabel("GEL Images");
             for(final GelImage image : plateView.getPlate().getImages()) {
-                final JPanel imagePanel = getGelImagePanel(image);
+                final JPanel imagePanel = getGelImagePanel(image, true);
                 imagePanel.setToolTipText("Double-click to pop out");
                 imagePanel.addMouseListener(new MouseAdapter(){
                     JFrame frame;

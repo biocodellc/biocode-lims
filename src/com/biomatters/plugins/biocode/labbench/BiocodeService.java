@@ -1239,8 +1239,8 @@ public class BiocodeService extends DatabaseService {
             //int workflowCount = 0;
             List<String> extractionIds = new ArrayList<String>();
             for(Reaction reaction : plate.getReactions()) {
-                Object tissueId = reaction.getFieldValue("sampleId");
-                if(!reaction.isEmpty() && tissueId != null && tissueId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                Object extractionId = reaction.getFieldValue("extractionId");
+                if(!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
                     extractionIds.add(reaction.getExtractionId());
                 }
             }
@@ -1294,14 +1294,16 @@ public class BiocodeService extends DatabaseService {
         }
 
         //replace the images
-        PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
-        deleteImagesStatement.execute();
-        for(GelImage image : plate.getImages()) {
-            PreparedStatement statement1 = image.toSql(connection);
-            statement1.execute();
-            statement1.close();
+        if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
+            PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
+            deleteImagesStatement.execute();
+            for(GelImage image : plate.getImages()) {
+                PreparedStatement statement1 = image.toSql(connection);
+                statement1.execute();
+                statement1.close();
+            }
+            deleteImagesStatement.close();
         }
-        deleteImagesStatement.close();
 
         Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
     }
@@ -1343,18 +1345,21 @@ public class BiocodeService extends DatabaseService {
         PreparedStatement statement2 = limsConnection.getConnection().prepareStatement(query2);
         statement2.setInt(1, plateId);
         ResultSet resultSet2 = statement2.executeQuery();
-        List<Query> queries = new ArrayList<Query>();
+        Set<String> samplesToGet = new HashSet<String>();
         Map<String, Integer> tissueToLocationMap = new HashMap<String, Integer>();
         while(resultSet2.next()) {
             tissueToLocationMap.put(resultSet2.getString("extraction.sampleId"), resultSet2.getInt("cycleSequencing.location"));
-            queries.add(Query.Factory.createFieldQuery(activeFIMSConnection.getTissueSampleDocumentField(), Condition.EQUAL, resultSet2.getString("extraction.sampleId")));
+            String sampleId = resultSet2.getString("extraction.sampleId");
+            if(sampleId != null && sampleId.length() > 0) {
+                samplesToGet.add(sampleId);
+            }
         }
         statement1.close();
         statement2.close();
 
         //step 3 - get the fims samples from the fims database
         try {
-            List<FimsSample> list = activeFIMSConnection.getMatchingSamples(Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP));
+            List<FimsSample> list = activeFIMSConnection.getMatchingSamples(samplesToGet);
             Map<BiocodeUtilities.Well, FimsSample> result = new HashMap<BiocodeUtilities.Well, FimsSample>();
             for(FimsSample sample : list) {
                 Integer location = tissueToLocationMap.get(sample.getId());

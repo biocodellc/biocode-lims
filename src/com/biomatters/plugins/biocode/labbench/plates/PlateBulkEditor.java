@@ -40,7 +40,13 @@ public class PlateBulkEditor {
         DOWN_AND_ACROSS
     }
 
-    public static void editPlate(final Plate p, JComponent owner) {
+    /**
+     *
+     * @param p
+     * @param owner
+     * @return  true if the user clicked ok, false if they clicked cancel
+     */
+    public static boolean editPlate(final Plate p, JComponent owner) {
         final JPanel platePanel = new JPanel();
         final AtomicReference<Direction> direction = new AtomicReference<Direction>(Direction.ACROSS_AND_DOWN);
         platePanel.setLayout(new BoxLayout(platePanel, BoxLayout.X_AXIS));
@@ -266,7 +272,7 @@ public class PlateBulkEditor {
         holderPanel.add(toolbar, BorderLayout.NORTH);
         swapAction.actionPerformed(null);
         if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
-            return;    
+            return false;
         }
 
         for(DocumentFieldEditor editor : editors) {
@@ -346,6 +352,7 @@ public class PlateBulkEditor {
         if(badWorkflows.length() > 0) {
             Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
         }
+        return true;
     }
 
 

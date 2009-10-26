@@ -38,6 +38,7 @@ public class CycleSequencingCocktail extends Cocktail{
         options.setValue("BufferConc", resultSet.getDouble("bufferConc"));
         options.setValue("Big DyeConc", resultSet.getDouble("bigDyeConc"));
         options.setValue("Template Conc", resultSet.getDouble("templateConc"));
+        options.setValue("Template", resultSet.getDouble("templateAmount"));
         options.setValue("extraItem", resultSet.getString("extraItem"));
         options.setValue("extraItemAmount", resultSet.getDouble("extraItemAmount"));
         options.setValue("Primer", resultSet.getDouble("primerAmount"));
@@ -58,8 +59,12 @@ public class CycleSequencingCocktail extends Cocktail{
         if(options == null) {
             options = new Options(this.getClass());
             Options.StringOption nameOption = options.addStringOption("name", "Name", "");
-            Options.DoubleOption templateConcOption = options.addDoubleOption("Template Conc", "Template/target concentration", 0.0, 0.0, Double.MAX_VALUE);
+            options.beginAlignHorizontally("Template/Target", false);
+            Options.DoubleOption templateConcOption = options.addDoubleOption("Template Conc", "", 0.0, 0.0, Double.MAX_VALUE);
             templateConcOption.setUnits("uM");
+            Options.DoubleOption templateOption = options.addDoubleOption("Template", "", 0.0, 0.0, Double.MAX_VALUE);
+            templateOption.setUnits("uL");
+            options.endAlignHorizontally();
             options.beginAlignHorizontally("Primer", false);
             Options.DoubleOption primerConcentrationOption = options.addDoubleOption("PrimerConc", "", 0.0, 0.0, Double.MAX_VALUE);
             primerConcentrationOption.setUnits("uM");
@@ -110,7 +115,7 @@ public class CycleSequencingCocktail extends Cocktail{
     }
 
     public String getSQLString() {
-        String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes, bufferConc, bigDyeConc, templateConc, primerAmount, primerConc, extraItem, extraItemAmount) VALUES ('" + options.getValueAsString("name").replace("'", "''") + "', " + options.getValueAsString("ddH2O") + ", " + options.getValueAsString("Buffer") + ", " + options.getValueAsString("Big Dye") + ", '" + options.getValueAsString("notes").replace("'", "''") + "', "+options.getValue("BufferConc")+", "+options.getValue("Big DyeConc")+", "+options.getValue("Template Conc")+", "+options.getValue("Primer")+", "+options.getValue("PrimerConc")+", '"+options.getValue("extraItem")+"', "+options.getValue("extraItemAmount")+")";
+        String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes, bufferConc, bigDyeConc, templateAmount, templateConc, primerAmount, primerConc, extraItem, extraItemAmount) VALUES ('" + options.getValueAsString("name").replace("'", "''") + "', " + options.getValueAsString("ddH2O") + ", " + options.getValueAsString("Buffer") + ", " + options.getValueAsString("Big Dye") + ", '" + options.getValueAsString("notes").replace("'", "''") + "', "+options.getValue("BufferConc")+", "+options.getValue("Big DyeConc")+", "+options.getValue("Template")+", "+options.getValue("Template Conc")+", "+options.getValue("Primer")+", "+options.getValue("PrimerConc")+", '"+options.getValue("extraItem")+"', "+options.getValue("extraItemAmount")+")";
         System.out.println(s);
         return s;
     }

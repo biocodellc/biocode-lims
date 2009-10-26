@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
@@ -31,6 +32,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.prefs.Preferences;
 
+import org.virion.jam.util.SimpleListener;
+
 /**
  * Created by IntelliJ IDEA.
  * User: steve
@@ -42,7 +45,7 @@ public class PlateViewer extends JPanel {
 
     private PlateView plateView;
     private PlateViewer selfReference = this;
-    private GTextField nameField;
+    private Options.StringOption nameField;
 
     public PlateViewer(int numberOfReactions, Reaction.Type type) {
         plateView = new PlateView(numberOfReactions, type, true);
@@ -67,22 +70,14 @@ public class PlateViewer extends JPanel {
         //toolbar.setLayout(new FlowLayout(FlowLayout.LEFT));
         leftToolbar.setOpaque(false);
 
-        leftToolbar.add(new JLabel("Name:"));
-        nameField = new GTextField(20);
-        nameField.addKeyListener(new KeyListener(){
-            public void keyTyped(KeyEvent e) {
-                plateView.getPlate().setName(nameField.getText());
-            }
-
-            public void keyPressed(KeyEvent e) {
-                plateView.getPlate().setName(nameField.getText());
-            }
-
-            public void keyReleased(KeyEvent e) {
-                plateView.getPlate().setName(nameField.getText());
+        Options nameOptions = new Options(this.getClass());
+        nameField = nameOptions.addStringOption("plateName", "Name:", "");
+        nameField.addChangeListener(new SimpleListener(){
+            public void objectChanged() {
+                plateView.getPlate().setName(nameField.getValue());
             }
         });
-        leftToolbar.add(nameField);
+        leftToolbar.add(nameOptions.getPanel());
 
         if (plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
             final DefaultComboBoxModel thermocycleModel = new DefaultComboBoxModel();
@@ -143,7 +138,18 @@ public class PlateViewer extends JPanel {
             toolbar.addAction(thermocycleAction);
 
             final GeneiousAction gelAction = new GeneiousAction("Attach GEL image", "Attach GEL images to this plate", BiocodePlugin.getIcons("addImage_16.png")) {
-            public void actionPerformed(ActionEvent e) {
+                public void actionPerformed(ActionEvent e) {
+                    if(!plateView.getPlate().gelImagesHaveBeenDownloaded()) {
+                        BiocodeService.block("Downloading existing GEL images", selfReference, new Runnable() {
+                            public void run() {
+                                try {
+                                    BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
+                                } catch (SQLException e1) {
+                                    Dialogs.showMessageDialog(e1.getMessage());
+                                }
+                            }
+                        });
+                    }
                     List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
                     plateView.getPlate().setImages(gelimages);
                 }
@@ -158,20 +164,21 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells", "Paste data into the wells from a spreadsheet", BiocodePlugin.getIcons("bulkEdit_16.png")) {
             public void actionPerformed(ActionEvent e) {
-                PlateBulkEditor.editPlate(plateView.getPlate(), selfReference);
-                nameField.setText(plateView.getPlate().getName());
-                Runnable runnable = new Runnable() {
-                    public void run() {
-                        String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
-                        if(error != null && error.length() > 0) {
-                            Dialogs.showMessageDialog(error);
+                if(PlateBulkEditor.editPlate(plateView.getPlate(), selfReference)) {
+                    nameField.setValue(plateView.getPlate().getName());
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
+                            if(error != null && error.length() > 0) {
+                                Dialogs.showMessageDialog(error);
+                            }
                         }
-                    }
-                };
-                BiocodeService.block("Checking reactions", selfReference, runnable);
-                plateView.invalidate();
-                scroller.getViewport().validate();
-                plateView.repaint();
+                    };
+                    BiocodeService.block("Checking reactions", selfReference, runnable);
+                    plateView.invalidate();
+                    scroller.getViewport().validate();
+                    plateView.repaint();
+                }
             }
         };
         toolbar.addAction(bulkEditAction);
@@ -294,6 +301,7 @@ public class PlateViewer extends JPanel {
                                     return;
                                 }
                                 progress.setVisible(false);
+                                nameField.getParentOptions().savePreferences();
                                 frame.dispose();
                             }
                         };

@@ -64,7 +64,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         options.setValue(ReactionOptions.RUN_STATUS, r.getString("cyclesequencing.progress"));
         options.setValue("cocktail", r.getString("cyclesequencing.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("cyclesequencing.cleanupPerformed"));
-        options.setValue("cleanupMethod", r.getBoolean("cyclesequencing.cleanupMethod"));
+        options.setValue("cleanupMethod", r.getString("cyclesequencing.cleanupMethod"));
 
         setPlateName(r.getString("plate.name"));
         setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
@@ -199,7 +199,8 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
         String error = "";
 
-        List<Query> queries = new ArrayList<Query>();
+        //List<Query> queries = new ArrayList<Query>();
+        Set<String> samplesToGet = new HashSet<String>();
 
         Map<String, String> tissueMapping = null;
         try {
@@ -216,20 +217,16 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             Options option = reaction.getOptions();
             String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
             if(tissue != null) {
-                Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
-                if(!queries.contains(fieldQuery)) {
-                     queries.add(fieldQuery);
-                }
+                samplesToGet.add(tissue);
             }
         }
 
-        if(queries.size() == 0) {
+        if(samplesToGet.size() == 0) {
             return  error.length() == 0 ? null : error;
         }
-        Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap());
 
         try {
-            List<FimsSample> docList = fimsConnection.getMatchingSamples(orQuery);
+            List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
             Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
             for(FimsSample sample : docList) {
                 docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);

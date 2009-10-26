@@ -168,10 +168,11 @@ public class PCROptions extends ReactionOptions {
         cocktailButton = new ButtonOption(COCKTAIL_BUTTON_ID, "", "Edit Cocktails");
         cocktailButton.setSpanningComponent(true);
         addCustomOption(cocktailButton);
-        BooleanOption cleanupOption = addBooleanOption("cleanupPerformed", "Cleanup performed", false);
+        Options.OptionValue[] cleanupValues = new OptionValue[] {new OptionValue("true", "Yes"), new OptionValue("false", "No")};
+        ComboBoxOption cleanupOption = addComboBoxOption("cleanupPerformed", "Cleanup performed", cleanupValues, cleanupValues[1]);
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
-        cleanupOption.addDependent(cleanupMethodOption, true);
+        cleanupOption.addDependent(cleanupMethodOption, cleanupValues[0]);
         TextAreaOption notes = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notes);
 

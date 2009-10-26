@@ -150,7 +150,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
 
         String error = "";            
 
-        List<Query> queries = new ArrayList<Query>();
+        Set<String> samplesToGet = new HashSet<String>();
 
         //check the extractions exist in the database...
         Map<String, String> tissueMapping = null;
@@ -174,19 +174,15 @@ public class PCRReaction extends Reaction<PCRReaction> {
                 reaction.isError = true;
             }
             else {
-                Query fieldQuery = Query.Factory.createFieldQuery(tissueField, Condition.EQUAL, tissue);
-                if(!queries.contains(fieldQuery)) {
-                     queries.add(fieldQuery);
-                }
+                samplesToGet.add(tissue);
             }
         }
 
 
         //add FIMS data to the reaction...
-        if(queries.size() > 0) {
-            Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP);
+        if(samplesToGet.size() > 0) {
             try {
-                List<FimsSample> docList = fimsConnection.getMatchingSamples(orQuery);
+                List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
                 Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
                 for(FimsSample sample : docList) {
                     docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);

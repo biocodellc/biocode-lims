@@ -74,8 +74,7 @@ public class BiocodeUtilities {
     public static WorkflowDocument getMostRecentWorkflow(LIMSConnection limsConnection, FIMSConnection fimsConnection, Object tissueId) throws DocumentOperationException {
         WorkflowDocument mostRecent = null;
         try {
-            Query fimsQuery = Query.Factory.createFieldQuery(fimsConnection.getTissueSampleDocumentField(), Condition.CONTAINS, tissueId);
-            List<FimsSample> tissues = fimsConnection.getMatchingSamples(fimsQuery);
+            List<FimsSample> tissues = fimsConnection.getMatchingSamples(Arrays.asList(tissueId.toString()));
             if (tissues.size() != 1) {
                 return null;
             }

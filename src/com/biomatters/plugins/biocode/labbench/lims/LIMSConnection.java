@@ -342,6 +342,7 @@ public class LIMSConnection {
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
         Set<Integer> plateIds = new HashSet<Integer>();
+        long startTime = System.currentTimeMillis();
 
         if(query instanceof BasicSearchQuery) {
             query = generateAdvancedQueryFromBasicQuery(query);
@@ -423,6 +424,7 @@ public class LIMSConnection {
                 }
             }
         }
+        System.out.println("EXECUTING PLATE QUERY");
 
         ResultSet resultSet = statement.executeQuery();
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
@@ -431,6 +433,7 @@ public class LIMSConnection {
         List<CycleSequencingReaction> cyclesequencingReactions = new ArrayList<CycleSequencingReaction>();
         List<Integer> returnedPlateIds = new ArrayList<Integer>();
         int count = 0;
+        System.out.println("Creating Reactions...");
         while(resultSet.next()) {
             count++;
             Plate plate;
@@ -464,18 +467,21 @@ public class LIMSConnection {
         System.out.println("count="+count);
         final StringBuilder totalErrors = new StringBuilder("");
         if(extractionReactions.size() > 0) {
+            System.out.println("Checking extractions");
             String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions);
             if(extractionErrors != null) {
                 totalErrors.append(extractionErrors+"\n");
             }
         }
         if(pcrReactions.size() > 0) {
+            System.out.println("Checking PCR's");
             String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions);
             if(pcrErrors != null) {
                 totalErrors.append(pcrErrors+"\n");
             }
         }
         if(cyclesequencingReactions.size() > 0) {
+            System.out.println("Checking Cycle Sequencing's...");
             String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions);
             if(cyclesequencingErrors != null) {
                 totalErrors.append(cyclesequencingErrors+"\n");
@@ -484,17 +490,26 @@ public class LIMSConnection {
         if(totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
-                    Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n"+totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
+                    if(totalErrors.toString().contains("connection")) {
+                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", totalErrors.toString());    
+                    }
+                    else {
+                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n"+totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
+                    }
                 }
             };
             ThreadUtilities.invokeNowOrLater(runnable);
         }
 
+        System.out.println("Creating plate documents");
         List<PlateDocument> docs = new ArrayList<PlateDocument>();
-        getGelImagesForPlates(plateMap.values());
+        System.out.println("Getting GEL images");
+        //getGelImagesForPlates(plateMap.values());   //we are only downloading these when the user wants to view them now...
         for(Plate plate : plateMap.values()) {
             docs.add(new PlateDocument(plate));
         }
+        int time = (int)(System.currentTimeMillis()-startTime)/1000;
+        System.out.println("done in "+time+" seconds!");
 
         return docs;
 
@@ -551,6 +566,7 @@ public class LIMSConnection {
             }
         }
         sql.append(")");
+        System.out.println(sql);
         PreparedStatement statement = connection.prepareStatement(sql.toString());
         ResultSet resultSet = statement.executeQuery();
         Map<Integer, List<GelImage>> map = new HashMap<Integer, List<GelImage>>();

@@ -177,18 +177,13 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
 
         if(srcPlate.getReactionType() == destPlate.getReactionType()) { //copy everything
-            srcPlate.setId(-1);
-            for(Reaction reaction : srcPlate.getReactions()) {
-                reaction.setId(-1);
-            }
-            plateViewer.setPlate(srcPlate);
+            destPlate.setName(srcPlate.getName());
+            destPlate.setThermocycle(srcPlate.getThermocycle());
         }
-        else {
-            Reaction[] srcReactions = srcPlate.getReactions();
-            Reaction[] destReactions = destPlate.getReactions();
-            for(int i=0; i < srcReactions.length; i++) {
-                copyReaction(srcReactions[i], destReactions[i]);
-            }
+        Reaction[] srcReactions = srcPlate.getReactions();
+        Reaction[] destReactions = destPlate.getReactions();
+        for(int i=0; i < srcReactions.length; i++) {
+            copyReaction(srcReactions[i], destReactions[i]);
         }
     }
 
@@ -202,7 +197,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             }
         }
         if(destReaction.getType() == srcReaction.getType()) { //copy everything
-            ReactionOptions op = null;
+            ReactionOptions op;
             try {
                 //clone it...
                 op = XMLSerializer.classFromXML(XMLSerializer.classToXML("Options", srcReaction.getOptions()), ReactionOptions.class);

@@ -600,7 +600,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         else {
                             statement.setInt(8, -1);
                         }
-                        statement.setBoolean(9, (Boolean)options.getValue("cleanupPerformed"));
+                        statement.setBoolean(9, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true"));
                         statement.setString(10, options.getValueAsString("cleanupMethod"));
                         statement.setString(11, reaction.getExtractionId());
                         statement.setString(12, options.getValueAsString("notes"));
@@ -611,8 +611,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 updateStatement.close();
                 break;
             case CycleSequencing:
-                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, sequences) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, sequences=?, date=cyclesequencing.date WHERE id=?";
+                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=cyclesequencing.date WHERE id=?";
                 String clearTracesSQL = "DELETE FROM traces WHERE reaction=?";
                 String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
 
@@ -630,7 +630,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(15, reaction.getId());
+                            statement.setInt(14, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -673,26 +673,26 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         else {
                             statement.setInt(9, -1);
                         }
-                        statement.setBoolean(10, (Boolean)options.getValue("cleanupPerformed"));
+                        statement.setBoolean(10, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true"));
                         statement.setString(11, options.getValueAsString("cleanupMethod"));
                         statement.setString(12, reaction.getExtractionId());
                         statement.setString(13, options.getValueAsString("notes"));
-                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
-                        String sequenceString = "";
-                        if(sequences != null && sequences.size() > 0) {
-                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
-                            Element element = XMLSerializer.classToXML("sequences", sequenceList);
-                            XMLOutputter out = new XMLOutputter(Format.getCompactFormat());
-                            StringWriter writer = new StringWriter();
-                            try {
-                                out.output(element, writer);
-                                sequenceString = writer.toString();
-                            } catch (IOException e) {
-                                throw new SQLException("Could not write the sequences to the database: "+e.getMessage());
-                            }
-                        }
-
-                        statement.setString(14, sequenceString);
+//                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
+//                        String sequenceString = "";
+//                        if(sequences != null && sequences.size() > 0) {
+//                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+//                            Element element = XMLSerializer.classToXML("sequences", sequenceList);
+//                            XMLOutputter out = new XMLOutputter(Format.getCompactFormat());
+//                            StringWriter writer = new StringWriter();
+//                            try {
+//                                out.output(element, writer);
+//                                sequenceString = writer.toString();
+//                            } catch (IOException e) {
+//                                throw new SQLException("Could not write the sequences to the database: "+e.getMessage());
+//                            }
+//                        }
+//
+//                        statement.setString(14, sequenceString);
                         statement.execute();
                         if(((CycleSequencingOptions)reaction.getOptions()).getSequences() != null) {
                             int reactionId = reaction.getId();
@@ -706,11 +706,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                                 reactionId = reactionIdResultSet.getInt(1);
                             }
 
-                            for(ReactionUtilities.MemoryFile file : ((CycleSequencingOptions)reaction.getOptions()).getRawTraces()) {
-                                insertTracesStatement.setInt(1, reactionId);
-                                insertTracesStatement.setString(2, file.getName());
-                                insertTracesStatement.setBytes(3, file.getData());
-                                insertTracesStatement.execute();
+                            List<ReactionUtilities.MemoryFile> memoryFiles = ((CycleSequencingOptions) reaction.getOptions()).getRawTraces();
+                            if(memoryFiles != null) {
+                                for(ReactionUtilities.MemoryFile file : memoryFiles) {
+                                    insertTracesStatement.setInt(1, reactionId);
+                                    insertTracesStatement.setString(2, file.getName());
+                                    insertTracesStatement.setBytes(3, file.getData());
+                                    insertTracesStatement.execute();
+                                }
                             }
                         }
                     }

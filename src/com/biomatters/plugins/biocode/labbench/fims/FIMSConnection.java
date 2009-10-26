@@ -3,13 +3,16 @@ package com.biomatters.plugins.biocode.labbench.fims;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 
 /**
  *
@@ -68,7 +71,54 @@ public abstract class FIMSConnection {
 
     public abstract BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument);
 
-    public abstract List<FimsSample> getMatchingSamples(Query query) throws ConnectionException;
+    public final List<FimsSample> getMatchingSamples(Query query) throws ConnectionException {
+        List<FimsSample> samples = _getMatchingSamples(query);
+        for(FimsSample sample : samples) {
+            sampleCache.put(sample.getId(), new SoftReference<FimsSample>(sample));
+        }
+        return samples;
+    }
+
+    public abstract List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException;
+
+    private Map<String, SoftReference<FimsSample>> sampleCache = new HashMap<String, SoftReference<FimsSample>>();
+
+    public List<FimsSample> getMatchingSamples(Collection<String> tissueIds) throws ConnectionException{
+        List<String> samplesToSearch = new ArrayList<String>();
+        List<FimsSample> samplesToReturn = new ArrayList<FimsSample>();
+
+        for(String s : tissueIds) {
+            SoftReference<FimsSample> tissueSampleWeakReference = sampleCache.get(s);
+            if(tissueSampleWeakReference != null && tissueSampleWeakReference.get() != null) {
+                FimsSample sample = tissueSampleWeakReference.get();
+                    samplesToReturn.add(sample);
+            }
+            else {
+                samplesToSearch.add(s);
+            }
+        }
+
+        if(samplesToSearch.size() > 0) {
+            List<Query> queries = new ArrayList<Query>();
+            for(String tissue : samplesToSearch) {
+                if(tissue != null) {
+                    Query fieldQuery = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissue);
+                    if(!queries.contains(fieldQuery)) {
+                         queries.add(fieldQuery);
+                    }
+                }
+            }
+
+            Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap());
+            List<FimsSample> searchedSamples = getMatchingSamples(orQuery);
+            for(FimsSample sample : searchedSamples) {
+                sampleCache.put(sample.getId(), new SoftReference<FimsSample>(sample));
+            }
+            samplesToReturn.addAll(searchedSamples);
+        }
+
+        return samplesToReturn;
+    }
 
     public abstract Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException;
 

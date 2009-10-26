@@ -91,7 +91,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return Collections.emptyList();
     }
 
-    public List<FimsSample> getMatchingSamples(Query query) throws ConnectionException{
+    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{
         Element searchXML = null;
         if(query instanceof CompoundSearchQuery) {
             try {

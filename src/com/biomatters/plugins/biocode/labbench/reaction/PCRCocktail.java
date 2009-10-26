@@ -36,6 +36,7 @@ public class PCRCocktail extends Cocktail{
         options.setValue("dNTPConc", resultSet.getDouble("dNTPConc"));
         options.setValue("TAQConc", resultSet.getDouble("taqConc"));
         options.setValue("template Conc", resultSet.getDouble("templateConc"));
+        options.setValue("template", resultSet.getDouble("templateAmount"));
         options.setValue("fwd PrimerConc", resultSet.getDouble("fwPrConc"));
         options.setValue("fwd Primer", resultSet.getDouble("fwPrAmount"));
         options.setValue("rev PrimerConc", resultSet.getDouble("revPrConc"));
@@ -47,8 +48,12 @@ public class PCRCocktail extends Cocktail{
     public PCRCocktail() {
         options = new Options(this.getClass());
         Options.StringOption nameOption = options.addStringOption("name", "Name", "");
-        Options.DoubleOption tempateConcOption = options.addDoubleOption("template Conc", "Template/target Concentration", 0.0, 0.0, Double.MAX_VALUE);
+        options.beginAlignHorizontally("Template/Target", false);
+        Options.DoubleOption tempateConcOption = options.addDoubleOption("template Conc", "", 0.0, 0.0, Double.MAX_VALUE);
         tempateConcOption.setUnits("uM");
+        Options.DoubleOption tempateOption = options.addDoubleOption("template", "", 0.0, 0.0, Double.MAX_VALUE);
+        tempateOption.setUnits("uL");
+        options.endAlignHorizontally();
         options.beginAlignHorizontally("Forward Primer", false);
         Options.DoubleOption fwPrimerConc = options.addDoubleOption("fwd PrimerConc", "", 1.0, 0.0, Double.MAX_VALUE);
         fwPrimerConc.setUnits("uM");
@@ -103,7 +108,7 @@ public class PCRCocktail extends Cocktail{
     }
 
     public String getSQLString() {
-        return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes, bufferConc, mgConc, dNTPConc, taqConc, templateConc, bsaConc, fwPrAmount, fwPrConc, revPrAmount, revPrConc, extraItem, extraItemAmount) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddH20")+", "+options.getValueAsString("Buffer")+", "+options.getValueAsString("Mg")+", "+options.getValueAsString("BSA")+", "+options.getValueAsString("dNTP")+", "+options.getValueAsString("TAQ")+", '"+options.getValueAsString("notes")+"', "+options.getValue("BufferConc")+", "+options.getValue("MgConc")+", "+options.getValue("dNTPConc")+", "+options.getValue("TAQConc")+", "+options.getValue("template Conc")+", "+options.getValue("BSAConc")+", "+options.getValue("fwd Primer")+", "+options.getValue("fwd PrimerConc")+", "+options.getValue("rev Primer")+", "+options.getValue("rev PrimerConc")+", '"+options.getValueAsString("extraItem")+"', "+options.getValue("extraItemAmount")+")";
+        return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes, bufferConc, mgConc, dNTPConc, taqConc, templateAmount, templateConc, bsaConc, fwPrAmount, fwPrConc, revPrAmount, revPrConc, extraItem, extraItemAmount) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddH20")+", "+options.getValueAsString("Buffer")+", "+options.getValueAsString("Mg")+", "+options.getValueAsString("BSA")+", "+options.getValueAsString("dNTP")+", "+options.getValueAsString("TAQ")+", '"+options.getValueAsString("notes")+"', "+options.getValue("BufferConc")+", "+options.getValue("MgConc")+", "+options.getValue("dNTPConc")+", "+options.getValue("TAQConc")+", "+options.getValue("template")+", "+options.getValue("template Conc")+", "+options.getValue("BSAConc")+", "+options.getValue("fwd Primer")+", "+options.getValue("fwd PrimerConc")+", "+options.getValue("rev Primer")+", "+options.getValue("rev PrimerConc")+", '"+options.getValueAsString("extraItem")+"', "+options.getValue("extraItemAmount")+")";
     }
 
     public int getId() {

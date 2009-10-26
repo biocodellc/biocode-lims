@@ -209,7 +209,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         return taxonomyFields;
     }
 
-    public List<FimsSample> getMatchingSamples(Query query) {
+    public List<FimsSample> _getMatchingSamples(Query query) {
         CompoundSearchQuery.Operator operator;
         List<AdvancedSearchQueryTerm> queries;
 
