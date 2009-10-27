@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceAnnotation;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtilities;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
@@ -379,7 +380,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 Options chromatogramExportOptions = null;
                 File tempFolder;
                 try {
-                    tempFolder = PluginUtilities.createTempFile("chromat", ".ab1").getParentFile();
+                    tempFolder = FileUtilities.createTempFile("chromat", ".ab1").getParentFile();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
