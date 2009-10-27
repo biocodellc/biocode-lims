@@ -27,7 +27,7 @@ public class Plate implements XMLSerializable {
     private int id=-1;
     private int rows;
     private int cols;
-    private String name;
+    private String name = "";
     private Reaction[] reactions;
     private Reaction.Type type;
     private Size plateSize;
