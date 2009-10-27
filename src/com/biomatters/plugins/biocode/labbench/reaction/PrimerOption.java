@@ -221,10 +221,6 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         return;
     }
 
-    @Override
-    public void addPossibleValue(Options.OptionValue newValue) {
-        return;
-    }
 
     public void setAndAddValue(String name, String sequence) {
         extraPrimer = new SequenceAndName(sequence, name);

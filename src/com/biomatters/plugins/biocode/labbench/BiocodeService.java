@@ -676,6 +676,7 @@ public class BiocodeService extends DatabaseService {
             resultSet.getStatement().close();
         }
         catch(SQLException ex) {
+            ex.printStackTrace();
             throw new TransactionException("Could not query PCR Cocktails from the database");
         }
         return cocktails;
