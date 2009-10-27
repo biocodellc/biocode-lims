@@ -696,7 +696,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.execute();
                         if(((CycleSequencingOptions)reaction.getOptions()).getSequences() != null) {
                             int reactionId = reaction.getId();
-                            if(reactionId > 0) {
+                            if(reactionId > 0 && ((CycleSequencingReaction)reaction).removeExistingTracesOnSave()) {
                                 clearTracesStatement.setInt(1, reactionId);
                                 clearTracesStatement.execute();
                             }

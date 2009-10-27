@@ -27,6 +27,7 @@ import java.util.List;
  */
 public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     private CycleSequencingOptions options;
+    private boolean removeExistingTracesOnSave = true;
 
     public CycleSequencingReaction() {
 
@@ -293,5 +294,13 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
     public void purgeChromats() {
         options.purgeChromats();
+    }
+
+    public boolean removeExistingTracesOnSave() {
+        return removeExistingTracesOnSave;
+    }
+
+    public void setRemoveExistingTracesOnSave(boolean b) {
+        this.removeExistingTracesOnSave = b;
     }
 }
