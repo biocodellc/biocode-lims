@@ -449,6 +449,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return edits;
     }
 
+    @Override
+    public boolean loadDocumentsBeforeShowingOptions() {
+        return true;
+    }
+
     /**
      *
      * @param annotatedDocument
