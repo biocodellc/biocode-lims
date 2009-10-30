@@ -1,7 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -11,6 +9,7 @@ import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 
+import javax.swing.*;
 import java.awt.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -141,7 +140,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         getOptions().setValue("extractionId", s);
     }
 
-    public String areReactionsValid(List<PCRReaction> reactions) {
+    public String areReactionsValid(List<PCRReaction> reactions, JComponent dialogParent) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }

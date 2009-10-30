@@ -396,7 +396,7 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
 
         public void saveChangesToDatabase(BiocodeService.BlockingDialog progress, Connection connection) throws SQLException{
-            reaction.areReactionsValid(Arrays.asList(reaction));
+            reaction.areReactionsValid(Arrays.asList(reaction), null);
             Reaction.saveReactions(new Reaction[] {reaction}, reaction.getType(), connection, progress);
             changes = false;
         }

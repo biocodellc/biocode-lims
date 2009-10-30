@@ -468,21 +468,21 @@ public class LIMSConnection {
         final StringBuilder totalErrors = new StringBuilder("");
         if(extractionReactions.size() > 0) {
             System.out.println("Checking extractions");
-            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions);
+            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions, null);
             if(extractionErrors != null) {
                 totalErrors.append(extractionErrors+"\n");
             }
         }
         if(pcrReactions.size() > 0) {
             System.out.println("Checking PCR's");
-            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions);
+            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions, null);
             if(pcrErrors != null) {
                 totalErrors.append(pcrErrors+"\n");
             }
         }
         if(cyclesequencingReactions.size() > 0) {
             System.out.println("Checking Cycle Sequencing's...");
-            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions);
+            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions, null);
             if(cyclesequencingErrors != null) {
                 totalErrors.append(cyclesequencingErrors+"\n");
             }

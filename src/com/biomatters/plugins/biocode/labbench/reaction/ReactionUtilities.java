@@ -314,7 +314,7 @@ public class ReactionUtilities {
 
     }
 
-    public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, Component owner, boolean justEditOptions, boolean creating) {
+    public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, JComponent owner, boolean justEditOptions, boolean creating) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -412,7 +412,7 @@ public class ReactionUtilities {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
             }
             if(changedOptionCount > 0) {
-                String error = reactions.get(0).areReactionsValid(reactions);
+                String error = reactions.get(0).areReactionsValid(reactions, owner);
                 if(error != null) {
                     Dialogs.showMessageDialog(error);
                 }

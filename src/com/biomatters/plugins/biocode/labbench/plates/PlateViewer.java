@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GComboBox;
-import com.biomatters.geneious.publicapi.components.GTextField;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
@@ -168,7 +167,7 @@ public class PlateViewer extends JPanel {
                     nameField.setValue(plateView.getPlate().getName());
                     Runnable runnable = new Runnable() {
                         public void run() {
-                            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
+                            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView);
                             if(error != null && error.length() > 0) {
                                 Dialogs.showMessageDialog(error);
                             }

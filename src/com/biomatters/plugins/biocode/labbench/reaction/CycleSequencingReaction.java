@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -11,6 +10,7 @@ import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 
+import javax.swing.*;
 import java.awt.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -191,7 +191,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return result;
     }
 
-    public String areReactionsValid(List<CycleSequencingReaction> reactions) {
+    public String areReactionsValid(List<CycleSequencingReaction> reactions, JComponent dialogParent) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }

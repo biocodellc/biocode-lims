@@ -2,8 +2,6 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.Condition;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -13,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 
+import javax.swing.*;
 import java.util.*;
 import java.util.List;
 import java.awt.*;
@@ -122,7 +121,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
 
-    public String areReactionsValid(List<ExtractionReaction> reactions) {
+    public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }
@@ -208,7 +207,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     for(ExtractionReaction reaction : extractionsThatExist) {
                         moveMessage.append(reaction.getExtractionId()+"\n");
                     }
-                    if(Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", null, Dialogs.DialogIcon.QUESTION)) {
+                    if(Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", dialogParent, Dialogs.DialogIcon.QUESTION)) {
                         for (int i = 0; i < reactions.size(); i++) {
                             Reaction r = reactions.get(i);
                             for (ExtractionReaction r2 : extractionsThatExist) {
@@ -238,6 +237,21 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         } catch (SQLException e) {
             return "Could not qurey the LIMS database: "+e.getMessage();
         }
+
+        //give the user the option to not save reactions with no extraction id
+        List<Reaction> reactionsWithNoIds = new ArrayList<Reaction>();
+        for(Reaction r : reactions) {
+            if(r.getExtractionId().length() == 0 && !r.isEmpty()) {
+                reactionsWithNoIds.add(r);
+            }
+        }
+        if(reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("Some extractions in your plate have no id's, but the reactions are not empty.  Would you like to make the extractions empty?", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
+            for(Reaction r : reactionsWithNoIds) {
+                r.getOptions().restoreDefaults();
+            }
+        }
+
+
         Set<String> namesSet = new HashSet<String>();
         for(Reaction r : reactions) {
             if(!r.isEmpty()) {

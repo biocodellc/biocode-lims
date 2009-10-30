@@ -987,7 +987,7 @@ public class BiocodeService extends DatabaseService {
                 throw new BadDataException("You need to save at least one reaction with your plate");
             }
 
-            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave);
+            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null);
             if(error != null && error.length() > 0) {
                 throw new BadDataException(error);
             }
@@ -1208,7 +1208,7 @@ public class BiocodeService extends DatabaseService {
                 throw new BadDataException("You need to save at least one reaction with your plate");
             }
 
-            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave);
+            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null);
             if(error != null && error.length() > 0) {
                 throw new BadDataException(error);
             }

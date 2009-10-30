@@ -15,6 +15,7 @@ import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
@@ -334,7 +335,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract Color _getBackgroundColor();
 
-    public abstract String areReactionsValid(List<T> reactions);
+    public abstract String areReactionsValid(List<T> reactions, JComponent dialogParent);
 
     public Dimension getPreferredSize() {
         int y = PADDING+3;

@@ -18,8 +18,6 @@ import jebl.util.ProgressListener;
 import java.util.List;
 import java.util.Arrays;
 
-import org.virion.jam.util.SimpleListener;
-
 /**
  * @author Steven Stones-Havas
  * @version $Id$
@@ -117,7 +115,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             progressListener.setMessage("Checking with the database");
             progressListener.setIndeterminateProgress();
             Reaction[] plateReactions = editingPlate.getReactions();
-            plateReactions[0].areReactionsValid(Arrays.asList(plateReactions));
+            plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null);
             progressListener.setProgress(1.0);
             if(progressListener.isCanceled()) {
                 return null;
@@ -202,6 +200,11 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 //clone it...
                 op = XMLSerializer.classFromXML(XMLSerializer.classToXML("Options", srcReaction.getOptions()), ReactionOptions.class);
                 destReaction.setOptions(op);
+                if(srcReaction.getType() == Reaction.Type.Extraction) { //hack for extractions...
+                    ReactionOptions destOptions = destReaction.getOptions();
+                    destOptions.setValue("parentExtraction", destOptions.getValue("extractionId"));
+                    destOptions.setValue("extractionId", "");
+                }
             } catch (XMLSerializationException e) {
                 e.printStackTrace();
                 assert false : e.getMessage(); //this shouldn't really happen since we're not actually writing anything out...
