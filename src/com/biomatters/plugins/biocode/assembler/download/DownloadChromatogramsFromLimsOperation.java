@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -54,7 +55,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
-        return new DocumentSelectionSignature[0];
+        return new DocumentSelectionSignature[]{new DocumentSelectionSignature(PluginDocument.class, 0, Integer.MAX_VALUE)};
     }
 
     @Override
@@ -62,7 +63,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        return new DownloadChromatogramsFromLimsOptions();
+        return new DownloadChromatogramsFromLimsOptions(documents);
     }
 
     @Override
