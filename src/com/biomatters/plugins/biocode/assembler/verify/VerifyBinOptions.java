@@ -27,7 +27,7 @@ public class VerifyBinOptions extends Options {
     private final Preferences prefs;
     private static final String LOWEST_TAXON = "lowestTaxon";
     private static final String MIN_MATCHING_KEYWORDS = "minMatchingKeywords";
-    private static final String MIN_HIT_LENGTH = "minHitLength";
+    private static final String MIN_HIT_LENGTH = "minHitLengthPercent";
     private static final String MIN_IDENTITY = "minIdentity";
     private static final String MIN_CONTIG_BIN = "minContigBin";
 
