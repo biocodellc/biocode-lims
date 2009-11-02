@@ -41,6 +41,11 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     }
 
     @Override
+    public boolean loadDocumentsBeforeShowingOptions() {
+        return true;
+    }
+
+    @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
         return new VerifyTaxonomyOptions(documents);
     }
