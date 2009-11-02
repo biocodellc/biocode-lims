@@ -381,7 +381,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
             new VerifyColumn("Hit Length", Integer.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    return row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH);
+                    return (100*(Integer)row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH))/(Integer)row.queryDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH);
                 }
             },
             new VerifyColumn("Hit Identity", Percentage.class, true) {

@@ -52,8 +52,9 @@ public class VerifyBinOptions extends Options {
 
         int defaultKeywordCount = prefs.getInt(MIN_MATCHING_KEYWORDS, 1);
         matchingKeywordsOption = addIntegerOption(MIN_MATCHING_KEYWORDS, "Minimum keywords that must match:", defaultKeywordCount, 0, Integer.MAX_VALUE);
-        int defaultMinLength = prefs.getInt(MIN_HIT_LENGTH, isHigh ? 700 : 600);
-        minLengthOption = addIntegerOption(MIN_HIT_LENGTH, "Minimum hit length:", defaultMinLength, 0, Integer.MAX_VALUE);
+        int defaultMinLength = prefs.getInt(MIN_HIT_LENGTH, isHigh ? 80 : 70);
+        minLengthOption = addIntegerOption(MIN_HIT_LENGTH, "Minimum hit length:", defaultMinLength, 0, 100);
+        minLengthOption.setUnits("% (of query length)");
         int defaultMinIdentity = prefs.getInt(MIN_IDENTITY, isHigh ? 80 : 70);
         minIdentityOption = addIntegerOption(MIN_IDENTITY, "Minimum hit identity:", defaultMinIdentity, 0, 100);
         minIdentityOption.setUnits("%");
