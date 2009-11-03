@@ -64,41 +64,48 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
                     }
                     label.setVerticalAlignment(JLabel.TOP);
                 }
-                return cellRendererComponent;
-            }
-        });
-        table.setDefaultRenderer(Integer.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component cellRendererComponent = super.getTableCellRendererComponent(table, value, isSelected, false, row, column);
-                if (cellRendererComponent instanceof JLabel) {
-                    JLabel label = (JLabel) cellRendererComponent;
-                    label.setFont(label.getFont().deriveFont(Font.BOLD));
-                    label.setVerticalAlignment(JLabel.TOP);
-                    label.setHorizontalAlignment(JLabel.LEFT);
-                    if (value instanceof Integer) {
-                        label.setForeground(verifyTaxonomyModel.getColorForHitLength((Integer)value, isSelected));
+                if(cellRendererComponent instanceof JLabel) {
+                    //int labelHeight = getLabelHeight((JLabel)comp, table.getColumnModel().getColumn(column).getWidth());
+                    Dimension d = getWidthRestrictedPreferredSize((JLabel)cellRendererComponent, table.getColumnModel().getColumn(column).getWidth());
+                    if(d.height > table.getRowHeight(row)) {
+                        table.setRowHeight(row, d.height);
                     }
                 }
                 return cellRendererComponent;
             }
         });
-        table.setDefaultRenderer(Percentage.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component cellRendererComponent = super.getTableCellRendererComponent(table, value, isSelected, false, row, column);
-                if (cellRendererComponent instanceof JLabel) {
-                    JLabel label = (JLabel) cellRendererComponent;
-                    label.setFont(label.getFont().deriveFont(Font.BOLD));
-                    label.setVerticalAlignment(JLabel.TOP);
-                    label.setHorizontalAlignment(JLabel.LEFT);
-                    if (value instanceof Percentage) {
-                        label.setForeground(verifyTaxonomyModel.getColorForIdentity(((Percentage)value).doubleValue(), isSelected));
-                    }
-                }
-                return cellRendererComponent;
-            }
-        });
+//        table.setDefaultRenderer(Integer.class, new DefaultTableCellRenderer() {
+//            @Override
+//            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+//                Component cellRendererComponent = super.getTableCellRendererComponent(table, value, isSelected, false, row, column);
+//                if (cellRendererComponent instanceof JLabel) {
+//                    JLabel label = (JLabel) cellRendererComponent;
+//                    label.setFont(label.getFont().deriveFont(Font.BOLD));
+//                    label.setVerticalAlignment(JLabel.TOP);
+//                    label.setHorizontalAlignment(JLabel.LEFT);
+//                    if (value instanceof Integer) {
+//                        label.setForeground(verifyTaxonomyModel.getColorForHitLength((Integer)value, isSelected));
+//                    }
+//                }
+//                return cellRendererComponent;
+//            }
+//        });
+//        table.setDefaultRenderer(Percentage.class, new DefaultTableCellRenderer() {
+//            @Override
+//            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+//                Component cellRendererComponent = super.getTableCellRendererComponent(table, value, isSelected, false, row, column);
+//                if (cellRendererComponent instanceof JLabel) {
+//                    JLabel label = (JLabel) cellRendererComponent;
+//                    label.setFont(label.getFont().deriveFont(Font.BOLD));
+//                    label.setVerticalAlignment(JLabel.TOP);
+//                    label.setHorizontalAlignment(JLabel.LEFT);
+//                    if (value instanceof Percentage) {
+//                        label.setForeground(verifyTaxonomyModel.getColorForIdentity(((Percentage)value).doubleValue(), isSelected));
+//                    }
+//                }
+//                return cellRendererComponent;
+//            }
+//        });
         table.setDefaultRenderer(VerifyTaxonomyTableModel.IconsWithToString.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {

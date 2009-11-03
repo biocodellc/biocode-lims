@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.biocode.labbench.TableSorter;
+import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -137,14 +138,14 @@ public class VerifyTaxonomyTableModel implements TableModel {
         }
     }
 
-    public Color getColorForHitLength(int length, boolean isSelected) {
+    public Color getColorForHitLength(double length, boolean isSelected) {
         if (length >= binningOptions.getHighBinOptions().getMinLength()) {
             return HTML_GREEN;
         }
         if (length >= binningOptions.getMediumBinOptions().getMinLength()) {
             return isSelected ? ORANGEY.darker() : ORANGEY;
         }
-        return Color.red; 
+        return Color.red;
     }
 
     public Color getColorForIdentity(double identity, boolean isSelected) {
@@ -378,16 +379,18 @@ public class VerifyTaxonomyTableModel implements TableModel {
                     return 120;
                 }
             },
-            new VerifyColumn("Hit Length", Integer.class, true) {
+            new VerifyColumn("Hit Length", TableDocumentViewerFactory.ObjectAndColor.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    return (100*(Integer)row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH))/(Integer)row.queryDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH);
+                    Percentage percentage = new Percentage(100 * (Integer) row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH) / (Integer) row.queryDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH));
+                    return new TableDocumentViewerFactory.ObjectAndColor(percentage, getColorForHitLength(percentage.doubleValue(), false), getColorForHitLength(percentage.doubleValue(), true));
                 }
             },
-            new VerifyColumn("Hit Identity", Percentage.class, true) {
+            new VerifyColumn("Hit Identity", TableDocumentViewerFactory.ObjectAndColor.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    return row.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL);
+                    Percentage percentage = (Percentage)row.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL);
+                    return new TableDocumentViewerFactory.ObjectAndColor(percentage, getColorForIdentity(percentage.doubleValue(), false), getColorForIdentity(percentage.doubleValue(), true));
                 }
             },
             new VerifyColumn("Assembly Bin", String.class, true) {

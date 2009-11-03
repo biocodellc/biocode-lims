@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 
 import javax.swing.*;
+import javax.swing.text.View;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
 import java.awt.*;
@@ -69,9 +70,15 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
                         Color color = Color.black;
                         if(value != null){
-                            color = value.getColor().equals(Color.white) ? Color.black : value.getColor();
+                            color = value.getColor(isSelected).equals(Color.white) ? Color.black : value.getColor(isSelected);
                         }
                         comp.setForeground(color);
+                        if(comp instanceof JLabel) {
+                            Dimension d = getWidthRestrictedPreferredSize((JLabel)comp, table.getColumnModel().getColumn(column).getWidth());
+                            if(d.height > table.getRowHeight(row)) {
+                                table.setRowHeight(row, d.height);
+                            }
+                        }
 
                         return comp;
                     }
@@ -92,17 +99,60 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
         };
     }
 
+    /**
+     * Returns the preferred size to set a component at in order to render an html string. You can     * specify the size of the width.
+     */
+    protected static java.awt.Dimension getWidthRestrictedPreferredSize(JLabel label, int width) {
+        View view = (View) label.getClientProperty(javax.swing.plaf.basic.BasicHTML.propertyKey);
+        if(view == null) {
+            return label.getPreferredSize();
+        }
+        view.setSize(width, 0);
+        float w = view.getPreferredSpan(View.X_AXIS);
+        float h = view.getPreferredSpan(View.Y_AXIS);
+        return new java.awt.Dimension((int) Math.ceil(w), (int) Math.ceil(h));
+    }
+
+//    protected static int getLabelHeight(JLabel label, int width) {
+//        if(label.getFont() == null || label.getText() == null) {
+//            return 16;
+//        }
+//        FontMetrics fm = label.getFontMetrics(label.getFont());
+//
+//
+//        Rectangle textRectangle = new Rectangle(0,0);
+//        Rectangle iconRectangle = new Rectangle(0,0);
+//        Rectangle viewRectangle = new Rectangle(width, Short.MAX_VALUE);
+//
+//        SwingUtilities.layoutCompoundLabel(label, fm, label.getText(), label.getIcon(), label.getVerticalAlignment(),
+//                label.getHorizontalAlignment(), label.getHorizontalTextPosition(), label.getVerticalTextPosition(),
+//                viewRectangle, iconRectangle, textRectangle, label.getIconTextGap());
+//
+//        int y1 = Math.min(iconRectangle.y, textRectangle.y);
+//        int y2 = Math.max(iconRectangle.y + iconRectangle.height, textRectangle.y + textRectangle.height);
+//
+//        return y2 - y1 + label.getInsets().top + label.getInsets().bottom;
+//    }
+
     protected static Color getBrighterColor(Color c) {
         return new Color(Math.min(255,c.getRed()+192), Math.min(255,c.getGreen()+192), Math.min(255,c.getBlue()+192));
     }
 
-    protected static class ObjectAndColor{
+    public static class ObjectAndColor{
         private Object object;
         private Color color;
+        private Color selectedColor;
 
-        protected ObjectAndColor(Object object, Color color) {
+        public ObjectAndColor(Object object, Color color) {
             this.object = object;
             this.color = color;
+            this.selectedColor = color;
+        }
+
+        public ObjectAndColor(Object object, Color color, Color selectedColor) {
+            this.object = object;
+            this.color = color;
+            this.selectedColor = selectedColor;
         }
 
         public Object getObject() {
@@ -110,7 +160,11 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
         }
 
         public Color getColor() {
-            return color;
+            return getColor(false);
+        }
+
+        public Color getColor(boolean isSelected) {
+            return isSelected ? selectedColor : color;
         }
 
         @Override
