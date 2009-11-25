@@ -159,7 +159,7 @@ public class LIMSConnection {
         );
     }
 
-    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, List<FimsSample> samples) throws SQLException{
+    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
 

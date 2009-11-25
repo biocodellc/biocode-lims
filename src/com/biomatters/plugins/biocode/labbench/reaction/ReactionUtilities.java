@@ -74,8 +74,22 @@ public class ReactionUtilities {
         selectionOption.setSelectionType(JFileChooser.DIRECTORIES_ONLY);
 
 
+        List<Options.OptionValue> fieldValues = new ArrayList<Options.OptionValue>();
+        for(DocumentField field : reactions.get(0).getAllDisplayableFields()) {
+            fieldValues.add(new Options.OptionValue(field.getCode(), field.getName(), field.getDescription()));
+        }
+        Options.OptionValue[] chooseValues = new Options.OptionValue[] {
+                new Options.OptionValue("well", "Well number"),
+                new Options.OptionValue("field", "Field")
+        };
+        Options.RadioOption<Options.OptionValue> chooseOption = options.addRadioOption("choose", "Match", chooseValues, chooseValues[0], Options.Alignment.VERTICAL_ALIGN);
+        Options.ComboBoxOption<Options.OptionValue> fieldOption = options.addComboBoxOption("field", "", fieldValues, fieldValues.get(0));
+        chooseOption.setDependentPosition(Options.RadioOption.DependentPosition.RIGHT);
+        chooseOption.addDependent(fieldOption, chooseValues[1]);
+
+
         options.beginAlignHorizontally(null, false);
-        Options.Option label = options.addLabel("Well number is:");
+        Options.Option label = options.addLabel("Match:");
         label.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
         NamePartOption namePartOption2 = new NamePartOption("namePart2", "");
         options.addCustomOption(namePartOption2);
@@ -107,6 +121,14 @@ public class ReactionUtilities {
         final int platePart = namePartOption.getPart();
         final int wellPart = namePartOption2.getPart();
         final boolean checkPlate = checkPlateName.getValue();
+        DocumentField field = null;
+        if(chooseOption.getValue().equals(chooseValues[1])) {
+            field = getDocumentField(reactions.get(0).getAllDisplayableFields(), fieldOption.getValue().getName());
+            assert field != null; //this shouldn't happen unless the list changes between when the options were displayed and when the user clicks ok.
+            if(field == null) {
+                return false;
+            }
+        }
 
         final File folder = new File(selectionOption.getValue());
         if(!folder.exists()) {
@@ -117,9 +139,10 @@ public class ReactionUtilities {
         }
 
         final String separatorString = nameSeperatorOption.getSeparatorString();
+        final DocumentField finalField = field;
         Runnable runnable = new Runnable() {
             public void run() {
-                importAndAddTraces(reactions, separatorString, platePart, wellPart, checkPlate, folder);
+                importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder);
             }
         };
         BiocodeService.block("Importing traces", owner, runnable);
@@ -127,16 +150,43 @@ public class ReactionUtilities {
         return true;
     }
 
+    private static DocumentField getDocumentField(List<DocumentField> fields, String code) {
+        for(DocumentField field : fields) {
+            if(field.getCode().equals(code)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    private static CycleSequencingReaction getReaction(List<CycleSequencingReaction> reactions, DocumentField field, String value) {
+        for(CycleSequencingReaction r : reactions) {
+            if(value.equals(""+r.getDisplayableValue(field))) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    private static CycleSequencingReaction getReaction(List<CycleSequencingReaction> reactions, String wellString) {
+        for(CycleSequencingReaction r : reactions) {
+            if(wellString.equalsIgnoreCase(r.getLocationString())) {
+                return r;
+            }
+        }
+        return null;
+    }
+
     /**
      *
      * @param reactions
      * @param separatorString
      * @param platePart
-     * @param wellPart
+     * @param partToMatch
      * @param checkPlate
      * @param folder
      */
-    private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int wellPart, boolean checkPlate, File folder) {
+    private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (SQLException e) {
@@ -159,48 +209,60 @@ public class ReactionUtilities {
             }
             if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
                 String[] nameParts = f.getName().split(separatorString);
-                BiocodeUtilities.Well well = BiocodeUtilities.getWellFromFileName(f.getName(), separatorString, wellPart);
-                if (well == null) continue;
-                String wellString = well.toString();
-                if(wellString.equals("A1")) {
-                    System.out.println(f.getAbsolutePath());
-                }
-                for(CycleSequencingReaction r : reactions) {
-                    if(wellString.equalsIgnoreCase(r.getLocationString())) {
-                        if(checkPlate) {
-                            if(nameParts.length >= platePart) {
-                                break;
-                            }
-                            String plateName = nameParts[platePart];
-                            if(!plateName.equals(r.getPlateName())) {
-                                break;
-                            }
-                        }
-                        List<AnnotatedPluginDocument> annotatedDocuments = null;
-                        try {
-                            annotatedDocuments = importDocuments(new File[]{f}, ProgressListener.EMPTY);
-                        } catch (IOException e) {
-                            Dialogs.showMessageDialog("Error reading sequences: "+e.getMessage());
-                            break;
-                        } catch (DocumentImportException e) {
-                            Dialogs.showMessageDialog("Error importing sequences: "+e.getMessage());
-                            break;
-                        }
-                        List<NucleotideSequenceDocument> sequences = getSequencesFromAnnotatedPluginDocuments(annotatedDocuments);
-                        List<MemoryFile> files = new ArrayList<MemoryFile>();
-
-                        try {
-                            files.add(loadFileIntoMemory(f));
-                        } catch (IOException e) {
-                            assert false : e.getMessage();
-                            //todo: handle
-                            e.printStackTrace();
-                        }
-
-
-                        r.addSequences(sequences, files);
+                CycleSequencingReaction r;
+                if(fieldToCheck != null && nameParts.length > partToMatch) {
+                    r = getReaction(reactions, fieldToCheck, nameParts[partToMatch]);
+                    if(r == null) {
+                        continue;
                     }
                 }
+                else {
+                    BiocodeUtilities.Well well = BiocodeUtilities.getWellFromFileName(f.getName(), separatorString, partToMatch);
+                    if (well == null) continue;
+                    String wellString = well.toString();
+                    r = getReaction(reactions, wellString);
+                    if(r == null) {
+                        continue;
+                    }
+                }
+                if(checkPlate) {
+                    if(nameParts.length >= platePart) {
+                        break;
+                    }
+                    String plateName = nameParts[platePart];
+                    if(!plateName.equals(r.getPlateName())) {
+                        break;
+                    }
+                }
+                List<AnnotatedPluginDocument> annotatedDocuments = null;
+                try {
+                    annotatedDocuments = importDocuments(new File[]{f}, ProgressListener.EMPTY);
+                } catch (IOException e) {
+                    Dialogs.showMessageDialog("Error reading sequences: "+e.getMessage());
+                    break;
+                } catch (DocumentImportException e) {
+                    Dialogs.showMessageDialog("Error importing sequences: "+e.getMessage());
+                    break;
+                }
+                List<NucleotideSequenceDocument> sequences = null;
+                try {
+                    sequences = getSequencesFromAnnotatedPluginDocuments(annotatedDocuments);
+                } catch (Exception e) {
+                    continue;
+                }
+                List<MemoryFile> files = new ArrayList<MemoryFile>();
+
+                try {
+                    files.add(loadFileIntoMemory(f));
+                } catch (IOException e) {
+                    assert false : e.getMessage();
+                    //todo: handle
+                    e.printStackTrace();
+                }
+
+
+                r.addSequences(sequences, files);
+
             }
         }
     }

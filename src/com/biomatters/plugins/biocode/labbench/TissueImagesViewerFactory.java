@@ -17,6 +17,8 @@ import java.util.List;
 import org.jdom.input.SAXBuilder;
 import org.jdom.JDOMException;
 import org.jdom.Element;
+import org.jdom.output.XMLOutputter;
+import org.jdom.output.Format;
 
 /**
  * @author Steven Stones-Havas
@@ -77,13 +79,15 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                                     InputStream in = xmlUrl.openStream();
                                     SAXBuilder builder = new SAXBuilder();
                                     Element root = builder.build(in).detachRootElement();
-
+                                    XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+                                    out.output(root, System.out);
                                     List<Element> imageUrls = root.getChildren("enlarge_jpeg_url");
                                     if(imageUrls != null && imageUrls.size() > 0) {
                                         Image[] images = new Image[imageUrls.size()];
                                         MediaTracker m = new MediaTracker(panel);
                                         for(int i=0; i < imageUrls.size(); i++) {
                                             URL imageUrl = new URL(imageUrls.get(i).getText());
+                                            System.out.println(imageUrl);
                                             Image img = Toolkit.getDefaultToolkit().createImage(imageUrl);
                                             images[i] = img;
                                             m.addImage(img,0);

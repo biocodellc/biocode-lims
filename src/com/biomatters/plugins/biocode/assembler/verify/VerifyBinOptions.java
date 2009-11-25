@@ -81,6 +81,9 @@ public class VerifyBinOptions extends Options {
     }
 
     public boolean isMetBy(VerifyResult result, String keywords) {
+        if(result.hitDocuments == null || result.hitDocuments.size() == 0) {
+            return false;
+        }
         AnnotatedPluginDocument hitDocument = result.hitDocuments.get(0);
         AnnotatedPluginDocument queryDocument = result.queryDocument;
         if (100*(Integer) hitDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH) / (Integer) queryDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH) < minLengthOption.getValue()) {

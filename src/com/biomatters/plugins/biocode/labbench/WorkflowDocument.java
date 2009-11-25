@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListD
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -69,10 +70,13 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public List<DocumentField> getDisplayableFields() {
-        return Collections.emptyList();
+        return Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false));
     }
 
     public Object getFieldValue(String fieldCodeName) {
+        if("numberOfParts".equals(fieldCodeName)) {
+            return getNumberOfParts();
+        }
         return null;
     }
 
@@ -134,6 +138,10 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public Part getPart(int index) {
         return parts.get(index);
+    }
+
+    public Workflow getWorkflow() {
+        return workflow;
     }
 
     public Reaction getMostRecentReaction(Reaction.Type type) {

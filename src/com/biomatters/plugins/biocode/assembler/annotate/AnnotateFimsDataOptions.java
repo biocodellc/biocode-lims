@@ -5,9 +5,8 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.*;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
 import org.virion.jam.util.SimpleListener;
@@ -35,11 +34,11 @@ public class AnnotateFimsDataOptions extends Options {
     private Option<String,? extends JComponent> afterLabel;
 
     private final AtomicBoolean loadedPlates = new AtomicBoolean(false);
-    private Map<BiocodeUtilities.Well, FimsSample> forwardPlateSpecimens = null;
+    private Map<BiocodeUtilities.Well, WorkflowDocument> forwardPlateSpecimens = null;
     private String actualForwardPlateName = null;
-    private Map<BiocodeUtilities.Well, FimsSample> reversePlateSpecimens = null;
+    private Map<BiocodeUtilities.Well, WorkflowDocument> reversePlateSpecimens = null;
     private String actualReversePlateName = null;
-    private Map<BiocodeUtilities.Well, FimsSample> noDirectionPlateSpecimens = null;
+    private Map<BiocodeUtilities.Well, WorkflowDocument> noDirectionPlateSpecimens = null;
     private String actualNoDirectionPlateName = null;
     private final BiocodeUtilities.ReadDirection noReadDirectionValue;
 
@@ -133,7 +132,7 @@ public class AnnotateFimsDataOptions extends Options {
                 return null;
             }
             loadPlateSpecimens();
-            FimsSample fimsSample;
+            WorkflowDocument workflow;
             String sequencingPlateName;
             Object isForwardValue = annotatedDocument.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
             if (isForwardValue == null) {
@@ -141,16 +140,16 @@ public class AnnotateFimsDataOptions extends Options {
                     //happens if user specifies different plates for forward and reverse but the sequences aren't annotated with directions
                     throw new DocumentOperationException("Could not determine direction of reads, make sure you have run Set Read Direction first.");
                 }
-                fimsSample = noDirectionPlateSpecimens.get(well);
+                workflow = noDirectionPlateSpecimens.get(well);
                 sequencingPlateName = actualNoDirectionPlateName;
             } else if ((Boolean)isForwardValue) {
-                fimsSample = forwardPlateSpecimens.get(well);
+                workflow = forwardPlateSpecimens.get(well);
                 sequencingPlateName = actualForwardPlateName;
             } else {
-                fimsSample = reversePlateSpecimens.get(well);
+                workflow = reversePlateSpecimens.get(well);
                 sequencingPlateName = actualReversePlateName;
             }
-            return new FimsData(fimsSample, sequencingPlateName, well);
+            return new FimsData(workflow, sequencingPlateName, well);
         }
     }
 
@@ -159,9 +158,18 @@ public class AnnotateFimsDataOptions extends Options {
         FimsSample fimsSample;
         String sequencingPlateName;
         BiocodeUtilities.Well well;
+        Workflow workflow;
 
-        public FimsData(FimsSample fimsSample, String sequencingPlateName, BiocodeUtilities.Well well) {
+        public FimsData(WorkflowDocument workflowDocument, String sequencingPlateName, BiocodeUtilities.Well well) {
+            this.fimsSample = workflowDocument != null ? workflowDocument.getMostRecentReaction(Reaction.Type.Extraction).getFimsSample() : null;
+            this.workflow = workflowDocument != null ? workflowDocument.getWorkflow() : null;
+            this.sequencingPlateName = sequencingPlateName;
+            this.well = well;
+        }
+
+        public FimsData(FimsSample fimsSample, Workflow workflow, String sequencingPlateName, BiocodeUtilities.Well well) {
             this.fimsSample = fimsSample;
+            this.workflow = workflow;
             this.sequencingPlateName = sequencingPlateName;
             this.well = well;
         }
@@ -180,13 +188,13 @@ public class AnnotateFimsDataOptions extends Options {
             String forwardPlateName = getForwardPlateName().trim();
             String reversePlateName = getReversePlateName().trim();
             try {
-                forwardPlateSpecimens = BiocodeService.getInstance().getFimsSamplesForCycleSequencingPlate(forwardPlateName);
+                forwardPlateSpecimens = BiocodeService.getInstance().getWorkflowsForCycleSequencingPlate(forwardPlateName);
                 actualForwardPlateName = forwardPlateName;
                 if (reversePlateName.equals("") || reversePlateName.equals(forwardPlateName)) {
                     reversePlateSpecimens = forwardPlateSpecimens;
                     actualReversePlateName = forwardPlateName;
                 } else {
-                    reversePlateSpecimens = BiocodeService.getInstance().getFimsSamplesForCycleSequencingPlate(reversePlateName);
+                    reversePlateSpecimens = BiocodeService.getInstance().getWorkflowsForCycleSequencingPlate(reversePlateName);
                     actualReversePlateName = reversePlateName;
                 }
 

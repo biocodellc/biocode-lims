@@ -71,6 +71,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId")));
             options.setValue("workflowId", getWorkflow().getName());
         }
+
+        setFimsSample(BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(options.getValueAsString("sampleId"))); //todo: hack
     }
 
     public String getExtractionId() {

@@ -1,8 +1,10 @@
 package com.biomatters.plugins.biocode.submission.genbank.barstool;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.verify.Pair;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -17,6 +19,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.sql.SQLException;
 
 /**
  * @author Richard
@@ -39,10 +42,26 @@ public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel 
         primersMap = new HashMap<AnnotatedPluginDocument, Pair<Options.OptionValue, Options.OptionValue>>();
         for (AnnotatedPluginDocument doc : docs) {
             Object tissueId = doc.getFieldValue(fimsConnection.getTissueSampleDocumentField());
+            Object workflowName = doc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD);
             if (tissueId == null) {
                 throw new DocumentOperationException(doc.getName() + " does not have a tissue id, make sure you have run Annotate with FIMS Data first.");
             }
-            WorkflowDocument workflow = BiocodeUtilities.getMostRecentWorkflow(limsConnection, fimsConnection, tissueId);
+            if(workflowName == null) {
+                throw new DocumentOperationException(doc.getName() + " does not have a workflow id, make sure you have run Annotate with FIMS Data first.");
+            }
+
+            List<WorkflowDocument> matchingWorkflows = null;
+            try {
+                matchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingWorkflowDocuments(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, workflowName), null);
+            } catch (SQLException e) {
+                throw new DocumentOperationException("Could not connect to the LIMS database: "+e.getMessage());
+            }
+            if(matchingWorkflows == null || matchingWorkflows.size() == 0) {
+                throw new DocumentOperationException("The workflow '"+workflowName+"' could not be found.  Make sure that the workflow was not deleted in the database after you annotated your traces with FIMS data.");
+            }
+            assert matchingWorkflows.size() == 1;
+            WorkflowDocument workflow = matchingWorkflows.get(0);
+            System.out.println(workflow.getWorkflow().getName());
             PCRReaction pcr = (PCRReaction) workflow.getMostRecentReaction(Reaction.Type.PCR);
             if (pcr == null) {
                 throw new DocumentOperationException(doc.getName() + " doesn't have an associated PCR reaction in LIMS, primers cannot be determined.");

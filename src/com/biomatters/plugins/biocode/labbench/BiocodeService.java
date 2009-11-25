@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -461,8 +462,14 @@ public class BiocodeService extends DatabaseService {
         }
         try {
             List<WorkflowDocument> workflowList = Collections.emptyList();
+            boolean isAnd = true;
+            if(query instanceof CompoundSearchQuery) {
+                isAnd = ((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND;
+            }
+            Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP);
+
             if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
-                workflowList = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), tissueSamples);
+                workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples);
             }
             if(callback.isCanceled()) {
                 return;
@@ -476,7 +483,7 @@ public class BiocodeService extends DatabaseService {
                 return;
             }
             if((Boolean)query.getExtendedOptionValue("plateDocuments")) {
-                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP), workflowList);
+                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList);
                 if(callback.isCanceled()) {
                     return;
                 }
@@ -1324,6 +1331,39 @@ public class BiocodeService extends DatabaseService {
         if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
             throw new BadDataException("The plate has no thermocycle set");
         }
+    }
+
+    public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws SQLException, DocumentOperationException {
+        List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName), null);
+        if(plateList.size() == 0) {
+            throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
+        }
+        assert plateList.size() == 1;
+        if(plateList.get(0).getPlate().getReactionType() != Reaction.Type.CycleSequencing) {
+            throw new DocumentOperationException("The plate '"+plateName+"' is not a cycle sequencing plate.");
+        }
+        Plate plate = plateList.get(0).getPlate();
+
+        List<Query> workflowNameQueries = new ArrayList<Query>();
+
+        for(Reaction r : plate.getReactions()) {
+            if(r.getWorkflow() != null) {
+                workflowNameQueries.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, r.getWorkflow().getName()));
+            }
+        }
+        List<WorkflowDocument> docs = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]), Collections.EMPTY_MAP), null);
+
+        Map<BiocodeUtilities.Well, WorkflowDocument> workflows = new HashMap<BiocodeUtilities.Well, WorkflowDocument>();
+        for(Reaction r : plate.getReactions()) {
+            for(WorkflowDocument doc : docs) {
+                Reaction mostRecentExtraction = doc.getMostRecentReaction(Reaction.Type.Extraction);
+                assert mostRecentExtraction != null; //workflows should always have an extraction
+                if(mostRecentExtraction != null && mostRecentExtraction.getFimsSample() != null && r.getFimsSample() != null && mostRecentExtraction.getFimsSample().getId().equals(r.getFimsSample().getId())) {
+                    workflows.put(new BiocodeUtilities.Well(r.getLocationString()), doc);
+                }
+            }
+        }
+        return workflows;
     }
 
     public Map<BiocodeUtilities.Well, FimsSample> getFimsSamplesForCycleSequencingPlate(String plateName) throws SQLException{

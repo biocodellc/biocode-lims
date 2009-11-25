@@ -83,6 +83,11 @@ public abstract class FIMSConnection {
 
     private Map<String, SoftReference<FimsSample>> sampleCache = new HashMap<String, SoftReference<FimsSample>>();
 
+    public FimsSample getFimsSampleFromCache(String tissueId) {
+        SoftReference<FimsSample> fimsSampleSoftReference = sampleCache.get(tissueId);
+        return fimsSampleSoftReference != null ? fimsSampleSoftReference.get() : null;
+    }
+
     public List<FimsSample> getMatchingSamples(Collection<String> tissueIds) throws ConnectionException{
         List<String> samplesToSearch = new ArrayList<String>();
         List<FimsSample> samplesToReturn = new ArrayList<FimsSample>();

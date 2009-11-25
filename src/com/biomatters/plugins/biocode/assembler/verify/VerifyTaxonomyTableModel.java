@@ -321,7 +321,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
                 Object getValue(VerifyResult row) {
                     Object fimsTaxonomy = row.queryDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
                     AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
-                    Object taxObject = row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD);
+                    Object taxObject = row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD) : null;
                     AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
                     highlight(taxonomy, ";", blastTaxonomy);
                     if (row.queryTaxon == null) {
@@ -340,7 +340,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
                 Object getValue(VerifyResult row) {
                     Object fimsTaxonomy = row.queryDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
                     AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
-                    Object taxObject = row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD);
+                    Object taxObject = row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD) : null;
                     AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
                     highlight(taxonomy, ";", blastTaxonomy);
                     return blastTaxonomy.get();
@@ -355,7 +355,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
                 @Override
                 Object getValue(VerifyResult row) {
                     AtomicReference<String> keys = new AtomicReference<String>(binningOptions.getKeywords());
-                    AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString());
+                    AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString() : "");
                     highlight(keys, ",", definition);
                     return keys.get();
                 }
@@ -369,7 +369,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
                 @Override
                 Object getValue(VerifyResult row) {
                     AtomicReference<String> keys = new AtomicReference<String>(binningOptions.getKeywords());
-                    AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString());
+                    AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString() : "");
                     highlight(keys, ",", definition);
                     return definition.get();
                 }
@@ -382,14 +382,15 @@ public class VerifyTaxonomyTableModel implements TableModel {
             new VerifyColumn("Hit Length", TableDocumentViewerFactory.ObjectAndColor.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    Percentage percentage = new Percentage(100 * (Integer) row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH) / (Integer) row.queryDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH));
+                    int hitLength = row.hitDocuments.size() > 0 ? (Integer)row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH) : 0;
+                    Percentage percentage = new Percentage(100 * hitLength / (Integer) row.queryDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH));
                     return new TableDocumentViewerFactory.ObjectAndColor(percentage, getColorForHitLength(percentage.doubleValue(), false), getColorForHitLength(percentage.doubleValue(), true));
                 }
             },
             new VerifyColumn("Hit Identity", TableDocumentViewerFactory.ObjectAndColor.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    Percentage percentage = (Percentage)row.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL);
+                    Percentage percentage = row.hitDocuments.size() > 0 ? (Percentage)row.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL) : new Percentage(0);
                     return new TableDocumentViewerFactory.ObjectAndColor(percentage, getColorForIdentity(percentage.doubleValue(), false), getColorForIdentity(percentage.doubleValue(), true));
                 }
             },

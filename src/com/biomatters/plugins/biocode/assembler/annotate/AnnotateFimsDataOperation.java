@@ -86,6 +86,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
             }
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
+            annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
             StringBuilder taxonomy = new StringBuilder();
             String genus = null;
             String species = null;

@@ -166,7 +166,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
                     }
                 }
-                TracesEditor editor = new TracesEditor((sequences==null && sequences.get() != null) ? Collections.EMPTY_LIST : sequences.get(), (rawTraces==null && rawTraces.get() != null) ? Collections.EMPTY_LIST : rawTraces.get(), getValueAsString("extractionId"));
+                TracesEditor editor = new TracesEditor((sequences==null || sequences.get() == null) ? Collections.EMPTY_LIST : sequences.get(), (rawTraces==null || rawTraces.get() == null) ? Collections.EMPTY_LIST : rawTraces.get(), getValueAsString("extractionId"));
                 if(editor.showDialog(tracesButton.getComponent())) {
                     List<NucleotideSequenceDocument> sequences = editor.getSequences();
                     CycleSequencingOptions.this.sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequences);
