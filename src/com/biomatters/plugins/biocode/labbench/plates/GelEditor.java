@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
 
 import javax.swing.*;
@@ -15,10 +16,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.File;
-import java.io.IOException;
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
@@ -79,21 +77,15 @@ public class GelEditor {
         leftPanel.add(scroller, BorderLayout.CENTER);
         addButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                JFileChooser chooser = new JFileChooser(preferences.get("fileLocation", System.getProperty("user.home")));
-                chooser.setFileFilter(new FileFilter(){
-                    public boolean accept(File pathname) {
-                        String name = pathname.getName().toLowerCase();
+                FilenameFilter fileFilter = new FilenameFilter(){
+                    public boolean accept(File pathname, String name) {
                         return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".gif");
                     }
-
-                    public String getDescription() {
-                        return "Image files (*.png, *.jpg, *.gif)";
-                    }
-                });
-                if(chooser.showDialog(editPanel, "Import") == JFileChooser.APPROVE_OPTION) {
-                    preferences.put("filelocation", chooser.getSelectedFile().getParent());
+                };
+                File inputFile = FileUtilities.getUserSelectedFile("Open GEL", fileFilter, JFileChooser.FILES_ONLY);
+                if(inputFile != null) {
                     try {
-                        GelImage newGelimage = new GelImage(-1, chooser.getSelectedFile(), "");
+                        GelImage newGelimage = new GelImage(-1, inputFile, "");
                         gelimages.add(newGelimage);
                         for(ListDataListener listener : listModel.getListDataListeners()){
                             listener.intervalAdded(new ListDataEvent(listModel, ListDataEvent.INTERVAL_ADDED, listModel.getSize(), listModel.getSize()-1));
