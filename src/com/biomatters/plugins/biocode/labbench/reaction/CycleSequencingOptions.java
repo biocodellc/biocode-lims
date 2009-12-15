@@ -42,7 +42,7 @@ import java.lang.ref.WeakReference;
 public class CycleSequencingOptions extends ReactionOptions {
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
-    private ButtonOption tracesButton;
+    private com.biomatters.plugins.biocode.labbench.ButtonOption tracesButton;
 
     public static final String PRIMER_OPTION_ID = "primer";
     static final String COCKTAIL_OPTION_ID = "cocktail";
@@ -110,7 +110,7 @@ public class CycleSequencingOptions extends ReactionOptions {
     public void initListeners() {
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
-        tracesButton = (ButtonOption)getOption(TRACES_BUTTON_ID);
+        tracesButton = (com.biomatters.plugins.biocode.labbench.ButtonOption)getOption(TRACES_BUTTON_ID);
         final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
 
 
@@ -315,7 +315,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
         cleanupOption.addDependent(cleanupMethodOption, cleanupValues[0]);
-        tracesButton = new ButtonOption("traces", "", "Add/Edit Traces", false);
+        tracesButton = new com.biomatters.plugins.biocode.labbench.ButtonOption("traces", "", "Add/Edit Traces", false);
         addCustomOption(tracesButton);
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);
