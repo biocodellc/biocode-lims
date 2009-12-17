@@ -171,7 +171,6 @@ public class BiocodePlugin extends GeneiousPlugin {
     @Override
     public DocumentOperation[] getDocumentOperations() {
         return new DocumentOperation[] {
-                new OneOffHackDocumentOperation(),
                 new NewPlateDocumentOperation(),
                 new DownloadChromatogramsFromLimsOperation(false),
                 new SetReadDirectionOperation(),
