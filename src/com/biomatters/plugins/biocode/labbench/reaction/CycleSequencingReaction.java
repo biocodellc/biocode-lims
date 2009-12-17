@@ -191,7 +191,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return result;
     }
 
-    public String areReactionsValid(List<CycleSequencingReaction> reactions, JComponent dialogParent) {
+    public String areReactionsValid(List<CycleSequencingReaction> reactions, JComponent dialogParent, boolean showDialogs) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }

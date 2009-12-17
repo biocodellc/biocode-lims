@@ -474,7 +474,7 @@ public class ReactionUtilities {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
             }
             if(changedOptionCount > 0) {
-                String error = reactions.get(0).areReactionsValid(reactions, owner);
+                String error = reactions.get(0).areReactionsValid(reactions, owner, true);
                 if(error != null) {
                     Dialogs.showMessageDialog(error);
                 }

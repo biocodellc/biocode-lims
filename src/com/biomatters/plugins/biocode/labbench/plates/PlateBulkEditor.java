@@ -44,13 +44,14 @@ public class PlateBulkEditor {
      *
      * @param p
      * @param owner
+     * @param newPlate
      * @return  true if the user clicked ok, false if they clicked cancel
      */
-    public static boolean editPlate(final Plate p, JComponent owner) {
+    public static boolean editPlate(final Plate p, JComponent owner, boolean newPlate) {
         final JPanel platePanel = new JPanel();
         final AtomicReference<Direction> direction = new AtomicReference<Direction>(Direction.ACROSS_AND_DOWN);
         platePanel.setLayout(new BoxLayout(platePanel, BoxLayout.X_AXIS));
-        List<DocumentField> defaultFields = getDefaultFields(p);
+        List<DocumentField> defaultFields = getDefaultFields(p, newPlate);
         final List<DocumentFieldEditor> editors = new ArrayList<DocumentFieldEditor>();
         final AtomicBoolean isAdjusting = new AtomicBoolean(false);
         AdjustmentListener listener = new AdjustmentListener(){
@@ -92,7 +93,7 @@ public class PlateBulkEditor {
             }
         };
         toolbar.addAction(swapAction);
-        if(p.getReactionType() == Reaction.Type.Extraction && p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384) {
+        if(p.getReactionType() == Reaction.Type.Extraction && (p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384) && newPlate) {
             toolbar.addAction(new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", BiocodePlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
@@ -174,7 +175,7 @@ public class PlateBulkEditor {
                 }
             });
         }
-        if(p.getReactionType() == Reaction.Type.Extraction) {
+        if(p.getReactionType() == Reaction.Type.Extraction && newPlate) {
             GeneiousAction autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
                 public void actionPerformed(ActionEvent e) {
                     DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
@@ -201,7 +202,7 @@ public class PlateBulkEditor {
                                 if(value != null && value.toString().trim().length() > 0) {
                                     int i = 1;
                                     while(extractionIds.contains(value+"."+i)) {
-                                        i++;   
+                                        i++;
                                     }
                                     String valueString = value + "." + i;
                                     extractionEditor.setValue(row, col, valueString);
@@ -220,7 +221,7 @@ public class PlateBulkEditor {
                             }
                         }
                         extractionEditor.textViewFromValues();
-                        
+
                     } catch (SQLException e1) {
                         //todo: handle
                         //todo: multithread
@@ -230,7 +231,7 @@ public class PlateBulkEditor {
             toolbar.addAction(autoGenerateIds);
         }
         GeneiousAction autodetectAction = null;
-        if(fieldToCheck != null) {
+        if(fieldToCheck != null && newPlate) {
             autodetectAction = new GeneiousAction("Autodetect workflows", "Autodetect workflows from the extraction id's you have entered", BiocodePlugin.getIcons("workflow_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     if (fieldToCheck == null) {
@@ -270,7 +271,7 @@ public class PlateBulkEditor {
         JPanel holderPanel = new JPanel(new BorderLayout());
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
-        swapAction.actionPerformed(null);
+        //swapAction.actionPerformed(null);
         if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
             return false;
         }
@@ -434,21 +435,36 @@ public class PlateBulkEditor {
         return editorToCheck;
     }
 
-    private static List<DocumentField> getDefaultFields(Plate p) {
+    private static List<DocumentField> getDefaultFields(Plate p, boolean newPlate) {
         switch(p.getReactionType()) {
             case Extraction:
-                return Arrays.asList(
-                    new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
-                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                    new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
-                    new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
-                );
+                if(newPlate) {
+                    return Arrays.asList(
+                        new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
+                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                        new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
+                        new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
+                    );
+                }
+                else {
+                    return Arrays.asList(
+                        new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
+                        new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
+                    );
+                }
             case PCR://drop through
             case CycleSequencing:
-                return Arrays.asList(
-                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                    new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
-                );
+                if(newPlate) {
+                    return Arrays.asList(
+                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                        new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                    );
+                }
+                else {
+                    return Arrays.asList(
+                        new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                    );
+                }
             default :
                 return Collections.EMPTY_LIST;
         }

@@ -45,7 +45,7 @@ public abstract class MuitiPartDocument implements PluginDocument {
 
         public void removeModifiedStateChangedListener(SimpleListener sl){}
 
-        public abstract void saveChangesToDatabase(BiocodeService.BlockingDialog progress, Connection connection) throws SQLException;
+        public abstract void saveChangesToDatabase(BiocodeService.BlockingProgress progress, Connection connection) throws SQLException;
         
     }
 }

@@ -115,7 +115,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             progressListener.setMessage("Checking with the database");
             progressListener.setIndeterminateProgress();
             Reaction[] plateReactions = editingPlate.getReactions();
-            plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null);
+            plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null, true);
             progressListener.setProgress(1.0);
             if(progressListener.isCanceled()) {
                 return null;
@@ -169,7 +169,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     }
 
-    private void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate) {
+    static void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate) {
         if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
             throw new IllegalArgumentException("Plates were of different sizes");
         }
@@ -185,7 +185,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
     }
 
-    private void copyReaction(Reaction srcReaction, Reaction destReaction) {
+    static void copyReaction(Reaction srcReaction, Reaction destReaction) {
         destReaction.setExtractionId(srcReaction.getExtractionId());
         destReaction.setWorkflow(srcReaction.getWorkflow());
         if(destReaction.getType() == Reaction.Type.Extraction) {

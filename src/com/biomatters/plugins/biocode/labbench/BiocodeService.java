@@ -926,7 +926,7 @@ public class BiocodeService extends DatabaseService {
         return results;
     }
 
-    public List<Workflow> createWorkflows(List<String> extractionIds, BlockingDialog progress) throws SQLException{
+    public List<Workflow> createWorkflows(List<String> extractionIds, BlockingProgress progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
@@ -968,7 +968,7 @@ public class BiocodeService extends DatabaseService {
         }
     }
 
-    public void saveExtractions(BiocodeService.BlockingDialog progress, Plate plate) throws SQLException, BadDataException{
+    public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException{
         List<String> extractionIds = new ArrayList<String>();
         List<String> extractionWithoutWorkflowIds = new ArrayList<String>();
 
@@ -994,7 +994,7 @@ public class BiocodeService extends DatabaseService {
                 throw new BadDataException("You need to save at least one reaction with your plate");
             }
 
-            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null);
+            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
             if(error != null && error.length() > 0) {
                 throw new BadDataException(error);
             }
@@ -1034,7 +1034,7 @@ public class BiocodeService extends DatabaseService {
 
     }
 
-    public void deletePlate(BiocodeService.BlockingDialog progress, Plate plate) throws SQLException {
+    public void deletePlate(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException {
 
         Set<Integer> plateIds = new HashSet<Integer>();
 
@@ -1063,7 +1063,7 @@ public class BiocodeService extends DatabaseService {
                 for(Plate emptyPlate : emptyPlates) {
                     message.append(emptyPlate.getName()+"\n");
                 }
-                if(Dialogs.showYesNoDialog(message.toString(), "Delete empty plates", progress, Dialogs.DialogIcon.QUESTION)){
+                if(Dialogs.showYesNoDialog(message.toString(), "Delete empty plates", progress.getComponentForOwner(), Dialogs.DialogIcon.QUESTION)){
                     for(Plate p : emptyPlates) {
                         deletePlate(progress, p);
                     }
@@ -1078,7 +1078,7 @@ public class BiocodeService extends DatabaseService {
 
     }
 
-    private Set<Integer> deleteWorkflows(BlockingDialog progress, Plate plate) throws SQLException {
+    private Set<Integer> deleteWorkflows(BlockingProgress progress, Plate plate) throws SQLException {
         progress.setMessage("deleting workflows");
         if(plate.getReactionType() != Reaction.Type.Extraction) {
             throw new IllegalArgumentException("You may only delete workflows from an extraction plate!");
@@ -1112,7 +1112,7 @@ public class BiocodeService extends DatabaseService {
         return plates;
     }
 
-    private void deleteReactions(BlockingDialog progress, Plate plate) throws SQLException {
+    private void deleteReactions(BlockingProgress progress, Plate plate) throws SQLException {
         progress.setMessage("deleting reactions");
 
         String tableName;
@@ -1173,7 +1173,7 @@ public class BiocodeService extends DatabaseService {
         return result;
     }
 
-    public void saveReactions(BiocodeService.BlockingDialog progress, Plate plate) throws SQLException, BadDataException {
+    public void saveReactions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException {
         progress.setMessage("Retrieving existing workflows");
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
@@ -1215,7 +1215,7 @@ public class BiocodeService extends DatabaseService {
                 throw new BadDataException("You need to save at least one reaction with your plate");
             }
 
-            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null);
+            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
             if(error != null && error.length() > 0) {
                 throw new BadDataException(error);
             }
@@ -1282,7 +1282,7 @@ public class BiocodeService extends DatabaseService {
         }
     }
 
-    private void createOrUpdatePlate(Plate plate, BlockingDialog progress) throws SQLException, BadDataException{
+    private void createOrUpdatePlate(Plate plate, BlockingProgress progress) throws SQLException, BadDataException{
         Connection connection = limsConnection.getConnection();
 
         //check the vaidity of the plate.
@@ -1456,7 +1456,7 @@ public class BiocodeService extends DatabaseService {
         return result;
     }
 
-    public Map<String, Workflow> getWorkflows(List<String> workflowIds) throws SQLException{
+    public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws SQLException{
         if(workflowIds.size() == 0) {
             return Collections.emptyMap();
         }
@@ -1470,8 +1470,10 @@ public class BiocodeService extends DatabaseService {
         }
         sqlBuilder.append(")");
         PreparedStatement statement = limsConnection.getConnection().prepareStatement(sqlBuilder.toString());
-        for (int i = 0; i < workflowIds.size(); i++) {
-            statement.setString(i+1, workflowIds.get(i));
+        int i=0;
+        for (String s : workflowIds) {
+            statement.setString(i+1, s);
+            i++;
         }
         ResultSet results = statement.executeQuery();
         Map<String, Workflow> result = new HashMap<String, Workflow>();
@@ -1509,7 +1511,23 @@ public class BiocodeService extends DatabaseService {
 //        return result;
 //    }
 
-    public static class BlockingDialog extends JDialog {
+    public static interface BlockingProgress {
+        public void setMessage(String s);
+        public void dispose();
+        public Component getComponentForOwner();
+
+        public static final BlockingProgress EMPTY = new BlockingProgress() {
+            public void setMessage(String s) {}
+
+            public void dispose() {}
+
+            public Component getComponentForOwner() {
+                return null;
+            }
+        };
+    }
+
+    public static class BlockingDialog extends JDialog implements BlockingProgress {
         private String message;
         private JLabel label;
 
@@ -1580,6 +1598,9 @@ public class BiocodeService extends DatabaseService {
             pack();
         }
 
+        public Component getComponentForOwner() {
+            return this;
+        }
 
     }
 }

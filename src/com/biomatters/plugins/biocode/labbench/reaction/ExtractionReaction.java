@@ -82,6 +82,14 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     public void setExtractionId(String s) {
         getOptions().setValue("extractionId", s);
     }
+
+    public String getTissueId() {
+        return getOptions().getValueAsString("sampleId");
+    }
+
+    public void setTissueId(String s) {
+        getOptions().setValue("sampleId", s);
+    }
     
 
     private ReactionOptions options;
@@ -123,7 +131,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
 
-    public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent) {
+    public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent, boolean showDialogs) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }
@@ -209,7 +217,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     for(ExtractionReaction reaction : extractionsThatExist) {
                         moveMessage.append(reaction.getExtractionId()+"\n");
                     }
-                    if(Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", dialogParent, Dialogs.DialogIcon.QUESTION)) {
+                    if(!showDialogs || Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", dialogParent, Dialogs.DialogIcon.QUESTION)) {
                         for (int i = 0; i < reactions.size(); i++) {
                             Reaction r = reactions.get(i);
                             for (ExtractionReaction r2 : extractionsThatExist) {
@@ -273,9 +281,5 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
         }
         return null;
-    }
-
-    public void setTissueId(String id) {
-        getOptions().setValue("sampleId", id);
     }
 }

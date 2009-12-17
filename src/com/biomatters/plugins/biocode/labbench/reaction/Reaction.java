@@ -335,7 +335,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract Color _getBackgroundColor();
 
-    public abstract String areReactionsValid(List<T> reactions, JComponent dialogParent);
+    public abstract String areReactionsValid(List<T> reactions, JComponent dialogParent, boolean showDialogs);
 
     public Dimension getPreferredSize() {
         int y = PADDING+3;
@@ -493,7 +493,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         return date;
     }
 
-    public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingDialog progress) throws IllegalStateException, SQLException {
+    public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
                 String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

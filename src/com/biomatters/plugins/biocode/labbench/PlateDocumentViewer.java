@@ -8,10 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.labbench.plates.GelEditor;
-import com.biomatters.plugins.biocode.labbench.plates.GelImage;
-import com.biomatters.plugins.biocode.labbench.plates.Plate;
-import com.biomatters.plugins.biocode.labbench.plates.PlateView;
+import com.biomatters.plugins.biocode.labbench.plates.*;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.math.MachineAccuracy;
 import org.virion.jam.util.SimpleListener;
@@ -119,7 +116,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
 
         saveAction.setEnabled(false);
-        //bulkEditAction.setProOnly(true);
+        bulkEditAction.setProOnly(true);
         editThermocycleAction.setProOnly(true);
         gelAction.setProOnly(true);
         updateToolbar(false);
@@ -160,7 +157,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             addTracesAction.setEnabled(buttonsEnabled);
         }
         editAction.setEnabled(plateView.getSelectedReactions().size() > 0 && !plateView.getPlate().isDeleted());
-        //bulkEditAction.setEnabled(buttonsEnabled);
+        bulkEditAction.setEnabled(buttonsEnabled);
 
         if(plateView.getPlate().isDeleted()) {
             for(Action a : getActionProvider().getOtherActions()) {
@@ -284,6 +281,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 if(!isLocal) {
                     actions.add(deletePlateAction);
                 }
+                actions.add(bulkEditAction);
 
                 return actions;
             }
@@ -382,17 +380,17 @@ public class PlateDocumentViewer extends DocumentViewer{
         }
     };
 
-//    GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit wells", null, BiocodePlugin.getIcons("bulkEdit_16.png")) {
-//        public void actionPerformed(ActionEvent e) {
-//            PlateBulkEditor.editPlate(plateView.getPlate(), container);
-//            saveAction.setEnabled(true);
-//            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()));
-//            if(error != null && error.length() > 0) {
-//                Dialogs.showMessageDialog(error);
-//            }
-//            updatePanel();
-//        }
-//    };
+    GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit wells", null, BiocodePlugin.getIcons("bulkEdit_16.png")) {
+        public void actionPerformed(ActionEvent e) {
+            PlateBulkEditor.editPlate(plateView.getPlate(), container, false);
+            saveAction.setEnabled(true);
+            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), container, true);
+            if(error != null && error.length() > 0) {
+                Dialogs.showMessageDialog(error);
+            }
+            updatePanel();
+        }
+    };
 
     GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file", "Generate an input file for ABI sequences", BiocodePlugin.getIcons("abi_16.png")) {
         public void actionPerformed(ActionEvent e) {

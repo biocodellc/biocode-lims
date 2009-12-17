@@ -57,7 +57,7 @@ public class LIMSConnection {
             DriverManager.setLoginTimeout(20);
             connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
             Statement statement = connection.createStatement();
-            statement.execute("USE labbench");
+            statement.execute("USE "+LIMSOptions.getValueAsString("database"));
             ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
             if(!resultSet.next()) {
                 throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
@@ -362,7 +362,7 @@ public class LIMSConnection {
         StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN extraction ON extraction.plate = plate.id " +
-                "LEFT JOIN workflow ON (workflow.extractionId = extraction.id OR workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
+                "LEFT JOIN workflow ON (workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
                 "WHERE");
 
         if (workflowDocuments != null) {
@@ -468,21 +468,21 @@ public class LIMSConnection {
         final StringBuilder totalErrors = new StringBuilder("");
         if(extractionReactions.size() > 0) {
             System.out.println("Checking extractions");
-            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions, null);
+            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions, null, true);
             if(extractionErrors != null) {
                 totalErrors.append(extractionErrors+"\n");
             }
         }
         if(pcrReactions.size() > 0) {
             System.out.println("Checking PCR's");
-            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions, null);
+            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions, null, true);
             if(pcrErrors != null) {
                 totalErrors.append(pcrErrors+"\n");
             }
         }
         if(cyclesequencingReactions.size() > 0) {
             System.out.println("Checking Cycle Sequencing's...");
-            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions, null);
+            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions, null, true);
             if(cyclesequencingErrors != null) {
                 totalErrors.append(cyclesequencingErrors+"\n");
             }

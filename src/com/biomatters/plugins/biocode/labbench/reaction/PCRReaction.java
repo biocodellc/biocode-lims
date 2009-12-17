@@ -140,7 +140,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         getOptions().setValue("extractionId", s);
     }
 
-    public String areReactionsValid(List<PCRReaction> reactions, JComponent dialogParent) {
+    public String areReactionsValid(List<PCRReaction> reactions, JComponent dialogParent, boolean showDialogs) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }

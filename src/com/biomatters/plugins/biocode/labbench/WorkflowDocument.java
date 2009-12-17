@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListD
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -403,8 +402,8 @@ public class WorkflowDocument extends MuitiPartDocument {
             return changes;
         }
 
-        public void saveChangesToDatabase(BiocodeService.BlockingDialog progress, Connection connection) throws SQLException{
-            reaction.areReactionsValid(Arrays.asList(reaction), null);
+        public void saveChangesToDatabase(BiocodeService.BlockingProgress progress, Connection connection) throws SQLException{
+            reaction.areReactionsValid(Arrays.asList(reaction), null, true);
             Reaction.saveReactions(new Reaction[] {reaction}, reaction.getType(), connection, progress);
             changes = false;
         }

@@ -143,7 +143,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(new DocumentField("BOLD ProcessID", "", "biocode_tissue.molecular_id", String.class, true, false));
 
-        fields.add(new DocumentField("Project Name", "", "biocode_collecting_event.ProjectName", String.class, false, false));
+        fields.add(new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false));
         fields.add(new DocumentField("Collector", "", "biocode_collecting_event.Collector", String.class, true, false));
         fields.add(new DocumentField("Collection time", "", "biocode_collecting_event.CollectionTime", Date.class, true, false));
         fields.add(new DocumentField("Identified By", "", "biocode.IdentifiedBy", String.class, true, false));
