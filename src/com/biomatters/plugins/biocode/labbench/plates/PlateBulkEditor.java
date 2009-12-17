@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
+import java.io.*;
 
 /**
  * @author Steven Stones-Havas
@@ -174,6 +176,52 @@ public class PlateBulkEditor {
                     }
                 }
             });
+        }
+        if(p.getReactionType() == Reaction.Type.Extraction) {
+            GeneiousAction importBarcodes = new GeneiousAction("Import Extraction Barcodes", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
+                public void actionPerformed(ActionEvent e) {
+                    File inputFile = FileUtilities.getUserSelectedFile("Select Barcode File", new FilenameFilter(){
+                        public boolean accept(File dir, String name) {
+                            return true;
+                        }
+                    }, JFileChooser.FILES_ONLY);
+
+                    if(inputFile != null) {
+                        DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+                        final DocumentFieldEditor barcodeEditor = getEditorForField(editors, extractionBarcodeField);
+                        //barcodeEditor.values = new String[barcodeEditor.values.length][barcodeEditor.values[0].length];//todo: make this tidier
+                        try {
+                            BufferedReader in = new BufferedReader(new FileReader(inputFile));
+                            String s;
+                            while((s = in.readLine()) != null) {
+                                String[] data = s.split("\\t");
+                                if(data.length != 2) {
+                                    continue;
+                                }
+                                String wellString = data[0].trim();
+                                String barcode = data[1].trim();
+                                if(wellString.charAt(wellString.length()-1) == ';') {
+                                    wellString = wellString.substring(0, wellString.length()-1);
+                                }
+                                BiocodeUtilities.Well well;
+                                try {
+                                    well = new BiocodeUtilities.Well(wellString);
+                                }
+                                catch(IllegalArgumentException ex) {
+                                    continue;
+                                }
+                                barcodeEditor.setValue(well.row(), well.col(), barcode);
+                            }
+                            in.close();
+                            barcodeEditor.textViewFromValues();
+                        }
+                        catch(IOException ex) {
+                            Dialogs.showMessageDialog("Could not read the input file! "+ex.getMessage());
+                        }
+                    }
+                }
+            };
+            toolbar.addAction(importBarcodes);
         }
         if(p.getReactionType() == Reaction.Type.Extraction && newPlate) {
             GeneiousAction autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
