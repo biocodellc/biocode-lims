@@ -983,7 +983,7 @@ public class BiocodeService extends DatabaseService {
             for(Reaction reaction : plate.getReactions()) {
                 if(!reaction.isEmpty()) {
                     extractionIds.add(reaction.getExtractionId());
-                    if((reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getFieldValue("sampleId").toString().length() > 0) {
+                    if(reaction.getId() < 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getFieldValue("sampleId").toString().length() > 0) {
                         extractionWithoutWorkflowIds.add(reaction.getExtractionId());
                     }
                     reactionsToSave.add(reaction);

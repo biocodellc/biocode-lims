@@ -510,7 +510,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(10, reaction.getId());
+                            statement.setInt(11, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
