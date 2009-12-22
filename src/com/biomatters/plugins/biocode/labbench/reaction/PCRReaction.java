@@ -40,12 +40,12 @@ public class PCRReaction extends Reaction<PCRReaction> {
         setId(r.getInt("pcr.id"));
         setPlateId(r.getInt("pcr.plate"));
         ReactionOptions options = getOptions();
-        options.setValue("extractionId", r.getString("pcr.extractionId"));
+        options.setValue("extractionId", r.getString("extraction.extractionId"));
 
         String s = r.getString("workflow.name");
         if(s != null) {
             options.setValue("workflowId", s);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("pcr.extractionId")));
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId")));
             options.setValue("workflowId", getWorkflow().getName());
         }
 

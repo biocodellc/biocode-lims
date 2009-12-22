@@ -140,15 +140,15 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         Set<String> samplesToGet = new HashSet<String>();
 
-        for(Reaction reaction : reactions) {
-            ReactionOptions option = reaction.getOptions();
-            String tissueId = option.getValueAsString("sampleId");
-
-            if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
-                continue;
-            }
-            samplesToGet.add(tissueId);
-        }
+//        for(Reaction reaction : reactions) {
+//            ReactionOptions option = reaction.getOptions();
+//            String tissueId = option.getValueAsString("sampleId");
+//
+//            if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
+//                continue;
+//            }
+//            samplesToGet.add(tissueId);
+//        }
 
         if(samplesToGet.size() == 0) {
             return null;
@@ -156,33 +156,33 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         String error = "";
 
-        try {
-            List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
-            Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
-            for(FimsSample sample : docList) {
-                docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
-            }
-            for(Reaction reaction : reactions) {
-                ReactionOptions op = reaction.getOptions();
-                String tissueId = op.getValueAsString("sampleId");
-                reaction.isError = false;
-                                
-                if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
-                    continue;
-                }
-                FimsSample currentFimsSample = docMap.get(tissueId);
-                if(currentFimsSample == null) {
-                    error += "The tissue sample "+tissueId+" does not exist in the database.\n";
-                    reaction.isError = true;
-                }
-                else {
-                    reaction.setFimsSample(currentFimsSample);
-                }
-            }
-
-        } catch (ConnectionException e) {
-            return "Could not query the FIMS database.  "+e.getMessage();
-        }
+//        try {
+//            List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
+//            Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
+//            for(FimsSample sample : docList) {
+//                docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
+//            }
+//            for(Reaction reaction : reactions) {
+//                ReactionOptions op = reaction.getOptions();
+//                String tissueId = op.getValueAsString("sampleId");
+//                reaction.isError = false;
+//
+//                if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
+//                    continue;
+//                }
+//                FimsSample currentFimsSample = docMap.get(tissueId);
+//                if(currentFimsSample == null) {
+//                    error += "The tissue sample "+tissueId+" does not exist in the database.\n";
+//                    reaction.isError = true;
+//                }
+//                else {
+//                    reaction.setFimsSample(currentFimsSample);
+//                }
+//            }
+//
+//        } catch (ConnectionException e) {
+//            return "Could not query the FIMS database.  "+e.getMessage();
+//        }
 
         try {
             //check that the extraction id's don't already exist in the database...

@@ -95,7 +95,7 @@ public class PlateBulkEditor {
             }
         };
         toolbar.addAction(swapAction);
-        if(p.getReactionType() == Reaction.Type.Extraction && (p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384) && newPlate) {
+        if(p.getReactionType() == Reaction.Type.Extraction && (p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384)) {
             toolbar.addAction(new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", BiocodePlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
@@ -223,7 +223,7 @@ public class PlateBulkEditor {
             };
             toolbar.addAction(importBarcodes);
         }
-        if(p.getReactionType() == Reaction.Type.Extraction && newPlate) {
+        if(p.getReactionType() == Reaction.Type.Extraction) {
             GeneiousAction autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
                 public void actionPerformed(ActionEvent e) {
                     DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
@@ -232,7 +232,6 @@ public class PlateBulkEditor {
 
                     DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
                     final DocumentFieldEditor extractionEditor = getEditorForField(editors, extractionField);
-                    extractionEditor.setText("");
                     extractionEditor.valuesFromTextView();
 
                     DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
@@ -486,20 +485,12 @@ public class PlateBulkEditor {
     private static List<DocumentField> getDefaultFields(Plate p, boolean newPlate) {
         switch(p.getReactionType()) {
             case Extraction:
-                if(newPlate) {
-                    return Arrays.asList(
-                        new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
-                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                        new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
-                        new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
-                    );
-                }
-                else {
-                    return Arrays.asList(
-                        new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
-                        new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
-                    );
-                }
+                return Arrays.asList(
+                    new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
+                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
+                    new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
+                );
             case PCR://drop through
             case CycleSequencing:
                 if(newPlate) {

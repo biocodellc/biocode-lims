@@ -1087,25 +1087,39 @@ public class BiocodeService extends DatabaseService {
         ArrayList<Integer> workflows = new ArrayList<Integer>();
         ArrayList<Integer> ids = new ArrayList<Integer>();
         ArrayList<String> extractionNames = new ArrayList<String>();
-        for(Reaction r : plate.getReactions()) {
+
+
+        boolean first = true;
+        StringBuilder builder = new StringBuilder();
+        for(Reaction r : plate.getReactions()) { //get the extraction id's and set up the query to get the workflow id's
             if(r.getId() >= 0) {
                 ids.add(r.getId());
                 extractionNames.add("'"+r.getExtractionId()+"'");
-            }
-
-            if(r.getWorkflow() != null) {
-                if(r.getWorkflow().getId() >= 0) {
-                    workflows.add(r.getWorkflow().getId());
+                if(!first) {
+                    builder.append(" OR ");
                 }
+                builder.append("extractionId="+r.getId());
+                first = false;
             }
+        }
+
+        String getWorkflowSQL = "SELECT id FROM workflow WHERE "+builder.toString();
+        System.out.println(getWorkflowSQL);
+
+        Statement statement = limsConnection.getConnection().createStatement();
+
+
+        ResultSet resultSet = statement.executeQuery(getWorkflowSQL);
+        while(resultSet.next()) {
+            workflows.add(resultSet.getInt("workflow.id"));
         }
 
         Set<Integer> plates = new HashSet<Integer>();
 
         plates.addAll(limsConnection.deleteRecords("pcr", "workflow", workflows));
-        plates.addAll(limsConnection.deleteRecords("pcr", "extractionId", extractionNames));
+        //plates.addAll(limsConnection.deleteRecords("pcr", "extractionId", extractionNames));
         plates.addAll(limsConnection.deleteRecords("cyclesequencing", "workflow", workflows));
-        plates.addAll(limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames));
+       // plates.addAll(limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames));
         limsConnection.deleteRecords("workflow", "id", workflows);
         plates.addAll(limsConnection.deleteRecords("extraction", "id", ids));
 

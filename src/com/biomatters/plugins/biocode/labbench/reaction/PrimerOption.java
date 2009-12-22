@@ -59,6 +59,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
     };
 
     static {
+        masterPrimerListener.objectChanged();
         searchCache.addDocumentsUpdatedListener(masterPrimerListener);
     }
 

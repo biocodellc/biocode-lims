@@ -361,8 +361,8 @@ public class LIMSConnection {
         }
         StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
-                "LEFT JOIN extraction ON extraction.plate = plate.id " +
                 "LEFT JOIN workflow ON (workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
+                "LEFT JOIN extraction ON (extraction.plate = plate.id OR extraction.id = workflow.extractionId) " +            
                 "WHERE");
 
         if (workflowDocuments != null) {

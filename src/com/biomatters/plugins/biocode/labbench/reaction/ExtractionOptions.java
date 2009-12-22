@@ -13,7 +13,7 @@ import com.biomatters.plugins.biocode.labbench.TextAreaOption;
  */
 public class ExtractionOptions extends ReactionOptions{
     public boolean fieldIsFinal(String fieldCode) {
-        return "sampleId".equals(fieldCode) || "extractionId".equals(fieldCode);
+        return false;//"sampleId".equals(fieldCode) || "extractionId".equals(fieldCode);
     }
 
     public ExtractionOptions() {
