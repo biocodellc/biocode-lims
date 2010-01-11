@@ -60,7 +60,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "1.3.11";
+        return "1.3.12";
     }
 
     public String getMinimumApiVersion() {
@@ -171,6 +171,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     @Override
     public DocumentOperation[] getDocumentOperations() {
         return new DocumentOperation[] {
+                new CherryPickingDocumentOperation(),
                 new NewPlateDocumentOperation(),
                 new DownloadChromatogramsFromLimsOperation(false),
                 new SetReadDirectionOperation(),

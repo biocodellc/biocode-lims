@@ -36,19 +36,25 @@ public class Plate implements XMLSerializable {
     private boolean isDeleted = false;
 
     public enum Size {
-        w48("48"),
-        w96("96"),
-        w384("384");
+        w48("48", 48),
+        w96("96", 96),
+        w384("384", 384);
         private String niceName;
+        private int size;
 
-        private Size(String s) {
+        private Size(String s, int size) {
             this.niceName = s;
+            this.size = size;
         }
 
 
         @Override
         public String toString() {
             return niceName;
+        }
+
+        public int numberOfReactions() {
+            return size;
         }
     }
 
@@ -224,6 +230,10 @@ public class Plate implements XMLSerializable {
 
     public Reaction getReaction(int row, int col) {
         return reactions[cols * row + col];
+    }
+
+    public BiocodeUtilities.Well getWell(int row, int col) {
+        return new BiocodeUtilities.Well(getWellName(row, col));   
     }
 
     public Reaction getReaction(BiocodeUtilities.Well well) {
