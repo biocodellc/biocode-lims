@@ -45,7 +45,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         setCreated(r.getTimestamp("cyclesequencing.date"));
         setId(r.getInt("cyclesequencing.id"));
         Options options = getOptions();
-        options.setValue("extractionId", r.getString("extraction.extractionId"));
+
+        String extractionId = r.getString("extraction.extractionId");
+        if(extractionId != null) {
+            options.setValue("extractionId", extractionId);
+        }
         String s = r.getString("workflow.name");
         if(s != null) {
             options.setValue("workflowId", s);
