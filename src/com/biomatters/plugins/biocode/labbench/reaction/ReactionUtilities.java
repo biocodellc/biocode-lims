@@ -542,7 +542,12 @@ public class ReactionUtilities {
             JComponent jComponent;
             if(!creating && options.fieldIsFinal(option.getName())) {
                 option.setEnabled(false);
-                jComponent = new JLabel(option.getValue().toString());
+                JTextField field = new JTextField(30);
+                field.setText(option.getValue().toString());
+                field.setEditable(false);
+                field.setBorder(new EmptyBorder(field.getBorder().getBorderInsets(field)));
+                field.setOpaque(false);
+                jComponent = field;
             }
             else {
                 jComponent = getOptionComponent(option);
