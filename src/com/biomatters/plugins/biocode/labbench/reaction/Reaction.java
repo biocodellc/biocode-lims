@@ -4,32 +4,25 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.color.ColorSpace;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
-import java.io.IOException;
-import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
 
 /**
@@ -51,6 +44,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     protected Date date = new Date();
     private static int charHeight = -1;
     private int[] fieldWidthCache = null;
+    private BackgroundColorer backgroundColorer;
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -91,6 +85,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract Type getType();
 
+    protected abstract BackgroundColorer getDefaultBackgroundColorer();
+
+    public BackgroundColorer getBackgroundColorer() {
+        return backgroundColorer == null ? getDefaultBackgroundColorer() : backgroundColorer;
+    }
+
+    public void setBackgroundColorer(BackgroundColorer backgroundColorer) {
+        this.backgroundColorer = backgroundColorer;
+    }
 
     public void setSelected(boolean selected) {
         this.selected = selected;
@@ -226,7 +229,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(isError) {
             return Color.orange.brighter();
         }
-        return _getBackgroundColor();
+        return getBackgroundColorer().getColor(this);
     }
 
     public FimsSample getFimsSample() {
@@ -268,6 +271,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(workflow != null) {
             Element workflowElement = XMLSerializer.classToXML("workflow", workflow);
             element.addContent(workflowElement);
+        }
+        if(backgroundColorer != null) {
+            Element backgroundColorerElement = XMLSerializer.classToXML("backgroundColorer", backgroundColorer);
+            element.addContent(backgroundColorerElement);
         }
         element.addContent(getOptions().valuesToXML("options"));
         return element;
@@ -323,6 +330,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         Element workflowElement = element.getChild("workflow");
         if(workflowElement != null) {
             workflow = XMLSerializer.classFromXML(workflowElement, Workflow.class);
+        }
+        Element backgroundColorerElement = element.getChild("backgroundColorer");
+        if(backgroundColorerElement != null) {
+            backgroundColorer = XMLSerializer.classFromXML(backgroundColorerElement, BackgroundColorer.class);
         }
         displayableFields = new ArrayList<DocumentField>();
         for(Element e : element.getChildren("displayableField")) {
@@ -726,4 +737,103 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
     }
 
+    public static class BackgroundColorer implements XMLSerializable{
+        private DocumentField documentField;
+        private Map<String, Color> color;
+
+        public BackgroundColorer(DocumentField documentField, Map<String, Color> color) {
+            this.documentField = documentField;
+            this.color = color;
+        }
+
+        public BackgroundColorer(Element e) throws XMLSerializationException{
+            fromXML(e);
+        }
+
+        public DocumentField getDocumentField() {
+            return documentField;
+        }
+
+        public Map<String, Color> getColorMap() {
+            return color;
+        }
+
+        public Color getColor(Reaction reaction) {
+            if(documentField != null) {
+                Color value = color.get(reaction.getFieldValue(documentField.getCode()));
+                return value != null ? value : Color.white;
+            }
+            return Color.white;
+        }
+
+        public static Color getRandomColor() {
+            ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_sRGB);
+            float[] rgbValues = cs.fromCIEXYZ(new float[]{(float)Math.random(), (float)Math.random(),(float)Math.random()});
+            return new Color(rgbValues[0], rgbValues[1], rgbValues[2]);
+        }
+
+        public Element toXML() {
+            Element root = new Element("backgroundColorer");
+            if(documentField != null) {
+                Element documentFieldElement = XMLSerializer.classToXML("documentField", documentField);
+                root.addContent(documentFieldElement);
+            }
+            Element mapElement = new Element("valueMap");
+            for(Map.Entry<String, Color> e : color.entrySet()) {
+                Element entryElement = new Element("entry");
+                Element keyElement = new Element("key").setText(e.getKey());
+                entryElement.addContent(keyElement);
+                Element valueElement = new Element("value");
+                valueElement.setText(colorToString(e.getValue()));
+                entryElement.addContent(valueElement);
+                mapElement.addContent(entryElement);
+            }
+            root.addContent(mapElement);
+            return root;
+        }
+
+        private static String colorToString(Color c) {
+            return c.getRed()+", "+c.getGreen()+", "+c.getBlue();
+        }
+
+        private static Color colorFromString(String s) {
+            String[] channels = s.split(",");
+            return new Color(Integer.parseInt(channels[0]), Integer.parseInt(channels[1]), Integer.parseInt(channels[2]));
+        }
+
+        public void fromXML(Element element) throws XMLSerializationException {
+            Element documentFieldElement = element.getChild("documentField");
+            if(documentFieldElement != null) {
+                documentField = XMLSerializer.classFromXML(documentFieldElement, DocumentField.class);
+            }
+            Element mapElement = element.getChild("valueMap");
+            color = new HashMap<String, Color>();
+            for(Element e : mapElement.getChildren("entry")) {
+                String key = e.getChildText("key");
+                Color value = colorFromString(e.getChildText("value"));
+                color.put(key, value);
+            }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            BackgroundColorer that = (BackgroundColorer) o;
+
+            if (!color.equals(that.color)) return false;
+            if (documentField != null ? !documentField.getCode().equals(that.documentField.getCode()) : that.documentField != null)
+                return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = documentField != null ? documentField.hashCode() : 0;
+            result = 31 * result + color.hashCode();
+            return result;
+        }
+    }
 }

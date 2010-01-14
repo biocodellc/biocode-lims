@@ -109,6 +109,14 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return Type.CycleSequencing;
     }
 
+    protected BackgroundColorer getDefaultBackgroundColorer() {
+        Map<String, Color> colors = new HashMap<String, Color>();
+        colors.put("none", Color.white);
+        colors.put("passed", Color.green.darker());
+        colors.put("failed", Color.red.darker());
+        return new BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors);
+    }
+
     public ReactionOptions _getOptions() {
         if(options == null) {
             options = new CycleSequencingOptions(this.getClass());

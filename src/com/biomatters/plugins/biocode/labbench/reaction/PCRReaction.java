@@ -109,6 +109,14 @@ public class PCRReaction extends Reaction<PCRReaction> {
         return Type.PCR;
     }
 
+    protected BackgroundColorer getDefaultBackgroundColorer() {
+        Map<String, Color> colors = new HashMap<String, Color>();
+        colors.put("none", Color.white);
+        colors.put("passed", Color.green.darker());
+        colors.put("failed", Color.red.darker());
+        return new BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors);
+    }
+
     public Cocktail getCocktail() {
         String cocktailId = ((Options.OptionValue)getOptions().getOption("cocktail").getValue()).getName();
         for(Cocktail c : Cocktail.getAllCocktailsOfType(Reaction.Type.PCR)) {

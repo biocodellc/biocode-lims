@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.GComboBox;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
@@ -427,9 +428,14 @@ public class ReactionUtilities {
 
 
         JPanel fieldsPanel = getFieldsPanel(availableFieldsVector,selectedFieldsVector);
+        ColoringPanel colorPanel = getColoringPanel(availableFieldsVector, reactions);
+        JPanel fieldsAndColorPanel = new JPanel(new BorderLayout());
+        fieldsAndColorPanel.setOpaque(false);
+        fieldsAndColorPanel.add(fieldsPanel, BorderLayout.CENTER);
+        fieldsAndColorPanel.add(colorPanel, BorderLayout.SOUTH);
         JComponent componentToDisplay;
         if(justEditDisplayableFields) {
-            componentToDisplay = fieldsPanel;
+            componentToDisplay = fieldsAndColorPanel;
         }
         else if(justEditOptions) {
             componentToDisplay = displayPanel;
@@ -437,7 +443,7 @@ public class ReactionUtilities {
         else {
             JTabbedPane tabs = new JTabbedPane();
             tabs.add("Reaction",displayPanel);
-            tabs.add("Display", fieldsPanel);
+            tabs.add("Display", fieldsAndColorPanel);
             componentToDisplay = tabs;
         }
 
@@ -472,6 +478,7 @@ public class ReactionUtilities {
             }
             for(Reaction r : reactions) {
                 r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
+                r.setBackgroundColorer(colorPanel.getColorer());
             }
             if(changedOptionCount > 0) {
                 String error = reactions.get(0).areReactionsValid(reactions, owner, true);
@@ -855,6 +862,23 @@ public class ReactionUtilities {
         return fieldsPanel;
     }
 
+    public static Collection getAllValues(DocumentField field, List<Reaction> reactions) {
+        Set allValues = new HashSet();
+        if(field != null) {
+            for(Reaction r : reactions) {
+                Object value = r.getFieldValue(field.getCode());
+                if(value != null) {
+                    allValues.add(value);
+                }
+            }
+        }
+        return allValues;
+    }
+
+    private static ColoringPanel getColoringPanel(final Vector<DocumentField> availableFieldsVector, List<Reaction> reactions) {
+        return new ColoringPanel(availableFieldsVector, reactions);
+    }
+
     public static class MemoryFile{
         private String name;
         private byte[] data;
@@ -872,4 +896,26 @@ public class ReactionUtilities {
             return data;
         }
     }
+
+    public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider{
+            private DocumentField documentField;
+
+            DocumentFieldWrapper(DocumentField documentField) {
+                this.documentField = documentField;
+            }
+
+            public String getDescription() {
+                return documentField == null ? null : documentField.getDescription();
+            }
+
+            public String toString() {
+                return documentField == null ? "None..." : documentField.getName();
+            }
+
+            public DocumentField getDocumentField() {
+                return documentField;
+            }
+        }
+
+
 }

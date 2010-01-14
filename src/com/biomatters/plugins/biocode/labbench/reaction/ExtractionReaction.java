@@ -118,6 +118,10 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Type.Extraction;
     }
 
+    protected BackgroundColorer getDefaultBackgroundColorer() {
+        return new BackgroundColorer(null, Collections.EMPTY_MAP);
+    }
+
     public List<DocumentField> getDefaultDisplayedFields() {
         return Arrays.asList(
                 BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
