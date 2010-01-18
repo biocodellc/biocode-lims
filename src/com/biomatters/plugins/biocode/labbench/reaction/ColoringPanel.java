@@ -25,6 +25,7 @@ public class ColoringPanel extends JPanel {
     final List<Reaction> reactions;
     private List<ColorPanel> colorPanels;
     private DocumentField selectedDocumentField;
+    private static final int MAX_PREFERRED_HEIGHT = 220;
 
     public ColoringPanel(Vector<DocumentField> availableFieldsVector, List<Reaction> reactions1) {
         super(new BorderLayout());
@@ -67,7 +68,9 @@ public class ColoringPanel extends JPanel {
                 JPanel holderPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
                 holderPanel.setOpaque(false);
                 holderPanel.add(valuesPanel);
-                add(holderPanel, BorderLayout.CENTER);
+                JScrollPane scrollPane = new JScrollPane(holderPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+                scrollPane.getVerticalScrollBar().setUnitIncrement(20);
+                add(scrollPane, BorderLayout.CENTER);
                 validate();
                 invalidate();
                 validate();
@@ -91,6 +94,15 @@ public class ColoringPanel extends JPanel {
             }
         }
 
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        Dimension superPreferredSize = super.getPreferredSize();
+        if (superPreferredSize.height > MAX_PREFERRED_HEIGHT) {
+            return new Dimension(superPreferredSize.width, MAX_PREFERRED_HEIGHT);
+        }
+        return superPreferredSize;
     }
 
     public Map<Object, Color> getObjectToColorMap() {

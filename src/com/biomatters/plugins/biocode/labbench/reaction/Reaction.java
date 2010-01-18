@@ -798,7 +798,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
         private static Color colorFromString(String s) {
             String[] channels = s.split(",");
-            return new Color(Integer.parseInt(channels[0]), Integer.parseInt(channels[1]), Integer.parseInt(channels[2]));
+            return new Color(Integer.parseInt(channels[0].trim()), Integer.parseInt(channels[1].trim()), Integer.parseInt(channels[2].trim()));
         }
 
         public void fromXML(Element element) throws XMLSerializationException {
