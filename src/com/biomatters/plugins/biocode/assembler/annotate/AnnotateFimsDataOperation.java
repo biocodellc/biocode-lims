@@ -201,14 +201,20 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         if (taxonomy.length() > 0) {
             annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy.substring(0, taxonomy.length() - 2));
         }
+        else {
+            annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, null);
+        }
         Object organism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
         if (organism != null && !((String)organism).contains(" ")) {
             //the database seems to have cases where just the Genus has been entered in the organism column eventhough the species has been entered in the taxonomy columns -> Throw that crap away
             organism = null;
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         }
-        if (organism == null && genus != null && species != null) {
+        else if (organism == null && genus != null && species != null) {
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + " " + species);
+        }
+        else {
+            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         }
         annotatedDocument.save();
     }
