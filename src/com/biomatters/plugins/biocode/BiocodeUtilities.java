@@ -29,6 +29,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
+import java.text.NumberFormat;
 
 /**
  * @author Richard
@@ -94,6 +95,24 @@ public class BiocodeUtilities {
         return mostRecent;
     }
 
+    public static String formatSize(long bytes, int decimalPlaces) {
+        NumberFormat fmt = NumberFormat.getNumberInstance();
+        if (decimalPlaces >= 0) {
+            fmt.setMaximumFractionDigits(decimalPlaces);
+        }
+        final double size = bytes;
+        double val = size / (1024 * 1024);
+        if (val > 1) {
+            return fmt.format(val).concat(" MB");
+        }
+        val = size / 1024;
+        if (val > 10) {
+            return fmt.format(val).concat(" KB");
+        }
+        return fmt.format(val).concat(" bytes");
+    }
+
+
     public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions, ProgressListener progressListener) throws SQLException, IOException, DocumentImportException{
         List<String> idQueries = new ArrayList<String>();
         for(Reaction r : reactions) {
@@ -105,23 +124,41 @@ public class BiocodeUtilities {
             return;
         }
 
-        Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement();
+        Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement(java.sql.ResultSet.TYPE_FORWARD_ONLY, java.sql.ResultSet.CONCUR_READ_ONLY);
+        statement.setFetchSize(Integer.MIN_VALUE);       
+        ResultSet countResultSet = statement.executeQuery("SELECT count(*) AS count FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
+        countResultSet.next();
+        int count = countResultSet.getInt("count");
+        countResultSet.close();
         ResultSet resultSet = statement.executeQuery("SELECT * FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
-        Map<Integer, ReactionUtilities.MemoryFile> results = new HashMap<Integer, ReactionUtilities.MemoryFile>();
+        Map<Integer, List<ReactionUtilities.MemoryFile>> results = new HashMap<Integer, List<ReactionUtilities.MemoryFile>>();
+        double pos = 0;
+        long bytes = 0;
         while(resultSet.next()) {
-            if (progressListener.isCanceled()) return;
+            if (progressListener.isCanceled()) break;
+            progressListener.setMessage("downloaded "+formatSize(bytes, 2));
+            progressListener.setProgress(pos/count);
+            pos++;
             ReactionUtilities.MemoryFile memoryFile = new ReactionUtilities.MemoryFile(resultSet.getString("name"), resultSet.getBytes("data"));
+            bytes += memoryFile.getData().length;
             int id = resultSet.getInt("reaction");
-            results.put(id, memoryFile);
+            List<ReactionUtilities.MemoryFile> files = results.get(id);
+            if(files == null) {
+                files = new ArrayList<ReactionUtilities.MemoryFile>();
+                results.put(id, files);
+            }
+            files.add(memoryFile);
         }
-        CompositeProgressListener progress = new CompositeProgressListener(progressListener, results.size());
-        for (Map.Entry<Integer, ReactionUtilities.MemoryFile> result : results.entrySet()) {
-            progress.beginSubtask();
-            if (progress.isCanceled()) return;
+        resultSet.close();
+        if(progressListener.isCanceled()) {
+            return;
+        }
+        for (Map.Entry<Integer, List<ReactionUtilities.MemoryFile>> result : results.entrySet()) {
+           if (progressListener.isCanceled()) return;
             //todo: there might be multiple instances of the same reaction in this list, so we loop through everything each time.  maybe we could sort the list if this is too slow?
             for(CycleSequencingReaction r : reactions) {
                 if(r.getId() == result.getKey()) {
-                    ((CycleSequencingOptions)r.getOptions()).addChromats(Collections.singletonList(result.getValue()));
+                    ((CycleSequencingOptions)r.getOptions()).addChromats(result.getValue());
                 }
             }
         }

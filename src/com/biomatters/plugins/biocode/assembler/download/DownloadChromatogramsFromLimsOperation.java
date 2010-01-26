@@ -109,7 +109,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 }
             }
         }
-        progress.beginSubtask("Downloading Traces...");
+        progress.beginSubtask("Downloading Traces");
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, progress);
         } catch (SQLException e) {

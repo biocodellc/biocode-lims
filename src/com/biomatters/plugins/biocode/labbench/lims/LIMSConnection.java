@@ -76,11 +76,17 @@ public class LIMSConnection {
 
     public void disconnect() throws ConnectionException{
         if(connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                throw new ConnectionException(e);
-            }
+            Thread t = new Thread() {
+                public void run() {
+                    try {
+                        connection.close();
+                    } catch (SQLException e) {
+                        System.out.println(e);
+                        e.printStackTrace();
+                    }
+                }
+            };
+            t.start();
         }
     }
 
