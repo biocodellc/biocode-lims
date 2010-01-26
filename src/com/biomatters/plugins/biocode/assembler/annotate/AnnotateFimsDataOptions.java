@@ -15,6 +15,7 @@ import javax.swing.*;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -28,6 +29,8 @@ public class AnnotateFimsDataOptions extends Options {
     private final StringOption forwardPlateNameOption;
     private final StringOption reversePlateNameOption;
     private final ComboBoxOption<OptionValue> idType;
+    private final RadioOption useExistingPlates;
+    private final OptionValue[] useExistingValues;
 
     private static final OptionValue WELL_NUMBER = new OptionValue("wellNumber", "Well number");
     private static final OptionValue BARCODE = new OptionValue("barcode", "Barcode");
@@ -44,17 +47,18 @@ public class AnnotateFimsDataOptions extends Options {
 
     public AnnotateFimsDataOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
         super(AnnotateFimsDataOptions.class);
-        forwardPlateNameOption = addStringOption("forwardPlateName", "Forward Sequencing Plate Name:", "");
-        reversePlateNameOption = addStringOption("reversePlateName", "Reverse Sequencing Plate Name:", "");
+        Options useExistingOptions = new Options(this.getClass());
+        forwardPlateNameOption = useExistingOptions.addStringOption("forwardPlateName", "Forward Sequencing Plate Name:", "");
+        reversePlateNameOption = useExistingOptions.addStringOption("reversePlateName", "Reverse Sequencing Plate Name:", "");
         forwardPlateNameOption.setDescription("Name of cycle sequencing plate in LIMS for forward reads, must not be empty.");
         reversePlateNameOption.setDescription("Name of cycle sequencing plate in LIMS for reverse reads, may be the same as forward plate or empty.");
-        beginAlignHorizontally(null, false);
-        idType = addComboBoxOption("idType", "", new OptionValue[] {WELL_NUMBER, BARCODE}, WELL_NUMBER);
-        addLabel("is");
-        addCustomOption(namePartOption);
-        addLabel("part of name");
-        afterLabel = addLabel("");
-        addCustomOption(nameSeparatorOption);
+        useExistingOptions.beginAlignHorizontally(null, false);
+        idType = useExistingOptions.addComboBoxOption("idType", "", new OptionValue[] {WELL_NUMBER, BARCODE}, WELL_NUMBER);
+        useExistingOptions.addLabel("is");
+        useExistingOptions.addCustomOption(namePartOption);
+        useExistingOptions.addLabel("part of name");
+        afterLabel = useExistingOptions.addLabel("separated by");
+        useExistingOptions.addCustomOption(nameSeparatorOption);
         SimpleListener namePartListener = new SimpleListener() {
             public void objectChanged() {
                 updateOptions();
@@ -69,20 +73,31 @@ public class AnnotateFimsDataOptions extends Options {
         idType.addChangeListener(idTypeListener);
         idTypeListener.objectChanged();
         namePartListener.objectChanged();
-        endAlignHorizontally();
+        useExistingOptions.endAlignHorizontally();
 
         noReadDirectionValue = BiocodeUtilities.getNoReadDirectionValue(Arrays.asList(documents));
+
+        useExistingValues = new OptionValue[] {
+                new OptionValue("plateFromOptions", "Use the following plate/well"),
+                new OptionValue("existingPlate", "Use annotated plate/well", "Your sequences will have annotated plate and well values if you have run annotate with \nFIMS data on them before, or if you downloaded them directly from the database.")
+        };
+
+        addChildOptions("useExistingOptions", "", "", useExistingOptions);
+
+        useExistingPlates = addRadioOption("useExistingPlate", "", useExistingValues, useExistingValues[0], Alignment.VERTICAL_ALIGN);
+        useExistingPlates.addDependent(useExistingValues[0], useExistingOptions, true);
+        
     }
 
     private void updateOptions() {
         boolean requiresSeparator = namePartOption.getPart() != 0 || idType.getValue().equals(BARCODE);
         afterLabel.setEnabled(requiresSeparator);
         nameSeparatorOption.setEnabled(requiresSeparator);
-        if (idType.getValue().equals(BARCODE)) {
-            afterLabel.setValue(", separated by");
-        } else {
-            afterLabel.setValue(", after");
-        }
+//        if (idType.getValue().equals(BARCODE)) {
+//            afterLabel.setValue(", separated by");
+//        } else {
+//            afterLabel.setValue(", after");
+//        }
     }
 
     private String getForwardPlateName() {
@@ -106,6 +121,51 @@ public class AnnotateFimsDataOptions extends Options {
      * @return never null
      */
     public FimsData getFimsData(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException, ConnectionException {
+        if(useExistingPlates.getValue() == useExistingValues[0]) {
+            return getFIMSDataForGivenPlate(annotatedDocument);
+        }
+        else {
+            return getFIMSDataForPlateByDocumentFields(annotatedDocument);
+        }
+    }
+
+    private Map<String, Map<BiocodeUtilities.Well, WorkflowDocument>> plateCache = new HashMap<String, Map<BiocodeUtilities.Well, WorkflowDocument>>();
+
+    private FimsData getFIMSDataForPlateByDocumentFields(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException{
+        Object plateName = annotatedDocument.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
+        if(plateName == null) {
+            return null;
+        }
+        Map<BiocodeUtilities.Well, WorkflowDocument> workflowMap = null;
+        try {
+            workflowMap = getWorkflowMap(plateName.toString());
+        } catch (SQLException e) {
+            throw new DocumentOperationException("Failed to retrieve FIMS data for plate " + plateName+". "+e.getMessage());
+        }
+
+        if(workflowMap != null) {
+            Object wellName = annotatedDocument.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD);
+            if(wellName == null) { //this shouldn't happen - if we have the plate field we should have the well field.
+                return null;
+            }
+            BiocodeUtilities.Well well = new BiocodeUtilities.Well(wellName.toString());       
+            WorkflowDocument workflowDocument = workflowMap.get(well);
+            return new FimsData(workflowDocument, plateName.toString(), well);
+        }
+
+        return null;
+    }
+
+    private Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowMap(String plateName) throws SQLException, DocumentOperationException{
+        Map<BiocodeUtilities.Well, WorkflowDocument> workflowMap = plateCache.get(plateName);
+        if(workflowMap == null) {
+            workflowMap = BiocodeService.getInstance().getWorkflowsForCycleSequencingPlate(plateName);
+            plateCache.put(plateName, workflowMap);
+        }
+        return workflowMap;
+    }
+
+    private FimsData getFIMSDataForGivenPlate(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         if (idType.getValue() == BARCODE) {
 //            if (true) {
                 throw new DocumentOperationException("FIMS data cannot be retrieved using barcodes. Please contact Biomatters if you require this functionality.");
