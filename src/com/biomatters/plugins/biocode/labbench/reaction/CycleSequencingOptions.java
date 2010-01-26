@@ -395,7 +395,11 @@ public class CycleSequencingOptions extends ReactionOptions {
      * nullify the strong reference to trace documents to free up memory!.
      */
     public void purgeChromats() {
-        sequencesStrongReference.clear();
-        rawTracesStrongReference.clear();
+        if(sequencesStrongReference != null) {
+            sequencesStrongReference.clear();
+        }
+        if(rawTracesStrongReference != null) {
+            rawTracesStrongReference.clear();
+        }
     }
 }
