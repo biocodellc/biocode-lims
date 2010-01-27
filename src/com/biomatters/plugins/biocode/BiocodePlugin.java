@@ -119,6 +119,10 @@ public class BiocodePlugin extends GeneiousPlugin {
         URL biocodeIconS = BiocodePlugin.class.getResource("biocode16.png");
         URL biocodeIconL = BiocodePlugin.class.getResource("biocode24.png");
         putUrlIntoIconsMap(biocodeIconS, biocodeIconL, "biocode24.png");
+
+        URL cherryIconS = BiocodePlugin.class.getResource("cherry_16.png");
+        URL cherryIconL = BiocodePlugin.class.getResource("cherry_24.png");
+        putUrlIntoIconsMap(cherryIconS, cherryIconL, "cherry_24.png");
     }
 
     private static void putUrlIntoIconsMap(URL url, String key){

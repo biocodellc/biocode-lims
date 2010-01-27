@@ -7,6 +7,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ import jebl.util.ProgressListener;
 public class CherryPickingDocumentOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
-        return new GeneiousActionOptions("New Reactions from Failed Reactions").setInMainToolbar(true);
+        return new GeneiousActionOptions("Cherry picking", "Create new Reactions from Failed Reactions", BiocodePlugin.getIcons("cherry_24.png")).setInMainToolbar(true);
     }
 
     public String getHelp() {
