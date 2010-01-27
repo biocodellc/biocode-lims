@@ -2,9 +2,10 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -14,6 +15,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import jebl.util.ProgressListener;
+import org.virion.jam.util.SimpleListener;
+import org.jdom.Element;
 
 /**
  * Created by IntelliJ IDEA.
@@ -30,6 +33,11 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
     public String getHelp() {
         return null;
+    }
+
+    @Override
+    public boolean isDocumentGenerator() {
+        return false;
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
@@ -57,11 +65,114 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 new Options.OptionValue(Plate.Size.w384.name(), Plate.Size.w384.name())
         );
 
+        CherryPickingOptions cherryPickingConditionsOptions = new CherryPickingOptions(this.getClass());
+
         options.addRadioOption("plateSize", "Plate Size", sizeValues, sizeValues.get(0), Options.Alignment.VERTICAL_ALIGN);
 
-
+        Options.MultipleOptions multipleOptions = options.addMultipleOptions("conditions", cherryPickingConditionsOptions, false);
 
         return options;
+    }
+
+    public static class CherryPickingOptions extends Options {
+        static final Options.OptionValue[] cherryPickingConditions = new Options.OptionValue[] {
+                new Options.OptionValue("reactionState", "Reaction State"),
+                new Options.OptionValue("taxonomy", "Taxonomy"),
+                new Options.OptionValue("primer", "Primer")
+        };
+
+        static final OptionValue[] valueValues = new OptionValue[] {
+                ReactionOptions.NOT_RUN_VALUE,
+                ReactionOptions.PASSED_VALUE,
+                ReactionOptions.FAILED_VALUE
+        };
+
+        public CherryPickingOptions(Class sourceClass) {
+            super(sourceClass);
+            beginAlignHorizontally("", false);
+
+            final Options.ComboBoxOption<Options.OptionValue> conditionOption = addComboBoxOption("condition", "", cherryPickingConditions, cherryPickingConditions[0]);
+
+
+            final ComboBoxOption valueOption = addComboBoxOption("value", "is", valueValues, valueValues[0]);
+
+            final Options.StringOption valueOption2 = addStringOption("value2", "contains", "");
+
+            final PrimerOption valueOption3 = new PrimerOption("value3", "is");
+            addCustomOption(valueOption3);
+
+
+            endAlignHorizontally();
+            initListener();
+
+        }
+
+        public CherryPickingOptions(Element e) throws XMLSerializationException{
+            super(e);
+            initListener();
+        }
+
+        private void initListener() {
+            final Option conditionOption = getOption("condition");
+            SimpleListener listener = new SimpleListener() {
+                public void objectChanged() {
+                    boolean value1Visible = conditionOption.getValue().equals(cherryPickingConditions[0]);
+                    boolean value2Visible = conditionOption.getValue().equals(cherryPickingConditions[1]);
+
+                    Option valueOption = getOption("value");
+                    Option valueOption2 = getOption("value2");
+                    Option valueOption3 = getOption("value3");
+
+                    valueOption.setVisible(value1Visible);
+                    valueOption2.setVisible(value2Visible);
+                    valueOption3.setVisible(!value1Visible && !value2Visible);
+                }
+            };
+            listener.objectChanged();
+            conditionOption.addChangeListener(listener);
+        }
+
+        public Element toXML() {
+            return super.toXML();
+        }
+
+
+        public boolean reactionMatches(Reaction r) {
+            Option conditionOption = getOption("condition");
+            String value1 = getValueAsString("value");
+            String value2 = getValueAsString("value2");
+            OptionValue value3 = (OptionValue)getValue("value3");
+            if(conditionOption.getValue().equals(cherryPickingConditions[0])) { //reaction state
+                return value1.equals(r.getFieldValue(ReactionOptions.RUN_STATUS));
+            }
+            else if(conditionOption.getValue().equals(cherryPickingConditions[1])) { //taxonomy
+                FimsSample fimsSample = r.getFimsSample();
+                for(DocumentField field : fimsSample.getTaxonomyAttributes()) {
+                    Object value = fimsSample.getFimsAttributeValue(field.getCode());
+                    if(value != null && value.toString().toLowerCase().contains(value2.toLowerCase())) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else if(conditionOption.getValue().equals(cherryPickingConditions[2])) { //primer
+                if(r.getType() == Reaction.Type.PCR) { //two primers
+                    OptionValue primer1 = (OptionValue)r.getOptions().getValue(PCROptions.PRIMER_OPTION_ID);
+                    OptionValue primer2 = (OptionValue)r.getOptions().getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
+
+                    return primer1.equals(value3) || primer2.equals(value3);
+                }
+                else if(r.getType() == Reaction.Type.CycleSequencing) {
+                    OptionValue primer = (OptionValue)r.getOptions().getValue(CycleSequencingOptions.PRIMER_OPTION_ID);
+
+                    return primer.equals(value3);
+                }
+                return false;
+            }
+            return false;
+        }
+
+
     }
 
     @Override
@@ -71,7 +182,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             plateDocuments.add((PlateDocument)doc.getDocument());
         }
 
-        List<Reaction> failedReactions = getFailedReactions(plateDocuments);
+        List<Reaction> failedReactions = getFailedReactions(plateDocuments, options);
 
         if(failedReactions.size() == 0) {
             throw new DocumentOperationException("The selected plates do not contain any failed reactions");
@@ -84,7 +195,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         List<PlateViewer> plates = new ArrayList<PlateViewer>();
         for(int i=0; i < numberOfPlatesRequired; i++) {
-            PlateViewer plate = new PlateViewer(plateSize, failedReactions.get(0).getType());
+            PlateViewer plate = new PlateViewer(plateSize, Reaction.Type.Extraction);
             for (int j = 0; j < plate.getPlate().getReactions().length; j++) {
                 if(j+i*plateSize.numberOfReactions() > failedReactions.size()-1) {
                     break;
@@ -92,6 +203,11 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 Reaction newReaction = plate.getPlate().getReactions()[j];
                 Reaction oldReaction = failedReactions.get(i*plateSize.numberOfReactions()+j);
                 newReaction.setExtractionId(oldReaction.getExtractionId());
+                FimsSample fimsSample = oldReaction.getFimsSample();
+                if(fimsSample != null) {
+                    newReaction.getOptions().setValue("sampleId", fimsSample.getId());
+                }
+                //todo: copy across the actual fields of the extractions
             }
             plates.add(plate);
         }
@@ -101,12 +217,21 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         return null;
     }
 
-    List<Reaction> getFailedReactions(List<PlateDocument> plates) {
+    List<Reaction> getFailedReactions(List<PlateDocument> plates, Options options) {
         List<Reaction> reactions = new ArrayList<Reaction>();
         for(PlateDocument doc : plates) {
             Plate plate = doc.getPlate();
             for(Reaction r : plate.getReactions()) {
-                if(r.getOptions().getValue(ReactionOptions.RUN_STATUS) == ReactionOptions.FAILED_VALUE) {
+                if(r.isEmpty()) {
+                    continue;
+                }
+                boolean matches = true;
+                Options.MultipleOptions conditions = options.getMultipleOptions("conditions");
+                for(Options o : conditions.getValues()) {
+                    CherryPickingOptions cOptions = (CherryPickingOptions)o;
+                    matches = matches && cOptions.reactionMatches(r);
+                }
+                if(matches) {
                     reactions.add(r);
                 }
             }

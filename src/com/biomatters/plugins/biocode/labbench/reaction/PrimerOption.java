@@ -208,7 +208,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         return element;
     }
 
-    protected PrimerOption(String name, String label) {
+    public PrimerOption(String name, String label) {
         super(name, label, noValue, noValue[0]);
         init();
     }
