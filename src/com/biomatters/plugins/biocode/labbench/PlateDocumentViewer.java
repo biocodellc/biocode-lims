@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.GLabel;
+import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -443,7 +445,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         notes.setLineWrap(true);
         thermocyclePanel.add(notes, BorderLayout.SOUTH);
         //thermocyclePanel.setBorder(new OptionsPanel.RoundedLineBorder(plate.getThermocycle().getName(), false));
-        JPanel holderPanel = new JPanel(new FlowLayout());
+        JPanel holderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         holderPanel.setBorder(new OptionsPanel.RoundedLineBorder(plate.getThermocycle().getName(), false));
         holderPanel.setOpaque(false);
         holderPanel.add(thermocyclePanel);
@@ -525,7 +527,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         return cockatilPanel;
     }
 
-    private JPanel getGelImagePanel(GelImage gelImage, boolean scrollPaneAroundImage) {
+    private JPanel getGelImagePanel(GelImage gelImage) {
         final Image img = gelImage.getImage();
         final JPanel imagePanel = getImagePanel(img);
         JPanel holderPanel = new JPanel(new BorderLayout()){  //delegate mouse listeners to the image panel (it's what we want people to click on)
@@ -545,16 +547,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
         };
         holderPanel.setOpaque(false);
-        if(scrollPaneAroundImage) {
-            JScrollPane scroller = new JScrollPane(imagePanel);
-            scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-            scroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            scroller.setPreferredSize(new Dimension(1, imagePanel.getPreferredSize().height));
-            holderPanel.add(scroller, BorderLayout.CENTER);
-        }
-        else {
-            holderPanel.add(imagePanel, BorderLayout.CENTER);
-        }
+        holderPanel.add(imagePanel, BorderLayout.CENTER);
         JTextArea notes = new JTextArea(gelImage.getNotes());
         notes.setWrapStyleWord(true);
         notes.setLineWrap(true);
@@ -564,7 +557,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private JPanel getImagePanel(final Image img) {
-        return new JPanel(){
+        return new GPanel(){
             @Override
             public Dimension getPreferredSize() {
                 if (isPreferredSizeSet()) {
@@ -575,8 +568,8 @@ public class PlateDocumentViewer extends DocumentViewer{
 
             @Override
             protected void paintComponent(Graphics g) {
-                g.setColor(getBackground());
-                g.fillRect(0,0,getWidth(),getHeight());
+                //g.setColor(getBackground());
+                //g.fillRect(0,0,getWidth(),getHeight());
                 double scaleFactor = Double.MAX_VALUE;
 
                 scaleFactor = Math.min(scaleFactor, (double)getWidth()/img.getWidth(this));
@@ -725,7 +718,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
                 if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0 && (Boolean)options.getValue("printImages")) {
                     for(GelImage image : plateView.getPlate().getImages()) {
-                        JPanel imagePanel = getGelImagePanel(image, false);
+                        JPanel imagePanel = getGelImagePanel(image);
 
                         Dimension preferredSize = imagePanel.getPreferredSize();
                         if(preferredSize.height > availableHeight) {
@@ -765,20 +758,10 @@ public class PlateDocumentViewer extends DocumentViewer{
         panel.setOpaque(false);
 
         //the main plate
-        OptionsPanel mainPanel = new OptionsPanel(true, false);
+        final OptionsPanel mainPanel = new OptionsPanel(false, false);
         mainPanel.setOpaque(false);
         mainPanel.addDividerWithLabel("Plate");
-        JScrollPane jScrollPane = new JScrollPane(plateView){
-            @Override
-            public Dimension getPreferredSize() {
-                return new Dimension(1, super.getPreferredSize().height + (getHorizontalScrollBar() != null ? getHorizontalScrollBar().getHeight() : 0));//constrain the width to the panel width...
-            }
-        };
-        jScrollPane.setBorder(null);
-        jScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
-        jScrollPane.getVerticalScrollBar().setUnitIncrement(20);
-        jScrollPane.getHorizontalScrollBar().setUnitIncrement(20);
-        mainPanel.addSpanningComponent(jScrollPane);
+        mainPanel.addSpanningComponent(plateView);
 
         updateCocktailCount();
 
@@ -803,72 +786,119 @@ public class PlateDocumentViewer extends DocumentViewer{
             mainPanel.addSpanningComponent(thermocyclePanel);
         }
 
-        if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0) {
+        if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0 || (!plateView.getPlate().gelImagesHaveBeenDownloaded() && plateView.getPlate().getReactionType() != Reaction.Type.Extraction)) {
             mainPanel.addDividerWithLabel("GEL Images");
-            for(final GelImage image : plateView.getPlate().getImages()) {
-                final JPanel imagePanel = getGelImagePanel(image, true);
-                imagePanel.setToolTipText("Double-click to pop out");
-                imagePanel.addMouseListener(new MouseAdapter(){
-                    JFrame frame;
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        if(e.getClickCount() == 2) {
-                            final JPanel gelImagePanel = getImagePanel(image.getImage());
-                            final Dimension originalImageSize = new Dimension(gelImagePanel.getPreferredSize());
-                            if(frame == null || !frame.isShowing()) {
-                                frame = new JFrame();
-                                frame.setTitle("GEL Image");
-                                frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                                frame.setSize(640, 480);
-                                frame.setLocationRelativeTo(imagePanel);
-                                final AtomicReference<Double> zoom = new AtomicReference<Double>(1.0);
-                                final ZoomPanel zoomer = new ZoomPanel();
-                                zoomer.setZoomLevel(zoom.get());
-                                zoomer.setMaximumZoomLevel(4.0);
-                                frame.getContentPane().add(zoomer, BorderLayout.NORTH);
-                                JPanel holder = new JPanel(new FlowLayout());
-                                holder.add(gelImagePanel);
-                                final JScrollPane scroller = new JScrollPane(holder);
-                                frame.getContentPane().add(scroller, BorderLayout.CENTER);
-
-                                frame.addComponentListener(new ComponentAdapter(){
-                                    @Override
-                                    public void componentResized(ComponentEvent e) {
-                                        boolean isAtMinZoom = MachineAccuracy.same(zoomer.getZoomLevel(),zoomer.getMinZoomLevel());
-                                        double newMinZoom = Math.min(1.0, Math.min(scroller.getViewport().getSize().getWidth()/originalImageSize.getWidth(), scroller.getViewport().getSize().getHeight()/originalImageSize.getHeight()));
-                                        zoomer.setMinimumAndFitToScreenZoomLevel(newMinZoom);
-                                        if(isAtMinZoom) {
-                                            zoomer.setZoomLevel(newMinZoom);
-                                        }
-                                    }
-                                });
-
-                                zoomer.addChangeListener(new ChangeListener(){
-                                    public void stateChanged(ChangeEvent e) {
-                                        Dimension preferredSize = new Dimension((int) (originalImageSize.width * zoomer.getZoomLevel()), (int) (originalImageSize.height * zoomer.getZoomLevel()));
-                                        gelImagePanel.setPreferredSize(preferredSize);
-                                        gelImagePanel.invalidate();
-                                        scroller.invalidate();
-                                        scroller.validate();
-                                    }
-                                });
-
-                                frame.setVisible(true);
+            if(plateView.getPlate().gelImagesHaveBeenDownloaded()) {
+                addGelImages(mainPanel);
+            }
+            else {
+                final JButton button = new JButton("Download GEL Images");
+                final JPanel buttonHolder = new GPanel(new FlowLayout(FlowLayout.LEFT));
+                buttonHolder.add(button);
+                mainPanel.addSpanningComponent(buttonHolder);
+                button.addActionListener(new ActionListener(){
+                    public void actionPerformed(ActionEvent e) {
+                        final JLabel loadingLabel = new GLabel("Downloading images...", JLabel.CENTER);
+                        AnimatedIcon activityIcon = AnimatedIcon.getActivityIcon();
+                        loadingLabel.setIcon(activityIcon);
+                        activityIcon.startAnimation();
+                        buttonHolder.removeAll();
+                        buttonHolder.add(loadingLabel);
+                        buttonHolder.revalidate();
+                        Thread t = new Thread() {
+                            public void run() {
+                                try {
+                                    BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
+                                    buttonHolder.removeAll();
+                                    OptionsPanel gelPanel = new OptionsPanel();
+                                    gelPanel.setOpaque(false);
+                                    addGelImages(gelPanel);
+                                    buttonHolder.setLayout(new BorderLayout());
+                                    buttonHolder.add(gelPanel);
+                                    buttonHolder.revalidate();
+                                } catch (SQLException e1) {
+                                    buttonHolder.remove(loadingLabel);
+                                    buttonHolder.add(new GLabel("Could not load GEL images: "+e1.getMessage(), JLabel.CENTER));
+                                    buttonHolder.revalidate();
+                                }
                             }
-                            else {
-                                frame.requestFocus();
-                            }
-                        }
+                        };
+                        t.start();
                     }
                 });
-                mainPanel.addSpanningComponent(imagePanel);
             }
         }
 
         panel.setLayout(new BorderLayout());
-        panel.add(mainPanel, BorderLayout.CENTER);
+        JScrollPane scroller = new JScrollPane(mainPanel);
+        scroller.setOpaque(false);
+        scroller.getViewport().setOpaque(false);
+        scroller.getVerticalScrollBar().setUnitIncrement(20);
+        scroller.getHorizontalScrollBar().setUnitIncrement(20);
+        panel.add(scroller, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private void addGelImages(OptionsPanel mainPanel) {
+        for(final GelImage image : plateView.getPlate().getImages()) {
+            final JPanel imagePanel = getGelImagePanel(image);
+            imagePanel.setToolTipText("Double-click to pop out");
+            imagePanel.addMouseListener(new MouseAdapter(){
+                JFrame frame;
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if(e.getClickCount() == 2) {
+                        final JPanel gelImagePanel = getImagePanel(image.getImage());
+                        final Dimension originalImageSize = new Dimension(gelImagePanel.getPreferredSize());
+                        if(frame == null || !frame.isShowing()) {
+                            frame = new JFrame();
+                            frame.setTitle("GEL Image");
+                            frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                            frame.setSize(640, 480);
+                            frame.setLocationRelativeTo(imagePanel);
+                            final AtomicReference<Double> zoom = new AtomicReference<Double>(1.0);
+                            final ZoomPanel zoomer = new ZoomPanel();
+                            zoomer.setZoomLevel(zoom.get());
+                            zoomer.setMaximumZoomLevel(4.0);
+                            frame.getContentPane().add(zoomer, BorderLayout.NORTH);
+                            JPanel holder = new JPanel(new FlowLayout());
+                            holder.add(gelImagePanel);
+                            final JScrollPane scroller = new JScrollPane(holder);
+                            frame.getContentPane().add(scroller, BorderLayout.CENTER);
+
+                            frame.addComponentListener(new ComponentAdapter(){
+                                @Override
+                                public void componentResized(ComponentEvent e) {
+                                    boolean isAtMinZoom = MachineAccuracy.same(zoomer.getZoomLevel(),zoomer.getMinZoomLevel());
+                                    double newMinZoom = Math.min(1.0, Math.min(scroller.getViewport().getSize().getWidth()/originalImageSize.getWidth(), scroller.getViewport().getSize().getHeight()/originalImageSize.getHeight()));
+                                    zoomer.setMinimumAndFitToScreenZoomLevel(newMinZoom);
+                                    if(isAtMinZoom) {
+                                        zoomer.setZoomLevel(newMinZoom);
+                                    }
+                                }
+                            });
+
+                            zoomer.addChangeListener(new ChangeListener(){
+                                public void stateChanged(ChangeEvent e) {
+                                    Dimension preferredSize = new Dimension((int) (originalImageSize.width * zoomer.getZoomLevel()), (int) (originalImageSize.height * zoomer.getZoomLevel()));
+                                    gelImagePanel.setPreferredSize(preferredSize);
+                                    gelImagePanel.invalidate();
+                                    scroller.invalidate();
+                                    scroller.validate();
+                                }
+                            });
+
+                            frame.setVisible(true);
+                        }
+                        else {
+                            frame.requestFocus();
+                        }
+                    }
+                }
+            });
+            mainPanel.addSpanningComponent(imagePanel);
+        }
     }
 
 
