@@ -559,6 +559,31 @@ public class LIMSConnection {
         }
     }
 
+    public Map<String, ExtractionReaction> getExtractionReactions(List<Reaction> sourceReactions) throws SQLException{
+        if(sourceReactions == null || sourceReactions.size() == 0) {
+            return Collections.EMPTY_MAP;
+        }
+        StringBuilder sql = new StringBuilder("SELECT * FROM extraction WHERE (");
+        for (int i=0; i < sourceReactions.size(); i++) {
+            sql.append("extractionId=?");
+            if (i < sourceReactions.size() - 1) {
+                sql.append(" OR ");
+            }
+        }
+        sql.append(")");
+        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        for (int i=0; i < sourceReactions.size(); i++) {
+            statement.setString(i+1, sourceReactions.get(i).getExtractionId());
+        }
+        ResultSet resultSet = statement.executeQuery();
+        Map<String, ExtractionReaction> reactions = new HashMap<String, ExtractionReaction>();
+        while(resultSet.next()) {
+            ExtractionReaction reaction = new ExtractionReaction(resultSet);
+            reactions.put(reaction.getExtractionId(), reaction);
+        }
+        return reactions;
+    }
+
     private Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws SQLException{
         if(plateIds == null || plateIds.size() == 0) {
             return Collections.EMPTY_MAP;

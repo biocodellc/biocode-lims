@@ -13,10 +13,14 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
+import java.sql.SQLException;
 
 import jebl.util.ProgressListener;
 import org.virion.jam.util.SimpleListener;
 import org.jdom.Element;
+
+import javax.swing.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -28,7 +32,7 @@ import org.jdom.Element;
 public class CherryPickingDocumentOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
-        return new GeneiousActionOptions("Cherry picking", "Create new Reactions from Failed Reactions", BiocodePlugin.getIcons("cherry_24.png")).setInMainToolbar(true);
+        return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(),new GeneiousActionOptions("Cherry picking", "Create new Reactions from Failed Reactions", BiocodePlugin.getIcons("cherry_24.png")).setInMainToolbar(true));
     }
 
     public String getHelp() {
@@ -67,7 +71,10 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         CherryPickingOptions cherryPickingConditionsOptions = new CherryPickingOptions(this.getClass());
 
-        options.addRadioOption("plateSize", "Plate Size", sizeValues, sizeValues.get(0), Options.Alignment.VERTICAL_ALIGN);
+        options.addRadioOption("plateSize", "Plate Size", sizeValues, sizeValues.get(0), Options.Alignment.HORIZONTAL_ALIGN);
+
+        Options.Option<String, ? extends JComponent> label = options.addLabel("Geneious will select reactions that conform to the following:");
+        label.setSpanningComponent(true);
 
         Options.MultipleOptions multipleOptions = options.addMultipleOptions("conditions", cherryPickingConditionsOptions, false);
 
@@ -185,7 +192,14 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         List<Reaction> failedReactions = getFailedReactions(plateDocuments, options);
 
         if(failedReactions.size() == 0) {
-            throw new DocumentOperationException("The selected plates do not contain any failed reactions");
+            throw new DocumentOperationException("The selected plates do not contain any reactions that match your criteria");
+        }
+
+        Map<String, ExtractionReaction> newReactions = null;
+        try {
+            newReactions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(failedReactions);
+        } catch (SQLException e) {
+            throw new DocumentOperationException("Could not fetch existing extractions from database: "+e.getMessage());
         }
 
         Plate.Size plateSize = Plate.Size.valueOf(options.getValueAsString("plateSize"));
@@ -200,12 +214,18 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 if(j+i*plateSize.numberOfReactions() > failedReactions.size()-1) {
                     break;
                 }
-                Reaction newReaction = plate.getPlate().getReactions()[j];
-                Reaction oldReaction = failedReactions.get(i*plateSize.numberOfReactions()+j);
-                newReaction.setExtractionId(oldReaction.getExtractionId());
+                Reaction plateReaction = plate.getPlate().getReactions()[j];
+                Reaction oldReaction = failedReactions.get(i * plateSize.numberOfReactions() + j);
+                Reaction newReaction = newReactions.get(oldReaction.getExtractionId());
+                if(newReaction == null) {
+                    continue;
+                }
+                plateReaction.getOptions().valuesFromXML(newReaction.getOptions().valuesToXML("values"));
+                plateReaction.setId(newReaction.getId());
+                plateReaction.setWorkflow(newReaction.getWorkflow());
                 FimsSample fimsSample = oldReaction.getFimsSample();
                 if(fimsSample != null) {
-                    newReaction.getOptions().setValue("sampleId", fimsSample.getId());
+                    plateReaction.setFimsSample(newReaction.getFimsSample());
                 }
                 //todo: copy across the actual fields of the extractions
             }

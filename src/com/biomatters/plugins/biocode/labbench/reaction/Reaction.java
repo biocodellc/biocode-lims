@@ -78,7 +78,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         setFieldsToDisplay(getDefaultDisplayedFields());
     }
 
-    protected void setFimsSample(FimsSample sample) {
+    public void setFimsSample(FimsSample sample) {
         this.fimsSample = sample;
         fieldWidthCache = null;
     }
