@@ -6,7 +6,9 @@ import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.GeneiousActionOptions;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -95,23 +97,23 @@ public class PlateBulkEditor {
             }
         };
         toolbar.addAction(swapAction);
+        List<GeneiousAction> toolsActions = new ArrayList<GeneiousAction>();
         if(p.getReactionType() == Reaction.Type.Extraction && (p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384)) {
-            toolbar.addAction(new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", BiocodePlugin.getIcons("barcode_16.png")) {
+            GeneiousAction archivePlateAction = new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", IconUtilities.getIcons("database16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
                     List<JTextField> jTextFields = new ArrayList<JTextField>();
                     JPanel textFieldPanel = new JPanel();
 
                     final boolean size96 = p.getPlateSize() == Plate.Size.w96;
-                    if(size96) {
+                    if (size96) {
                         textFieldPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-                        textFieldPanel.setBorder(new EmptyBorder(0,0,0,0));
+                        textFieldPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
                         JTextField tf1 = new JTextField(15);
                         jTextFields.add(tf1);
                         textFieldPanel.add(tf1);
-                    }
-                    else {
-                        textFieldPanel.setLayout(new GridLayout(2,2,2,2));
+                    } else {
+                        textFieldPanel.setLayout(new GridLayout(2, 2, 2, 2));
                         JTextField tf1 = new GTextField(); //top left
                         JTextField tf2 = new GTextField(); //top right
                         JTextField tf3 = new GTextField(); //bottom left
@@ -130,12 +132,12 @@ public class PlateBulkEditor {
                     ButtonGroup group = new ButtonGroup();
                     group.add(extractionButton);
                     group.add(tissueButton);
-                    if(Dialogs.showInputDialog("", "Get FIMS plate", platePanel, tissueButton, extractionButton, new JLabel(" "), new JLabel("Enter the plate ID"+(size96 ? "" : "s")), textFieldPanel)) {
+                    if (Dialogs.showInputDialog("", "Get FIMS plate", platePanel, tissueButton, extractionButton, new JLabel(" "), new JLabel("Enter the plate ID" + (size96 ? "" : "s")), textFieldPanel)) {
                         final List<String> plateIds = new ArrayList<String>();
-                        for(JTextField field : jTextFields) {
+                        for (JTextField field : jTextFields) {
                             plateIds.add(field.getText());
                         }
-                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);                       
+                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
                         final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
 
 
@@ -143,11 +145,10 @@ public class PlateBulkEditor {
                             public void run() {
                                 try {
                                     List<Map<String, String>> tissueIds = new ArrayList<Map<String, String>>();
-                                    for(String plateId : plateIds) {
-                                        if(extractionButton.isSelected()) {
+                                    for (String plateId : plateIds) {
+                                        if (extractionButton.isSelected()) {
                                             tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsExtractionPlate(plateId));
-                                        }
-                                        else {
+                                        } else {
                                             tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateId));
                                         }
                                     }
@@ -159,23 +160,23 @@ public class PlateBulkEditor {
                                         }
                                     }
 
-                                    if(size96) {
+                                    if (size96) {
                                         populateWells96(tissueIds.get(0), tissueEditor, p, plateIds.get(0));
-                                    }
-                                    else {
+                                    } else {
                                         populateWells384(tissueIds, tissueEditor, p);
                                     }
 
                                 } catch (ConnectionException e1) {
                                     e1.printStackTrace();
-                                    Dialogs.showMessageDialog("Could not get Tissue IDs from the FIMS database: "+e1.getMessage());
+                                    Dialogs.showMessageDialog("Could not get Tissue IDs from the FIMS database: " + e1.getMessage());
                                 }
                             }
                         };
                         BiocodeService.block("Fetching tissue ID's from the FIMS database", tissueEditor, runnable);
                     }
                 }
-            });
+            };
+            toolsActions.add(archivePlateAction);
         }
         if(p.getReactionType() == Reaction.Type.Extraction) {
             GeneiousAction importBarcodes = new GeneiousAction("Import Extraction Barcodes", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
@@ -221,9 +222,8 @@ public class PlateBulkEditor {
                     }
                 }
             };
-            toolbar.addAction(importBarcodes);
-        }
-        if(p.getReactionType() == Reaction.Type.Extraction) {
+            toolsActions.add(importBarcodes);
+
             GeneiousAction autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
                 public void actionPerformed(ActionEvent e) {
                     DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
@@ -287,7 +287,11 @@ public class PlateBulkEditor {
                     }
                 }
             };
-            toolbar.addAction(autoGenerateIds);
+            toolsActions.add(autoGenerateIds);
+        }
+        if(toolsActions.size() > 0) {
+            GeneiousAction.SubMenu toolsAction = new GeneiousAction.SubMenu(new GeneiousActionOptions("Tools", "", IconUtilities.getIcons("tools16.png")), toolsActions);
+            toolbar.addAction(toolsAction);
         }
         GeneiousAction autodetectAction = null;
         if(fieldToCheck != null && newPlate) {
