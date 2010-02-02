@@ -70,7 +70,11 @@ public class ColoringPanel extends JPanel {
                 holderPanel.add(valuesPanel);
                 JScrollPane scrollPane = new JScrollPane(holderPanel, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
                 scrollPane.getVerticalScrollBar().setUnitIncrement(20);
-                add(scrollPane, BorderLayout.CENTER);
+                scrollPane.getViewport().setOpaque(false);
+                scrollPane.setOpaque(false);
+                if(allValues.size() > 0) {
+                    add(scrollPane, BorderLayout.CENTER);
+                }
                 validate();
                 invalidate();
                 validate();
@@ -151,7 +155,11 @@ public class ColoringPanel extends JPanel {
 
             setLayout(new BorderLayout());
             setOpaque(false);
-            JLabel label = new JLabel(value.toString());
+            String valueString = value.toString();
+            if(valueString.length() == 0) {
+                valueString = "<html><i>No value...</i></html>";
+            }
+            JLabel label = new JLabel(valueString);
             label.setPreferredSize(new Dimension(200, label.getPreferredSize().height));
 
             final JPanel colorPanel = new JPanel(){

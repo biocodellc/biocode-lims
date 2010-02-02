@@ -48,6 +48,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     private Map<Cocktail, Integer> cocktailCount;
     private final boolean isLocal;
     private JComponent container;
+    private JComponent thingInsideScrollPane;
 
     public PlateDocumentViewer(PlateDocument doc, AnnotatedPluginDocument aDoc, boolean local) {
         this.annotatedDocument = aDoc;
@@ -185,10 +186,10 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private void updatePanel() {
-        container.invalidate();
-        MultiPartDocumentViewerFactory.recursiveDoLayout(container);
-        container.invalidate();
-        container.validate();
+        if(thingInsideScrollPane != null) {
+            plateView.invalidate();
+            thingInsideScrollPane.revalidate();
+        }
     }
 
     private void updateThermocycleAction(boolean showDialogs){
@@ -831,6 +832,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
         panel.setLayout(new BorderLayout());
         JScrollPane scroller = new JScrollPane(mainPanel);
+        thingInsideScrollPane = mainPanel;
         scroller.setOpaque(false);
         scroller.getViewport().setOpaque(false);
         scroller.getVerticalScrollBar().setUnitIncrement(20);
