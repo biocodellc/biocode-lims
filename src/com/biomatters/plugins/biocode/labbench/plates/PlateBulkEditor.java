@@ -240,12 +240,21 @@ public class PlateBulkEditor {
 
                     List<String> tissueIds = getIdsToCheck(tissueEditor, p);
 
+                    boolean fillAllWells = false;
+                    if(tissueIds.size() > 1) {
+                        fillAllWells = Dialogs.showYesNoDialog("There are already extraction ID's on this plate. \nDo you want to overwrite these values (choosing no will generate extraction id's for nonempty wells that don't already have one)", "Extraction IDs already exist", tissueEditor, Dialogs.DialogIcon.QUESTION);
+                    }
+
                     try {
                         Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
                         for(int row=0; row < p.getRows(); row++) {
                             for(int col=0; col < p.getCols(); col++) {
+                                Object existingValue = extractionEditor.getValue(row, col);
                                 Object value = tissueEditor.getValue(row, col);
                                 Object barcodeValue = extractionBarcodeEditor.getValue(row, col);
+                                if(existingValue != null && existingValue.toString().length() > 0 && !fillAllWells) {
+                                    continue;
+                                }
                                 if(value != null && value.toString().trim().length() > 0) {
                                     int i = 1;
                                     while(extractionIds.contains(value+"."+i)) {
