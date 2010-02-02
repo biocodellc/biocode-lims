@@ -252,8 +252,11 @@ public class PlateBulkEditor {
                                 Object existingValue = extractionEditor.getValue(row, col);
                                 Object value = tissueEditor.getValue(row, col);
                                 Object barcodeValue = extractionBarcodeEditor.getValue(row, col);
-                                if(existingValue != null && existingValue.toString().length() > 0 && !fillAllWells) {
-                                    continue;
+                                if(existingValue != null && existingValue.toString().length() > 0) {
+                                    extractionIds.add(existingValue.toString());
+                                    if(!fillAllWells) {
+                                        continue;
+                                    }
                                 }
                                 if(value != null && value.toString().trim().length() > 0) {
                                     int i = 1;
