@@ -184,12 +184,38 @@ public class NewPlateOptions extends Options{
             if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w96 && plateSize != Plate.Size.w384) {
                 return "You can only create 384 well plates from a single 384 well or up to 4 96 well plate documents";
             }
-            if(getPlateSize() != Plate.Size.w96 && getPlateSize() != Plate.Size.w384) {
+            if(plateSize == null && getPlateSize() != null) {
+                return "You cannot create a "+getPlateSize()+" plate from a set of reactions.";
+            }
+            if((plateSize != null && getPlateSize() != null) && (getPlateSize() != Plate.Size.w96 && getPlateSize() != Plate.Size.w384)) {
                 return "You cannot create a "+getPlateSize()+" well plate from a "+plateSize+" well plate.";
+            }
+            if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w384) {
+                int docCount = 0;
+                for(int i=0; i < 4; i++) {
+                    AnnotatedPluginDocument doc = getPlateForQuadrant(documents, i);
+                    if(doc != null) {
+                        docCount++;
+                    }
+                }
+                if(docCount == 0) {
+                    return "Please select at least one quadrant";
+                }
             }
         }
 
         return super.verifyOptionsAreValid();
+    }
+
+    AnnotatedPluginDocument getPlateForQuadrant(AnnotatedPluginDocument[] documents, int i) {
+        AnnotatedPluginDocument doc = null;
+        Options.OptionValue docName = (Options.OptionValue)getValue("fromQuadrant.q" + (i + 1));
+        for(AnnotatedPluginDocument adoc : documents) {
+            if(adoc.getURN().toString().equals(docName.getName())){
+                doc = adoc;
+            }
+        }
+        return doc;
     }
 
     private List<Options.OptionValue> getDocumentOptionValues(AnnotatedPluginDocument[] docs) {

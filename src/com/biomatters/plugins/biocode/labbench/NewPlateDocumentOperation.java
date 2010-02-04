@@ -17,6 +17,9 @@ import jebl.util.ProgressListener;
 
 import java.util.List;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Map;
+import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -62,9 +65,11 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
         //analyse the documents
         Plate.Size pSize = null;
+        int reactionCount = 0;
         for(AnnotatedPluginDocument doc : documents) {
             PlateDocument plateDoc = (PlateDocument)doc.getDocument();
             Plate.Size size = plateDoc.getPlate().getPlateSize();
+            reactionCount = plateDoc.getPlate().getReactions().length;
             if(pSize != null && size != pSize) {
                 throw new DocumentOperationException("All plates must be of the same size");
             }
@@ -81,7 +86,14 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             plateViewer = new PlateViewer(sizeFromOptions, typeFromOptions);
         }
         else {
-            plateViewer = new PlateViewer((Integer)options.getValue("reactionNumber"), typeFromOptions);
+            Options.Option reactionNumberOption = options.getOption("reactionNumber");
+            if(reactionNumberOption.isEnabled()) {
+                plateViewer = new PlateViewer((Integer)reactionNumberOption.getValue(), typeFromOptions);
+            }
+            else {
+                plateViewer = new PlateViewer(reactionCount, typeFromOptions);    
+            }
+
         }
 
         if(fromExisting) {
@@ -100,16 +112,18 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             else if(sizeFromOptions == Plate.Size.w384) {
                 Plate[] plates = new Plate[4];
                 for (int i = 0; i < plates.length; i++) {
-                    Options.OptionValue docName = (Options.OptionValue)options.getValue("fromQuadrant.q" + (i + 1));
-                    for(AnnotatedPluginDocument doc : documents) {
-                        if(doc.getURN().toString().equals(docName.getName())){
-                            PlateDocument pDoc = (PlateDocument) doc.getDocument();
-                            plates[i] = pDoc.getPlate();
-                        }
+                    AnnotatedPluginDocument doc = null;
+                    doc = options.getPlateForQuadrant(documents, i);
+                    if(doc != null) {
+                        PlateDocument pDoc = (PlateDocument) doc.getDocument();
+                        plates[i] = pDoc.getPlate();
                     }
                 }
 
                 copy96To384(plates, editingPlate);
+            }
+            else if(sizeFromOptions == null) {
+                copyPlateToReactionList(plate, editingPlate);
             }
 
             progressListener.setMessage("Checking with the database");
@@ -127,7 +141,19 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         return null;
     }
 
-    private void copy96To384(Plate[] srcPlates, Plate destPlate) {
+    private void copyPlateToReactionList(Plate srcPlate, Plate destPlate) throws DocumentOperationException{
+        Reaction[] srcReactions = srcPlate.getReactions();
+        Reaction[] destReactions = destPlate.getReactions();
+
+        for(int i=0; i < Math.min(srcReactions.length, destReactions.length); i++) {
+            copyReaction(srcReactions[i], destReactions[i]);
+        }
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction) {
+            autodetectWorkflows(destPlate);
+        }
+    }
+
+    private void copy96To384(Plate[] srcPlates, Plate destPlate) throws DocumentOperationException{
         if(destPlate.getPlateSize() != Plate.Size.w384) {
             throw new IllegalArgumentException("The destination plate must be a 384 well plate");
         }
@@ -150,9 +176,12 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
+        if(srcPlates[0].getReactionType() == Reaction.Type.Extraction) {
+            autodetectWorkflows(destPlate);
+        }
     }
 
-    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant) {
+    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant) throws DocumentOperationException{
         quadrant = quadrant-1;//zero-index it
         Reaction[] srcReactions = srcPlate.getReactions();
         for(int i=0; i < srcReactions.length; i++) {
@@ -166,10 +195,13 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction) {
+            autodetectWorkflows(destPlate);
+        }
 
     }
 
-    static void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate) {
+    static void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate) throws DocumentOperationException{
         if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
             throw new IllegalArgumentException("Plates were of different sizes");
         }
@@ -182,6 +214,9 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         Reaction[] destReactions = destPlate.getReactions();
         for(int i=0; i < srcReactions.length; i++) {
             copyReaction(srcReactions[i], destReactions[i]);
+        }
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction) {
+            autodetectWorkflows(destPlate);
         }
     }
 
@@ -210,6 +245,32 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 assert false : e.getMessage(); //this shouldn't really happen since we're not actually writing anything out...
             }
 
+        }
+    }
+
+    static void autodetectWorkflows(Plate plate) throws DocumentOperationException {
+        List<String> extractionIds = new ArrayList<String>();
+        for(Reaction r : plate.getReactions()) {
+            extractionIds.add(r.getExtractionId());
+        }
+        try {
+            Map<String, String> idToWorkflow = BiocodeService.getInstance().getWorkflowIds(extractionIds, plate.getReactionType());
+            Map<String,Workflow> workflowIdToWorkflow = BiocodeService.getInstance().getWorkflows(idToWorkflow.values());
+            for(int row=0; row < plate.getRows(); row++) {
+                for(int col=0; col < plate.getCols(); col++) {
+                    Reaction reaction = plate.getReaction(row, col);
+                    String value = idToWorkflow.get(reaction.getExtractionId());
+                    if(value != null) {
+                        reaction.setWorkflow(workflowIdToWorkflow.get(value));
+                    }
+                    else {
+                        reaction.setWorkflow(null);
+                    }
+                }
+            }
+        }
+        catch(SQLException ex) {
+            throw new DocumentOperationException(ex.getMessage(), ex);
         }
     }
 }
