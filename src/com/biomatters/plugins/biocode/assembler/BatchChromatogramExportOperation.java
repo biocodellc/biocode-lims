@@ -80,7 +80,10 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
             if (NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
                 try {
                     File file = getExportFile(directory, annotatedDocument, abiExporter);
-                    abiExporter.export(file, new AnnotatedPluginDocument[] {annotatedDocument}, ProgressListener.EMPTY, null);
+                    AnnotatedPluginDocument[] documentArray = {annotatedDocument};
+                    Options exporterOptions = abiExporter.getOptions(documentArray);
+                    exporterOptions.setValue("exportMethod", "originalSource");
+                    abiExporter.export(file, documentArray, ProgressListener.EMPTY, exporterOptions);
                     formats.put(annotatedDocument, "ABI");
                     names.put(annotatedDocument, file.getName());
                     continue;
