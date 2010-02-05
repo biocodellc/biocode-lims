@@ -459,7 +459,6 @@ public class PlateBulkEditor {
             }
         }
         editorField.textViewFromValues();
-        p.setName(plateId);
     }
 
     private static void putMappedValuesIntoEditor(DocumentFieldEditor sourceEditor, DocumentFieldEditor destEditor, Map<String, String> mappedValues, Plate plate) {
