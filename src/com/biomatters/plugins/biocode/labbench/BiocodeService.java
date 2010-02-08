@@ -57,6 +57,7 @@ public class BiocodeService extends DatabaseService {
     private LIMSConnection limsConnection = new LIMSConnection();
     private String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     static Driver driver;
+    static Driver localDriver;
     private static BiocodeService instance = null;
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
@@ -80,6 +81,10 @@ public class BiocodeService extends DatabaseService {
             assert false : e.getMessage();
             loadEmptyCaches();
         }
+    }
+
+    public File getDataDirectory() {
+        return dataDirectory;
     }
 
     private void loadEmptyCaches() {
@@ -131,6 +136,14 @@ public class BiocodeService extends DatabaseService {
 
     public static Driver getDriver() {
         return driver;
+    }
+
+    public static Class getLocalDriverClass() {
+        return localDriver.getClass();
+    }
+
+    public static Driver getLocalDriver() {
+        return localDriver;
     }
 
 
@@ -310,6 +323,19 @@ public class BiocodeService extends DatabaseService {
                 error = "Could not instantiate MySQL driver class";
             } catch (ClassCastException e1) {
                 error = "MySQL Driver class exists, but is not an SQL driver";
+            }
+
+            try {
+                Class driverClass = loader.loadClass("org.sqlite.JDBC");
+                localDriver = (Driver) driverClass.newInstance();
+            } catch (ClassNotFoundException e1) {
+                error = "Could not find SQLite driver class";
+            } catch (IllegalAccessException e1) {
+                error = "Could not access SQLite driver class";
+            } catch (InstantiationException e1) {
+                error = "Could not instantiate SQLite driver class";
+            } catch (ClassCastException e1) {
+                error = "SQLite Driver class exists, but is not an SQL driver";
             }
 
             if (error != null) {
@@ -705,7 +731,7 @@ public class BiocodeService extends DatabaseService {
     }
 
     private List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws TransactionException {
-        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN (thermocycle, cycle, state) ON (thermocycleid = "+thermocycleIdentifierTable+".cycle AND thermocycle.id = cycle.thermocycleId AND cycle.id = state.cycleId);";
+        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON thermocycleid = "+thermocycleIdentifierTable+".cycle LEFT JOIN cycle ON thermocycle.id = cycle.thermocycleId LEFT JOIN state ON cycle.id = state.cycleId;";
 
 
         ResultSet resultSet = limsConnection.executeQuery(sql);

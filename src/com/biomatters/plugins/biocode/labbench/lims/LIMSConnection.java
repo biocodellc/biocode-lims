@@ -17,9 +17,11 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 
 import java.sql.*;
 import java.util.*;
+import java.io.File;
 
 /**
  * Created by IntelliJ IDEA.
@@ -32,23 +34,59 @@ public class LIMSConnection {
     private static final int EXPECTED_SERVER_VERSION = 4;
     Driver driver;
     Connection connection;
+    private LocalLIMS localLIMS;
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
 
     public Options getConnectionOptions() {
         Options LIMSOptions = new Options(this.getClass());
-        LIMSOptions.addStringOption("server", "Server Address", "");
-        LIMSOptions.addIntegerOption("port", "Port", 3306, 1, Integer.MAX_VALUE);
-        LIMSOptions.addStringOption("database", "Database Name", "labbench");
-        LIMSOptions.addStringOption("username", "Username", "");
-        LIMSOptions.addCustomOption(new PasswordOption("password", "Password", ""));
-        return LIMSOptions;
+
+        Options remoteOptions = new Options(this.getClass());
+        remoteOptions.addStringOption("server", "Server Address", "");
+        remoteOptions.addIntegerOption("port", "Port", 3306, 1, Integer.MAX_VALUE);
+        remoteOptions.addStringOption("database", "Database Name", "labbench");
+        remoteOptions.addStringOption("username", "Username", "");
+        remoteOptions.addCustomOption(new PasswordOption("password", "Password", ""));
+
+        LIMSOptions.addChildOptions("remote", "Remote Server", "Connect to a LIMS database on a remote MySQL server", remoteOptions);
+
+        Options localOptions = getLocalOptions();
+
+        LIMSOptions.addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);
+
+        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
+
+        return  LIMSOptions;
+    }
+
+    private Options getLocalOptions() {
+        if(localLIMS == null) {
+            localLIMS = new LocalLIMS();
+            localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
+        }
+        Options localOptions = localLIMS.getConnectionOptions();
+        
+        return localOptions;
     }
 
 
     public void connect(Options LIMSOptions) throws ConnectionException {
-        driver = BiocodeService.getDriver();
+        if(LIMSOptions.getValueAsString("connectionType").equals("remote")) {
+            driver = BiocodeService.getDriver();
+            connectRemote(LIMSOptions.getChildOptions().get("remote"));
+        }
+        else {
+            driver = BiocodeService.getLocalDriver();
+            connectLocal(LIMSOptions.getChildOptions().get("local"));
+        }
+    }
+
+    private void connectLocal(Options LIMSOptions) throws ConnectionException {
+        connection = localLIMS.connect(LIMSOptions);
+    }
+
+    private void connectRemote(Options LIMSOptions) throws ConnectionException {
         //connect to the LIMS
         Properties properties = new Properties();
         properties.put("user", LIMSOptions.getValueAsString("username"));
