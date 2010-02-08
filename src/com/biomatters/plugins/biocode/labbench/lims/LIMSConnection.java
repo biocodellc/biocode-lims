@@ -18,6 +18,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 
 import java.sql.*;
 import java.util.*;
@@ -53,9 +54,16 @@ public class LIMSConnection {
 
         Options localOptions = getLocalOptions();
 
-        LIMSOptions.addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);
+        boolean isJava6 = BiocodeUtilities.getJavaVersion() >= 6;
 
-        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Arrays.asList("local"), Options.PageChooserType.COMBO_BOX, false);
+        LIMSOptions.addChildOptions("local", "Local Database", isJava6 ? "Create and connect to LIMS databases on your local computer" : "Only available in Java 6 or later", localOptions);
+
+        ArrayList<String> disabledItems = new ArrayList<String>();
+        if(!isJava6) {
+            disabledItems.add("local");
+        }
+
+        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", disabledItems, Options.PageChooserType.COMBO_BOX, false);
 
         return  LIMSOptions;
     }

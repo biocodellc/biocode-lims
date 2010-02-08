@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.sql.DriverManager;
@@ -45,12 +47,19 @@ public class LocalLIMS {
     }
 
     private void update() {
-        dbNames = new ArrayList<String>();
+        Set<String> dbNamesSet = new LinkedHashSet<String>();
         for(File f : this.dataDirectory.listFiles()) {
             if(f.getName().endsWith(".db.log")) {
-                dbNames.add(f.getName().substring(0, f.getName().length()-7));
+                dbNamesSet.add(f.getName().substring(0, f.getName().length()-7));
+            }
+            else if(f.getName().endsWith(".db.properties")) {
+                dbNamesSet.add(f.getName().substring(0, f.getName().length()-14));
+            }
+            else if(f.getName().endsWith(".db.script")) {
+                dbNamesSet.add(f.getName().substring(0, f.getName().length()-10));
             }
         }
+        dbNames = new ArrayList<String>(dbNamesSet);
     }
 
     public Options getConnectionOptions() {
@@ -145,8 +154,9 @@ public class LocalLIMS {
             } catch (ClassNotFoundException e) {
                 e.printStackTrace(); //do nothing
             }
-            Connection connection = DriverManager.getConnection("jdbc:hsqldb:file:" + getDbPath(newDbName));
-            DatabaseScriptRunner.runScript(connection, connectionFile, true, true);
+            Connection connection = DriverManager.getConnection("jdbc:hsqldb:file:" + getDbPath(newDbName)+";shutdown=true");
+            DatabaseScriptRunner.runScript(connection, connectionFile, true, false);
+            connection.close();
         } catch (IOException e) {
             throw new SQLException(e.getMessage());
         } catch(URISyntaxException e) {
@@ -198,7 +208,7 @@ public class LocalLIMS {
             throw new ConnectionException("Could not create path to database "+dataDirectory.getAbsolutePath()+ "\\" + dbName + ".db", e);
         }
         try {
-            return DriverManager.getConnection("jdbc:hsqldb:file:"+path);
+            return DriverManager.getConnection("jdbc:hsqldb:file:"+path+";shutdown=true");
             //return DriverManager.getConnection("jdbc:sqlite:" + path);
         } catch (SQLException e) {
             e.printStackTrace();

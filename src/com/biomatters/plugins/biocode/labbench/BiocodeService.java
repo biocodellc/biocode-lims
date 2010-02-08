@@ -325,17 +325,19 @@ public class BiocodeService extends DatabaseService {
                 error = "MySQL Driver class exists, but is not an SQL driver";
             }
 
-            try {
-                Class driverClass = loader.loadClass("org.hsqldb.jdbc.JDBCDriver");
-                localDriver = (Driver) driverClass.newInstance();
-            } catch (ClassNotFoundException e1) {
-                error = "Could not find HSQL driver class";
-            } catch (IllegalAccessException e1) {
-                error = "Could not access HSQL driver class";
-            } catch (InstantiationException e1) {
-                error = "Could not instantiate HSQL driver class";
-            } catch (ClassCastException e1) {
-                error = "HSQL Driver class exists, but is not an SQL driver";
+            if(BiocodeUtilities.getJavaVersion() >= 6) {
+                try {
+                    Class driverClass = loader.loadClass("org.hsqldb.jdbc.JDBCDriver");
+                    localDriver = (Driver) driverClass.newInstance();
+                } catch (ClassNotFoundException e1) {
+                    error = "Could not find HSQL driver class";
+                } catch (IllegalAccessException e1) {
+                    error = "Could not access HSQL driver class";
+                } catch (InstantiationException e1) {
+                    error = "Could not instantiate HSQL driver class";
+                } catch (ClassCastException e1) {
+                    error = "HSQL Driver class exists, but is not an SQL driver";
+                }
             }
 
             if (error != null) {
@@ -732,8 +734,9 @@ public class BiocodeService extends DatabaseService {
 
     private List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws TransactionException {
         //String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN (thermocycle, cycle, state) ON (thermocycleid = "+thermocycleIdentifierTable+".cycle AND thermocycle.id = cycle.thermocycleId AND cycle.id = state.cycleId);";
-        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON thermocycle.id = "+thermocycleIdentifierTable+".cycle LEFT JOIN cycle ON thermocycle.id = cycle.thermocycleId LEFT JOIN state ON cycle.id = state.cycleId;";
+        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON (thermocycle.id = "+thermocycleIdentifierTable+".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
 //        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON thermocycle.id = "+thermocycleIdentifierTable+".cycle LEFT JOIN cycle ON thermocycle.id = cycle.thermocycleId LEFT JOIN state ON cycle.id = state.cycleId;";
+        System.out.println(sql);
 
 
         ResultSet resultSet = limsConnection.executeQuery(sql);
@@ -741,9 +744,21 @@ public class BiocodeService extends DatabaseService {
         List<Thermocycle> tCycles = new ArrayList<Thermocycle>();
 
         try {
-            while(resultSet.next()) {
-                tCycles.add(Thermocycle.fromSQL(resultSet));
-                resultSet.previous();
+            resultSet.next();
+            while(true) {
+                try {
+                    resultSet.getInt("thermocycle.id");
+                    Thermocycle thermocycle = Thermocycle.fromSQL(resultSet);
+                    if(thermocycle != null) {
+                    tCycles.add(thermocycle);
+                    }
+                    else {
+                        break;
+                    }
+                }
+                catch(SQLException e) {
+                    break;
+                }
             }
             resultSet.getStatement().close();
         }

@@ -71,7 +71,9 @@ public class Thermocycle implements XMLSerializable {
         Thermocycle tCycle = new Thermocycle(name, id);
         tCycle.setNotes(notes);
         Cycle currentCycle = null;
+        int count = 0;
         while(resultSet.getInt("thermocycle.id") == id) {
+            count++;
             int cycleId = resultSet.getInt("cycle.id");
             if(currentCycle == null || currentCycle.getId() != cycleId) {
                 int repeats = resultSet.getInt("cycle.repeats");
@@ -87,7 +89,7 @@ public class Thermocycle implements XMLSerializable {
                 break;
             }
         }
-        return tCycle;
+        return count > 0 ? tCycle : null;
     }
 
     /**

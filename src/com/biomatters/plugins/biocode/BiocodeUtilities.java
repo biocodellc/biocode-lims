@@ -73,6 +73,13 @@ public class BiocodeUtilities {
         }
     }
 
+    public static int getJavaVersion() {
+        String version = System.getProperty("java.version");
+        char minor = version.charAt(2);
+        char point = version.charAt(4);
+        return Integer.parseInt(""+minor);
+    }
+
     public static WorkflowDocument getMostRecentWorkflow(LIMSConnection limsConnection, FIMSConnection fimsConnection, Object tissueId) throws DocumentOperationException {
         WorkflowDocument mostRecent = null;
         try {
