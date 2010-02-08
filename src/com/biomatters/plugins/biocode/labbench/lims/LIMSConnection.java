@@ -55,7 +55,7 @@ public class LIMSConnection {
 
         LIMSOptions.addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);
 
-        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
+        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Arrays.asList("local"), Options.PageChooserType.COMBO_BOX, false);
 
         return  LIMSOptions;
     }
