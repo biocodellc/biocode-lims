@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -107,10 +108,10 @@ public class Thermocycle implements XMLSerializable {
         statement1.close();
 
         //get the id of the thermocycle record
-        PreparedStatement statement = conn.prepareStatement("SELECT last_insert_id() AS new_id;\n");
+        PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");;
         ResultSet resultSet = statement.executeQuery();
         resultSet.next();
-        int thermoId = resultSet.getInt("new_id");
+        int thermoId = resultSet.getInt(1);
         statement.close();
 
         for(Cycle cycle : getCycles()) {
@@ -120,10 +121,10 @@ public class Thermocycle implements XMLSerializable {
             statement2.close();
 
             //get the id of the cycle record
-            statement = conn.prepareStatement("SELECT last_insert_id() AS new_cycle_id;\n");
+            statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");;
             resultSet = statement.executeQuery();
             resultSet.next();
-            int cycleId = resultSet.getInt("new_cycle_id");
+            int cycleId = resultSet.getInt(1);
             statement.close();
 
             for(State state : cycle.getStates()) {

@@ -39,6 +39,7 @@ public class LIMSConnection {
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
+    private boolean isLocal;
 
     public Options getConnectionOptions() {
         Options LIMSOptions = new Options(this.getClass());
@@ -78,6 +79,10 @@ public class LIMSConnection {
         return localOptions;
     }
 
+    public boolean isLocal() {
+        return isLocal;
+    }
+
 
     public void connect(Options LIMSOptions) throws ConnectionException {
         if(LIMSOptions.getValueAsString("connectionType").equals("remote")) {
@@ -91,10 +96,12 @@ public class LIMSConnection {
     }
 
     private void connectLocal(Options LIMSOptions) throws ConnectionException {
+        isLocal = true;
         connection = localLIMS.connect(LIMSOptions);
     }
 
     private void connectRemote(Options LIMSOptions) throws ConnectionException {
+        isLocal = false;
         //connect to the LIMS
         Properties properties = new Properties();
         properties.put("user", LIMSOptions.getValueAsString("username"));
@@ -121,19 +128,24 @@ public class LIMSConnection {
     }
 
     public void disconnect() throws ConnectionException{
-        if(connection != null) {
-            Thread t = new Thread() {
-                public void run() {
-                    try {
-                        connection.close();
-                    } catch (SQLException e) {
-                        System.out.println(e);
-                        e.printStackTrace();
-                    }
-                }
-            };
-            t.start();
-        }
+//        if(connection != null) {
+//            Thread t = new Thread() {
+//                public void run() {
+//                    try {
+//                        connection.close();
+//                        isLocal = false;
+//                    } catch (SQLException e) {
+//                        System.out.println(e);
+//                        e.printStackTrace();
+//                    }
+//                }
+//            };
+//            t.start();
+//        }
+        //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
+        //now we remove all references to it and let the garbage collector close it when the queries have finished.
+        connection = null;
+        isLocal = false;
     }
 
     public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
@@ -289,7 +301,7 @@ public class LIMSConnection {
                     }
                     else if(String.class.isAssignableFrom(fclass)) {
                         QueryTermSurrounder ts = getQueryTermSurrounder(aq);
-                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().replace("\"", "")+ts.getAppend());
+                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().toLowerCase().replace("\"", "")+ts.getAppend());
                     }
                     else {
                         throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());
@@ -364,7 +376,11 @@ public class LIMSConnection {
             if(queries.get(i) instanceof AdvancedSearchQueryTerm) {
                 AdvancedSearchQueryTerm q = (AdvancedSearchQueryTerm)queries.get(i);
                 QueryTermSurrounder termSurrounder = getQueryTermSurrounder(q);
-                sql.append(" "+ q.getField().getCode() +" "+ termSurrounder.getJoin() +" ");
+                String code = q.getField().getCode();
+                if(String.class.isAssignableFrom(q.getField().getValueType())) {
+                    code = "LOWER("+code+")";
+                }
+                sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
 
                 Object[] queryValues = q.getValues();
                 for (int j = 0; j < queryValues.length; j++) {
@@ -467,7 +483,7 @@ public class LIMSConnection {
                     }
                     else if(String.class.isAssignableFrom(fclass)) {
                         QueryTermSurrounder ts = getQueryTermSurrounder(aq);
-                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().replace("\"", "")+ts.getAppend());
+                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().toLowerCase().replace("\"", "")+ts.getAppend());
                     }
                     else {
                         throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());

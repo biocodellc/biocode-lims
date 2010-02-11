@@ -344,7 +344,9 @@ public class Plate implements XMLSerializable {
         }
         r.setPlateId(this.id);
         r.setPlateName(getName());
-        reactions[r.getPosition()] = r;
+        if(reactions[r.getPosition()] == null || reactions[r.getPosition()].isEmpty()) {
+            reactions[r.getPosition()] = r;
+        }
         r.setLocationString(getWell(r.getPosition(), plateSize).toString());
         return r;
     }

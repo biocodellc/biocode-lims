@@ -511,7 +511,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, date=extraction.date WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
-                insertStatement.addBatch();
+                int insertCount = 0;
+                int updateCount = 0;
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
@@ -521,10 +522,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
+                            updateCount++;
                             statement.setInt(11, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
+                            insertCount++;
                         }
                         ReactionOptions options = reaction.getOptions();
                         statement.setString(1, options.getValueAsString("extractionMethod"));
@@ -537,7 +540,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setInt(8, reaction.getPlateId());
                         statement.setInt(9, reaction.getPosition());
                         statement.setString(10, options.getValueAsString("notes"));
-                        statement.execute();
+                        statement.addBatch();
+                        //statement.execute();
+                    }
+                    if(insertCount > 0) {
+                        insertStatement.executeBatch();
+                    }
+                    if(updateCount > 0) {
+                        updateStatement.executeBatch();
                     }
                 }
                 insertStatement.close();
@@ -612,7 +622,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         else {
                             statement.setInt(8, -1);
                         }
-                        statement.setBoolean(9, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true"));
+                        statement.setInt(9, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
                         statement.setString(10, options.getValueAsString("cleanupMethod"));
                         statement.setString(11, reaction.getExtractionId());
                         statement.setString(12, options.getValueAsString("notes"));
@@ -685,7 +695,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         else {
                             statement.setInt(9, -1);
                         }
-                        statement.setBoolean(10, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true"));
+                        statement.setInt(10, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
                         statement.setString(11, options.getValueAsString("cleanupMethod"));
                         statement.setString(12, reaction.getExtractionId());
                         statement.setString(13, options.getValueAsString("notes"));
@@ -713,7 +723,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                                 clearTracesStatement.execute();
                             }
                             else {
-                                ResultSet reactionIdResultSet = connection.createStatement().executeQuery("SELECT LAST_INSERT_ID()");
+                                ResultSet reactionIdResultSet = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? connection.createStatement().executeQuery("CALL IDENTITY();") : connection.createStatement().executeQuery("SELECT last_insert_id()");
                                 reactionIdResultSet.next();
                                 reactionId = reactionIdResultSet.getInt(1);
                             }

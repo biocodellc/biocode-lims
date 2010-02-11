@@ -115,7 +115,7 @@ public class ReactionUtilities {
         options.addCustomOption(nameSeperatorOption);
         options.endAlignHorizontally();
 
-        if(!Dialogs.showOptionsDialog(options, "Bulk add chromatograms", true, owner)){
+        if(!Dialogs.showOptionsDialog(options, "Bulk add traces", true, owner)){
             return false;    
         }
 
@@ -191,12 +191,15 @@ public class ReactionUtilities {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (SQLException e) {
+            e.printStackTrace();
             Dialogs.showMessageDialog("Error reading existing sequences from database: "+e.getMessage());
             return;
         } catch (IOException e) {
+            e.printStackTrace();
             Dialogs.showMessageDialog("Error writing temporary sequences to disk: "+e.getMessage());
             return;
         } catch (DocumentImportException e) {
+            e.printStackTrace();
             Dialogs.showMessageDialog("Error importing existing sequences: "+e.getMessage());
             return;
         }

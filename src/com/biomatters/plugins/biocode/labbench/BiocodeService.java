@@ -804,6 +804,7 @@ public class BiocodeService extends DatabaseService {
             connection.setAutoCommit(false);
             boolean autoCommit = connection.getAutoCommit();
             for(Thermocycle tCycle : cycles) {
+                connection.setAutoCommit(false);
                 Savepoint savepoint = connection.setSavepoint();
                 try {
                     int id = tCycle.toSQL(connection);
@@ -814,7 +815,9 @@ public class BiocodeService extends DatabaseService {
                     statement.close();
                 }
                 catch(SQLException ex) {
-                    connection.rollback(savepoint);
+                    try {
+                        connection.rollback(savepoint);
+                    } catch (SQLException e) {}
                     throw ex;
                 }
                 finally {
@@ -973,11 +976,11 @@ public class BiocodeService extends DatabaseService {
         List<Workflow> workflows = new ArrayList<Workflow>();
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
+        connection.setAutoCommit(false);     
         Savepoint savepoint = connection.setSavepoint();
         try {
-            connection.setAutoCommit(false);
             PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(extractionId) VALUES ((SELECT extraction.id from extraction where extraction.extractionId = ?))");
-            PreparedStatement statement2 = connection.prepareStatement("SELECT last_insert_id()");
+            PreparedStatement statement2 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
             PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = CONCAT('workflow', id) WHERE id=?");
             for(int i=0; i < extractionIds.size(); i++) {
                 if(progress != null) {
@@ -1017,11 +1020,11 @@ public class BiocodeService extends DatabaseService {
 
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
+        connection.setAutoCommit(false);      
         Savepoint savepoint = connection.setSavepoint();
         try {
             isPlateValid(plate, connection);
 
-            connection.setAutoCommit(false);
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
                 if(!reaction.isEmpty()) {
@@ -1050,7 +1053,7 @@ public class BiocodeService extends DatabaseService {
                 //create workflows if necessary
 
                 if(extractionIds.size() > 0) {
-                    List<Workflow> workflowList = BiocodeService.getInstance().createWorkflows(extractionWithoutWorkflowIds, progress);
+                    List<Workflow> workflowList = createWorkflows(extractionWithoutWorkflowIds, progress);
                     int workflowIndex = 0;
                     for(Reaction reaction : plate.getReactions()) {
                         if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getOptions().getValueAsString("sampleId").length() > 0) {
@@ -1062,7 +1065,9 @@ public class BiocodeService extends DatabaseService {
             }
             if(!autoCommit)
                 connection.commit();
-            connection.releaseSavepoint(savepoint);
+            if(!limsConnection.isLocal()) {
+                connection.releaseSavepoint(savepoint);
+            }
         } catch(BadDataException e) {
             try {
                 connection.rollback(savepoint);
@@ -1234,10 +1239,11 @@ public class BiocodeService extends DatabaseService {
         progress.setMessage("Retrieving existing workflows");
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
+        connection.setAutoCommit(false);
         Savepoint savepoint = connection.setSavepoint();
         int originalPlateId = plate.getId();
         try {
-            connection.setAutoCommit(false);
+
 
             //set workflows for reactions that have id's
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
@@ -1325,7 +1331,9 @@ public class BiocodeService extends DatabaseService {
             createOrUpdatePlate(plate, progress);
             if(!autoCommit)
                 connection.commit();
-            connection.releaseSavepoint(savepoint);
+            if(!limsConnection.isLocal()) {
+                connection.releaseSavepoint(savepoint);
+            }
         } catch(BadDataException e) {
             plate.setId(originalPlateId);
             try {
@@ -1350,7 +1358,7 @@ public class BiocodeService extends DatabaseService {
         statement.execute();
         statement.close();
         if(plate.getId() < 0) {
-            PreparedStatement statement1 = connection.prepareStatement("SELECT last_insert_id()");
+            PreparedStatement statement1 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");;
             ResultSet resultSet = statement1.executeQuery();
             resultSet.next();
             int plateId = resultSet.getInt(1);

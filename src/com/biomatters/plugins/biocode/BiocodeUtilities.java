@@ -132,10 +132,12 @@ public class BiocodeUtilities {
         }
 
         Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement(java.sql.ResultSet.TYPE_FORWARD_ONLY, java.sql.ResultSet.CONCUR_READ_ONLY);
-        statement.setFetchSize(Integer.MIN_VALUE);       
-        ResultSet countResultSet = statement.executeQuery("SELECT count(*) AS count FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
+        if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+            statement.setFetchSize(Integer.MIN_VALUE);
+        }
+        ResultSet countResultSet = statement.executeQuery("SELECT COUNT(*) FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
         countResultSet.next();
-        int count = countResultSet.getInt("count");
+        int count = countResultSet.getInt(1);
         countResultSet.close();
         ResultSet resultSet = statement.executeQuery("SELECT * FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
         Map<Integer, List<ReactionUtilities.MemoryFile>> results = new HashMap<Integer, List<ReactionUtilities.MemoryFile>>();

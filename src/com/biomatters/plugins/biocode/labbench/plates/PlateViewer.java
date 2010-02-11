@@ -295,6 +295,7 @@ public class PlateViewer extends JPanel {
                                     progress.setVisible(false);
                                     return;
                                 } catch(SQLException ex){
+                                    ex.printStackTrace();
                                     Dialogs.showMessageDialog("There was an error saving your plate: "+ex.getMessage());
                                     progress.setVisible(false);
                                     return;
