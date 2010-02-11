@@ -215,7 +215,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         for(int i=0; i < srcReactions.length; i++) {
             copyReaction(srcReactions[i], destReactions[i]);
         }
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction) {
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
             autodetectWorkflows(destPlate);
         }
     }
