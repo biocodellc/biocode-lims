@@ -89,14 +89,17 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     public void disconnect() throws ConnectionException{
-        if(connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                throw new ConnectionException(e);
-            }
-            connection = null;
-        }
+//        if(connection != null) {
+//            try {
+//                connection.close();
+//            } catch (SQLException e) {
+//                throw new ConnectionException(e);
+//            }
+//            connection = null;
+//        }
+        //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
+        //now we remove all references to it and let the garbage collector close it when the queries have finished.
+        connection = null;
     }
 
     public List<DocumentField> getTaxonomyAttributes() {
