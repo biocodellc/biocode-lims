@@ -14,6 +14,7 @@ import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
@@ -880,6 +881,34 @@ public class ReactionUtilities {
 
     private static ColoringPanel getColoringPanel(final Vector<DocumentField> availableFieldsVector, List<Reaction> reactions) {
         return new ColoringPanel(availableFieldsVector, reactions);
+    }
+
+    public static void copyReaction(Reaction srcReaction, Reaction destReaction) {
+        destReaction.setExtractionId(srcReaction.getExtractionId());
+        destReaction.setWorkflow(srcReaction.getWorkflow());
+        if(destReaction.getType() == Reaction.Type.Extraction) {
+            FimsSample fimsSample = srcReaction.getFimsSample();
+            if(fimsSample != null) {
+                ((ExtractionReaction) destReaction).setTissueId(fimsSample.getId());
+            }
+        }
+        if(destReaction.getType() == srcReaction.getType()) { //copy everything
+            ReactionOptions op;
+            try {
+                //clone it...
+                op = XMLSerializer.classFromXML(XMLSerializer.classToXML("Options", srcReaction.getOptions()), ReactionOptions.class);
+                destReaction.setOptions(op);
+                if(srcReaction.getType() == Reaction.Type.Extraction) { //hack for extractions...
+                    ReactionOptions destOptions = destReaction.getOptions();
+                    destOptions.setValue("parentExtraction", destOptions.getValue("extractionId"));
+                    destOptions.setValue("extractionId", "");
+                }
+            } catch (XMLSerializationException e) {
+                e.printStackTrace();
+                assert false : e.getMessage(); //this shouldn't really happen since we're not actually writing anything out...
+            }
+
+        }
     }
 
     public static class MemoryFile{

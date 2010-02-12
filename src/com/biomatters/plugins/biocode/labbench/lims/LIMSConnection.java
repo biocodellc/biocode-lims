@@ -621,7 +621,7 @@ public class LIMSConnection {
         }
     }
 
-    public Map<String, ExtractionReaction> getExtractionReactions(List<Reaction> sourceReactions) throws SQLException{
+    public Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws SQLException{
         if(sourceReactions == null || sourceReactions.size() == 0) {
             return Collections.EMPTY_MAP;
         }
@@ -638,7 +638,7 @@ public class LIMSConnection {
             statement.setString(i+1, sourceReactions.get(i).getExtractionId());
         }
         ResultSet resultSet = statement.executeQuery();
-        Map<String, ExtractionReaction> reactions = new HashMap<String, ExtractionReaction>();
+        Map<String, Reaction> reactions = new HashMap<String, Reaction>();
         while(resultSet.next()) {
             ExtractionReaction reaction = new ExtractionReaction(resultSet);
             reactions.put(reaction.getExtractionId(), reaction);

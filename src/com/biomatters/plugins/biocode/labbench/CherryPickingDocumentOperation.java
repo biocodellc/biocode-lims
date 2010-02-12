@@ -10,10 +10,7 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
+import java.util.*;
 import java.sql.SQLException;
 
 import jebl.util.ProgressListener;
@@ -72,6 +69,14 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         CherryPickingOptions cherryPickingConditionsOptions = new CherryPickingOptions(this.getClass());
 
         options.addRadioOption("plateSize", "Plate Size", sizeValues, sizeValues.get(0), Options.Alignment.HORIZONTAL_ALIGN);
+
+        Options.OptionValue[] plateTypeValues = new Options.OptionValue[] {
+                new Options.OptionValue(Reaction.Type.Extraction.name(), "Extraction"),
+                new Options.OptionValue(Reaction.Type.PCR.name(), "PCR"),
+                new Options.OptionValue(Reaction.Type.CycleSequencing.name(), "Cycle Sequencing")
+        };
+
+        options.addComboBoxOption("plateType", "Plate Type", plateTypeValues, plateTypeValues[0]);
 
         Options.Option<String, ? extends JComponent> label = options.addLabel("Geneious will select reactions that conform to the following:");
         label.setSpanningComponent(true);
@@ -195,11 +200,22 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             throw new DocumentOperationException("The selected plates do not contain any reactions that match your criteria");
         }
 
-        Map<String, ExtractionReaction> newReactions = null;
-        try {
-            newReactions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(failedReactions);
-        } catch (SQLException e) {
-            throw new DocumentOperationException("Could not fetch existing extractions from database: "+e.getMessage());
+        Map<String, Reaction> newReactions = null;
+        String reactionTypeString = options.getValueAsString("plateType");
+        Reaction.Type plateType = Reaction.Type.valueOf(reactionTypeString);
+        if(plateType == null) {
+            throw new DocumentOperationException("There is no reaction type '"+reactionTypeString+"'");
+        }
+
+        if(plateType == Reaction.Type.Extraction) { //if it's an extraction we want to move the existing extractions to this plate, not make new ones...
+            try {
+                newReactions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(failedReactions);
+            } catch (SQLException e) {
+                throw new DocumentOperationException("Could not fetch existing extractions from database: "+e.getMessage());
+            }
+        }
+        else {
+            newReactions = getNewReactions(failedReactions, plateType);
         }
 
         Plate.Size plateSize = Plate.Size.valueOf(options.getValueAsString("plateSize"));
@@ -235,6 +251,19 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             viewer.displayInFrame(true, GuiUtilities.getMainFrame());
         }
         return null;
+    }
+
+    Map<String, Reaction> getNewReactions(List<Reaction> failedReactions, Reaction.Type reactionType) {
+        Map<String, Reaction> newReactions = new HashMap<String, Reaction>();
+
+        for(Reaction oldReaction : failedReactions) {
+            Reaction newReaction = Reaction.getNewReaction(reactionType);
+            ReactionUtilities.copyReaction(oldReaction, newReaction);
+            newReactions.put(newReaction.getExtractionId(), newReaction);
+        }
+
+        return newReactions;
+
     }
 
     List<Reaction> getFailedReactions(List<PlateDocument> plates, Options options) {
