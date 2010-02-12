@@ -18,7 +18,8 @@ public class AddAssemblyResultsToLimsOptions extends Options {
     public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
 //        boolean isAlignmentSelected = SequenceAlignmentDocument.class.isAssignableFrom(documents[0].getDocumentClass());
 
-        addChromatogramsOption = addBooleanOption("attachChromatograms", "Add chromatograms to LIMS", true);
+        addChromatogramsOption = addBooleanOption("attachChromatograms", "Add chromatograms to LIMS", false);
+        addLabel("If you downloaded your chromatograms from the LIMS, you do not need to add them again.");  
         addChromatogramsOption.setDescription("<html>If assemblies are selected and they reference original chromatograms then the<br>" +
                                                     "chromatograms will be attached to the appropriate cycle sequencing entry in the LIMS</html>");
 
