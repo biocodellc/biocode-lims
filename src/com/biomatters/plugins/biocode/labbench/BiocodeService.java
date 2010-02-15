@@ -325,19 +325,17 @@ public class BiocodeService extends DatabaseService {
                 error = "MySQL Driver class exists, but is not an SQL driver";
             }
 
-            if(BiocodeUtilities.getJavaVersion() >= 6) {
-                try {
-                    Class driverClass = loader.loadClass("org.hsqldb.jdbc.JDBCDriver");
-                    localDriver = (Driver) driverClass.newInstance();
-                } catch (ClassNotFoundException e1) {
-                    error = "Could not find HSQL driver class";
-                } catch (IllegalAccessException e1) {
-                    error = "Could not access HSQL driver class";
-                } catch (InstantiationException e1) {
-                    error = "Could not instantiate HSQL driver class";
-                } catch (ClassCastException e1) {
-                    error = "HSQL Driver class exists, but is not an SQL driver";
-                }
+            try {
+                Class driverClass = loader.loadClass("org.hsqldb.jdbc.JDBCDriver");
+                localDriver = (Driver) driverClass.newInstance();
+            } catch (ClassNotFoundException e1) {
+                error = "Could not find HSQL driver class";
+            } catch (IllegalAccessException e1) {
+                error = "Could not access HSQL driver class";
+            } catch (InstantiationException e1) {
+                error = "Could not instantiate HSQL driver class";
+            } catch (ClassCastException e1) {
+                error = "HSQL Driver class exists, but is not an SQL driver";
             }
 
             if (error != null) {

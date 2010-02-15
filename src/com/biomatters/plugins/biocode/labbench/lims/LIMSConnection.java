@@ -55,16 +55,11 @@ public class LIMSConnection {
 
         Options localOptions = getLocalOptions();
 
-        boolean isJava6 = BiocodeUtilities.getJavaVersion() >= 6;
 
-        LIMSOptions.addChildOptions("local", "Local Database", isJava6 ? "Create and connect to LIMS databases on your local computer" : "Only available in Java 6 or later", localOptions);
+        LIMSOptions.addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);
 
-        ArrayList<String> disabledItems = new ArrayList<String>();
-        if(!isJava6) {
-            disabledItems.add("local");
-        }
 
-        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", disabledItems, Options.PageChooserType.COMBO_BOX, false);
+        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
 
         return  LIMSOptions;
     }
