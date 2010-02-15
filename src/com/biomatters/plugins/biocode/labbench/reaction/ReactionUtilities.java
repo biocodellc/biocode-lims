@@ -508,7 +508,7 @@ public class ReactionUtilities {
                 continue;
             }
 
-            if(!(option instanceof Options.LabelOption) && !(option instanceof ButtonOption)) {
+            if(!(option instanceof Options.LabelOption) && !(option instanceof ButtonOption || option instanceof Options.ButtonOption)) {
                 if(!creating && options.fieldIsFinal(option.getName())) {
                     option.setEnabled(false);
                     if(multiOptions) {//just don't display the option if we're editing multiple reactions
