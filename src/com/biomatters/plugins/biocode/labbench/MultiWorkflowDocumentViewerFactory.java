@@ -26,7 +26,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
     }
 
     public String getHelp() {
-        return null;
+        return "This view displays a summary of the most recent reactions of each type run in the selected workflows.  Green text represents a passed reaction, while red text represents a failed reaction.";
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {

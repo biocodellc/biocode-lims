@@ -34,7 +34,7 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
     }
 
     public String getHelp() {
-        return null;
+        return "An overview of all "+type.toString()+" reactions performed on the selected workflows.  The table shows all primers run in the reactions.";
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
