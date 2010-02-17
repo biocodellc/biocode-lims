@@ -70,7 +70,7 @@ public class ColoringPanel extends JPanel {
                     valuesPanel.add(cp);
                     colorPanels.add(cp);
                 }
-                if(originalColorer != null && originalColorer.getDocumentField() != null && originalColorer.getDocumentField().getCode().equals(selectedDocumentField.getCode())) {
+                if(originalColorer != null && selectedDocumentField != null && originalColorer.getDocumentField() != null && originalColorer.getDocumentField().getCode().equals(selectedDocumentField.getCode())) {
                     for(ColorPanel panel : colorPanels) {
                         Color newValue = originalColorer.getColorMap().get(panel.getValue().toString());
                         if(newValue == null) newValue = Color.white;
@@ -152,7 +152,7 @@ public class ColoringPanel extends JPanel {
 
         //if we're using the same document field as the default colourer, make sure all possible values are accounted for...
         Reaction.BackgroundColorer defaultColorer = reactions.get(0).getBackgroundColorer();
-        if(defaultColorer.getDocumentField() != null && selectedDocumentField.getCode().equals(defaultColorer.getDocumentField().getCode())) {
+        if(defaultColorer.getDocumentField() != null && selectedDocumentField != null && selectedDocumentField.getCode().equals(defaultColorer.getDocumentField().getCode())) {
             for(Map.Entry<String, Color> entry : defaultColorer.getColorMap().entrySet()) {
                 if(newColorer.getColorMap().get(entry.getKey()) == null) {
                     newColorer.getColorMap().put(entry.getKey(), entry.getValue());
