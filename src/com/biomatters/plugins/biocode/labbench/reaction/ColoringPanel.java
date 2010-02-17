@@ -38,6 +38,9 @@ public class ColoringPanel extends JPanel {
             cbValues.add(new ReactionUtilities.DocumentFieldWrapper(field));
         }
         final GComboBox comboBox = new GComboBox(cbValues);
+
+        
+        final Reaction.BackgroundColorer defaultColorer = reactions1.get(0).getDefaultBackgroundColorer();
         
 
         JPanel cbPanel = new JPanel();
@@ -57,7 +60,11 @@ public class ColoringPanel extends JPanel {
                 valuesPanel.setOpaque(false);
                 colorPanels = new ArrayList<ColorPanel>();
                 for(Object o : allValues) {
-                    ColorPanel cp = new ColorPanel(o, Reaction.BackgroundColorer.getRandomColor());
+                    Color color = Reaction.BackgroundColorer.getRandomColor();
+                    if(selectedDocumentField.equals(defaultColorer.getDocumentField())) {
+                        color = defaultColorer.getColor(o);
+                    }
+                    ColorPanel cp = new ColorPanel(o, color);
                     cp.setOpaque(false);
                     valuesPanel.add(cp);
                     colorPanels.add(cp);
@@ -141,7 +148,19 @@ public class ColoringPanel extends JPanel {
             }
         }
 
-        return new Reaction.BackgroundColorer(selectedDocumentField, colors);
+        Reaction.BackgroundColorer newColorer = new Reaction.BackgroundColorer(selectedDocumentField, colors);
+
+        //if we're using the same document field as the default colourer, make sure all possible values are accounted for...
+        Reaction.BackgroundColorer defaultColorer = reactions.get(0).getBackgroundColorer();
+        if(defaultColorer.getDocumentField() != null && selectedDocumentField.getCode().equals(defaultColorer.getDocumentField().getCode())) {
+            for(Map.Entry<String, Color> entry : defaultColorer.getColorMap().entrySet()) {
+                if(newColorer.getColorMap().get(entry.getKey()) == null) {
+                    newColorer.getColorMap().put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        return newColorer;
     }
 
 
