@@ -47,7 +47,7 @@ public class NewPlateOptions extends Options{
         }
 
         final Options.OptionValue[] plateValues = new Options.OptionValue[] {
-                new Options.OptionValue("individualReactions", "Individual Reactions"),
+                new Options.OptionValue("individualReactions", ""),
                 new Options.OptionValue("48Plate", "48 well plate"),
                 new Options.OptionValue("96Plate", "96 well plate"),
                 new Options.OptionValue("384Plate", "384 well plate")
@@ -69,8 +69,10 @@ public class NewPlateOptions extends Options{
         final Options.RadioOption<Options.OptionValue> plateOption = addRadioOption("plateType", "", plateValues, plateValues[2], Options.Alignment.VERTICAL_ALIGN);
 
 
-        final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "Number of reactions", 1, 1, 26);
+        final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, 26);
         plateOption.addDependent(plateValues[0], reactionNumber, true);
+        plateOption.addDependent(plateValues[0], addLabel(" individual reactions"), true);
+        plateOption.setDependentPosition(RadioOption.DependentPosition.RIGHT);
 
         final Options quadrantOptions = new Options(this.getClass());
         final QuadrantOption quadrantOption = new QuadrantOption("value", "", 1);

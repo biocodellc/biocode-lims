@@ -25,6 +25,7 @@ public class ColoringPanel extends JPanel {
     final List<Reaction> reactions;
     private List<ColorPanel> colorPanels;
     private DocumentField selectedDocumentField;
+    private Reaction.BackgroundColorer originalColorer;
     private static final int MAX_PREFERRED_HEIGHT = 220;
 
     public ColoringPanel(Vector<DocumentField> availableFieldsVector, List<Reaction> reactions1) {
@@ -41,7 +42,7 @@ public class ColoringPanel extends JPanel {
 
         
         final Reaction.BackgroundColorer defaultColorer = reactions1.get(0).getDefaultBackgroundColorer();
-        
+        originalColorer = getBackgroundColorerForReactions(reactions);
 
         JPanel cbPanel = new JPanel();
         cbPanel.setOpaque(false);
@@ -61,13 +62,20 @@ public class ColoringPanel extends JPanel {
                 colorPanels = new ArrayList<ColorPanel>();
                 for(Object o : allValues) {
                     Color color = Reaction.BackgroundColorer.getRandomColor();
-                    if(selectedDocumentField.equals(defaultColorer.getDocumentField())) {
+                    if(defaultColorer.getDocumentField() != null && selectedDocumentField.getCode().equals(defaultColorer.getDocumentField().getCode())) {
                         color = defaultColorer.getColor(o);
                     }
                     ColorPanel cp = new ColorPanel(o, color);
                     cp.setOpaque(false);
                     valuesPanel.add(cp);
                     colorPanels.add(cp);
+                }
+                if(originalColorer != null && originalColorer.getDocumentField() != null && originalColorer.getDocumentField().getCode().equals(selectedDocumentField.getCode())) {
+                    for(ColorPanel panel : colorPanels) {
+                        Color newValue = originalColorer.getColorMap().get(panel.getValue().toString());
+                        if(newValue == null) newValue = Color.white;
+                        panel.setColor(newValue);
+                    }
                 }
                 if(getComponentCount() > 1) {
                     remove(1);
@@ -88,22 +96,14 @@ public class ColoringPanel extends JPanel {
             }
         };
         comboBox.addItemListener(comboBoxListener);
-        Reaction.BackgroundColorer colorer = getBackgroundColorerForReactions(reactions);
         for (int i = 0; i < availableFieldsVector.size(); i++) {
             DocumentField field = availableFieldsVector.get(i);
-            if(colorer.getDocumentField() != null && field.getCode().equals(colorer.getDocumentField().getCode())) {
+            if(originalColorer.getDocumentField() != null && field.getCode().equals(originalColorer.getDocumentField().getCode())) {
                 comboBox.setSelectedIndex(i+1);
                 break;
             }
         }
         comboBoxListener.itemStateChanged(null);
-        if(colorPanels != null) {
-            for(ColorPanel panel : colorPanels) {
-                Color newValue = colorer.getColorMap().get(panel.getValue().toString());
-                if(newValue == null) newValue = Color.white;
-                panel.setColor(newValue);
-            }
-        }
 
     }
 
