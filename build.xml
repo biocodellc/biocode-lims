@@ -40,12 +40,12 @@
    </target>
 
    <target name="build" depends="compile">
-      <jar jarfile="${plugin-build}/${plugin-name}/${short-plugin-name}.jar">
+      <copy todir="${plugin-build}/${plugin-name}">
          <fileset dir="${classes}"/>
          <fileset dir="${resources}">
             <exclude name="plugin.properties"/>
          </fileset>
-      </jar>
+      </copy>
       <copy todir="${plugin-build}/${plugin-name}">
          <fileset dir="${lib}"/>
          <fileset dir="">
