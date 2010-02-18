@@ -40,18 +40,20 @@
    </target>
 
    <target name="build" depends="compile">
-      <jar jarfile="${plugin-build}/${plugin-name}/${short-plugin-name}.jar">
-         <fileset dir="${classes}"/>
-         <fileset dir="${resources}">
-            <exclude name="plugin.properties"/>
-         </fileset>
-      </jar>
       <copy todir="${plugin-build}/${plugin-name}">
          <fileset dir="${lib}"/>
          <fileset dir="">
             <include name="plugin.properties"/>
          </fileset>
       </copy>
+
+   <copy todir="${plugin-build}/${plugin-name}" failonerror="false">
+         <fileset dir="lib"/>
+         <fileset dir="resources"/>
+      </copy>
+      <jar destfile="${plugin-build}/${plugin-name}/${plugin-name}.jar">
+         <fileset dir="${classes}"/>
+      </jar>
    </target>
 
    <!--<target name="build" depends="compile">-->
