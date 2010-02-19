@@ -30,11 +30,8 @@ class DatabaseScriptRunner {
      * @throws SQLException if a problem is encountered while communicating with the database, this may include bad syntax
      * @throws IOException if a problem occurs reading the script file.  This is a FileNotFoundException if the script file did not exist.
      */
-    public static void runScript(Connection connection, File scriptFile, boolean allowDrops, boolean ignoreErrors) throws SQLException, IOException {
+    public static void runScript(Connection connection, InputStream scriptFile, boolean allowDrops, boolean ignoreErrors) throws SQLException, IOException {
         List<String> commands = getCommandsFromScript(scriptFile);
-        if(commands == null) {
-            throw new FileNotFoundException("Script file " + scriptFile.getAbsolutePath() + " is missing");
-        }
 
         Statement statement = connection.createStatement();
 
@@ -65,15 +62,12 @@ class DatabaseScriptRunner {
      * @return An unmodifiable list containing the sql commands in the provided script file.  null if the file does not exist
      * @throws IOException if there are problems reading from the script file
      */
-    static List<String> getCommandsFromScript(File scriptFile) throws IOException {
-        if(!scriptFile.exists()) {
-            return null;
-        }
+    static List<String> getCommandsFromScript(InputStream scriptFile) throws IOException {
 
         List<String> commands = new ArrayList<String>();
         BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new FileReader(scriptFile));
+            reader = new BufferedReader(new InputStreamReader(scriptFile));
 
             // Here we must read until we hit a ; character.  When we have found a ; that indicates that this is the end
             // of a command.  We must ignore anything after a -- on each line, because those are comments.

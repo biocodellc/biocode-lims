@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import java.io.File;
 import java.io.IOException;
 import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
@@ -144,24 +145,21 @@ public class LocalLIMS {
 
     private void createDatabase(String newDbName) throws SQLException {
         try {
-            URL fileUrl = getClass().getResource(SCRIPT_NAME);
-            if(fileUrl == null) {
+            InputStream scriptStream = getClass().getResourceAsStream(SCRIPT_NAME);
+            if(scriptStream == null) {
                 throw new FileNotFoundException("Could not find resource "+getClass().getPackage().getName()+"."+SCRIPT_NAME);
             }
-            File connectionFile = new File(fileUrl.toURI());
             try {
                 Class.forName("org.hsqldb.jdbc.JDBCDriver");
             } catch (ClassNotFoundException e) {
                 e.printStackTrace(); //do nothing
             }
             Connection connection = DriverManager.getConnection("jdbc:hsqldb:file:" + getDbPath(newDbName)+";shutdown=true");
-            DatabaseScriptRunner.runScript(connection, connectionFile, true, false);
+            DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
             connection.close();
         } catch (IOException e) {
             throw new SQLException(e.getMessage());
-        } catch(URISyntaxException e) {
-            throw new SQLException(e.getMessage());
-        }
+        } 
     }
 
     private void deleteDatabase(String dbName) throws IOException{
