@@ -176,7 +176,7 @@ public class LocalLIMS {
     }
 
     private String getDbPath(String newDbName) throws IOException {
-        return dataDirectory.getCanonicalPath() + "\\" + newDbName + ".db";
+        return dataDirectory.getCanonicalPath() + File.separator + newDbName + ".db";
     }
 
     private List<Options.OptionValue> getDbValues() {
@@ -203,7 +203,7 @@ public class LocalLIMS {
             path = getDbPath(dbName);
         } catch (IOException e) {
             e.printStackTrace();
-            throw new ConnectionException("Could not create path to database "+dataDirectory.getAbsolutePath()+ "\\" + dbName + ".db", e);
+            throw new ConnectionException("Could not create path to database "+dataDirectory.getAbsolutePath()+ File.separator + dbName + ".db", e);
         }
         try {
             return DriverManager.getConnection("jdbc:hsqldb:file:"+path+";shutdown=true");
