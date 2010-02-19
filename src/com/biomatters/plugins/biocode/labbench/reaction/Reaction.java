@@ -543,11 +543,18 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.addBatch();
                         //statement.execute();
                     }
-                    if(insertCount > 0) {
-                        insertStatement.executeBatch();
+                    try {
+                        if(insertCount > 0) {
+                            insertStatement.executeBatch();
+                        }
+                        if(updateCount > 0) {
+                            updateStatement.executeBatch();
+                        }
                     }
-                    if(updateCount > 0) {
-                        updateStatement.executeBatch();
+                    catch(SQLException e) {
+                        if(!e.getMessage().toLowerCase().contains("not in batch")) { //suppress if the SQL driver doesn't support batch mode...
+                            throw e;
+                        }
                     }
                 }
                 insertStatement.close();
