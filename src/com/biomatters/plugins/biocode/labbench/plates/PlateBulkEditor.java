@@ -15,6 +15,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -223,6 +224,70 @@ public class PlateBulkEditor {
                 }
             };
             toolsActions.add(importBarcodes);
+
+            GeneiousAction getExtractionsFromBarcodes = new GeneiousAction("Fetch extractions from barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
+                public void actionPerformed(ActionEvent e) {
+                    DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+                    final DocumentFieldEditor barcodeEditor = getEditorForField(editors, extractionBarcodeField);
+                    barcodeEditor.valuesFromTextView();
+                    final List<String> barcodes = new ArrayList<String>();
+                    for(int i=0; i < p.getRows(); i++) {
+                        for(int j=0; j < p.getCols(); j++) {
+                            final Object value = barcodeEditor.getValue(i, j);
+                            if(value != null) {
+                                barcodes.add(value.toString());
+                            }
+                        }
+                    }
+
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            try {
+                                Map<String, ExtractionReaction> extractions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
+                                DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
+                                DocumentField parentExtractionField = new DocumentField("Parent Extraction", "", "parentExtraction", String.class, false, false);
+                                DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                                DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+                                DocumentFieldEditor extractionIdEditor = getEditorForField(editors, extractionField);
+                                DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, parentExtractionField);
+                                for(int i=0; i < p.getRows(); i++) {
+                                    for(int j=0; j < p.getCols(); j++) {
+                                        Object barcode = barcodeEditor.getValue(i,j);
+
+                                        //get the extraction
+                                        ExtractionReaction reaction = null;
+                                        if(barcode != null) {
+                                            reaction = extractions.get(barcode.toString());
+                                        }
+
+                                        //fill in the values
+                                        if(reaction != null) {
+                                            extractionIdEditor.setValue(i,j,reaction.getExtractionId());
+                                            parentExtractionEditor.setValue(i,j,""+reaction.getFieldValue("parentExtraction"));
+                                            tissueEditor.setValue(i,j,reaction.getTissueId());
+                                            //todo: original plate
+                                        }
+                                        else {
+                                            extractionIdEditor.setValue(i,j,"");
+                                            parentExtractionEditor.setValue(i,j,"");
+                                            tissueEditor.setValue(i,j,"");
+                                        }
+
+                                    }
+                                    extractionIdEditor.textViewFromValues();
+                                    parentExtractionEditor.textViewFromValues();
+                                    tissueEditor.textViewFromValues();
+                                }
+                            } catch (SQLException e1) {
+                                Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
+                                return;
+                            }
+                        }
+                    };
+                    BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable);
+                }
+            };
+            toolsActions.add(getExtractionsFromBarcodes);
 
             GeneiousAction autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
                 public void actionPerformed(ActionEvent e) {

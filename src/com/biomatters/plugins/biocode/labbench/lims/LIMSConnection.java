@@ -751,6 +751,41 @@ public class LIMSConnection {
         return result;
     }
 
+    public Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws SQLException{
+         StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id " +
+                "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
+                "LEFT JOIN extraction ON workflow.extractionId = extraction.id " +
+                "LEFT JOIN plate ON plate.id = extraction.plate "+
+                "WHERE (");
+
+        List<String> queryParams = new ArrayList<String>();
+        for(String barcode : barcodes) {
+            queryParams.add("extraction.extractionBarcode = ?");
+        }
+
+        sql.append(StringUtilities.join(" OR ", queryParams));
+
+        sql.append(")");
+
+        PreparedStatement statement = connection.prepareStatement(sql.toString());
+
+        for (int i = 0; i < barcodes.size(); i++) {
+            String barcode = barcodes.get(i);
+            statement.setString(i+1, barcode);
+        }
+
+        ResultSet r = statement.executeQuery();
+
+        Map<String, ExtractionReaction> results = new HashMap<String, ExtractionReaction>();
+        while(r.next()) {
+            ExtractionReaction reaction = new ExtractionReaction(r);
+            results.put(""+reaction.getFieldValue("extractionBarcode"), reaction);
+        }
+
+        return results;
+    }
+
+
     private static class QueryTermSurrounder{
         private final String prepend, append, join;
 
