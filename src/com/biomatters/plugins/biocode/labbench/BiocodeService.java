@@ -1137,6 +1137,7 @@ public class BiocodeService extends DatabaseService {
 
         boolean first = true;
         StringBuilder builder = new StringBuilder();
+        int reactionCount = 0;
         for(Reaction r : plate.getReactions()) { //get the extraction id's and set up the query to get the workflow id's
             if(r.getId() >= 0) {
                 ids.add(r.getId());
@@ -1146,7 +1147,11 @@ public class BiocodeService extends DatabaseService {
                 }
                 builder.append("extractionId="+r.getId());
                 first = false;
+                reactionCount++;
             }
+        }
+        if(reactionCount == 0) { //the plate is empty
+            return Collections.EMPTY_SET;    
         }
 
         String getWorkflowSQL = "SELECT id FROM workflow WHERE "+builder.toString();
