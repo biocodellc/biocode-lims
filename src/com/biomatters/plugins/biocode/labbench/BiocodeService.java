@@ -12,10 +12,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnection;
-import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
-import com.biomatters.plugins.biocode.labbench.fims.TAPIRFimsConnection;
+import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -125,6 +122,7 @@ public class BiocodeService extends DatabaseService {
     private static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
+                new GoogleFimsConnection(),
                 new MooreaFimsConnection(),
                 new TAPIRFimsConnection()
         };
