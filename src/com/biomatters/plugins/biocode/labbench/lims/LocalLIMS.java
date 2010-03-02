@@ -19,6 +19,7 @@ import java.awt.event.ActionEvent;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.net.URL;
 import java.net.URISyntaxException;
 
@@ -30,7 +31,7 @@ import org.virion.jam.util.SimpleListener;
  * Time: 8:24:56 PM
  */
 public class LocalLIMS {
-    private static final String SCRIPT_NAME = "labbench_4.sql";
+    private static final String SCRIPT_NAME = "labbench_5.sql";
     private static final Options.OptionValue NULL_DATABASE = new Options.OptionValue("null", "No databases");
 
 
@@ -215,4 +216,30 @@ public class LocalLIMS {
     }
 
 
+    public void upgradeDatabase(Options options) throws SQLException{
+        Connection connection = null;
+        try {
+            connection = connect(options);
+        }
+        catch(ConnectionException ex) {
+            throw new SQLException("Could not connect to the database to upgrade it: "+ex.getMessage());
+        }
+        try {
+            ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
+            if(!resultSet.next()) {
+                throw new SQLException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
+            }
+            int version = resultSet.getInt("version");
+
+            InputStream scriptStream = getClass().getResourceAsStream("upgrade"+version+".sql");
+            if(scriptStream == null) {
+                throw new SQLException("Could not find the upgrade script for version "+version);
+            }
+            DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
+            connection.close();
+        }
+        catch(IOException ex) {
+            throw new SQLException(ex.getMessage());
+        }
+    }
 }

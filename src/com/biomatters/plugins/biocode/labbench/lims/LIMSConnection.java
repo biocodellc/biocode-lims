@@ -86,13 +86,38 @@ public class LIMSConnection {
         }
         else {
             driver = BiocodeService.getLocalDriver();
-            connectLocal(LIMSOptions.getChildOptions().get("local"));
+            connectLocal(LIMSOptions.getChildOptions().get("local"), false);
         }
     }
 
-    private void connectLocal(Options LIMSOptions) throws ConnectionException {
+    private void connectLocal(Options LIMSOptions, boolean alreadyAskedBoundUpgrade) throws ConnectionException {
         isLocal = true;
         connection = localLIMS.connect(LIMSOptions);
+        try {
+            ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
+            if(!resultSet.next()) {
+                throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
+            }
+            else {
+                int version = resultSet.getInt("version");
+
+                if(version < EXPECTED_SERVER_VERSION) {
+                    if(alreadyAskedBoundUpgrade || Dialogs.showYesNoDialog("The LIMS database you are connecting to is written for an older version of this plugin.  Would you like to upgrade it?", "Old database", null, Dialogs.DialogIcon.QUESTION)) {
+                        localLIMS.upgradeDatabase(LIMSOptions);
+                        connectLocal(LIMSOptions, true);
+                    }
+                    else {
+                        throw new ConnectionException("You need to upgrade your database, or choose another one to continue");
+                    }
+                }
+                else if(version > EXPECTED_SERVER_VERSION) {
+                    throw new ConnectionException("This database was written for a newer version of the LIMS plugin, and cannot be accessed");
+                }
+            }
+        }
+        catch(SQLException ex) {
+            throw new ConnectionException(ex.getMessage(), ex);
+        }
     }
 
     private void connectRemote(Options LIMSOptions) throws ConnectionException {
