@@ -902,6 +902,8 @@ public class ReactionUtilities {
                     ReactionOptions destOptions = destReaction.getOptions();
                     destOptions.setValue("parentExtraction", destOptions.getValue("extractionId"));
                     destOptions.setValue("extractionId", "");
+                    destOptions.setValue("previousPlate", srcReaction.getPlateName());
+                    destOptions.setValue("previousWell", srcReaction.getLocationString());
                 }
             } catch (XMLSerializationException e) {
                 e.printStackTrace();

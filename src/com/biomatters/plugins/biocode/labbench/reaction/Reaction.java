@@ -507,8 +507,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, date=extraction.date WHERE id=?";
+                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=extraction.date WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 int insertCount = 0;
@@ -523,7 +523,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
                             updateCount++;
-                            statement.setInt(11, reaction.getId());
+                            statement.setInt(13, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -540,6 +540,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setInt(8, reaction.getPlateId());
                         statement.setInt(9, reaction.getPosition());
                         statement.setString(10, options.getValueAsString("notes"));
+                        statement.setString(11, options.getValueAsString("previousPlate"));
+                        statement.setString(12, options.getValueAsString("previousWell"));
                         statement.addBatch();
                         //statement.execute();
                     }

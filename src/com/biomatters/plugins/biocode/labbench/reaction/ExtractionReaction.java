@@ -39,6 +39,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         options.setValue("extractionId", r.getString("extraction.extractionId"));
         options.setValue("extractionBarcode", r.getString("extraction.extractionBarcode"));
         options.setValue("extractionMethod", r.getString("extraction.method"));
+        options.setValue("previousPlate", r.getString("extraction.previousPlate"));
+        options.setValue("previousWell", r.getString("extraction.previousWell"));
         options.setValue("parentExtraction", r.getString("extraction.parent"));
         options.setValue("volume", r.getInt("extraction.volume"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
@@ -227,11 +229,13 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                             Reaction r = reactions.get(i);
                             for (ExtractionReaction r2 : extractionsThatExist) {
                                 if(r.getExtractionId().equals(r2.getExtractionId())) {
-                                    reactions.set(i, r2);
-                                    r2.setPlateId(r.getPlateId());
-                                    r2.setPosition(r.getPosition());
-                                    r2.setThermocycle(r.getThermocycle());
-                                    r2.setLocationString(r.getLocationString());
+                                    ReactionUtilities.copyReaction(r2, r);
+                                    r.setPlateId(r.getPlateId());
+                                    r.setPosition(r.getPosition());
+                                    r.setId(r2.getId());
+                                    r.setExtractionId(r2.getExtractionId());
+                                    r.setThermocycle(r.getThermocycle());
+                                    r.setLocationString(r.getLocationString());
                                 }
                             }
                         }
