@@ -32,7 +32,7 @@ import java.io.File;
  * To change this template use File | Settings | File Templates.
  */
 public class LIMSConnection {
-    private static final int EXPECTED_SERVER_VERSION = 4;
+    private static final int EXPECTED_SERVER_VERSION = 5;
     Driver driver;
     Connection connection;
     private LocalLIMS localLIMS;
