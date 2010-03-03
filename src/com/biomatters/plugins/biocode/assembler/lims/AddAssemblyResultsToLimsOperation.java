@@ -343,7 +343,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             try {
                 PreparedStatement statement;
                 statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                        "coverage, disagreements, trim_params_fwd, trim_params_rev, edits) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 statement.setString(1, result.extractionId);
                 statement.setInt(2, result.workflowId);
                 statement.setString(3, isPass ? "passed" : "failed");
@@ -373,6 +373,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     statement.setString(8, result.trims[1]);
                 }
                 statement.setInt(9, result.edits);
+                statement.setNull(10, Types.LONGVARCHAR); //params
+                statement.setNull(11, Types.INTEGER); //reference_seq_id
+                statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
+                statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
+                statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
+                statement.setNull(15, Types.LONGVARCHAR); //notes
 
                 statement.execute();
 
@@ -418,6 +424,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
 
             } catch (SQLException e) {
+                e.printStackTrace();
                 throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
             }
         }
