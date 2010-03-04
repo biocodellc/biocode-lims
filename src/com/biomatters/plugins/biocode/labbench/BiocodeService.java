@@ -122,7 +122,7 @@ public class BiocodeService extends DatabaseService {
     private static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
-                new GoogleFimsConnection(),
+//                new GoogleFimsConnection(),
                 new MooreaFimsConnection(),
                 new TAPIRFimsConnection()
         };
