@@ -968,7 +968,7 @@ public class BiocodeService extends DatabaseService {
         return results;
     }
 
-    public List<Workflow> createWorkflows(List<String> extractionIds, BlockingProgress progress) throws SQLException{
+    public List<Workflow> createWorkflows(List<Reaction> reactions, BlockingProgress progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
@@ -978,16 +978,16 @@ public class BiocodeService extends DatabaseService {
             PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(extractionId) VALUES ((SELECT extraction.id from extraction where extraction.extractionId = ?))");
             PreparedStatement statement2 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
             PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = CONCAT('workflow', id) WHERE id=?");
-            for(int i=0; i < extractionIds.size(); i++) {
+            for(int i=0; i < reactions.size(); i++) {
                 if(progress != null) {
-                    progress.setMessage("Creating new workflow "+(i+1)+" of "+extractionIds.size());
+                    progress.setMessage("Creating new workflow "+(i+1)+" of "+reactions.size());
                 }
-                statement.setString(1, extractionIds.get(i));
+                statement.setString(1, reactions.get(i).getExtractionId());
                 statement.execute();
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
-                workflows.add(new Workflow(workflowId, "workflow"+workflowId, extractionIds.get(i)));
+                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId()));
                 statement3.setInt(1, workflowId);
                 statement3.execute();
             }
@@ -1012,7 +1012,7 @@ public class BiocodeService extends DatabaseService {
 
     public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException{
         List<String> extractionIds = new ArrayList<String>();
-        List<String> extractionWithoutWorkflowIds = new ArrayList<String>();
+        List<Reaction> extractionWithoutWorkflowIds = new ArrayList<Reaction>();
 
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
@@ -1026,7 +1026,7 @@ public class BiocodeService extends DatabaseService {
                 if(!reaction.isEmpty()) {
                     extractionIds.add(reaction.getExtractionId());
                     if(reaction.getId() < 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getFieldValue("sampleId").toString().length() > 0) {
-                        extractionWithoutWorkflowIds.add(reaction.getExtractionId());
+                        extractionWithoutWorkflowIds.add(reaction);
                     }
                     reactionsToSave.add(reaction);
                 }
@@ -1050,12 +1050,9 @@ public class BiocodeService extends DatabaseService {
 
                 if(extractionIds.size() > 0) {
                     List<Workflow> workflowList = createWorkflows(extractionWithoutWorkflowIds, progress);
-                    int workflowIndex = 0;
-                    for(Reaction reaction : plate.getReactions()) {
-                        if(!reaction.isEmpty() && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getOptions().getValueAsString("sampleId").length() > 0) {
-                            reaction.setWorkflow(workflowList.get(workflowIndex));
-                            workflowIndex++;
-                        }
+                    for (int i = 0; i < extractionWithoutWorkflowIds.size(); i++) {
+                        Reaction reaction = extractionWithoutWorkflowIds.get(i);
+                        reaction.setWorkflow(workflowList.get(i));
                     }
                 }
             }
@@ -1309,21 +1306,18 @@ public class BiocodeService extends DatabaseService {
 
             //create workflows if necessary
             //int workflowCount = 0;
-            List<String> extractionIds = new ArrayList<String>();
+            List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
                 Object extractionId = reaction.getFieldValue("extractionId");
                 if(!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                    extractionIds.add(reaction.getExtractionId());
+                    reactionsWithoutWorkflows.add(reaction);
                 }
             }
-            if(extractionIds.size() > 0) {
-                List<Workflow> workflowList = BiocodeService.getInstance().createWorkflows(extractionIds, progress);
-                int workflowIndex = 0;
-                for(Reaction reaction : plate.getReactions()) {
-                    if(!reaction.isEmpty() && reaction.getExtractionId().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                        reaction.setWorkflow(workflowList.get(workflowIndex));
-                        workflowIndex++;
-                    }
+            if(reactionsWithoutWorkflows.size() > 0) {
+                List<Workflow> workflowList = createWorkflows(reactionsWithoutWorkflows, progress);
+                for (int i = 0; i < reactionsWithoutWorkflows.size(); i++) {
+                    Reaction reaction = reactionsWithoutWorkflows.get(i);
+                    reaction.setWorkflow(workflowList.get(i));
                 }
             }
 
