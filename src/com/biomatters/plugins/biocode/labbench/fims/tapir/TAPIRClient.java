@@ -5,7 +5,6 @@ import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Geneious;
-import com.biomatters.plugins.biocode.labbench.fims.MicrosatGraphPanel;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -262,7 +261,7 @@ public class TAPIRClient {
     }
 
     public static void main(String[] args) throws Exception{
-        List<int[]> valueList = new ArrayList<int[]>();
+        /*List<int[]> valueList = new ArrayList<int[]>();
         BufferedReader reader = new BufferedReader(new FileReader(new File("C:\\Documents and Settings\\steve\\My Documents\\batchextract\\189_PO68_H11_2009-05-07_RawData.dat")));
         String line = null;
         while((line = reader.readLine()) != null) {
@@ -279,7 +278,7 @@ public class TAPIRClient {
         frame.setSize(640,480);
         frame.getContentPane().add(new JScrollPane(panel));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
+        frame.setVisible(true);*/
     }
 
 
