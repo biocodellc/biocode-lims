@@ -256,8 +256,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(isError) {
             element.addContent(new Element("isError").setText("true"));
         }
-        synchronized (BiocodeService.dateFormat) {
-            element.addContent(new Element("created").setText(BiocodeService.dateFormat.format(getCreated())));
+        synchronized (BiocodeService.XMLDateFormat) {
+            element.addContent(new Element("created").setText(BiocodeService.XMLDateFormat.format(getCreated())));
         }
         element.addContent(new Element("position").setText(""+getPosition()));
         if(locationString != null) {
@@ -303,8 +303,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             fimsSample = XMLSerializer.classFromXML(fimsElement, FimsSample.class);
         }
         try {
-            synchronized (BiocodeService.dateFormat) {
-                setCreated(BiocodeService.dateFormat.parse(element.getChildText("created")));
+            synchronized (BiocodeService.XMLDateFormat) {
+                setCreated(BiocodeService.XMLDateFormat.parse(element.getChildText("created")));
             }
         } catch (ParseException e) {
             assert false : "Could not read the date "+element.getChildText("created");

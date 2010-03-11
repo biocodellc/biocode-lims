@@ -60,6 +60,7 @@ public class BiocodeService extends DatabaseService {
     private File dataDirectory;
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
+    public static final DateFormat XMLDateFormat = new SimpleDateFormat("yyyy MMM dd hh:mm:ss");
 
     private BiocodeService() {
     }

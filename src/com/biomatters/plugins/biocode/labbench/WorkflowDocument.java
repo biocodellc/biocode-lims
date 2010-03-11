@@ -33,6 +33,11 @@ public class WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
     private List<Reaction> reactions;
     private List<ReactionPart> parts;
+    Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>() {
+            public int compare(ReactionPart o1, ReactionPart o2) {
+                return (int) (o1.getReaction().getCreated().getTime() - o2.getReaction().getCreated().getTime());
+            }
+        };
 
 
     public WorkflowDocument() {
@@ -129,6 +134,7 @@ public class WorkflowDocument extends MuitiPartDocument {
         for(Reaction r : reactions) {
             parts.add(new ReactionPart(r));
         }
+        Collections.sort(parts, reactionComparitor);
     }
 
     public int getNumberOfParts() {
@@ -165,7 +171,13 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public void addRow(ResultSet resultSet) throws SQLException{
         //add extractions
-        Reaction.Type rowType = Reaction.Type.valueOf(resultSet.getString("plate.type"));
+        final String plateType = resultSet.getString("plate.type");
+
+        if(plateType == null) {  //workaround for a bug in HSQL
+            return;
+        }
+
+        Reaction.Type rowType = Reaction.Type.valueOf(plateType);
         switch(rowType) {
             case Extraction :
                 int reactionId = resultSet.getInt("extraction.id");
@@ -213,11 +225,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
             break;
         }
-        Collections.sort(parts, new Comparator<ReactionPart>(){
-            public int compare(ReactionPart o1, ReactionPart o2) {
-                return (int)(o1.getReaction().getCreated().getTime() - o2.getReaction().getCreated().getTime());
-            }
-        });
+        Collections.sort(parts, reactionComparitor);
     }
 
     public static class ReactionPart extends Part {
