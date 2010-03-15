@@ -190,11 +190,13 @@ public class TracesEditor {
                 } catch (IllegalArgumentException e) {
                     Dialogs.showMessageDialog(e.getMessage());
                 }
-                if(sequences != null) {
-                    nucleotideDocuments.addAll(sequences);
+                if(nucleotideDocuments != null) {
+                    if(sequences != null) {
+                        nucleotideDocuments.addAll(sequences);
+                    }
+                    sequences = nucleotideDocuments;
+                    updateViewer(nucleotideDocuments);
                 }
-                sequences = nucleotideDocuments;
-                updateViewer(nucleotideDocuments);
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
