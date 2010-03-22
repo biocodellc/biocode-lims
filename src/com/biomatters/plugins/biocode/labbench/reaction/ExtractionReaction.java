@@ -121,7 +121,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
 
-    public List<DocumentField> getDefaultDisplayedFields() {
+
+    public static List<DocumentField> getDefaultDisplayedFields() {
         if(BiocodeService.getInstance().isLoggedIn()) {
             return Arrays.asList(
                     BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),

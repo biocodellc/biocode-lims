@@ -680,9 +680,9 @@ public class BiocodeService extends DatabaseService {
             colors.put("passed", Color.green.darker());
             colors.put("failed", Color.red.darker());
             switch(type) {
-                case Extraction: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.Extraction, new ExtractionReaction().getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.EMPTY_MAP)));
-                case PCR: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.PCR, new PCRReaction().getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
-                case CycleSequencing: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.CycleSequencing, new CycleSequencingReaction().getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
+                case Extraction: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.Extraction, ExtractionReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.EMPTY_MAP)));
+                case PCR: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.PCR, PCRReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
+                case CycleSequencing: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.CycleSequencing, CycleSequencingReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
                 default : throw new IllegalArgumentException("You must supply one of the supported reaction types");
             }
 

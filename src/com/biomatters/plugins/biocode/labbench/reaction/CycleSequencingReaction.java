@@ -134,7 +134,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return null;
     }
 
-    public List<DocumentField> getDefaultDisplayedFields() {
+    public static List<DocumentField> getDefaultDisplayedFields() {
         if(BiocodeService.getInstance().isLoggedIn()) {
             return Arrays.asList(new DocumentField[] {
                     BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
