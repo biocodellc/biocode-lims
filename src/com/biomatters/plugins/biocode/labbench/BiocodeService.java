@@ -41,6 +41,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 /**
  * @author Steven Stones-Havas
@@ -58,6 +59,7 @@ public class BiocodeService extends DatabaseService {
     private static BiocodeService instance = null;
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
+    private Preferences preferences = Preferences.userNodeForPackage(BiocodeService.class);
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
     public static final DateFormat XMLDateFormat = new SimpleDateFormat("yyyy MMM dd hh:mm:ss");
@@ -568,8 +570,20 @@ public class BiocodeService extends DatabaseService {
     private List<Thermocycle> cyclesequencingThermocycles = null;
     private List<Cocktail> PCRCocktails = null;
     private List<Cocktail> cyclesequencingCocktails = null;
+    private List<DisplayFieldsTemplate> extractionDisplayedFields = null;
+    private List<DisplayFieldsTemplate> pcrDisplayedFields = null;
+    private List<DisplayFieldsTemplate> cycleSequencingDisplayedFields = null;
 
     private void buildCaches() throws TransactionException {
+        try {
+            buildCachesFromDisk();
+        } catch (IOException e) {
+            throw new TransactionException("Could not read the caches from disk", e);
+        } catch (JDOMException e) {
+            throw new TransactionException("Could not read the caches from disk", e);
+        } catch (XMLSerializationException e) {
+            throw new TransactionException("Could not read the caches from disk", e);
+        }
         PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle");
         cyclesequencingThermocycles = getThermocyclesFromDatabase("cyclesequencing_thermocycle");
         PCRCocktails = getPCRCocktailsFromDatabase();
@@ -590,6 +604,9 @@ public class BiocodeService extends DatabaseService {
         cyclesequencingThermocycles = getThermocyclesFromDisk("cyclesequencing_thermocycle");
         PCRCocktails = getPCRCocktailsFromDisk();
         cyclesequencingCocktails = getCycleSequencingCocktailsFromDisk();
+        extractionDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.Extraction);
+        pcrDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.PCR);
+        cycleSequencingDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.CycleSequencing);
     }
 
     private void saveCachesToDisk() throws IOException, JDOMException, XMLSerializationException {
@@ -597,6 +614,9 @@ public class BiocodeService extends DatabaseService {
         saveThermocyclesToDisk("cyclesequencing_thermocycle", cyclesequencingThermocycles);
         savePCRCocktailsToDisk();
         saveCycleSequencingCocktailsToDisk();
+        saveDisplayedFieldsToDisk(Reaction.Type.Extraction, extractionDisplayedFields);
+        saveDisplayedFieldsToDisk(Reaction.Type.PCR, pcrDisplayedFields);
+        saveDisplayedFieldsToDisk(Reaction.Type.CycleSequencing, cycleSequencingDisplayedFields);
     }
 
     private List<Cocktail> getCycleSequencingCocktailsFromDisk() throws JDOMException, IOException, XMLSerializationException{
@@ -620,6 +640,61 @@ public class BiocodeService extends DatabaseService {
             cocktails.add(XMLSerializer.classFromXML(e, Cocktail.class));
         }
         return cocktails;
+    }
+
+    public void saveDisplayedFieldTemplate(DisplayFieldsTemplate template) {
+        Reaction.Type type = template.getReactionType();
+        List<DisplayFieldsTemplate> templates = new ArrayList<DisplayFieldsTemplate>(getDisplayedFieldTemplates(type));
+        templates.add(template);
+        try {
+            saveDisplayedFieldsToDisk(type, templates);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (XMLSerializationException e) {
+            e.printStackTrace();
+        }
+        //template.toSQL(limsConnection.getConnection());
+        updateDisplayFieldsTemplates();
+    }
+
+    public void updateDisplayFieldsTemplates() {
+        try {
+            extractionDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.Extraction);
+            pcrDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.PCR);
+            cycleSequencingDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.CycleSequencing);
+        } catch (JDOMException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (XMLSerializationException e) {
+            e.printStackTrace();
+        }
+        //todo: load from the database, not from disk!
+    }
+
+    private List<DisplayFieldsTemplate> getDisplayFieldsTemplatesFromDisk(Reaction.Type type) throws JDOMException, IOException, XMLSerializationException{
+        File file = new File(dataDirectory, type+"Fields.xml");
+        if(!file.exists()) {
+            Map<String, Color> colors = new HashMap<String, Color>();
+            colors.put("none", Color.white);
+            colors.put("passed", Color.green.darker());
+            colors.put("failed", Color.red.darker());
+            switch(type) {
+                case Extraction: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.Extraction, new ExtractionReaction().getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.EMPTY_MAP)));
+                case PCR: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.PCR, new PCRReaction().getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
+                case CycleSequencing: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.CycleSequencing, new CycleSequencingReaction().getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
+                default : throw new IllegalArgumentException("You must supply one of the supported reaction types");
+            }
+
+
+        }
+        List<DisplayFieldsTemplate> templates = new ArrayList<DisplayFieldsTemplate>();
+        SAXBuilder builder = new SAXBuilder();
+        Element element = builder.build(file).detachRootElement();
+        for(Element e : element.getChildren("template")) {
+            templates.add(XMLSerializer.classFromXML(e, DisplayFieldsTemplate.class));
+        }
+        return templates;
     }
 
     private List<Thermocycle> getThermocyclesFromDisk(String type)  throws JDOMException, IOException, XMLSerializationException{
@@ -667,6 +742,26 @@ public class BiocodeService extends DatabaseService {
         XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
         FileOutputStream outf = new FileOutputStream(file);
         out.output(cocktailsElement, outf);
+        outf.close();
+    }
+
+    private void saveDisplayedFieldsToDisk(Reaction.Type type, List<DisplayFieldsTemplate> templates)  throws IOException, XMLSerializationException{
+        File file = new File(dataDirectory, type+"Fields.xml");
+        if(!file.exists()) {
+            createNewFile(file);
+        }
+        if(templates == null || templates.size() == 0) {
+            file.delete();
+            return;
+        }
+
+        Element templatesElement = new Element("templates");
+        for(DisplayFieldsTemplate tp : templates) {
+            templatesElement.addContent(XMLSerializer.classToXML("template", tp));
+        }
+        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        FileOutputStream outf = new FileOutputStream(file);
+        out.output(templatesElement, outf);
         outf.close();
     }
 
@@ -764,6 +859,42 @@ public class BiocodeService extends DatabaseService {
         }
 
         return tCycles;
+    }
+
+    public List<DisplayFieldsTemplate> getDisplayedFieldTemplates(Reaction.Type type) {
+        switch(type) {
+            case Extraction:return new ArrayList<DisplayFieldsTemplate>(extractionDisplayedFields);
+            case PCR:return new ArrayList<DisplayFieldsTemplate>(pcrDisplayedFields);
+            case CycleSequencing:return new ArrayList<DisplayFieldsTemplate>(cycleSequencingDisplayedFields);
+            default:throw new IllegalArgumentException("You must request one of the supported reaction types (Extraction, PCR, or Cycle Sequencing");
+        }
+    }
+
+    public DisplayFieldsTemplate getDisplayedFieldTemplate(Reaction.Type type, String name) {
+        List<DisplayFieldsTemplate> templates = getDisplayedFieldTemplates(type);
+        for(DisplayFieldsTemplate template : templates) {
+            if(template.getName().equals(name)) {
+                return template;
+            }
+        }
+        return null;
+    }
+
+    public DisplayFieldsTemplate getDefaultDisplayedFieldsTemplate(Reaction.Type type) {
+        String name = preferences.get(type+"_defaultFieldsTemplate", null);
+        List<DisplayFieldsTemplate> templates = getDisplayedFieldTemplates(type);
+        if(name != null) {
+            for(DisplayFieldsTemplate template : templates) {
+                if(template.getName().equals(name)) {
+                    return template;
+                }
+            }
+        }
+        return templates.get(0);
+    }
+
+    public void setDefaultDisplayedFieldsTemplate(DisplayFieldsTemplate template) {
+        preferences.put(template.getReactionType()+"_defaultFieldsTemplate", template.getName());
     }
 
     public List<Thermocycle> getPCRThermocycles() {

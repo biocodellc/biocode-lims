@@ -120,15 +120,19 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Type.Extraction;
     }
 
-    protected BackgroundColorer getDefaultBackgroundColorer() {
-        return new BackgroundColorer(null, Collections.EMPTY_MAP);
-    }
 
     public List<DocumentField> getDefaultDisplayedFields() {
-        return Arrays.asList(
-                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
-                new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)
-        );
+        if(BiocodeService.getInstance().isLoggedIn()) {
+            return Arrays.asList(
+                    BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
+                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)
+            );
+        }
+        else {
+            return Arrays.asList(
+                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)
+            );
+        }
     }
 
 

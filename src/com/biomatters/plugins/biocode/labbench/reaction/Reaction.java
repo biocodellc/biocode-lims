@@ -24,6 +24,7 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 /**
  * Created by IntelliJ IDEA.
@@ -45,6 +46,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private static int charHeight = -1;
     private int[] fieldWidthCache = null;
     private BackgroundColorer backgroundColorer;
+    DisplayFieldsTemplate displayFieldsTemplate;
+
+    private static final Preferences preferences = Preferences.userNodeForPackage(Reaction.class);
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -75,7 +79,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private String locationString = "";
 
     public Reaction() {
-        setFieldsToDisplay(getDefaultDisplayedFields());
+        setFieldsToDisplay(BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getDisplayedFields());
     }
 
     public void setFimsSample(FimsSample sample) {
@@ -85,7 +89,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract Type getType();
 
-    protected abstract BackgroundColorer getDefaultBackgroundColorer();
+    protected BackgroundColorer getDefaultBackgroundColorer() {
+         return BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getColorer();
+    }
 
     public BackgroundColorer getBackgroundColorer() {
         return backgroundColorer == null ? getDefaultBackgroundColorer() : backgroundColorer;
@@ -183,20 +189,52 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         List<DocumentField> fields = new ArrayList<DocumentField>();
         for(Options.Option op : getOptions().getOptions()) {
             if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){
-                fields.add(new DocumentField(op.getLabel().length() > 0 ? op.getLabel() : op.getName(), "", op.getName(), op.getValue().getClass(), true, false));
+                if(op instanceof Options.ComboBoxOption) {
+                    final List possibleValues = ((Options.ComboBoxOption) op).getPossibleOptionValues();
+                    String[] enumValues = new String[possibleValues.size()];
+                    for (int i = 0; i < possibleValues.size(); i++) {
+                        enumValues[i] = ((Options.OptionValue)possibleValues.get(i)).getLabel();
+
+                    }
+                    fields.add(DocumentField.createEnumeratedField(enumValues, op.getLabel().length() > 0 ? op.getLabel() : op.getName(), "", op.getName(), true, false));
+                }
+                else {
+                    fields.add(new DocumentField(op.getLabel().length() > 0 ? op.getLabel() : op.getName(), "", op.getName(), op.getValue().getClass(), true, false));
+                }
             }
         }
         return fields;
     }
 
-    public abstract List<DocumentField> getDefaultDisplayedFields();
+    public List<DocumentField> getDefaultDisplayedFields() {
+        return BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getDisplayedFields();
+    }
 
     public List<DocumentField> getFieldsToDisplay(){
         if(isEmpty()) {
             return Collections.EMPTY_LIST;
         }
-        return displayableFields != null ? displayableFields : Collections.EMPTY_LIST;
+        if(displayableFields != null) {
+            return displayableFields;
+        }
+        DisplayFieldsTemplate displayFieldsTemplate = getDefaultDisplayedFieldsTemplate();
+        if(displayFieldsTemplate != null) {
+            return displayFieldsTemplate.getDisplayedFields();
+        }
+        return Collections.EMPTY_LIST;
     };
+
+    public DisplayFieldsTemplate getDefaultDisplayedFieldsTemplate() {
+        final String templateName = preferences.get(getType() + "_fields", null);
+        if(templateName == null) {
+            return BiocodeService.getInstance().getDisplayedFieldTemplate(getType(), templateName);
+        }
+        return null;
+    }
+
+    public void setDefaultDisplayedFieldsTemplate(DisplayFieldsTemplate template) {
+        preferences.put(getType() + "_fields", template.getName());
+    }
 
     public void setFieldsToDisplay(List<DocumentField> fields) {
         this.displayableFields = fields;

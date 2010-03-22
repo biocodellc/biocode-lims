@@ -1,8 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
-import com.biomatters.geneious.publicapi.components.GComboBox;
+import com.biomatters.geneious.publicapi.components.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
@@ -40,6 +38,7 @@ import java.io.PrintWriter;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 import java.sql.SQLException;
 
@@ -424,22 +423,68 @@ public class ReactionUtilities {
             }
             List<DocumentField> availableFields = r.getAllDisplayableFields();
             for(DocumentField df : availableFields) {
-                if(!selectedFieldsVector.contains(df) && !availableFieldsVector.contains(df)) {
+                if(!availableFieldsVector.contains(df)) {
                     availableFieldsVector.add(df);
+                }
+            }
+        }
+        int [] selectedIndicies = new int[selectedFieldsVector.size()];
+        for(int i=0; i < selectedFieldsVector.size(); i++) {
+            for(int j=0; j < availableFieldsVector.size(); j++) {
+                if(availableFieldsVector.get(j).getCode().equals(selectedFieldsVector.get(i).getCode())) {
+                    selectedIndicies[i] = j;
                 }
             }
         }
 
 
-        JPanel fieldsPanel = getFieldsPanel(availableFieldsVector,selectedFieldsVector);
+        JPanel fieldsPanel = new JPanel(new BorderLayout());
+
+
+        DefaultListCellRenderer cellRenderer = new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                Component superComponent = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);    //To change body of overridden methods use File | Settings | File Templates.
+                if (superComponent instanceof JLabel) {
+                    JLabel label = (JLabel) superComponent;
+                    DocumentField field = (DocumentField) value;
+                    label.setText(field.getName());
+                }
+                return superComponent;
+            }
+        };
+
+        final SplitPaneListSelector<DocumentField> listSelector = new SplitPaneListSelector<DocumentField>(availableFieldsVector, selectedIndicies, cellRenderer);
+
+
+        fieldsPanel.add(listSelector, BorderLayout.CENTER);
+        fieldsPanel.setOpaque(false);
+        fieldsPanel.setBorder(new EmptyBorder(10,10,10,10));
+
+
         ColoringPanel colorPanel = getColoringPanel(availableFieldsVector, reactions);
-        JPanel fieldsAndColorPanel = new JPanel(new BorderLayout());
-        fieldsAndColorPanel.setOpaque(false);
-        fieldsAndColorPanel.add(fieldsPanel, BorderLayout.CENTER);
-        fieldsAndColorPanel.add(colorPanel, BorderLayout.SOUTH);
+
+
+        final TemplateSelector templateSelectorPanel = new TemplateSelector(listSelector, colorPanel, reactions.get(0).getType());
+        templateSelectorPanel.addChangeListener(new ChangeListener() {
+            public void stateChanged(ChangeEvent e) {
+                DisplayFieldsTemplate selectedTemplate = (DisplayFieldsTemplate)e.getSource();
+                if(selectedTemplate != null) {
+                    listSelector.setSelectedFields(selectedTemplate.getDisplayedFields());
+                }
+            }
+        });
+
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false);
+        mainPanel.add(templateSelectorPanel, BorderLayout.NORTH);
+        mainPanel.add(fieldsPanel, BorderLayout.CENTER);
+        mainPanel.add(colorPanel, BorderLayout.SOUTH);
+
         JComponent componentToDisplay;
         if(justEditDisplayableFields) {
-            componentToDisplay = fieldsAndColorPanel;
+            componentToDisplay = mainPanel;
         }
         else if(justEditOptions) {
             componentToDisplay = displayPanel;
@@ -447,7 +492,7 @@ public class ReactionUtilities {
         else {
             JTabbedPane tabs = new JTabbedPane();
             tabs.add("Reaction",displayPanel);
-            tabs.add("Display", fieldsAndColorPanel);
+            tabs.add("Display", mainPanel);
             componentToDisplay = tabs;
         }
 
@@ -481,7 +526,7 @@ public class ReactionUtilities {
                 }
             }
             for(Reaction r : reactions) {
-                r.setFieldsToDisplay(new ArrayList<DocumentField>(selectedFieldsVector));
+                r.setFieldsToDisplay(new ArrayList<DocumentField>(listSelector.getSelectedFields()));
                 r.setBackgroundColorer(colorPanel.getColorer());
             }
             if(changedOptionCount > 0) {
@@ -598,273 +643,57 @@ public class ReactionUtilities {
         return comp;
     }
 
-    private static JPanel getFieldsPanel(final Vector<DocumentField> availableFieldsVector, final Vector<DocumentField> selectedFieldsVector) {
-        JPanel fieldsPanel = new JPanel(new BorderLayout());
-
-        //List<DocumentField> displayableFields = reactions.get(0).getAllDisplayableFields();
-        //final Vector<DocumentField> displayableFieldsVector = new Vector(displayableFields);
-        final JList availableListBox = new JList(availableFieldsVector);
-        availableListBox.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-
-        final JList selectedListBox = new JList(selectedFieldsVector);
-
-        DefaultListCellRenderer cellRenderer = new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                Component superComponent = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);    //To change body of overridden methods use File | Settings | File Templates.
-                if (superComponent instanceof JLabel) {
-                    JLabel label = (JLabel) superComponent;
-                    DocumentField field = (DocumentField) value;
-                    label.setText(field.getName());
-                }
-                return superComponent;
+    private static DisplayFieldsTemplate getTemplate(Vector<DocumentField> fields, List<DisplayFieldsTemplate> templates) {
+        List<DocumentField> fieldsList = new ArrayList<DocumentField>(fields);
+        for(DisplayFieldsTemplate template : templates) {
+            if(template.fieldsMatch(fieldsList)) {
+                return template;
             }
-        };
-        availableListBox.setCellRenderer(cellRenderer);
-        selectedListBox.setCellRenderer(cellRenderer);
-
-
-
-        final JButton addButton = new JButton(IconUtilities.getIcons("arrow_right.png").getIcon16());
-        addButton.setOpaque(false);
-        addButton.setPreferredSize(new Dimension(addButton.getPreferredSize().height, addButton.getPreferredSize().height));
-        addButton.setCursor(Cursor.getDefaultCursor());
-        final JButton removeButton = new JButton(IconUtilities.getIcons("arrow_left.png").getIcon16());
-        removeButton.setOpaque(false);
-        removeButton.setCursor(Cursor.getDefaultCursor());
-        removeButton.setPreferredSize(new Dimension(removeButton.getPreferredSize().height, removeButton.getPreferredSize().height));
-
-        final JButton moveUpButton = new JButton(IconUtilities.getIcons("arrow_up.png").getIcon16());
-        moveUpButton.setOpaque(false);
-        moveUpButton.setPreferredSize(new Dimension(moveUpButton.getPreferredSize().height, moveUpButton.getPreferredSize().height));
-        final JButton moveDownButton = new JButton(IconUtilities.getIcons("arrow_down.png").getIcon16());
-        moveDownButton.setOpaque(false);
-        moveDownButton.setPreferredSize(new Dimension(moveDownButton.getPreferredSize().height, moveDownButton.getPreferredSize().height));
-
-        ListSelectionListener selectionListener = new ListSelectionListener(){
-            public void valueChanged(ListSelectionEvent e) {
-                addButton.setEnabled(availableListBox.getSelectedIndices().length > 0);
-                removeButton.setEnabled(selectedListBox.getSelectedIndices().length > 0);
-            }
-        };
-        availableListBox.addListSelectionListener(selectionListener);
-        selectedListBox.addListSelectionListener(selectionListener);
-
-        final ActionListener addAction = new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                int offset = 0;
-                int[] indices = availableListBox.getSelectedIndices();
-                for (int i = 0; i < indices.length; i++) {
-                    int index = indices[i]-offset;
-                    selectedFieldsVector.add(availableFieldsVector.get(index));
-                    availableFieldsVector.remove(index);
-                    offset++;
-                }
-                availableListBox.clearSelection();
-                selectedListBox.clearSelection();
-                for (ListDataListener listener : ((AbstractListModel) availableListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, availableFieldsVector.size() - 1));
-                }
-                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
-                }
-                availableListBox.revalidate();
-                selectedListBox.revalidate();
-            }
-        };
-
-        final ActionListener removeAction = new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                int offset = 0;
-                int[] indices = selectedListBox.getSelectedIndices();
-                for (int i = 0; i < indices.length; i++) {
-                    int index = indices[i - offset];
-                    availableFieldsVector.add(selectedFieldsVector.get(index));
-                    selectedFieldsVector.remove(index);
-                    offset++;
-                }
-                selectedListBox.clearSelection();
-                availableListBox.clearSelection();
-                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
-                }
-                for (ListDataListener listener : ((AbstractListModel) availableListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(availableListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, availableFieldsVector.size() - 1));
-                }
-                availableListBox.revalidate();
-                selectedListBox.revalidate();
-            }
-        };
-
-        final ActionListener sortUpAction = new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                List selectedValues = Arrays.asList(selectedListBox.getSelectedValues());
-                Vector<DocumentField> newValues = new Vector<DocumentField>();
-                DocumentField current = null;
-                for(int i=0; i < selectedFieldsVector.size(); i++) {
-                    DocumentField currentField = selectedFieldsVector.get(i);
-                    if(selectedValues.contains(currentField)) {
-                        newValues.add(currentField);
-                    }
-                    else {
-                        if(current != null) {
-                            newValues.add(current);
-                        }
-                        current = currentField;
-                    }
-                }
-                if(current != null) {
-                    newValues.add(current);
-                }
-                selectedFieldsVector.clear();
-                selectedFieldsVector.addAll(newValues);
-                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
-                }
-                selectedListBox.revalidate();
-                int[] indices = selectedListBox.getSelectedIndices();
-                boolean contiguousFirstBlock = true;
-                for(int i=0; i < indices.length; i++) {
-                    if(contiguousFirstBlock && indices[i] == i) {
-                        continue;
-                    }
-                    contiguousFirstBlock = false;
-                    indices[i] --;
-                }
-                selectedListBox.setSelectedIndices(indices);
-
-            }
-        };
-
-        final ActionListener sortDownAction = new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                List selectedValues = Arrays.asList(selectedListBox.getSelectedValues());
-                Vector<DocumentField> newValues = new Vector<DocumentField>();
-                DocumentField current = null;
-                for(int i=selectedFieldsVector.size()-1; i >= 0; i--) {
-                    DocumentField currentField = selectedFieldsVector.get(i);
-                    if(selectedValues.contains(currentField)) {
-                        newValues.add(0,currentField);
-                    }
-                    else {
-                        if(current != null) {
-                            newValues.add(0,current);
-                        }
-                        current = currentField;
-                    }
-                }
-                if(current != null) {
-                    newValues.add(0,current);
-                }
-                selectedFieldsVector.clear();
-                selectedFieldsVector.addAll(newValues);
-                for (ListDataListener listener : ((AbstractListModel) selectedListBox.getModel()).getListDataListeners()) {
-                    listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
-                }
-                selectedListBox.revalidate();
-                int[] indices = selectedListBox.getSelectedIndices();
-                boolean contiguousFirstBlock = true;
-                for(int i=0; i < indices.length; i++) {
-                    if(contiguousFirstBlock && indices[indices.length-1-i] == selectedFieldsVector.size()-1-i) {
-                        continue;
-                    }
-                    contiguousFirstBlock = false;
-                    indices[indices.length-1-i] ++;
-                }
-                selectedListBox.setSelectedIndices(indices);
-
-            }
-        };
-
-        removeButton.addActionListener(removeAction);
-        addButton.addActionListener(addAction);
-
-        moveUpButton.addActionListener(sortUpAction);
-        moveDownButton.addActionListener(sortDownAction);
-
-        availableListBox.addMouseListener(new MouseAdapter(){
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if(e.getClickCount() == 2) {
-                    addAction.actionPerformed(null);
-                }
-            }
-        });
-
-        selectedListBox.addMouseListener(new MouseAdapter(){
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if(e.getClickCount() == 2) {
-                    removeAction.actionPerformed(null);
-                }
-            }
-        });
-
-        final JPanel addRemovePanel = new JPanel(new GridLayout(2,1));
-        addRemovePanel.add(addButton);
-        addRemovePanel.add(removeButton);
-        addRemovePanel.setMaximumSize(addRemovePanel.getPreferredSize());
-        addRemovePanel.setMinimumSize(addRemovePanel.getPreferredSize());
-        addRemovePanel.setOpaque(false);
-
-        final JPanel movePanel = new JPanel();
-        movePanel.setOpaque(false);
-        movePanel.add(moveUpButton);
-        movePanel.add(moveDownButton);
-        movePanel.setLayout(new BoxLayout(movePanel, BoxLayout.Y_AXIS));
-        movePanel.add(moveUpButton);
-        movePanel.add(moveDownButton);
-
-        JPanel availableListBoxPanel = new JPanel(new BorderLayout());
-        availableListBoxPanel.add(new JScrollPane(availableListBox), BorderLayout.CENTER);
-        JLabel label1 = new JLabel("Available");
-        label1.setOpaque(false);
-        availableListBoxPanel.add(label1, BorderLayout.NORTH);
-        availableListBoxPanel.setOpaque(false);
-
-        JPanel selectedListBoxPanel = new JPanel(new BorderLayout());
-        selectedListBoxPanel.add(new JScrollPane(selectedListBox), BorderLayout.CENTER);
-        selectedListBoxPanel.add(movePanel, BorderLayout.EAST);
-        JLabel label2 = new JLabel("Selected");
-        label2.setOpaque(false);
-        selectedListBoxPanel.add(label2, BorderLayout.NORTH);
-        selectedListBoxPanel.setOpaque(false);
-
-        final JSplitPane fieldsSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, availableListBoxPanel, selectedListBoxPanel);
-        fieldsSplit.setBorder(new EmptyBorder(0,0,0,0));
-        fieldsSplit.setUI(new BasicSplitPaneUI(){
-            @Override
-            public BasicSplitPaneDivider createDefaultDivider() {
-
-                BasicSplitPaneDivider divider = new BasicSplitPaneDivider(this){
-                    @Override
-                    public int getDividerSize() {
-                        return addRemovePanel.getPreferredSize().width;
-                    }
-
-                    public void setBorder(Border b) {}
-                };
-                divider.setLayout(new BoxLayout(divider, BoxLayout.X_AXIS));
-                divider.add(addRemovePanel);
-                return divider;
-            }
-        });
-
-        fieldsSplit.setOpaque(false);
-        fieldsSplit.setContinuousLayout(true);
-        fieldsPanel.add(fieldsSplit);
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                //this doesn't have an effect unless the split pane is showing
-                fieldsSplit.setDividerLocation(0.5);
-            }
-        });
-        fieldsSplit.setResizeWeight(0.5);
-        fieldsPanel.setOpaque(false);
-        fieldsPanel.setBorder(new EmptyBorder(10,10,10,10));
-
-        return fieldsPanel;
+        }
+        return null;
     }
+
+
+    /**
+     * if an existing template matches the one we're trying to create, that one is returned instead unless createNewEvenIfItMatchesExisting is true
+     * @param listSelector
+     * @param type
+     * @return
+     */
+    private static DisplayFieldsTemplate createNewTemplate(SplitPaneListSelector<DocumentField> listSelector, ColoringPanel colorSelector, Reaction.Type type, String instruction, boolean createNewEvenIfItMatchesExisting) {
+        DisplayFieldsTemplate newTemplate = null;
+        BiocodeService.getInstance().updateDisplayFieldsTemplates();
+        for(DisplayFieldsTemplate template : BiocodeService.getInstance().getDisplayedFieldTemplates(type)) {
+            if(template.fieldsMatch(listSelector.getSelectedFields())) {
+                BiocodeService.getInstance().setDefaultDisplayedFieldsTemplate(template);
+                if(!createNewEvenIfItMatchesExisting) {
+                    return template;
+                }
+            }
+        }
+        JTextField inputTextfield = new JTextField(30);
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setOpaque(false);
+        panel.add(new JLabel("Template name: "));
+        panel.add(inputTextfield);
+        String message = instruction;
+        aroundTheOutterLoop:
+                while(Dialogs.showInputDialog(message, "Save template", listSelector, panel)){
+            BiocodeService.getInstance().updateDisplayFieldsTemplates();
+            for(DisplayFieldsTemplate template : BiocodeService.getInstance().getDisplayedFieldTemplates(type)) {
+                if(template.getName().equals(inputTextfield.getText())) {
+                    message = instruction+"<br><br><font style=\"color:red;\">A template with the name '"+inputTextfield.getText()+"' already exists.";
+
+                    continue aroundTheOutterLoop;
+                }
+            }
+            newTemplate = new DisplayFieldsTemplate(inputTextfield.getText(), type, listSelector.getSelectedFields(), colorSelector.getColorer());
+            BiocodeService.getInstance().saveDisplayedFieldTemplate(newTemplate);
+            break;
+        }
+        return newTemplate;
+    }
+
 
     public static Collection getAllValues(DocumentField field, List<Reaction> reactions) {
         Set allValues = new HashSet();
@@ -874,6 +703,11 @@ public class ReactionUtilities {
                 if(value != null) {
                     allValues.add(value);
                 }
+            }
+        }
+        if(field.isEnumeratedField()) {
+            for(String s : field.getEnumerationValues()) {
+                allValues.add(s);
             }
         }
         return allValues;
@@ -931,25 +765,97 @@ public class ReactionUtilities {
         }
     }
 
-    public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider{
-            private DocumentField documentField;
+    public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {
+        private DocumentField documentField;
 
-            DocumentFieldWrapper(DocumentField documentField) {
-                this.documentField = documentField;
-            }
-
-            public String getDescription() {
-                return documentField == null ? null : documentField.getDescription();
-            }
-
-            public String toString() {
-                return documentField == null ? "None..." : documentField.getName();
-            }
-
-            public DocumentField getDocumentField() {
-                return documentField;
-            }
+        DocumentFieldWrapper(DocumentField documentField) {
+            this.documentField = documentField;
         }
+
+        public String getDescription() {
+            return documentField == null ? null : documentField.getDescription();
+        }
+
+        public String toString() {
+            return documentField == null ? "None..." : documentField.getName();
+        }
+
+        public DocumentField getDocumentField() {
+            return documentField;
+        }
+    }
+
+    private static class TemplateSelector extends JPanel {
+
+        public TemplateSelector(final SplitPaneListSelector listSelector, final ColoringPanel colorer, final Reaction.Type type) {
+            changeListeners = new ArrayList<ChangeListener>();
+            final List<DisplayFieldsTemplate> templateList = BiocodeService.getInstance().getDisplayedFieldTemplates(type);
+            setOpaque(false);
+            final GeneiousAction.SubMenu templateSelectorDropdown = new GeneiousAction.SubMenu(new GeneiousActionOptions("Select a template"), Collections.EMPTY_LIST);
+            add(new GLabel("Template: "));
+            final JButton button = new JButton(templateSelectorDropdown);
+            button.setIcon(IconUtilities.getIcons("dropdownArrow.png").getOriginalIcon());
+            button.setHorizontalTextPosition(AbstractButton.LEFT);
+            add(button);
+            GButton setDefaultTemplateButton = new GButton("Save as default");
+            add(setDefaultTemplateButton);
+
+
+            final Runnable newTemplateRunnable = new Runnable() {
+                public void run() {
+                    createNewTemplate(listSelector, colorer, type, "Please enter a name for your template", true);
+                    List<GeneiousAction> templateActions = getTemplateActions(BiocodeService.getInstance().getDisplayedFieldTemplates(type), listSelector, this, type);
+                    templateSelectorDropdown.setSubMenuActions(templateActions);
+                }
+            };
+
+            setDefaultTemplateButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    DisplayFieldsTemplate newTemplate = createNewTemplate(listSelector, colorer, type, "You must save your settings as a template before making them the defaults", false);
+                    if (newTemplate != null) {
+                        BiocodeService.getInstance().setDefaultDisplayedFieldsTemplate(newTemplate);
+                        templateSelectorDropdown.setSubMenuActions(getTemplateActions(BiocodeService.getInstance().getDisplayedFieldTemplates(type), listSelector, newTemplateRunnable, type));
+                    }
+                }
+            });
+
+            List<GeneiousAction> templateActions = getTemplateActions(templateList, listSelector, newTemplateRunnable, type);
+            templateSelectorDropdown.setSubMenuActions(templateActions);
+        }
+
+        private List<GeneiousAction> getTemplateActions(final List<DisplayFieldsTemplate> templateList, final SplitPaneListSelector<DocumentField> listSelector, final Runnable newTemplateRunnable, final Reaction.Type type) {
+            List<GeneiousAction> templateActions = new ArrayList<GeneiousAction>();
+            DisplayFieldsTemplate defaultTemplate = BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(type);
+            for(final DisplayFieldsTemplate template : templateList) {
+                String name = (defaultTemplate != null && template.getName().equals(defaultTemplate.getName())) ? "<html><b>"+template.getName()+"</b></html>" : template.getName();
+                templateActions.add(new GeneiousAction(new GeneiousActionOptions(name)){
+                    public void actionPerformed(ActionEvent e) {
+                        for(ChangeListener listener : changeListeners) {
+                            listener.stateChanged(new ChangeEvent(template));
+                        }
+                    }
+                });
+            }
+            templateActions.add(new GeneiousAction.Divider());
+            templateActions.add(new GeneiousAction("Create template..."){
+                public void actionPerformed(ActionEvent e) {
+                    newTemplateRunnable.run();
+                }
+            });
+            return templateActions;
+        }
+
+        public void addChangeListener(ChangeListener l) {
+            changeListeners.add(l);
+        }
+
+        public void removeChangeListener(ChangeListener l) {
+            changeListeners.remove(l);
+        }
+
+        private List<ChangeListener> changeListeners;
+
+    }
 
 
 }

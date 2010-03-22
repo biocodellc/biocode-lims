@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.prefs.Preferences;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
@@ -36,6 +37,7 @@ public class TracesEditor {
     private List<NucleotideSequenceDocument> sequences;
     private List<ReactionUtilities.MemoryFile> rawTraces;
     private DocumentViewerFactory factory;
+    Preferences preferences = Preferences.userNodeForPackage(getClass());
     private JPanel holder = new JPanel(new BorderLayout());
     private JPanel sequenceHolder = new JPanel(new GridLayout(1,1));
     DocumentViewerMessageHandler messageHandler;
@@ -49,10 +51,11 @@ public class TracesEditor {
         sequenceHolder.setPreferredSize(new Dimension(640,480));
         addSequenceAction = new GeneiousAction("Add sequence(s)") {
             public void actionPerformed(ActionEvent e) {
-                JFileChooser chooser = new JFileChooser(System.getProperty("user.dir"));
+                JFileChooser chooser = new JFileChooser(preferences.get("addTraces_defaultFolder", System.getProperty("user.dir")));
                 chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
                 chooser.setMultiSelectionEnabled(true);
                 if(chooser.showOpenDialog(holder) == JFileChooser.APPROVE_OPTION) {
+                    preferences.put("addTraces_defaultFolder", chooser.getSelectedFile().getParent());
                     final File[] sequenceFiles = chooser.getSelectedFiles();
                     final ProgressFrame progress = new ProgressFrame("Importing", "Importing Documents", 500, false);
                     Runnable runnable = new Runnable() {
@@ -214,6 +217,8 @@ public class TracesEditor {
                 }
             }
             documentViewer = createViewer(DefaultSequenceListDocument.forNucleotideSequences(nucleotideDocuments), factory);
+            documentViewer.setEditingEnabled(false, "Hammertime!");
+            documentViewer.setInSplitLayout(new DocumentViewer.ViewerLocation(false, true,""));
             documentViewer.setOutgoingMessageHandler(messageHandler);
             sequenceHolder.add(documentViewer.getComponent(), BorderLayout.CENTER);
         }
