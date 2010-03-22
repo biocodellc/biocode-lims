@@ -207,7 +207,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public static List<DocumentField> getDefaultDisplayedFields() {
-        return BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getDisplayedFields();
+        return Collections.EMPTY_LIST;//BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getDisplayedFields();
     }
 
     public List<DocumentField> getFieldsToDisplay(){
