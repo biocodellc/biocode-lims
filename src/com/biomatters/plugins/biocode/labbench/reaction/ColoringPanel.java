@@ -27,18 +27,15 @@ public class ColoringPanel extends JPanel {
     private DocumentField selectedDocumentField;
     private Reaction.BackgroundColorer originalColorer;
     private static final int MAX_PREFERRED_HEIGHT = 220;
+    GComboBox fieldToColor;
 
     public ColoringPanel(Vector<DocumentField> availableFieldsVector, List<Reaction> reactions1) {
         super(new BorderLayout());
         this.availableFieldsVector = availableFieldsVector;
         this.reactions = reactions1;
         setOpaque(false);
-        Vector<ReactionUtilities.DocumentFieldWrapper> cbValues = new Vector<ReactionUtilities.DocumentFieldWrapper>();
-        cbValues.add(new ReactionUtilities.DocumentFieldWrapper(null));
-        for(DocumentField field : availableFieldsVector) {
-            cbValues.add(new ReactionUtilities.DocumentFieldWrapper(field));
-        }
-        final GComboBox comboBox = new GComboBox(cbValues);
+        Vector<ReactionUtilities.DocumentFieldWrapper> cbValues = getDocumentFields();
+        fieldToColor = new GComboBox(cbValues);
 
         
         final Reaction.BackgroundColorer defaultColorer = reactions1.get(0).getDefaultBackgroundColorer();
@@ -49,12 +46,12 @@ public class ColoringPanel extends JPanel {
         JLabel jLabel = new JLabel("Color wells based on");
         jLabel.setOpaque(false);
         cbPanel.add(jLabel);
-        cbPanel.add(comboBox);
+        cbPanel.add(fieldToColor);
         add(cbPanel, BorderLayout.NORTH);
 
         ItemListener comboBoxListener = new ItemListener() {
             public void itemStateChanged(ItemEvent e) {
-                ReactionUtilities.DocumentFieldWrapper wrapper = (ReactionUtilities.DocumentFieldWrapper)comboBox.getSelectedItem();
+                ReactionUtilities.DocumentFieldWrapper wrapper = (ReactionUtilities.DocumentFieldWrapper)fieldToColor.getSelectedItem();
                 selectedDocumentField = wrapper.getDocumentField();
                 Collection allValues = ReactionUtilities.getAllValues(selectedDocumentField, reactions);
                 JPanel valuesPanel = new JPanel(new GridLayout(allValues.size(),1,5,5));
@@ -95,16 +92,25 @@ public class ColoringPanel extends JPanel {
                 validate();
             }
         };
-        comboBox.addItemListener(comboBoxListener);
+        fieldToColor.addItemListener(comboBoxListener);
         for (int i = 0; i < availableFieldsVector.size(); i++) {
             DocumentField field = availableFieldsVector.get(i);
             if(originalColorer.getDocumentField() != null && field.getCode().equals(originalColorer.getDocumentField().getCode())) {
-                comboBox.setSelectedIndex(i+1);
+                fieldToColor.setSelectedIndex(i+1);
                 break;
             }
         }
         comboBoxListener.itemStateChanged(null);
 
+    }
+
+    private Vector<ReactionUtilities.DocumentFieldWrapper> getDocumentFields() {
+        Vector<ReactionUtilities.DocumentFieldWrapper> cbValues = new Vector<ReactionUtilities.DocumentFieldWrapper>();
+        cbValues.add(new ReactionUtilities.DocumentFieldWrapper(null));
+        for(DocumentField field : availableFieldsVector) {
+            cbValues.add(new ReactionUtilities.DocumentFieldWrapper(field));
+        }
+        return cbValues;
     }
 
     @Override
@@ -161,6 +167,23 @@ public class ColoringPanel extends JPanel {
         }
 
         return newColorer;
+    }
+
+    public void setColorer(Reaction.BackgroundColorer colorer) {
+        final Vector<ReactionUtilities.DocumentFieldWrapper> documentFields = getDocumentFields();
+        for(int i=0; i < documentFields.size(); i++) {
+            if(colorer.getDocumentField() != null && documentFields.get(i).getDocumentField() != null && colorer.getDocumentField().getCode().equals(documentFields.get(i).getDocumentField().getCode())) {
+                fieldToColor.setSelectedIndex(i);
+                for(ColorPanel panel : colorPanels) {
+                    Color color = colorer.getColorMap().get(panel.getValue());
+                    if(color != null) {
+                        panel.setColor(color);
+                    }
+                }
+                repaint();
+                return;
+            }
+        }
     }
 
 

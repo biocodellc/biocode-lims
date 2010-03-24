@@ -462,18 +462,21 @@ public class ReactionUtilities {
         fieldsPanel.setBorder(new EmptyBorder(10,10,10,10));
 
 
-        ColoringPanel colorPanel = getColoringPanel(availableFieldsVector, reactions);
+        final ColoringPanel colorPanel = getColoringPanel(availableFieldsVector, reactions);
 
 
         final TemplateSelector templateSelectorPanel = new TemplateSelector(listSelector, colorPanel, reactions.get(0).getType());
-        templateSelectorPanel.addChangeListener(new ChangeListener() {
+        final ChangeListener templateChangeListener = new ChangeListener() {
             public void stateChanged(ChangeEvent e) {
-                DisplayFieldsTemplate selectedTemplate = (DisplayFieldsTemplate)e.getSource();
-                if(selectedTemplate != null) {
+                DisplayFieldsTemplate selectedTemplate = (DisplayFieldsTemplate) e.getSource();
+                if (selectedTemplate != null) {
                     listSelector.setSelectedFields(selectedTemplate.getDisplayedFields());
+                    colorPanel.setColorer(selectedTemplate.getColorer());
                 }
             }
-        });
+        };
+        templateSelectorPanel.addChangeListener(templateChangeListener);
+        templateChangeListener.stateChanged(new ChangeEvent(BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(reactions.get(0).getType())));
 
 
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -663,8 +666,9 @@ public class ReactionUtilities {
     private static DisplayFieldsTemplate createNewTemplate(SplitPaneListSelector<DocumentField> listSelector, ColoringPanel colorSelector, Reaction.Type type, String instruction, boolean createNewEvenIfItMatchesExisting) {
         DisplayFieldsTemplate newTemplate = null;
         BiocodeService.getInstance().updateDisplayFieldsTemplates();
+        final Reaction.BackgroundColorer newColorer = colorSelector.getColorer();     
         for(DisplayFieldsTemplate template : BiocodeService.getInstance().getDisplayedFieldTemplates(type)) {
-            if(template.fieldsMatch(listSelector.getSelectedFields())) {
+            if(template.fieldsMatch(listSelector.getSelectedFields()) && template.colourerMatches(newColorer)) {
                 BiocodeService.getInstance().setDefaultDisplayedFieldsTemplate(template);
                 if(!createNewEvenIfItMatchesExisting) {
                     return template;

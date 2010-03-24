@@ -79,11 +79,21 @@ public class DisplayFieldsTemplate implements XMLSerializable{
 
         DisplayFieldsTemplate that = (DisplayFieldsTemplate) o;
 
+        if (!colorer.equals(that.colorer)) return false;
         if (!fieldsMatch(that.displayedFields)) return false;
         if (!name.equals(that.name)) return false;
         if (type != that.type) return false;
 
         return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = displayedFields.hashCode();
+        result = 31 * result + name.hashCode();
+        result = 31 * result + type.hashCode();
+        result = 31 * result + colorer.hashCode();
+        return result;
     }
 
     public boolean fieldsMatch(List<DocumentField> fields) {
@@ -99,16 +109,12 @@ public class DisplayFieldsTemplate implements XMLSerializable{
         return true;
     }
 
-    public Reaction.Type getReactionType() {
-        return type;
+    public boolean colourerMatches(Reaction.BackgroundColorer colorer) {
+        return colorer.equals(this.colorer);
     }
 
-    @Override
-    public int hashCode() {
-        int result = displayedFields.hashCode();
-        result = 31 * result + name.hashCode();
-        result = 31 * result + type.hashCode();
-        return result;
+    public Reaction.Type getReactionType() {
+        return type;
     }
 
     public List<DocumentField> getDisplayedFields() {

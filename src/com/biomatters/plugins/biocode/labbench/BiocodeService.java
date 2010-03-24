@@ -678,7 +678,7 @@ public class BiocodeService extends DatabaseService {
         File file = new File(dataDirectory, type+"Fields.xml");
         if(!file.exists()) {
             Map<String, Color> colors = new HashMap<String, Color>();
-            colors.put("none", Color.white);
+            colors.put("not run", Color.white);
             colors.put("passed", Color.green.darker());
             colors.put("failed", Color.red.darker());
             switch(type) {
