@@ -274,20 +274,22 @@ public class BiocodeService extends DatabaseService {
         final Options LIMSOptions = limsConnection.getConnectionOptions();
 
         Options loginOptions = new Options(this.getClass());
-        loginOptions.addChildOptions("fims", "", "", FIMSOptions);
-        loginOptions.addChildOptions("lims", "Lab-bench login", "", LIMSOptions);
+        loginOptions.addChildOptions("fims", null, null, FIMSOptions);
+        loginOptions.addChildOptions("lims", null, null, LIMSOptions);
 
-        loginOptions.addFileSelectionOption("driver", "MySQL Driver", "", new String[0], "Browse...", new FilenameFilter() {
+        Options.FileSelectionOption driverOption = loginOptions.addFileSelectionOption("driver", "MySQL Driver:", "", new String[0], "Browse...", new FilenameFilter() {
             public boolean accept(File dir, String name) {
                 return name.toLowerCase().endsWith(".jar");
             }
-        }).setSelectionType(JFileChooser.FILES_ONLY);
+        });
+        driverOption.setDescription("A file similar to \"mysql-connector-java-5.1.12-bin.jar\", available for download from http://dev.mysql.com/downloads/connector/j/");
+        driverOption.setSelectionType(JFileChooser.FILES_ONLY);
 
         loginOptions.restorePreferences();
 
         String logIn = "Log In";
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {logIn, "Cancel"}, logIn, null, Dialogs.DialogIcon.NO_ICON);
-        dialogOptions.setMaxWidth(dialogOptions.getMaxDimensions().width + 50);
+        dialogOptions.setMaxWidth(dialogOptions.getMaxDimensions().width + 200);
         Object result = Dialogs.showDialog(dialogOptions, loginOptions.getPanel());
         if (logIn.equals(result)) {
             loginOptions.savePreferences();

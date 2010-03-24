@@ -52,11 +52,11 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     public Options getConnectionOptions() {
         Options options = new Options(this.getClass(), "mooreaFIMS");
-        options.addStringOption("serverUrl", "Server", "darwin.berkeley.edu");
-        options.addIntegerOption("serverPort", "Port", 3306, 0, Integer.MAX_VALUE);
-        options.addStringOption("username", "Username", "");
+        options.addStringOption("serverUrl", "Server:", "darwin.berkeley.edu");
+        options.addIntegerOption("serverPort", "Port:", 3306, 0, Integer.MAX_VALUE);
+        options.addStringOption("username", "Username:", "");
         //options.addStringOption("password", "Password", "");
-        PasswordOption password = new PasswordOption("password", "Password", "");
+        PasswordOption password = new PasswordOption("password", "Password:", "");
         options.addCustomOption(password);
 
         return options;

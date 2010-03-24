@@ -49,7 +49,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
 
     public Options getConnectionOptions() {
         Options connectionOptions = new Options(this.getClass());
-        connectionOptions.addStringOption("accessPoint", "Access Point", "http://tapirlink.berkeley.edu/tapir.php/biocode");
+        connectionOptions.addStringOption("accessPoint", "Access Point:", "http://tapirlink.berkeley.edu/tapir.php/biocode");
         return connectionOptions;
     }
 

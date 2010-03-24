@@ -45,11 +45,11 @@ public class LIMSConnection {
         Options LIMSOptions = new Options(this.getClass());
 
         Options remoteOptions = new Options(this.getClass());
-        remoteOptions.addStringOption("server", "Server Address", "");
-        remoteOptions.addIntegerOption("port", "Port", 3306, 1, Integer.MAX_VALUE);
-        remoteOptions.addStringOption("database", "Database Name", "labbench");
-        remoteOptions.addStringOption("username", "Username", "");
-        remoteOptions.addCustomOption(new PasswordOption("password", "Password", ""));
+        remoteOptions.addStringOption("server", "Server Address:", "");
+        remoteOptions.addIntegerOption("port", "Port:", 3306, 1, Integer.MAX_VALUE);
+        remoteOptions.addStringOption("database", "Database Name:", "labbench");
+        remoteOptions.addStringOption("username", "Username:", "");
+        remoteOptions.addCustomOption(new PasswordOption("password", "Password:", ""));
 
         LIMSOptions.addChildOptions("remote", "Remote Server", "Connect to a LIMS database on a remote MySQL server", remoteOptions);
 

@@ -57,14 +57,14 @@ public class ExcelFimsConnection extends FIMSConnection{
     public Options getConnectionOptions() {
         Options options = new Options(this.getClass());
         options.addLabel("<html>Choose the location of your excel file.<br>The first row should be column headers, and it should<br>have at least a tissue and specimen column.</html>");
-        final Options.FileSelectionOption fileLocation = options.addFileSelectionOption("excelFile", "Excel file location", "");
+        final Options.FileSelectionOption fileLocation = options.addFileSelectionOption("excelFile", "Excel file location:", "");
         fileLocation.setSelectionType(JFileChooser.FILES_ONLY);
 
         List<Options.OptionValue> cols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null);
 
-        final Options.ComboBoxOption<Options.OptionValue> tissueId = options.addComboBoxOption("tissueId", "Tissue ID field", cols, cols.get(0));
+        final Options.ComboBoxOption<Options.OptionValue> tissueId = options.addComboBoxOption("tissueId", "Tissue ID field:", cols, cols.get(0));
 
-        final Options.ComboBoxOption<Options.OptionValue> specimenId = options.addComboBoxOption("specimenId", "Specimen ID field", cols, cols.get(0));
+        final Options.ComboBoxOption<Options.OptionValue> specimenId = options.addComboBoxOption("specimenId", "Specimen ID field:", cols, cols.get(0));
 
         options.addLabel(" ");
         options.addLabel("Specify your taxonomy fields, in order of highest to lowest");
