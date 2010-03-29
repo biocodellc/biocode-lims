@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.sql.SQLException;
 
 /**
@@ -51,14 +53,14 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     }
 
     @Override
-    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] documents, ProgressListener dontUse, Options optionsa) throws DocumentOperationException {
+    public List<AnnotatedPluginDocument> performOperation(final AnnotatedPluginDocument[] documents, ProgressListener dontUse, Options optionsa) throws DocumentOperationException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
 
-        ProgressFrame progressListener = new ProgressFrame("Verifying Reactions", "", 0, false);
+        final ProgressFrame progressListener = new ProgressFrame("Verifying Reactions", "", 0, false);
 
-        NewPlateOptions options = (NewPlateOptions)optionsa;
+        final NewPlateOptions options = (NewPlateOptions)optionsa;
 
         //analyse the documents
         Plate.Size pSize = null;
@@ -74,66 +76,81 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
         final Plate.Size plateSize = pSize;
 
-        Plate.Size sizeFromOptions = options.getPlateSize();
-        Reaction.Type typeFromOptions = options.getReactionType();
-        boolean fromExisting = options.isFromExisting();
+        final Plate.Size sizeFromOptions = options.getPlateSize();
+        final Reaction.Type typeFromOptions = options.getReactionType();
+        final boolean fromExisting = options.isFromExisting();
+        final AtomicReference<DocumentOperationException> exception = new AtomicReference<DocumentOperationException>();
+        final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
 
-        PlateViewer plateViewer;
-        if(sizeFromOptions != null) {
-            plateViewer = new PlateViewer(sizeFromOptions, typeFromOptions);
-        }
-        else {
-            Options.Option reactionNumberOption = options.getOption("reactionNumber");
-            if(reactionNumberOption.isEnabled()) {
-                plateViewer = new PlateViewer((Integer)reactionNumberOption.getValue(), typeFromOptions);
-            }
-            else {
-                plateViewer = new PlateViewer(reactionCount, typeFromOptions);    
-            }
-
-        }
-
-        if(fromExisting) {
-            PlateDocument plateDoc = (PlateDocument)documents[0].getDocument();
-            Plate plate = plateDoc.getPlate();
-            Plate editingPlate = plateViewer.getPlate();
-
-
-            if(plateSize == sizeFromOptions) {
-                copyPlateOfSameSize(plateViewer, plate, editingPlate);
-            }
-            else if(sizeFromOptions == Plate.Size.w96){
-                copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"));
-                
-            }
-            else if(sizeFromOptions == Plate.Size.w384) {
-                Plate[] plates = new Plate[4];
-                for (int i = 0; i < plates.length; i++) {
-                    AnnotatedPluginDocument doc = null;
-                    doc = options.getPlateForQuadrant(documents, i);
-                    if(doc != null) {
-                        PlateDocument pDoc = (PlateDocument) doc.getDocument();
-                        plates[i] = pDoc.getPlate();
+        final int reactionCount1 = reactionCount;
+        Runnable runnable = new Runnable() {
+            public void run() {
+                try {
+                    if(sizeFromOptions != null) {
+                        plateViewer.set(new PlateViewer(sizeFromOptions, typeFromOptions));
                     }
+                    else {
+                        Options.Option reactionNumberOption = options.getOption("reactionNumber");
+                        if(reactionNumberOption.isEnabled()) {
+                            plateViewer.set(new PlateViewer((Integer)reactionNumberOption.getValue(), typeFromOptions));
+                        }
+                        else {
+                            plateViewer.set(new PlateViewer(reactionCount1, typeFromOptions));
+                        }
+
+                    }
+
+                    if(fromExisting) {
+                        PlateDocument plateDoc = (PlateDocument)documents[0].getDocument();
+                        Plate plate = plateDoc.getPlate();
+                        Plate editingPlate = plateViewer.get().getPlate();
+
+
+                        if(plateSize == sizeFromOptions) {
+                            copyPlateOfSameSize(plateViewer.get(), plate, editingPlate);
+                        }
+                        else if(sizeFromOptions == Plate.Size.w96){
+                            copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"));
+
+                        }
+                        else if(sizeFromOptions == Plate.Size.w384) {
+                            Plate[] plates = new Plate[4];
+                            for (int i = 0; i < plates.length; i++) {
+                                AnnotatedPluginDocument doc = null;
+                                doc = options.getPlateForQuadrant(documents, i);
+                                if(doc != null) {
+                                    PlateDocument pDoc = (PlateDocument) doc.getDocument();
+                                    plates[i] = pDoc.getPlate();
+                                }
+                            }
+
+                            copy96To384(plates, editingPlate);
+                        }
+                        else if(sizeFromOptions == null) {
+                            copyPlateToReactionList(plate, editingPlate);
+                        }
+
+                        progressListener.setMessage("Checking with the database");
+                        progressListener.setIndeterminateProgress();
+                        Reaction[] plateReactions = editingPlate.getReactions();
+                        plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null, true);
+                        progressListener.setProgress(1.0);
+                        if(progressListener.isCanceled()) {
+                            return;
+                        }
+                    }
+
+
+                } catch (DocumentOperationException e) {
+                    exception.set(e);
                 }
-
-                copy96To384(plates, editingPlate);
             }
-            else if(sizeFromOptions == null) {
-                copyPlateToReactionList(plate, editingPlate);
-            }
-
-            progressListener.setMessage("Checking with the database");
-            progressListener.setIndeterminateProgress();
-            Reaction[] plateReactions = editingPlate.getReactions();
-            plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null, true);
-            progressListener.setProgress(1.0);
-            if(progressListener.isCanceled()) {
-                return null;
-            }
+        };
+        ThreadUtilities.invokeNowOrWait(runnable);
+        if(exception.get() != null) {
+            throw exception.get();
         }
-
-        plateViewer.displayInFrame(true, GuiUtilities.getMainFrame());
+        plateViewer.get().displayInFrame(true, GuiUtilities.getMainFrame());
 
         return null;
     }

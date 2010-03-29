@@ -321,9 +321,6 @@ public class PlateViewer extends JPanel {
         };
         ThreadUtilities.invokeNowOrWait(runnable);
 
-        while (frame.isVisible()) {
-            ThreadUtilities.sleep(100);
-        }
     }
 
 

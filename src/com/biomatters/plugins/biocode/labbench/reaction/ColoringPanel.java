@@ -53,7 +53,13 @@ public class ColoringPanel extends JPanel {
             public void itemStateChanged(ItemEvent e) {
                 ReactionUtilities.DocumentFieldWrapper wrapper = (ReactionUtilities.DocumentFieldWrapper)fieldToColor.getSelectedItem();
                 selectedDocumentField = wrapper.getDocumentField();
-                Collection allValues = ReactionUtilities.getAllValues(selectedDocumentField, reactions);
+                Collection allValues;
+                if(selectedDocumentField == null) {
+                    allValues = Collections.EMPTY_LIST;
+                }
+                else {
+                    allValues = ReactionUtilities.getAllValues(selectedDocumentField, reactions);
+                }
                 JPanel valuesPanel = new JPanel(new GridLayout(allValues.size(),1,5,5));
                 valuesPanel.setOpaque(false);
                 colorPanels = new ArrayList<ColorPanel>();
