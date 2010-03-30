@@ -165,6 +165,15 @@ public class ExcelFimsConnection extends FIMSConnection{
                     }
                 }
             }
+
+            //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
+            if(getTableCol(fields, tissueCol) == null) {
+                throw new ConnectionException(null, "You have listed your tissue sample field as also being a taxonomy field.  This is not allowed.");
+            }
+            if(getTableCol(fields, specimenCol) == null) {
+                throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
+            }
+
         } catch (BiffException e) {
             e.printStackTrace();  //todo: anything?
         } catch (IOException e) {

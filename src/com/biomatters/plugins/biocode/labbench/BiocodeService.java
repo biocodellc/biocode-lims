@@ -372,7 +372,13 @@ public class BiocodeService extends DatabaseService {
                     }
                     catch (ConnectionException ex) {
                         unBlock();
-                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"},"Error connecting to FIMS"), "There was an error connecting to "+activeFIMSConnection.getLabel(), ex.getMessage());
+                        String message = ex.getMainMessage() == null ? "There was an error connecting to "+activeFIMSConnection.getLabel() : ex.getMainMessage();
+                        if(ex.getMessage() != null) {
+                            Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"},"Error connecting to FIMS"), message, ex.getMessage());
+                        }
+                        else {
+                            Dialogs.showMessageDialog(message, "Error connecting to FIMS");
+                        }
                         logOut();
                         return;
                     }
