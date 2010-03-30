@@ -9,8 +9,10 @@ import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.sun.javaws.jnl.XMLUtils;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
@@ -108,7 +110,7 @@ public class ExcelFimsConnection extends FIMSConnection{
                     Cell cell = sheet.getCell(i,0);
                     String cellContents = cell.getContents();
                     if(cellContents.length() > 0) {
-                        values.add(new Options.OptionValue(""+i, cellContents));
+                        values.add(new Options.OptionValue(""+i, XmlUtilities.encodeXMLChars(cellContents)));
                     }
                 }
             } catch (BiffException e) {
@@ -152,14 +154,14 @@ public class ExcelFimsConnection extends FIMSConnection{
             List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
             for(Options taxOptionsValue : taxOptions){
                 Options.OptionValue colValue = (Options.OptionValue)((Options.ComboBoxOption)taxOptionsValue.getOption("taxCol")).getValue();
-                taxonomyFields.add(new DocumentField(colValue.getLabel(), colValue.getLabel(), colValue.getName(), String.class, true, false));
+                taxonomyFields.add(new DocumentField(XmlUtilities.encodeXMLChars(colValue.getLabel()), XmlUtilities.encodeXMLChars(colValue.getLabel()), colValue.getName(), String.class, true, false));
             }
 
             for(int i=0; i < sheet.getColumns(); i++) {
                 Cell cell = sheet.getCell(i,0);
                 String cellContents = cell.getContents();
                 if(cellContents.length() > 0) {
-                    DocumentField field = new DocumentField(cellContents, cellContents, "" + i, String.class, true, false);
+                    DocumentField field = new DocumentField(XmlUtilities.encodeXMLChars(cellContents), XmlUtilities.encodeXMLChars(cellContents), "" + i, String.class, true, false);
                     if(!taxonomyFields.contains(field)) {
                         fields.add(field);
                     }
@@ -254,7 +256,7 @@ public class ExcelFimsConnection extends FIMSConnection{
                 Condition condition = term.getCondition();
                 String termValue = term.getValues()[0].toString();
                 int col = Integer.parseInt(field.getCode());
-                String value = sheet.getCell(col, i).getContents();
+                String value = XmlUtilities.encodeXMLChars(sheet.getCell(col, i).getContents());
                 boolean colMatch;
                 switch(condition) {
                     case EQUAL:

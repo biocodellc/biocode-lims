@@ -33,13 +33,12 @@ public class ExcelFimsSample implements FimsSample {
 
         for(DocumentField field : fields) {
             String value = sheet.getCell(Integer.parseInt(field.getCode()), row).getContents();
-            values.put(field.getCode(), value);
+            values.put(field.getCode(), XmlUtilities.encodeXMLChars(value));
         }
         for(DocumentField field : taxFields) {
             String value = sheet.getCell(Integer.parseInt(field.getCode()), row).getContents();
-            values.put(field.getCode(), value);
+            values.put(field.getCode(), XmlUtilities.encodeXMLChars(value));
         }
-        System.out.println(values.size());
     }
 
     public ExcelFimsSample(Element e) throws XMLSerializationException {
