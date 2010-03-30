@@ -177,10 +177,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         displayableFields.addAll(getDisplayableFields());
         if(BiocodeService.getInstance().isLoggedIn()) {
             displayableFields.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getCollectionAttributes());
+            displayableFields.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getTaxonomyAttributes());
         }
         else if(fimsSample != null) {
             displayableFields.addAll(fimsSample.getFimsAttributes());
-            //displayableFields.addAll(fimsSample.getTaxonomyAttributes());
+            displayableFields.addAll(fimsSample.getTaxonomyAttributes());
         }
         return displayableFields;
     }
