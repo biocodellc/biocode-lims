@@ -12,7 +12,6 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.sun.javaws.jnl.XMLUtils;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
