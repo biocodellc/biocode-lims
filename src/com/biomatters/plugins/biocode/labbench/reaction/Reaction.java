@@ -829,9 +829,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             return valueColor != null ? valueColor : Color.white;
         }
 
-        public static Color getRandomColor() {
+        public static Color getRandomColor(Object o) {
+            Random r = new Random(o.hashCode());
+            r = new Random(r.nextInt(Integer.MAX_VALUE));
             ColorSpace cs = ColorSpace.getInstance(ColorSpace.CS_sRGB);
-            float[] rgbValues = cs.fromCIEXYZ(new float[]{(float)Math.random(), (float)Math.random(),(float)Math.random()});
+            float[] rgbValues = cs.fromCIEXYZ(new float[]{r.nextFloat(), r.nextFloat(),r.nextFloat()});
             return new Color(rgbValues[0], rgbValues[1], rgbValues[2]);
         }
 

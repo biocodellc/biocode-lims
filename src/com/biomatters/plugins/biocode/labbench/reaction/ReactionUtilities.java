@@ -380,7 +380,7 @@ public class ReactionUtilities {
 
     }
 
-    public static void editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, JComponent owner, boolean justEditOptions, boolean creating) {
+    public static boolean editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, JComponent owner, boolean justEditOptions, boolean creating) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -428,6 +428,20 @@ public class ReactionUtilities {
                 }
             }
         }
+
+        //make sure that all the selected fields exist in the available fields...
+        List<DocumentField> invalidSelectedFields = new ArrayList<DocumentField>();
+        aroundtheoutterloop:
+        for(DocumentField field : selectedFieldsVector) {
+            for(DocumentField field2 : availableFieldsVector) {
+                if(field2.getCode().equals(field.getCode())) {
+                    continue aroundtheoutterloop;
+                }
+            }
+            invalidSelectedFields.add(field);
+        }
+        selectedFieldsVector.removeAll(invalidSelectedFields);
+
         int [] selectedIndicies = new int[selectedFieldsVector.size()];
         for(int i=0; i < selectedFieldsVector.size(); i++) {
             for(int j=0; j < availableFieldsVector.size(); j++) {
@@ -476,7 +490,7 @@ public class ReactionUtilities {
             }
         };
         templateSelectorPanel.addChangeListener(templateChangeListener);
-        templateChangeListener.stateChanged(new ChangeEvent(BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(reactions.get(0).getType())));
+        //templateChangeListener.stateChanged(new ChangeEvent(BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(reactions.get(0).getType())));
 
 
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -503,9 +517,11 @@ public class ReactionUtilities {
         dialogOptions.setMaxWidth(800);
         dialogOptions.setMaxHeight(800);
         Object choice = Dialogs.showDialog(dialogOptions, componentToDisplay);
+        boolean hasChanges = false;
         if(choice.equals("OK")) {
             int changedOptionCount = 0;
             if(!justEditDisplayableFields || justEditOptions) {
+                hasChanges = true; //todo: check if options actually have changed...
                 Element optionsElement = XMLSerializer.classToXML("options", options);
                 if(reactions.size() == 1) {
                     changedOptionCount = 1;
@@ -539,7 +555,7 @@ public class ReactionUtilities {
                 }
             }
         }
-
+        return hasChanges;
     }
 
     private static OptionsPanel getReactionPanel(ReactionOptions options, Map<String, Boolean> haveAllSameValues, boolean multiOptions, boolean creating) {
