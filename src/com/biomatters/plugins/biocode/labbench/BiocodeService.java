@@ -504,27 +504,27 @@ public class BiocodeService extends DatabaseService {
             Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP);
 
             if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
-                workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples);
+                workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null);
             }
             if(callback.isCanceled()) {
                 return;
             }
-            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
-                for(PluginDocument doc : workflowList) {
-                    callback.add(doc, Collections.<String, Object>emptyMap());
-                }
-            }
+//            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
+//                for(PluginDocument doc : workflowList) {
+//                    callback.add(doc, Collections.<String, Object>emptyMap());
+//                }
+//            }
             if(callback.isCanceled()) {
                 return;
             }
             if((Boolean)query.getExtendedOptionValue("plateDocuments")) {
-                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList);
+                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, callback);
                 if(callback.isCanceled()) {
                     return;
                 }
-                for(PluginDocument doc : plateList) {
-                    callback.add(doc, Collections.<String, Object>emptyMap());
-                }
+//                for(PluginDocument doc : plateList) {
+//                    callback.add(doc, Collections.<String, Object>emptyMap());
+//                }
             }
 
         } catch (SQLException e) {
@@ -1534,7 +1534,7 @@ public class BiocodeService extends DatabaseService {
     }
 
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws SQLException, DocumentOperationException {
-        List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName), null);
+        List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName), null, null);
         if(plateList.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }
@@ -1551,7 +1551,7 @@ public class BiocodeService extends DatabaseService {
                 workflowNameQueries.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, r.getWorkflow().getName()));
             }
         }
-        List<WorkflowDocument> docs = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]), Collections.EMPTY_MAP), null);
+        List<WorkflowDocument> docs = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]), Collections.EMPTY_MAP), null, null);
 
         Map<BiocodeUtilities.Well, WorkflowDocument> workflows = new HashMap<BiocodeUtilities.Well, WorkflowDocument>();
         for(Reaction r : plate.getReactions()) {

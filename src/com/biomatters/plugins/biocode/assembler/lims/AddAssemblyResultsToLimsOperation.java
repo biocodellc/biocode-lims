@@ -208,7 +208,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 Query q = Query.Factory.createQuery(plateName);
                 List<PlateDocument> plateDocuments;
                 try {
-                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null);
+                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
                 } catch (SQLException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);

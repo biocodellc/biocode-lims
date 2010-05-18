@@ -1,10 +1,12 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
@@ -62,6 +64,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         Options options = new Options(this.getClass());
 
         List<Options.OptionValue> sizeValues = Arrays.asList(
+                new Options.OptionValue("null", "Just give me a list of reactions"),
                 new Options.OptionValue(Plate.Size.w96.name(), Plate.Size.w96.name()),
                 new Options.OptionValue(Plate.Size.w384.name(), Plate.Size.w384.name())
         );
@@ -194,7 +197,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             plateDocuments.add((PlateDocument)doc.getDocument());
         }
 
-        List<Reaction> failedReactions = getFailedReactions(plateDocuments, options);
+        final List<Reaction> failedReactions = getFailedReactions(plateDocuments, options);
 
         if(failedReactions.size() == 0) {
             throw new DocumentOperationException("The selected plates do not contain any reactions that match your criteria");
@@ -218,38 +221,48 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             newReactions = getNewReactions(failedReactions, plateType);
         }
 
-        Plate.Size plateSize = Plate.Size.valueOf(options.getValueAsString("plateSize"));
+        String plateSizeString = options.getValueAsString("plateSize");
+        if(plateSizeString.equals("null")) {
+            return Arrays.asList(DocumentUtilities.createAnnotatedPluginDocument(new CherryPickingDocument("Results", failedReactions)));
+        }
+        final Plate.Size plateSize = Plate.Size.valueOf(plateSizeString);
 
-        int numberOfPlatesRequired = (int)Math.ceil(((double)failedReactions.size())/plateSize.numberOfReactions());
+        final int numberOfPlatesRequired = (int)Math.ceil(((double)failedReactions.size())/plateSize.numberOfReactions());
 
 
-        List<PlateViewer> plates = new ArrayList<PlateViewer>();
-        for(int i=0; i < numberOfPlatesRequired; i++) {
-            PlateViewer plate = new PlateViewer(plateSize, Reaction.Type.Extraction);
-            for (int j = 0; j < plate.getPlate().getReactions().length; j++) {
-                if(j+i*plateSize.numberOfReactions() > failedReactions.size()-1) {
-                    break;
+        final List<PlateViewer> plates = new ArrayList<PlateViewer>();
+        final Map<String, Reaction> finalNewReactions = newReactions;
+        Runnable runnable = new Runnable() {
+            public void run() {
+                for(int i=0; i < numberOfPlatesRequired; i++) {
+                    PlateViewer plate = new PlateViewer(plateSize, Reaction.Type.Extraction);
+                    for (int j = 0; j < plate.getPlate().getReactions().length; j++) {
+                        if(j+i*plateSize.numberOfReactions() > failedReactions.size()-1) {
+                            break;
+                        }
+                        Reaction plateReaction = plate.getPlate().getReactions()[j];
+                        Reaction oldReaction = failedReactions.get(i * plateSize.numberOfReactions() + j);
+                        Reaction newReaction = finalNewReactions.get(oldReaction.getExtractionId());
+                        if(newReaction == null) {
+                            continue;
+                        }
+                        plateReaction.getOptions().valuesFromXML(newReaction.getOptions().valuesToXML("values"));
+                        plateReaction.setId(newReaction.getId());
+                        plateReaction.setWorkflow(newReaction.getWorkflow());
+                        FimsSample fimsSample = oldReaction.getFimsSample();
+                        if(fimsSample != null) {
+                            plateReaction.setFimsSample(newReaction.getFimsSample());
+                        }
+                        //todo: copy across the actual fields of the extractions
+                    }
+                    plates.add(plate);
                 }
-                Reaction plateReaction = plate.getPlate().getReactions()[j];
-                Reaction oldReaction = failedReactions.get(i * plateSize.numberOfReactions() + j);
-                Reaction newReaction = newReactions.get(oldReaction.getExtractionId());
-                if(newReaction == null) {
-                    continue;
+                for(PlateViewer viewer : plates) {
+                    viewer.displayInFrame(true, GuiUtilities.getMainFrame());
                 }
-                plateReaction.getOptions().valuesFromXML(newReaction.getOptions().valuesToXML("values"));
-                plateReaction.setId(newReaction.getId());
-                plateReaction.setWorkflow(newReaction.getWorkflow());
-                FimsSample fimsSample = oldReaction.getFimsSample();
-                if(fimsSample != null) {
-                    plateReaction.setFimsSample(newReaction.getFimsSample());
-                }
-                //todo: copy across the actual fields of the extractions
             }
-            plates.add(plate);
-        }
-        for(PlateViewer viewer : plates) {
-            viewer.displayInFrame(true, GuiUtilities.getMainFrame());
-        }
+        };
+        ThreadUtilities.invokeNowOrWait(runnable);
         return null;
     }
 

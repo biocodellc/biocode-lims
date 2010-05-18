@@ -52,7 +52,7 @@ public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel 
 
             List<WorkflowDocument> matchingWorkflows = null;
             try {
-                matchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingWorkflowDocuments(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, workflowName), null);
+                matchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingWorkflowDocuments(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, workflowName), null, null);
             } catch (SQLException e) {
                 throw new DocumentOperationException("Could not connect to the LIMS database: "+e.getMessage());
             }

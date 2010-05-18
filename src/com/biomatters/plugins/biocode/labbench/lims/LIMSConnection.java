@@ -1,10 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
-import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -35,6 +32,7 @@ public class LIMSConnection {
     private static final int EXPECTED_SERVER_VERSION = 5;
     Driver driver;
     Connection connection;
+    Connection connection2;
     private LocalLIMS localLIMS;
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
@@ -129,8 +127,10 @@ public class LIMSConnection {
         try {
             DriverManager.setLoginTimeout(20);
             connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
+            connection2 = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
             Statement statement = connection.createStatement();
-            statement.execute("USE "+LIMSOptions.getValueAsString("database"));
+            connection.createStatement().execute("USE "+LIMSOptions.getValueAsString("database"));
+            connection2.createStatement().execute("USE "+LIMSOptions.getValueAsString("database"));
             ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
             if(!resultSet.next()) {
                 throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
@@ -165,6 +165,7 @@ public class LIMSConnection {
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
         connection = null;
+        connection2 = null;
         isLocal = false;
     }
 
@@ -243,7 +244,7 @@ public class LIMSConnection {
         );
     }
 
-    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples) throws SQLException{
+    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
 
@@ -300,6 +301,9 @@ public class LIMSConnection {
         //attach the values to the query
         System.out.println(sql.toString());
         PreparedStatement statement = connection.prepareStatement(sql.toString());
+        if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+            statement.setFetchSize(Integer.MIN_VALUE);
+        }
         int position = 1;
         if(samples != null && samples.size() > 0) {
             for(FimsSample sample : samples) {
@@ -331,9 +335,17 @@ public class LIMSConnection {
             }
         }
         ResultSet resultSet = statement.executeQuery();
+
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
+        int prevWorkflowId = -1;
         while(resultSet.next()) {
             int workflowId = resultSet.getInt("workflow.id");
+            if(callback != null && prevWorkflowId >= 0 && prevWorkflowId != workflowId) {
+                WorkflowDocument prevWorkflow = workflowDocs.get(prevWorkflowId);
+                if(prevWorkflow != null)
+                    callback.add(prevWorkflow, Collections.<String, Object>emptyMap());
+            }
+            prevWorkflowId = workflowId;
             if(workflowDocs.get(workflowId) != null) {
                 workflowDocs.get(workflowId).addRow(resultSet);
             }
@@ -341,6 +353,11 @@ public class LIMSConnection {
                 WorkflowDocument doc = new WorkflowDocument(resultSet);
                 workflowDocs.put(workflowId, doc);
             }
+        }
+        if(prevWorkflowId >= 0) {
+            WorkflowDocument prevWorkflow = workflowDocs.get(prevWorkflowId);
+            if(prevWorkflow != null)
+                callback.add(prevWorkflow, Collections.<String, Object>emptyMap());
         }
         statement.close();
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
@@ -426,7 +443,7 @@ public class LIMSConnection {
         return sql.toString();
     }
 
-    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments) throws SQLException{
+    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
         Set<Integer> plateIds = new HashSet<Integer>();
@@ -486,7 +503,11 @@ public class LIMSConnection {
             sql.append(")");
         }
         System.out.println(sql.toString());
+        Connection connection = isLocal ? this.connection : this.connection2;
         PreparedStatement statement = connection.prepareStatement(sql.toString());
+        if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+            statement.setFetchSize(Integer.MIN_VALUE);
+        }
 
         int position = 1;
         for (Query q : refinedQueries) {
@@ -515,6 +536,7 @@ public class LIMSConnection {
         System.out.println("EXECUTING PLATE QUERY");
 
         ResultSet resultSet = statement.executeQuery();
+        final StringBuilder totalErrors = new StringBuilder("");
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
         List<ExtractionReaction> extractionReactions = new ArrayList<ExtractionReaction>();
         List<PCRReaction> pcrReactions = new ArrayList<PCRReaction>();
@@ -522,10 +544,27 @@ public class LIMSConnection {
         List<Integer> returnedPlateIds = new ArrayList<Integer>();
         int count = 0;
         System.out.println("Creating Reactions...");
+        int previousId = -1;
         while(resultSet.next()) {
             count++;
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
+            //System.out.println(plateId);
+
+            if(previousId >= 0 && previousId != plateId) {
+                Plate prevPlate = plateMap.get(previousId);
+                if(prevPlate != null) {
+                    prevPlate.initialiseReactions();
+                    String error = checkReactions(prevPlate);
+                    if(error != null) {
+                        totalErrors.append(error+"\n");
+                    }
+                    System.out.println("Adding "+prevPlate.getName());
+                    callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
+                }
+            }
+            previousId = plateId;
+
             if(plateMap.get(plateId) == null) {
                 returnedPlateIds.add(plateId);
                 plate = new Plate(resultSet);
@@ -549,32 +588,41 @@ public class LIMSConnection {
             }
         }
         statement.close();
-        for(Plate plate : plateMap.values()) {
-            plate.initialiseReactions();
+        if(previousId >= 0) {
+            Plate prevPlate = plateMap.get(previousId);
+            if(prevPlate != null) {
+                prevPlate.initialiseReactions();
+                String error = checkReactions(prevPlate);
+                if(error != null) {
+                    totalErrors.append(error+"\n");
+                }
+                System.out.println("Adding "+prevPlate.getName());
+                callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
+            }
         }
         System.out.println("count="+count);
-        final StringBuilder totalErrors = new StringBuilder("");
-        if(extractionReactions.size() > 0) {
-            System.out.println("Checking extractions");
-            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions, null, true);
-            if(extractionErrors != null) {
-                totalErrors.append(extractionErrors+"\n");
-            }
-        }
-        if(pcrReactions.size() > 0) {
-            System.out.println("Checking PCR's");
-            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions, null, true);
-            if(pcrErrors != null) {
-                totalErrors.append(pcrErrors+"\n");
-            }
-        }
-        if(cyclesequencingReactions.size() > 0) {
-            System.out.println("Checking Cycle Sequencing's...");
-            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions, null, true);
-            if(cyclesequencingErrors != null) {
-                totalErrors.append(cyclesequencingErrors+"\n");
-            }
-        }
+
+//        if(extractionReactions.size() > 0) {
+//            System.out.println("Checking extractions");
+//            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions, null, true);
+//            if(extractionErrors != null) {
+//                totalErrors.append(extractionErrors+"\n");
+//            }
+//        }
+//        if(pcrReactions.size() > 0) {
+//            System.out.println("Checking PCR's");
+//            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions, null, true);
+//            if(pcrErrors != null) {
+//                totalErrors.append(pcrErrors+"\n");
+//            }
+//        }
+//        if(cyclesequencingReactions.size() > 0) {
+//            System.out.println("Checking Cycle Sequencing's...");
+//            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions, null, true);
+//            if(cyclesequencingErrors != null) {
+//                totalErrors.append(cyclesequencingErrors+"\n");
+//            }
+//        }
         if(totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
@@ -624,6 +672,17 @@ public class LIMSConnection {
         }
         query = Query.Factory.createOrQuery(queryTerms.toArray(new Query[queryTerms.size()]), Collections.EMPTY_MAP);
         return query;
+    }
+
+    private String checkReactions(Plate plate) {
+        System.out.println("Checking "+plate.getName());
+        List<Reaction> reactions = new ArrayList<Reaction>();
+        for(Reaction r : plate.getReactions()) {
+            if(r != null) {
+                reactions.add(r);
+            }
+        }
+        return reactions.get(0).areReactionsValid(reactions, null, true);
     }
 
     public void getGelImagesForPlates(Collection<Plate> plates) throws SQLException {

@@ -60,7 +60,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "1.4";
+        return "1.4.1";
     }
 
     public String getMinimumApiVersion() {
@@ -168,7 +168,8 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new MultiWorkflowDocumentViewerFactory(),
                 new MultiPrimerDocumentViewerFactory(Reaction.Type.PCR),
                 new MultiPrimerDocumentViewerFactory(Reaction.Type.CycleSequencing),
-                new VerifyTaxonomyDocumentViewerFactory()
+                new VerifyTaxonomyDocumentViewerFactory(),
+                new CherryPickingDocumentViewerFactory()
         };
     }
 

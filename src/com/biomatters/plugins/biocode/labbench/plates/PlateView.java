@@ -56,17 +56,18 @@ public class PlateView extends JPanel {
 
         Graphics2D g = (Graphics2D)g1;
         int cellWidth = (getWidth()+1)/cols;
-        int cellHeight = (getHeight()+1)/rows;
+        int cellHeight = (getHeight())/rows;
 
         g.setColor(Color.white);
         g.fillRect(0,0,getWidth(),getHeight());
 
         g.setColor(getBackground());
-        g.fillRect(0,0,cellWidth*cols+1,cellHeight*rows+1);
+        g.fillRect(0,0,cellWidth*cols+1,cellHeight*rows+2);
         Shape clip = g.getClip();
 
 
         for(int i=0; i < rows; i++) {
+            boolean lastRow = i == rows-1;
             for(int j = 0; j < cols; j++) {
                 final Reaction reaction = reactions[cols*i + j];
                 Rectangle reactionBounds = new Rectangle(1+cellWidth * j, 1+cellHeight * i, cellWidth - 1, cellHeight - 1);

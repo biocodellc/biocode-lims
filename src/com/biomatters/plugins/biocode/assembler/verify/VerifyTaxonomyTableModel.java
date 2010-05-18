@@ -431,6 +431,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
         String s2 = s.get();
         for (String key : keys) {
             key = key.trim();
+            if(key.length() == 0) {
+                continue;
+            }
             int index = s2.toLowerCase().indexOf(key.toLowerCase());
             if (index != -1) {
                 keys2 = keys2.replace(key, "<font color=\"green\">" + key + "</font>");

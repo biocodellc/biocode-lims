@@ -22,6 +22,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.font.TextLayout;
+import java.awt.geom.Rectangle2D;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.sql.SQLException;
@@ -90,6 +92,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                                         ((CycleSequencingReaction)r).purgeChromats();
                                     }
                                 }
+                                reloadViewer();
                             } catch (SQLException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());    
                             } catch(BadDataException e2) {
@@ -125,15 +128,26 @@ public class PlateDocumentViewer extends DocumentViewer{
         updateToolbar(false);
     }
 
+    private void reloadViewer() {
+        if(container !=null) {
+            container.removeAll();
+            container.add(getPanel(), BorderLayout.CENTER);   
+        }
+    }
+
     public JComponent getComponent() {
-        container = new JPanel(new BorderLayout());
-        container.setOpaque(true);
-        container.setBackground(Color.white);
-        container.add(getPanel(), BorderLayout.CENTER);
+        if(container == null) {
+            container = new JPanel(new BorderLayout());
+            container.setOpaque(true);
+            container.setBackground(Color.white);
+            reloadViewer();
+        }
         return container;
     }
 
     private void updateCocktailCount() {
+        cocktailCount.clear();
+        panelMap.clear();
         for(Reaction r : plateView.getPlate().getReactions()) {
             if(r.isEmpty()) {
                 continue;
@@ -498,7 +512,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                             label.setText(doubleOption.getValue() + " " + doubleOption.getUnits());
                         }
                         else {
-                            double totalVol = fudgeFactor * doubleOption.getValue() * count;
+                            double vol = fudgeFactor * doubleOption.getValue();
+                            double totalVol = vol * count;
                             DecimalFormat format = new DecimalFormat("#0.0"+ " " + doubleOption.getUnits());
                             label.setText(format.format(totalVol));
                         }
@@ -511,17 +526,21 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
         }
         final JLabel countLabel = new JLabel();
+        final JLabel perReactionCount = new JLabel();
         ChangeListener changeListener = new ChangeListener(){
             public void stateChanged(ChangeEvent e) {
                 double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
-                DecimalFormat format = new DecimalFormat("#0.0 uL");
-                double totalVol = fudgeFactor * ct.getReactionVolume(ct.getOptions()) * count;
+                DecimalFormat format = new DecimalFormat("#0.0 µL");
+                double vol = fudgeFactor * ct.getReactionVolume(ct.getOptions());
+                double totalVol = vol * count;
+                perReactionCount.setText("<html><b>" + format.format(vol) + "</b></html>");
                 countLabel.setText("<html><b>" + format.format(totalVol) + "</b></html>");
             }
         };
         fudgeSpinner.addChangeListener(changeListener);
         changeListener.stateChanged(null);
         countLabel.setOpaque(false);
+        cockatilPanel.addComponentWithLabel("<html><b>Volume per well</b></html>", perReactionCount, false);
         cockatilPanel.addComponentWithLabel("<html><b>Total volume</b></html>", countLabel, false);
         cockatilPanel.setBorder(new OptionsPanel.RoundedLineBorder(ct.getName(), false));
         panelMap.put(ct, cockatilPanel);
@@ -622,15 +641,39 @@ public class PlateDocumentViewer extends DocumentViewer{
                 int availableHeight = dimensions.height;
                 boolean oldColorBackground = plateView.isColorBackground();
                 plateView.setColorBackground((Boolean)options.getValue("colorPlate"));
-                double scaleFactor = dimensions.getWidth()/plateView.getPreferredSize().width;
+                double scaleFactor = 1;
+                scaleFactor = Math.min(scaleFactor, dimensions.getWidth()/plateView.getPreferredSize().width);
                 scaleFactor = Math.min(scaleFactor, dimensions.getHeight()/plateView.getPreferredSize().height);
                 double requiredPlateHeight = scaleFactor*plateView.getPreferredSize().height;
 
+
+
                 if(pageIndex+1 == page && g != null) {
+                    int initialSize = 16;
+                    //draw the title
+                    g.setColor(Color.black);
+                    g.setFont(new Font("sans serif", Font.BOLD, initialSize));
+                    String plateName = plateDoc.getName();
+                    TextLayout layout = new TextLayout(plateName, g.getFont(), g.getFontRenderContext());
+                    Rectangle2D layoutBounds = layout.getBounds();
+
+                    //quick hack to try and fit the font to the width of the page...
+                    if(layoutBounds.getWidth() > dimensions.width) {
+                        g.setFont(new Font("sans serif", Font.BOLD, (int)(initialSize*(dimensions.width/layoutBounds.getWidth()))));
+                        layout = new TextLayout(plateName, g.getFont(), g.getFontRenderContext());
+                        layoutBounds = layout.getBounds();
+                    }
+
+                    g.drawString(plateName, (int)(dimensions.width- layoutBounds.getWidth())/2, layout.getAscent());
+                    availableHeight -= layout.getAscent()+5; //5 is for padding...
+
+                    //draw the plate
+                    g.translate(0, dimensions.height-availableHeight);
                     g.scale(scaleFactor, scaleFactor);
                     plateView.setBounds(0,0,plateView.getPreferredSize().width, plateView.getPreferredSize().height);
                     plateView.print(g);
                     g.scale(1/scaleFactor, 1/scaleFactor);
+                    g.translate(0, availableHeight-dimensions.height);
                 }
                 plateView.setColorBackground(oldColorBackground);
 
@@ -639,6 +682,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 int cocktailHeight = 0;
                 int cocktailWidth = 0;
                 int maxRowHeight = 0;
+                updateCocktailCount();
                 if(cocktailCount.size() > 0) {
                     for(Map.Entry<Cocktail, Integer> entry : cocktailCount.entrySet()) {
                         JPanel cocktailPanel = getCocktailPanel(entry);

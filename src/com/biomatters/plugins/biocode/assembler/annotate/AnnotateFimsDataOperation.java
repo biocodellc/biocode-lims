@@ -171,7 +171,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
     private static void annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         AnnotateFimsDataOptions.FimsData fimsData;
         fimsData = fimsDataGetter.getFimsData(annotatedDocument);
-        if (fimsData.fimsSample == null) {
+        if (fimsData == null || fimsData.fimsSample == null) {
             failBlog.add(annotatedDocument.getName());
             return;
         }

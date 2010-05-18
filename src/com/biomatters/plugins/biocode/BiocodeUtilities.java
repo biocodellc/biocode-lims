@@ -1,8 +1,6 @@
 package com.biomatters.plugins.biocode;
 
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
@@ -21,7 +19,6 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.io.IOException;
@@ -88,7 +85,7 @@ public class BiocodeUtilities {
                 return null;
             }
 
-            List<WorkflowDocument> workflows = limsConnection.getMatchingWorkflowDocuments(null, tissues);
+            List<WorkflowDocument> workflows = limsConnection.getMatchingWorkflowDocuments(null, tissues, null);
             for (WorkflowDocument workflow : workflows) {
                 if (mostRecent == null || workflow.getNumberOfParts() > mostRecent.getNumberOfParts()) {
                     mostRecent = workflow;

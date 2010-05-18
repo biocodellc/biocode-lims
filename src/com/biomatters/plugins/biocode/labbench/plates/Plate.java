@@ -73,7 +73,7 @@ public class Plate implements XMLSerializable {
             init(plateSize, type, false);
         }
         else {
-            init(size, 1, type, false);
+            init(1, size, type, false);
         }
         int thermocycleId = resultSet.getInt("plate.thermocycle");
         setThermocycleFromId(thermocycleId);
@@ -110,7 +110,7 @@ public class Plate implements XMLSerializable {
     }
 
     public Plate(int numberOfWells, Reaction.Type type) {
-        init(numberOfWells, 1, type, true);
+        init(1, numberOfWells, type, true);
     }
 
 
@@ -233,7 +233,7 @@ public class Plate implements XMLSerializable {
     }
 
     public BiocodeUtilities.Well getWell(int row, int col) {
-        return new BiocodeUtilities.Well(getWellName(row, col));   
+        return new BiocodeUtilities.Well(getWellName(row, col));
     }
 
     public Reaction getReaction(BiocodeUtilities.Well well) {
@@ -243,6 +243,11 @@ public class Plate implements XMLSerializable {
     public static String getWellName(int row, int col) {
         return ""+(char)(65+row)+(1+col);
     }
+
+//    public static String getWellName(int position, Plate.Size size) {
+//        BiocodeUtilities.Well well = getWell(position, size);
+//        return getWellName(well.row(), well.col(), size != null);
+//    }
 
     public static BiocodeUtilities.Well getWell(int position, Size size) {
         int cols;
@@ -260,7 +265,7 @@ public class Plate implements XMLSerializable {
             }
         }
         else {
-            cols = 1;
+            cols = 1+position;
         }
         int row = position / cols;
         int col = position % cols;
@@ -391,7 +396,7 @@ public class Plate implements XMLSerializable {
             init(sizeEnum, type, false);
         }
         else {
-            init(size, 1, type, false);
+            init(1, size, type, false);
         }
         for(Element e : element.getChildren("reaction")) {
             Reaction r = XMLSerializer.classFromXML(e, Reaction.class);
