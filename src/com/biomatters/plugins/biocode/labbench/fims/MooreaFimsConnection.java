@@ -406,6 +406,10 @@ public class MooreaFimsConnection extends FIMSConnection{
         return queryBuilder.toString();
     }
 
+    public boolean canGetTissueIdsFromFimsTissuePlate() {
+        return true;
+    }
+
     public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
         if(plateId == null || plateId.length() == 0) {
             return Collections.emptyMap();

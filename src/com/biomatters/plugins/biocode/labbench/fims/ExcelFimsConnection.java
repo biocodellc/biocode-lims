@@ -21,10 +21,7 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.prefs.Preferences;
 
 /**
@@ -43,6 +40,10 @@ public class ExcelFimsConnection extends FIMSConnection{
 
     int specimenCol;
 
+    int plateCol, wellCol;
+
+    boolean storePlates;
+
     public String getName() {
         return "excel";
     }
@@ -59,6 +60,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         Options options = new Options(this.getClass());
         options.addLabel("<html>Choose the location of your excel file.<br>The first row should be column headers, and it should<br>have at least a tissue and specimen column.</html>");
         final Options.FileSelectionOption fileLocation = options.addFileSelectionOption("excelFile", "Excel file location:", "");
+        options.restorePreferences(); //to make sure that the field chooser boxes start out with the right values
         fileLocation.setSelectionType(JFileChooser.FILES_ONLY);
 
         List<Options.OptionValue> cols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null);
@@ -66,6 +68,15 @@ public class ExcelFimsConnection extends FIMSConnection{
         final Options.ComboBoxOption<Options.OptionValue> tissueId = options.addComboBoxOption("tissueId", "Tissue ID field:", cols, cols.get(0));
 
         final Options.ComboBoxOption<Options.OptionValue> specimenId = options.addComboBoxOption("specimenId", "Specimen ID field:", cols, cols.get(0));
+
+        final Options.BooleanOption storePlates = options.addBooleanOption("storePlates", "The FIMS database contains plate information", false);
+
+        final Options.ComboBoxOption<Options.OptionValue> plateName = options.addComboBoxOption("plateName", "Plate name field:", cols, cols.get(0));
+
+        final Options.ComboBoxOption<Options.OptionValue> plateWell = options.addComboBoxOption("plateWell", "Well field:", cols, cols.get(0));
+
+        storePlates.addDependent(plateName, true);
+        storePlates.addDependent(plateWell, true);
 
         options.addLabel(" ");
         options.addLabel("Specify your taxonomy fields, in order of highest to lowest");
@@ -81,6 +92,8 @@ public class ExcelFimsConnection extends FIMSConnection{
                 List<Options.OptionValue> newCols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null);
                 tissueId.setPossibleValues(newCols);
                 specimenId.setPossibleValues(newCols);
+                plateName.setPossibleValues(newCols);
+                plateWell.setPossibleValues(newCols);
                 taxCol.setPossibleValues(newCols);
                 for(Options options : taxOptions.getValues()) {
                     for(Options.Option option : options.getOptions()) {
@@ -141,6 +154,11 @@ public class ExcelFimsConnection extends FIMSConnection{
         }
         tissueCol = Integer.parseInt(((Options.OptionValue)options.getValue("tissueId")).getName());
         specimenCol = Integer.parseInt(((Options.OptionValue)options.getValue("specimenId")).getName());
+        storePlates = (Boolean)options.getValue("storePlates");
+        if(storePlates) {
+            plateCol = Integer.parseInt(((Options.OptionValue)options.getValue("plateName")).getName());
+            wellCol = Integer.parseInt(((Options.OptionValue)options.getValue("plateWell")).getName());
+        }
         fields = new ArrayList<DocumentField>();
         taxonomyFields = new ArrayList<DocumentField>();
 
@@ -307,7 +325,26 @@ public class ExcelFimsConnection extends FIMSConnection{
         return Collections.emptyMap();
     }
 
+    public boolean canGetTissueIdsFromFimsTissuePlate() {
+        return storePlates;
+    }
+
     public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
+        if(storePlates) {
+            DocumentField plateField = getTableCol(fields, plateCol);
+            DocumentField wellField = getTableCol(fields, wellCol);
+
+            Query query = Query.Factory.createFieldQuery(plateField, Condition.EQUAL, plateId);
+            List<FimsSample> samples = getMatchingSamples(query);
+
+            Map<String, String> results = new HashMap<String, String>();
+
+            for(FimsSample sample : samples) {
+                results.put(""+sample.getFimsAttributeValue(wellField.getCode()), sample.getId());
+            }
+
+            return results;
+        }
         return Collections.emptyMap();
     }
 

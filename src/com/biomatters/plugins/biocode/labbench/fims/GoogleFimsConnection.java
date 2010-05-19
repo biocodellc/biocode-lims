@@ -206,6 +206,10 @@ public class GoogleFimsConnection extends FIMSConnection{
         return Collections.emptyMap();
     }
 
+    public boolean canGetTissueIdsFromFimsTissuePlate() {
+        return false;
+    }
+
     public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
         return null;
     }

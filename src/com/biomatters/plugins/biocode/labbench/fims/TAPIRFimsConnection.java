@@ -165,4 +165,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
     public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
         return Collections.emptyMap();
     }
+
+    public boolean canGetTissueIdsFromFimsTissuePlate() {
+        return false;
+    }
 }

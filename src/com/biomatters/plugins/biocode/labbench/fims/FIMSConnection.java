@@ -129,6 +129,8 @@ public abstract class FIMSConnection {
 
     public abstract Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException;
 
+    public abstract boolean canGetTissueIdsFromFimsTissuePlate();
+
     public abstract Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException;
 
 }
