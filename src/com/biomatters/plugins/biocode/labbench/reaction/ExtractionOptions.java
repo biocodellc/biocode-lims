@@ -5,6 +5,8 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 
+import java.util.Date;
+
 /**
  * @author Steven Stones-Havas
  * @version $Id$
@@ -19,6 +21,7 @@ public class ExtractionOptions extends ReactionOptions{
     public ExtractionOptions() {
         addStringOption("sampleId", "Tissue Sample Id", "");
         addStringOption("extractionId", "Extraction Id", "");
+        addDateOption("date", "Date", new Date());          
         addStringOption("extractionBarcode", "Extraction Barcode", "", "May be blank");
         addStringOption("extractionMethod", "Extraction Method", "");
         addStringOption("parentExtraction", "Parent Extraction Id", "", "May be blank");
@@ -47,7 +50,7 @@ public class ExtractionOptions extends ReactionOptions{
 
     @Override
     public Element toXML() {
-        return super.toXML();    //To change body of overridden methods use File | Settings | File Templates.
+        return super.toXML();
     }
 
     public Cocktail getCocktail() {

@@ -31,7 +31,7 @@ import org.virion.jam.util.SimpleListener;
  * Time: 8:24:56 PM
  */
 public class LocalLIMS {
-    private static final String SCRIPT_NAME = "labbench_5.sql";
+    private static final String SCRIPT_NAME = "labbench_"+LIMSConnection.EXPECTED_SERVER_VERSION+"_sqlite.sql";
     private static final Options.OptionValue NULL_DATABASE = new Options.OptionValue("null", "No databases");
 
 

@@ -16,6 +16,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Date;
 
 /**
  * @author Steven Stones-Havas
@@ -143,6 +144,7 @@ public class PCROptions extends ReactionOptions {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
         addStringOption("workflowId", "Workflow ID", "");
+        addDateOption("date", "Date", new Date());
 
 
         OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, PASSED_VALUE, FAILED_VALUE };

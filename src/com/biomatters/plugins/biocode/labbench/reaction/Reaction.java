@@ -546,8 +546,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=extraction.date WHERE id=?";
+                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=? WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 int insertCount = 0;
@@ -562,7 +562,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
                             updateCount++;
-                            statement.setInt(13, reaction.getId());
+                            statement.setInt(14, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -581,6 +581,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setString(10, options.getValueAsString("notes"));
                         statement.setString(11, options.getValueAsString("previousPlate"));
                         statement.setString(12, options.getValueAsString("previousWell"));
+                        statement.setDate(13, new java.sql.Date(((Date)options.getValue("date")).getTime()));
                         statement.addBatch();
                         //statement.execute();
                     }
@@ -602,8 +603,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 updateStatement.close();
                 break;
             case PCR:
-                insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=pcr.date WHERE id=?";
+                insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=? WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -615,7 +616,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(15, reaction.getId());
+                            statement.setInt(16, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -638,6 +639,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         Options.OptionValue primerOptionValue2 = (Options.OptionValue) value2;
                         statement.setString(13, primerOptionValue2.getLabel());
                         statement.setString(14, primerOptionValue2.getDescription());
+                        statement.setDate(15, new java.sql.Date(((Date)options.getValue("date")).getTime()));
 //                        statement.setInt(14, (Integer)options.getValue("revPrAmount"));
 //                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
 //                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
@@ -681,8 +683,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 updateStatement.close();
                 break;
             case CycleSequencing:
-                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=cyclesequencing.date WHERE id=?";
+                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=? WHERE id=?";
                 String clearTracesSQL = "DELETE FROM traces WHERE reaction=?";
                 String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
 
@@ -700,7 +702,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(14, reaction.getId());
+                            statement.setInt(15, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -747,6 +749,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setString(11, options.getValueAsString("cleanupMethod"));
                         statement.setString(12, reaction.getExtractionId());
                         statement.setString(13, options.getValueAsString("notes"));
+                        statement.setDate(14, new java.sql.Date(((Date)options.getValue("date")).getTime()));
 //                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
 //                        String sequenceString = "";
 //                        if(sequences != null && sequences.size() > 0) {

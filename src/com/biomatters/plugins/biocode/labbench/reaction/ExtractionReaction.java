@@ -45,6 +45,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         options.setValue("volume", r.getInt("extraction.volume"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
         options.setValue("notes", r.getString("extraction.notes"));
+        options.getOption("date").setValue(r.getDate("extraction.date")); //we use getOption() here because the toString() method of java.sql.Date is different to the toString() method of java.util.Date, so setValueFromString() fails in DateOption
         setPlateId(r.getInt("extraction.plate"));
         setPosition(r.getInt("extraction.location"));
         String workflowName = null;

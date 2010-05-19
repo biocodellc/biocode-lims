@@ -31,6 +31,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Date;
 import java.lang.ref.WeakReference;
 
 /**
@@ -284,6 +285,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
         addStringOption("workflowId", "Workflow ID", "");
+        addDateOption("date", "Date", new Date());
 
 
         OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, PASSED_VALUE, FAILED_VALUE };
