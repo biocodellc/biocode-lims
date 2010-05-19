@@ -198,4 +198,9 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new DocumentType("Plate Document", PlateDocument.class, BiocodePlugin.getIcons("plateDocument_32.png"))
         };
     }
+
+    @Override
+    public DocumentFileExporter[] getDocumentFileExporters() {
+        return new DocumentFileExporter[] {new WorkflowSummaryExporter()};
+    }
 }

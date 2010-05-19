@@ -159,6 +159,16 @@ public class WorkflowDocument extends MuitiPartDocument {
         return r;
     }
 
+    public Reaction getMostRecentSequencingReaction(boolean forward) {
+        Reaction r = null;
+        for(int i=0; i < reactions.size(); i++) {
+            if(reactions.get(i).getType() == Reaction.Type.CycleSequencing && CycleSequencingOptions.FORWARD_VALUE.equals(reactions.get(i).getOptions().getValueAsString(CycleSequencingOptions.DIRECTION)) == forward) {
+                r = reactions.get(i);
+            }
+        }
+        return r;
+    }
+
     public List<Reaction> getReactions(Reaction.Type type) {
         List<Reaction> reactionsList = new ArrayList<Reaction>();
         for(int i=0; i < reactions.size(); i++) {

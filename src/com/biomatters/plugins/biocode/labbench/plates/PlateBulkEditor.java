@@ -99,7 +99,7 @@ public class PlateBulkEditor {
         };
         toolbar.addAction(swapAction);
         List<GeneiousAction> toolsActions = new ArrayList<GeneiousAction>();
-        if(p.getReactionType() == Reaction.Type.Extraction && (p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384)) {
+        if(p.getReactionType() == Reaction.Type.Extraction && (p.getPlateSize() == Plate.Size.w96 || p.getPlateSize() == Plate.Size.w384) && BiocodeService.getInstance().getActiveFIMSConnection().canGetTissueIdsFromFimsTissuePlate()) {
             GeneiousAction archivePlateAction = new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", IconUtilities.getIcons("database16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
@@ -128,12 +128,7 @@ public class PlateBulkEditor {
                         textFieldPanel.add(tf3);
                         textFieldPanel.add(tf4);
                     }
-                    final JRadioButton tissueButton = new JRadioButton("Tissue Plate", true);
-                    final JRadioButton extractionButton = new JRadioButton("Extraction Plate", false);
-                    ButtonGroup group = new ButtonGroup();
-                    group.add(extractionButton);
-                    group.add(tissueButton);
-                    if (Dialogs.showInputDialog("", "Get FIMS plate", platePanel, tissueButton, extractionButton, new JLabel(" "), new JLabel("Enter the plate ID" + (size96 ? "" : "s")), textFieldPanel)) {
+                    if (Dialogs.showInputDialog("", "Get FIMS plate", platePanel, new JLabel(" "), new JLabel("Enter the plate ID" + (size96 ? "" : "s")), textFieldPanel)) {
                         final List<String> plateIds = new ArrayList<String>();
                         for (JTextField field : jTextFields) {
                             plateIds.add(field.getText());
@@ -147,11 +142,7 @@ public class PlateBulkEditor {
                                 try {
                                     List<Map<String, String>> tissueIds = new ArrayList<Map<String, String>>();
                                     for (String plateId : plateIds) {
-                                        if (extractionButton.isSelected()) {
-                                            tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsExtractionPlate(plateId));
-                                        } else {
-                                            tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateId));
-                                        }
+                                        tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateId));
                                     }
 
                                     for (int i = 0; i < tissueIds.size(); i++) {

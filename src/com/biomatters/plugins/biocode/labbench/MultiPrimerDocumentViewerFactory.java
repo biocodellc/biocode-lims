@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.reaction.Cocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
@@ -91,16 +92,24 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
         for(AnnotatedPluginDocument doc : docs) {
             WorkflowDocument workflow = (WorkflowDocument)doc.getDocumentOrCrash();
             List<Reaction> reactions = workflow.getReactions(type);
-            for(Reaction r : reactions) {
-                Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("primer");
-                primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.forward, primerValue.getName()));
-            }
             if(type == Reaction.Type.PCR) {
+                for(Reaction r : reactions) {
+                    Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("primer");
+                    primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.forward, primerValue.getName()));
+                }
                 for(Reaction r : reactions) {
                     Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("revPrimer");
                     primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.reverse, primerValue.getName()));
                 }
             }
+            else {
+                for(Reaction r : reactions) {
+                    boolean isForward = CycleSequencingOptions.FORWARD_VALUE.equals(r.getOptions().getValueAsString(CycleSequencingOptions.DIRECTION));
+                    Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("primer");
+                    primerNamesSet.add(new PrimerIdentifier(isForward ? PrimerIdentifier.Type.forward : PrimerIdentifier.Type.reverse, primerValue.getName()));
+                }
+            }
+
         }
         final List<PrimerIdentifier> primerList = new ArrayList<PrimerIdentifier>(primerNamesSet);
 
@@ -118,7 +127,13 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 PrimerIdentifier primer = primerList.get(j);
                 String s = primer.getName();
                 for (Reaction r : reactions) {
-                    String primerName = ((Options.OptionValue) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer")).getName();
+                    String primerName;
+                    if(r.getType() == Reaction.Type.PCR) {
+                        primerName = ((Options.OptionValue) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer")).getName();
+                    }
+                    else {
+                        primerName = ((Options.OptionValue) r.getOptions().getValue("primer")).getName();    
+                    }
                     Cocktail cocktail = r.getOptions().getCocktail();
                     if (primerName.equals(s)) {
                         tableValues[i][j] = new ObjectAndColor(r.getPlateName()+" "+r.getLocationString()+(cocktail != null ? ", "+cocktail.getName() : ""), r.getBackgroundColor());

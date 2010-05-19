@@ -2,10 +2,7 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
-import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.Cocktail;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
@@ -41,11 +38,11 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public int getColumnCount() {
-                return 7;
+                return 12;
             }
 
             public String getColumnName(int columnIndex) {
-                String[] names = new String[] {"Name", "Extraction", "PCR forward primer", "PCR reverse primer", "PCR plate", "Cycle Sequencing", "Cycle Sequencing Plate"};
+                String[] names = new String[] {"Name", "Extraction", "PCR forward primer", "PCR reverse primer", "PCR plate", "PCR status", "Cycle Sequencing primer (forward)", "Cycle Sequencing Plate (forward)", "Cycle sequencing status (forward)", "Cycle Sequencing primer (reverse)", "Cycle Sequencing Plate (reverse)", "Cycle sequencing status (reverse)"};
                 return names[columnIndex];
             }
 
@@ -61,7 +58,8 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                 WorkflowDocument doc = (WorkflowDocument)docs[rowIndex].getDocumentOrCrash();
                 Reaction recentExtraction = doc.getMostRecentReaction(Reaction.Type.Extraction);
                 Reaction recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
-                Reaction recentCycleSequencing = doc.getMostRecentReaction(Reaction.Type.CycleSequencing);
+                Reaction recentCycleSequencingForward = doc.getMostRecentSequencingReaction(true);
+                Reaction recentCycleSequencingReverse = doc.getMostRecentSequencingReaction(false);
                 switch(columnIndex) {
                     case 0 :
                         return doc.getName();
@@ -78,11 +76,23 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                     case 4 :
                         return recentPCR != null ? new ObjectAndColor(recentPCR.getPlateName()+" "+recentPCR.getLocationString(), recentPCR.getBackgroundColor()) : null;
                     case 5 :
-                        if(recentCycleSequencing == null) return null;
-                        cocktail = recentCycleSequencing.getCocktail();
-                        return new ObjectAndColor(recentCycleSequencing.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencing.getBackgroundColor());
+                        return recentPCR != null ? new ObjectAndColor(recentPCR.getFieldValue(ReactionOptions.RUN_STATUS), recentPCR.getBackgroundColor()) : null;
                     case 6 :
-                        return recentCycleSequencing != null ? new ObjectAndColor(recentCycleSequencing.getPlateName()+" "+recentCycleSequencing.getLocationString(), recentCycleSequencing.getBackgroundColor()) : null;
+                        if(recentCycleSequencingForward == null) return null;
+                        cocktail = recentCycleSequencingForward.getCocktail();
+                        return new ObjectAndColor(recentCycleSequencingForward.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencingForward.getBackgroundColor());
+                    case 7 :
+                        return recentCycleSequencingForward != null ? new ObjectAndColor(recentCycleSequencingForward.getPlateName()+" "+recentCycleSequencingForward.getLocationString(), recentCycleSequencingForward.getBackgroundColor()) : null;
+                    case 8 :
+                        return recentCycleSequencingForward != null ? new ObjectAndColor(recentCycleSequencingForward.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingForward.getBackgroundColor()) : null;
+                    case 9 :
+                        if(recentCycleSequencingReverse == null) return null;
+                        cocktail = recentCycleSequencingReverse.getCocktail();
+                        return new ObjectAndColor(recentCycleSequencingReverse.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencingReverse.getBackgroundColor());
+                    case 10 :
+                        return recentCycleSequencingReverse != null ? new ObjectAndColor(recentCycleSequencingReverse.getPlateName()+" "+recentCycleSequencingReverse.getLocationString(), recentCycleSequencingReverse.getBackgroundColor()) : null;
+                    case 11 :
+                        return recentCycleSequencingReverse != null ? new ObjectAndColor(recentCycleSequencingReverse.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingReverse.getBackgroundColor()) : null;
                 }
                 return null;
             }
