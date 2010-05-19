@@ -114,8 +114,14 @@ public abstract class Cocktail implements XMLSerializable {
                     newCocktail = cocktailClass.newInstance();
                 } catch (InstantiationException e1) {
                     Dialogs.showMessageDialog("Could not create a new cocktail: "+e1.getMessage());
+                    return;
                 } catch (IllegalAccessException e1) {
                     Dialogs.showMessageDialog("Could not create a new cocktail: "+e1.getMessage());
+                    return;
+                }
+                if(cocktailList.getSelectedValue() != null) {
+                    newCocktail.getOptions().valuesFromXML(((Cocktail)cocktailList.getSelectedValue()).getOptions().valuesToXML("options"));
+                    newCocktail.getOptions().setValue("name", "Untitled");
                 }
                 newCocktails.add(newCocktail);
                 for(ListDataListener listener : listModel.getListDataListeners()){
