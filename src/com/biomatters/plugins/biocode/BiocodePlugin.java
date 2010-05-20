@@ -201,6 +201,6 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public DocumentFileExporter[] getDocumentFileExporters() {
-        return new DocumentFileExporter[] {new WorkflowSummaryExporter()};
+        return new DocumentFileExporter[] {new WorkflowSummaryExporter(), new PlateExporter()};
     }
 }
