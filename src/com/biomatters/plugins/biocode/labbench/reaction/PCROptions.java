@@ -174,6 +174,7 @@ public class PCROptions extends ReactionOptions {
         ComboBoxOption cleanupOption = addComboBoxOption("cleanupPerformed", "Cleanup performed", cleanupValues, cleanupValues[1]);
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
+        addStringOption("technician", "Technician", "May be blank");
         cleanupOption.addDependent(cleanupMethodOption, cleanupValues[0]);
         TextAreaOption notes = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notes);

@@ -71,7 +71,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         options.setValue("cleanupPerformed", r.getBoolean("cyclesequencing.cleanupPerformed"));
         options.setValue("cleanupMethod", r.getString("cyclesequencing.cleanupMethod"));
         options.getOption("date").setValue(r.getDate("cyclesequencing.date")); //we use getOption() here because the toString() method of java.sql.Date is different to the toString() method of java.util.Date, so setValueFromString() fails in DateOption
-
+        options.setValue("technician", r.getString("cyclesequencing.technician"));
         setPlateName(r.getString("plate.name"));
         setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
 

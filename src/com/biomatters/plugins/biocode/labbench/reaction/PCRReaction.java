@@ -77,7 +77,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         options.setValue("cleanupMethod", r.getString("pcr.cleanupMethod"));
         options.setValue("notes", r.getString("pcr.notes"));
         options.getOption("date").setValue(r.getDate("pcr.date")); //we use getOption() here because the toString() method of java.sql.Date is different to the toString() method of java.util.Date, so setValueFromString() fails in DateOption
-
+        options.setValue("technician", r.getString("pcr.technician"));
         setPlateName(r.getString("plate.name"));
         setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
 

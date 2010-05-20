@@ -36,7 +36,7 @@ public class GelEditor {
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         editPanel.add(splitPane, BorderLayout.CENTER);
         final JList gelimageList = new JList();
-        gelimageList.setPrototypeCellValue("Image");
+        gelimageList.setPrototypeCellValue("Image.jpg");
         final AbstractListModel listModel = new AbstractListModel() {
             public int getSize() {
                 return gelimages.size();
@@ -56,7 +56,8 @@ public class GelEditor {
                 if(value instanceof GelImage) {
                     if(superComponent instanceof JLabel) {
                         JLabel label = (JLabel)superComponent;
-                        label.setText("Image");
+                        GelImage image = (GelImage)value;
+                        label.setText(image.getFilename());
                     }
                 }
                 return superComponent;

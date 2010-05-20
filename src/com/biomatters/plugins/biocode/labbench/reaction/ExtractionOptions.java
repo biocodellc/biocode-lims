@@ -30,6 +30,7 @@ public class ExtractionOptions extends ReactionOptions{
         addIntegerOption("dilution", "Dilution 1/", 5, 0, Integer.MAX_VALUE);
         Options.IntegerOption volume = addIntegerOption("volume", "Extraction Volume", 5, 0, Integer.MAX_VALUE);
         volume.setUnits("uL");
+        addStringOption("technician", "Technician", "", "May be blank");
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);
     }

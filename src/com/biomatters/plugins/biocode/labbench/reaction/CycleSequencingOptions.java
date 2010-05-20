@@ -319,6 +319,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         cleanupOption.addDependent(cleanupMethodOption, cleanupValues[0]);
         tracesButton = new com.biomatters.plugins.biocode.labbench.ButtonOption("traces", "", "Add/Edit Traces", false);
         addCustomOption(tracesButton);
+        addStringOption("technician", "Technician", "May be blank");
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);
 

@@ -25,6 +25,7 @@ public class GelImage implements XMLSerializable {
     private byte[] imageBytes;
     private Image image;
     private String notes;
+    private String filename;
 
     public GelImage(Element xml) throws XMLSerializationException {
         fromXML(xml);
@@ -33,6 +34,7 @@ public class GelImage implements XMLSerializable {
     public GelImage(int plate, File imageFile, String notes) throws IOException {
         this.notes = notes;
         this.plate = plate;
+        this.filename = imageFile.getName();
         FileInputStream in = new FileInputStream(imageFile);
         if(imageFile.length() > Integer.MAX_VALUE) {
             throw new IOException("The file "+imageFile.getName()+" is too large");
@@ -47,6 +49,7 @@ public class GelImage implements XMLSerializable {
         this.plate = resultSet.getInt("gelimages.plate");
         this.id = resultSet.getInt("gelimages.id");
         this.imageBytes = resultSet.getBytes("gelimages.imageData");
+        this.filename = resultSet.getString("gelImages.name");
         createImage();
     }
 
@@ -65,25 +68,18 @@ public class GelImage implements XMLSerializable {
 
     public PreparedStatement toSql(Connection conn) throws SQLException {
         PreparedStatement statement;
-//        if(id < 0) {
-            statement = conn.prepareStatement("INSERT INTO gelimages (plate, imageData, notes) VALUES (?, ?, ?)");
-            statement.setInt(1, plate);
-            statement.setObject(2, imageBytes);
-            statement.setString(3, notes);
-//        }
-//        else {
-//            statement = conn.prepareStatement("UPDATE gelimages SET plate=?, imageData=?, notes=? WHERE id=?");
-//            statement.setInt(1, id);
-//            statement.setInt(2, plate);
-//            statement.setObject(3, imageBytes);
-//            statement.setString(4, notes);
-//        }
+        statement = conn.prepareStatement("INSERT INTO gelimages (plate, imageData, notes, name) VALUES (?, ?, ?, ?)");
+        statement.setInt(1, plate);
+        statement.setObject(2, imageBytes);
+        statement.setString(3, notes);
+        statement.setString(4, filename);
         return statement;
     }
 
     public Element toXML() {
         Element xml = new Element("GelImage");
         xml.addContent(new Element("id").setText(""+getId()));
+        xml.addContent(new Element("name").setText(filename));
         xml.addContent(new Element("plate").setText(""+getPlate()));
         xml.addContent(new Element("notes").setText(getNotes()));
         String imageBase64 = new String(Base64Coder.encode(imageBytes));
@@ -94,6 +90,7 @@ public class GelImage implements XMLSerializable {
 
     public void fromXML(Element xml) throws XMLSerializationException {
         id = Integer.parseInt(xml.getChildText("id"));
+        filename = xml.getChildText("name");
         plate = Integer.parseInt(xml.getChildText("plate"));
         notes = xml.getChildText("notes");
         imageBytes = Base64Coder.decode(xml.getChildText("imageData").toCharArray());
@@ -126,6 +123,10 @@ public class GelImage implements XMLSerializable {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getFilename() {
+        return filename;
     }
 
     public void setImageBytes(byte[] imageBytes) {

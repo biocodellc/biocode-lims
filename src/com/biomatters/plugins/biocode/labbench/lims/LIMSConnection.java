@@ -29,7 +29,7 @@ import java.io.File;
  * To change this template use File | Settings | File Templates.
  */
 public class LIMSConnection {
-    static final int EXPECTED_SERVER_VERSION = 5;
+    static final int EXPECTED_SERVER_VERSION = 6;
     Driver driver;
     Connection connection;
     Connection connection2;
