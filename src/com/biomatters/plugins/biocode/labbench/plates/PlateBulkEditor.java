@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 
@@ -279,6 +280,29 @@ public class PlateBulkEditor {
                 }
             };
             toolsActions.add(getExtractionsFromBarcodes);
+
+            if(BiocodeService.getInstance().getActiveFIMSConnection() instanceof MooreaFimsConnection) {
+                GeneiousAction specNumCollector = new GeneiousAction("Map Spec_Num_Collectors", "Convert Spec_Num_Collector values to Mbio numbers") {
+                    public void actionPerformed(ActionEvent e) {
+                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                        final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+                        tissueEditor.valuesFromTextView();
+
+                        List<String> tissueIds = getIdsToCheck(tissueEditor, p);
+
+
+
+                        try {
+                            Map<String, String> mapping = BiocodeService.getSpecNumToMbioMapping(tissueIds);
+                            putMappedValuesIntoEditor(tissueEditor, tissueEditor, mapping, p);
+                        } catch (ConnectionException e1) {
+                            Dialogs.showMessageDialog(e1.getMessage());
+                            e1.printStackTrace();
+                        }
+                    }
+                };
+                toolsActions.add(specNumCollector);
+            }
 
             GeneiousAction autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
                 public void actionPerformed(ActionEvent e) {

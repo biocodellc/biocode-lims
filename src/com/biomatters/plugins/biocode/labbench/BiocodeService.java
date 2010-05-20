@@ -1064,6 +1064,26 @@ public class BiocodeService extends DatabaseService {
         return cocktailList;
     }
 
+    public static Map<String, String> getSpecNumToMbioMapping(List<String> mbioNumbers) throws ConnectionException {
+        Query[] queries = new Query[mbioNumbers.size()];
+        DocumentField field = new DocumentField("Specimen Num Collector", "", "biocode.Specimen_Num_Collector", String.class, false, true);
+        for (int i = 0; i < mbioNumbers.size(); i++) {
+            String num = mbioNumbers.get(i);
+            Query query = Query.Factory.createFieldQuery(field, Condition.EQUAL, num);
+            queries[i] = query;
+        }
+
+        Query masterQuery = Query.Factory.createOrQuery(queries, Collections.EMPTY_MAP);
+
+        List<FimsSample> list = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(masterQuery);
+        
+        Map<String, String> result = new HashMap<String, String>();
+        for(FimsSample sample : list) {
+            result.put( ""+sample.getFimsAttributeValue("biocode.Specimen_Num_Collector"), sample.getId());
+        }
+        return result;
+    }
+
     public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{
         if(reactions.size() == 0) {
             return Collections.emptyMap();
