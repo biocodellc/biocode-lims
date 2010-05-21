@@ -169,6 +169,10 @@ public class WorkflowDocument extends MuitiPartDocument {
         return r;
     }
 
+    public List<Reaction> getReactions() {
+        return new ArrayList<Reaction> (reactions);
+    }
+
     public List<Reaction> getReactions(Reaction.Type type) {
         List<Reaction> reactionsList = new ArrayList<Reaction>();
         for(int i=0; i < reactions.size(); i++) {
@@ -200,8 +204,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                 }
                 if(!alreadyThere) {
                     Reaction r = new ExtractionReaction(resultSet);
-                    reactions.add(r);
-                    parts.add(new ReactionPart(r));
+                    addReaction(r);
                 }
             break;
         case PCR :
@@ -215,8 +218,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
             if(!alreadyThere) {
                 Reaction r = new PCRReaction(resultSet);
-                reactions.add(r);
-                parts.add(new ReactionPart(r));
+                addReaction(r);
             }
             break;
         case CycleSequencing :
@@ -230,11 +232,15 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
             if(!alreadyThere) {
                 Reaction r = new CycleSequencingReaction(resultSet);
-                reactions.add(r);
-                parts.add(new ReactionPart(r));
+                addReaction(r);
             }
             break;
         }
+    }
+
+    public void addReaction(Reaction r) {
+        reactions.add(r);
+        parts.add(new ReactionPart(r));
         Collections.sort(parts, reactionComparitor);
     }
 

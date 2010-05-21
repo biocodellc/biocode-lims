@@ -44,10 +44,13 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     }
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
+        final TableModel model = getTableModel(annotatedDocuments);
+        if(model == null) {
+            return null;
+        }
         return new DocumentViewer(){
             JTable table;
             public JComponent getComponent() {
-                TableModel model = getTableModel(annotatedDocuments);
                 TableSorter sorter = new TableSorter(model);
                 final AtomicReference<JScrollPane> scroller = new AtomicReference<JScrollPane>();
                 table = new GTable(sorter){

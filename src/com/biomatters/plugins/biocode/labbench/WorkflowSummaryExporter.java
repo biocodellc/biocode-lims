@@ -42,7 +42,8 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
-        return new DocumentSelectionSignature[] {new DocumentSelectionSignature(WorkflowDocument.class, 1, Integer.MAX_VALUE)};
+        return new DocumentSelectionSignature[] {new DocumentSelectionSignature(WorkflowDocument.class, 1, Integer.MAX_VALUE),
+        new DocumentSelectionSignature(PlateDocument.class, 1, Integer.MAX_VALUE)};
     }
 
     @Override
@@ -50,11 +51,15 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
         try {
             WritableWorkbook workbook = Workbook.createWorkbook(file);
 
+            int count = 0;
             for (int i = 0; i < factoriesToExport.length; i++) {
                 TableDocumentViewerFactory factory = factoriesToExport[i];
                 TableModel tableModel = factory.getTableModel(documents);
-                WritableSheet sheet = workbook.createSheet(factory.getName(), i);
-                ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);
+                if(tableModel != null) {
+                    WritableSheet sheet = workbook.createSheet(factory.getName(), count);
+                    ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);
+                    count++;
+                }
             }
 
             workbook.write();

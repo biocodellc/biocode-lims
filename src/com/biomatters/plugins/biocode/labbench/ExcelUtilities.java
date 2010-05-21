@@ -14,16 +14,19 @@ import java.awt.*;
 
 public class ExcelUtilities {
     public static void exportTable(WritableSheet sheet, TableModel table, ProgressListener progressListener, Options options) throws IOException, WriteException {
+        WritableFont defaultFont = new WritableFont(WritableFont.ARIAL);
+
         //write out the column headers
         for (int i = 0; i < table.getColumnCount(); i++) {
-            sheet.addCell(new Label(i, 0, table.getColumnName(i)));
+            WritableFont font = new WritableFont(defaultFont);
+            font.setBoldStyle(WritableFont.BOLD);
+            sheet.addCell(new Label(i, 0, table.getColumnName(i), new WritableCellFormat(font)));
             sheet.setColumnView(i, 25);
         }
 
-        WritableFont defaultFont = new WritableFont(sheet.getCell(0, 0).getCellFormat().getFont());
 
 
-        //write out the column headers
+        //write out the values
         for (int i = 0; i < table.getColumnCount(); i++) {
             for (int j = 0; j < table.getRowCount(); j++) {
                 Object tableValue = table.getValueAt(j, i);

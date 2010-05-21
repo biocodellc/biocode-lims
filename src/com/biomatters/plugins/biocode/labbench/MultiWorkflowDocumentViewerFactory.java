@@ -6,6 +6,8 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * @author Steven Stones-Havas
@@ -30,11 +32,25 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
         return new DocumentSelectionSignature[] {new DocumentSelectionSignature(WorkflowDocument.class, 2, Integer.MAX_VALUE)};
     }
 
+    public List<WorkflowDocument> getWorkflowDocuments(AnnotatedPluginDocument[] docs) {
+        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
+        for(AnnotatedPluginDocument doc : docs) {
+            if(WorkflowDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                workflows.add((WorkflowDocument)doc.getDocumentOrCrash());
+            }
+        }
+        return workflows;
+    }
+
 
     public TableModel getTableModel(final AnnotatedPluginDocument[] docs) {
+        final List<WorkflowDocument> workflowDocuments = getWorkflowDocuments(docs);
+        if(workflowDocuments.size() == 0) {
+            return null;
+        }
         TableModel tableModel = new TableModel(){
             public int getRowCount() {
-                return docs.length;
+                return workflowDocuments.size();
             }
 
             public int getColumnCount() {
@@ -55,7 +71,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public Object getValueAt(int rowIndex, int columnIndex) {
-                WorkflowDocument doc = (WorkflowDocument)docs[rowIndex].getDocumentOrCrash();
+                WorkflowDocument doc = workflowDocuments.get(rowIndex);
                 Reaction recentExtraction = doc.getMostRecentReaction(Reaction.Type.Extraction);
                 Reaction recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
                 Reaction recentCycleSequencingForward = doc.getMostRecentSequencingReaction(true);
