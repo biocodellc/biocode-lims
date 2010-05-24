@@ -14,12 +14,12 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 
 import java.sql.*;
 import java.util.*;
-import java.io.File;
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * Created by IntelliJ IDEA.
@@ -37,6 +37,9 @@ public class LIMSConnection {
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
+    public static final DocumentField DATE_FIELD = new DocumentField("Last Modified (LIMS)", "", "date", Date.class, true, false);
+    public static final DocumentField PLATE_DATE_FIELD = new DocumentField("Last Modified (LIMS plate)", "", "plate.date", Date.class, false, false);
+    public static final DocumentField WORKFLOW_DATE_FIELD = new DocumentField("Last Modified (LIMS workflow)", "", "workflow.date", Date.class, false, false);
     private boolean isLocal;
 
     public Options getConnectionOptions() {
@@ -240,7 +243,10 @@ public class LIMSConnection {
         return Arrays.asList(
                 PLATE_NAME_FIELD,
                 WORKFLOW_NAME_FIELD,
-                PLATE_TYPE_FIELD
+                PLATE_TYPE_FIELD,
+                DATE_FIELD,
+                PLATE_DATE_FIELD,
+                WORKFLOW_DATE_FIELD
         );
     }
 
@@ -253,11 +259,11 @@ public class LIMSConnection {
         }
 
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date"));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type"));
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date"));
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((samples == null || samples.size() == 0) && refinedQueries.size() == 0) {
@@ -290,7 +296,7 @@ public class LIMSConnection {
             if(refinedQueries.size() > 0) {
                 somethingToSearch = true;
                 sql.append("(");
-                sql.append(queryToSql(refinedQueries, operator, new ArrayList<Object>()));
+                sql.append(queryToSql(refinedQueries, operator, "workflow", new ArrayList<Object>()));
                 sql.append(")");
             }
         }
@@ -327,6 +333,9 @@ public class LIMSConnection {
                         QueryTermSurrounder ts = getQueryTermSurrounder(aq);
                         statement.setString(position, ts.getPrepend()+queryValues[j].toString().toLowerCase().replace("\"", "")+ts.getAppend());
                     }
+                    else if(Date.class.isAssignableFrom(fclass)) {
+                        statement.setDate(position, new java.sql.Date(((Date)queryValues[j]).getTime()));
+                    }
                     else {
                         throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());
                     }
@@ -356,7 +365,7 @@ public class LIMSConnection {
         }
         if(prevWorkflowId >= 0) {
             WorkflowDocument prevWorkflow = workflowDocs.get(prevWorkflowId);
-            if(prevWorkflow != null)
+            if(prevWorkflow != null && callback != null)
                 callback.add(prevWorkflow, Collections.<String, Object>emptyMap());
         }
         statement.close();
@@ -399,7 +408,7 @@ public class LIMSConnection {
 //        return returnValue;
 //    }
 
-    private String queryToSql(List<? extends Query> queries, CompoundSearchQuery.Operator operator, List<Object> inserts) {
+    private String queryToSql(List<? extends Query> queries, CompoundSearchQuery.Operator operator, String tableName, List<Object> inserts) {
         StringBuilder sql = new StringBuilder();
         String mainJoin;
         switch(operator) {
@@ -414,6 +423,9 @@ public class LIMSConnection {
                 AdvancedSearchQueryTerm q = (AdvancedSearchQueryTerm)queries.get(i);
                 QueryTermSurrounder termSurrounder = getQueryTermSurrounder(q);
                 String code = q.getField().getCode();
+                if("date".equals(code)) {
+                    code = tableName+".date"; //hack for last modified date...
+                }
                 if(String.class.isAssignableFrom(q.getField().getValueType())) {
                     code = "LOWER("+code+")";
                 }
@@ -422,7 +434,7 @@ public class LIMSConnection {
                 Object[] queryValues = q.getValues();
                 for (int j = 0; j < queryValues.length; j++) {
                     Object value = queryValues[j];
-                    String valueString = value.toString();
+                    String valueString = valueToString(value);
                     valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
                     if(value instanceof String) {
                         inserts.add(valueString);
@@ -443,6 +455,14 @@ public class LIMSConnection {
         return sql.toString();
     }
 
+    private static String valueToString(Object value) {
+        if(value instanceof Date) {
+            DateFormat format = new SimpleDateFormat("yyyy-mm-dd kk:mm:ss");
+            return format.format((Date)value);
+        }
+        return value.toString();
+    }
+
     public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
@@ -454,11 +474,11 @@ public class LIMSConnection {
         }
 
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name", "workflow.date"));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("workflow.name"));
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("workflow.name", "workflow.date"));
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((workflowDocuments == null || workflowDocuments.size() == 0) && refinedQueries.size() == 0) {
@@ -498,7 +518,7 @@ public class LIMSConnection {
                 sql.append(" (");
             }
 
-            sql.append(queryToSql(refinedQueries, operator, new ArrayList<Object>()));
+            sql.append(queryToSql(refinedQueries, operator, "plate", new ArrayList<Object>()));
 
             sql.append(")");
         }
@@ -525,6 +545,9 @@ public class LIMSConnection {
                     else if(String.class.isAssignableFrom(fclass)) {
                         QueryTermSurrounder ts = getQueryTermSurrounder(aq);
                         statement.setString(position, ts.getPrepend()+queryValues[j].toString().toLowerCase().replace("\"", "")+ts.getAppend());
+                    }
+                    else if(Date.class.isAssignableFrom(fclass)) {
+                        statement.setDate(position, new java.sql.Date(((Date)queryValues[j]).getTime()));
                     }
                     else {
                         throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());

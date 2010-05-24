@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListD
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -16,11 +17,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.List;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -67,19 +67,24 @@ public class WorkflowDocument extends MuitiPartDocument {
         int workflowId = resultSet.getInt("workflow.id");
         String workflowName = resultSet.getString("workflow.name");
         String extraction = resultSet.getString("extraction.extractionId");
+        java.sql.Date lastModified = resultSet.getDate("workflow.date");      
         this.reactions = new ArrayList<Reaction>();
-        workflow = new Workflow(workflowId, workflowName, extraction);
+        workflow = new Workflow(workflowId, workflowName, extraction, lastModified);
         this.parts = new ArrayList<ReactionPart>();
         addRow(resultSet);
     }
 
     public List<DocumentField> getDisplayableFields() {
-        return Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false));
+        return Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
+                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", Date.class, true, false));
     }
 
     public Object getFieldValue(String fieldCodeName) {
         if("numberOfParts".equals(fieldCodeName)) {
             return getNumberOfParts();
+        }
+        if("lastModified".equals(fieldCodeName)) {
+            return workflow.getLastModified();
         }
         return null;
     }

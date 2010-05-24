@@ -57,6 +57,7 @@ DROP TABLE IF EXISTS  workflow ;
 CREATE TABLE  workflow  (
    id  INTEGER PRIMARY KEY IDENTITY,
    name  varchar(45)default  'workflow' ,
+   date timestamp DEFAULT CURRENT_TIMESTAMP,
    extractionId  INTEGER NOT NULL,
   FOREIGN KEY (extractionId) REFERENCES extraction(id)
 );

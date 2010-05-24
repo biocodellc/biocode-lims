@@ -16,10 +16,7 @@ import java.util.Set;
 import java.util.LinkedHashSet;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Connection;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.net.URL;
 import java.net.URISyntaxException;
 
@@ -229,11 +226,13 @@ public class LocalLIMS {
             if(!resultSet.next()) {
                 throw new SQLException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
             }
-            int version = resultSet.getInt("version");
+            int version = resultSet.getInt("version")-1;
+            resultSet.close();
 
-            InputStream scriptStream = getClass().getResourceAsStream("upgrade"+version+".sql");
+            String upgradeName = "upgrade_" + version + "_sqlite.sql";
+            InputStream scriptStream = getClass().getResourceAsStream(upgradeName);
             if(scriptStream == null) {
-                throw new SQLException("Could not find the upgrade script for version "+version);
+                throw new FileNotFoundException("Could not find resource "+getClass().getPackage().getName()+"."+upgradeName);
             }
             DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
             connection.close();

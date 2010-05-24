@@ -1147,7 +1147,7 @@ public class BiocodeService extends DatabaseService {
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
-                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId()));
+                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId(), new Date()));
                 statement3.setInt(1, workflowId);
                 statement3.execute();
             }
@@ -1534,6 +1534,8 @@ public class BiocodeService extends DatabaseService {
         }
 
         Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
+
+        //update the last-modified on the workflows associated with this plate...
     }
 
     private void isPlateValid(Plate plate, Connection connection) throws BadDataException, SQLException {
@@ -1699,7 +1701,7 @@ public class BiocodeService extends DatabaseService {
         Map<String, Workflow> result = new HashMap<String, Workflow>();
 
         while(results.next()) {
-            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId")));
+            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId"), results.getDate("workflow.date")));
         }
         statement.close();
         return result;

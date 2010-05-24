@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
+import java.util.Date;
 
 /**
  * @author Steven Stones-Havas
@@ -27,6 +28,7 @@ public class Plate implements XMLSerializable {
     private int id=-1;
     private int rows;
     private int cols;
+    private Date lastModified;
     private String name = "";
     private Reaction[] reactions;
     private Reaction.Type type;
@@ -69,6 +71,7 @@ public class Plate implements XMLSerializable {
         this.id = resultSet.getInt("plate.id");
         plateSize = getSizeEnum(size);
         name = resultSet.getString("plate.name");
+        lastModified = resultSet.getDate("plate.date");
         if(plateSize != null) {
             init(plateSize, type, false);
         }
@@ -272,6 +275,10 @@ public class Plate implements XMLSerializable {
         return new BiocodeUtilities.Well((char)(65+row), 1+col);
     }
 
+    public Date lastModified() {
+        return lastModified;
+    }
+
     /**
      * wellName must be in the form A1, or A01
      * @param well
@@ -308,7 +315,7 @@ public class Plate implements XMLSerializable {
             statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle) VALUES (?, ?, ?, ?)");
         }
         else {
-            statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=? WHERE id=?");
+            statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=CURRENT_TIMESTAMP WHERE id=?");
             statement.setInt(5, getId());
         }
         statement.setString(1, getName());
@@ -385,6 +392,7 @@ public class Plate implements XMLSerializable {
         id = Integer.parseInt(element.getChildText("id"));
         rows = Integer.parseInt(element.getChildText("rows"));
         cols = Integer.parseInt(element.getChildText("cols"));
+        lastModified = new Date(Long.parseLong(element.getChildText("lastModified")));
         if(element.getChild("plateSize") != null) {
             plateSize = Size.valueOf(element.getChildText("plateSize"));
         }
@@ -433,6 +441,7 @@ public class Plate implements XMLSerializable {
         plateElement.addContent(new Element("name").setText(getName()));
         plateElement.addContent(new Element("type").setText(type.name()));
         plateElement.addContent(new Element("size").setText(""+reactions.length));
+        plateElement.addContent(new Element("lastModified").setText(""+lastModified.getTime()));
         String rowString = "" + rows;
         Element rowElement = new Element("rows");
         rowElement.setText(rowString);

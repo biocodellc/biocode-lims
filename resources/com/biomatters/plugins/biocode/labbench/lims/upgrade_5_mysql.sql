@@ -4,4 +4,6 @@ ALTER TABLE cyclesequencing ADD technician varchar(45) DEFAULT '' NOT NULL ;
 
 ALTER TABLE `labbench`.`gelimages` ADD COLUMN `name` VARCHAR(45) NOT NULL DEFAULT 'Image' AFTER `notes`;
 
+ALTER TABLE `labbench`.`workflow` ADD COLUMN `date` timestamp DEFAULT CURRENT_TIMESTAMP;
+
 UPDATE databaseVersion SET version = 6;

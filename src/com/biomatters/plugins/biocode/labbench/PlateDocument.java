@@ -29,10 +29,15 @@ public class PlateDocument implements PluginDocument {
     }
 
     public List<DocumentField> getDisplayableFields() {
-        return null;
+        return Arrays.asList(
+                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", Date.class, true, false)
+        );
     }
 
     public Object getFieldValue(String fieldCodeName) {
+        if("lastModified".equals(fieldCodeName)) {
+            return plate.lastModified();
+        }
         return null;
     }
 

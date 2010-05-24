@@ -72,7 +72,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         
         if(workflowName != null) {
             options.setValue("workflowId", workflowName);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId")));
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getDate("workflow.date")));
             options.setValue("workflowId", getWorkflow().getName());
         }
 
