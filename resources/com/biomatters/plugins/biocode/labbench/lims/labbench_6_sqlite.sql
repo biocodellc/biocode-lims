@@ -34,6 +34,7 @@ CREATE TABLE extraction (
   method varchar(45) NOT NULL,
   volume double NOT NULL,
   dilution double,
+  concentrationStored tinyint DEFAULT 0 NOT NULL,
   concentration double,
   parent varchar(45) NOT NULL,
   sampleId varchar(45) NOT NULL,

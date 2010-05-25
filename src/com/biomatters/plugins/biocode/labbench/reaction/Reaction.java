@@ -546,8 +546,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=? WHERE id=?";
+                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=? WHERE id=?";
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 int insertCount = 0;
@@ -562,7 +562,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
                             updateCount++;
-                            statement.setInt(15, reaction.getId());
+                            statement.setInt(17, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -583,6 +583,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setString(12, options.getValueAsString("previousWell"));
                         statement.setDate(13, new java.sql.Date(((Date)options.getValue("date")).getTime()));
                         statement.setString(14, options.getValueAsString("technician"));
+                        statement.setInt(15, "yes".equals(options.getValueAsString("concentrationStored")) ? 1 : 0);
+                        statement.setDouble(16, (Double)options.getValue("concentration"));
                         statement.addBatch();
                         //statement.execute();
                     }

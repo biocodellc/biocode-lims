@@ -1668,7 +1668,7 @@ public class BiocodeService extends DatabaseService {
                 throw new RuntimeException("You should not be adding extractions to existing workflows!");
             case PCR:
             case CycleSequencing:
-                sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
+                sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.date AS date, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
                 for (int i = 0; i < idsToCheck.size(); i++) {
                     sqlBuilder.append("extraction.extractionId = ? ");
                     if(i < idsToCheck.size()-1) {
@@ -1699,7 +1699,7 @@ public class BiocodeService extends DatabaseService {
             return Collections.emptyMap();
         }
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
+        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, workflow.date AS date, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
         for(int i=0; i < workflowIds.size(); i++) {
             sqlBuilder.append("workflow.name = ? ");
             if(i < workflowIds.size()-1) {

@@ -21,7 +21,17 @@ public class ExtractionOptions extends ReactionOptions{
     public ExtractionOptions() {
         addStringOption("sampleId", "Tissue Sample Id", "");
         addStringOption("extractionId", "Extraction Id", "");
-        addDateOption("date", "Date", new Date());          
+        addDateOption("date", "Date", new Date());
+        OptionValue[] concStoredValues = new OptionValue[] {
+            new OptionValue("yes", "Yes"),
+            new OptionValue("no", "No")
+        };
+        ComboBoxOption concStoredOption = addComboBoxOption("concentrationStored", "Sample Spec'd", concStoredValues, concStoredValues[1]);
+        DoubleOption concOption = addDoubleOption("concentration", "Concentration/Purity", 0.0, 0.0, Double.MAX_VALUE);
+        concOption.setUnits("ng/µL");
+        concOption.setDisabledValue(0.0);
+        concOption.setIncrement(0.01);
+        concStoredOption.addDependent(concOption, concStoredValues[0]);
         addStringOption("extractionBarcode", "Extraction Barcode", "", "May be blank");
         addStringOption("extractionMethod", "Extraction Method", "");
         addStringOption("parentExtraction", "Parent Extraction Id", "", "May be blank");

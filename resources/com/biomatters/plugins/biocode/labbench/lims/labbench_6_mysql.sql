@@ -207,6 +207,8 @@ CREATE TABLE `extraction` (
   `method` varchar(45) NOT NULL,
   `volume` double NOT NULL,
   `dilution` double default NULL,
+  `concentrationStored` tinyint(1) NOT NULL default '0',
+  `concentration` double NOT NULL default '0'
   `parent` varchar(45) NOT NULL,
   `sampleId` varchar(45) NOT NULL,
   `extractionId` varchar(45) NOT NULL,

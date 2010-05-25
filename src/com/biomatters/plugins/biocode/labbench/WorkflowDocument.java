@@ -76,7 +76,7 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public List<DocumentField> getDisplayableFields() {
         return Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
-                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", Date.class, true, false));
+                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", java.util.Date.class, true, false));
     }
 
     public Object getFieldValue(String fieldCodeName) {
@@ -84,7 +84,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             return getNumberOfParts();
         }
         if("lastModified".equals(fieldCodeName)) {
-            return workflow.getLastModified();
+            return new Date(workflow.getLastModified().getTime());
         }
         return null;
     }

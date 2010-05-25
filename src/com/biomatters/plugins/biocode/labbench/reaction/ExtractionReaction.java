@@ -43,6 +43,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         options.setValue("previousWell", r.getString("extraction.previousWell"));
         options.setValue("parentExtraction", r.getString("extraction.parent"));
         options.setValue("volume", r.getInt("extraction.volume"));
+        options.setValue("concentrationStored", r.getBoolean("concentrationStored") ? "yes" : "no");
+        options.setValue("concentration", r.getDouble("concentration"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
         options.setValue("notes", r.getString("extraction.notes"));
         options.getOption("date").setValue(r.getDate("extraction.date")); //we use getOption() here because the toString() method of java.sql.Date is different to the toString() method of java.util.Date, so setValueFromString() fails in DateOption

@@ -36,7 +36,7 @@ public class PlateDocument implements PluginDocument {
 
     public Object getFieldValue(String fieldCodeName) {
         if("lastModified".equals(fieldCodeName)) {
-            return plate.lastModified();
+            return new Date(plate.lastModified().getTime());
         }
         return null;
     }
