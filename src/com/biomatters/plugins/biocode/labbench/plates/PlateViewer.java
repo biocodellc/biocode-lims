@@ -136,25 +136,25 @@ public class PlateViewer extends JPanel {
             };
             toolbar.addAction(thermocycleAction);
 
-            final GeneiousAction gelAction = new GeneiousAction("Attach GEL image", "Attach GEL images to this plate", BiocodePlugin.getIcons("addImage_16.png")) {
-                public void actionPerformed(ActionEvent e) {
-                    if(!plateView.getPlate().gelImagesHaveBeenDownloaded()) {
-                        BiocodeService.block("Downloading existing GEL images", selfReference, new Runnable() {
-                            public void run() {
-                                try {
-                                    BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
-                                } catch (SQLException e1) {
-                                    Dialogs.showMessageDialog(e1.getMessage());
-                                }
-                            }
-                        });
-                    }
-                    List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
-                    plateView.getPlate().setImages(gelimages);
-                }
-            };
-            toolbar.addAction(gelAction);
         }
+        final GeneiousAction gelAction = new GeneiousAction("Attach GEL image", "Attach GEL images to this plate", BiocodePlugin.getIcons("addImage_16.png")) {
+            public void actionPerformed(ActionEvent e) {
+                if(!plateView.getPlate().gelImagesHaveBeenDownloaded()) {
+                    BiocodeService.block("Downloading existing GEL images", selfReference, new Runnable() {
+                        public void run() {
+                            try {
+                                BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
+                            } catch (SQLException e1) {
+                                Dialogs.showMessageDialog(e1.getMessage());
+                            }
+                        }
+                    });
+                }
+                List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
+                plateView.getPlate().setImages(gelimages);
+            }
+        };
+        toolbar.addAction(gelAction);
 
 
 

@@ -170,9 +170,9 @@ public class PlateDocumentViewer extends DocumentViewer{
         if(plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
             thermocycleAction.setEnabled(buttonsEnabled);
             editThermocycleAction.setEnabled(buttonsEnabled);
-            gelAction.setEnabled(buttonsEnabled);
             addTracesAction.setEnabled(buttonsEnabled);
         }
+        gelAction.setEnabled(buttonsEnabled);
         editAction.setEnabled(plateView.getSelectedReactions().size() > 0 && !plateView.getPlate().isDeleted());
         bulkEditAction.setEnabled(buttonsEnabled);
 
@@ -278,8 +278,9 @@ public class PlateDocumentViewer extends DocumentViewer{
             public List<GeneiousAction> getOtherActions() {
                 List<GeneiousAction> actions = new ArrayList<GeneiousAction>();
                 if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                    thermocycleAction = editThermocycleAction = gelAction = null;
-                    actions.add(editAction);
+                    thermocycleAction = editThermocycleAction = null;
+                    actions.addAll(Arrays.asList(editAction,
+                            gelAction));
                 }
                 else {
                     actions.addAll(Arrays.asList(
@@ -831,7 +832,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             mainPanel.addSpanningComponent(thermocyclePanel);
         }
 
-        if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0 || (!plateView.getPlate().gelImagesHaveBeenDownloaded() && plateView.getPlate().getReactionType() != Reaction.Type.Extraction)) {
+        if(plateView.getPlate().getImages() != null && plateView.getPlate().getImages().size() > 0 || (!plateView.getPlate().gelImagesHaveBeenDownloaded())) {
             mainPanel.addDividerWithLabel("GEL Images");
             if(plateView.getPlate().gelImagesHaveBeenDownloaded()) {
                 addGelImages(mainPanel);
