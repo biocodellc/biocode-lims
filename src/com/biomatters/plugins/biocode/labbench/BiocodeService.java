@@ -1549,7 +1549,6 @@ public class BiocodeService extends DatabaseService {
         else {
             throw new SQLException("There is no reaction type "+plate.getReactionType());
         }
-        System.out.println(sql);
         Statement workflowUpdateStatement = connection.createStatement();
         workflowUpdateStatement.executeUpdate(sql);
         workflowUpdateStatement.close();
