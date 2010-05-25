@@ -1536,6 +1536,23 @@ public class BiocodeService extends DatabaseService {
         Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
 
         //update the last-modified on the workflows associated with this plate...
+        String sql;
+        if(plate.getReactionType() == Reaction.Type.Extraction) {
+            sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
+        }
+        else if(plate.getReactionType() == Reaction.Type.PCR){
+            sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
+        }
+        else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
+            sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
+        }
+        else {
+            throw new SQLException("There is no reaction type "+plate.getReactionType());
+        }
+        System.out.println(sql);
+        Statement workflowUpdateStatement = connection.createStatement();
+        workflowUpdateStatement.executeUpdate(sql);
+        workflowUpdateStatement.close();
     }
 
     private void isPlateValid(Plate plate, Connection connection) throws BadDataException, SQLException {
