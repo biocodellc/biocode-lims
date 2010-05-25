@@ -3,13 +3,24 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
+import com.sun.media.jai.codec.ImageCodec;
+import com.sun.media.jai.codec.SeekableStream;
+import com.sun.media.jai.codec.ByteArraySeekableStream;
+import com.sun.media.jai.codec.ImageDecoder;
 
 import javax.swing.*;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.media.jai.RenderedImageAdapter;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
 import java.sql.*;
+import java.util.Iterator;
 
 import org.jdom.Element;
 
@@ -57,13 +68,20 @@ public class GelImage implements XMLSerializable {
         if(imageBytes == null || imageBytes.length == 0) {
             throw new IllegalStateException("The image data buffer is empty!");
         }
-        image = Toolkit.getDefaultToolkit().createImage(imageBytes);
-        MediaTracker mt = new MediaTracker(new JLabel());
-        mt.addImage(image,0);
         try {
-            mt.waitForAll();
+            SeekableStream ss = new ByteArraySeekableStream(imageBytes);
+            String[] codecNames = ImageCodec.getDecoderNames(ss);
+            if(codecNames.length == 0) {
+                assert false;
+                return;
+            }
+            ImageDecoder decoder = ImageCodec.createImageDecoder(codecNames[0], ss, null);
+            RenderedImageAdapter planarImage = new RenderedImageAdapter(decoder.decodeAsRenderedImage());
+            image = planarImage.getAsBufferedImage();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        catch(InterruptedException ex){}
+
     }
 
     public PreparedStatement toSql(Connection conn) throws SQLException {
