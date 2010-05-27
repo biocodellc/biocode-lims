@@ -439,6 +439,7 @@ CREATE TABLE `workflow` (
   `name` varchar(45) NOT NULL default 'workflow',
   `date` timestamp NOT NULL default CURRENT_TIMESTAMP,
   `extractionId` int(10) unsigned NOT NULL,
+  `locus` varchar(45) NOT NULL default 'COI',
   PRIMARY KEY  USING BTREE (`id`),
   UNIQUE KEY `ind_workflow_3` (`name`),
   KEY `FK_workflow_extraction` (`extractionId`),

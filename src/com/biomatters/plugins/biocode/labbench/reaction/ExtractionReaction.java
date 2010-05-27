@@ -74,11 +74,15 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         
         if(workflowName != null) {
             options.setValue("workflowId", workflowName);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getDate("workflow.date")));
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
             options.setValue("workflowId", getWorkflow().getName());
         }
 
         setFimsSample(BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(options.getValueAsString("sampleId"))); //todo: hack
+    }
+
+    public String getLocus() {
+        return null; //extractions don't have a locus
     }
 
     public String getExtractionId() {
@@ -276,6 +280,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         if(reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("Some extractions in your plate have no id's, but the reactions are not empty.  Would you like to make the extractions empty?", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
             for(Reaction r : reactionsWithNoIds) {
                 r.getOptions().restoreDefaults();
+                r.isEmpty();
             }
         }
 

@@ -575,7 +575,7 @@ public class ReactionUtilities {
             if(!(option instanceof Options.LabelOption) && !(option instanceof ButtonOption || option instanceof Options.ButtonOption)) {
                 if(!creating && options.fieldIsFinal(option.getName())) {
                     option.setEnabled(false);
-                    if(multiOptions) {//just don't display the option if we're editing multiple reactions
+                    if(!haveAllSameValues.get(option.getName())) {//just don't display the option if we're editing multiple reactions and they don't all have the same value...
                         continue;
                     }
                     leftComponent = new JLabel(option.getLabel());
@@ -765,6 +765,15 @@ public class ReactionUtilities {
             }
 
         }
+    }
+
+    public static String getNewExtractionId(Set<String> extractionIds, Object tissueId) {
+        int i = 1;
+        while(extractionIds.contains(tissueId+"."+i)) {
+            i++;
+        }
+        String valueString = tissueId + "." + i;
+        return valueString;
     }
 
     public static class MemoryFile{

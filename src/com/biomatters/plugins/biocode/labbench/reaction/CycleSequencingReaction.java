@@ -53,8 +53,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         String s = r.getString("workflow.name");
         if(s != null) {
             options.setValue("workflowId", s);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getDate("workflow.date")));
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
         }
+        options.setValue("locus", r.getString("workflow.locus"));
 
 
         options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("cyclesequencing.progress"));
@@ -123,6 +124,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             throw new IllegalArgumentException("Options must be instances of CycleSequencingOptions");
         }
         this.options = (CycleSequencingOptions)op;
+    }
+
+    public String getLocus() {
+        return getOptions().getValueAsString("locus");
     }
 
     public Cocktail getCocktail() {

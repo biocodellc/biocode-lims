@@ -33,12 +33,14 @@ public class NewPlateOptions extends Options{
         final boolean fromExistingPossible = documents.length > 0;
         final boolean fourPlates = documents.length > 1;
         Plate.Size pSize = null;
+        int numberOfReactions = 0;
         for(AnnotatedPluginDocument doc : documents) {
             PlateDocument plateDoc = (PlateDocument)doc.getDocument();
             Plate.Size size = plateDoc.getPlate().getPlateSize();
             if(pSize != null && size != pSize) {
                 throw new DocumentOperationException("All selected plates must be of the same size");
             }
+            numberOfReactions += plateDoc.getPlate().getReactions().length;
             pSize = size;
         }
         final Plate.Size plateSize = pSize;
@@ -73,6 +75,9 @@ public class NewPlateOptions extends Options{
         plateOption.addDependent(plateValues[0], reactionNumber, true);
         plateOption.addDependent(plateValues[0], addLabel(" individual reactions"), true);
         plateOption.setDependentPosition(RadioOption.DependentPosition.RIGHT);
+        if(plateSize == null) {
+            reactionNumber.setValue(numberOfReactions);
+        }
 
         final Options quadrantOptions = new Options(this.getClass());
         final QuadrantOption quadrantOption = new QuadrantOption("value", "", 1);
@@ -107,7 +112,7 @@ public class NewPlateOptions extends Options{
                 public void objectChanged() {
                     quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(plateValues[2]));
                     docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(plateValues[3]));
-                    reactionNumber.setEnabled(!fromExistingOption1.getValue());
+                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
                 }
             };
             fromExistingOption.addChangeListener(fromExistingListener);

@@ -400,7 +400,8 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit wells", null, BiocodePlugin.getIcons("bulkEdit_16.png")) {
         public void actionPerformed(ActionEvent e) {
-            PlateBulkEditor.editPlate(plateView.getPlate(), container, false);
+            PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
+            editor.editPlate(container);
             saveAction.setEnabled(true);
             String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), container, true);
             if(error != null && error.length() > 0) {

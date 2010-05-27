@@ -1135,20 +1135,22 @@ public class BiocodeService extends DatabaseService {
         connection.setAutoCommit(false);     
         Savepoint savepoint = connection.setSavepoint();
         try {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(extractionId) VALUES ((SELECT extraction.id from extraction where extraction.extractionId = ?))");
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?))");
             PreparedStatement statement2 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
-            PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = CONCAT('workflow', id) WHERE id=?");
+            PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = ? WHERE id=?");
             for(int i=0; i < reactions.size(); i++) {
                 if(progress != null) {
                     progress.setMessage("Creating new workflow "+(i+1)+" of "+reactions.size());
                 }
-                statement.setString(1, reactions.get(i).getExtractionId());
+                statement.setString(2, reactions.get(i).getExtractionId());
+                statement.setString(1, reactions.get(i).getLocus());
                 statement.execute();
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int workflowId = resultSet.getInt(1);
-                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId(), new Date()));
-                statement3.setInt(1, workflowId);
+                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
+                statement3.setString(1, reactions.get(i).getLocus()+"_workflow"+workflowId);
+                statement3.setInt(2, workflowId);
                 statement3.execute();
             }
             if(!autoCommit)
@@ -1172,7 +1174,6 @@ public class BiocodeService extends DatabaseService {
 
     public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException{
         List<String> extractionIds = new ArrayList<String>();
-        List<Reaction> extractionWithoutWorkflowIds = new ArrayList<Reaction>();
 
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
@@ -1185,9 +1186,6 @@ public class BiocodeService extends DatabaseService {
             for(Reaction reaction : plate.getReactions()) {
                 if(!reaction.isEmpty()) {
                     extractionIds.add(reaction.getExtractionId());
-                    if(reaction.getId() < 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) && reaction.getFieldValue("sampleId").toString().length() > 0) {
-                        extractionWithoutWorkflowIds.add(reaction);
-                    }
                     reactionsToSave.add(reaction);
                 }
             }
@@ -1203,19 +1201,6 @@ public class BiocodeService extends DatabaseService {
 
             createOrUpdatePlate(plate, progress);
 
-            if(extractionWithoutWorkflowIds.size() > 0) {
-                progress.setMessage("Creating new workflows");
-
-                //create workflows if necessary
-
-                if(extractionIds.size() > 0) {
-                    List<Workflow> workflowList = createWorkflows(extractionWithoutWorkflowIds, progress);
-                    for (int i = 0; i < extractionWithoutWorkflowIds.size(); i++) {
-                        Reaction reaction = extractionWithoutWorkflowIds.get(i);
-                        reaction.setWorkflow(workflowList.get(i));
-                    }
-                }
-            }
             if(!autoCommit)
                 connection.commit();
             if(!limsConnection.isLocal()) {
@@ -1658,11 +1643,12 @@ public class BiocodeService extends DatabaseService {
         return null;
     }
 
-    public Map<String, String> getWorkflowIds(List<String> idsToCheck, Reaction.Type reactionType) throws SQLException{
+    public Map<String, String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws SQLException{
         if(idsToCheck.size() == 0) {
             return Collections.emptyMap();
         }
         StringBuilder sqlBuilder = new StringBuilder();
+        List<String> values = new ArrayList<String>();
         switch(reactionType) {
             case Extraction:
                 throw new RuntimeException("You should not be adding extractions to existing workflows!");
@@ -1670,9 +1656,18 @@ public class BiocodeService extends DatabaseService {
             case CycleSequencing:
                 sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.date AS date, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
                 for (int i = 0; i < idsToCheck.size(); i++) {
-                    sqlBuilder.append("extraction.extractionId = ? ");
+                    if(loci.get(i) != null && loci.get(i).length() > 0) {
+                        sqlBuilder.append("(extraction.extractionId = ? AND locus = ?)");
+                        values.add(idsToCheck.get(i));
+                        values.add(loci.get(i));
+                    }
+                    else {
+                        sqlBuilder.append("extraction.extractionId = ?");
+                        values.add(idsToCheck.get(i));
+                    }
+
                     if(i < idsToCheck.size()-1) {
-                        sqlBuilder.append("OR ");
+                        sqlBuilder.append(" OR ");
                     }
                 }
                 sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
@@ -1681,8 +1676,8 @@ public class BiocodeService extends DatabaseService {
         }
         System.out.println(sqlBuilder.toString());
         PreparedStatement statement = limsConnection.getConnection().prepareStatement(sqlBuilder.toString());
-        for (int i = 0; i < idsToCheck.size(); i++) {
-            statement.setString(i+1, idsToCheck.get(i));
+        for (int i = 0; i < values.size(); i++) {
+            statement.setString(i+1, values.get(i));
         }
         ResultSet results = statement.executeQuery();
         Map<String, String> result = new HashMap<String, String>();
@@ -1699,7 +1694,7 @@ public class BiocodeService extends DatabaseService {
             return Collections.emptyMap();
         }
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, workflow.date AS date, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
+        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, workflow.date AS date, workflow.locus AS locus, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
         for(int i=0; i < workflowIds.size(); i++) {
             sqlBuilder.append("workflow.name = ? ");
             if(i < workflowIds.size()-1) {
@@ -1717,7 +1712,7 @@ public class BiocodeService extends DatabaseService {
         Map<String, Workflow> result = new HashMap<String, Workflow>();
 
         while(results.next()) {
-            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId"), results.getDate("workflow.date")));
+            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId"), results.getString("locus"), results.getDate("workflow.date")));
         }
         statement.close();
         return result;

@@ -163,7 +163,8 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells", "Paste data into the wells from a spreadsheet", BiocodePlugin.getIcons("bulkEdit_16.png")) {
             public void actionPerformed(ActionEvent e) {
-                if(PlateBulkEditor.editPlate(plateView.getPlate(), selfReference, true)) {
+                PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
+                if(editor.editPlate(selfReference)) {
                     nameField.setValue(plateView.getPlate().getName());
                     Runnable runnable = new Runnable() {
                         public void run() {

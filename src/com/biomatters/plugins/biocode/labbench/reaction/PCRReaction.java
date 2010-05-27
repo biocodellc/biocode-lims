@@ -48,7 +48,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         String s = r.getString("workflow.name");
         if(s != null) {
             options.setValue("workflowId", s);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"),  r.getDate("workflow.date")));
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
             options.setValue("workflowId", getWorkflow().getName());
         }
 
@@ -72,6 +72,10 @@ public class PCRReaction extends Reaction<PCRReaction> {
 
         setCreated(r.getTimestamp("pcr.date"));
         setPosition(r.getInt("pcr.location"));
+        String workflowString = r.getString("workflow.locus");
+        if(workflowString != null) {
+            options.setValue("locus", workflowString);
+        }
         options.setValue("cocktail", r.getString("pcr.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("pcr.cleanupPerformed"));
         options.setValue("cleanupMethod", r.getString("pcr.cleanupMethod"));
@@ -104,6 +108,10 @@ public class PCRReaction extends Reaction<PCRReaction> {
             throw new IllegalArgumentException("Options must be instances of PCR options");
         }
         this.options = op;
+    }
+
+    public String getLocus() {
+        return getOptions().getValueAsString("locus");
     }
 
     public Type getType() {
@@ -211,12 +219,19 @@ public class PCRReaction extends Reaction<PCRReaction> {
         Set<String> workflowIdStrings = new HashSet<String>();
         for(Reaction reaction : reactions) {
             Object workflowId = reaction.getFieldValue("workflowId");
+            if(reaction.getWorkflow() != null && !reaction.getWorkflow().getName().equals(workflowId)) {
+                reaction.setWorkflow(null);
+            }
             if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
                 if(reaction.getWorkflow() != null){
                     String extractionId = reaction.getExtractionId();
                     if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
                         reaction.setHasError(true);
                         error += "The workflow "+workflowId+" does not match the extraction "+extractionId;
+                    }
+                    if(!reaction.getWorkflow().getLocus().equals(reaction.getLocus())) {
+                        reaction.setHasError(true);
+                        error += "The locus of the workflow "+workflowId+" ("+reaction.getWorkflow().getLocus()+") does not match the reaction's locus ("+reaction.getLocus()+")<br>";    
                     }
                     if(reaction.getWorkflow().getName().equals(workflowId)) {
                         continue;
@@ -256,7 +271,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         }
 
         if(error.length() > 0) {
-            return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
+            return "<html><b>There were some errors in your data.</b><br><br><b>The affected reactions have been highlighted in yellow.</b><br><br>"+error;
         }
         return null;
     }

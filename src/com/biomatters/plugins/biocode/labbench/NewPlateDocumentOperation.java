@@ -13,10 +13,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import jebl.util.ProgressListener;
 
-import java.util.List;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.sql.SQLException;
 
@@ -75,12 +72,22 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             pSize = size;
         }
         final Plate.Size plateSize = pSize;
+        if(options.getPlateSize() == null && plateSize != null) {
+            throw new DocumentOperationException("You cannot create individual reactions from a plate");
+        }
 
         final Plate.Size sizeFromOptions = options.getPlateSize();
         final Reaction.Type typeFromOptions = options.getReactionType();
         final boolean fromExisting = options.isFromExisting();
         final AtomicReference<DocumentOperationException> exception = new AtomicReference<DocumentOperationException>();
         final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
+        final int numberOfReactionsFromOptions = (Integer)options.getOption("reactionNumber").getValue();
+
+        if(options.getPlateSize() == null) {
+            if(numberOfReactionsFromOptions < reactionCount) {
+                throw new DocumentOperationException("You must create at least the number of reactions as are in your existing document(s)");    
+            }
+        }
 
         final int reactionCount1 = reactionCount;
         Runnable runnable = new Runnable() {
@@ -90,9 +97,8 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                         plateViewer.set(new PlateViewer(sizeFromOptions, typeFromOptions));
                     }
                     else {
-                        Options.Option reactionNumberOption = options.getOption("reactionNumber");
-                        if(reactionNumberOption.isEnabled()) {
-                            plateViewer.set(new PlateViewer((Integer)reactionNumberOption.getValue(), typeFromOptions));
+                        if(options.getOption("reactionNumber").isEnabled()) {
+                            plateViewer.set(new PlateViewer(numberOfReactionsFromOptions, typeFromOptions));
                         }
                         else {
                             plateViewer.set(new PlateViewer(reactionCount1, typeFromOptions));
@@ -232,15 +238,45 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
             autodetectWorkflows(destPlate);
         }
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
+            generateExtractionIds(destPlate);
+        }
+    }
+
+    static void generateExtractionIds(Plate plate) throws DocumentOperationException{
+        List<String> tissueIds = new ArrayList<String>();
+        for(Reaction r : plate.getReactions()) {
+            String tissueId = ""+r.getFieldValue("sampleId");
+            if(tissueId.length() > 0) {
+                tissueIds.add(tissueId);
+            }
+        }
+
+        try {
+            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
+
+            for(Reaction r : plate.getReactions()) {
+                String tissueId = ""+r.getFieldValue("sampleId");
+                if(tissueId.length() > 0) {
+                    String extractionId = ReactionUtilities.getNewExtractionId(extractionIds, tissueId);
+                    r.setExtractionId(extractionId);
+                    extractionIds.add(extractionId);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DocumentOperationException("Error reading the database: "+e.getMessage(), e);
+        }
     }
 
     static void autodetectWorkflows(Plate plate) throws DocumentOperationException {
         List<String> extractionIds = new ArrayList<String>();
+        List<String> loci = new ArrayList<String>();
         for(Reaction r : plate.getReactions()) {
             extractionIds.add(r.getExtractionId());
+            loci.add(r.getLocus());
         }
         try {
-            Map<String, String> idToWorkflow = BiocodeService.getInstance().getWorkflowIds(extractionIds, plate.getReactionType());
+            Map<String, String> idToWorkflow = BiocodeService.getInstance().getWorkflowIds(extractionIds, loci, plate.getReactionType());
             Map<String,Workflow> workflowIdToWorkflow = BiocodeService.getInstance().getWorkflows(idToWorkflow.values());
             for(int row=0; row < plate.getRows(); row++) {
                 for(int col=0; col < plate.getCols(); col++) {

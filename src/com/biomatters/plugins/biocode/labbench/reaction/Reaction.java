@@ -17,6 +17,7 @@ import java.awt.color.ColorSpace;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Rectangle2D;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -56,6 +57,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public static final int PADDING = 10;
     private Thermocycle thermocycle;
+
+    public abstract String getLocus();
 
 
     public enum Type {
@@ -389,7 +392,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public Dimension getPreferredSize() {
         int y = PADDING+3;
-        int x = 0;
+        int x = 10;
         String maxLabel = " ";
         List<DocumentField> fieldsToDisplay = getFieldsToDisplay();
 
@@ -403,7 +406,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 continue;
             }
             y += charHeight + LINE_SPACING;
-            x = Math.max(x, fieldWidthCache[i]);
+            if(fieldWidthCache == null) {
+                assert false;
+            }
+            else {
+                x = Math.max(x, fieldWidthCache[i]);
+            }
         }
         x += PADDING;
         return new Dimension(Math.max(50,x), Math.max(30,y));
@@ -422,7 +430,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             }
             Font font = i == 0 ? firstLabelFont : labelFont;
             TextLayout tl = new TextLayout(value, font, fontRenderContext);
-            fieldWidthCache[i] = (int)tl.getBounds().getWidth();
+            Rectangle2D layoutBounds = tl.getBounds();
+            if(layoutBounds != null) {
+                fieldWidthCache[i] = (int) layoutBounds.getWidth();
+            }
+            else {
+                fieldWidthCache[i] = 60;
+                assert false : "The text knows no bounds!";
+            }
             charHeight = (int)tl.getBounds().getHeight();
         }
     }
@@ -537,6 +552,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public void setWorkflow(Workflow workflow) {
         this.workflow = workflow;
         getOptions().setValue("workflowId", workflow != null ? workflow.getName() : "");
+        //getOptions().setValue("locus", workflow != null ? workflow.getLocus() : ""); //lets not clear this - we want to be able to create new workflows for this locus...
     }
 
     public Date getDate() {

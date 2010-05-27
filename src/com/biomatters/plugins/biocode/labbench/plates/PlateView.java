@@ -62,7 +62,7 @@ public class PlateView extends JPanel {
         g.fillRect(0,0,getWidth(),getHeight());
 
         g.setColor(getBackground());
-        g.fillRect(0,0,cellWidth*cols+1,cellHeight*rows+2);
+        g.fillRect(0,0,cellWidth*cols+1,cellHeight*rows-1);
         Shape clip = g.getClip();
 
 
@@ -77,6 +77,9 @@ public class PlateView extends JPanel {
                 g.setClip(clip);
             }
         }
+
+        g.setColor(Color.black);
+        g.drawRect(0,0,cellWidth*cols+1,cellHeight*rows-1);
         //System.out.println("paintin: "+(System.currentTimeMillis()-time));
     }
 

@@ -40,6 +40,7 @@ public class LIMSConnection {
     public static final DocumentField DATE_FIELD = new DocumentField("Last Modified (LIMS)", "", "date", Date.class, true, false);
     public static final DocumentField PLATE_DATE_FIELD = new DocumentField("Last Modified (LIMS plate)", "", "plate.date", Date.class, false, false);
     public static final DocumentField WORKFLOW_DATE_FIELD = new DocumentField("Last Modified (LIMS workflow)", "", "workflow.date", Date.class, false, false);
+    public static final DocumentField WORKFLOW_LOCUS_FIELD = new DocumentField("Locus", "The locus of the workflow", "locus", String.class, true, false);
     private boolean isLocal;
 
     public Options getConnectionOptions() {
@@ -246,7 +247,8 @@ public class LIMSConnection {
                 PLATE_TYPE_FIELD,
                 DATE_FIELD,
                 PLATE_DATE_FIELD,
-                WORKFLOW_DATE_FIELD
+                WORKFLOW_DATE_FIELD,
+                WORKFLOW_LOCUS_FIELD
         );
     }
 

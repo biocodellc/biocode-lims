@@ -69,17 +69,22 @@ public class WorkflowDocument extends MuitiPartDocument {
         String extraction = resultSet.getString("extraction.extractionId");
         java.sql.Date lastModified = resultSet.getDate("workflow.date");      
         this.reactions = new ArrayList<Reaction>();
-        workflow = new Workflow(workflowId, workflowName, extraction, lastModified);
+        workflow = new Workflow(workflowId, workflowName, extraction, resultSet.getString("workflow.locus"), lastModified);
         this.parts = new ArrayList<ReactionPart>();
         addRow(resultSet);
     }
 
     public List<DocumentField> getDisplayableFields() {
         return Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
-                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", java.util.Date.class, true, false));
+                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", java.util.Date.class, true, false),
+                LIMSConnection.WORKFLOW_LOCUS_FIELD)
+        ;
     }
 
     public Object getFieldValue(String fieldCodeName) {
+        if("locus".equals(fieldCodeName)) {
+            return workflow.getLocus();
+        }
         if("numberOfParts".equals(fieldCodeName)) {
             return getNumberOfParts();
         }

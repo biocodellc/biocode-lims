@@ -85,7 +85,7 @@ public class CycleSequencingOptions extends ReactionOptions {
     }
 
     public boolean fieldIsFinal(String fieldCode) {
-        return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode);
+        return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode) || "locus".equals(fieldCode);
     }
 
     public void refreshValuesFromCaches() {
@@ -285,6 +285,8 @@ public class CycleSequencingOptions extends ReactionOptions {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
         addStringOption("workflowId", "Workflow ID", "");
+        String[] sampleLoci = new String[] {"COI", "16s", "18s"};
+        addEditableComboBoxOption("locus", "Locus", "COI", sampleLoci);
         addDateOption("date", "Date", new Date());
 
 
@@ -319,7 +321,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         cleanupOption.addDependent(cleanupMethodOption, cleanupValues[0]);
         tracesButton = new com.biomatters.plugins.biocode.labbench.ButtonOption("traces", "", "Add/Edit Traces", false);
         addCustomOption(tracesButton);
-        addStringOption("technician", "Technician", "May be blank");
+        addStringOption("technician", "Technician", "", "May be blank");
         TextAreaOption notesOption = new TextAreaOption("notes", "Notes", "");
         addCustomOption(notesOption);
 

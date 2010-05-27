@@ -16,16 +16,18 @@ public class Workflow implements XMLSerializable {
     private int id;
     private String name;
     private String extraction;
+    private String locus;
     private Date lastModified;
 
     public Workflow(Element e) throws XMLSerializationException{
         fromXML(e);
     }
 
-    public Workflow(int id, String name, String extractionId, Date lastModified) {
+    public Workflow(int id, String name, String extractionId, String locus, Date lastModified) {
         this.id = id;
         this.name = name;
         this.extraction = extractionId;
+        this.locus = locus;
         this.lastModified = lastModified;
     }
 
@@ -53,18 +55,23 @@ public class Workflow implements XMLSerializable {
         this.extraction = extraction;
     }
 
+    public String getLocus() {
+        return locus;
+    }
+
     public Date getLastModified() {
         return lastModified;
     }
 
     public Element toXML() {
-        return new Element("workflow").addContent(new Element("name").setText(getName())).addContent(new Element("id").setText(""+getId())).addContent(new Element("extraction").setText(extraction)).addContent(new Element("date").setText(""+lastModified.getTime()));
+        return new Element("workflow").addContent(new Element("name").setText(getName())).addContent(new Element("id").setText(""+getId())).addContent(new Element("extraction").setText(extraction)).addContent(new Element("date").setText(""+lastModified.getTime())).addContent(new Element("locus").setText(locus));
     }
 
     public void fromXML(Element element) throws XMLSerializationException {
         name = element.getChildText("name");
         extraction = element.getChildText("extraction");
         lastModified = new Date(Long.parseLong(element.getChildText("date")));
+        locus = element.getChildText("locus");
         if(element.getChildText("id") != null) {
             try {
                 id = Integer.parseInt(element.getChildText("id"));
