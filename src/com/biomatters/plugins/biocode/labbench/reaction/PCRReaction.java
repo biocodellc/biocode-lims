@@ -222,6 +222,10 @@ public class PCRReaction extends Reaction<PCRReaction> {
             if(reaction.getWorkflow() != null && !reaction.getWorkflow().getName().equals(workflowId)) {
                 reaction.setWorkflow(null);
             }
+            if(!reaction.isEmpty() && (reaction.getLocus() == null || reaction.getLocus().length() == 0)) {
+                reaction.setHasError(true);
+                error += "The reaction "+reaction.getExtractionId()+" does not have a locus set.<br>";   
+            }
             if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
                 if(reaction.getWorkflow() != null){
                     String extractionId = reaction.getExtractionId();

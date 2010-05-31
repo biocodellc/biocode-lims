@@ -279,6 +279,8 @@ public class LIMSConnection {
                 "WHERE ");
 
         boolean somethingToSearch = false;
+        ArrayList<Object> sqlValues = new ArrayList<Object>();
+                        
         if(samples != null && samples.size() > 0) {
             somethingToSearch = true;
             sql.append("(");
@@ -298,7 +300,7 @@ public class LIMSConnection {
             if(refinedQueries.size() > 0) {
                 somethingToSearch = true;
                 sql.append("(");
-                sql.append(queryToSql(refinedQueries, operator, "workflow", new ArrayList<Object>()));
+                sql.append(queryToSql(refinedQueries, operator, "workflow", sqlValues));
                 sql.append(")");
             }
         }
@@ -319,30 +321,22 @@ public class LIMSConnection {
                 position++;
             }
         }
-        for (Query q : refinedQueries) {
-            if(q instanceof AdvancedSearchQueryTerm) {
-                AdvancedSearchQueryTerm aq = (AdvancedSearchQueryTerm)q;
-                Class fclass = aq.getField().getValueType();
-                Object[] queryValues = aq.getValues();
-                for (int j = 0; j < queryValues.length; j++) {
-                    if(Integer.class.isAssignableFrom(fclass)) {
-                        statement.setInt(position, (Integer)queryValues[j]);
-                    }
-                    else if(Double.class.isAssignableFrom(fclass)) {
-                        statement.setDouble(position, (Double)queryValues[j]);
-                    }
-                    else if(String.class.isAssignableFrom(fclass)) {
-                        QueryTermSurrounder ts = getQueryTermSurrounder(aq);
-                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().toLowerCase().replace("\"", "")+ts.getAppend());
-                    }
-                    else if(Date.class.isAssignableFrom(fclass)) {
-                        statement.setDate(position, new java.sql.Date(((Date)queryValues[j]).getTime()));
-                    }
-                    else {
-                        throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());
-                    }
-                    position++;
-                }
+        for (int i = 0; i < sqlValues.size(); i++) {
+            Object o = sqlValues.get(i);
+            if(Integer.class.isAssignableFrom(o.getClass())) {
+                statement.setInt(i+1, (Integer)o);
+            }
+            else if(Double.class.isAssignableFrom(o.getClass())) {
+                statement.setDouble(i+1, (Double)o);
+            }
+            else if(String.class.isAssignableFrom(o.getClass())) {
+                statement.setString(i+1, o.toString());
+            }
+            else if(Date.class.isAssignableFrom(o.getClass())) {
+                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()-86300000));
+            }
+            else {
+                throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
             }
         }
         ResultSet resultSet = statement.executeQuery();
@@ -431,22 +425,33 @@ public class LIMSConnection {
                 if(String.class.isAssignableFrom(q.getField().getValueType())) {
                     code = "LOWER("+code+")";
                 }
-                sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
 
                 Object[] queryValues = q.getValues();
-                for (int j = 0; j < queryValues.length; j++) {
-                    Object value = queryValues[j];
-                    String valueString = valueToString(value);
-                    valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
-                    if(value instanceof String) {
-                        inserts.add(valueString);
+
+                if(code.contains("date") && (q.getCondition() == Condition.EQUAL || q.getCondition() == Condition.NOT_EQUAL)) {
+                    //hack for dates - we need to check that the date is greater than 12:00am on the day in question and less than 12:00am on the next day
+                    sql.append("(");
+                    Date dateValue = (Date) queryValues[0];
+                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? ">" : "<")+" ");
+                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()-86300000), q.getCondition());//minus one day...
+                    if(q.getCondition() == Condition.EQUAL) {
+                        sql.append(" AND ");
                     }
                     else {
-                        inserts.add(value);
+                        sql.append(" OR ");
                     }
-                    sql.append("?");
-                    if(i < queryValues.length-1) {
+                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? "<" : ">")+" ");
+                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()), q.getCondition());
+                    sql.append(")");
+                    if(i < queryValues.length - 1) {
                         sql.append(" AND ");
+                    }
+                }
+                else {
+                    sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
+
+                    for (int j = 0; j < queryValues.length; j++) {
+                        appendValue(inserts, sql, i < queryValues.length - 1, termSurrounder, queryValues[j], q.getCondition());
                     }
                 }
             }
@@ -455,6 +460,24 @@ public class LIMSConnection {
             }
         }
         return sql.toString();
+    }
+
+    private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, QueryTermSurrounder termSurrounder, Object value, Condition condition) {
+        String valueString = valueToString(value);
+        valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
+        if(Date.class.isAssignableFrom(value.getClass()) && (condition == Condition.LESS_THAN_OR_EQUAL_TO || condition == Condition.GREATER_THAN)) { //hack to make these conditions work...
+            value = new Date(((Date)value).getTime()+86300000);
+        }
+        if(value instanceof String) {
+            inserts.add(termSurrounder.getPrepend()+valueString+termSurrounder.getAppend());
+        }
+        else {
+            inserts.add(value);
+        }
+        sql.append("?");
+        if(appendAnd) {
+            sql.append(" AND ");
+        }
     }
 
     private static String valueToString(Object value) {
@@ -491,6 +514,7 @@ public class LIMSConnection {
                 "LEFT JOIN workflow ON (workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
                 "LEFT JOIN extraction ON (extraction.plate = plate.id OR extraction.id = workflow.extractionId) " +            
                 "WHERE");
+        ArrayList<Object> sqlValues = new ArrayList<Object>();
 
         if (workflowDocuments != null) {
             for(WorkflowDocument doc : workflowDocuments) {
@@ -520,7 +544,7 @@ public class LIMSConnection {
                 sql.append(" (");
             }
 
-            sql.append(queryToSql(refinedQueries, operator, "plate", new ArrayList<Object>()));
+            sql.append(queryToSql(refinedQueries, operator, "plate", sqlValues));
 
             sql.append(")");
         }
@@ -531,31 +555,22 @@ public class LIMSConnection {
             statement.setFetchSize(Integer.MIN_VALUE);
         }
 
-        int position = 1;
-        for (Query q : refinedQueries) {
-            if(q instanceof AdvancedSearchQueryTerm) {
-                AdvancedSearchQueryTerm aq = (AdvancedSearchQueryTerm)q;
-                Class fclass = aq.getField().getValueType();
-                Object[] queryValues = aq.getValues();
-                for (int j = 0; j < queryValues.length; j++) {
-                    if(Integer.class.isAssignableFrom(fclass)) {
-                        statement.setInt(position, (Integer)queryValues[j]);
-                    }
-                    else if(Double.class.isAssignableFrom(fclass)) {
-                        statement.setDouble(position, (Double)queryValues[j]);
-                    }
-                    else if(String.class.isAssignableFrom(fclass)) {
-                        QueryTermSurrounder ts = getQueryTermSurrounder(aq);
-                        statement.setString(position, ts.getPrepend()+queryValues[j].toString().toLowerCase().replace("\"", "")+ts.getAppend());
-                    }
-                    else if(Date.class.isAssignableFrom(fclass)) {
-                        statement.setDate(position, new java.sql.Date(((Date)queryValues[j]).getTime()));
-                    }
-                    else {
-                        throw new SQLException("You have a field parameter with an invalid type: "+aq.getField().getName()+", "+fclass.getCanonicalName());
-                    }
-                    position++;
-                }
+        for (int i = 0; i < sqlValues.size(); i++) {
+            Object o = sqlValues.get(i);
+            if(Integer.class.isAssignableFrom(o.getClass())) {
+                statement.setInt(i+1, (Integer)o);
+            }
+            else if(Double.class.isAssignableFrom(o.getClass())) {
+                statement.setDouble(i+1, (Double)o);
+            }
+            else if(String.class.isAssignableFrom(o.getClass())) {
+                statement.setString(i+1, o.toString());
+            }
+            else if(Date.class.isAssignableFrom(o.getClass())) {
+                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()-86300000));
+            }
+            else {
+                throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
             }
         }
         System.out.println("EXECUTING PLATE QUERY");

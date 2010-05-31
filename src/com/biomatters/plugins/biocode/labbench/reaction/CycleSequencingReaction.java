@@ -54,8 +54,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         if(s != null) {
             options.setValue("workflowId", s);
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
+            options.setValue("locus", r.getString("workflow.locus"));
         }
-        options.setValue("locus", r.getString("workflow.locus"));
+
 
 
         options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("cyclesequencing.progress"));
@@ -267,6 +268,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         Set<String> workflowIdStrings = new HashSet<String>();
         for(Reaction reaction : reactions) {
             Object workflowId = reaction.getFieldValue("workflowId");
+            if(!reaction.isEmpty() && (reaction.getLocus() == null || reaction.getLocus().length() == 0)) {
+                reaction.setHasError(true);
+                error += "The reaction "+reaction.getExtractionId()+" does not have a locus set.<br>";
+            }
             if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
                 if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
                     continue;
