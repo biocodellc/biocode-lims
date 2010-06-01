@@ -18,8 +18,8 @@
 -- Create schema labbench
 --
 
-CREATE DATABASE IF NOT EXISTS labbench;
-USE labbench;
+CREATE DATABASE IF NOT EXISTS labbench2;
+USE labbench2;
 
 --
 -- Definition of table `assembly`
@@ -366,7 +366,7 @@ DROP TABLE IF EXISTS `plate`;
 CREATE TABLE `plate` (
   `id` int(10) unsigned NOT NULL auto_increment,
   `name` varchar(64) NOT NULL default 'plate',
-  `date` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
+  `date` date NOT NULL,
   `size` int(11) NOT NULL,
   `type` varchar(45) NOT NULL,
   `thermocycle` int(11) NOT NULL default '-1',
@@ -440,7 +440,7 @@ DROP TABLE IF EXISTS `workflow`;
 CREATE TABLE `workflow` (
   `id` int(10) unsigned NOT NULL auto_increment,
   `name` varchar(45) NOT NULL default 'workflow',
-  `date` timestamp NOT NULL default CURRENT_TIMESTAMP,
+  `date` date NOT NULL,
   `extractionId` int(10) unsigned NOT NULL,
   `locus` varchar(45) NOT NULL default 'COI',
   PRIMARY KEY  USING BTREE (`id`),

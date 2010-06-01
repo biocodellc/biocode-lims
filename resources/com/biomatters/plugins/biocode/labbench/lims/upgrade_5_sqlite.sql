@@ -4,7 +4,8 @@ ALTER TABLE cyclesequencing ADD technician varchar(90) DEFAULT '' NOT NULL ;
 
 ALTER TABLE gelimages ADD name VARCHAR(45) DEFAULT 'Image' NOT NULL ;
 
-ALTER TABLE workflow ADD COLUMN date timestamp DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE workflow ADD COLUMN date date DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE plate ALTER COLUMN date date DEFAULT CURRENT_TIMESTAMP;
 
 ALTER TABLE extraction ADD COLUMN concentrationStored tinyint DEFAULT 0 NOT NULL;
 ALTER TABLE extraction ADD COLUMN concentration double DEFAULT 0 NOT NULL;
