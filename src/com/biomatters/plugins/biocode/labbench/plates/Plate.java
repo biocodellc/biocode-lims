@@ -312,11 +312,11 @@ public class Plate implements XMLSerializable {
         }
         PreparedStatement statement;
         if(getId() < 0) {
-            statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle) VALUES (?, ?, ?, ?)");
+            statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle, date) VALUES (?, ?, ?, ?, ?)");
         }
         else {
-            statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=CURRENT_TIMESTAMP WHERE id=?");
-            statement.setInt(5, getId());
+            statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=? WHERE id=?");
+            statement.setInt(6, getId());
         }
         statement.setString(1, getName());
         statement.setInt(2, reactions.length);
@@ -328,6 +328,7 @@ public class Plate implements XMLSerializable {
         else {
             statement.setInt(4, -1);
         }
+        statement.setDate(5, new java.sql.Date(new Date().getTime()));
         return statement;
     }
 

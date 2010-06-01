@@ -1136,7 +1136,7 @@ public class BiocodeService extends DatabaseService {
         connection.setAutoCommit(false);     
         Savepoint savepoint = connection.setSavepoint();
         try {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?))");
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
             PreparedStatement statement2 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
             PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = ? WHERE id=?");
             for(int i=0; i < reactions.size(); i++) {
@@ -1145,6 +1145,7 @@ public class BiocodeService extends DatabaseService {
                 }
                 statement.setString(2, reactions.get(i).getExtractionId());
                 statement.setString(1, reactions.get(i).getLocus());
+                statement.setDate(3, new java.sql.Date(new Date().getTime()));
                 statement.execute();
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();

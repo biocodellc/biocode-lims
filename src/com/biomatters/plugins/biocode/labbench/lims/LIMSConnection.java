@@ -333,7 +333,7 @@ public class LIMSConnection {
                 statement.setString(i+1, o.toString());
             }
             else if(Date.class.isAssignableFrom(o.getClass())) {
-                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()-86300000));
+                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
             }
             else {
                 throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
@@ -432,32 +432,32 @@ public class LIMSConnection {
 
                 Object[] queryValues = q.getValues();
 
-                if(code.contains("date") && (q.getCondition() == Condition.EQUAL || q.getCondition() == Condition.NOT_EQUAL)) {
-                    //hack for dates - we need to check that the date is greater than 12:00am on the day in question and less than 12:00am on the next day
-                    sql.append("(");
-                    Date dateValue = (Date) queryValues[0];
-                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? ">" : "<")+" ");
-                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()-86300000), q.getCondition());//minus one day...
-                    if(q.getCondition() == Condition.EQUAL) {
-                        sql.append(" AND ");
-                    }
-                    else {
-                        sql.append(" OR ");
-                    }
-                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? "<" : ">")+" ");
-                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()), q.getCondition());
-                    sql.append(")");
-                    if(i < queryValues.length - 1) {
-                        sql.append(" AND ");
-                    }
-                }
-                else {
+                //if(code.contains("date") && (q.getCondition() == Condition.EQUAL || q.getCondition() == Condition.NOT_EQUAL)) {
+//                    //hack for dates - we need to check that the date is greater than 12:00am on the day in question and less than 12:00am on the next day
+//                    sql.append("(");
+//                    Date dateValue = (Date) queryValues[0];
+//                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? ">" : "<")+" ");
+//                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()-86300000), q.getCondition());//minus one day...
+//                    if(q.getCondition() == Condition.EQUAL) {
+//                        sql.append(" AND ");
+//                    }
+//                    else {
+//                        sql.append(" OR ");
+//                    }
+//                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? "<" : ">")+" ");
+//                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()), q.getCondition());
+//                    sql.append(")");
+//                    if(i < queryValues.length - 1) {
+//                        sql.append(" AND ");
+//                    }
+                //}
+                //else {
                     sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
 
                     for (int j = 0; j < queryValues.length; j++) {
                         appendValue(inserts, sql, i < queryValues.length - 1, termSurrounder, queryValues[j], q.getCondition());
                     }
-                }
+                //}
             }
             if(i < queries.size()-1) {
                 sql.append(" "+mainJoin);
@@ -571,7 +571,7 @@ public class LIMSConnection {
                 statement.setString(i+1, o.toString());
             }
             else if(Date.class.isAssignableFrom(o.getClass())) {
-                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()-86300000));
+                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
             }
             else {
                 throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
