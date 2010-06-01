@@ -28,6 +28,10 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
     }
 
     public String getName() {
+        switch(type) {
+            case PCR: return "PCR Primers";
+            case CycleSequencing: return "Sequencing Primers";
+        }
         return type.toString();
     }
 

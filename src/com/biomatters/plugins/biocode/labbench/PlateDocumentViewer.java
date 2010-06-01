@@ -316,7 +316,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         };
     }
 
-    GeneiousAction gelAction = new GeneiousAction("Attach GEL image", null, BiocodePlugin.getIcons("addImage_16.png")) {
+    GeneiousAction gelAction = new GeneiousAction("Add/Remove GEL Image", null, BiocodePlugin.getIcons("addImage_16.png")) {
         public void actionPerformed(ActionEvent e) {
             if(!BiocodeService.getInstance().isLoggedIn()) {
                 Dialogs.showMessageDialog("Please log in");
@@ -889,6 +889,9 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private void addGelImages(OptionsPanel mainPanel) {
+        if(plateView.getPlate().getImages().size() == 0) {
+            mainPanel.addSpanningComponent(new GLabel("This plate has no GEL images."));
+        }
         for(final GelImage image : plateView.getPlate().getImages()) {
             final JPanel imagePanel = getGelImagePanel(image);
             imagePanel.setToolTipText("Double-click to pop out");

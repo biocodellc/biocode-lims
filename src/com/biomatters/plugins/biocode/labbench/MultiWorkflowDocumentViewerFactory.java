@@ -17,7 +17,7 @@ import java.util.ArrayList;
  */
 public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFactory{
     public String getName() {
-        return "Summary View";
+        return "Primer Overview";
     }
 
     public String getDescription() {

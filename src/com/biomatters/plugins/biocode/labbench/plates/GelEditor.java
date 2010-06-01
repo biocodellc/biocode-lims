@@ -83,7 +83,8 @@ public class GelEditor {
             public void actionPerformed(ActionEvent e) {
                 FilenameFilter fileFilter = new FilenameFilter(){
                     public boolean accept(File pathname, String name) {
-                        return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".gif");
+                        name = name.toLowerCase();
+                        return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".gif") || name.endsWith(".tiff") || name.endsWith(".jpeg");
                     }
                 };
                 File inputFile = FileUtilities.getUserSelectedFile("Open GEL", fileFilter, JFileChooser.FILES_ONLY);

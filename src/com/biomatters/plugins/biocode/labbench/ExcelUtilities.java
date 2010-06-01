@@ -41,7 +41,11 @@ public class ExcelUtilities {
                     Colour closestColour = getClosestColour(color);
                     font.setColour(closestColour);
                     label = new Label(i, j + 1, objectAndColor.getObject().toString(), new WritableCellFormat(font));
-                } else {
+                }
+                else if(tableValue == null) {
+                    label = new Label(i, j + 1, "");
+                }
+                else {
                     label = new Label(i, j + 1, "" + tableValue);
                 }
                 sheet.addCell(label);

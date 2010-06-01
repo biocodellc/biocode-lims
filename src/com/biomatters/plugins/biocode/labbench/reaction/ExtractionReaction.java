@@ -277,7 +277,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                 reactionsWithNoIds.add(r);
             }
         }
-        if(reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("Some extractions in your plate have no id's, but the reactions are not empty.  Would you like to make the extractions empty?", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
+        if(reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("You have added information to reactions on your plate which have no tissue data.  Would you like to discard this information so that the wells remain empty?<br>(This is for the case where you are creating a control reaction, or if you have wells filled with cocktail, but no DNA)", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
             for(Reaction r : reactionsWithNoIds) {
                 r.getOptions().restoreDefaults();
                 r.isEmpty();
