@@ -47,14 +47,14 @@ public class WorkflowDocument extends MuitiPartDocument {
     public WorkflowDocument(Workflow workflow, List<Reaction> reactions) {
         this.workflow = workflow;
         this.reactions = new ArrayList<Reaction>(reactions);
-        sortReactions(reactions);
         parts = new ArrayList<ReactionPart>();
         for(Reaction r : reactions) {
             parts.add(new ReactionPart(r));
         }
+        sortReactions();     
     }
 
-    private void sortReactions(List<Reaction> reactions) {
+    public void sortReactions() {
         Comparator comp = new Comparator<Reaction>(){
             public int compare(Reaction o1, Reaction o2) {
                 return (int)(o2.getDate().getTime()-o1.getDate().getTime());
@@ -144,7 +144,6 @@ public class WorkflowDocument extends MuitiPartDocument {
         for(Reaction r : reactions) {
             parts.add(new ReactionPart(r));
         }
-        Collections.sort(parts, reactionComparitor);
     }
 
     public int getNumberOfParts() {

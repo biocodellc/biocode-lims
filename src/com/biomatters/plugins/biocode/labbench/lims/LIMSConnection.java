@@ -347,8 +347,10 @@ public class LIMSConnection {
             int workflowId = resultSet.getInt("workflow.id");
             if(callback != null && prevWorkflowId >= 0 && prevWorkflowId != workflowId) {
                 WorkflowDocument prevWorkflow = workflowDocs.get(prevWorkflowId);
-                if(prevWorkflow != null)
+                if(prevWorkflow != null) {
+                    prevWorkflow.sortReactions();
                     callback.add(prevWorkflow, Collections.<String, Object>emptyMap());
+                }
             }
             prevWorkflowId = workflowId;
             if(workflowDocs.get(workflowId) != null) {
@@ -361,8 +363,10 @@ public class LIMSConnection {
         }
         if(prevWorkflowId >= 0) {
             WorkflowDocument prevWorkflow = workflowDocs.get(prevWorkflowId);
-            if(prevWorkflow != null && callback != null)
+            if(prevWorkflow != null && callback != null) {
+                prevWorkflow.sortReactions();
                 callback.add(prevWorkflow, Collections.<String, Object>emptyMap());
+            }
         }
         statement.close();
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
