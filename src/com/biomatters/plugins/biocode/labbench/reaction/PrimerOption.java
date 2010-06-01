@@ -257,6 +257,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
         oligoAnnotations.addAll(SequenceUtilities.getAnnotationsOfType(originalDoc.getSequenceAnnotations(), SequenceAnnotation.TYPE_PRIMER_BIND_REVERSE));
         oligoAnnotations.addAll(SequenceUtilities.getAnnotationsOfType(originalDoc.getSequenceAnnotations(), SequenceAnnotation.TYPE_DNA_PROBE));
         for (SequenceAnnotation annotation : oligoAnnotations) {
+            if (annotation.getIntervals().size() == 0) continue;
             SequenceAnnotationInterval interval = annotation.getIntervals().get(0);
             if(interval.getLength() == originalDoc.getSequenceLength() && interval.getMinimumIndex() == 1 &&
                     interval.getMaximumIndex() == originalDoc.getSequenceLength()) {

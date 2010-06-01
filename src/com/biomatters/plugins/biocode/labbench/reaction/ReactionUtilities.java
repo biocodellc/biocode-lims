@@ -691,14 +691,14 @@ public class ReactionUtilities {
                 }
             }
         }
-        JTextField inputTextfield = new JTextField(30);
+        JTextField inputTextfield = new JTextField(25);
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setOpaque(false);
         panel.add(new JLabel("Template name: "));
         panel.add(inputTextfield);
         String message = instruction;
         aroundTheOutterLoop:
-                while(Dialogs.showInputDialog(message, "Save template", listSelector, panel)){
+        while(Dialogs.showInputDialog(message, "Save template", listSelector, panel)){
             BiocodeService.getInstance().updateDisplayFieldsTemplates();
             for(DisplayFieldsTemplate template : BiocodeService.getInstance().getDisplayedFieldTemplates(type)) {
                 if(template.getName().equals(inputTextfield.getText())) {

@@ -342,7 +342,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     };
 
 
-    GeneiousAction editThermocycleAction = new GeneiousAction("View/Edit Thermocycles", null, StandardIcons.edit.getIcons()){
+    GeneiousAction editThermocycleAction = new GeneiousAction("View/Add Thermocycles", null, StandardIcons.edit.getIcons()){
         public void actionPerformed(ActionEvent e) {
             if(!BiocodeService.getInstance().isLoggedIn()) {
                 Dialogs.showMessageDialog("Please log in");

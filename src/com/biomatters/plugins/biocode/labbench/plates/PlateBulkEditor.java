@@ -104,10 +104,11 @@ public class PlateBulkEditor {
                 setAllButton.addActionListener(new ActionListener(){
                     public void actionPerformed(ActionEvent e) {
                         OptionsPanel messagePanel = new OptionsPanel();
-                        JTextField textField = new JTextField(30);
+                        JTextField textField = new JTextField(25);
                         messagePanel.addComponent(new JLabel(" "), true);
-                        messagePanel.addComponentWithLabel("Enter the value to be set", textField, false);
+                        messagePanel.addComponentWithLabel("Value for all wells:", textField, false);
                         JCheckBox doWorkflows = new JCheckBox("Also refresh workflows", true);
+                        doWorkflows.setToolTipText("Updates the workflow ids to the correct workflow for the new locus");
                         messagePanel.addComponent(doWorkflows, false);
                         if(Dialogs.showOkCancelDialog(messagePanel, "Enter Value", editor.get())) {
                             for(int i=0; i < editor.get().values.length; i++) {

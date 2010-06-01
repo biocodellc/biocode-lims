@@ -637,7 +637,11 @@ public class LIMSConnection {
                     totalErrors.append(error+"\n");
                 }
                 System.out.println("Adding "+prevPlate.getName());
-                callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
+                if (callback != null) {
+                    callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
+                } else {
+                    plateMap.put(previousId, prevPlate);
+                }
             }
         }
         System.out.println("count="+count);

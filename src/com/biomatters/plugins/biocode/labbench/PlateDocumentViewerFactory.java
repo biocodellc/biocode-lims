@@ -36,7 +36,7 @@ public class PlateDocumentViewerFactory extends MultiPartDocumentViewerFactory{
                 "<h2>Actions</h2>" +
                 "<p><b>Thermocycle</b><br>" +
                 "<i>Not available on extraction plates</i><br><br>" +
-                "You can change the thermocycle for the plate by selecting one from the drop down menu.  Click <i>View/Edit Thermocycles</i> to create a new one.</p><br>" +
+                "You can change the thermocycle for the plate by selecting one from the drop down menu.  Click <i>View/Add Thermocycles</i> to create a new one.</p><br>" +
                 "<p><b>Attach GEL Image</b><br>" +
                 "<i>Not available on extraction plates</i><br><br>" +
                 "Click this button to view and add/remove GEL images.</p><br>" +

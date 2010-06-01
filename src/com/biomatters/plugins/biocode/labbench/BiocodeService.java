@@ -290,6 +290,7 @@ public class BiocodeService extends DatabaseService {
         String logIn = "Log In";
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {logIn, "Cancel"}, logIn, null, Dialogs.DialogIcon.NO_ICON);
         dialogOptions.setMaxWidth(dialogOptions.getMaxDimensions().width + 200);
+        dialogOptions.setMaxHeight(dialogOptions.getMaxDimensions().height + 200);
         Object result = Dialogs.showDialog(dialogOptions, loginOptions.getPanel());
         if (logIn.equals(result)) {
             loginOptions.savePreferences();

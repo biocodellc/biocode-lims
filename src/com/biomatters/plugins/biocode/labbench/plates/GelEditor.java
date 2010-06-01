@@ -33,7 +33,10 @@ public class GelEditor {
     public static List<GelImage> editGels(List<GelImage> gels, Component owner) {
         final List<GelImage> gelimages = new ArrayList<GelImage>(gels);
         final JPanel editPanel = new JPanel(new BorderLayout());
+        editPanel.setPreferredSize(new Dimension(700, 450));
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setContinuousLayout(true);
+        splitPane.setBorder(null);
         editPanel.add(splitPane, BorderLayout.CENTER);
         final JList gelimageList = new JList();
         gelimageList.setPrototypeCellValue("Image.jpg");
@@ -131,7 +134,8 @@ public class GelEditor {
 
         splitPane.setLeftComponent(leftPanel);
         gelimageList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JPanel holderPanel = new JPanel();
+        JPanel holderPanel = new JPanel(new GridBagLayout());
+        holderPanel.add(new JLabel("<html>No gel images<br>Click 'Add' button below to add gel images</html>"));
         holderPanel.setPreferredSize(new Dimension(250,250));
         
         setRightComponent(splitPane, holderPanel);
@@ -139,8 +143,10 @@ public class GelEditor {
         gelimageList.addListSelectionListener(selectionListener);
 
         gelimageList.setSelectedIndex(0);
-                
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Gelimages", owner), editPanel).equals("OK")) {
+
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[]{"OK", "Cancel"}, "Edit Gel Images", owner);
+        dialogOptions.setMaxWidth(800);
+        if(Dialogs.showDialog(dialogOptions, editPanel).equals("OK")) {
             return gelimages;
         }
         return gels;

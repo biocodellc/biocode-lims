@@ -95,7 +95,7 @@ public class PlateViewer extends JPanel {
             leftToolbar.add(new JLabel("Thermocycle: "));
             leftToolbar.add(thermocycleCombo);
 
-            final GeneiousAction thermocycleAction = new GeneiousAction("View/Edit Thermocycles", "Create new Thermocycles, or view existing ones", BiocodePlugin.getIcons("thermocycle_16.png")) {
+            final GeneiousAction thermocycleAction = new GeneiousAction("View/Add Thermocycles", "Create new Thermocycles, or view existing ones", BiocodePlugin.getIcons("thermocycle_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);
                     if (newThermocycles.size() > 0) {
