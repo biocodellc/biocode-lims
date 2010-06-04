@@ -38,12 +38,11 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
     }
 
     public String getFileTypeDescription() {
-        return "Workflow Summary (Excel)";
+        return "Primer Summary (Excel)";
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
-        return new DocumentSelectionSignature[] {new DocumentSelectionSignature(WorkflowDocument.class, 1, Integer.MAX_VALUE),
-        new DocumentSelectionSignature(PlateDocument.class, 1, Integer.MAX_VALUE)};
+        return new DocumentSelectionSignature[] {new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[] {new DocumentSelectionSignature.DocumentSelectionSignatureAtom(WorkflowDocument.class, 0, Integer.MAX_VALUE), new DocumentSelectionSignature.DocumentSelectionSignatureAtom(PlateDocument.class, 0, Integer.MAX_VALUE)})};
     }
 
     @Override
