@@ -401,10 +401,10 @@ public class CycleSequencingOptions extends ReactionOptions {
      */
     public void purgeChromats() {
         if(sequencesStrongReference != null) {
-            sequencesStrongReference.clear();
+            sequencesStrongReference = null;
         }
         if(rawTracesStrongReference != null) {
-            rawTracesStrongReference.clear();
+            rawTracesStrongReference = null;
         }
     }
 }
