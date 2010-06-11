@@ -59,6 +59,11 @@ public class BiocodePlugin extends GeneiousPlugin {
         return "Biomatters Ltd.";
     }
 
+    @Override
+    public String getEmailAddressForCrashes() {
+        return "support@biomatters.com";
+    }
+
     public String getVersion() {
         return "1.5.0";
     }

@@ -226,7 +226,7 @@ public class LocalLIMS {
             if(!resultSet.next()) {
                 throw new SQLException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
             }
-            int version = resultSet.getInt("version")-1;
+            int version = resultSet.getInt("version");
             resultSet.close();
 
             String upgradeName = "upgrade_" + version + "_sqlite.sql";
