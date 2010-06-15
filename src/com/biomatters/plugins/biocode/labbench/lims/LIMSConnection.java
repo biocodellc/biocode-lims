@@ -506,11 +506,11 @@ public class LIMSConnection {
         }
 
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name", "workflow.date"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name", "workflow.date", "locus"));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("workflow.name", "workflow.date"));
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("workflow.name", "workflow.date", "locus"));
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((workflowDocuments == null || workflowDocuments.size() == 0) && refinedQueries.size() == 0) {
