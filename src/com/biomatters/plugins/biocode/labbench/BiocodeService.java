@@ -529,6 +529,7 @@ public class BiocodeService extends DatabaseService {
             }
 
         } catch (SQLException e) {
+            e.printStackTrace();
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
 
