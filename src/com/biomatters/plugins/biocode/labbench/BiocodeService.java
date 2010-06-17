@@ -49,7 +49,7 @@ import java.util.prefs.Preferences;
  *          <p/>
  *          Created on 23/02/2009 4:41:26 PM
  */
-public class BiocodeService extends DatabaseService {
+public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection = new LIMSConnection();
@@ -85,6 +85,94 @@ public class BiocodeService extends DatabaseService {
 
     public File getDataDirectory() {
         return dataDirectory;
+    }
+
+    @Override
+    public boolean canDeleteDocuments(List<AnnotatedPluginDocument> documents) {
+        for(AnnotatedPluginDocument doc : documents) {
+            if(!PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public void deleteDocuments(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
+        List<Plate> platesToDelete = new ArrayList<Plate>();
+        for(AnnotatedPluginDocument doc : documents) {
+            if(PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                PlateDocument plateDocument = (PlateDocument)doc.getDocumentOrThrow(DatabaseServiceException.class);
+                platesToDelete.add(plateDocument.getPlate());
+            }
+        }
+        if(platesToDelete.size() == 0) {
+            return;
+        }
+        BlockingDialog blockingDialog = BlockingDialog.getDialog("Deleting documents", null);
+        try {
+            for(Plate plate : platesToDelete) {
+                deletePlate(blockingDialog, plate);
+            }
+        }
+        catch (SQLException e) {
+            throw new DatabaseServiceException(e.getMessage(), true);
+        } finally {
+            blockingDialog.setVisible(false);
+        }
+    }
+
+    @Override
+    public boolean canEditDocumentField(AnnotatedPluginDocument document, DocumentField field) {
+        return !FimsSample.class.isAssignableFrom(document.getDocumentClass()) && field.getCode().equals(DocumentField.NAME_FIELD.getCode());
+    }
+
+    @Override
+    public void editDocumentField(AnnotatedPluginDocument document, DocumentFieldAndValue newValue) throws DatabaseServiceException {
+        System.out.println("tried to rename a document to "+newValue);
+        if(newValue == null || newValue.getValue() == null) {
+            return;
+        }
+        if(WorkflowDocument.class.isAssignableFrom(document.getDocumentClass())) {
+            WorkflowDocument doc = (WorkflowDocument)document.getDocumentOrThrow(DatabaseServiceException.class);
+            try {
+                renameWorkflow(doc.getWorkflow().getId(), newValue.getValue().toString());
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e.getMessage(), true);
+            }
+        }
+
+        if(PlateDocument.class.isAssignableFrom(document.getDocumentClass())) {
+            PlateDocument doc = (PlateDocument)document.getDocumentOrThrow(DatabaseServiceException.class);
+            try {
+                renamePlate(doc.getPlate().getId(), newValue.getValue().toString());
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e.getMessage(), true);
+            }
+        }
+    }
+
+
+    private void renameWorkflow(int id, String newName) throws SQLException {
+        String sql = "UPDATE workflow SET name=? WHERE id=?";
+        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);
+
+        statement.setString(1, newName);
+        statement.setInt(2, id);
+
+        statement.executeUpdate();
+        statement.close();
+    }
+
+    private void renamePlate(int id, String newName) throws SQLException{
+        String sql = "UPDATE plate SET name=? WHERE id=?";
+        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);
+
+        statement.setString(1, newName);
+        statement.setInt(2, id);
+
+        statement.executeUpdate();
+        statement.close();
     }
 
     private void loadEmptyCaches() {
@@ -1281,7 +1369,8 @@ public class BiocodeService extends DatabaseService {
         boolean first = true;
         StringBuilder builder = new StringBuilder();
         int reactionCount = 0;
-        for(Reaction r : plate.getReactions()) { //get the extraction id's and set up the query to get the workflow id's
+        Reaction[] reactions = plate.getReactions();
+        for(Reaction r : reactions) { //get the extraction id's and set up the query to get the workflow id's
             if(r.getId() >= 0) {
                 ids.add(r.getId());
                 extractionNames.add("'"+r.getExtractionId()+"'");
