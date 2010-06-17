@@ -333,7 +333,7 @@ public class LIMSConnection {
                 statement.setDouble(i+1, (Double)o);
             }
             else if(String.class.isAssignableFrom(o.getClass())) {
-                statement.setString(i+1, o.toString());
+                statement.setString(i+1, o.toString().toLowerCase());
             }
             else if(Date.class.isAssignableFrom(o.getClass())) {
                 statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
@@ -571,7 +571,7 @@ public class LIMSConnection {
                 statement.setDouble(i+1, (Double)o);
             }
             else if(String.class.isAssignableFrom(o.getClass())) {
-                statement.setString(i+1, o.toString());
+                statement.setString(i+1, o.toString().toLowerCase());
             }
             else if(Date.class.isAssignableFrom(o.getClass())) {
                 statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
