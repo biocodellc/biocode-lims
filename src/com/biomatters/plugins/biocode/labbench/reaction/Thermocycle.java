@@ -62,7 +62,7 @@ public class Thermocycle implements XMLSerializable {
     }
 
     public String toString() {
-        return getName();
+        return getName() != null ? getName() : "Untitled";
     }
 
     public static Thermocycle fromSQL(ResultSet resultSet) throws SQLException{
