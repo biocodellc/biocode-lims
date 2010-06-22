@@ -63,15 +63,15 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         Options options = new Options(this.getClass());
 
-        List<Options.OptionValue> sizeValues = Arrays.asList(
+        final List<Options.OptionValue> sizeValues = Arrays.asList(
                 new Options.OptionValue("null", "Just give me a list of reactions"),
-                new Options.OptionValue(Plate.Size.w96.name(), Plate.Size.w96.name()),
-                new Options.OptionValue(Plate.Size.w384.name(), Plate.Size.w384.name())
+                new Options.OptionValue(Plate.Size.w96.name(), Plate.Size.w96.toString()),
+                new Options.OptionValue(Plate.Size.w384.name(), Plate.Size.w384.toString())
         );
 
         CherryPickingOptions cherryPickingConditionsOptions = new CherryPickingOptions(this.getClass());
 
-        options.addRadioOption("plateSize", "Plate Size", sizeValues, sizeValues.get(0), Options.Alignment.HORIZONTAL_ALIGN);
+        final Options.RadioOption<Options.OptionValue> plateSizeOption = options.addRadioOption("plateSize", "Plate Size", sizeValues, sizeValues.get(0), Options.Alignment.HORIZONTAL_ALIGN);
 
         Options.OptionValue[] plateTypeValues = new Options.OptionValue[] {
                 new Options.OptionValue(Reaction.Type.Extraction.name(), "Extraction"),
@@ -79,7 +79,13 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 new Options.OptionValue(Reaction.Type.CycleSequencing.name(), "Cycle Sequencing")
         };
 
-        options.addComboBoxOption("plateType", "Plate Type", plateTypeValues, plateTypeValues[0]);
+        final Options.ComboBoxOption<Options.OptionValue> plateTypeOption = options.addComboBoxOption("plateType", "Plate Type", plateTypeValues, plateTypeValues[0]);
+
+        plateSizeOption.addChangeListener(new SimpleListener(){
+            public void objectChanged() {
+                plateTypeOption.setEnabled(plateSizeOption.getValue() != sizeValues.get(0));
+            }
+        });
 
         Options.Option<String, ? extends JComponent> label = options.addLabel("Geneious will select reactions that conform to the following:");
         label.setSpanningComponent(true);
@@ -205,7 +211,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         Map<String, Reaction> newReactions = null;
         String reactionTypeString = options.getValueAsString("plateType");
-        Reaction.Type plateType = Reaction.Type.valueOf(reactionTypeString);
+        final Reaction.Type plateType = Reaction.Type.valueOf(reactionTypeString);
         if(plateType == null) {
             throw new DocumentOperationException("There is no reaction type '"+reactionTypeString+"'");
         }
@@ -235,7 +241,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         Runnable runnable = new Runnable() {
             public void run() {
                 for(int i=0; i < numberOfPlatesRequired; i++) {
-                    PlateViewer plate = new PlateViewer(plateSize, Reaction.Type.Extraction);
+                    PlateViewer plate = new PlateViewer(plateSize, plateType);
                     for (int j = 0; j < plate.getPlate().getReactions().length; j++) {
                         if(j+i*plateSize.numberOfReactions() > failedReactions.size()-1) {
                             break;
