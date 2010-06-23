@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.types.TaxonomyDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import jebl.util.CompositeProgressListener;
@@ -89,36 +90,68 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
                 continue;
             }
             String taxonomy = taxonomyObject.toString();
-            int lastSemicolon = taxonomy.lastIndexOf(';');
-            final String lowestTaxon;
-            if (lastSemicolon == -1) {
-                lowestTaxon = taxonomy;
-            } else {
-                lowestTaxon = taxonomy.substring(lastSemicolon + 1, taxonomy.length());
-            }
+            String[] levels = taxonomy.split(";");
             BiocodeTaxon taxon = null;
-            if (TAXON_CACHE.containsKey(lowestTaxon.toLowerCase())) {
-                taxon = TAXON_CACHE.get(lowestTaxon.toLowerCase());
-            } else {
-                List<AnnotatedPluginDocument> taxonomyDocuments = taxonomyDatabase.retrieve(lowestTaxon);
-                if (taxonomyDocuments.isEmpty()) {
-                    //this will be reported in the output document
-                } else if (taxonomyDocuments.size() != 1) {
-                    new Thread("Tell about multiple taxa found") {
-                        public void run() {
-                            //pretty crude but i'm hoping this won't happen
-                            Dialogs.showMessageDialog("More than one taxon found at NCBI for " + lowestTaxon);
+            List<String> skippedLevels = new ArrayList<String>();
+
+            bothLoops1:
+            for (int i = levels.length - 1; i >= 0; i--) {
+                String level = levels[i].trim();
+                if (level.length() == 0) {
+                    continue;
+                }
+                String[] parts;
+                int spaceIndex = level.indexOf(' ');
+                if (spaceIndex == -1) {
+                    parts = new String[] {level};
+                }
+                else {
+                    //crap in the database where two taxa where entered at the same taxonomic level, eg. genus = "Pagurixus sp. 12"
+                    parts = new String[] {level.substring(0, spaceIndex), level.substring(spaceIndex + 1)};
+                }
+                for (int p = parts.length - 1; p >= 0; p--) {
+                    String part = parts[p];
+                    if (progress.isCanceled()) return null;
+                    if (TAXON_CACHE.containsKey(part.toLowerCase())) {
+                        taxon = TAXON_CACHE.get(part.toLowerCase());
+                    }
+                    else {
+                        List<AnnotatedPluginDocument> taxonomyDocuments = taxonomyDatabase.retrieve(part);
+                        if (taxonomyDocuments.isEmpty()) {
+                            //taxon null
+                        } else if (taxonomyDocuments.size() != 1) {
+                            bothLoops2:
+                            for (int j = i - 1; j >= 0; j--) {
+                                String nextLevel = levels[j];
+                                for (AnnotatedPluginDocument taxonomyDocument : taxonomyDocuments) {
+                                    TaxonomyDocument.Taxon taxon1 = ((TaxonomyDocument) taxonomyDocument.getDocument()).getTaxon();
+                                    if (taxon1.toString().contains(nextLevel)) {
+                                        taxon = BiocodeTaxon.fromNcbiTaxon(taxon1);
+                                        break bothLoops2;
+                                    }
+                                }
+                            }
                         }
-                    }.start();
-                } else {
-                    taxon = BiocodeTaxon.fromNcbiTaxon(((TaxonomyDocument) taxonomyDocuments.get(0).getDocument()).getTaxon());
+                        else {
+                            taxon = BiocodeTaxon.fromNcbiTaxon(((TaxonomyDocument) taxonomyDocuments.get(0).getDocument()).getTaxon());
+                        }
+                    }
+                    TAXON_CACHE.put(part.toLowerCase(), taxon);
+                    if (taxon != null) {
+                        if (!skippedLevels.isEmpty()) {
+                            taxon = new BiocodeTaxon(taxon);
+                            taxon.setSkippedLevels(skippedLevels);
+                        }
+                        break bothLoops1;
+                    } else {
+                        skippedLevels.add(0, part);
+                    }
                 }
             }
             if (taxon != null) {
                 query.setFieldValue(DocumentField.TAXONOMY_FIELD, taxon.toString());
                 query.saveDocument();
             }
-            TAXON_CACHE.put(lowestTaxon.toLowerCase(), taxon);
             taxons.add(new Pair<AnnotatedPluginDocument, BiocodeTaxon>(query, taxon));
         }
         return taxons;

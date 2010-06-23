@@ -10,8 +10,10 @@ import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.TableSorter;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
+import com.google.gdata.util.common.base.StringUtil;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -319,13 +321,25 @@ public class VerifyTaxonomyTableModel implements TableModel {
             new VerifyColumn("Query Taxon", String.class) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    Object fimsTaxonomy = row.queryDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
-                    AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
+                    String fimsTaxonomy;
+                    List<String> skippedLevels;
+                    if (row.queryTaxon != null) {
+                        fimsTaxonomy = row.queryTaxon.toString();
+                        skippedLevels = row.queryTaxon.getSkippedLevels();
+                    } else {
+                        Object taxonomyFieldValue = row.queryDocument.getFieldValue(DocumentField.TAXONOMY_FIELD);
+                        fimsTaxonomy = taxonomyFieldValue == null ? "" : taxonomyFieldValue.toString();
+                        skippedLevels = null;
+                    }
+
+                    AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy);
                     Object taxObject = row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD) : null;
                     AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
                     highlight(taxonomy, ";", blastTaxonomy);
                     if (row.queryTaxon == null) {
                         taxonomy.set(taxonomy.get() + " (not found in NCBI Taxonomy)");
+                    } else if (skippedLevels != null && !skippedLevels.isEmpty()) {
+                        taxonomy.set(taxonomy.get() + " + " + StringUtilities.join("; ", skippedLevels) + " (not in NCBI Taxonomy)");
                     }
                     return taxonomy.get();
                 }
