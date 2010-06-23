@@ -3,11 +3,9 @@ package com.biomatters.plugins.biocode.assembler.verify;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.types.TaxonomyDocument;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import org.jdom.Element;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -83,7 +81,11 @@ public class BiocodeTaxon implements XMLSerializable {
     public BiocodeTaxon(BiocodeTaxon taxon) {
         this.name = taxon.name;
         this.level = taxon.level;
-        this.parent = taxon.parent;
+        if (taxon.parent != null) {
+            this.parent = new BiocodeTaxon(taxon.parent);
+        } else {
+            this.parent = null;
+        }
         this.skippedLevels.addAll(taxon.skippedLevels);
     }
 
