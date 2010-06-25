@@ -217,7 +217,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
         Map<String, String> tissueMapping = null;
         try {
-            tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("pcr", reactions);
+            tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("cyclesequencing", reactions);
         } catch (SQLException e) {
             return "Could not connect to the LIMS database";
         }
