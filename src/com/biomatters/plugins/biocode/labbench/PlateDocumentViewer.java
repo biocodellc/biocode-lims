@@ -487,6 +487,9 @@ public class PlateDocumentViewer extends DocumentViewer{
         cockatilPanel.addSpanningComponent(fudgePanel);
         String extraItem = ct.getOptions().getValueAsString("extraItem");
         for(final Options.Option option : ct.getOptions().getOptions()) {
+            if(option.getName().toLowerCase().contains("template")) {
+                continue;
+            }
             if(option instanceof Options.DoubleOption) {
                 int concIndex = option.getName().toLowerCase().indexOf("conc");
                 if(concIndex >= 0 && ct.getOptions().getOption(option.getName().substring(0, concIndex)) != null) {
