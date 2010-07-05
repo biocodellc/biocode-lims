@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import javax.swing.event.TableModelListener;
@@ -63,7 +64,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public Class<?> getColumnClass(int columnIndex) {
-                return columnIndex < 2 ? String.class : ObjectAndColor.class;
+                return columnIndex < 2 ? String.class : GuiUtilities.ObjectAndColor.class;
             }
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -84,31 +85,31 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                     case 2 :
                         if(recentPCR == null) return null;
                         Cocktail cocktail = recentPCR.getCocktail();
-                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentPCR.getBackgroundColor());
+                        return new GuiUtilities.ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentPCR.getBackgroundColor());
                     case 3 :
                         if(recentPCR == null) return null;
                         cocktail = recentPCR.getCocktail();
-                        return new ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_REVERSE_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentPCR.getBackgroundColor());
+                        return new GuiUtilities.ObjectAndColor(recentPCR.getFieldValue(PCROptions.PRIMER_REVERSE_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentPCR.getBackgroundColor());
                     case 4 :
-                        return recentPCR != null ? new ObjectAndColor(recentPCR.getPlateName()+" "+recentPCR.getLocationString(), recentPCR.getBackgroundColor()) : null;
+                        return recentPCR != null ? new GuiUtilities.ObjectAndColor(recentPCR.getPlateName()+" "+recentPCR.getLocationString(), recentPCR.getBackgroundColor()) : null;
                     case 5 :
-                        return recentPCR != null ? new ObjectAndColor(recentPCR.getFieldValue(ReactionOptions.RUN_STATUS), recentPCR.getBackgroundColor()) : null;
+                        return recentPCR != null ? new GuiUtilities.ObjectAndColor(recentPCR.getFieldValue(ReactionOptions.RUN_STATUS), recentPCR.getBackgroundColor()) : null;
                     case 6 :
                         if(recentCycleSequencingForward == null) return null;
                         cocktail = recentCycleSequencingForward.getCocktail();
-                        return new ObjectAndColor(recentCycleSequencingForward.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencingForward.getBackgroundColor());
+                        return new GuiUtilities.ObjectAndColor(recentCycleSequencingForward.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencingForward.getBackgroundColor());
                     case 7 :
-                        return recentCycleSequencingForward != null ? new ObjectAndColor(recentCycleSequencingForward.getPlateName()+" "+recentCycleSequencingForward.getLocationString(), recentCycleSequencingForward.getBackgroundColor()) : null;
+                        return recentCycleSequencingForward != null ? new GuiUtilities.ObjectAndColor(recentCycleSequencingForward.getPlateName()+" "+recentCycleSequencingForward.getLocationString(), recentCycleSequencingForward.getBackgroundColor()) : null;
                     case 8 :
-                        return recentCycleSequencingForward != null ? new ObjectAndColor(recentCycleSequencingForward.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingForward.getBackgroundColor()) : null;
+                        return recentCycleSequencingForward != null ? new GuiUtilities.ObjectAndColor(recentCycleSequencingForward.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingForward.getBackgroundColor()) : null;
                     case 9 :
                         if(recentCycleSequencingReverse == null) return null;
                         cocktail = recentCycleSequencingReverse.getCocktail();
-                        return new ObjectAndColor(recentCycleSequencingReverse.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencingReverse.getBackgroundColor());
+                        return new GuiUtilities.ObjectAndColor(recentCycleSequencingReverse.getFieldValue(CycleSequencingOptions.PRIMER_OPTION_ID) + (cocktail != null ? ", "+cocktail.getName() : ""), recentCycleSequencingReverse.getBackgroundColor());
                     case 10 :
-                        return recentCycleSequencingReverse != null ? new ObjectAndColor(recentCycleSequencingReverse.getPlateName()+" "+recentCycleSequencingReverse.getLocationString(), recentCycleSequencingReverse.getBackgroundColor()) : null;
+                        return recentCycleSequencingReverse != null ? new GuiUtilities.ObjectAndColor(recentCycleSequencingReverse.getPlateName()+" "+recentCycleSequencingReverse.getLocationString(), recentCycleSequencingReverse.getBackgroundColor()) : null;
                     case 11 :
-                        return recentCycleSequencingReverse != null ? new ObjectAndColor(recentCycleSequencingReverse.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingReverse.getBackgroundColor()) : null;
+                        return recentCycleSequencingReverse != null ? new GuiUtilities.ObjectAndColor(recentCycleSequencingReverse.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingReverse.getBackgroundColor()) : null;
                 }
                 return null;
             }

@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 
 import javax.swing.*;
 import javax.swing.text.View;
@@ -65,10 +66,10 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);                
                 table.setGridColor(Color.lightGray);
                 sorter.setTableHeader(table.getTableHeader());
-                table.setDefaultRenderer(ObjectAndColor.class, new DefaultTableCellRenderer(){
+                table.setDefaultRenderer(GuiUtilities.ObjectAndColor.class, new DefaultTableCellRenderer(){
                     @Override
                     public Component getTableCellRendererComponent(JTable table, Object avalue, boolean isSelected, boolean hasFocus, int row, int column) {
-                        ObjectAndColor value = (ObjectAndColor)avalue;
+                        GuiUtilities.ObjectAndColor value = (GuiUtilities.ObjectAndColor)avalue;
                         Component comp = super.getTableCellRendererComponent(table, value == null ? null : value.getObject(), isSelected, hasFocus, row, column);
 
                         Color color = Color.black;
@@ -116,63 +117,9 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
         return new java.awt.Dimension((int) Math.ceil(w), (int) Math.ceil(h));
     }
 
-//    protected static int getLabelHeight(JLabel label, int width) {
-//        if(label.getFont() == null || label.getText() == null) {
-//            return 16;
-//        }
-//        FontMetrics fm = label.getFontMetrics(label.getFont());
-//
-//
-//        Rectangle textRectangle = new Rectangle(0,0);
-//        Rectangle iconRectangle = new Rectangle(0,0);
-//        Rectangle viewRectangle = new Rectangle(width, Short.MAX_VALUE);
-//
-//        SwingUtilities.layoutCompoundLabel(label, fm, label.getText(), label.getIcon(), label.getVerticalAlignment(),
-//                label.getHorizontalAlignment(), label.getHorizontalTextPosition(), label.getVerticalTextPosition(),
-//                viewRectangle, iconRectangle, textRectangle, label.getIconTextGap());
-//
-//        int y1 = Math.min(iconRectangle.y, textRectangle.y);
-//        int y2 = Math.max(iconRectangle.y + iconRectangle.height, textRectangle.y + textRectangle.height);
-//
-//        return y2 - y1 + label.getInsets().top + label.getInsets().bottom;
-//    }
 
     protected static Color getBrighterColor(Color c) {
         return new Color(Math.min(255,c.getRed()+192), Math.min(255,c.getGreen()+192), Math.min(255,c.getBlue()+192));
     }
 
-    public static class ObjectAndColor{
-        private Object object;
-        private Color color;
-        private Color selectedColor;
-
-        public ObjectAndColor(Object object, Color color) {
-            this.object = object;
-            this.color = color;
-            this.selectedColor = color;
-        }
-
-        public ObjectAndColor(Object object, Color color, Color selectedColor) {
-            this.object = object;
-            this.color = color;
-            this.selectedColor = selectedColor;
-        }
-
-        public Object getObject() {
-            return object;
-        }
-
-        public Color getColor() {
-            return getColor(false);
-        }
-
-        public Color getColor(boolean isSelected) {
-            return isSelected ? selectedColor : color;
-        }
-
-        @Override
-        public String toString() {
-            return getObject() == null ? null : getObject().toString();
-        }
-    }
 }

@@ -8,6 +8,7 @@ import javax.swing.table.TableModel;
 
 import jebl.util.ProgressListener;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 
 import java.io.IOException;
 import java.awt.*;
@@ -31,8 +32,8 @@ public class ExcelUtilities {
             for (int j = 0; j < table.getRowCount(); j++) {
                 Object tableValue = table.getValueAt(j, i);
                 Label label;
-                if (tableValue instanceof TableDocumentViewerFactory.ObjectAndColor) {
-                    TableDocumentViewerFactory.ObjectAndColor objectAndColor = (TableDocumentViewerFactory.ObjectAndColor) tableValue;
+                if (tableValue instanceof GuiUtilities.ObjectAndColor) {
+                    GuiUtilities.ObjectAndColor objectAndColor = (GuiUtilities.ObjectAndColor) tableValue;
                     WritableFont font = new WritableFont(defaultFont);
                     Color color = objectAndColor.getColor();
                     if (color.equals(Color.WHITE)) {

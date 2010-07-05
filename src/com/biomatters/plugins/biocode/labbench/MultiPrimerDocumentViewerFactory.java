@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.Cocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
@@ -176,8 +177,8 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
         }
         final List<PrimerIdentifier> primerList = new ArrayList<PrimerIdentifier>(primerNamesSet);
 
-        final ObjectAndColor[][] tableValues = new ObjectAndColor[workflows.size()][primerNamesSet.size()];
-        ObjectAndColor notTriedValue = new ObjectAndColor("Not tried", Color.black);
+        final GuiUtilities.ObjectAndColor[][] tableValues = new GuiUtilities.ObjectAndColor[workflows.size()][primerNamesSet.size()];
+        GuiUtilities.ObjectAndColor notTriedValue = new GuiUtilities.ObjectAndColor("Not tried", Color.black);
         for(int i=0; i < tableValues.length; i++) {
             Arrays.fill(tableValues[i], notTriedValue);
         }
@@ -198,7 +199,7 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                     }
                     Cocktail cocktail = r.getOptions().getCocktail();
                     if (primerName.equals(s)) {
-                        tableValues[i][j] = new ObjectAndColor(r.getPlateName()+" "+r.getLocationString()+(cocktail != null ? ", "+cocktail.getName() : ""), r.getBackgroundColor());
+                        tableValues[i][j] = new GuiUtilities.ObjectAndColor(r.getPlateName()+" "+r.getLocationString()+(cocktail != null ? ", "+cocktail.getName() : ""), r.getBackgroundColor());
                     }
                 }
             }
@@ -228,7 +229,7 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 if(columnIndex < 2) {
                     return String.class;
                 }
-                return ObjectAndColor.class;
+                return GuiUtilities.ObjectAndColor.class;
             }
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
