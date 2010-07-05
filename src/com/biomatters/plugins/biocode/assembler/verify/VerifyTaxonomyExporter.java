@@ -32,7 +32,7 @@ public class VerifyTaxonomyExporter extends DocumentFileExporter {
     }
 
     public String getFileTypeDescription() {
-        return "Primer Summary (Excel)";
+        return "Verify Taxonomy Table (Excel)";
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
