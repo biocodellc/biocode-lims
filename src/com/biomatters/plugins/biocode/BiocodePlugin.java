@@ -8,6 +8,7 @@ import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFr
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyDocumentViewerFactory;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
+import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.submission.bold.ExportForBoldOperation;
@@ -206,6 +207,6 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public DocumentFileExporter[] getDocumentFileExporters() {
-        return new DocumentFileExporter[] {new WorkflowSummaryExporter(), new PlateExporter()};
+        return new DocumentFileExporter[] {new WorkflowSummaryExporter(), new PlateExporter(), new VerifyTaxonomyExporter()};
     }
 }
