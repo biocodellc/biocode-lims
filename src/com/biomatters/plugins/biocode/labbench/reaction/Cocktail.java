@@ -43,7 +43,7 @@ public abstract class Cocktail implements XMLSerializable {
     public double getReactionVolume(Options options) {
         double sum = 0;
         for (Options.Option o : options.getOptions()) {
-            if (o instanceof Options.DoubleOption && !o.getName().toLowerCase().contains("conc") && !o.getName().contains("template")) {
+            if (o instanceof Options.DoubleOption && !o.getName().toLowerCase().contains("conc") && !o.getName().toLowerCase().contains("template")) {
                 sum += (Double) o.getValue();
             }
         }
