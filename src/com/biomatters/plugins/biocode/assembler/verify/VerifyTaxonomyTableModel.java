@@ -43,6 +43,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
     private final List<VerifyResult> rows = new ArrayList<VerifyResult>();
     private int[] selectedRows = new int[0];
     private JComponent dialogParent = null;
+    private boolean htmlify = true;
 
     private final VerifyBinningOptions binningOptions;
     private final AnnotatedPluginDocument resultsDocument;
@@ -50,8 +51,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
     private static final Color HTML_GREEN = new Color(0, 128, 0);
     private static final Color ORANGEY = new Color(233, 160, 45);
 
-    public VerifyTaxonomyTableModel(AnnotatedPluginDocument results, VerifyBinningOptions overrideBinningOptions) {
+    public VerifyTaxonomyTableModel(AnnotatedPluginDocument results, VerifyBinningOptions overrideBinningOptions, boolean htmlify) {
         resultsDocument = results;
+        this.htmlify = htmlify;
         VerifyTaxonomyResultsDocument resultsPluginDocument = (VerifyTaxonomyResultsDocument) results.getDocumentOrCrash();
         for (VerifyResult entry : resultsPluginDocument.getResults()) {
             rows.add(entry);
@@ -335,7 +337,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
                     AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy);
                     Object taxObject = row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD) : null;
                     AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
-                    highlight(taxonomy, ";", blastTaxonomy);
+                    if(htmlify) {
+                        highlight(taxonomy, ";", blastTaxonomy);
+                    }
                     if (row.queryTaxon == null) {
                         taxonomy.set(taxonomy.get() + " (not found in NCBI Taxonomy)");
                     } else if (skippedLevels != null && !skippedLevels.isEmpty()) {
@@ -356,7 +360,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
                     AtomicReference<String> taxonomy = new AtomicReference<String>(fimsTaxonomy == null ? "" : fimsTaxonomy.toString());
                     Object taxObject = row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.TAXONOMY_FIELD) : null;
                     AtomicReference<String> blastTaxonomy = new AtomicReference<String>(taxObject == null ? "" : taxObject.toString());
-                    highlight(taxonomy, ";", blastTaxonomy);
+                    if(htmlify) {
+                        highlight(taxonomy, ";", blastTaxonomy);
+                    }
                     return blastTaxonomy.get();
                 }
 
@@ -370,7 +376,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
                 Object getValue(VerifyResult row) {
                     AtomicReference<String> keys = new AtomicReference<String>(binningOptions.getKeywords());
                     AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString() : "");
-                    highlight(keys, ",", definition);
+                    if(htmlify) {
+                        highlight(keys, ",", definition);
+                    }
                     return keys.get();
                 }
 
@@ -384,7 +392,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
                 Object getValue(VerifyResult row) {
                     AtomicReference<String> keys = new AtomicReference<String>(binningOptions.getKeywords());
                     AtomicReference<String> definition = new AtomicReference<String>(row.hitDocuments.size() > 0 ? row.hitDocuments.get(0).getFieldValue(DocumentField.DESCRIPTION_FIELD).toString() : "");
-                    highlight(keys, ",", definition);
+                    if(htmlify) {
+                        highlight(keys, ",", definition);
+                    }
                     return definition.get();
                 }
 

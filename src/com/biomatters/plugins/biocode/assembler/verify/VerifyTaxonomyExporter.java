@@ -18,6 +18,7 @@ import jxl.write.WriteException;
 import jxl.Workbook;
 
 import javax.swing.table.TableModel;
+import javax.swing.event.TableModelListener;
 
 /**
  * @author Steve
@@ -45,7 +46,7 @@ public class VerifyTaxonomyExporter extends DocumentFileExporter {
             WritableWorkbook workbook = Workbook.createWorkbook(file);
 
 
-            VerifyTaxonomyTableModel tableModel = new VerifyTaxonomyTableModel(documents[0], null);
+            VerifyTaxonomyTableModel tableModel = new VerifyTaxonomyTableModel(documents[0], null, false);
             WritableSheet sheet = workbook.createSheet("Verify Taxonomy Results", 0);
             ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);
 

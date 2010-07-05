@@ -143,24 +143,26 @@ public class VerifyBinOptions extends Options {
     }
 
     public enum Bin {
-        High("happy.png", 3),
-        Medium("ok.png", 2),
-        Low("sad.png", 1);
+        High("happy.png", "High", 3),
+        Medium("ok.png", "Medium", 2),
+        Low("sad.png", "Low", 1);
 
         private final String icon;
+        private String title;
         private final int rank;
         private VerifyTaxonomyTableModel.IconsWithToString icons;
         private final OptionValue optionValue;
 
-        Bin(String icon, int rank) {
+        Bin(String icon, String title, int rank) {
             this.icon = icon;
+            this.title = title;
             this.rank = rank;
             this.optionValue = new OptionValue(name(), name());
         }
 
         public VerifyTaxonomyTableModel.IconsWithToString getIcons() {
             if (icons == null) {
-                icons = new VerifyTaxonomyTableModel.IconsWithToString(icon, new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon))));
+                icons = new VerifyTaxonomyTableModel.IconsWithToString(title, new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon))));
             }
             return icons;
         }

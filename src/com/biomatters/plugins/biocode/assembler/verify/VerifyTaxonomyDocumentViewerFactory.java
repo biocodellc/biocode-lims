@@ -31,7 +31,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
     }
 
     public TableModel getTableModel(AnnotatedPluginDocument[] docs) {
-        return new VerifyTaxonomyTableModel(docs[0], overrideBinningOptions);
+        return new VerifyTaxonomyTableModel(docs[0], overrideBinningOptions, true);
     }
 
     @Override
