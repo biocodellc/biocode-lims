@@ -8,6 +8,8 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.virion.jam.util.SimpleListener;
 
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -32,11 +34,15 @@ public class NewPlateOptions extends Options{
         //analyse the documents
         final boolean fromExistingPossible = documents.length > 0;
         final boolean fourPlates = documents.length > 1;
+        boolean allPcrOrSequencing = true;
         Plate.Size pSize = null;
         int numberOfReactions = 0;
         for(AnnotatedPluginDocument doc : documents) {
             PlateDocument plateDoc = (PlateDocument)doc.getDocument();
             Plate.Size size = plateDoc.getPlate().getPlateSize();
+            if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+                allPcrOrSequencing = false;
+            }
             if(pSize != null && size != pSize) {
                 throw new DocumentOperationException("All selected plates must be of the same size");
             }
@@ -55,16 +61,26 @@ public class NewPlateOptions extends Options{
                 new Options.OptionValue("384Plate", "384 well plate")
         };
 
-        Options.OptionValue[] typeValues = new Options.OptionValue[] {
+        final Options.OptionValue[] typeValues = new Options.OptionValue[] {
                 new Options.OptionValue("extraction", "Extraction"),
                 new Options.OptionValue("pcr", "PCR"),
                 new Options.OptionValue("cyclesequencing", "Cycle Sequencing")
         };
 
         Options.BooleanOption fromExistingOption = null;
+        Options.BooleanOption onlyPassed = null;
         if(fromExistingPossible) {
             fromExistingOption = addBooleanOption("fromExisting", "Create plate from existing document", false);
             fromExistingOption.setSpanningComponent(true);
+            onlyPassed = addBooleanOption("onlyPassed", "Copy only passed reactions", false);
+            onlyPassed.setSpanningComponent(true);
+            onlyPassed.setDisabledValue(false);
+            if(allPcrOrSequencing) {
+                fromExistingOption.addDependent(onlyPassed, true);
+            }
+            else {
+                onlyPassed.setEnabled(false);
+            }
         }
 
         addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
@@ -154,6 +170,10 @@ public class NewPlateOptions extends Options{
 
     public boolean isFromExisting() {
         return "true".equals(getValueAsString("fromExisting"));
+    }
+
+    public boolean copyOnlyPassedReactions() {
+        return "true".equals(getValueAsString("onlyPassed"));
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -79,6 +80,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         final Plate.Size sizeFromOptions = options.getPlateSize();
         final Reaction.Type typeFromOptions = options.getReactionType();
         final boolean fromExisting = options.isFromExisting();
+        final boolean copyOnlyPassed = options.copyOnlyPassedReactions();
         final AtomicReference<DocumentOperationException> exception = new AtomicReference<DocumentOperationException>();
         final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
         final int numberOfReactionsFromOptions = (Integer)options.getOption("reactionNumber").getValue();
@@ -113,10 +115,10 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
 
                         if(plateSize == sizeFromOptions) {
-                            copyPlateOfSameSize(plateViewer.get(), plate, editingPlate);
+                            copyPlateOfSameSize(plateViewer.get(), plate, editingPlate, copyOnlyPassed);
                         }
                         else if(sizeFromOptions == Plate.Size.w96){
-                            copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"));
+                            copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"), copyOnlyPassed);
 
                         }
                         else if(sizeFromOptions == Plate.Size.w384) {
@@ -201,7 +203,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
     }
 
-    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant) throws DocumentOperationException{
+    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, boolean onlyPassed) throws DocumentOperationException{
         quadrant = quadrant-1;//zero-index it
         Reaction[] srcReactions = srcPlate.getReactions();
         for(int i=0; i < srcReactions.length; i++) {
@@ -211,7 +213,9 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 for(int row = 0; row < destPlate.getRows(); row++) {
                     Reaction destReaction = destPlate.getReaction(row, col);
                     Reaction srcReaction = srcPlate.getReaction(row*2 + yOffset, col*2 + xoffset);
-                    ReactionUtilities.copyReaction(srcReaction, destReaction);
+                    if(!onlyPassed || ReactionOptions.PASSED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
+                        ReactionUtilities.copyReaction(srcReaction, destReaction);
+                    }
                 }
             }
         }
@@ -221,7 +225,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     }
 
-    static void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate) throws DocumentOperationException{
+    static void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate, boolean onlyPassed) throws DocumentOperationException{
         if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
             throw new IllegalArgumentException("Plates were of different sizes");
         }
@@ -233,7 +237,9 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         Reaction[] srcReactions = srcPlate.getReactions();
         Reaction[] destReactions = destPlate.getReactions();
         for(int i=0; i < srcReactions.length; i++) {
-            ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
+            if(!onlyPassed || ReactionOptions.PASSED_VALUE.getName().equals(srcReactions[i].getFieldValue(ReactionOptions.RUN_STATUS))) {
+                ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
+            }
         }
         if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
             autodetectWorkflows(destPlate);
