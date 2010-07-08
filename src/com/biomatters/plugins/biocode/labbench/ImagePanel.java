@@ -4,7 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 
 public class ImagePanel extends JPanel {
-    private Image[] images;
+    protected Image[] images;
+    public static final int PADDING = 10;
 
     public ImagePanel(Image... i) {
         this.images = i;
@@ -15,10 +16,10 @@ public class ImagePanel extends JPanel {
         int h = 0;
         for (Image i : images) {
             w = Math.max(w, i.getWidth(null));
-            h += i.getHeight(null) + 10;
+            h += i.getHeight(null) + PADDING;
         }
-        w += 20;//padding
-        h += 10;
+        w += 2*PADDING;//padding
+        h += PADDING;
 
         return new Dimension(Math.max(250,w), Math.max(250,h));
     }
@@ -26,10 +27,10 @@ public class ImagePanel extends JPanel {
     public void paintComponent(Graphics g) {
         g.setColor(SystemColor.control.darker().darker());
         g.fillRect(0, 0, getWidth(), getHeight());
-        int y = 10;
+        int y = PADDING;
         for (Image i : images) {
-            g.drawImage(i, 10, y, null);
-            y += i.getHeight(null) + 10;
+            g.drawImage(i, PADDING, y, null);
+            y += i.getHeight(null) + PADDING;
         }
 
     }

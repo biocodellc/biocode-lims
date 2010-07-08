@@ -150,7 +150,7 @@ public class PlateViewer extends JPanel {
                         }
                     });
                 }
-                List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), selfReference);
+                List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate(), selfReference);
                 plateView.getPlate().setImages(gelimages);
             }
         };

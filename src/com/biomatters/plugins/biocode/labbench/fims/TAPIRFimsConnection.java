@@ -149,6 +149,12 @@ public class TAPIRFimsConnection extends FIMSConnection{
                     return samples;
                 }
             }
+            else {
+                Element errorElement = searchXML.getChild("error", searchXML.getNamespace());
+                if(errorElement != null) {
+                    throw new ConnectionException("TAPIR Server reported an error: "+errorElement.getText());
+                }
+            }
 
         }
         return Collections.EMPTY_LIST;

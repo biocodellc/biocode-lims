@@ -55,6 +55,17 @@ public class GelImage implements XMLSerializable {
         createImage();
     }
 
+    /**
+     * this constructor is only to be used for split gel images attached to reactions.  not images attached to plates.
+     * @param imageBytes
+     * @param name
+     */
+    public GelImage(byte[] imageBytes, String name) {
+        this.filename = name;
+        this.imageBytes = imageBytes;
+        createImage();
+    }
+
     public GelImage(ResultSet resultSet) throws SQLException{
         this.notes = resultSet.getString("gelimages.notes");
         this.plate = resultSet.getInt("gelimages.plate");

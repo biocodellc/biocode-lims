@@ -9,10 +9,13 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import org.jdom.Element;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.ImageObserver;
 import java.awt.color.ColorSpace;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
@@ -46,8 +49,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     protected Date date = new Date();
     private static int charHeight = -1;
     private int[] fieldWidthCache = null;
+    private GelImage gelImage = null;
     private BackgroundColorer backgroundColorer;
     DisplayFieldsTemplate displayFieldsTemplate;
+    private static final ImageObserver imageObserver = new ImageObserver(){
+        public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
+            return false;
+        }
+    };
 
     private static final Preferences preferences = Preferences.userNodeForPackage(Reaction.class);
 
@@ -57,6 +66,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public static final int PADDING = 10;
     private Thermocycle thermocycle;
+    public static final DocumentField GEL_IMAGE_DOCUMENT_FIELD = new DocumentField("GELImage", "", "gelImage", String.class, false, false);
 
     public abstract String getLocus();
 
@@ -65,6 +75,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         Extraction,
         PCR,
         CycleSequencing
+    }
+
+    public GelImage getGelImage() {
+        return gelImage;
+    }
+
+    public void setGelImage(GelImage gelImage) {
+        this.gelImage = gelImage;
     }
 
     public static Reaction getNewReaction(Type type) {
@@ -191,6 +209,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public List<DocumentField> getDisplayableFields() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
+        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+            fields.add(GEL_IMAGE_DOCUMENT_FIELD);
+        }
         for(Options.Option op : getOptions().getOptions()) {
             if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){
                 if(op instanceof Options.ComboBoxOption) {
@@ -216,6 +237,16 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public List<DocumentField> getFieldsToDisplay(){
         if(isEmpty()) {
+            if(displayableFields.contains(GEL_IMAGE_DOCUMENT_FIELD)) {
+                return Arrays.asList(GEL_IMAGE_DOCUMENT_FIELD);
+            }
+            DisplayFieldsTemplate displayFieldsTemplate = getDefaultDisplayedFieldsTemplate();
+            if(displayFieldsTemplate != null) {
+                List<DocumentField> fields = displayFieldsTemplate.getDisplayedFields();
+                if(fields.contains(GEL_IMAGE_DOCUMENT_FIELD)) {
+                    return Arrays.asList(GEL_IMAGE_DOCUMENT_FIELD);
+                }
+            }
             return Collections.EMPTY_LIST;
         }
         if(displayableFields != null) {
@@ -305,6 +336,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(locationString != null) {
             element.addContent(new Element("wellLabel").setText(locationString));
         }
+        if(gelImage != null) {
+            element.addContent(XMLSerializer.classToXML("gelimage", gelImage));
+        }
         if(displayableFields != null && displayableFields.size() > 0) {
             for(DocumentField df : displayableFields) {
                 element.addContent(XMLSerializer.classToXML("displayableField", df));
@@ -343,6 +377,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         Element fimsElement = element.getChild("fimsSample");
         if(fimsElement != null) {
             fimsSample = XMLSerializer.classFromXML(fimsElement, FimsSample.class);
+        }
+        Element gelImageElement = element.getChild("gelimage");
+        if(gelImageElement != null) {
+            gelImage = XMLSerializer.classFromXML(gelImageElement, GelImage.class);
         }
         try {
             synchronized (BiocodeService.XMLDateFormat) {
@@ -401,6 +439,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
         for (int i = 0; i < fieldsToDisplay.size(); i++) {
             DocumentField field = getFieldsToDisplay().get(i);
+            if(field.equals(GEL_IMAGE_DOCUMENT_FIELD)) {
+                if(gelImage != null) {
+                    y += gelImage.getImage().getHeight(imageObserver)+5;
+                }
+                continue;
+            }
             String value = getDisplayableValue(field).toString();
             if (value.length() == 0) {
                 continue;
@@ -479,6 +523,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         int y = location.y + 8;
         y += (location.height - getPreferredSize().height + PADDING)/2;
         for (int i = 0; i < getFieldsToDisplay().size(); i++) {
+            if(getFieldsToDisplay().get(i).equals(GEL_IMAGE_DOCUMENT_FIELD)) {
+                if(gelImage != null) {
+                    int x = (location.width-gelImage.getImage().getWidth(imageObserver))/2;
+                    g.drawImage(gelImage.getImage(),location.x+x,y, imageObserver);
+                    y += gelImage.getImage().getHeight(imageObserver)+5;
+                }
+                continue;
+            }
             g.setFont(i == 0 ? firstLabelFont : labelFont);
 
             DocumentField field = getFieldsToDisplay().get(i);
@@ -562,8 +614,16 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
-                String insertSQL = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                String updateSQL = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=? WHERE id=?";
+                String insertSQL;
+                String updateSQL;
+                if(LIMSConnection.EXPECTED_SERVER_VERSION == 6) {
+                    insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=? WHERE id=?";
+                }
+                else {
+                    insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=? WHERE id=?";
+                }
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                 int insertCount = 0;
@@ -578,7 +638,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
                             updateCount++;
-                            statement.setInt(17, reaction.getId());
+                            statement.setInt(11+LIMSConnection.EXPECTED_SERVER_VERSION, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -601,6 +661,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setString(14, options.getValueAsString("technician"));
                         statement.setInt(15, "yes".equals(options.getValueAsString("concentrationStored")) ? 1 : 0);
                         statement.setDouble(16, (Double)options.getValue("concentration"));
+                        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+                            GelImage image = reaction.getGelImage();
+                            statement.setBytes(17, image != null ? image.getImageBytes() : null);    
+                        }
                         statement.addBatch();
                         //statement.execute();
                     }
@@ -622,8 +686,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 updateStatement.close();
                 break;
             case PCR:
-                insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence, date, technician) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=?, technician=? WHERE id=?";
+                if(LIMSConnection.EXPECTED_SERVER_VERSION == 6) {
+                    insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=?, technician=? WHERE id=?";
+                }
+                else {
+                    insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=?, technician=?, gelimage=? WHERE id=?";
+                }
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
                 for (int i = 0; i < reactions.length; i++) {
@@ -635,7 +705,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(17, reaction.getId());
+                            statement.setInt(11+LIMSConnection.EXPECTED_SERVER_VERSION, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -696,6 +766,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setString(10, options.getValueAsString("cleanupMethod"));
                         statement.setString(11, reaction.getExtractionId());
                         statement.setString(12, options.getValueAsString("notes"));
+                        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+                            if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+                                GelImage image = reaction.getGelImage();
+                                statement.setBytes(17, image != null ? image.getImageBytes() : null);
+                            }
+                        }
                         statement.execute();
                     }
                 }
@@ -703,8 +779,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 updateStatement.close();
                 break;
             case CycleSequencing:
-                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, date, technician) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=?, technician=? WHERE id=?";
+                if(LIMSConnection.EXPECTED_SERVER_VERSION == 6) {
+                    insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, date, technician) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=?, technician=? WHERE id=?";
+                }
+                else {
+                    insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=?, technician=?, gelimage=? WHERE id=?";
+                }
                 String clearTracesSQL = "DELETE FROM traces WHERE reaction=?";
                 String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
 
@@ -722,7 +804,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         PreparedStatement statement;
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
-                            statement.setInt(16, reaction.getId());
+                            statement.setInt(10+LIMSConnection.EXPECTED_SERVER_VERSION, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -771,6 +853,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setString(13, options.getValueAsString("notes"));
                         statement.setDate(14, new java.sql.Date(((Date)options.getValue("date")).getTime()));
                         statement.setString(15, options.getValueAsString("technician"));
+                        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+                            if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+                                GelImage image = reaction.getGelImage();
+                                statement.setBytes(16, image != null ? image.getImageBytes() : null);    
+                            }
+                        }
 
 //                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
 //                        String sequenceString = "";

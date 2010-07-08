@@ -240,7 +240,14 @@ public class Plate implements XMLSerializable {
     }
 
     public Reaction getReaction(BiocodeUtilities.Well well) {
-        return reactions[cols * well.row() + well.col()];
+        int index = cols * well.row() + well.col();
+        if(index < reactions.length) {
+            return reactions[index];
+        }
+        else {
+            System.out.println("Well out of index! "+well);
+            return null;
+        }
     }
 
     public static String getWellName(int row, int col) {

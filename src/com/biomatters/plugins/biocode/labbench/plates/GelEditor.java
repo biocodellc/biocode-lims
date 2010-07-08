@@ -2,8 +2,13 @@ package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
+import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 
 import javax.swing.*;
 import javax.swing.event.ListDataEvent;
@@ -30,8 +35,8 @@ import java.util.prefs.Preferences;
 public class GelEditor {
     static Preferences preferences = Preferences.userNodeForPackage(GelEditor.class);
     
-    public static List<GelImage> editGels(List<GelImage> gels, Component owner) {
-        final List<GelImage> gelimages = new ArrayList<GelImage>(gels);
+    public static List<GelImage> editGels(final Plate plate, Component owner) {
+        final List<GelImage> gelimages = new ArrayList<GelImage>(plate.getImages());
         final JPanel editPanel = new JPanel(new BorderLayout());
         editPanel.setPreferredSize(new Dimension(700, 450));
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
@@ -107,7 +112,7 @@ public class GelEditor {
             public void valueChanged(ListSelectionEvent e) {
                 GelImage selectedGelimage = (GelImage) gelimageList.getSelectedValue();
                 //todo
-                setRightComponent(splitPane, getGelViewerPanel(selectedGelimage));
+                setRightComponent(splitPane, getGelViewerPanel(selectedGelimage, plate));
                 removeButton.setEnabled(gelimageList.getSelectedIndex() >= 0);
             }
         };
@@ -150,10 +155,10 @@ public class GelEditor {
         if(Dialogs.showDialog(dialogOptions, editPanel).equals("OK")) {
             return gelimages;
         }
-        return gels;
+        return plate.getImages();
     }
 
-    private static JComponent getGelViewerPanel(final GelImage image) {
+    private static JComponent getGelViewerPanel(final GelImage image, final Plate plate) {
         if(image == null) {
             return new JPanel();
         }
@@ -179,6 +184,16 @@ public class GelEditor {
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(imageScroller, BorderLayout.CENTER);
         panel.add(notesScroller, BorderLayout.SOUTH);
+        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+            GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(GelEditor.class), false, true);
+            Icons icon = BiocodePlugin.getIcons("splitgel16.png");
+            toolbar.addAction(new GeneiousAction("Split GEL", "Split the GEL into wells, and attach them to your reactions.", icon){
+                public void actionPerformed(ActionEvent e) {
+                    GelSplitter.splitGel(plate, image);
+                }
+            }).setText("Split GEL");
+            panel.add(toolbar, BorderLayout.NORTH);
+        }
         return panel;
     }
 

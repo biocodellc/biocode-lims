@@ -46,6 +46,7 @@ CREATE TABLE extraction (
   extractionBarcode varchar(45) NOT NULL,
   previousPlate varchar(45) NOT NULL,
   previousWell varchar(45) NOT NULL,
+  gelimage LONGVARBINARY,
   FOREIGN KEY (plate) REFERENCES plate(id)
 );
 
@@ -225,6 +226,7 @@ CREATE TABLE cyclesequencing (
   cleanupPerformed tinyint NOT NULL,
   cleanupMethod varchar(99) NOT NULL,
   direction varchar(32) NOT NULL,
+  gelimage LONGVARBINARY,
   --PRIMARY KEY  ( id ),
   FOREIGN KEY (plate) REFERENCES plate(id),
   FOREIGN KEY (workflow) REFERENCES workflow(id),
@@ -353,6 +355,7 @@ CREATE TABLE  pcr  (
   notes LONGVARCHAR NOT NULL,
   revPrName varchar(64) NOT NULL,
   revPrSequence varchar(999) NOT NULL,
+  gelimage LONGVARBINARY,
   FOREIGN KEY (workflow) REFERENCES workflow(id),
   FOREIGN KEY (cocktail) REFERENCES pcr_cocktail(id),
   FOREIGN KEY (plate) REFERENCES plate(id)

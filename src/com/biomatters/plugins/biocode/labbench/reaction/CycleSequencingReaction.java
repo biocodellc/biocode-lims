@@ -7,8 +7,10 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
+import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 
 import javax.swing.*;
 import java.awt.*;
@@ -76,6 +78,13 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         options.setValue("technician", r.getString("cyclesequencing.technician"));
         setPlateName(r.getString("plate.name"));
         setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
+
+        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+            byte[] imageBytes = r.getBytes("gelimage");
+            if(imageBytes != null) {
+                setGelImage(new GelImage(imageBytes, getLocationString()));
+            }
+        }
 
         int thermocycleId = r.getInt("plate.thermocycle");
         if(thermocycleId >= 0) {

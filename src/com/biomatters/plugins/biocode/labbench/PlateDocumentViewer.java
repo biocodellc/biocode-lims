@@ -334,7 +334,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 });
             }
 
-            List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate().getImages(), container);
+            List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate(), container);
             plateView.getPlate().setImages(gelimages);
             saveAction.setEnabled(true);
             updatePanel();

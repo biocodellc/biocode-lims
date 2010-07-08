@@ -5,11 +5,13 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
+import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import javax.swing.*;
 import java.util.*;
@@ -69,6 +71,13 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         if(plateName != null) {
             setPlateName(plateName);
             setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
+        }
+
+        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
+            byte[] imageBytes = r.getBytes("extraction.gelimage");
+            if(imageBytes != null) {
+                setGelImage(new GelImage(imageBytes, getLocationString()));
+            }
         }
         
         
