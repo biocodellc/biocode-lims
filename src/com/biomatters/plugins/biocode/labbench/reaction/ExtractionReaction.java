@@ -87,7 +87,10 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             options.setValue("workflowId", getWorkflow().getName());
         }
 
-        setFimsSample(BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(options.getValueAsString("sampleId"))); //todo: hack
+        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        if(fimsConnection != null) {
+            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString("sampleId")));
+        }
     }
 
     public String getLocus() {
