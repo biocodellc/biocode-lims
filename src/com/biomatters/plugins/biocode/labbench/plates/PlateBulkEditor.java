@@ -587,7 +587,13 @@ public class PlateBulkEditor {
         editorField.setText("");
         editorField.valuesFromTextView();
         for(Map.Entry<String, String> entry : ids.entrySet()) {
-            BiocodeUtilities.Well well = new BiocodeUtilities.Well(entry.getKey());
+            BiocodeUtilities.Well well = null;
+            try {
+                well = new BiocodeUtilities.Well(entry.getKey());
+            } catch (IllegalArgumentException e) {
+                Dialogs.showMessageDialog(e.getMessage());
+                return;
+            }
             try {
                 editorField.setValue(well.row(), well.col(), entry.getValue());
             } catch (Exception e1) {

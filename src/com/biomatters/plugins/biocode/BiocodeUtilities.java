@@ -290,12 +290,12 @@ public class BiocodeUtilities {
 
         public Well(String wellName) {
             if(wellName == null || wellName.length() < 2) {
-                throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+                throw new IllegalArgumentException("wellName must be in the form 'A1', or 'A01', but your well name was '"+wellName+"'");
             }
             wellName = wellName.toUpperCase();
             char letter = wellName.toCharArray()[0];
             if(letter < 65 || letter > 90) {
-                throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+                throw new IllegalArgumentException("wellName must be in the form 'A1', or 'A01', but your well name was '"+wellName+"'");
             }
             this.letter = letter;
 
@@ -304,7 +304,7 @@ public class BiocodeUtilities {
                 number = Integer.parseInt(wellName.substring(1));
             }
             catch(NumberFormatException ex) {
-                throw new IllegalArgumentException("wellName must be in the form A1, or A01");
+                throw new IllegalArgumentException("wellName must be in the form 'A1', or 'A01', but your well name was '"+wellName+"'");
             }
             this.number = number;
         }

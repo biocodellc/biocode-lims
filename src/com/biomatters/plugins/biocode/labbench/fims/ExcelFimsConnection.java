@@ -340,7 +340,10 @@ public class ExcelFimsConnection extends FIMSConnection{
             Map<String, String> results = new HashMap<String, String>();
 
             for(FimsSample sample : samples) {
-                results.put(""+sample.getFimsAttributeValue(wellField.getCode()), sample.getId());
+                Object wellValue = sample.getFimsAttributeValue(wellField.getCode());
+                if(wellValue != null && wellField.toString().length() > 0) {
+                    results.put(wellValue.toString(), sample.getId());
+                }
             }
 
             return results;
