@@ -19,10 +19,7 @@ import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -75,7 +72,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
     }
 
     public List<DocumentField> getSearchAttributes() {
-        return searchAttributes;
+        return getMatchingFields(searchAttributes, false);
     }
 
     public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
@@ -83,19 +80,48 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return null;
     }
 
+    private static List<DocumentField> getMatchingFields(List<DocumentField> searchAttributes, boolean taxonomy) {
+        List<DocumentField> result = new ArrayList<DocumentField>();
+        for(DocumentField field : searchAttributes) {
+            if(isTaxonomyAttribute(field.getCode()) == taxonomy) {
+                result.add(field);
+            }
+        }
+        return result;
+    }
+
+    private static boolean isTaxonomyAttribute(String code) {
+        String[] taxonomyCodes = new String[] {
+                "http://rs.tdwg.org/dwc/dwcore/Kingdom",
+                "http://rs.tdwg.org/dwc/dwcore/Phylum",
+                "http://rs.tdwg.org/dwc/dwcore/Class",
+                "http://rs.tdwg.org/dwc/dwcore/Order",
+                "http://rs.tdwg.org/dwc/dwcore/Family",
+                "http://rs.tdwg.org/dwc/dwcore/Genus",
+                "http://rs.tdwg.org/dwc/dwcore/SpecificEpithet"
+        };
+        for(int i=0; i < taxonomyCodes.length; i++) {
+            if(taxonomyCodes[i].equals(code)) {
+                return true;
+            } 
+        }
+        return false;
+    }
+
     public List<DocumentField> getCollectionAttributes() {
         return searchAttributes;
     }
 
     public List<DocumentField> getTaxonomyAttributes() {
-        return Collections.emptyList();
+        return getMatchingFields(searchAttributes, false);
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{
         Element searchXML = null;
         if(query instanceof CompoundSearchQuery) {
             try {
-                searchXML = client.searchTapirServer((CompoundSearchQuery)query, searchAttributes);
+                CompoundSearchQuery csq = (CompoundSearchQuery) query;
+                searchXML = client.searchTapirServer(csq.getChildren(), csq.getOperator(), searchAttributes);
             } catch (JDOMException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -111,7 +137,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
                     }
                 }
 
-                searchXML = client.searchTapirServer((CompoundSearchQuery)Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.EMPTY_MAP), searchAttributes);
+                searchXML = client.searchTapirServer(queries, CompoundSearchQuery.Operator.OR, searchAttributes);
             } catch (JDOMException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -120,27 +146,29 @@ public class TAPIRFimsConnection extends FIMSConnection{
         }
         else if(query instanceof AdvancedSearchQueryTerm) {
             try {
-                searchXML = client.searchTapirServer((CompoundSearchQuery)Query.Factory.createOrQuery(new Query[] {query}, Collections.EMPTY_MAP), searchAttributes);
+                searchXML = client.searchTapirServer(Arrays.asList(query), CompoundSearchQuery.Operator.AND, searchAttributes);
             } catch (JDOMException e) {
                 e.printStackTrace();
+                throw new ConnectionException(e.getMessage(), e);
             } catch (IOException e) {
                 e.printStackTrace();
+                throw new ConnectionException(e.getMessage(), e);
             }
         }
         if(searchXML != null) {
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-            try {
-                out.output(searchXML, System.out);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+//            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+//            try {
+//                out.output(searchXML, System.out);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
             List<FimsSample> samples = new ArrayList<FimsSample>();
             Element searchElement = searchXML.getChild("search", searchXML.getNamespace());
             if(searchElement != null) {
                 Namespace namespace = Namespace.getNamespace("http://example.net/simple_specimen");
                 Element recordsElement = searchElement.getChild("records", namespace);
                 if(recordsElement != null) {
-                    List<Element> recordList = recordsElement.getChildren("record", namespace);
+                    List<Element> recordList = new ArrayList<Element>(recordsElement.getChildren("record", namespace));
                     for (int i = 0; i < recordList.size(); i++) {
                         Element e = recordList.get(i);
                         e.detach();
@@ -169,10 +197,25 @@ public class TAPIRFimsConnection extends FIMSConnection{
     }
 
     public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
-        return Collections.emptyMap();
+        DocumentField plateField = new DocumentField("Plate", "", "http://biocode.berkeley.edu/schema/plate", String.class, false, false);
+        DocumentField wellField = new DocumentField("Well", "", "http://biocode.berkeley.edu/schema/well", String.class, false, false);
+
+        Query query = Query.Factory.createFieldQuery(plateField, Condition.EQUAL, plateId);
+        List<FimsSample> samples = getMatchingSamples(query);
+
+        Map<String, String> results = new HashMap<String, String>();
+
+        for(FimsSample sample : samples) {
+            Object wellValue = sample.getFimsAttributeValue(wellField.getCode());
+            if(wellValue != null && wellField.toString().length() > 0) {
+                results.put(wellValue.toString(), sample.getId());
+            }
+        }
+
+        return results;
     }
 
     public boolean canGetTissueIdsFromFimsTissuePlate() {
-        return false;
+        return true;
     }
 }

@@ -8,7 +8,6 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsSample;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
@@ -288,7 +287,7 @@ public class LIMSConnection {
             Object[] samplesArray = samples.toArray();
             for(int i=0; i < samplesArray.length; i++) {
                 sql.append(" extraction.sampleId=?");
-                sqlValues.add(((MooreaFimsSample)samplesArray[i]).getId());
+                sqlValues.add(((FimsSample)samplesArray[i]).getId());
                 if(i != samples.size()-1) {
                     sql.append(" OR");
                 }

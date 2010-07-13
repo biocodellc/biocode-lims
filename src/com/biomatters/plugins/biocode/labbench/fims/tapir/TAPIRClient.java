@@ -13,7 +13,6 @@ import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
-import javax.swing.*;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -61,6 +60,9 @@ public class TAPIRClient {
         for(Element schema : conceptSchema) {
             List<Element> fieldElements = schema.getChildren("mappedConcept", schema.getNamespace());
             for(Element fieldElement : fieldElements) {
+                XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+                out.output(fieldElement,  System.out);
+                System.out.println();
                 String code = fieldElement.getAttributeValue("id");
                 String name;
                 if(code.indexOf("/") >= 0) {
@@ -193,8 +195,8 @@ public class TAPIRClient {
         return "xs:string";
     }
 
-    public Element searchTapirServer(CompoundSearchQuery query, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
-        Element searchXML = generateSearchXML(query, fieldsToSearch);
+    public Element searchTapirServer(List<? extends Query> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
+        Element searchXML = generateSearchXML(queries, operator, fieldsToSearch);
         searchXML = padQueryXML(searchXML);
         XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
         out.output(searchXML, System.out);
@@ -212,9 +214,9 @@ public class TAPIRClient {
 
 
 
-    public Element generateSearchXML(CompoundSearchQuery query, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
+    public Element generateSearchXML(List<? extends Query> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
         Element searchElement = new Element("search");
-        searchElement.setAttribute("count", "true").setAttribute("start", "0").setAttribute("limit", "1000").setAttribute("envelope", "true");
+        searchElement.setAttribute("count", "true").setAttribute("start", "0").setAttribute("limit", "65536").setAttribute("envelope", "true");
 
         Element outputModel = new Element("outputModel");
         searchElement.addContent(outputModel);
@@ -238,22 +240,92 @@ public class TAPIRClient {
         outputModel.addContent(mappingElement);
 
         Element filterElement = new Element("filter");
-        if(query.getChildren().size() == 1) {
-            Element equals = new Element("equals");
-            AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) query.getChildren().get(0);
-            equals.addContent(new Element("concept").setAttribute("id", advancedQuery.getField().getCode()));
-            equals.addContent(new Element("literal").setAttribute("value", ""+advancedQuery.getValues()[0]));
-            filterElement.addContent(equals);
+        if(queries.size() == 1) {
+            Element conditionElement;
+            boolean not = false;
+            if(queries.get(0) instanceof AdvancedSearchQueryTerm) {
+                AdvancedSearchQueryTerm queryTerm = (AdvancedSearchQueryTerm)queries.get(0);
+                switch(queryTerm.getCondition()) {
+                    case NOT_CONTAINS:
+                        not = true;
+                    case CONTAINS:
+                        conditionElement = new Element("like");
+                        break;
+                    case GREATER_THAN_OR_EQUAL_TO:
+                        conditionElement = new Element("greaterThanOrEquals");
+                        break;
+                    case LESS_THAN:
+                        conditionElement = new Element("lessThan");
+                        break;
+                    case LESS_THAN_OR_EQUAL_TO:
+                        conditionElement = new Element("lessThanOrEquals");
+                        break;
+                    case NOT_EQUAL:
+                            not = true;
+                    case EQUAL:
+                        default:
+                        conditionElement = new Element("equals");
+                }
+            }
+            else {
+                conditionElement = new Element("equals");
+            }
+            AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) queries.get(0);
+            conditionElement.addContent(new Element("concept").setAttribute("id", advancedQuery.getField().getCode()));
+            conditionElement.addContent(new Element("literal").setAttribute("value", ""+advancedQuery.getValues()[0]));
+            if(not) {
+                Element notElement = new Element("not");
+                notElement.addContent(conditionElement);
+                filterElement.addContent(notElement);
+            }
+            else {
+                filterElement.addContent(conditionElement);
+            }
         }
         else {
-            Element filterParent = new Element(query.getOperator() == CompoundSearchQuery.Operator.AND ? "and" : "or");
+            Element filterParent = new Element(operator == CompoundSearchQuery.Operator.AND ? "and" : "or");
             filterElement.addContent(filterParent);
-            for(Query q : query.getChildren()) {
-                Element equals = new Element("equals");
+            for(Query q : queries) {
+                boolean not = false;
+                Element conditionElement;
+                if(queries.get(0) instanceof AdvancedSearchQueryTerm) {
+                    AdvancedSearchQueryTerm queryTerm = (AdvancedSearchQueryTerm)queries.get(0);
+                    switch(queryTerm.getCondition()) {
+                        case NOT_CONTAINS:
+                            not = true;
+                        case CONTAINS:
+                            conditionElement = new Element("like");
+                            break;
+                        case GREATER_THAN_OR_EQUAL_TO:
+                            conditionElement = new Element("greaterThanOrEquals");
+                            break;
+                        case LESS_THAN:
+                            conditionElement = new Element("lessThan");
+                            break;
+                        case LESS_THAN_OR_EQUAL_TO:
+                            conditionElement = new Element("lessThanOrEquals");
+                            break;
+                        case NOT_EQUAL:
+                                not = true;
+                        case EQUAL:
+                            default:
+                            conditionElement = new Element("equals");
+                    }
+                }
+                else {
+                    conditionElement = new Element("equals");
+                }
                 AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) q;
-                equals.addContent(new Element("concept").setAttribute("id", advancedQuery.getField().getCode()));
-                equals.addContent(new Element("literal").setAttribute("value", ""+advancedQuery.getValues()[0]));
-                filterParent.addContent(equals);
+                conditionElement.addContent(new Element("concept").setAttribute("id", advancedQuery.getField().getCode()));
+                conditionElement.addContent(new Element("literal").setAttribute("value", ""+advancedQuery.getValues()[0]));
+                if(not) {
+                    Element notElement = new Element("not");
+                    notElement.addContent(conditionElement);
+                    filterParent.addContent(notElement);
+                }
+                else {
+                    filterParent.addContent(conditionElement);
+                }
             }
         }
         searchElement.addContent(filterElement);
