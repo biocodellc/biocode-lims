@@ -3,8 +3,10 @@ package com.biomatters.plugins.biocode.labbench.fims.tapir;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Geneious;
+import com.biomatters.plugins.biocode.labbench.fims.TAPIRFimsConnection;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -74,6 +76,7 @@ public class TAPIRClient {
                 fields.add(new DocumentField(name, "", code, getFieldClass(fieldElement), true, false));
             }
         }
+        fields.add(0, new TAPIRFimsConnection().getTissueSampleDocumentField());
         return fields;
     }
 
@@ -143,7 +146,7 @@ public class TAPIRClient {
             xml += buffer+"\n";
         }
         in.close();
-       // System.out.println(xml);
+        System.out.println(xml);
 
         //parse the response to a JDOM element
         SAXBuilder sbuilder = new SAXBuilder();
@@ -195,7 +198,7 @@ public class TAPIRClient {
         return "xs:string";
     }
 
-    public Element searchTapirServer(List<? extends Query> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
+    public Element searchTapirServer(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
         Element searchXML = generateSearchXML(queries, operator, fieldsToSearch);
         searchXML = padQueryXML(searchXML);
         XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
@@ -214,7 +217,7 @@ public class TAPIRClient {
 
 
 
-    public Element generateSearchXML(List<? extends Query> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
+    public Element generateSearchXML(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
         Element searchElement = new Element("search");
         searchElement.setAttribute("count", "true").setAttribute("start", "0").setAttribute("limit", "65536").setAttribute("envelope", "true");
 
@@ -240,119 +243,85 @@ public class TAPIRClient {
         outputModel.addContent(mappingElement);
 
         Element filterElement = new Element("filter");
-        if(queries.size() == 1) {
-            Element conditionElement;
-            boolean not = false;
-            if(queries.get(0) instanceof AdvancedSearchQueryTerm) {
-                AdvancedSearchQueryTerm queryTerm = (AdvancedSearchQueryTerm)queries.get(0);
-                switch(queryTerm.getCondition()) {
-                    case NOT_CONTAINS:
-                        not = true;
-                    case CONTAINS:
-                        conditionElement = new Element("like");
-                        break;
-                    case GREATER_THAN_OR_EQUAL_TO:
-                        conditionElement = new Element("greaterThanOrEquals");
-                        break;
-                    case LESS_THAN:
-                        conditionElement = new Element("lessThan");
-                        break;
-                    case LESS_THAN_OR_EQUAL_TO:
-                        conditionElement = new Element("lessThanOrEquals");
-                        break;
-                    case NOT_EQUAL:
-                            not = true;
-                    case EQUAL:
-                        default:
-                        conditionElement = new Element("equals");
+        Element filterParent = new Element(operator == CompoundSearchQuery.Operator.AND ? "and" : "or");
+        filterElement.addContent(filterParent);
+        for(AdvancedSearchQueryTerm q : queries) {
+            if(q.getField().getCode().equals("tissueId")) {
+                String[] tissueIdParts = q.getValues()[0].toString().split("\\.");
+                if(tissueIdParts.length == 2) {
+                    Element filterParent2 = new Element("and");
+                    filterParent2.addContent(getQueryXml((AdvancedSearchQueryTerm)Query.Factory.createFieldQuery(new DocumentField("ss", "", "http://rs.tdwg.org/dwc/dwcore/CatalogNumber", String.class, false, false), Condition.EQUAL, tissueIdParts[0])));
+                    filterParent2.addContent(getQueryXml((AdvancedSearchQueryTerm)Query.Factory.createFieldQuery(new DocumentField("ss", "", "http://biocode.berkeley.edu/schema/tissue_num", String.class, false, false), Condition.EQUAL, tissueIdParts[1])));
+                    Element filterElement2 = new Element("filter");
+                    filterElement2.addContent(filterParent2);
+                    searchElement.addContent(filterElement2);
+                }
+                else {
+                    filterParent.addContent(getQueryXml((AdvancedSearchQueryTerm)Query.Factory.createFieldQuery(new DocumentField("ss", "", "http://rs.tdwg.org/dwc/dwcore/CatalogNumber", String.class, false, false), q.getCondition(), tissueIdParts[0])));
                 }
             }
             else {
-                conditionElement = new Element("equals");
-            }
-            AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) queries.get(0);
-            conditionElement.addContent(new Element("concept").setAttribute("id", advancedQuery.getField().getCode()));
-            conditionElement.addContent(new Element("literal").setAttribute("value", ""+advancedQuery.getValues()[0]));
-            if(not) {
-                Element notElement = new Element("not");
-                notElement.addContent(conditionElement);
-                filterElement.addContent(notElement);
-            }
-            else {
-                filterElement.addContent(conditionElement);
+                filterParent.addContent(getQueryXml(q));
             }
         }
-        else {
-            Element filterParent = new Element(operator == CompoundSearchQuery.Operator.AND ? "and" : "or");
-            filterElement.addContent(filterParent);
-            for(Query q : queries) {
-                boolean not = false;
-                Element conditionElement;
-                if(queries.get(0) instanceof AdvancedSearchQueryTerm) {
-                    AdvancedSearchQueryTerm queryTerm = (AdvancedSearchQueryTerm)queries.get(0);
-                    switch(queryTerm.getCondition()) {
-                        case NOT_CONTAINS:
-                            not = true;
-                        case CONTAINS:
-                            conditionElement = new Element("like");
-                            break;
-                        case GREATER_THAN_OR_EQUAL_TO:
-                            conditionElement = new Element("greaterThanOrEquals");
-                            break;
-                        case LESS_THAN:
-                            conditionElement = new Element("lessThan");
-                            break;
-                        case LESS_THAN_OR_EQUAL_TO:
-                            conditionElement = new Element("lessThanOrEquals");
-                            break;
-                        case NOT_EQUAL:
-                                not = true;
-                        case EQUAL:
-                            default:
-                            conditionElement = new Element("equals");
-                    }
-                }
-                else {
-                    conditionElement = new Element("equals");
-                }
-                AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) q;
-                conditionElement.addContent(new Element("concept").setAttribute("id", advancedQuery.getField().getCode()));
-                conditionElement.addContent(new Element("literal").setAttribute("value", ""+advancedQuery.getValues()[0]));
-                if(not) {
-                    Element notElement = new Element("not");
-                    notElement.addContent(conditionElement);
-                    filterParent.addContent(notElement);
-                }
-                else {
-                    filterParent.addContent(conditionElement);
-                }
-            }
+        if(filterParent.getContent().size() > 0) {
+            searchElement.addContent(filterElement);
         }
-        searchElement.addContent(filterElement);
         return searchElement;
     }
 
-    public static void main(String[] args) throws Exception{
-        /*List<int[]> valueList = new ArrayList<int[]>();
-        BufferedReader reader = new BufferedReader(new FileReader(new File("C:\\Documents and Settings\\steve\\My Documents\\batchextract\\189_PO68_H11_2009-05-07_RawData.dat")));
-        String line = null;
-        while((line = reader.readLine()) != null) {
-            String[] parts = line.split("\t");
-            int[] partsArray = new int[parts.length];
-            for(int i=0; i < parts.length; i++) {
-                partsArray[i] = Integer.parseInt(parts[i]);
-            }
-            valueList.add(partsArray);
+    private Element getQueryXml(AdvancedSearchQueryTerm query) {
+        Element conditionElement;
+        boolean not = false;
+        switch(query.getCondition()) {
+            case NOT_CONTAINS:
+                not = true;
+            case CONTAINS:
+                conditionElement = new Element("like");
+                break;
+            case GREATER_THAN_OR_EQUAL_TO:
+                conditionElement = new Element("greaterThanOrEquals");
+                break;
+            case LESS_THAN:
+                conditionElement = new Element("lessThan");
+                break;
+            case LESS_THAN_OR_EQUAL_TO:
+                conditionElement = new Element("lessThanOrEquals");
+                break;
+            case NOT_EQUAL:
+                    not = true;
+            case EQUAL:
+                default:
+                conditionElement = new Element("equals");
         }
-        int[][] values = valueList.toArray(new int[valueList.size()][valueList.get(0).length]);
-        MicrosatGraphPanel panel = new MicrosatGraphPanel(values);
-        JFrame frame = new JFrame("Graphs");
-        frame.setSize(640,480);
-        frame.getContentPane().add(new JScrollPane(panel));
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);*/
+        conditionElement.addContent(new Element("concept").setAttribute("id", query.getField().getCode()));
+        conditionElement.addContent(new Element("literal").setAttribute("value", ""+query.getValues()[0]));
+        if(not) {
+            Element notElement = new Element("not");
+            notElement.addContent(conditionElement);
+            return notElement;
+        }
+        else {
+            return conditionElement;
+        }
     }
 
 
+    private class XmlTapirQuery {
+        private boolean not;
+        private Element conditionElement;
 
+        public XmlTapirQuery(Element conditionElement, boolean not) {
+            this.not = not;
+            this.conditionElement = conditionElement;
+        }
+
+        public Element getConditionElement() {
+            return conditionElement;
+        }
+
+        public boolean isNot() {
+            return not;
+        }
+    }
 }

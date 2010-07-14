@@ -18,22 +18,25 @@ import java.util.*;
  */
 public class TapirFimsSample implements FimsSample {
     private List<DocumentField> searchFields;
+    private List<DocumentField> taxonomyFields;
     private Map<String, Object> values;
 
     public TapirFimsSample(Element e) throws XMLSerializationException {
         fromXML(e);
     }
 
-    public TapirFimsSample(Element tapirHit, List<DocumentField> searchFields) {
+    public TapirFimsSample(TAPIRFimsConnection connection, Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
        TAPIRClient.clearNamespace(tapirHit);
-        this.searchFields = searchFields;
+        this.searchFields = new ArrayList<DocumentField>(searchFields);
+        this.searchFields.add(0, connection.getTissueSampleDocumentField());
+        this.taxonomyFields = taxonomyFields;
         init(tapirHit);
     }
 
     public void init(Element tapirHit) {
         values = new HashMap<String, Object>();
         for(Element e : tapirHit.getChildren()) {
-            DocumentField df = getDocumentField(e.getName());
+            DocumentField df = getDocumentFieldFromName(e.getName());
             if(df == null) {
                 continue;
             }
@@ -62,7 +65,18 @@ public class TapirFimsSample implements FimsSample {
 
 
     public String getId() {
-        return ""+getFimsAttributeValue("http://rs.tdwg.org/dwc/dwcore/CatalogNumber");
+        Object o  = values.get("http://rs.tdwg.org/dwc/dwcore/CatalogNumber");
+        Object o2 = values.get("http://biocode.berkeley.edu/schema/tissue_num");
+        if(o != null && o2 != null) {
+            return o+"."+o2;
+        }
+        else if(o != null) {
+            return o.toString();
+        }
+        else if(o2 != null) {
+            return o2.toString();
+        }
+        return "Untitled";
     }
 
     public String getSpecimenId() {
@@ -78,10 +92,14 @@ public class TapirFimsSample implements FimsSample {
     }
 
     public List<DocumentField> getTaxonomyAttributes() {
-        return null;
+        return taxonomyFields;
     }
 
     public Object getFimsAttributeValue(String attributeName) {
+        if("tissueId".equals(attributeName)) {
+            //special hack for tissue ids...
+            return getId();
+        }
         return values.get(attributeName);
     }
 
@@ -90,8 +108,13 @@ public class TapirFimsSample implements FimsSample {
         for(DocumentField field : searchFields) {
             fieldsElement.addContent(XMLSerializer.classToXML("field", field));
         }
+        Element taxonomyElement = new Element("taxonomyFields");
+        for(DocumentField field : taxonomyFields) {
+            taxonomyElement.addContent(XMLSerializer.classToXML("field", field));
+        }
         Element root = new Element("tapirSample");
         root.addContent(fieldsElement);
+        root.addContent(taxonomyElement);
 
         Element hits = new Element("hits");
         for(Map.Entry<String, Object> entry : values.entrySet()) {
@@ -105,6 +128,7 @@ public class TapirFimsSample implements FimsSample {
     public void fromXML(Element element) throws XMLSerializationException {
         Element tapirHit = element.getChild("hits");
         searchFields = new ArrayList<DocumentField>();
+        taxonomyFields = new ArrayList<DocumentField>();
         values = new HashMap<String, Object>();
                 
         if(tapirHit == null) {
@@ -113,6 +137,10 @@ public class TapirFimsSample implements FimsSample {
         Element fields = element.getChild("documentFields");
         for(Element e : fields.getChildren("field")) {
             searchFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
+        }
+        Element taxonomyFieldsElement = element.getChild("taxonomyFields");
+        for(Element e : taxonomyFieldsElement.getChildren("field")) {
+            taxonomyFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
         }
         for(Element e : tapirHit.getChildren("hit")) {
                 String name = e.getAttributeValue("name");
@@ -124,8 +152,13 @@ public class TapirFimsSample implements FimsSample {
         }
     }
 
-    private DocumentField getDocumentField(String name) {
+    private DocumentField getDocumentFieldFromName(String name) {
         for(DocumentField field : searchFields) {
+            if(field.getName().equals(name)) {
+                return field;
+            }
+        }
+        for(DocumentField field : taxonomyFields) {
             if(field.getName().equals(name)) {
                 return field;
             }
@@ -135,6 +168,11 @@ public class TapirFimsSample implements FimsSample {
 
     private DocumentField getDocumentFieldFromCode(String name) {
         for(DocumentField field : searchFields) {
+            if(field.getCode().equals(name)) {
+                return field;
+            }
+        }
+        for(DocumentField field : taxonomyFields) {
             if(field.getCode().equals(name)) {
                 return field;
             }

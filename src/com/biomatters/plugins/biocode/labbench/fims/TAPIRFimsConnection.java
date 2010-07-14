@@ -30,6 +30,7 @@ import java.util.*;
  */
 public class TAPIRFimsConnection extends FIMSConnection{
     private List<DocumentField> searchAttributes;
+    private List<DocumentField> taxonomyAttributes;
     private TAPIRClient client;
 
     public String getName() {
@@ -53,7 +54,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
     public void connect(Options options) throws ConnectionException {
         client = new TAPIRClient(options.getValueAsString("accessPoint"));
         try {
-            searchAttributes = client.getSearchAttributes();
+            searchAttributes = getMatchingFields(client.getSearchAttributes(), false);
+            taxonomyAttributes = getMatchingFields(client.getSearchAttributes(), true);
         } catch (JDOMException e) {
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
@@ -113,7 +115,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
     }
 
     public List<DocumentField> getTaxonomyAttributes() {
-        return getMatchingFields(searchAttributes, false);
+        return taxonomyAttributes;
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{
@@ -121,7 +123,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
         if(query instanceof CompoundSearchQuery) {
             try {
                 CompoundSearchQuery csq = (CompoundSearchQuery) query;
-                searchXML = client.searchTapirServer(csq.getChildren(), csq.getOperator(), searchAttributes);
+                List<? extends Query> children = csq.getChildren();
+                searchXML = client.searchTapirServer((List<AdvancedSearchQueryTerm>)children, csq.getOperator(), searchAttributes);
             } catch (JDOMException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -129,11 +132,11 @@ public class TAPIRFimsConnection extends FIMSConnection{
             }
         }
         else if(query instanceof BasicSearchQuery) {
-            List<Query> queries = new ArrayList<Query>();
+            List<AdvancedSearchQueryTerm> queries = new ArrayList<AdvancedSearchQueryTerm>();
             try {
                 for(DocumentField field : searchAttributes) {
                     if(String.class.isAssignableFrom(field.getValueType())) {
-                        queries.add(Query.Factory.createFieldQuery(field, Condition.CONTAINS, ((BasicSearchQuery)query).getSearchText()));
+                        queries.add((AdvancedSearchQueryTerm)Query.Factory.createFieldQuery(field, Condition.CONTAINS, ((BasicSearchQuery)query).getSearchText()));
                     }
                 }
 
@@ -146,7 +149,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         }
         else if(query instanceof AdvancedSearchQueryTerm) {
             try {
-                searchXML = client.searchTapirServer(Arrays.asList(query), CompoundSearchQuery.Operator.AND, searchAttributes);
+                searchXML = client.searchTapirServer(Arrays.asList((AdvancedSearchQueryTerm)query), CompoundSearchQuery.Operator.AND, searchAttributes);
             } catch (JDOMException e) {
                 e.printStackTrace();
                 throw new ConnectionException(e.getMessage(), e);
@@ -172,7 +175,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
                     for (int i = 0; i < recordList.size(); i++) {
                         Element e = recordList.get(i);
                         e.detach();
-                        samples.add(new TapirFimsSample(e, searchAttributes));
+                        samples.add(new TapirFimsSample(this, e, searchAttributes, taxonomyAttributes));
                     }
                     return samples;
                 }

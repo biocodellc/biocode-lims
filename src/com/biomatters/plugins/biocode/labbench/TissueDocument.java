@@ -95,6 +95,9 @@ public class TissueDocument implements PluginDocument {
         for(DocumentField field : taxonomyAttributes) {
             String name = field.getName();
             Object value = fimsResults.getFimsAttributeValue(field.getCode());
+            if(value == null) {
+                value = "";
+            }
             htmlBuilder.append("<tr><td align=\"right\"><b>"+name+":</b></td><td>"+value+"</td></tr>\n");
         }
         htmlBuilder.append("</table>\n");
