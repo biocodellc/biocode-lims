@@ -7,10 +7,7 @@ import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.plugins.biocode.labbench.fims.TAPIRFimsConnection;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.Namespace;
+import org.jdom.*;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
@@ -173,6 +170,9 @@ public class TAPIRClient {
         Element sequence = new Element("sequence", namespace);
         unitType.addContent(sequence);
         for(DocumentField field : fieldsToSearch) {
+            if(field.equals(new TAPIRFimsConnection().getTissueSampleDocumentField())) {
+                continue;
+            }
             Element unitElement = new Element("element", namespace);
             unitElement.setAttribute("name", field.getName());
             unitElement.setAttribute("type", getElementType(field.getValueType()));
@@ -244,7 +244,7 @@ public class TAPIRClient {
 
         Element filterElement = new Element("filter");
         Element filterParent = new Element(operator == CompoundSearchQuery.Operator.AND ? "and" : "or");
-        filterElement.addContent(filterParent);
+        //filterElement.addContent(filterParent);
         for(AdvancedSearchQueryTerm q : queries) {
             if(q.getField().getCode().equals("tissueId")) {
                 String[] tissueIdParts = q.getValues()[0].toString().split("\\.");
@@ -264,8 +264,13 @@ public class TAPIRClient {
                 filterParent.addContent(getQueryXml(q));
             }
         }
-        if(filterParent.getContent().size() > 0) {
-            searchElement.addContent(filterElement);
+        if(filterParent.getContent().size() > 1) {
+            searchElement.addContent(filterParent);
+        }
+        else if(filterParent.getContent().size() > 0) {
+            Content contentElement = filterParent.getContent(0);
+            contentElement.detach();
+            searchElement.addContent(contentElement);
         }
         return searchElement;
     }
@@ -303,25 +308,6 @@ public class TAPIRClient {
         }
         else {
             return conditionElement;
-        }
-    }
-
-
-    private class XmlTapirQuery {
-        private boolean not;
-        private Element conditionElement;
-
-        public XmlTapirQuery(Element conditionElement, boolean not) {
-            this.not = not;
-            this.conditionElement = conditionElement;
-        }
-
-        public Element getConditionElement() {
-            return conditionElement;
-        }
-
-        public boolean isNot() {
-            return not;
         }
     }
 }
