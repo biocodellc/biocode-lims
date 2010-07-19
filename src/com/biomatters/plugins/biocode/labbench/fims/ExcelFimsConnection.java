@@ -214,8 +214,10 @@ public class ExcelFimsConnection extends FIMSConnection{
     public void disconnect() throws ConnectionException {
         tissueCol = specimenCol = -1;
         fields = null;
-        workbook.close();
-        workbook = null;
+        if(workbook != null) {
+            workbook.close();
+            workbook = null;
+        }
     }
 
     public List<DocumentField> getSearchAttributes() {
