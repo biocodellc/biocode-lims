@@ -13,7 +13,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PasswordOption;
+import com.biomatters.options.PasswordOption;
 
 import java.sql.*;
 import java.util.*;
@@ -56,7 +56,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         options.addIntegerOption("serverPort", "Port:", 3306, 0, Integer.MAX_VALUE);
         options.addStringOption("username", "Username:", "");
         //options.addStringOption("password", "Password", "");
-        PasswordOption password = new PasswordOption("password", "Password:", "");
+        PasswordOption password = new PasswordOption("password", "Password:");
         options.addCustomOption(password);
 
         return options;

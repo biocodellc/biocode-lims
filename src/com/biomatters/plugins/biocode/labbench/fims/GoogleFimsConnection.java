@@ -15,7 +15,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PasswordOption;
+import com.biomatters.options.PasswordOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.google.gdata.client.GoogleService;
 import com.google.gdata.client.ClientLoginAccountType;

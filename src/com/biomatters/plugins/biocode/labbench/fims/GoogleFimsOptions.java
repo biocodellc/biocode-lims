@@ -2,7 +2,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.plugins.biocode.labbench.PasswordOption;
+import com.biomatters.options.PasswordOption;
 import com.biomatters.plugins.biocode.labbench.AnimatedIcon;
 import com.google.gdata.data.spreadsheet.*;
 import com.google.gdata.util.ServiceException;
@@ -48,7 +48,7 @@ public class GoogleFimsOptions extends Options {
 
     public void init() {
         final StringOption emailOption = addStringOption("email", "Google email", "");
-        final com.biomatters.plugins.biocode.labbench.PasswordOption passwordOption = new com.biomatters.plugins.biocode.labbench.PasswordOption("password", "Password", "");
+        final PasswordOption passwordOption = new PasswordOption("password", "Password");
         addCustomOption(passwordOption);
         beginAlignHorizontally(null, false);
         final List<OptionValue> valueList = getSpreadsheetValues();
@@ -155,7 +155,7 @@ public class GoogleFimsOptions extends Options {
     private void updateAvailableColumns() throws IOException, ServiceException {
         SpreadsheetService service = new SpreadsheetService("exampleCo-exampleApp-1");
         String email = getValueAsString("email");
-        String password = ((com.biomatters.plugins.biocode.labbench.PasswordOption)getOption("password")).getPassword();
+        String password = ((PasswordOption)getOption("password")).getPassword();
         service.setUserCredentials(email, password);
 
         SpreadsheetEntry selectedEntry = null;
