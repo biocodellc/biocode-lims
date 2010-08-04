@@ -14,7 +14,7 @@
 
    <path id="classpath">
       <fileset dir="${lib}"/>
-      <path refid="classpath.publicapi"/>
+      <path refid="classpath.privateapi"/>
    </path>
 
    <path id="classpath.test.local">
