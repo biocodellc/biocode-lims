@@ -26,6 +26,12 @@ public class ExtractionOptions extends ReactionOptions{
             new OptionValue("yes", "Yes"),
             new OptionValue("no", "No")
         };
+        OptionValue[] controlValues = new OptionValue[]{
+                new OptionValue("none", "None"),
+                new OptionValue("positive", "Positive"),
+                new OptionValue("negative", "Negative")
+        };
+        ComboBoxOption controlOption = addComboBoxOption("control", "Control", controlValues, controlValues[0]);
         ComboBoxOption concStoredOption = addComboBoxOption("concentrationStored", "Sample Spec'd", concStoredValues, concStoredValues[1]);
         DoubleOption concOption = addDoubleOption("concentration", "Concentration/Purity", 0.0, 0.0, Double.MAX_VALUE);
         concOption.setUnits("ng/µL");

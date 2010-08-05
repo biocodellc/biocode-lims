@@ -70,7 +70,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
     }
 
     public DocumentField getTissueSampleDocumentField() {
-        return new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
+        return new DocumentField("Tissue ID", "", "http://biocode.berkeley.edu/schema/tissue_id", String.class, true, false);
     }
 
     public List<DocumentField> getSearchAttributes() {
@@ -159,12 +159,12 @@ public class TAPIRFimsConnection extends FIMSConnection{
             }
         }
         if(searchXML != null) {
-//            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-//            try {
-//                out.output(searchXML, System.out);
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
+            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+            try {
+                out.output(searchXML, System.out);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             List<FimsSample> samples = new ArrayList<FimsSample>();
             Element searchElement = searchXML.getChild("search", searchXML.getNamespace());
             if(searchElement != null) {

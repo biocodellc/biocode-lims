@@ -1,10 +1,9 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.XMLSerializable;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -223,6 +222,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                     }
                     fields.add(DocumentField.createEnumeratedField(enumValues, op.getLabel().length() > 0 ? op.getLabel() : op.getName(), "", op.getName(), true, false));
                 }
+                else if(op instanceof DocumentSelectionOption) {
+                    fields.add(new DocumentField(op.getLabel().length() > 0 ? op.getLabel() : op.getName(), "", op.getName(), String.class, true, false));
+                }
                 else {
                     fields.add(new DocumentField(op.getLabel().length() > 0 ? op.getLabel() : op.getName(), "", op.getName(), op.getValue().getClass(), true, false));
                 }
@@ -287,6 +289,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         Object value = options.getValue(fieldCode);
         if(value instanceof Options.OptionValue) {
             return ((Options.OptionValue)value).getLabel();
+        }
+        if(value instanceof List) { //can't evaulate generics! - assume List<AnnotatedPluginDocument>
+            List<AnnotatedPluginDocument> valueList = (List<AnnotatedPluginDocument>)value;
+            if(valueList.size() == 0) {
+                return "None";
+            }
+            AnnotatedPluginDocument firstValue = valueList.get(0);
+            return firstValue.getName();
         }
         if(value == null && fimsSample != null) { //check the FIMS data
             value = fimsSample.getFimsAttributeValue(fieldCode);
@@ -621,8 +631,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                     updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=? WHERE id=?";
                 }
                 else {
-                    insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                    updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=? WHERE id=?";
+                    insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage, control) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=?, control=? WHERE id=?";
                 }
                 PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
                 PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
@@ -638,7 +648,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
                             updateCount++;
-                            statement.setInt(11+LIMSConnection.EXPECTED_SERVER_VERSION, reaction.getId());
+                            statement.setInt(17+(LIMSConnection.EXPECTED_SERVER_VERSION-6)*2, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
@@ -663,7 +673,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setDouble(16, (Double)options.getValue("concentration"));
                         if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
                             GelImage image = reaction.getGelImage();
-                            statement.setBytes(17, image != null ? image.getImageBytes() : null);    
+                            statement.setBytes(17, image != null ? image.getImageBytes() : null);
+                            statement.setString(18, options.getValueAsString("control"));
                         }
                         statement.addBatch();
                         //statement.execute();
@@ -713,21 +724,37 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
                         ReactionOptions options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
-                        if(!(value instanceof Options.OptionValue)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        if(!(value instanceof List)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
                         }
-                        Options.OptionValue primerOptionValue = (Options.OptionValue) value;
-                        statement.setString(1, primerOptionValue.getLabel());
-                        statement.setString(2, primerOptionValue.getDescription());
+                        List<AnnotatedPluginDocument> primerOptionValue = (List<AnnotatedPluginDocument>) value;
+                        if(primerOptionValue.size() == 0) {
+                            statement.setString(1, "None");
+                            statement.setString(2, "");
+                        }
+                        else {
+                            AnnotatedPluginDocument selectedDoc = primerOptionValue.get(0);
+                            NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                            statement.setString(1, selectedDoc.getName());
+                            statement.setString(2, sequence.getSequenceString());
+                        }
                         //statement.setInt(3, (Integer)options.getValue("prAmount"));
 
                         Object value2 = options.getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
-                        if(!(value instanceof Options.OptionValue)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        if(!(value instanceof List)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
                         }
-                        Options.OptionValue primerOptionValue2 = (Options.OptionValue) value2;
-                        statement.setString(13, primerOptionValue2.getLabel());
-                        statement.setString(14, primerOptionValue2.getDescription());
+                        List<AnnotatedPluginDocument> primerOptionValue2 = (List<AnnotatedPluginDocument>) value;
+                        if(primerOptionValue2.size() == 0) {
+                            statement.setString(13, "None");
+                            statement.setString(14, "");
+                        }
+                        else {
+                            AnnotatedPluginDocument selectedDoc = primerOptionValue2.get(0);
+                            NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                            statement.setString(13, selectedDoc.getName());
+                            statement.setString(14, sequence.getSequenceString());
+                        }
                         statement.setDate(15, new java.sql.Date(((Date)options.getValue("date")).getTime()));
                         statement.setString(16, options.getValueAsString("technician"));
 //                        statement.setInt(14, (Integer)options.getValue("revPrAmount"));
@@ -812,12 +839,20 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
                         ReactionOptions options = reaction.getOptions();
                         Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
-                        if(!(value instanceof Options.OptionValue)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+Options.OptionValue.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        if(!(value instanceof List)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
                         }
-                        Options.OptionValue primerOptionValue = (Options.OptionValue) value;
-                        statement.setString(1, primerOptionValue.getLabel());
-                        statement.setString(2, primerOptionValue.getDescription());
+                        List<AnnotatedPluginDocument> primerOptionValue = (List<AnnotatedPluginDocument>) value;
+                        if(primerOptionValue.size() == 0) {
+                            statement.setString(1, "None");
+                            statement.setString(2, "");
+                        }
+                        else {
+                            AnnotatedPluginDocument selectedDoc = primerOptionValue.get(0);
+                            NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                            statement.setString(1, selectedDoc.getName());
+                            statement.setString(2, sequence.getSequenceString());
+                        }
                         statement.setString(3, options.getValueAsString("direction"));
                         //statement.setInt(3, (Integer)options.getValue("prAmount"));
                         if(reaction.getWorkflow() != null) {

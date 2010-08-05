@@ -194,7 +194,7 @@ CREATE TABLE `databaseversion` (
 
 /*!40000 ALTER TABLE `databaseversion` DISABLE KEYS */;
 INSERT INTO `databaseversion` (`version`) VALUES
- (6);
+ (7);
 /*!40000 ALTER TABLE `databaseversion` ENABLE KEYS */;
 
 
@@ -215,6 +215,7 @@ CREATE TABLE `extraction` (
   `technician` varchar(90) NOT NULL,
   `sampleId` varchar(45) NOT NULL,
   `extractionId` varchar(45) NOT NULL,
+  `control` varchar(45) NOT NULL,
   `plate` int(10) unsigned NOT NULL,
   `location` int(10) unsigned NOT NULL,
   `notes` longtext NOT NULL,

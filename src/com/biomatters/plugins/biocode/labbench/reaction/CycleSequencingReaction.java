@@ -2,7 +2,9 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -63,10 +65,12 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
         options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("cyclesequencing.progress"));
 
-        PrimerOption primerOption = (PrimerOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
+        DocumentSelectionOption primerOption = (DocumentSelectionOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
         String primerName = r.getString("cyclesequencing.primerName");
         String primerSequence = r.getString("cyclesequencing.primerSequence");
-        primerOption.setAndAddValue(primerName, primerSequence);
+        if(primerSequence.length() > 0) {
+            primerOption.setValue(Arrays.asList(BiocodeUtilities.createPrimerDocument(primerName, primerSequence)));
+        }
         options.setValue("direction", r.getString("direction"));
         //options.setValue("prAmount", r.getInt("cyclesequencing.primerAmount"));
         options.setValue("notes", r.getString("cyclesequencing.notes"));

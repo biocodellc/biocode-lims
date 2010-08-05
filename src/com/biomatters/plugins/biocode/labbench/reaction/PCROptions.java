@@ -2,7 +2,9 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -17,6 +19,7 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Date;
+import java.util.Collections;
 
 /**
  * @author Steven Stones-Havas
@@ -153,12 +156,12 @@ public class PCROptions extends ReactionOptions {
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
         addLabel("");
-        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Forward Primer");
-        addCustomOption(primerOption);
+        DocumentSelectionOption primerOption = addPrimerOption(PRIMER_OPTION_ID, "Forward Primer", Collections.<AnnotatedPluginDocument>emptyList(), false, Collections.<AnnotatedPluginDocument>emptyList());
+//        addCustomOption(primerOption);
         //IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
         //primerAmountOption.setUnits("uL");
-        PrimerOption revPrimerOption = new PrimerOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer");
-        addCustomOption(revPrimerOption);
+        DocumentSelectionOption revPrimerOption = addPrimerOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer", Collections.<AnnotatedPluginDocument>emptyList(), false, Collections.<AnnotatedPluginDocument>emptyList());
+//        addCustomOption(revPrimerOption);
         //IntegerOption revPrimerAmountOption = addIntegerOption("revPrAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
         //revPrimerAmountOption.setUnits("uL");
 

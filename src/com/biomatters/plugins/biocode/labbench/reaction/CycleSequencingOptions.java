@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListD
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
@@ -294,8 +295,8 @@ public class CycleSequencingOptions extends ReactionOptions {
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
         addLabel("");
-        PrimerOption primerOption = new PrimerOption(PRIMER_OPTION_ID, "Primer");
-        addCustomOption(primerOption);
+        DocumentSelectionOption primerOption = addPrimerOption(PRIMER_OPTION_ID, "Primer", Collections.EMPTY_LIST, false, Collections.EMPTY_LIST);//new PrimerOption(PRIMER_OPTION_ID, "Primer");
+        //addCustomOption(primerOption);
 
         OptionValue[] directionValues = new OptionValue[] {new OptionValue(FORWARD_VALUE, "Forward"), new OptionValue("reverse", "Reverse")};
         addComboBoxOption(DIRECTION, "Direction", directionValues, directionValues[0]);

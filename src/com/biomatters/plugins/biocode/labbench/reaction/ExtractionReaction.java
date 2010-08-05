@@ -78,6 +78,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             if(imageBytes != null) {
                 setGelImage(new GelImage(imageBytes, getLocationString()));
             }
+            options.setValue("control", r.getString("extraction.control"));
         }
         
         

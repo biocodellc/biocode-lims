@@ -123,7 +123,7 @@ public class ReactionUtilities {
         final int wellPart = namePartOption2.getPart();
         final boolean checkPlate = checkPlateName.getValue();
         DocumentField field = null;
-        if(chooseOption.getValue().equals(chooseValues[1])) {
+        if(optionValuesAreEqual(chooseValues[1], chooseOption.getValue())) {
             field = getDocumentField(reactions.get(0).getAllDisplayableFields(), fieldOption.getValue().getName());
             assert field != null; //this shouldn't happen unless the list changes between when the options were displayed and when the user clicks ok.
             if(field == null) {
@@ -401,7 +401,9 @@ public class ReactionUtilities {
         for(Options.Option option : options.getOptions()) {
             haveAllSameValues.put(option.getName(), true);
             for(Reaction reaction : reactions) {
-                if(!reaction.getOptions().getValue(option.getName()).equals(option.getValue())) {
+                Object optionValue = option.getValue();
+                Object reactionValue = reaction.getOptions().getValue(option.getName());
+                if(!optionValuesAreEqual(optionValue, reactionValue)) {
                     haveAllSameValues.put(option.getName(), false);
                     continue;
                 }
@@ -537,8 +539,14 @@ public class ReactionUtilities {
                         for(final Options.Option option : options.getOptions()) {
                             if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
                                 reaction.getOptions().refreshValuesFromCaches();
-                                reaction.getOptions().setValue(option.getName(), option.getValue());
-                                changedOptionCount++;
+                                Options.Option reactionOption = reaction.getOptions().getOption(option.getName());
+                                if(reactionOption != null) {
+                                    reactionOption.setValue(option.getValue());
+                                    changedOptionCount++;
+                                }
+                                else {
+                                    assert false : option.getName()+" didn't exist in the destination options!";
+                                }
                             }
                         }
                     }
@@ -556,6 +564,23 @@ public class ReactionUtilities {
             }
         }
         return hasChanges;
+    }
+
+    private static boolean optionValuesAreEqual(Object optionValue, Object reactionValue) {
+        if(reactionValue instanceof List && optionValue instanceof List) {
+            List list1 = (List)reactionValue;
+            List list2 = (List)optionValue;
+            if(list1.size() != list2.size()) {
+                return false;
+            }
+            for(int i=0; i < list1.size(); i++) {
+                if(!list1.get(i).equals(list2.get(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return reactionValue.equals(optionValue);
     }
 
     private static OptionsPanel getReactionPanel(ReactionOptions options, Map<String, Boolean> haveAllSameValues, boolean multiOptions, boolean creating) {

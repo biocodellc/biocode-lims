@@ -2,12 +2,15 @@ package com.biomatters.plugins.biocode;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
+import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -47,6 +50,11 @@ public class BiocodeUtilities {
             return null;
         }
         return consensusOperation.getOptions(selectedDocuments);
+    }
+
+    public static AnnotatedPluginDocument createPrimerDocument(String primerName, String primerSequence) {
+        OligoSequenceDocument sequence = new OligoSequenceDocument(primerName, "", primerSequence, new Date());
+        return DocumentUtilities.createAnnotatedPluginDocument(sequence);
     }
 
     /**

@@ -39,6 +39,7 @@ CREATE TABLE extraction (
   parent varchar(45) NOT NULL,
   sampleId varchar(45) NOT NULL,
   extractionId varchar(45) NOT NULL,
+  control varchar(45) NOT NULL,
   plate INTEGER  NOT NULL,
   location INTEGER  NOT NULL,
   technician varchar(90) NOT NULL,
@@ -250,7 +251,7 @@ CREATE TABLE  databaseversion  (
 -- Dumping data for table  databaseversion
 --
 
-INSERT INTO databaseversion VALUES  (6);
+INSERT INTO databaseversion VALUES  (7);
 
 
 

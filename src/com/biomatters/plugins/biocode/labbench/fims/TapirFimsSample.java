@@ -28,7 +28,6 @@ public class TapirFimsSample implements FimsSample {
     public TapirFimsSample(TAPIRFimsConnection connection, Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
        TAPIRClient.clearNamespace(tapirHit);
         this.searchFields = new ArrayList<DocumentField>(searchFields);
-        this.searchFields.add(0, connection.getTissueSampleDocumentField());
         this.taxonomyFields = taxonomyFields;
         init(tapirHit);
     }
@@ -65,15 +64,8 @@ public class TapirFimsSample implements FimsSample {
 
 
     public String getId() {
-        Object o  = values.get("http://rs.tdwg.org/dwc/dwcore/CatalogNumber");
-        Object o2 = values.get("http://biocode.berkeley.edu/schema/tissue_num");
-        if(o != null && o2 != null) {
-            return o+"."+o2;
-        }
-        else if(o != null) {
-            return o.toString();
-        }
-        else if(o2 != null) {
+        Object o2 = values.get("http://biocode.berkeley.edu/schema/tissue_id");
+        if(o2 != null) {
             return o2.toString();
         }
         return "Untitled";
@@ -96,10 +88,6 @@ public class TapirFimsSample implements FimsSample {
     }
 
     public Object getFimsAttributeValue(String attributeName) {
-        if("tissueId".equals(attributeName)) {
-            //special hack for tissue ids...
-            return getId();
-        }
         return values.get(attributeName);
     }
 

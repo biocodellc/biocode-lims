@@ -106,6 +106,7 @@ public class LocalLIMS {
                         databaseOption.setPossibleValues(getDbValues());
                     }
                     databaseOption.setPossibleValues(getDbValues());
+                    databaseOption.setValueFromString(newDbName);
                 }
             }
         });

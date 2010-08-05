@@ -30,7 +30,7 @@ import java.text.SimpleDateFormat;
  * To change this template use File | Settings | File Templates.
  */
 public class LIMSConnection {
-    public static final int EXPECTED_SERVER_VERSION = 6;
+    public static final int EXPECTED_SERVER_VERSION = 7;
     Driver driver;
     Connection connection;
     Connection connection2;
@@ -347,6 +347,10 @@ public class LIMSConnection {
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
         int prevWorkflowId = -1;
         while(resultSet.next()) {
+            if(callback != null && callback.isCanceled()) {
+                resultSet.close();
+                return Collections.EMPTY_LIST;
+            }
             int workflowId = resultSet.getInt("workflow.id");
             if(callback != null && prevWorkflowId >= 0 && prevWorkflowId != workflowId) {
                 WorkflowDocument prevWorkflow = workflowDocs.get(prevWorkflowId);
@@ -594,6 +598,13 @@ public class LIMSConnection {
         int previousId = -1;
         while(resultSet.next()) {
             count++;
+            System.out.println(count);
+
+            if(callback != null && callback.isCanceled()) {
+                resultSet.close();
+                return Collections.EMPTY_LIST;
+            }
+
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
             //System.out.println(plateId);

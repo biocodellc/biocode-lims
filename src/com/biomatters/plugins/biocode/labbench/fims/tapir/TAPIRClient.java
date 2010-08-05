@@ -73,7 +73,6 @@ public class TAPIRClient {
                 fields.add(new DocumentField(name, "", code, getFieldClass(fieldElement), true, false));
             }
         }
-        fields.add(0, new TAPIRFimsConnection().getTissueSampleDocumentField());
         return fields;
     }
 
@@ -245,33 +244,16 @@ public class TAPIRClient {
         Element filterElement = new Element("filter");
         Element filterParent = new Element(operator == CompoundSearchQuery.Operator.AND ? "and" : "or");
         //filterElement.addContent(filterParent);
-        for(AdvancedSearchQueryTerm q : queries) {
-            if(q.getField().getCode().equals("tissueId")) {
-                String[] tissueIdParts = q.getValues()[0].toString().split("\\.");
-                if(tissueIdParts.length == 2) {
-                    Element filterParent2 = new Element("and");
-                    filterParent2.addContent(getQueryXml((AdvancedSearchQueryTerm)Query.Factory.createFieldQuery(new DocumentField("ss", "", "http://rs.tdwg.org/dwc/dwcore/CatalogNumber", String.class, false, false), Condition.EQUAL, tissueIdParts[0])));
-                    filterParent2.addContent(getQueryXml((AdvancedSearchQueryTerm)Query.Factory.createFieldQuery(new DocumentField("ss", "", "http://biocode.berkeley.edu/schema/tissue_num", String.class, false, false), Condition.EQUAL, tissueIdParts[1])));
-                    Element filterElement2 = new Element("filter");
-                    filterElement2.addContent(filterParent2);
-                    searchElement.addContent(filterElement2);
-                }
-                else {
-                    filterParent.addContent(getQueryXml((AdvancedSearchQueryTerm)Query.Factory.createFieldQuery(new DocumentField("ss", "", "http://rs.tdwg.org/dwc/dwcore/CatalogNumber", String.class, false, false), q.getCondition(), tissueIdParts[0])));
-                }
-            }
-            else {
+        if(queries.size() > 1) {
+            for(AdvancedSearchQueryTerm q : queries) {
                 filterParent.addContent(getQueryXml(q));
             }
+            filterElement.addContent(filterParent);
         }
-        if(filterParent.getContent().size() > 1) {
-            searchElement.addContent(filterParent);
+        else {
+            filterElement.addContent(getQueryXml(queries.get(0)));
         }
-        else if(filterParent.getContent().size() > 0) {
-            Content contentElement = filterParent.getContent(0);
-            contentElement.detach();
-            searchElement.addContent(contentElement);
-        }
+        searchElement.addContent(filterElement);
         return searchElement;
     }
 

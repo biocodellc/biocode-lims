@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -10,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 
 import javax.swing.*;
 import java.awt.*;
@@ -56,19 +58,19 @@ public class PCRReaction extends Reaction<PCRReaction> {
 
         options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("pcr.progress"));
 
-        PrimerOption primerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
+        DocumentSelectionOption primerOption = (DocumentSelectionOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
         String primerName = r.getString("pcr.prName");
         String primerSequence = r.getString("pcr.prSequence");
         if(primerSequence.length() > 0) {
-            primerOption.setAndAddValue(primerName, primerSequence);
+            primerOption.setValue(Arrays.asList(BiocodeUtilities.createPrimerDocument(primerName, primerSequence)));
         }
         //options.setValue("prAmount", r.getInt("pcr.prAmount"));
 
-        PrimerOption reversePrimerOption = (PrimerOption)options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
+        DocumentSelectionOption reversePrimerOption = (DocumentSelectionOption)options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
         String reversePrimerName = r.getString("pcr.revPrName");
         String reversePrimerSequence = r.getString("pcr.revPrSequence");
         if(reversePrimerSequence.length() > 0) {
-            reversePrimerOption.setAndAddValue(reversePrimerName, reversePrimerSequence);
+            reversePrimerOption.setValue(Arrays.asList(BiocodeUtilities.createPrimerDocument(reversePrimerName, reversePrimerSequence)));
         }
         //options.setValue("revPrAmount", r.getInt("pcr.revPrAmount"));
 

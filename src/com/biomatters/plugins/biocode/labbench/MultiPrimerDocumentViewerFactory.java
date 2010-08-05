@@ -2,10 +2,12 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.Cocktail;
+import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 
@@ -158,19 +160,37 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
             List<Reaction> reactions = workflow.getReactions(type);
             if(type == Reaction.Type.PCR) {
                 for(Reaction r : reactions) {
-                    Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("primer");
-                    primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.forward, primerValue.getName()));
+                    List<AnnotatedPluginDocument> primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue("primer");
+                    if(primerValue.size() == 0) {
+                        primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.forward, "None"));
+                    }
+                    else {
+                        AnnotatedPluginDocument document = primerValue.get(0);
+                        primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.forward, document.getName()));
+                    }
                 }
                 for(Reaction r : reactions) {
-                    Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("revPrimer");
-                    primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.reverse, primerValue.getName()));
+                    List<AnnotatedPluginDocument> primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue("revPrimer");
+                    if(primerValue.size() == 0) {
+                        primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.reverse, "None"));
+                    }
+                    else {
+                        AnnotatedPluginDocument document = primerValue.get(0);
+                        primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.reverse, document.getName()));
+                    }
                 }
             }
             else {
                 for(Reaction r : reactions) {
                     boolean isForward = CycleSequencingOptions.FORWARD_VALUE.equals(r.getOptions().getValueAsString(CycleSequencingOptions.DIRECTION));
-                    Options.OptionValue primerValue = (Options.OptionValue) r.getOptions().getValue("primer");
-                    primerNamesSet.add(new PrimerIdentifier(isForward ? PrimerIdentifier.Type.forward : PrimerIdentifier.Type.reverse, primerValue.getName()));
+                    List<AnnotatedPluginDocument> primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue(PCROptions.PRIMER_OPTION_ID);
+                    if(primerValue.size() == 0) {
+                        primerNamesSet.add(new PrimerIdentifier(isForward ? PrimerIdentifier.Type.forward : PrimerIdentifier.Type.reverse, "None"));
+                    }
+                    else {
+                        AnnotatedPluginDocument document = primerValue.get(0);
+                        primerNamesSet.add(new PrimerIdentifier(isForward ? PrimerIdentifier.Type.forward : PrimerIdentifier.Type.reverse, document.getName()));
+                    }
                 }
             }
 
@@ -191,11 +211,19 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 String s = primer.getName();
                 for (Reaction r : reactions) {
                     String primerName;
+                    List<AnnotatedPluginDocument> primerValue;
                     if(r.getType() == Reaction.Type.PCR) {
-                        primerName = ((Options.OptionValue) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer")).getName();
+                        primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer");
                     }
                     else {
-                        primerName = ((Options.OptionValue) r.getOptions().getValue("primer")).getName();    
+                        primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue("primer");
+                    }
+                    if(primerValue.size() == 0) {
+                        primerName = "None";
+                    }
+                    else {
+                        AnnotatedPluginDocument document = primerValue.get(0);
+                        primerName = document.getName();
                     }
                     Cocktail cocktail = r.getOptions().getCocktail();
                     if (primerName.equals(s)) {

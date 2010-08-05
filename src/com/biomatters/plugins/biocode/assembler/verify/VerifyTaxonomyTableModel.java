@@ -420,7 +420,7 @@ public class VerifyTaxonomyTableModel implements TableModel {
             new VerifyColumn("Assembly Bin", String.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    return row.queryDocument.getFieldValue(DocumentField.BIN).toString();
+                    return row.queryDocument.getFieldValue(DocumentField.BIN);
                 }
             }
     };
