@@ -48,7 +48,7 @@ public class GoogleFimsOptions extends Options {
 
     public void init() {
         final StringOption emailOption = addStringOption("email", "Google email", "");
-        final PasswordOption passwordOption = new PasswordOption("password", "Password");
+        final PasswordOption passwordOption = new PasswordOption("password", "Password", true);
         addCustomOption(passwordOption);
         beginAlignHorizontally(null, false);
         final List<OptionValue> valueList = getSpreadsheetValues();

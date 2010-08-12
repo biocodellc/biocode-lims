@@ -56,7 +56,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         options.addIntegerOption("serverPort", "Port:", 3306, 0, Integer.MAX_VALUE);
         options.addStringOption("username", "Username:", "");
         //options.addStringOption("password", "Password", "");
-        PasswordOption password = new PasswordOption("password", "Password:");
+        PasswordOption password = new PasswordOption("password", "Password:", true);
         options.addCustomOption(password);
 
         return options;
