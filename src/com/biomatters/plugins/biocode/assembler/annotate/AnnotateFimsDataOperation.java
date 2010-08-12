@@ -1,15 +1,16 @@
 package com.biomatters.plugins.biocode.assembler.annotate;
 
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -181,6 +182,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         }
         annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
         annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
+        annotatedDocument.setFieldValue(BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName+"."+fimsData.well.toString());
         annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
         StringBuilder taxonomy = new StringBuilder();
         String genus = null;
@@ -216,6 +218,43 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         else {
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         }
+
+        //annotate the primers...
+        AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
+        DocumentNote note = notes.getNote("sequencingPrimer");
+        if(note == null) {
+            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType("sequencingPrimer");
+            if(sequencingPrimerType != null) {
+                note = sequencingPrimerType.createDocumentNote();
+            }
+        }
+        if(note != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
+            Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
+            AnnotatedPluginDocument forwardPrimer = null;
+            List<AnnotatedPluginDocument> value = (List<AnnotatedPluginDocument>)pcrReaction.getOptions().getValue(PCROptions.PRIMER_OPTION_ID);
+            if(value.size() > 0){
+                forwardPrimer = value.get(0);
+            }
+            AnnotatedPluginDocument reversePrimer = null;
+            value = (List<AnnotatedPluginDocument>)pcrReaction.getOptions().getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
+            if(value.size() > 0){
+                reversePrimer = value.get(0);
+            }
+
+            if(forwardPrimer != null) {
+                note.setFieldValue("fwd_primer_name", forwardPrimer.getName());
+                OligoSequenceDocument sequence = (OligoSequenceDocument)forwardPrimer.getDocument();
+                note.setFieldValue("fwd_primer_seq", sequence.getBindingSequence().toString());
+            }
+            if(reversePrimer != null) {
+                note.setFieldValue("rev_primer_name", reversePrimer.getName());
+                OligoSequenceDocument sequence = (OligoSequenceDocument)reversePrimer.getDocument();
+                note.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
+            }
+            notes.setNote(note);
+            notes.saveNotes();
+        }
+
         annotatedDocument.save();
     }
 

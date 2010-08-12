@@ -15,6 +15,7 @@ import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOperati
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOptions;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
+import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
@@ -25,10 +26,7 @@ import jebl.util.ProgressListener;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Richard
@@ -99,12 +97,25 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 throw new DocumentOperationException("Plate \"" + plateName + "\" is not a sequencing plate");
             }
 
+            List<Query> workflowNames = new ArrayList<Query>();
+            for (Reaction reaction : plate.getReactions()) {
+                workflowNames.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, reaction.getWorkflow().getName()));
+            }
+
+            Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.EMPTY_MAP);
+            List<WorkflowDocument> workflows = null;
+            try {
+                workflows = limsConnection.getMatchingWorkflowDocuments(workflowQuery, Collections.EMPTY_LIST, null);
+            } catch (SQLException e) {
+                throw new DocumentOperationException(e.getMessage(), e);
+            }
+
             for (Reaction reaction : plate.getReactions()) {
                 if (reactionsProgress.isCanceled()) return null;
                 if (!reaction.isEmpty()) {
                     reactions.add((CycleSequencingReaction) reaction);
                     BiocodeUtilities.Well well = Plate.getWell(reaction.getPosition(), plate.getPlateSize());
-                    fimsDataForReactions.put((CycleSequencingReaction) reaction, new AnnotateFimsDataOptions.FimsData(reaction.getFimsSample(), reaction.getWorkflow(), plate.getName(), well));
+                    fimsDataForReactions.put((CycleSequencingReaction) reaction, new AnnotateFimsDataOptions.FimsData(findWorkflow(workflows, reaction.getWorkflow().getId()), plate.getName(), well));
 
                 }
             }
@@ -163,6 +174,15 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         }
         if (progress.isCanceled()) return null;
         return chromatogramDocuments;
+    }
+
+    private static WorkflowDocument findWorkflow(List<WorkflowDocument> workflows, int id) {
+        for(WorkflowDocument document : workflows) {
+            if(document.getWorkflow().getId() == id) {
+                return document;
+            }
+        }
+        return null;
     }
 
     @Override

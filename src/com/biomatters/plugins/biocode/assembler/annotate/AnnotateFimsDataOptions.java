@@ -218,18 +218,11 @@ public class AnnotateFimsDataOptions extends Options {
         FimsSample fimsSample;
         String sequencingPlateName;
         BiocodeUtilities.Well well;
-        Workflow workflow;
+        WorkflowDocument workflow;
 
         public FimsData(WorkflowDocument workflowDocument, String sequencingPlateName, BiocodeUtilities.Well well) {
             this.fimsSample = workflowDocument != null ? workflowDocument.getMostRecentReaction(Reaction.Type.Extraction).getFimsSample() : null;
-            this.workflow = workflowDocument != null ? workflowDocument.getWorkflow() : null;
-            this.sequencingPlateName = sequencingPlateName;
-            this.well = well;
-        }
-
-        public FimsData(FimsSample fimsSample, Workflow workflow, String sequencingPlateName, BiocodeUtilities.Well well) {
-            this.fimsSample = fimsSample;
-            this.workflow = workflow;
+            this.workflow = workflowDocument;
             this.sequencingPlateName = sequencingPlateName;
             this.well = well;
         }

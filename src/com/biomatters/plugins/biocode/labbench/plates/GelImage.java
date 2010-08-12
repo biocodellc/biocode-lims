@@ -15,10 +15,7 @@ import javax.media.jai.RenderedImageAdapter;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.ByteArrayInputStream;
+import java.io.*;
 import java.sql.*;
 import java.util.Iterator;
 

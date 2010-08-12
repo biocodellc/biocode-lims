@@ -62,21 +62,6 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
         //analyse the documents
         Plate.Size pSize = null;
-        int reactionCount = 0;
-        for(AnnotatedPluginDocument doc : documents) {
-            PlateDocument plateDoc = (PlateDocument)doc.getDocument();
-            Plate.Size size = plateDoc.getPlate().getPlateSize();
-            reactionCount = plateDoc.getPlate().getReactions().length;
-            if(pSize != null && size != pSize) {
-                throw new DocumentOperationException("All plates must be of the same size");
-            }
-            pSize = size;
-        }
-        final Plate.Size plateSize = pSize;
-        if(options.getPlateSize() == null && plateSize != null) {
-            throw new DocumentOperationException("You cannot create individual reactions from a plate");
-        }
-
         final Plate.Size sizeFromOptions = options.getPlateSize();
         final Reaction.Type typeFromOptions = options.getReactionType();
         final boolean fromExisting = options.isFromExisting();
@@ -84,6 +69,22 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         final AtomicReference<DocumentOperationException> exception = new AtomicReference<DocumentOperationException>();
         final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
         final int numberOfReactionsFromOptions = (Integer)options.getOption("reactionNumber").getValue();
+        int reactionCount = 0;
+        if(fromExisting) {
+            for(AnnotatedPluginDocument doc : documents) {
+                PlateDocument plateDoc = (PlateDocument)doc.getDocument();
+                Plate.Size size = plateDoc.getPlate().getPlateSize();
+                reactionCount = plateDoc.getPlate().getReactions().length;
+                if(pSize != null && size != pSize) {
+                    throw new DocumentOperationException("All plates must be of the same size");
+                }
+                pSize = size;                      
+            }
+        }
+        final Plate.Size plateSize = pSize;
+        if(options.getPlateSize() == null && plateSize != null) {
+            throw new DocumentOperationException("You cannot create individual reactions from a plate");
+        }
 
         if(options.getPlateSize() == null) {
             if(numberOfReactionsFromOptions < reactionCount) {
