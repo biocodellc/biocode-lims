@@ -78,13 +78,18 @@ public class GelSplitter {
 
 
 
-        Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"ok"}, "test"), holder);
+        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "test"), holder).equals(Dialogs.CANCEL)) {
+            return;
+        }
         final AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>> imageMap = new AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>>();
         BiocodeService.block("Splitting your GEL", null, new Runnable() {
             public void run() {
                 imageMap.set(imagePanel.splitImage());
             }
         });
+        if(imageMap.get() == null) {
+            return;
+        }
         File folder = new File(System.getProperty("user.home")+File.separator+"images");
         for(Map.Entry<BiocodeUtilities.Well, BufferedImage> entry : imageMap.get().entrySet()) {
             BufferedImage entryImage = entry.getValue();
@@ -264,9 +269,14 @@ public class GelSplitter {
 
                         Point p = getRowAndCol(i,j);
 
-                        String wellName = width > 15 && height > 15 ? Plate.getWellName(p.x, p.y) : "";
+                        String wellName = Plate.getWellName(p.x, p.y);
                         double scaleFactor = 40.0/Math.max(width,height);
-                        BufferedImage image = new BufferedImage((int)(scaleFactor*width), (int)(scaleFactor*height), BufferedImage.TYPE_INT_RGB);
+                        int wellWidth = (int) (scaleFactor * width);
+                        int wellHeight = (int) (scaleFactor * height);
+                        if(wellWidth <= 0 || wellHeight <= 0) {
+                            continue;
+                        }
+                        BufferedImage image = new BufferedImage(wellWidth, wellHeight, BufferedImage.TYPE_INT_RGB);
                         Graphics2D graphics = image.createGraphics();
                         graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
                         graphics.scale(scaleFactor, scaleFactor);
