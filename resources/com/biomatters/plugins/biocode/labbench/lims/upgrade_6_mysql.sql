@@ -5,4 +5,4 @@ ALTER TABLE cyclesequencing ADD gelimage longblob DEFAULT NULL;
 ALTER table extraction ADD control varchar(45) DEFAULT '' NOT NULL;
 
 
-UPDATE databaseVersion SET version = 7;
+UPDATE databaseversion SET version = 7;
