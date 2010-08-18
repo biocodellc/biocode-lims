@@ -951,7 +951,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                     }
                 }
             });
-            mainPanel.addSpanningComponent(imagePanel);
+            mainPanel.addSpanningComponent(imagePanel, false, GridBagConstraints.WEST);
         }
     }
 

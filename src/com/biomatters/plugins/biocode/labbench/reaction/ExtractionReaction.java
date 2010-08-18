@@ -73,13 +73,11 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
         }
 
-        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
-            byte[] imageBytes = r.getBytes("extraction.gelimage");
-            if(imageBytes != null) {
-                setGelImage(new GelImage(imageBytes, getLocationString()));
-            }
-            options.setValue("control", r.getString("extraction.control"));
+        byte[] imageBytes = r.getBytes("extraction.gelimage");
+        if(imageBytes != null) {
+            setGelImage(new GelImage(imageBytes, getLocationString()));
         }
+        options.setValue("control", r.getString("extraction.control"));
         
         
         if(workflowName != null) {

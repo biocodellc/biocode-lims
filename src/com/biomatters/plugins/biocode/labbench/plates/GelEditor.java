@@ -184,16 +184,14 @@ public class GelEditor {
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(imageScroller, BorderLayout.CENTER);
         panel.add(notesScroller, BorderLayout.SOUTH);
-        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
-            GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(GelEditor.class), false, true);
-            Icons icon = BiocodePlugin.getIcons("splitgel16.png");
-            toolbar.addAction(new GeneiousAction("Split GEL", "Split the GEL into wells, and attach them to your reactions.", icon){
-                public void actionPerformed(ActionEvent e) {
-                    GelSplitter.splitGel(plate, image);
-                }
-            }).setText("Split GEL");
-            panel.add(toolbar, BorderLayout.NORTH);
-        }
+        GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(GelEditor.class), false, true);
+        Icons icon = BiocodePlugin.getIcons("splitgel16.png");
+        toolbar.addAction(new GeneiousAction("Split GEL", "Split the GEL into wells, and attach them to your reactions.", icon){
+            public void actionPerformed(ActionEvent e) {
+                GelSplitter.splitGel(plate, image);
+            }
+        }).setText("Split GEL");
+        panel.add(toolbar, BorderLayout.NORTH);
         return panel;
     }
 

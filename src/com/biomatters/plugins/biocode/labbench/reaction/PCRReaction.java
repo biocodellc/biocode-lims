@@ -89,11 +89,9 @@ public class PCRReaction extends Reaction<PCRReaction> {
         setPlateName(r.getString("plate.name"));
         setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
 
-        if(LIMSConnection.EXPECTED_SERVER_VERSION > 6) {
-            byte[] imageBytes = r.getBytes("pcr.gelimage");
-            if(imageBytes != null) {
-                setGelImage(new GelImage(imageBytes, getLocationString()));
-            }
+        byte[] imageBytes = r.getBytes("pcr.gelimage");
+        if(imageBytes != null) {
+            setGelImage(new GelImage(imageBytes, getLocationString()));
         }
 
         int thermocycleId = r.getInt("plate.thermocycle");
