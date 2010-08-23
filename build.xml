@@ -66,11 +66,11 @@
    <!--</target>-->
 
    <target name="compile" depends="build-public-api, prepare">
-      <javac destdir="${classes}" debug="true">
+      <javac destdir="${classes}" debug="true" target="1.5">
          <classpath refid="classpath"/>
          <src path="src"/>
       </javac>
-      <javac destdir="${classes.test}" debug="${debug}">
+      <javac destdir="${classes.test}" debug="${debug}" target="1.5">
          <classpath refid="classpath.test.local"/>
          <src path="test"/>
       </javac>

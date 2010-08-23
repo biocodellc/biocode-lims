@@ -28,7 +28,7 @@ import org.virion.jam.util.SimpleListener;
  */
 
 public class GelSplitter {
-    public static void splitGel(Plate plate, GelImage image) {
+    public static void splitGel(Plate plate, GelImage image, Component owner) {
         final SplitGelImagePanel imagePanel = new SplitGelImagePanel(image.getImage(), plate);
         JScrollPane scroller = new JScrollPane(imagePanel);
 
@@ -76,9 +76,10 @@ public class GelSplitter {
         holder.add(scroller, BorderLayout.CENTER);
         holder.add(options.getPanel(), BorderLayout.EAST);
 
-
-
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "test"), holder).equals(Dialogs.CANCEL)) {
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "test", owner);
+        dialogOptions.setMaxWidth(2048);
+        dialogOptions.setMaxHeight(1400);
+        if(Dialogs.showDialog(dialogOptions, holder).equals(Dialogs.CANCEL)) {
             return;
         }
         final AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>> imageMap = new AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>>();

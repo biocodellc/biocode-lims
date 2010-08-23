@@ -99,7 +99,9 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
             List<Query> workflowNames = new ArrayList<Query>();
             for (Reaction reaction : plate.getReactions()) {
-                workflowNames.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, reaction.getWorkflow().getName()));
+                if(!reaction.isEmpty() && reaction.getWorkflow() != null) {
+                    workflowNames.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, reaction.getWorkflow().getName()));
+                }
             }
 
             Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.EMPTY_MAP);
@@ -112,7 +114,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
             for (Reaction reaction : plate.getReactions()) {
                 if (reactionsProgress.isCanceled()) return null;
-                if (!reaction.isEmpty()) {
+                if (!reaction.isEmpty() && reaction.getWorkflow() != null) {
                     reactions.add((CycleSequencingReaction) reaction);
                     BiocodeUtilities.Well well = Plate.getWell(reaction.getPosition(), plate.getPlateSize());
                     fimsDataForReactions.put((CycleSequencingReaction) reaction, new AnnotateFimsDataOptions.FimsData(findWorkflow(workflows, reaction.getWorkflow().getId()), plate.getName(), well));

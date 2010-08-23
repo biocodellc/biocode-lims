@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 
 import javax.swing.*;
@@ -15,7 +14,6 @@ import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -34,7 +32,7 @@ import java.util.prefs.Preferences;
  */
 public class GelEditor {
     static Preferences preferences = Preferences.userNodeForPackage(GelEditor.class);
-    
+
     public static List<GelImage> editGels(final Plate plate, Component owner) {
         final List<GelImage> gelimages = new ArrayList<GelImage>(plate.getImages());
         final JPanel editPanel = new JPanel(new BorderLayout());
@@ -143,7 +141,7 @@ public class GelEditor {
         JPanel holderPanel = new JPanel(new GridBagLayout());
         holderPanel.add(new JLabel("<html>No gel images<br>Click 'Add' button below to add gel images</html>"));
         holderPanel.setPreferredSize(new Dimension(250,250));
-        
+
         setRightComponent(splitPane, holderPanel);
 
         gelimageList.addListSelectionListener(selectionListener);
@@ -181,14 +179,14 @@ public class GelEditor {
         JScrollPane notesScroller = new JScrollPane(notesArea);
         notesScroller.setPreferredSize(new Dimension(100,100));
         notesScroller.setBorder(new OptionsPanel.RoundedLineBorder("Notes", false));
-        JPanel panel = new JPanel(new BorderLayout());
+        final JPanel panel = new JPanel(new BorderLayout());
         panel.add(imageScroller, BorderLayout.CENTER);
         panel.add(notesScroller, BorderLayout.SOUTH);
         GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(GelEditor.class), false, true);
         Icons icon = BiocodePlugin.getIcons("splitgel16.png");
         toolbar.addAction(new GeneiousAction("Split GEL", "Split the GEL into wells, and attach them to your reactions.", icon){
             public void actionPerformed(ActionEvent e) {
-                GelSplitter.splitGel(plate, image);
+                GelSplitter.splitGel(plate, image, panel);
             }
         }).setText("Split GEL");
         panel.add(toolbar, BorderLayout.NORTH);
