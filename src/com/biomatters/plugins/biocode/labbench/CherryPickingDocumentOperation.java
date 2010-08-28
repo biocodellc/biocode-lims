@@ -31,7 +31,8 @@ import javax.swing.*;
 public class CherryPickingDocumentOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
-        return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(),new GeneiousActionOptions("Cherry picking", "Create new Reactions from Failed Reactions", BiocodePlugin.getIcons("cherry_24.png")).setInMainToolbar(true));
+        return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(),new GeneiousActionOptions("Cherry picking", "Create new Reactions from Failed Reactions", BiocodePlugin.getIcons("cherry_24.png"))
+                .setInMainToolbar(true).setProOnly(true));
     }
 
     public String getHelp() {

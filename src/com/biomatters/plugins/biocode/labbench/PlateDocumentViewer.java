@@ -860,7 +860,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                                 try {
                                     BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
                                     buttonHolder.removeAll();
-                                    OptionsPanel gelPanel = new OptionsPanel();
+                                    OptionsPanel gelPanel = new OptionsPanel(false, false);
                                     gelPanel.setOpaque(false);
                                     addGelImages(gelPanel);
                                     buttonHolder.setLayout(new BorderLayout());
