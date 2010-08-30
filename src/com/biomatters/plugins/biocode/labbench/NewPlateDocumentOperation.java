@@ -116,7 +116,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
 
                         if(plateSize == sizeFromOptions) {
-                            copyPlateOfSameSize(plateViewer.get(), plate, editingPlate, copyOnlyPassed);
+                            copyPlateOfSameSize(plate, editingPlate, copyOnlyPassed);
                         }
                         else if(sizeFromOptions == Plate.Size.w96){
                             copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"), copyOnlyPassed);
@@ -226,7 +226,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     }
 
-    static void copyPlateOfSameSize(PlateViewer plateViewer, Plate srcPlate, Plate destPlate, boolean onlyPassed) throws DocumentOperationException{
+    static void copyPlateOfSameSize(Plate srcPlate, Plate destPlate, boolean onlyPassed) throws DocumentOperationException{
         if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
             throw new IllegalArgumentException("Plates were of different sizes");
         }

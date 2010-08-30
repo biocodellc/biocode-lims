@@ -485,14 +485,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         block("Building Caches", null);
                         buildCaches();
                     } catch (ConnectionException e1) {
-                        Dialogs.showMessageDialog("Failed to connect to the LIMS database: " + e1.getMessage());
-                        logOut();
                         unBlock();
+                        logOut();
+                        String title = "Connection Failure";
+                        String message = "Geneious could not connect to the LIMS database";
+                        showErrorDialog(e1, title, message);
                         return;
                     } catch (TransactionException e2) {
-                        Dialogs.showMessageDialog("Failed to connect to the LIMS database: " + e2.getMessage());
                         logOut();
                         unBlock();
+                        String title = "Connection Failure";
+                        String message = "Geneious could not connect to the LIMS database";
+                        showErrorDialog(e2, title, message);
                         return;
                     }
                     unBlock();
@@ -501,6 +505,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
             };
             new Thread(runnable).start();
+        }
+    }
+
+    private void showErrorDialog(Throwable e1, String title, String message) {
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[]{"OK"}, title);
+        dialogOptions.setMoreOptionsButtonText("Show details", "Hide details");
+        if(e1.getMessage() == null) {
+            Dialogs.showMessageDialog(message, title);
+        }
+        else if(e1.getMessage().contains("\n")) {
+            Dialogs.showMoreOptionsDialog(dialogOptions, message, e1.getMessage());
+        }
+        else {
+            Dialogs.showMessageDialog(message+": "+e1.getMessage(), title);
         }
     }
 
@@ -1471,7 +1489,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void saveReactions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException {
-        progress.setMessage("Retrieving existing workflows");
+        if(progress != null) {
+            progress.setMessage("Retrieving existing workflows");
+        }
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
         connection.setAutoCommit(false);
@@ -1538,8 +1558,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     }
                 }
             }
-
-            progress.setMessage("Creating new workflows");
+            if(progress != null) {
+                progress.setMessage("Creating new workflows");
+            }
 
             //create workflows if necessary
             //int workflowCount = 0;
@@ -1557,8 +1578,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     reaction.setWorkflow(workflowList.get(i));
                 }
             }
-
-            progress.setMessage("Creating the plate");
+            if(progress != null) {
+                progress.setMessage("Creating the plate");
+            }
             //we need to create the plate
             createOrUpdatePlate(plate, progress);
             if(!autoCommit)

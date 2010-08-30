@@ -11,8 +11,8 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
-import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOperation;
-import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOptions;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOperation;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOptions;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
@@ -72,7 +72,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         List<String> plateNames = ((DownloadChromatogramsFromLimsOptions)options).getPlateNames();
         List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
-        final Map<CycleSequencingReaction, AnnotateFimsDataOptions.FimsData> fimsDataForReactions = new HashMap<CycleSequencingReaction, AnnotateFimsDataOptions.FimsData>();
+        final Map<CycleSequencingReaction, AnnotateLimsDataOptions.FimsData> fimsDataForReactions = new HashMap<CycleSequencingReaction, AnnotateLimsDataOptions.FimsData>();
         CompositeProgressListener reactionsProgress = new CompositeProgressListener(progress, plateNames.size());
         for (String plateName : plateNames) {
             reactionsProgress.beginSubtask(plateName);
@@ -117,7 +117,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 if (!reaction.isEmpty() && reaction.getWorkflow() != null) {
                     reactions.add((CycleSequencingReaction) reaction);
                     BiocodeUtilities.Well well = Plate.getWell(reaction.getPosition(), plate.getPlateSize());
-                    fimsDataForReactions.put((CycleSequencingReaction) reaction, new AnnotateFimsDataOptions.FimsData(findWorkflow(workflows, reaction.getWorkflow().getId()), plate.getName(), well));
+                    fimsDataForReactions.put((CycleSequencingReaction) reaction, new AnnotateLimsDataOptions.FimsData(findWorkflow(workflows, reaction.getWorkflow().getId()), plate.getName(), well));
 
                 }
             }
@@ -136,7 +136,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
         }
         progress.beginSubtask("Creating Documents...");
-        final Map<AnnotatedPluginDocument, AnnotateFimsDataOptions.FimsData> fimsData = new HashMap<AnnotatedPluginDocument, AnnotateFimsDataOptions.FimsData>();
+        final Map<AnnotatedPluginDocument, AnnotateLimsDataOptions.FimsData> fimsData = new HashMap<AnnotatedPluginDocument, AnnotateLimsDataOptions.FimsData>();
         List<AnnotatedPluginDocument> chromatogramDocuments = new ArrayList<AnnotatedPluginDocument>();
         CompositeProgressListener tracesProgress = new CompositeProgressListener(progress, reactions.size());
         for (CycleSequencingReaction reaction : reactions) {
@@ -155,15 +155,15 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             reaction.purgeChromats();
         }
         if (progress.isCanceled()) return null;
-        AnnotateFimsDataOperation.FimsDataGetter fimsDataGetter = new AnnotateFimsDataOperation.FimsDataGetter() {
+        AnnotateLimsDataOperation.FimsDataGetter fimsDataGetter = new AnnotateLimsDataOperation.FimsDataGetter() {
             @Override
-            public AnnotateFimsDataOptions.FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+            public AnnotateLimsDataOptions.FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                 return fimsData.get(document);
             }
         };
         AnnotatedPluginDocument[] array = chromatogramDocuments.toArray(new AnnotatedPluginDocument[chromatogramDocuments.size()]);
         try {
-            AnnotateFimsDataOperation.annotateFimsData(array, ProgressListener.EMPTY, fimsDataGetter);
+            AnnotateLimsDataOperation.annotateFimsData(array, ProgressListener.EMPTY, fimsDataGetter);
         } catch (DocumentOperationException e) {
             if (!isAutomated) {
                 String continueButton = "Continue";

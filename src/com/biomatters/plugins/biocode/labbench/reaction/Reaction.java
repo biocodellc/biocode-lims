@@ -725,10 +725,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         //statement.setInt(3, (Integer)options.getValue("prAmount"));
 
                         Object value2 = options.getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
-                        if(!(value instanceof List)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        if(!(value2 instanceof List)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value2.getClass().getCanonicalName());
                         }
-                        List<AnnotatedPluginDocument> primerOptionValue2 = (List<AnnotatedPluginDocument>) value;
+                        List<AnnotatedPluginDocument> primerOptionValue2 = (List<AnnotatedPluginDocument>) value2;
                         if(primerOptionValue2.size() == 0) {
                             statement.setString(13, "None");
                             statement.setString(14, "");

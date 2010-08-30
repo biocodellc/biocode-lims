@@ -118,7 +118,7 @@ public class CycleSequencingCocktail extends Cocktail{
     }
 
     public String getSQLString() {
-        String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes, bufferConc, bigDyeConc, templateAmount, templateConc, primerAmount, primerConc, extraItem, extraItemAmount) VALUES ('" + options.getValueAsString("name").replace("'", "''") + "', " + options.getValueAsString("ddH2O") + ", " + options.getValueAsString("Buffer") + ", " + options.getValueAsString("Big Dye") + ", '" + options.getValueAsString("notes").replace("'", "''") + "', "+options.getValue("BufferConc")+", "+options.getValue("Big DyeConc")+", "+options.getValue("Template")+", "+options.getValue("Template Conc")+", "+options.getValue("Primer")+", "+options.getValue("PrimerConc")+", '"+options.getValue("extraItem")+"', "+options.getValue("extraItemAmount")+")";
+        String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes, bufferConc, bigDyeConc, templateConc, templateAmount, extraItem, extraItemAmount, primerAmount, primerConc) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddH2O")+", "+options.getValueAsString("BufferX")+", "+options.getValueAsString("Big Dye")+", '"+options.getValueAsString("notes").replace("'", "''")+"', "+options.getValueAsString("BufferVol")+",  "+options.getValueAsString("Big DyeConc")+", "+options.getValueAsString("Template Conc")+", '"+options.getValueAsString("Template")+"', '"+options.getValueAsString("extraItem")+"', "+options.getValueAsString("extraItemAmount")+", '"+options.getValueAsString("Primer")+"', "+options.getValueAsString("PrimerConc")+")";
         System.out.println(s);
         return s;
     }

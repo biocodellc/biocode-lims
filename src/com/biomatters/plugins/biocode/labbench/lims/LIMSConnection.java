@@ -475,7 +475,7 @@ public class LIMSConnection {
 
     private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, QueryTermSurrounder termSurrounder, Object value, Condition condition) {
         String valueString = valueToString(value);
-        valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
+        //valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
         if(Date.class.isAssignableFrom(value.getClass()) && (condition == Condition.LESS_THAN_OR_EQUAL_TO || condition == Condition.GREATER_THAN)) { //hack to make these conditions work...
             value = new Date(((Date)value).getTime()+86300000);
         }

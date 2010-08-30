@@ -169,10 +169,12 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             }
             else if(conditionOption.getValue().equals(cherryPickingConditions[1])) { //taxonomy
                 FimsSample fimsSample = r.getFimsSample();
-                for(DocumentField field : fimsSample.getTaxonomyAttributes()) {
-                    Object value = fimsSample.getFimsAttributeValue(field.getCode());
-                    if(value != null && value.toString().toLowerCase().contains(value2.toLowerCase())) {
-                        return true;
+                if(fimsSample != null) {
+                    for(DocumentField field : fimsSample.getTaxonomyAttributes()) {
+                        Object value = fimsSample.getFimsAttributeValue(field.getCode());
+                        if(value != null && value.toString().toLowerCase().contains(value2.toLowerCase())) {
+                            return true;
+                        }
                     }
                 }
                 return false;
