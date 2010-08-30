@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
+import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 
@@ -189,6 +190,30 @@ public class GelEditor {
                 GelSplitter.splitGel(plate, image, panel);
             }
         }).setText("Split GEL");
+        toolbar.addAction(new GeneiousAction("Save to disk", "Save the selected GEL image to your computer", StandardIcons.save.getIcons()){
+            public void actionPerformed(ActionEvent e) {
+                String extension = "";
+                int extensionIndex=image.getFilename().lastIndexOf('.');
+                if (extensionIndex>0 && extensionIndex < image.getFilename().length())
+                    extension = image.getFilename().substring(extensionIndex+1);
+                File saveFile = FileUtilities.getUserSelectedSaveFile("Save", "Save GEL", image.getFilename(), extension);
+                if(saveFile != null) {
+                    OutputStream out = null;
+                    try {
+                        out = new BufferedOutputStream(new FileOutputStream(saveFile));
+                        out.write(image.getImageBytes());
+                    } catch(IOException ex) {
+                        Dialogs.showMessageDialog("There was a problem saving your GEL: "+ex.getMessage());
+                    } finally {
+                        if (out!=null) try {
+                            out.close();
+                        } catch (IOException e1) {
+                            //we can't do anything more...
+                        }
+                    }
+                }
+            }
+        });
         panel.add(toolbar, BorderLayout.NORTH);
         return panel;
     }

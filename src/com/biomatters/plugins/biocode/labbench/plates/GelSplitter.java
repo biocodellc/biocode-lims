@@ -1,14 +1,19 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
+import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ZoomPanel;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import com.sun.image.codec.jpeg.JPEGCodec;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.event.*;
@@ -32,7 +37,23 @@ public class GelSplitter {
         final SplitGelImagePanel imagePanel = new SplitGelImagePanel(image.getImage(), plate);
         JScrollPane scroller = new JScrollPane(imagePanel);
 
+        final JPanel zoomPanel = new GPanel(new BorderLayout());
+        final ZoomPanel zoomer = new ZoomPanel(true, true, null, 5);
+        zoomer.setMinimumAndMaximumAndCurrentZoomLevels(0.1,1.0,1.0, true);
+        final JSlider rotationSlider = new JSlider(0,100,50);
+        ChangeListener zoomAndRotationListener = new ChangeListener() {
+            public void stateChanged(ChangeEvent e) {
+                imagePanel.setZoom(zoomer.getZoomLevel());
+                imagePanel.setRotation((Math.PI*(rotationSlider.getValue()-50))/1000);
+            }
+        };
+        zoomer.addChangeListener(zoomAndRotationListener);
+        rotationSlider.addChangeListener(zoomAndRotationListener);
+        zoomPanel.add(zoomer, BorderLayout.NORTH);
+        zoomPanel.add(rotationSlider, BorderLayout.CENTER);
+
         Options options = new Options(GelSplitter.class);
+        options.setHorizontallyCompact(true);
         final Options.IntegerOption numberOfRowsOption = options.addIntegerOption("numberOfRows", "Number of Rows", 8, 1, plate.getReactions().length);
         final Options.IntegerOption numberOfColsOption = options.addIntegerOption("numberOfCols", "Number of Columns", 12, 1, plate.getReactions().length);
         final Options.StringOption startLetter = options.addStringOption("startLetter", "Start", "A");
@@ -40,6 +61,9 @@ public class GelSplitter {
         final Options.IntegerOption startNumber = options.addIntegerOption("startNumber", "Start", 1, 1, plate.getCols());
         final AtomicInteger direction = new AtomicInteger(0);
         Options.ButtonOption toggleDirection = options.addButtonOption("toggleDirection", "", "Toggle Direction");
+        options.addBooleanOption("scorePlate", "Automatically Score plate", true);
+        JSlider slider = new JSlider(250, 1250, 750);
+        options.addCustomComponent(slider);
 
         toggleDirection.setSpanningComponent(true);
 
@@ -74,7 +98,10 @@ public class GelSplitter {
 
         JPanel holder = new JPanel(new BorderLayout());
         holder.add(scroller, BorderLayout.CENTER);
-        holder.add(options.getPanel(), BorderLayout.EAST);
+        JPanel eastHolder = new GPanel(new BorderLayout());
+        eastHolder.add(options.getPanel(), BorderLayout.CENTER);
+        eastHolder.add(zoomPanel, BorderLayout.NORTH);
+        holder.add(eastHolder, BorderLayout.EAST);
 
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "test", owner);
         dialogOptions.setMaxWidth(2048);
@@ -91,6 +118,7 @@ public class GelSplitter {
         if(imageMap.get() == null) {
             return;
         }
+        System.out.println(slider.getValue());
         File folder = new File(System.getProperty("user.home")+File.separator+"images");
         for(Map.Entry<BiocodeUtilities.Well, BufferedImage> entry : imageMap.get().entrySet()) {
             BufferedImage entryImage = entry.getValue();
@@ -103,6 +131,10 @@ public class GelSplitter {
                 Reaction reaction = plate.getReaction(entry.getKey());
                 if(reaction != null) {
                     reaction.setGelImage(gelImage);
+                    if((Boolean)options.getValue("scorePlate")) {
+                        System.out.print(reaction.getLocationString()+" ");
+                        reaction.getOptions().setValue(ReactionOptions.RUN_STATUS, GelScorer.wellPasses(entryImage,slider.getValue()) ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -124,6 +156,7 @@ public class GelSplitter {
         private int startRow;
         private int startCol;
         private Plate plate;
+
 
         public SplitGelImagePanel(Image i, Plate plate) {
             super(i);
@@ -260,6 +293,19 @@ public class GelSplitter {
 
         public Map<BiocodeUtilities.Well, BufferedImage> splitImage() {
             Map<BiocodeUtilities.Well, BufferedImage> imageMap = new HashMap<BiocodeUtilities.Well, BufferedImage>();
+            Rectangle dragRectangle = new Rectangle(PADDING+(int)((this.dragRectangle.x-PADDING)/getZoom()), PADDING+(int)((this.dragRectangle.y-PADDING)/getZoom()), (int)(this.dragRectangle.width/getZoom()), (int)(this.dragRectangle.height/getZoom()));
+            Dimension bounds = getBoundingBox(new Dimension(images[0].getWidth(null), images[0].getHeight(null)));
+
+            //draw the rotated image
+            BufferedImage masterImage = new BufferedImage(bounds.width, bounds.height, BufferedImage.TYPE_INT_RGB);
+            Graphics2D imageGraphics = masterImage.createGraphics();
+
+            int halfHeight =  images[0].getHeight(null) / 2;
+            int halfWidth = images[0].getWidth(null) / 2;
+            imageGraphics.translate(PADDING + bounds.width/2, bounds.height/2);
+            imageGraphics.rotate(getRotation());
+            imageGraphics.drawImage(images[0],  -halfWidth, -halfHeight, null);
+
             if(rows > 0 && cols > 0 && dragRectangle != null) {
                 for(int i=0; i < cols; i++) {
                     for(int j=0; j < rows; j++) {
@@ -281,7 +327,7 @@ public class GelSplitter {
                         Graphics2D graphics = image.createGraphics();
                         graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
                         graphics.scale(scaleFactor, scaleFactor);
-                        graphics.drawImage(images[0], -x1, -y1, this);
+                        graphics.drawImage(masterImage, -x1, -y1, this);
 
                         imageMap.put(new BiocodeUtilities.Well(wellName), image);
                     }
