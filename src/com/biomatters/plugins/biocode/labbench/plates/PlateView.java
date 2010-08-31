@@ -154,7 +154,7 @@ public class PlateView extends JPanel {
                 if(e.getClickCount() == 2) {
                     List<Reaction> selectedReactions = getSelectedReactions();
                     if(selectedReactions.size() > 0) {
-                        ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), false, selfReference, false, creating);
+                        ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), selfReference, creating);
                     }
                     revalidate();
                     repaint();

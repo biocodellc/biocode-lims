@@ -380,37 +380,12 @@ public class ReactionUtilities {
 
     }
 
-    public static boolean editReactions(List<Reaction> reactions, boolean justEditDisplayableFields, JComponent owner, boolean justEditOptions, boolean creating) {
-        if(reactions == null || reactions.size() == 0) {
-            throw new IllegalArgumentException("reactions must be non-null and non-empty");
-        }
+    public static void showDisplayDialog(Plate plate, JComponent owner) {
 
-        ReactionOptions options = null;
-        try {
-            options = XMLSerializer.clone(reactions.get(0).getOptions());
-            options.refreshValuesFromCaches();
-            options.setReaction(reactions.get(0));//hack for cycle sequencing traces
-        } catch (XMLSerializationException e) {
-            //e.printStackTrace();
-            //options = reactions.get(0).getOptions();
-            throw new RuntimeException(e);
-        }
+        List<Reaction> reactions = Arrays.asList(plate.getReactions());
 
-        Map<String, Boolean> haveAllSameValues = new HashMap<String, Boolean>();
-        //fill in the master options based on the values in all the reactions
-        for(Options.Option option : options.getOptions()) {
-            haveAllSameValues.put(option.getName(), true);
-            for(Reaction reaction : reactions) {
-                Object optionValue = option.getValue();
-                Object reactionValue = reaction.getOptions().getValue(option.getName());
-                if(!optionValuesAreEqual(optionValue, reactionValue)) {
-                    haveAllSameValues.put(option.getName(), false);
-                    continue;
-                }
-            }
-        }
+        JPanel fieldsPanel = new JPanel(new BorderLayout());
 
-        OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues, reactions.size() > 1, creating);
         Vector<DocumentField> selectedFieldsVector = new Vector<DocumentField>();
         Vector<DocumentField> availableFieldsVector = new Vector<DocumentField>();
         for(Reaction r : reactions) {//todo: may be slow
@@ -454,9 +429,6 @@ public class ReactionUtilities {
         }
 
 
-        JPanel fieldsPanel = new JPanel(new BorderLayout());
-
-
         DefaultListCellRenderer cellRenderer = new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -494,72 +466,96 @@ public class ReactionUtilities {
         templateSelectorPanel.addChangeListener(templateChangeListener);
         //templateChangeListener.stateChanged(new ChangeEvent(BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(reactions.get(0).getType())));
 
-
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setOpaque(false);
         mainPanel.add(templateSelectorPanel, BorderLayout.NORTH);
         mainPanel.add(fieldsPanel, BorderLayout.CENTER);
         mainPanel.add(colorPanel, BorderLayout.SOUTH);
+        mainPanel.setPreferredSize(new Dimension(500, 500));
 
-        JComponent componentToDisplay;
-        if(justEditDisplayableFields) {
-            componentToDisplay = mainPanel;
-        }
-        else if(justEditOptions) {
-            componentToDisplay = displayPanel;
-        }
-        else {
-            JTabbedPane tabs = new JTabbedPane();
-            tabs.add("Reaction",displayPanel);
-            tabs.add("Display", mainPanel);
-            componentToDisplay = tabs;
-        }
-
-        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Well Options", owner, Dialogs.DialogIcon.NO_ICON);
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Display", owner, Dialogs.DialogIcon.NO_ICON);
         dialogOptions.setMaxWidth(800);
         dialogOptions.setMaxHeight(800);
-        Object choice = Dialogs.showDialog(dialogOptions, componentToDisplay);
+        Object choice = Dialogs.showDialog(dialogOptions, mainPanel);
+        if(choice.equals("OK")) {
+            for(Reaction r : reactions) {
+                r.setFieldsToDisplay(new ArrayList<DocumentField>(listSelector.getSelectedFields()));
+                r.setBackgroundColorer(colorPanel.getColorer());
+            }
+        }
+    }
+
+    public static boolean editReactions(List<Reaction> reactions, JComponent owner, boolean creating) {
+        if(reactions == null || reactions.size() == 0) {
+            throw new IllegalArgumentException("reactions must be non-null and non-empty");
+        }
+
+        ReactionOptions options = null;
+        try {
+            options = XMLSerializer.clone(reactions.get(0).getOptions());
+            options.refreshValuesFromCaches();
+            options.setReaction(reactions.get(0));//hack for cycle sequencing traces
+        } catch (XMLSerializationException e) {
+            //e.printStackTrace();
+            //options = reactions.get(0).getOptions();
+            throw new RuntimeException(e);
+        }
+
+        Map<String, Boolean> haveAllSameValues = new HashMap<String, Boolean>();
+        //fill in the master options based on the values in all the reactions
+        for(Options.Option option : options.getOptions()) {
+            haveAllSameValues.put(option.getName(), true);
+            for(Reaction reaction : reactions) {
+                Object optionValue = option.getValue();
+                Object reactionValue = reaction.getOptions().getValue(option.getName());
+                if(!optionValuesAreEqual(optionValue, reactionValue)) {
+                    haveAllSameValues.put(option.getName(), false);
+                    continue;
+                }
+            }
+        }
+
+        OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues, reactions.size() > 1, creating);
+
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Wells", owner, Dialogs.DialogIcon.NO_ICON);
+        dialogOptions.setMaxWidth(800);
+        dialogOptions.setMaxHeight(800);
+        Object choice = Dialogs.showDialog(dialogOptions, displayPanel);
         boolean hasChanges = false;
         if(choice.equals("OK")) {
             int changedOptionCount = 0;
-            if(!justEditDisplayableFields || justEditOptions) {
-                hasChanges = true; //todo: check if options actually have changed...
-                Element optionsElement = XMLSerializer.classToXML("options", options);
-                if(reactions.size() == 1) {
-                    changedOptionCount = 1;
-                    Reaction reaction = reactions.get(0);
-                    try {
-                        reaction.setOptions(XMLSerializer.classFromXML(optionsElement, ReactionOptions.class));
-                    } catch (XMLSerializationException e) {
-                        Dialogs.showMessageDialog("Could not save your options: "+e.getMessage());
-                    }
+            hasChanges = true; //todo: check if options actually have changed...
+            Element optionsElement = XMLSerializer.classToXML("options", options);
+            if(reactions.size() == 1) {
+                changedOptionCount = 1;
+                Reaction reaction = reactions.get(0);
+                try {
+                    reaction.setOptions(XMLSerializer.classFromXML(optionsElement, ReactionOptions.class));
+                } catch (XMLSerializationException e) {
+                    Dialogs.showMessageDialog("Could not save your options: "+e.getMessage());
                 }
-                else {
-                    for(Reaction reaction : reactions) {
-                        for(final Options.Option option : options.getOptions()) {
-                            if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
-                                reaction.getOptions().refreshValuesFromCaches();
-                                Options.Option reactionOption = reaction.getOptions().getOption(option.getName());
-                                if(reactionOption != null) {
-                                    reactionOption.setValue(option.getValue());
-                                    changedOptionCount++;
-                                }
-                                else {
-                                    assert false : option.getName()+" didn't exist in the destination options!";
-                                }
+            }
+            else {
+                for(Reaction reaction : reactions) {
+                    for(final Options.Option option : options.getOptions()) {
+                        if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
+                            reaction.getOptions().refreshValuesFromCaches();
+                            Options.Option reactionOption = reaction.getOptions().getOption(option.getName());
+                            if(reactionOption != null) {
+                                reactionOption.setValue(option.getValue());
+                                changedOptionCount++;
+                            }
+                            else {
+                                assert false : option.getName()+" didn't exist in the destination options!";
                             }
                         }
                     }
                 }
             }
-            for(Reaction r : reactions) {
-                r.setFieldsToDisplay(new ArrayList<DocumentField>(listSelector.getSelectedFields()));
-                r.setBackgroundColorer(colorPanel.getColorer());
-            }
             if(changedOptionCount > 0) {
                 String error = reactions.get(0).areReactionsValid(reactions, owner, true);
                 if(error != null) {
-                    Dialogs.showMessageDialog(error);
+                    Dialogs.showMessageDialog(error, "Invalid Reactions", owner, Dialogs.DialogIcon.INFORMATION);
                 }
             }
         }

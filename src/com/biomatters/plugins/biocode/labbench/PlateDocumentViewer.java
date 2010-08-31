@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -58,7 +59,6 @@ public class PlateDocumentViewer extends DocumentViewer{
         this.plateDoc = doc;
         this.isLocal = local;
         Plate plate = null;
-        deletePlateAction.setProOnly(true);
         addTracesAction.setProOnly(true);
         try {
             plate = new Plate(plateDoc.getPlate().toXML());
@@ -173,7 +173,12 @@ public class PlateDocumentViewer extends DocumentViewer{
             addTracesAction.setEnabled(buttonsEnabled);
         }
         gelAction.setEnabled(buttonsEnabled);
-        editAction.setEnabled(plateView.getSelectedReactions().size() > 0 && !plateView.getPlate().isDeleted());
+        if (!plateView.getPlate().isDeleted()) {
+            editAction.setName(plateView.getSelectedReactions().size() > 0 ? "Edit Selected Wells" : "Edit All Wells");
+        }
+        else {
+            editAction.setEnabled(false);
+        }
         bulkEditAction.setEnabled(buttonsEnabled);
 
         if(plateView.getPlate().isDeleted()) {
@@ -280,13 +285,15 @@ public class PlateDocumentViewer extends DocumentViewer{
                 if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
                     thermocycleAction = editThermocycleAction = null;
                     actions.addAll(Arrays.asList(editAction,
+                            displayAction,
                             gelAction));
                 }
                 else {
                     actions.addAll(Arrays.asList(
                             thermocycleAction,
                             gelAction,
-                            editAction
+                            editAction,
+                            displayAction
                     ));
                 }
                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing && plateView.getPlate().getPlateSize() != null) {
@@ -296,9 +303,6 @@ public class PlateDocumentViewer extends DocumentViewer{
                     ));
                 }
 
-                if(!isLocal) {
-                    actions.add(deletePlateAction);
-                }
                 actions.add(bulkEditAction);
 
                 return actions;
@@ -316,7 +320,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         };
     }
 
-    GeneiousAction gelAction = new GeneiousAction("Add/Remove GEL Image", null, BiocodePlugin.getIcons("addImage_16.png")) {
+    GeneiousAction gelAction = new GeneiousAction("GEL Images", null, BiocodePlugin.getIcons("addImage_16.png")) {
         public void actionPerformed(ActionEvent e) {
             if(!BiocodeService.getInstance().isLoggedIn()) {
                 Dialogs.showMessageDialog("Please log in");
@@ -383,72 +387,50 @@ public class PlateDocumentViewer extends DocumentViewer{
         }
     };
 
-    GeneiousAction editAction = new GeneiousAction("Edit selected wells", null, StandardIcons.edit.getIcons()) {
+    GeneiousAction editAction = new GeneiousAction("Edit All Wells", null, StandardIcons.edit.getIcons()) {
         public void actionPerformed(ActionEvent e) {
-            ReactionUtilities.editReactions(plateView.getSelectedReactions(), isLocal, plateView, false, false);
+            List<Reaction> selectedReactions = plateView.getSelectedReactions();
+            if (selectedReactions.isEmpty()) {
+                selectedReactions = Arrays.asList(plateView.getPlate().getReactions());
+            }
+            ReactionUtilities.editReactions(selectedReactions, plateView, false);
             saveAction.setEnabled(true);
             updatePanel();
         }
     };
 
-    GeneiousAction addTracesAction = new GeneiousAction("Bulk add traces", null, StandardIcons.nucleotide.getIcons()) {
+    GeneiousAction displayAction = new GeneiousAction("Display Options", null, IconUtilities.getIcons("monitor16.png")) {
+        public void actionPerformed(ActionEvent e) {
+            ReactionUtilities.showDisplayDialog(plateView.getPlate(), plateView);
+            updatePanel();
+        }
+    };
+
+    GeneiousAction addTracesAction = new GeneiousAction("Bulk Add Traces", null, IconUtilities.getIcons("chromatogram32.png")) {
         public void actionPerformed(ActionEvent e) {
             ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
             saveAction.setEnabled(true);
         }
     };
 
-    GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit wells", null, BiocodePlugin.getIcons("bulkEdit_16.png")) {
+    GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit", null, BiocodePlugin.getIcons("bulkEdit_16.png")) {
         public void actionPerformed(ActionEvent e) {
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
             editor.editPlate(container);
             saveAction.setEnabled(true);
             String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), container, true);
             if(error != null && error.length() > 0) {
-                Dialogs.showMessageDialog(error);
+                Dialogs.showMessageDialog(error, "Invalid Reactions", container, Dialogs.DialogIcon.INFORMATION);
             }
             updatePanel();
         }
     };
 
-    GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file", "Generate an input file for ABI sequences", BiocodePlugin.getIcons("abi_16.png")) {
+    GeneiousAction exportPlateAction = new GeneiousAction("Export Sequencer File", "Generate an input file for ABI sequencers", BiocodePlugin.getIcons("abi_16.png")) {
         public void actionPerformed(ActionEvent e) {
             ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
         }
     };
-
-    GeneiousAction deletePlateAction = new GeneiousAction("Delete Plate", "Removes the plate, and all associated reactions from the database", StandardIcons.delete.getIcons()) {
-        public void actionPerformed(ActionEvent e) {
-            String message;
-            boolean isExtraction = plateView.getPlate().getReactionType() == Reaction.Type.Extraction;
-            if(isExtraction) {
-                message = "<html><b>WARNING: </b>Deleting an extraction plate will also remove all workflows, PCR, and Cycle Sequencing reactions associated with these extractions.";
-            }
-            else {
-                message = "<html>This will delete all reactions associated with this plate.";
-            }
-
-            if(Dialogs.showYesNoDialog(message+"<br>Are you sure you want to continue?</html>", "Delete Plate", plateView, isExtraction ? Dialogs.DialogIcon.WARNING : Dialogs.DialogIcon.INFORMATION)) {
-                try {
-                    BiocodeService.getInstance().deletePlate(BiocodeService.BlockingDialog.getDialog("Deleting your plate", plateView), plateView.getPlate());
-                } catch (SQLException e1) {
-                    Dialogs.showMessageDialog("There was an error deleting your plate: "+e1.getMessage());
-                    e1.printStackTrace();
-                }
-                plateView.repaint();
-                if(!isLocal && !BiocodeService.getInstance().isLoggedIn()) {
-                    Dialogs.showMessageDialog("Please log in");
-                    return;
-                }
-                annotatedDocument.saveDocument();
-                updateToolbar(false);
-            }
-
-
-        }
-    };
-
-
 
     private JPanel getThermocyclePanel(Plate plate) {
         JPanel thermocyclePanel = new JPanel(new BorderLayout());

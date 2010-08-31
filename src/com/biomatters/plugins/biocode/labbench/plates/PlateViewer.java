@@ -137,7 +137,7 @@ public class PlateViewer extends JPanel {
             toolbar.addAction(thermocycleAction);
 
         }
-        final GeneiousAction gelAction = new GeneiousAction("Attach GEL image", "Attach GEL images to this plate", BiocodePlugin.getIcons("addImage_16.png")) {
+        final GeneiousAction gelAction = new GeneiousAction("Attach GEL Image", "Attach GEL images to this plate", BiocodePlugin.getIcons("addImage_16.png")) {
             public void actionPerformed(ActionEvent e) {
                 if(!plateView.getPlate().gelImagesHaveBeenDownloaded()) {
                     BiocodeService.block("Downloading existing GEL images", selfReference, new Runnable() {
@@ -161,7 +161,7 @@ public class PlateViewer extends JPanel {
         //toolbar.addSeparator(new Dimension(1, 24));
         toolbar.addAction(new GeneiousAction.Divider());
 
-        final GeneiousAction bulkEditAction = new GeneiousAction("Bulk-edit wells", "Paste data into the wells from a spreadsheet", BiocodePlugin.getIcons("bulkEdit_16.png")) {
+        final GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit", "Paste data into the wells from a spreadsheet", BiocodePlugin.getIcons("bulkEdit_16.png")) {
             public void actionPerformed(ActionEvent e) {
                 PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
                 if(editor.editPlate(selfReference)) {
@@ -183,7 +183,7 @@ public class PlateViewer extends JPanel {
         };
         toolbar.addAction(bulkEditAction);
 
-        final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk-add traces", "Import trace files, and attach them to wells", StandardIcons.nucleotide.getIcons()) {
+        final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk Add Traces", "Import trace files, and attach them to wells", StandardIcons.nucleotide.getIcons()) {
             public void actionPerformed(ActionEvent e) {
                 ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
             }
@@ -192,9 +192,13 @@ public class PlateViewer extends JPanel {
             toolbar.addAction(bulkChromatAction);
         }
 
-        final GeneiousAction editAction = new GeneiousAction("Edit selected wells", "", StandardIcons.edit.getIcons()) {
+        final GeneiousAction editAction = new GeneiousAction("Edit All Wells", "", StandardIcons.edit.getIcons()) {
             public void actionPerformed(ActionEvent e) {
-                ReactionUtilities.editReactions(plateView.getSelectedReactions(), false, plateView, false, true);
+                List<Reaction> reactions = plateView.getSelectedReactions();
+                if (reactions.isEmpty()) {
+                    reactions = Arrays.asList(plateView.getPlate().getReactions());
+                }
+                ReactionUtilities.editReactions(reactions, plateView, true);
                 plateView.invalidate();
                 scroller.getViewport().validate();
                 plateView.repaint();
@@ -203,7 +207,7 @@ public class PlateViewer extends JPanel {
         toolbar.addAction(editAction);
         ListSelectionListener toolbarListener = new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
-                editAction.setEnabled(plateView.getSelectedReactions().size() > 0);
+                editAction.setName(plateView.getSelectedReactions().size() > 0 ? "Edit Selected Wells" : "Edit All Wells");
             }
         };
         plateView.addSelectionListener(toolbarListener);
@@ -212,7 +216,7 @@ public class PlateViewer extends JPanel {
         //toolbar.addSeparator();
         toolbar.addAction(new GeneiousAction.Divider());
         if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
-            final GeneiousAction exportPlateAction = new GeneiousAction("Generate ABI sequencer file") {
+            final GeneiousAction exportPlateAction = new GeneiousAction("Export Sequencer File") {
                 public void actionPerformed(ActionEvent e) {
                     ReactionUtilities.saveAbiFileFromPlate(plateView.getPlate(), plateView);
                 }

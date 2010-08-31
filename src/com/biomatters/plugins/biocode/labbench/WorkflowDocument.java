@@ -297,7 +297,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             editButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
-                    ReactionUtilities.editReactions(Arrays.asList(reaction), false, panel, true, false);
+                    ReactionUtilities.editReactions(Arrays.asList(reaction), panel, false);
                     SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
                     if(reaction.hasError()) {
                         try {

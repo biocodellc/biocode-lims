@@ -37,14 +37,12 @@ public class PlateDocumentViewerFactory extends MultiPartDocumentViewerFactory{
                 "<p><b>Thermocycle</b><br>" +
                 "<i>Not available on extraction plates</i><br><br>" +
                 "You can change the thermocycle for the plate by selecting one from the drop down menu.  Click <i>View/Add Thermocycles</i> to create a new one.</p><br>" +
-                "<p><b>Attach GEL Image</b><br>" +
+                "<p><b>GEL Images</b><br>" +
                 "<i>Not available on extraction plates</i><br><br>" +
                 "Click this button to view and add/remove GEL images.</p><br>" +
-                "<p><b>Edit Selected wells</b><br><br>" +
+                "<p><b>Edit wells</b><br><br>" +
                 "You can select wells on your plate by clicking, dragging, shift clicking or "+(SystemUtilities.isMac() ? "command" : "ctrl")+" clicking on the plate in the viewer.  Clicking <i>Edit selected wells</i> will then edit all selected wells at once.  There is a column of checkboxes on the left hand side of the edit window.  Only fields which are checked will be changed by the editor.  <br>The editor also allows you to edit the fields that are displayed in each well, as well as the plate color scheme.</p>" +
-                "<p><b>Delete Plate</b><br><br>" +
-                "Removes the plate from the database.</p><br>" +
-                "<p><b>Bulk Edit wells</b><br><br>" +
+                "<p><b>Bulk Edit Wells</b><br><br>" +
                 "This editor displays key fields of the plate in a column form, making it easy to paste in data from spreadsheet programs.";
     }
 }
