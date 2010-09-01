@@ -199,23 +199,14 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return Collections.emptyMap();
     }
 
-    public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
-        DocumentField plateField = new DocumentField("Plate", "", "http://biocode.berkeley.edu/schema/plate", String.class, false, false);
-        DocumentField wellField = new DocumentField("Well", "", "http://biocode.berkeley.edu/schema/well", String.class, false, false);
+    @Override
+    public DocumentField getPlateDocumentField() {
+        return new DocumentField("Plate", "", "http://biocode.berkeley.edu/schema/plate", String.class, false, false);
+    }
 
-        Query query = Query.Factory.createFieldQuery(plateField, Condition.EQUAL, plateId);
-        List<FimsSample> samples = getMatchingSamples(query);
-
-        Map<String, String> results = new HashMap<String, String>();
-
-        for(FimsSample sample : samples) {
-            Object wellValue = sample.getFimsAttributeValue(wellField.getCode());
-            if(wellValue != null && wellField.toString().length() > 0) {
-                results.put(wellValue.toString(), sample.getId());
-            }
-        }
-
-        return results;
+    @Override
+    public DocumentField getWellDocumentField() {
+        return new DocumentField("Well", "", "http://biocode.berkeley.edu/schema/well", String.class, false, false);
     }
 
     public boolean canGetTissueIdsFromFimsTissuePlate() {

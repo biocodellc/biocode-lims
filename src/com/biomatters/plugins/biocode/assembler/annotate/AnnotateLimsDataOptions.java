@@ -213,20 +213,7 @@ public class AnnotateLimsDataOptions extends Options {
         }
     }
 
-    public static final class FimsData {
 
-        FimsSample fimsSample;
-        String sequencingPlateName;
-        BiocodeUtilities.Well well;
-        WorkflowDocument workflow;
-
-        public FimsData(WorkflowDocument workflowDocument, String sequencingPlateName, BiocodeUtilities.Well well) {
-            this.fimsSample = workflowDocument != null ? workflowDocument.getMostRecentReaction(Reaction.Type.Extraction).getFimsSample() : null;
-            this.workflow = workflowDocument;
-            this.sequencingPlateName = sequencingPlateName;
-            this.well = well;
-        }
-    }
 
     @Override
     public String verifyOptionsAreValid() {

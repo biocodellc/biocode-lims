@@ -331,26 +331,14 @@ public class ExcelFimsConnection extends FIMSConnection{
         return storePlates;
     }
 
-    public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
-        if(storePlates) {
-            DocumentField plateField = getTableCol(fields, plateCol);
-            DocumentField wellField = getTableCol(fields, wellCol);
+    @Override
+    public DocumentField getPlateDocumentField() {
+        return getTableCol(fields, plateCol);
+    }
 
-            Query query = Query.Factory.createFieldQuery(plateField, Condition.EQUAL, plateId);
-            List<FimsSample> samples = getMatchingSamples(query);
-
-            Map<String, String> results = new HashMap<String, String>();
-
-            for(FimsSample sample : samples) {
-                Object wellValue = sample.getFimsAttributeValue(wellField.getCode());
-                if(wellValue != null && wellField.toString().length() > 0) {
-                    results.put(wellValue.toString(), sample.getId());
-                }
-            }
-
-            return results;
-        }
-        return Collections.emptyMap();
+    @Override
+    public DocumentField getWellDocumentField() {
+        return getTableCol(fields, wellCol);
     }
 
     public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {

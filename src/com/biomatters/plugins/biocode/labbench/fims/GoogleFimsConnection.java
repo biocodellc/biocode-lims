@@ -120,6 +120,15 @@ public class GoogleFimsConnection extends FIMSConnection{
         return feed.getEntries();
     }
 
+    @Override
+    public DocumentField getPlateDocumentField() {
+        return null;
+    }
+
+    @Override
+    public DocumentField getWellDocumentField() {
+        return null; 
+    }
 
     /**
    * Fetches the results for a select query. Prints them to standard

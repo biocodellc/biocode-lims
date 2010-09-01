@@ -411,6 +411,20 @@ public class MooreaFimsConnection extends FIMSConnection{
         return true;
     }
 
+    @Override
+    public DocumentField getPlateDocumentField() {
+        return MOOREA_PLATE_NAME_FIELD;
+    }
+
+    @Override
+    public DocumentField getWellDocumentField() {
+        return MOOREA_WELL_NUMBER_FIELD;
+    }
+
+    /*
+    this method probably doesn't need to be overridden anymore, but I'm leaving the code here as it works and is probably more efficient than the method it overrides...
+     */
+    @Override
     public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
         if(plateId == null || plateId.length() == 0) {
             return Collections.emptyMap();

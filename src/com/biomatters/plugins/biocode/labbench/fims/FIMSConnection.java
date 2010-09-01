@@ -129,8 +129,32 @@ public abstract class FIMSConnection {
 
     public abstract Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException;
 
+    public abstract DocumentField getPlateDocumentField();
+
+    public abstract DocumentField getWellDocumentField();
+
     public abstract boolean canGetTissueIdsFromFimsTissuePlate();
 
-    public abstract Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException;
+    public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
+        if(canGetTissueIdsFromFimsTissuePlate()) {
+            DocumentField plateField = getPlateDocumentField();
+            DocumentField wellField = getWellDocumentField();
+
+            Query query = Query.Factory.createFieldQuery(plateField, Condition.EQUAL, plateId);
+            List<FimsSample> samples = getMatchingSamples(query);
+
+            Map<String, String> results = new HashMap<String, String>();
+
+            for(FimsSample sample : samples) {
+                Object wellValue = sample.getFimsAttributeValue(wellField.getCode());
+                if(wellValue != null && wellField.toString().length() > 0) {
+                    results.put(wellValue.toString(), sample.getId());
+                }
+            }
+
+            return results;
+        }
+        return Collections.emptyMap();
+    }
 
 }
