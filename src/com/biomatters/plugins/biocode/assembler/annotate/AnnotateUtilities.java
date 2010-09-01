@@ -1,19 +1,18 @@
 package com.biomatters.plugins.biocode.assembler.annotate;
 
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.DocumentNote;
-import com.biomatters.geneious.publicapi.documents.DocumentNoteType;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.ProgressListener;
 
 import java.util.*;
 
 public class AnnotateUtilities {
-    public static final List<String> FIELDS_TO_NOT_COPY;
+    public static List<String> FIELDS_TO_NOT_COPY;
 
     public AnnotateUtilities() {
         this.FIELDS_TO_NOT_COPY = Arrays.asList(DocumentField.AMBIGUITIES.getCode(),
