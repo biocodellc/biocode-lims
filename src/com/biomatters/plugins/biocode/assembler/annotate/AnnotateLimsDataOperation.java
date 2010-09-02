@@ -21,7 +21,7 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Annotate with FIMS/LIMS Data...",
                 "Annotate sequences/assemblies with data from the Lab and Field Information Management Systems. eg. Taxonomy, Collector, Primers used")
-                .setInPopupMenu(true, 0.2);
+                .setInPopupMenu(true, 0.22);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 

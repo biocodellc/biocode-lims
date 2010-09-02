@@ -51,7 +51,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions(isPass ? "Mark as Pass in LIMS..." : "Mark as Fail in LIMS...")
-                .setInPopupMenu(true, isPass ? 0.6 : 0.61).setProOnly(true);
+                .setInPopupMenu(true, isPass ? 0.65 : 0.66).setProOnly(true);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 

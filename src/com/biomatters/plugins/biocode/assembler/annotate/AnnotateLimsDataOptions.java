@@ -29,7 +29,7 @@ public class AnnotateLimsDataOptions extends Options {
     private final StringOption forwardPlateNameOption;
     private final StringOption reversePlateNameOption;
     private final ComboBoxOption<OptionValue> idType;
-    private final RadioOption useExistingPlates;
+    private final RadioOption<OptionValue> useExistingPlates;
     private final OptionValue[] useExistingValues;
 
     private static final OptionValue WELL_NUMBER = new OptionValue("wellNumber", "Well number");
@@ -217,7 +217,7 @@ public class AnnotateLimsDataOptions extends Options {
 
     @Override
     public String verifyOptionsAreValid() {
-        if (getForwardPlateName().trim().equals("")) {
+        if (useExistingPlates.getValue() == useExistingValues[0] && getForwardPlateName().trim().equals("")) {
             return "A forward plate name must be entered (reverse can be empty)";
         }
         return null;

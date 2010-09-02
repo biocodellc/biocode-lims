@@ -12,8 +12,6 @@ import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.submission.bold.ExportForBoldOperation;
-import com.biomatters.plugins.biocode.submission.genbank.barstool.ExportForBarstoolOperation;
 
 import javax.swing.*;
 import java.io.File;
@@ -39,8 +37,9 @@ public class BiocodePlugin extends GeneiousPlugin {
             superBiocodeAction = new GeneiousActionOptions("Biocode", null, getIcons("biocode24.png"))
                     .setInMainToolbar(true, 0.532)
                     .setMainMenuLocation(GeneiousActionOptions.MainMenu.Sequence);
+            superBiocodeAction.addSubmenuDivider(0.1);
+            superBiocodeAction.addSubmenuDivider(0.2);
             superBiocodeAction.addSubmenuDivider(0.5);
-            superBiocodeAction.addSubmenuDivider(0.65);
         }
         return superBiocodeAction;
     }
@@ -196,8 +195,7 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AnnotateFimsDataOperation(),
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
-                new ExportForBoldOperation(),
-                new ExportForBarstoolOperation(false)
+//                new ExportForBarstoolOperation(false)
         };
     }
 

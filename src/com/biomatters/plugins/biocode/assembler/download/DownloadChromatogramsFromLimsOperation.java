@@ -44,7 +44,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Download Traces from LIMS...",
                 "Download chromatograms/traces from LIMS and annotate them with the necessary data for assembly and submission.")
-                .setInPopupMenu(true, 0.05);
+                .setInPopupMenu(true, 0.11);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 

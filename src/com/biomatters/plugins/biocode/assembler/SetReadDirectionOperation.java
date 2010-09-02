@@ -20,7 +20,7 @@ public class SetReadDirectionOperation extends DocumentOperation {
 
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Set Read Direction...", "Mark sequences as forward or reverse reads so the correct reads are reverse complemented by assembly")
-                .setInPopupMenu(true, 0.1).setProOnly(true);
+                .setInPopupMenu(true, 0.21).setProOnly(true);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 

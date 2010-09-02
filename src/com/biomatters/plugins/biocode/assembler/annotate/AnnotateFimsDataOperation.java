@@ -23,9 +23,9 @@ import java.util.List;
  */
 public class AnnotateFimsDataOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {
-        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Annotate without FIMS data only...",
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Annotate with FIMS Data Only...",
                 "Annotate sequences/assemblies with data from the Field Information Management System, bypassing the LIMS")
-                .setInPopupMenu(true, 0.2);
+                .setInPopupMenu(true, 0.23);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 

@@ -190,7 +190,7 @@ public class GelEditor {
                 GelSplitter.splitGel(plate, image, panel);
             }
         }).setText("Split GEL");
-        toolbar.addAction(new GeneiousAction("Save to disk", "Save the selected GEL image to your computer", StandardIcons.save.getIcons()){
+        toolbar.addAction(new GeneiousAction("Export Image", "Save the selected GEL image to your computer", StandardIcons.save.getIcons()){
             public void actionPerformed(ActionEvent e) {
                 String extension = "";
                 int extensionIndex=image.getFilename().lastIndexOf('.');
