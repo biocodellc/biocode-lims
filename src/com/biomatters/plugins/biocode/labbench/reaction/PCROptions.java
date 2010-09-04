@@ -156,11 +156,11 @@ public class PCROptions extends ReactionOptions {
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
         addLabel("");
-        DocumentSelectionOption primerOption = addPrimerOption(PRIMER_OPTION_ID, "Forward Primer", Collections.<AnnotatedPluginDocument>emptyList(), false, Collections.<AnnotatedPluginDocument>emptyList());
+        DocumentSelectionOption primerOption = addPrimerOption(PRIMER_OPTION_ID, "Forward Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
 //        addCustomOption(primerOption);
         //IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
         //primerAmountOption.setUnits("uL");
-        DocumentSelectionOption revPrimerOption = addPrimerOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer", Collections.<AnnotatedPluginDocument>emptyList(), false, Collections.<AnnotatedPluginDocument>emptyList());
+        DocumentSelectionOption revPrimerOption = addPrimerOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
 //        addCustomOption(revPrimerOption);
         //IntegerOption revPrimerAmountOption = addIntegerOption("revPrAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
         //revPrimerAmountOption.setUnits("uL");

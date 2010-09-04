@@ -69,7 +69,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         String primerName = r.getString("cyclesequencing.primerName");
         String primerSequence = r.getString("cyclesequencing.primerSequence");
         if(primerSequence.length() > 0) {
-            primerOption.setValue(Arrays.asList(BiocodeUtilities.createPrimerDocument(primerName, primerSequence)));
+            primerOption.setValue(new DocumentSelectionOption.FolderOrDocuments(BiocodeUtilities.createPrimerDocument(primerName, primerSequence)));
         }
         options.setValue("direction", r.getString("direction"));
         //options.setValue("prAmount", r.getInt("cyclesequencing.primerAmount"));

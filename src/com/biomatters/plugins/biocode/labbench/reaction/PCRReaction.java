@@ -62,7 +62,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         String primerName = r.getString("pcr.prName");
         String primerSequence = r.getString("pcr.prSequence");
         if(primerSequence.length() > 0) {
-            primerOption.setValue(Arrays.asList(BiocodeUtilities.createPrimerDocument(primerName, primerSequence)));
+            primerOption.setValue(new DocumentSelectionOption.FolderOrDocuments(BiocodeUtilities.createPrimerDocument(primerName, primerSequence)));
         }
         //options.setValue("prAmount", r.getInt("pcr.prAmount"));
 
@@ -70,7 +70,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         String reversePrimerName = r.getString("pcr.revPrName");
         String reversePrimerSequence = r.getString("pcr.revPrSequence");
         if(reversePrimerSequence.length() > 0) {
-            reversePrimerOption.setValue(Arrays.asList(BiocodeUtilities.createPrimerDocument(reversePrimerName, reversePrimerSequence)));
+            reversePrimerOption.setValue(new DocumentSelectionOption.FolderOrDocuments(BiocodeUtilities.createPrimerDocument(reversePrimerName, reversePrimerSequence)));
         }
         //options.setValue("revPrAmount", r.getInt("pcr.revPrAmount"));
 
