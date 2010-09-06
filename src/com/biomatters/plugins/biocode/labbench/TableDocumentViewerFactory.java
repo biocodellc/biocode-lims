@@ -6,7 +6,7 @@ import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
-import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.utilities.ObjectAndColor;
 
 import javax.swing.*;
 import javax.swing.text.View;
@@ -66,10 +66,10 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);                
                 table.setGridColor(Color.lightGray);
                 sorter.setTableHeader(table.getTableHeader());
-                table.setDefaultRenderer(GuiUtilities.ObjectAndColor.class, new DefaultTableCellRenderer(){
+                table.setDefaultRenderer(ObjectAndColor.class, new DefaultTableCellRenderer(){
                     @Override
                     public Component getTableCellRendererComponent(JTable table, Object avalue, boolean isSelected, boolean hasFocus, int row, int column) {
-                        GuiUtilities.ObjectAndColor value = (GuiUtilities.ObjectAndColor)avalue;
+                        ObjectAndColor value = (ObjectAndColor)avalue;
                         Component comp = super.getTableCellRendererComponent(table, value == null ? null : value.getObject(), isSelected, hasFocus, row, column);
 
                         Color color = Color.black;

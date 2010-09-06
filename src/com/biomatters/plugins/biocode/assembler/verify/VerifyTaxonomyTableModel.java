@@ -11,8 +11,8 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.labbench.TableSorter;
+import com.biomatters.utilities.ObjectAndColor;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -402,19 +402,19 @@ public class VerifyTaxonomyTableModel implements TableModel {
                     return 120;
                 }
             },
-            new VerifyColumn("Hit Length", GuiUtilities.ObjectAndColor.class, true) {
+            new VerifyColumn("Hit Length", ObjectAndColor.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
                     int hitLength = row.hitDocuments.size() > 0 ? (Integer)row.hitDocuments.get(0).getFieldValue(DocumentField.SEQUENCE_LENGTH) : 0;
                     Percentage percentage = new Percentage(100 * hitLength / (Integer) row.queryDocument.getFieldValue(DocumentField.SEQUENCE_LENGTH));
-                    return new GuiUtilities.ObjectAndColor(percentage, getColorForHitLength(percentage.doubleValue(), false), getColorForHitLength(percentage.doubleValue(), true));
+                    return new ObjectAndColor(percentage, getColorForHitLength(percentage.doubleValue(), false), getColorForHitLength(percentage.doubleValue(), true));
                 }
             },
-            new VerifyColumn("Hit Identity", GuiUtilities.ObjectAndColor.class, true) {
+            new VerifyColumn("Hit Identity", ObjectAndColor.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
                     Percentage percentage = row.hitDocuments.size() > 0 ? (Percentage)row.hitDocuments.get(0).getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL) : new Percentage(0);
-                    return new GuiUtilities.ObjectAndColor(percentage, getColorForIdentity(percentage.doubleValue(), false), getColorForIdentity(percentage.doubleValue(), true));
+                    return new ObjectAndColor(percentage, getColorForIdentity(percentage.doubleValue(), false), getColorForIdentity(percentage.doubleValue(), true));
                 }
             },
             new VerifyColumn("Assembly Bin", String.class, true) {

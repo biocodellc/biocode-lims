@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.utilities.ObjectAndColor;
 import jxl.write.*;
 import jxl.write.Label;
 import jxl.format.Colour;
@@ -8,7 +9,6 @@ import javax.swing.table.TableModel;
 
 import jebl.util.ProgressListener;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 
 import java.io.IOException;
 import java.awt.*;
@@ -32,8 +32,8 @@ public class ExcelUtilities {
             for (int j = 0; j < table.getRowCount(); j++) {
                 Object tableValue = table.getValueAt(j, i);
                 Label label;
-                if (tableValue instanceof GuiUtilities.ObjectAndColor) {
-                    GuiUtilities.ObjectAndColor objectAndColor = (GuiUtilities.ObjectAndColor) tableValue;
+                if (tableValue instanceof ObjectAndColor) {
+                    ObjectAndColor objectAndColor = (ObjectAndColor) tableValue;
                     WritableFont font = new WritableFont(defaultFont);
                     Color color = objectAndColor.getColor();
                     if (color.equals(Color.WHITE)) {
