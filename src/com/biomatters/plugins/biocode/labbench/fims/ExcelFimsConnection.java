@@ -269,7 +269,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         //do the actual search...
         Sheet sheet = workbook.getSheet(0);
         List<FimsSample> result = new ArrayList<FimsSample>();
-        for(int i=0; i < sheet.getRows(); i++) {
+        for(int i=1; i < sheet.getRows(); i++) {
             for(AdvancedSearchQueryTerm term : queries) {
                 DocumentField field = term.getField();
                 Condition condition = term.getCondition();
