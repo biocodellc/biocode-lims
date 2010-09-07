@@ -45,11 +45,10 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
     }
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
-        if (true) return null;
         TissueDocument tissueDoc = (TissueDocument)annotatedDocuments[0].getDocumentOrCrash();
-//        if(!MooreaFimsSample.class.isAssignableFrom(tissueDoc.getFimsSampleClass())) {
-//            return null;
-//        }
+        if(!MooreaFimsSample.class.isAssignableFrom(tissueDoc.getFimsSampleClass())) {
+            return null;
+        }
         return new DocumentViewer(){
             JPanel panel;
             public JComponent getComponent() {
