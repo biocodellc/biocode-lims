@@ -47,6 +47,10 @@ public class TissueDocument implements PluginDocument {
         return getId();
     }
 
+    public Class getFimsSampleClass() {
+        return fimsResults.getClass();
+    }
+
     public URN getURN() {
         return null;//new URN(BiocodeService.UNIQUE_ID, fimsResults.getFimsConnectionId(), getId());
     }
