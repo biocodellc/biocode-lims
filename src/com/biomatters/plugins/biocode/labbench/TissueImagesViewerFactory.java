@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.util.List;
 
+import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsSample;
 import org.jdom.input.SAXBuilder;
 import org.jdom.JDOMException;
 import org.jdom.Element;
@@ -44,6 +45,10 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
     }
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
+        TissueDocument tissueDoc = (TissueDocument)annotatedDocuments[0].getDocumentOrCrash();
+        if(!MooreaFimsSample.class.isAssignableFrom(tissueDoc.getFimsSampleClass())) {
+            return null;
+        }
         return new DocumentViewer(){
             JPanel panel;
             public JComponent getComponent() {
