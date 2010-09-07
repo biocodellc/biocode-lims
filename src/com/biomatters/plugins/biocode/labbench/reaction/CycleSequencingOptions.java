@@ -15,7 +15,6 @@ import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 import com.biomatters.plugins.biocode.labbench.TransactionException;
 import jebl.util.ProgressListener;
@@ -295,7 +294,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
         addLabel("");
-        DocumentSelectionOption primerOption = addPrimerOption(PRIMER_OPTION_ID, "Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());//new PrimerOption(PRIMER_OPTION_ID, "Primer");
+        DocumentSelectionOption primerOption = addPrimerSelectionOption(PRIMER_OPTION_ID, "Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());//new PrimerOption(PRIMER_OPTION_ID, "Primer");
         //addCustomOption(primerOption);
 
         OptionValue[] directionValues = new OptionValue[] {new OptionValue(FORWARD_VALUE, "Forward"), new OptionValue("reverse", "Reverse")};
