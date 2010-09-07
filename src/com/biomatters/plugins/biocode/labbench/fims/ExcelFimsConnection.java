@@ -270,14 +270,15 @@ public class ExcelFimsConnection extends FIMSConnection{
         Sheet sheet = workbook.getSheet(0);
         List<FimsSample> result = new ArrayList<FimsSample>();
         for(int i=1; i < sheet.getRows(); i++) {
-            for(AdvancedSearchQueryTerm term : queries) {
+            for (int i1 = 0, queriesSize = queries.size(); i1 < queriesSize; i1++) {
+                AdvancedSearchQueryTerm term = queries.get(i1);
                 DocumentField field = term.getField();
                 Condition condition = term.getCondition();
                 String termValue = term.getValues()[0].toString();
                 int col = Integer.parseInt(field.getCode());
                 String value = XmlUtilities.encodeXMLChars(sheet.getCell(col, i).getContents());
                 boolean colMatch;
-                switch(condition) {
+                switch (condition) {
                     case EQUAL:
                         colMatch = termValue.equalsIgnoreCase(value);
                         break;
@@ -302,13 +303,13 @@ public class ExcelFimsConnection extends FIMSConnection{
                     case ENDS_WITH:
                         colMatch = value.toLowerCase().endsWith(termValue.toLowerCase());
                         break;
-                    default :
+                    default:
                         colMatch = false;
                 }
-                if(colMatch && operator == CompoundSearchQuery.Operator.OR) {
+                if (colMatch && (operator == CompoundSearchQuery.Operator.OR || i == queriesSize-1)) {
                     result.add(new ExcelFimsSample(sheet, i, this));
-                }
-                else if(!colMatch && operator == CompoundSearchQuery.Operator.AND) {
+                    break;
+                } else if (!colMatch && operator == CompoundSearchQuery.Operator.AND) {
                     break;
                 }
 
