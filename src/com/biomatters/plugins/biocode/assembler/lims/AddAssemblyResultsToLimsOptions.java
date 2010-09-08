@@ -14,6 +14,7 @@ import javax.swing.*;
  */
 public class AddAssemblyResultsToLimsOptions extends Options {
     private BooleanOption addChromatogramsOption;
+    private StringOption technicianOption;
 
     public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
 //        boolean isAlignmentSelected = SequenceAlignmentDocument.class.isAssignableFrom(documents[0].getDocumentClass());
@@ -22,7 +23,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         addLabel("If you downloaded your chromatograms from the LIMS, you do not need to add them again.");  
         addChromatogramsOption.setDescription("<html>If assemblies are selected and they reference original chromatograms then the<br>" +
                                                     "chromatograms will be attached to the appropriate cycle sequencing entry in the LIMS</html>");
-
+        technicianOption = addStringOption("technician", "Your name", "");
         boolean contigSelected = false;
         for (AnnotatedPluginDocument doc : documents) {
             if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass()) && !BiocodeUtilities.isAlignmentOfContigs(doc)) {

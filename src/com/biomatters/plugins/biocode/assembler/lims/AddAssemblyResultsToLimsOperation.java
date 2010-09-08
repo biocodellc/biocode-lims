@@ -3,15 +3,12 @@ package com.biomatters.plugins.biocode.assembler.lims;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceAnnotation;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.documents.sequence.*;
 import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtilities;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
@@ -26,9 +23,15 @@ import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -139,17 +142,28 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
             Double coverage = (Double) annotatedDocument.getFieldValue(DocumentField.CONTIG_MEAN_COVERAGE);
             Integer disagreements = (Integer) annotatedDocument.getFieldValue(DocumentField.DISAGREEMENTS);
+            Integer ambiguities = (Integer) annotatedDocument.getFieldValue(DocumentField.AMBIGUITIES);
+            String bin = (String) annotatedDocument.getFieldValue(DocumentField.BIN);
 
             int edits = getEdits(annotatedDocument);
             String[] trims = getTrimParameters(annotatedDocument);
 
             String consensus = docsToMark.get(annotatedDocument);
+            SequenceDocument consensusDocument = null;
             if (consensus == null && SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
-                consensus = ((SequenceDocument) BiocodeUtilities.getConsensusSequence(annotatedDocument, options.getConsensusOptions()).getDocument()).getSequenceString();
+                consensusDocument = (SequenceDocument) BiocodeUtilities.getConsensusSequence(annotatedDocument, options.getConsensusOptions()).getDocument();
+                consensus = consensusDocument.getSequenceString();
             }
             if (isPass && consensus == null) {
                 issueTracker.setIssue(annotatedDocument, "Not a consensus sequence, cannot pass");
                 continue;
+            }
+            int[] qualities = null;
+            if(NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
+                qualities = getQualities((SequenceDocument)annotatedDocument.getDocument());
+            }
+            else if(consensusDocument != null) {
+                qualities = getQualities(consensusDocument);
             }
 
             if (workflowsWithResults.containsKey(assemblyResult.workflowId)) {
@@ -164,8 +178,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     continue;
                 }
             }
-
-            assemblyResult.setContigProperties(consensus, coverage, disagreements, trims, edits);
+            assemblyResult.setContigProperties(annotatedDocument, consensus, qualities, coverage, disagreements, trims, edits, ambiguities == null ? 0 : ambiguities, bin);
             workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
             results.add(assemblyResult);
         }
@@ -283,17 +296,25 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         public Double coverage;
         public Integer disagreements;
         public String[] trims;
+        public int[] qualities;
         public int edits;
+        public int ambiguities;
+        public String bin;
+        public AnnotatedPluginDocument assembly;
 
         private Map<Integer, List<AnnotatedPluginDocument>> chromatograms = new HashMap<Integer, List<AnnotatedPluginDocument>>();
         private Map<Integer, CycleSequencingReaction> reactionsById = new HashMap<Integer, CycleSequencingReaction>();
 
-        public void setContigProperties(String consensus, Double coverage, Integer disagreements, String[] trims, int edits) {
+        public void setContigProperties(AnnotatedPluginDocument assembly, String consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, int edits, int ambiguities, String bin) {
             this.consensus = consensus;
             this.coverage = coverage;
             this.disagreements = disagreements;
             this.trims = trims;
             this.edits = edits;
+            this.ambiguities = ambiguities;
+            this.bin = bin;
+            this.qualities = qualities;
+            this.assembly = assembly;
         }
 
         public void addReaction(CycleSequencingReaction cycleSequencingReaction, List<AnnotatedPluginDocument> chromatograms) {
@@ -373,9 +394,24 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     statement.setString(8, result.trims[1]);
                 }
                 statement.setInt(9, result.edits);
-                statement.setNull(10, Types.LONGVARCHAR); //params
+                String params = getAssemblyOptionsValues(result.assembly);
+                if(params != null) {
+                    statement.setString(10, params); //params
+                }
+                else {
+                    statement.setNull(10, Types.LONGVARCHAR); //params
+                }
                 statement.setNull(11, Types.INTEGER); //reference_seq_id
-                statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
+                if(result.qualities != null) {
+                    List<Integer> qualitiesList = new ArrayList<Integer>();
+                    for(int i : result.qualities) {
+                        qualitiesList.add(i);
+                    }
+                    statement.setString(12, StringUtilities.join(",", qualitiesList));
+                }
+                else {
+                    statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
+                }
                 statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
                 statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
                 statement.setNull(15, Types.LONGVARCHAR); //notes
@@ -427,6 +463,90 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 e.printStackTrace();
                 throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
             }
+        }
+        return null;
+    }
+
+    private Options getAssemblyOptions(AnnotatedPluginDocument document) throws DocumentOperationException {
+        String optionsValues = getAssemblyOptionsValues(document);
+        if(optionsValues != null) {
+            return getOptions(optionsValues, "com.biomatters.plugins.alignment.AssemblyOperation", document);
+        }
+        return null;
+    }
+
+    private String getAssemblyOptionsValues(AnnotatedPluginDocument document) throws DocumentOperationException{
+        if(document == null) {
+            return null;
+        }
+        DocumentHistory history;
+        try {
+            history = document.getDocumentHistory();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new DocumentOperationException("Could not read the history for "+document.getName()+": "+e.getMessage());
+        }
+        List<DocumentHistoryEntry> historyEntries = history.getHistoryEntries();
+        for (int i = historyEntries.size()-1; i >= 0; i--) {//get the most recent assembly (the one closest to the end of the list)
+            DocumentHistoryEntry entry = historyEntries.get(i);
+            List<DocumentHistoryEntryField> entryFields = entry.getFields();
+            DocumentHistoryEntryField optionsField = null;
+            DocumentHistoryEntryField uniqueIdField = null;
+            for(DocumentHistoryEntryField field : entryFields) {
+                if(field.getFieldCode().equals("com.biomatters.operationUniqueId")) {
+                    uniqueIdField = field;
+                }
+                else if(field.getFieldCode().equals("com.biomatters.optionsValues")) {
+                    optionsField = field;
+                }
+            }
+            if(uniqueIdField != null && optionsField != null && uniqueIdField.getFieldValue().equals("com.biomatters.plugins.alignment.AssemblyOperation")) {
+                return optionsField.getFieldValue();
+            }
+        }
+        return null;
+    }
+
+    /*
+    copied from DOcumentHistoryEntryPanel (and edited slightly to change the way exceptions are handled)
+     */
+    private static Options getOptions(String optionsFieldValue, String operationUniqueIdFieldValue, AnnotatedPluginDocument document) throws DocumentOperationException{
+        Element optionsElement;
+        SAXBuilder saxBuilder = new SAXBuilder();
+        Reader stringReader = new StringReader(optionsFieldValue);
+        try {
+            final Document xmlDocument = saxBuilder.build(stringReader);
+            optionsElement = xmlDocument.getRootElement();
+        }
+        catch (JDOMException ex) {
+            throw new DocumentOperationException("Information about the options used to assemble your sequences has been corrupted", ex);
+        }
+        catch (IOException ex) {
+            throw new DocumentOperationException("Could not read the history of your documents: "+ex.getMessage(), ex);
+        }
+
+        DocumentOperation operation = PluginUtilities.getDocumentOperation(operationUniqueIdFieldValue);
+        Options options = null;
+        if(operation != null) {
+            options = operation.getOptions(document);
+
+            options.valuesFromXML(optionsElement);
+        }
+        return options;
+    }
+
+
+    private int[] getQualities(SequenceDocument sequenceDocument) {
+        if(!(sequenceDocument instanceof NucleotideGraphSequenceDocument)) {
+            return null;
+        }
+        NucleotideGraphSequenceDocument graphSequence = (NucleotideGraphSequenceDocument)sequenceDocument;
+        if(graphSequence.hasSequenceQualities()) {
+            int[] result = new int[graphSequence.getSequenceLength()];
+            for(int i=0; i < graphSequence.getSequenceLength(); i++) {
+                result[i] = graphSequence.getSequenceQuality(i);
+            }
+            return result;
         }
         return null;
     }

@@ -98,6 +98,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
         }
 
+        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        if(fimsConnection != null) {
+            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString("sampleId")));
+        }
+
 //        String sequenceString = r.getString("cyclesequencing.sequences");
 //        if(sequenceString != null && sequenceString.length() > 0) {
 //            SAXBuilder builder = new SAXBuilder();

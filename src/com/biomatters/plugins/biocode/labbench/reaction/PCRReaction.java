@@ -103,6 +103,10 @@ public class PCRReaction extends Reaction<PCRReaction> {
                 }
             }
         }
+        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        if(fimsConnection != null) {
+            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString("sampleId")));
+        }
     }
 
     public ReactionOptions _getOptions() {

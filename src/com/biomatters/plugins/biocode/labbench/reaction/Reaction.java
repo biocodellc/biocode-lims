@@ -20,12 +20,10 @@ import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.text.ParseException;
 import java.util.*;
+import java.util.Date;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -105,6 +103,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public void setFimsSample(FimsSample sample) {
         this.fimsSample = sample;
         fieldWidthCache = null;
+        if(workflow != null) {
+            workflow.setFimsSample(fimsSample);
+        }
     }
 
     public abstract Type getType();
@@ -612,6 +613,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public void setWorkflow(Workflow workflow) {
         this.workflow = workflow;
         getOptions().setValue("workflowId", workflow != null ? workflow.getName() : "");
+        if(getFimsSample() != null) {
+            workflow.setFimsSample(getFimsSample());
+        }
         //getOptions().setValue("locus", workflow != null ? workflow.getLocus() : ""); //lets not clear this - we want to be able to create new workflows for this locus...
     }
 
