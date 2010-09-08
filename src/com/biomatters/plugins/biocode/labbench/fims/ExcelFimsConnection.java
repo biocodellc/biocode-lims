@@ -334,11 +334,17 @@ public class ExcelFimsConnection extends FIMSConnection{
 
     @Override
     public DocumentField getPlateDocumentField() {
+        if(!storePlates) {
+            return null;
+        }
         return getTableCol(fields, plateCol);
     }
 
     @Override
     public DocumentField getWellDocumentField() {
+        if(!storePlates) {
+            return null;
+        }
         return getTableCol(fields, wellCol);
     }
 

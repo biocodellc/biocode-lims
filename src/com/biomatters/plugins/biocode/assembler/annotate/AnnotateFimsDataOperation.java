@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.assembler.annotate;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -59,7 +60,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
         final List<FimsSample> fimsSamples;
         try {
-            fimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(getPlateQuery(getPlateIds(annotatedDocuments, options)));
+            fimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(getQuery(annotatedDocuments, options));
         } catch (ConnectionException e) {
             e.printStackTrace();
             throw new DocumentOperationException("There was an error communicating with the FIMS database: "+e.getMessage(), e);
@@ -68,11 +69,19 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         FimsDataGetter fimsDataGetter = new FimsDataGetter() {
             public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                 try {
-                    BiocodeUtilities.Well well = getWell(document, options);
-                    String plateId = getPlateId(document, options);
-                    FimsSample sample = getFimsSample(fimsSamples, plateId, well);
-                    if(sample != null) {
-                        return new FimsData(sample, plateId, well);
+                    if(options.matchField()) {
+                        FimsSample sample = getFimsSample(fimsSamples, options.getFieldToMatch(), document, options);
+                        if(sample != null) {
+                            return new FimsData(sample, null, null);
+                        }
+                    }
+                    else {
+                        BiocodeUtilities.Well well = getWell(document, options);
+                        String plateId = getPlateId(document, options);
+                        FimsSample sample = getFimsSample(fimsSamples, plateId, well);
+                        if(sample != null) {
+                            return new FimsData(sample, plateId, well);
+                        }
                     }
                     return null;
                 } catch (Exception e) {
@@ -82,6 +91,13 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         };
         AnnotateUtilities.annotateFimsData(annotatedDocuments, progressListener, fimsDataGetter);
         return null;
+    }
+
+    private Query getQuery(AnnotatedPluginDocument[] annotatedDocuments, AnnotateFimsDataOptions options) throws DocumentOperationException{
+        if(options.matchField()) {
+            return getFieldQuery(options.getFieldToMatch(), getFieldValues(annotatedDocuments, DocumentField.NAME_FIELD, options.getNamePart(), options.getNameSeaparator()));
+        }
+        return getPlateQuery(getPlateIds(annotatedDocuments, options));
     }
 
     private static FimsSample getFimsSample(List<FimsSample> fimsSamples, String plate, BiocodeUtilities.Well well) {
@@ -95,19 +111,41 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         return null;
     }
 
+    private static FimsSample getFimsSample(List<FimsSample> fimsSamples, DocumentField searchField, AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
+        String searchValue = getFieldValue(document, options);
+        for(FimsSample sample : fimsSamples) {
+            Object resultValue = sample.getFimsAttributeValue(searchField.getCode());
+            if(resultValue != null && searchValue.equalsIgnoreCase(resultValue.toString())) {
+                return sample;
+            }
+        }
+        return null;
+    }
+
+    private static Query getFieldQuery(DocumentField field, List<String> values) throws DocumentOperationException{
+        if(values.size() == 0) {
+            throw new DocumentOperationException("None of your documents contain field values for the name part that you specified");
+        }
+        if(values.size() == 1) {
+            return Query.Factory.createFieldQuery(field, Condition.EQUAL, values.get(0));
+        }
+        else {
+            Query[] queries = new Query[values.size()];
+            for (int i = 0, plateIdsSize = values.size(); i < plateIdsSize; i++) {
+                queries[i] = Query.Factory.createFieldQuery(field, Condition.EQUAL, values.get(i));
+            }
+            return Query.Factory.createOrQuery(queries, Collections.EMPTY_MAP);
+        }
+    }
+
     private static Query getPlateQuery(List<String> plateIds) {
         if(plateIds.size() == 0) {
             throw new IllegalArgumentException("You tried to search for no plates!");
         }
-        if(plateIds.size() == 1) {
-            return Query.Factory.createFieldQuery(BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField(), Condition.EQUAL, plateIds.get(0));
-        }
-        else {
-            Query[] queries = new Query[plateIds.size()];
-            for (int i = 0, plateIdsSize = plateIds.size(); i < plateIdsSize; i++) {
-                queries[i] = Query.Factory.createFieldQuery(BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField(), Condition.EQUAL, plateIds.get(i));
-            }
-            return Query.Factory.createOrQuery(queries, Collections.EMPTY_MAP);
+        try {
+            return getFieldQuery(BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField(), plateIds);
+        } catch (DocumentOperationException e) {
+            throw new IllegalArgumentException(e.getMessage());
         }
     }
 
@@ -122,6 +160,13 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         else {
             return options.getExistingPlateName();
         }
+    }
+
+    private static String getFieldValue(AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
+        if(options.matchField()) {
+            return BiocodeUtilities.getStringFromFileName(document.getName(), options.getNameSeaparator(), options.getNamePart());
+        }
+        return null;
     }
 
     private static BiocodeUtilities.Well getWell(AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
@@ -140,17 +185,28 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
     private static List<String> getPlateIds(AnnotatedPluginDocument[] documents, AnnotateFimsDataOptions options) {
         List<String> result = new ArrayList<String>();
         if(options.useExistingPlate()) {
-            for(AnnotatedPluginDocument document : documents) {
-                Object value = document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField());
-                if(value != null) {
-                    result.add(value.toString());
-                }
-            }
+            DocumentField plateField = BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField();
+            List<String> fieldValues = getFieldValues(documents, plateField, options.getNamePart(), options.getNameSeaparator());
+            result.addAll(fieldValues);
         }
         else {
             result.add(options.getExistingPlateName());
         }
         return result;
+    }
+
+    private static List<String> getFieldValues(AnnotatedPluginDocument[] documents, DocumentField field, int part, String separator) {
+        List<String> fieldValues = new ArrayList<String>();
+        for(AnnotatedPluginDocument document : documents) {
+            Object value = document.getFieldValue(field);
+            if(value != null) {
+                String finalValue = BiocodeUtilities.getStringFromFileName(value.toString(), separator, part);
+                if(finalValue != null) {
+                    fieldValues.add(finalValue);
+                }
+            }
+        }
+        return fieldValues;
     }
 
 
