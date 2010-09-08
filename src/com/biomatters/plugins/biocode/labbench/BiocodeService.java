@@ -207,6 +207,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 new CheckboxSearchOption("tissueDocuments", "Tissue-samples", true),
                 new CheckboxSearchOption("workflowDocuments", "Workflows", true),
                 new CheckboxSearchOption("plateDocuments", "Plates", true),
+                new CheckboxSearchOption("sequenceDocuments", "Sequences", false)
         };
     }
 
@@ -610,12 +611,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP);
 
-            if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
+            if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                 workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null);
             }
             if(callback.isCanceled()) {
                 return;
             }
+
+            Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
+            workflowsToSearch.addAll(workflowList);
 //            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
 //                for(PluginDocument doc : workflowList) {
 //                    callback.add(doc, Collections.<String, Object>emptyMap());
@@ -624,14 +628,24 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(callback.isCanceled()) {
                 return;
             }
-            if((Boolean)query.getExtendedOptionValue("plateDocuments")) {
-                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, callback);
+            if((Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
+                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null);
                 if(callback.isCanceled()) {
                     return;
+                }
+                for(PlateDocument plate : plateList) {
+                    for(Reaction r : plate.getPlate().getReactions()) {
+                        if(r.getWorkflow() != null) {
+                            workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.EMPTY_LIST));
+                        }
+                    }
                 }
 //                for(PluginDocument doc : plateList) {
 //                    callback.add(doc, Collections.<String, Object>emptyMap());
 //                }
+            }
+            if((Boolean)query.getExtendedOptionValue("sequenceDocuments") && !workflowsToSearch.isEmpty()) {
+                List<AnnotatedPluginDocument> assemblyDocuments = limsConnection.getMatchingAssemblyDocuments(workflowsToSearch, callback);
             }
 
         } catch (SQLException e) {

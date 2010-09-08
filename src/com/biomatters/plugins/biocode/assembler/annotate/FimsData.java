@@ -17,7 +17,7 @@ public class FimsData {
         WorkflowDocument workflow;
 
         public FimsData(WorkflowDocument workflowDocument, String sequencingPlateName, BiocodeUtilities.Well well) {
-            this.fimsSample = workflowDocument != null ? workflowDocument.getMostRecentReaction(Reaction.Type.Extraction).getFimsSample() : null;
+            this.fimsSample = workflowDocument != null ? workflowDocument.getFimsSample() : null;
             this.workflow = workflowDocument;
             this.sequencingPlateName = sequencingPlateName;
             this.well = well;

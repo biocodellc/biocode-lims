@@ -2,11 +2,22 @@ package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
+import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
+import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -253,6 +264,82 @@ public class LIMSConnection {
         );
     }
 
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
+        String sql = "SELECT * FROM assembly WHERE (";
+        List<String> terms = new ArrayList<String>();
+        for(WorkflowDocument workflow : workflows) {
+            terms.add("workflow="+workflow.getId());
+        }
+        sql = sql+StringUtilities.join(" OR ", terms)+")";
+
+        Statement statement = connection.createStatement();
+        statement.setFetchSize(1);
+        try {
+            final ResultSet resultSet = statement.executeQuery(sql);
+            List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
+            while(resultSet.next()) {
+                AnnotatedPluginDocument doc = createAssemblyDocument(resultSet);
+                FimsDataGetter getter = new FimsDataGetter(){
+                    public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                        try {
+                            for(WorkflowDocument workflow : workflows) {
+                                if(workflow.getId() == resultSet.getInt("workflow")) {
+                                    return new FimsData(workflow, null, null);
+                                }
+                            }
+                        }
+                        catch(SQLException ex) {
+                            throw new DocumentOperationException("Could not get workflow id from assembly table: "+ex.getMessage());
+                        }
+                        return null;
+                    }
+                };
+                AnnotateUtilities.annotateDocument(getter, new ArrayList<String>(), doc);
+                resultDocuments.add(doc);
+                if(callback != null) {
+                    callback.add(doc, Collections.EMPTY_MAP);
+                }
+            }
+            return resultDocuments;
+        }
+        catch (DocumentOperationException e) {
+            e.printStackTrace();
+            if(e.getCause() != null && e.getCause() instanceof SQLException) {
+                throw (SQLException)e.getCause();
+            }
+            throw new SQLException(e.getMessage());
+        } finally {
+            statement.close();
+        }
+    }
+
+    private AnnotatedPluginDocument createAssemblyDocument(ResultSet resultSet) throws SQLException{
+        String qualities = resultSet.getString("confidence_scores");
+        SequenceDocument sequence;
+        if(qualities == null) {
+            String name = resultSet.getString("extraction_id");
+            sequence = new DefaultNucleotideSequence(name, "Assembly consensus sequence for "+name, resultSet.getString("consensus"), new Date(resultSet.getDate("date").getTime()));
+        }
+        else {
+            String sequenceString = resultSet.getString("consensus");
+            NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
+            String name = resultSet.getString("extraction_id");
+            sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, new Date(resultSet.getDate("date").getTime()), graph);
+        }
+        AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
+        //todo: add data as fields and notes...
+        return doc;
+    }
+
+    private int[] qualitiesFromString(String qualString) {
+        String[] values = qualString.split(",");
+        int[] result = new int[values.length];
+        for(int i=0; i < values.length; i++) {
+            result[i] = Integer.parseInt(values[i]);
+        }
+        return result;
+    }
+
     public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
@@ -285,10 +372,10 @@ public class LIMSConnection {
         if(samples != null && samples.size() > 0) {
             somethingToSearch = true;
             sql.append("(");
-            Object[] samplesArray = samples.toArray();
+            FimsSample[] samplesArray = samples.toArray(new FimsSample[samples.size()]);
             for(int i=0; i < samplesArray.length; i++) {
                 sql.append(" extraction.sampleId=?");
-                sqlValues.add(((FimsSample)samplesArray[i]).getId());
+                sqlValues.add(samplesArray[i].getId());
                 if(i != samples.size()-1) {
                     sql.append(" OR");
                 }
@@ -618,7 +705,10 @@ public class LIMSConnection {
                         totalErrors.append(error+"\n");
                     }
                     System.out.println("Adding "+prevPlate.getName());
-                    callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
+                    if(callback != null) {
+                        callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
+                    }
+                    plateMap.put(previousId, prevPlate);
                 }
             }
             previousId = plateId;
@@ -657,9 +747,10 @@ public class LIMSConnection {
                 System.out.println("Adding "+prevPlate.getName());
                 if (callback != null) {
                     callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
-                } else {
-                    plateMap.put(previousId, prevPlate);
                 }
+
+                plateMap.put(previousId, prevPlate);
+                
             }
         }
         System.out.println("count="+count);

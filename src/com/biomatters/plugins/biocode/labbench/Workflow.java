@@ -18,6 +18,24 @@ public class Workflow implements XMLSerializable {
     private String extraction;
     private String locus;
     private Date lastModified;
+    private FimsSample fimsSample;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Workflow)) return false;
+
+        Workflow workflow = (Workflow) o;
+
+        if (id != workflow.id) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
+    }
 
     public Workflow(Element e) throws XMLSerializationException{
         fromXML(e);
@@ -65,6 +83,14 @@ public class Workflow implements XMLSerializable {
 
     public Element toXML() {
         return new Element("workflow").addContent(new Element("name").setText(getName())).addContent(new Element("id").setText(""+getId())).addContent(new Element("extraction").setText(extraction)).addContent(new Element("date").setText(""+lastModified.getTime())).addContent(new Element("locus").setText(locus));
+    }
+
+    public FimsSample getFimsSample() {
+        return fimsSample;
+    }
+
+    public void setFimsSample(FimsSample fimsSample) {
+        this.fimsSample = fimsSample;
     }
 
     public void fromXML(Element element) throws XMLSerializationException {

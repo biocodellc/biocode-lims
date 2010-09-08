@@ -39,6 +39,22 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
         };
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof WorkflowDocument)) return false;
+
+        WorkflowDocument that = (WorkflowDocument) o;
+
+        if (workflow != null ? !workflow.equals(that.workflow) : that.workflow != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return workflow != null ? workflow.hashCode() : 0;
+    }
 
     public WorkflowDocument() {
         this(null, Collections.<Reaction>emptyList());
@@ -57,7 +73,10 @@ public class WorkflowDocument extends MuitiPartDocument {
     public void sortReactions() {
         Comparator comp = new Comparator<Reaction>(){
             public int compare(Reaction o1, Reaction o2) {
-                return (int)(o2.getDate().getTime()-o1.getDate().getTime());
+                if(o1 instanceof ExtractionReaction && !(o2 instanceof ExtractionReaction)) {
+                    return -Integer.MAX_VALUE;
+                }
+                return (int)(o1.getDate().getTime()-o2.getDate().getTime());
             }
         };
         Collections.sort(reactions, comp);
@@ -142,8 +161,19 @@ public class WorkflowDocument extends MuitiPartDocument {
             reactions.add(XMLSerializer.classFromXML(e, Reaction.class));
         }
         for(Reaction r : reactions) {
+            if(r.getFimsSample() != null) {
+                workflow.setFimsSample(r.getFimsSample());
+            }
             parts.add(new ReactionPart(r));
         }
+    }
+
+    public FimsSample getFimsSample() {
+        return getWorkflow().getFimsSample();
+    }
+
+    public void setFimsSample(FimsSample sample) {
+        getWorkflow().setFimsSample(sample);
     }
 
     public int getNumberOfParts() {
@@ -250,6 +280,9 @@ public class WorkflowDocument extends MuitiPartDocument {
     public void addReaction(Reaction r) {
         reactions.add(r);
         parts.add(new ReactionPart(r));
+        if(r.getFimsSample() != null) {
+            workflow.setFimsSample(r.getFimsSample());
+        }
         Collections.sort(parts, reactionComparitor);
     }
 
