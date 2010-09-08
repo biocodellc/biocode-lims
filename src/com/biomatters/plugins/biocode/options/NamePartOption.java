@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.options;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 
+import javax.swing.*;
+
 /**
  * Combo box contain 1st, 2nd, 3rd etc
  *
@@ -21,6 +23,13 @@ public class NamePartOption extends Options.ComboBoxOption<Options.OptionValue> 
 
     public NamePartOption(String name, String label) {
         super(name, label, VALUES, VALUES[0]);
+    }
+
+    @Override
+    protected JComboBox createComponent() {
+        JComboBox box = super.createComponent();
+        box.setPrototypeDisplayValue("1stab");
+        return box;
     }
 
     /**

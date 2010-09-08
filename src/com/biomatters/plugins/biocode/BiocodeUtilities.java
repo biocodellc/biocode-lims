@@ -368,6 +368,14 @@ public class BiocodeUtilities {
         }
     }
 
+    public static String getStringFromFileName(String fileName, String separator, int partNumber) {
+        String[] parts = fileName.split(separator);
+        if(parts.length < partNumber) {
+            return null;
+        }
+        return parts[partNumber];
+    }
+
     /**
      * Take an ab1 filename and attempt to pull out the well name
      *
@@ -377,12 +385,10 @@ public class BiocodeUtilities {
      * @return well or null if couldn't parse out well name
      */
     public static Well getWellFromFileName(String fileName, String separator, int partNumber) {
-        String[] nameParts = fileName.split(separator);
-        if(partNumber >= nameParts.length) {
+        String wellStringBig = getStringFromFileName(fileName, separator, partNumber);
+        if(wellStringBig == null) {
             return null;
         }
-
-        String wellStringBig = nameParts[partNumber];
         int count = 1;
         int wellNumber = -1;
         String wellNumberString = "";
