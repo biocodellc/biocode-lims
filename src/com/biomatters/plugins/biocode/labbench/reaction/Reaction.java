@@ -285,17 +285,21 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(options == null) {
             return null;
         }
-        Object value = options.getValue(fieldCode);
-        if(value instanceof Options.OptionValue) {
-            return ((Options.OptionValue)value).getLabel();
+        Options.Option option = options.getOption(fieldCode);
+        if(option == null) {
+            return null;
         }
-        if(value instanceof List) { //can't evaulate generics! - assume List<AnnotatedPluginDocument>
-            List<AnnotatedPluginDocument> valueList = (List<AnnotatedPluginDocument>)value;
+        if(option instanceof DocumentSelectionOption) {
+            List<AnnotatedPluginDocument> valueList = ((DocumentSelectionOption)option).getDocuments();
             if(valueList.size() == 0) {
                 return "None";
             }
             AnnotatedPluginDocument firstValue = valueList.get(0);
             return firstValue.getName();
+        }
+        Object value = option.getValue();
+        if(value instanceof Options.OptionValue) {
+            return ((Options.OptionValue)value).getLabel();
         }
         if(value == null && fimsSample != null) { //check the FIMS data
             value = fimsSample.getFimsAttributeValue(fieldCode);
@@ -711,11 +715,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         }
 
                         ReactionOptions options = reaction.getOptions();
-                        Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
-                        if(!(value instanceof List)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        Options.Option option = options.getOption(PCROptions.PRIMER_OPTION_ID);
+                        if(!(option instanceof DocumentSelectionOption)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option.getClass().getCanonicalName());
                         }
-                        List<AnnotatedPluginDocument> primerOptionValue = (List<AnnotatedPluginDocument>) value;
+                        List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption)option).getDocuments();
                         if(primerOptionValue.size() == 0) {
                             statement.setString(1, "None");
                             statement.setString(2, "");
@@ -728,11 +732,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         }
                         //statement.setInt(3, (Integer)options.getValue("prAmount"));
 
-                        Object value2 = options.getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
-                        if(!(value2 instanceof List)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value2.getClass().getCanonicalName());
+                        Options.Option option2 = options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
+                        if(!(option2 instanceof DocumentSelectionOption)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option2.getClass().getCanonicalName());
                         }
-                        List<AnnotatedPluginDocument> primerOptionValue2 = (List<AnnotatedPluginDocument>) value2;
+                        List<AnnotatedPluginDocument> primerOptionValue2 = ((DocumentSelectionOption)option2).getDocuments();
                         if(primerOptionValue2.size() == 0) {
                             statement.setString(13, "None");
                             statement.setString(14, "");
@@ -822,11 +826,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         }
 
                         ReactionOptions options = reaction.getOptions();
-                        Object value = options.getValue(PCROptions.PRIMER_OPTION_ID);
-                        if(!(value instanceof List)) {
-                            throw new SQLException("Could not save reactions - expected primer type "+List.class.getCanonicalName()+" but found a "+value.getClass().getCanonicalName());
+                        Options.Option option = options.getOption(PCROptions.PRIMER_OPTION_ID);
+                        if(!(option instanceof DocumentSelectionOption)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option.getClass().getCanonicalName());
                         }
-                        List<AnnotatedPluginDocument> primerOptionValue = (List<AnnotatedPluginDocument>) value;
+                        List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption)option).getDocuments();
                         if(primerOptionValue.size() == 0) {
                             statement.setString(1, "None");
                             statement.setString(2, "");

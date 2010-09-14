@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
@@ -180,12 +181,14 @@ public class AnnotateUtilities {
         if (note != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
             AnnotatedPluginDocument forwardPrimer = null;
-            List<AnnotatedPluginDocument> value = (List<AnnotatedPluginDocument>) pcrReaction.getOptions().getValue(PCROptions.PRIMER_OPTION_ID);
+            DocumentSelectionOption option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(PCROptions.PRIMER_OPTION_ID);
+            List<AnnotatedPluginDocument> value = option.getDocuments();
             if (value.size() > 0) {
                 forwardPrimer = value.get(0);
             }
             AnnotatedPluginDocument reversePrimer = null;
-            value = (List<AnnotatedPluginDocument>) pcrReaction.getOptions().getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
+            option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
+            value = option.getDocuments();
             if (value.size() > 0) {
                 reversePrimer = value.get(0);
             }

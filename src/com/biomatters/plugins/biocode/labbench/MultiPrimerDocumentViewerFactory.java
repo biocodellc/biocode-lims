@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.labbench.reaction.Cocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
@@ -158,7 +159,8 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
             List<Reaction> reactions = workflow.getReactions(type);
             if(type == Reaction.Type.PCR) {
                 for(Reaction r : reactions) {
-                    List<AnnotatedPluginDocument> primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue("primer");
+                    DocumentSelectionOption option = (DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_OPTION_ID);
+                    List<AnnotatedPluginDocument> primerValue = option.getDocuments();
                     if(primerValue.size() == 0) {
                         primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.forward, "None"));
                     }
@@ -168,7 +170,8 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                     }
                 }
                 for(Reaction r : reactions) {
-                    List<AnnotatedPluginDocument> primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue("revPrimer");
+                    DocumentSelectionOption option = (DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
+                    List<AnnotatedPluginDocument> primerValue = option.getDocuments();
                     if(primerValue.size() == 0) {
                         primerNamesSet.add(new PrimerIdentifier(PrimerIdentifier.Type.reverse, "None"));
                     }
@@ -181,7 +184,8 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
             else {
                 for(Reaction r : reactions) {
                     boolean isForward = CycleSequencingOptions.FORWARD_VALUE.equals(r.getOptions().getValueAsString(CycleSequencingOptions.DIRECTION));
-                    List<AnnotatedPluginDocument> primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue(PCROptions.PRIMER_OPTION_ID);
+                    DocumentSelectionOption option = (DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_OPTION_ID);
+                    List<AnnotatedPluginDocument> primerValue = option.getDocuments();
                     if(primerValue.size() == 0) {
                         primerNamesSet.add(new PrimerIdentifier(isForward ? PrimerIdentifier.Type.forward : PrimerIdentifier.Type.reverse, "None"));
                     }
@@ -211,10 +215,12 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                     String primerName;
                     List<AnnotatedPluginDocument> primerValue;
                     if(r.getType() == Reaction.Type.PCR) {
-                        primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue(primer.getType() == PrimerIdentifier.Type.forward ? "primer" : "revPrimer");
+                        DocumentSelectionOption option = (DocumentSelectionOption)r.getOptions().getOption(primer.getType() == PrimerIdentifier.Type.forward ? PCROptions.PRIMER_OPTION_ID : PCROptions.PRIMER_REVERSE_OPTION_ID);
+                        primerValue = option.getDocuments();
                     }
                     else {
-                        primerValue = (List<AnnotatedPluginDocument>) r.getOptions().getValue("primer");
+                        DocumentSelectionOption option = (DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_OPTION_ID);
+                        primerValue = option.getDocuments();
                     }
                     if(primerValue.size() == 0) {
                         primerName = "None";
