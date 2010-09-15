@@ -6,10 +6,7 @@ import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.StandardIcons;
-import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -212,6 +209,16 @@ public class PlateViewer extends JPanel {
         };
         plateView.addSelectionListener(toolbarListener);
         toolbarListener.valueChanged(null);
+
+        GeneiousAction displayAction = new GeneiousAction("Display Options", null, IconUtilities.getIcons("monitor16.png")) {
+            public void actionPerformed(ActionEvent e) {
+                ReactionUtilities.showDisplayDialog(plateView.getPlate(), plateView);
+                plateView.invalidate();
+                scroller.getViewport().validate();
+                plateView.repaint();
+            }
+        };
+        toolbar.addAction(displayAction);
 
         //toolbar.addSeparator();
         toolbar.addAction(new GeneiousAction.Divider());
