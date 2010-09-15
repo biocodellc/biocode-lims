@@ -7,6 +7,7 @@ import com.biomatters.plugins.biocode.labbench.ZoomPanel;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import com.sun.image.codec.jpeg.JPEGCodec;
@@ -61,9 +62,23 @@ public class GelSplitter {
         final Options.IntegerOption startNumber = options.addIntegerOption("startNumber", "Start", 1, 1, plate.getCols());
         final AtomicInteger direction = new AtomicInteger(0);
         Options.ButtonOption toggleDirection = options.addButtonOption("toggleDirection", "", "Toggle Direction");
-        options.addBooleanOption("scorePlate", "Automatically Score plate", true);
-        JSlider slider = new JSlider(250, 1250, 750);
-        options.addCustomComponent(slider);
+        Options.BooleanOption scoreOption = options.addBooleanOption("scorePlate", "Automatically Score plate", false);
+        JPanel sliderPanel = new GPanel(new FlowLayout(FlowLayout.CENTER));
+        sliderPanel.add(new GLabel("Threshold: "));
+        final JSlider slider = new JSlider(250, 1250, 750);
+        slider.setPreferredSize(new Dimension(100, slider.getPreferredSize().height));
+        sliderPanel.add(slider);
+        final JLabel label = new GLabel("" + ((slider.getValue()-250)/10));
+        sliderPanel.add(label);
+        Options.Option sliderOption = options.addCustomComponent(sliderPanel);
+        slider.addChangeListener(new ChangeListener(){
+            public void stateChanged(ChangeEvent e) {
+                label.setText("" + ((slider.getValue()-250)/10));
+            }
+        });
+        scoreOption.addDependent(sliderOption, true);
+
+        options.restorePreferences();
 
         toggleDirection.setSpanningComponent(true);
 
@@ -109,6 +124,7 @@ public class GelSplitter {
         if(Dialogs.showDialog(dialogOptions, holder).equals(Dialogs.CANCEL)) {
             return;
         }
+        options.savePreferences();
         final AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>> imageMap = new AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>>();
         BiocodeService.block("Splitting your GEL", null, new Runnable() {
             public void run() {
@@ -164,7 +180,7 @@ public class GelSplitter {
             addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    mouseDownPoint = e.getPoint();
+                    mouseDownPoint = new Point(e.getPoint().x+PADDING, e.getPoint().y+PADDING);
                     mouseDown = true;
                 }
 
@@ -186,7 +202,7 @@ public class GelSplitter {
 
                 public void mouseChanged(MouseEvent e) {
                     if(mouseDown) {
-                        mouseUpPoint = e.getPoint();
+                        mouseUpPoint = new Point(e.getPoint().x+PADDING, e.getPoint().y+PADDING);
                         dragRectangle = getRectangle(mouseDownPoint, mouseUpPoint);
                         repaint();
                     }
