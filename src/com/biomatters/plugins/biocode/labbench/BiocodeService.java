@@ -542,6 +542,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         List<FimsSample> tissueSamples = null;
         List<Query> fimsQueries = new ArrayList<Query>();
         List<Query> limsQueries = new ArrayList<Query>();
+        callback.setIndeterminateProgress();
 
 
         if(query instanceof CompoundSearchQuery) {
@@ -563,6 +564,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
                 }
                 try {
+                    callback.setMessage("Downloading Tissues");
                     tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
                 } catch (ConnectionException e) {
                     throw new DatabaseServiceException(e.getMessage(), false);
@@ -571,6 +573,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         else if(query instanceof BasicSearchQuery){
             try {
+                callback.setMessage("Downloading Tissues");
                 tissueSamples = activeFIMSConnection.getMatchingSamples(query);
             } catch (ConnectionException e) {
                 throw new DatabaseServiceException(e.getMessage(), false);
@@ -581,6 +584,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
                 fimsQueries.add(query);
                 try {
+                    callback.setMessage("Downloading Tissues");
                     tissueSamples = activeFIMSConnection.getMatchingSamples(query);
                 } catch (ConnectionException e) {
                     throw new DatabaseServiceException(e.getMessage(), false);
@@ -612,6 +616,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP);
 
             if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
+                callback.setMessage("Downloading Workflows");
                 workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null);
             }
             if(callback.isCanceled()) {
@@ -629,6 +634,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 return;
             }
             if((Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
+                callback.setMessage("Downloading Plates");
                 List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null);
                 if(callback.isCanceled()) {
                     return;
@@ -645,6 +651,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 //                }
             }
             if((Boolean)query.getExtendedOptionValue("sequenceDocuments") && !workflowsToSearch.isEmpty()) {
+                callback.setMessage("Downloading Sequences");
                 List<AnnotatedPluginDocument> assemblyDocuments = limsConnection.getMatchingAssemblyDocuments(workflowsToSearch, callback);
             }
 

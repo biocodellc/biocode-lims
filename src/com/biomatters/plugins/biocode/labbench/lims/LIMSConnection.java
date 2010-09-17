@@ -279,6 +279,9 @@ public class LIMSConnection {
             List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
             while(resultSet.next()) {
                 AnnotatedPluginDocument doc = createAssemblyDocument(resultSet);
+                if(doc == null) {
+                    continue;
+                }
                 FimsDataGetter getter = new FimsDataGetter(){
                     public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                         try {
@@ -318,7 +321,12 @@ public class LIMSConnection {
         SequenceDocument sequence;
         if(qualities == null) {
             String name = resultSet.getString("extraction_id");
-            sequence = new DefaultNucleotideSequence(name, "Assembly consensus sequence for "+name, resultSet.getString("consensus"), new Date(resultSet.getDate("date").getTime()));
+            String consensus = resultSet.getString("consensus");
+            java.sql.Date created = resultSet.getDate("date");
+            if(consensus == null || created == null) {
+                return null;
+            }
+            sequence = new DefaultNucleotideSequence(name, "Assembly consensus sequence for "+name, consensus, new Date(created.getTime()));
         }
         else {
             String sequenceString = resultSet.getString("consensus");
@@ -328,6 +336,17 @@ public class LIMSConnection {
         }
         AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
         //todo: add data as fields and notes...
+        String notes = resultSet.getString("notes");
+        if(notes != null) {
+            doc.setFieldValue(AnnotateUtilities.NOTES_FIELD, notes);
+        }
+        doc.setFieldValue(AnnotateUtilities.PROGRESS_FIELD, resultSet.getString("progress"));
+        doc.setFieldValue(DocumentField.CONTIG_MEAN_COVERAGE, resultSet.getDouble("coverage"));
+        doc.setFieldValue(DocumentField.DISAGREEMENTS, resultSet.getInt("disagreements"));
+        doc.setFieldValue(AnnotateUtilities.EDITS_FIELD, resultSet.getInt("edits"));
+        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_FWD_FIELD, resultSet.getString("trim_params_fwd"));
+        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_REV_FIELD, resultSet.getString("trim_params_rev"));
+        //todo: fields that require a schema change
         return doc;
     }
 
@@ -680,12 +699,9 @@ public class LIMSConnection {
         List<PCRReaction> pcrReactions = new ArrayList<PCRReaction>();
         List<CycleSequencingReaction> cyclesequencingReactions = new ArrayList<CycleSequencingReaction>();
         List<Integer> returnedPlateIds = new ArrayList<Integer>();
-        int count = 0;
         System.out.println("Creating Reactions...");
         int previousId = -1;
         while(resultSet.next()) {
-            count++;
-            System.out.println(count);
 
             if(callback != null && callback.isCanceled()) {
                 resultSet.close();
@@ -694,7 +710,6 @@ public class LIMSConnection {
 
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
-            //System.out.println(plateId);
 
             if(previousId >= 0 && previousId != plateId) {
                 Plate prevPlate = plateMap.get(previousId);
@@ -753,7 +768,6 @@ public class LIMSConnection {
                 
             }
         }
-        System.out.println("count="+count);
 
 //        if(extractionReactions.size() > 0) {
 //            System.out.println("Checking extractions");
