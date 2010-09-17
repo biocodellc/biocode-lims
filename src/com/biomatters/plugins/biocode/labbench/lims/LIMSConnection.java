@@ -25,6 +25,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.options.PasswordOption;
 
 import java.sql.*;
@@ -32,6 +33,8 @@ import java.util.*;
 import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+
+import jebl.util.Cancelable;
 
 /**
  * Created by IntelliJ IDEA.
@@ -265,6 +268,10 @@ public class LIMSConnection {
     }
 
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
+        return getMatchingAssemblyDocuments(workflows, callback, callback);    
+    }
+
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
         String sql = "SELECT * FROM assembly WHERE (";
         List<String> terms = new ArrayList<String>();
         for(WorkflowDocument workflow : workflows) {
@@ -273,6 +280,10 @@ public class LIMSConnection {
         sql = sql+StringUtilities.join(" OR ", terms)+")";
 
         Statement statement = connection.createStatement();
+        BiocodeUtilities.CancelListeningThread listeningThread = null;
+        if(cancelable != null) {
+            //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
+        }
         statement.setFetchSize(1);
         try {
             final ResultSet resultSet = statement.executeQuery(sql);
@@ -302,6 +313,9 @@ public class LIMSConnection {
                 if(callback != null) {
                     callback.add(doc, Collections.EMPTY_MAP);
                 }
+            }
+            if(listeningThread != null) {
+                listeningThread.finish();
             }
             return resultDocuments;
         }
@@ -358,8 +372,11 @@ public class LIMSConnection {
         }
         return result;
     }
-
     public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException{
+        return getMatchingWorkflowDocuments(query, samples, callback, callback);
+    }
+
+    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
 
@@ -420,6 +437,10 @@ public class LIMSConnection {
         //attach the values to the query
         System.out.println(sql.toString());
         PreparedStatement statement = connection.prepareStatement(sql.toString());
+        BiocodeUtilities.CancelListeningThread listeningThread1 = null;
+        if(cancelable != null) {
+            //todo: listeningThread1 = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
+        }
         if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
             statement.setFetchSize(Integer.MIN_VALUE);
         }
@@ -453,7 +474,7 @@ public class LIMSConnection {
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
         int prevWorkflowId = -1;
         while(resultSet.next()) {
-            if(callback != null && callback.isCanceled()) {
+            if(cancelable != null && callback.isCanceled()) {
                 resultSet.close();
                 return Collections.EMPTY_LIST;
             }
@@ -480,6 +501,9 @@ public class LIMSConnection {
                 prevWorkflow.sortReactions();
                 callback.add(prevWorkflow, Collections.<String, Object>emptyMap());
             }
+        }
+        if(listeningThread1 != null) {
+            listeningThread1.finish();
         }
         statement.close();
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
@@ -606,6 +630,10 @@ public class LIMSConnection {
     }
 
     public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback) throws SQLException{
+        return getMatchingPlateDocuments(query, workflowDocuments, callback, callback);
+    }
+
+    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
         Set<Integer> plateIds = new HashSet<Integer>();
@@ -668,6 +696,10 @@ public class LIMSConnection {
         System.out.println(sql.toString());
         Connection connection = isLocal ? this.connection : this.connection2;
         PreparedStatement statement = connection.prepareStatement(sql.toString());
+        BiocodeUtilities.CancelListeningThread listeningThread = null;
+        if(cancelable != null) {
+            //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
+        }
         if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
             statement.setFetchSize(Integer.MIN_VALUE);
         }
@@ -703,7 +735,7 @@ public class LIMSConnection {
         int previousId = -1;
         while(resultSet.next()) {
 
-            if(callback != null && callback.isCanceled()) {
+            if(cancelable != null && cancelable.isCanceled()) {
                 resultSet.close();
                 return Collections.EMPTY_LIST;
             }
@@ -814,6 +846,9 @@ public class LIMSConnection {
         int time = (int)(System.currentTimeMillis()-startTime)/1000;
         System.out.println("done in "+time+" seconds!");
 
+        if(listeningThread != null) {
+            listeningThread.finish();
+        }
         return docs;
 
     }

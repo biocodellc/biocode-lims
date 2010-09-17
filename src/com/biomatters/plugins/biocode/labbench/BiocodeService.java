@@ -617,7 +617,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
             if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                 callback.setMessage("Downloading Workflows");
-                workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null);
+                workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null, callback);
             }
             if(callback.isCanceled()) {
                 return;
@@ -635,7 +635,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             if((Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                 callback.setMessage("Downloading Plates");
-                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null);
+                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
                 if(callback.isCanceled()) {
                     return;
                 }
@@ -652,7 +652,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             if((Boolean)query.getExtendedOptionValue("sequenceDocuments") && !workflowsToSearch.isEmpty()) {
                 callback.setMessage("Downloading Sequences");
-                List<AnnotatedPluginDocument> assemblyDocuments = limsConnection.getMatchingAssemblyDocuments(workflowsToSearch, callback);
+                List<AnnotatedPluginDocument> assemblyDocuments = limsConnection.getMatchingAssemblyDocuments(workflowsToSearch, callback, callback);
             }
 
         } catch (SQLException e) {

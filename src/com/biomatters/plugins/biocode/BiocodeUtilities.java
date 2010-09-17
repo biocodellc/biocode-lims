@@ -9,7 +9,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDoc
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -23,6 +23,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import jebl.util.ProgressListener;
+import jebl.util.Cancelable;
 
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -424,5 +425,41 @@ public class BiocodeUtilities {
             return !(alignment.getSequence(i) instanceof NucleotideGraphSequenceDocument);
         }
         return false;
+    }
+
+    public static class CancelListeningThread extends Thread{
+        private Cancelable cancelable;
+        private Statement statement;
+        private boolean running = true;
+
+        public CancelListeningThread(Cancelable cancelable, Statement statement){
+            this.cancelable = cancelable;
+            this.statement = statement;
+            start();
+        }
+
+        @Override
+        public void run() {
+            while(running) {
+                if(cancelable.isCanceled()) {
+                    try {
+                        if(statement.getResultSet() != null) {
+                            statement.getResultSet().close();
+                        }
+                        statement.close();
+                    } catch (SQLException e) {
+                        //ignore...
+                        System.out.println(e.getMessage());
+                        e.printStackTrace();
+                    }
+                    break;
+                }
+                ThreadUtilities.sleep(100);
+            }
+        }
+
+        public void finish() {
+            running = false;
+        }
     }
 }
