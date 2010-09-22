@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Collections;
 import java.io.*;
 
 import org.virion.jam.util.SimpleListener;
@@ -65,15 +66,15 @@ public class GelSplitter {
         Options.BooleanOption scoreOption = options.addBooleanOption("scorePlate", "Automatically Score plate", false);
         JPanel sliderPanel = new GPanel(new FlowLayout(FlowLayout.CENTER));
         sliderPanel.add(new GLabel("Threshold: "));
-        final JSlider slider = new JSlider(250, 1250, 750);
+        final JSlider slider = new JSlider(0, 2000, 750);
         slider.setPreferredSize(new Dimension(100, slider.getPreferredSize().height));
         sliderPanel.add(slider);
-        final JLabel label = new GLabel("" + ((slider.getValue()-250)/10));
+        final JLabel label = new GLabel("" + ((slider.getValue())/20));
         sliderPanel.add(label);
         Options.Option sliderOption = options.addCustomComponent(sliderPanel);
         slider.addChangeListener(new ChangeListener(){
             public void stateChanged(ChangeEvent e) {
-                label.setText("" + ((slider.getValue()-250)/10));
+                label.setText("" + ((slider.getValue())/20));
             }
         });
         scoreOption.addDependent(sliderOption, true);
@@ -308,6 +309,9 @@ public class GelSplitter {
         }
 
         public Map<BiocodeUtilities.Well, BufferedImage> splitImage() {
+            if(dragRectangle == null) {
+                return Collections.emptyMap();
+            }
             Map<BiocodeUtilities.Well, BufferedImage> imageMap = new HashMap<BiocodeUtilities.Well, BufferedImage>();
             Rectangle dragRectangle = new Rectangle(PADDING+(int)((this.dragRectangle.x-PADDING)/getZoom()), PADDING+(int)((this.dragRectangle.y-PADDING)/getZoom()), (int)(this.dragRectangle.width/getZoom()), (int)(this.dragRectangle.height/getZoom()));
             Dimension bounds = getBoundingBox(new Dimension(images[0].getWidth(null), images[0].getHeight(null)));

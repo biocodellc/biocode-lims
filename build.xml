@@ -79,7 +79,7 @@
       </copy>
    </target>
 
-   <target name="prepare">
+   <target name="prepare" depends="clean">
       <mkdir dir="${plugin-build}/${plugin-name}"/>
       <mkdir dir="${classes}"/>
    </target>
@@ -87,5 +87,6 @@
    <target name="clean">
       <delete dir="${plugin-build}"/>
       <delete dir="${classes}"/>
+      <delete  file="${dist}/${short-plugin-name}.gplugin"/>
    </target>
 </project>

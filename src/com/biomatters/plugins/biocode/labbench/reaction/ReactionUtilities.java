@@ -739,18 +739,24 @@ public class ReactionUtilities {
     public static Collection getAllValues(DocumentField field, List<Reaction> reactions) {
         Set allValues = new HashSet();
         if(field != null) {
-            for(Reaction r : reactions) {
-                Object value = r.getFieldValue(field.getCode());
-                if(value != null) {
-                    allValues.add(value);
+            if(field.isEnumeratedField()) {
+                for(String s : field.getEnumerationValues()) {
+                    allValues.add(s);
+                }
+            }
+            else {
+                for(Reaction r : reactions) {
+                    Object value = r.getFieldValue(field.getCode());
+                    if(value != null) {
+                        allValues.add(value);
+                    }
                 }
             }
         }
-        if(field.isEnumeratedField()) {
-            for(String s : field.getEnumerationValues()) {
-                allValues.add(s);
-            }
+        if(allValues.size() == 0) {
+            allValues.add("");
         }
+
         return allValues;
     }
 

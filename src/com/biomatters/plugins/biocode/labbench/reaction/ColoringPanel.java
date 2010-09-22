@@ -54,12 +54,7 @@ public class ColoringPanel extends JPanel {
                 ReactionUtilities.DocumentFieldWrapper wrapper = (ReactionUtilities.DocumentFieldWrapper)fieldToColor.getSelectedItem();
                 selectedDocumentField = wrapper.getDocumentField();
                 Collection allValues;
-                if(selectedDocumentField == null) {
-                    allValues = Collections.EMPTY_LIST;
-                }
-                else {
-                    allValues = ReactionUtilities.getAllValues(selectedDocumentField, reactions);
-                }
+                allValues = ReactionUtilities.getAllValues(selectedDocumentField, reactions);
                 JPanel valuesPanel = new JPanel(new GridLayout(allValues.size(),1,5,5));
                 valuesPanel.setOpaque(false);
                 colorPanels = new ArrayList<ColorPanel>();
@@ -93,9 +88,7 @@ public class ColoringPanel extends JPanel {
                 if(allValues.size() > 0) {
                     add(scrollPane, BorderLayout.CENTER);
                 }
-                validate();
-                invalidate();
-                validate();
+                revalidate();
             }
         };
         fieldToColor.addItemListener(comboBoxListener);

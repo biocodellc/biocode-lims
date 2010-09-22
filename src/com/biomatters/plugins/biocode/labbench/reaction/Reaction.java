@@ -286,22 +286,22 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             return null;
         }
         Options.Option option = options.getOption(fieldCode);
-        if(option == null) {
-            return null;
-        }
-        if(option instanceof DocumentSelectionOption) {
-            List<AnnotatedPluginDocument> valueList = ((DocumentSelectionOption)option).getDocuments();
-            if(valueList.size() == 0) {
-                return "None";
+        Object value = null;
+        if(option != null) {
+            if(option instanceof DocumentSelectionOption) {
+                List<AnnotatedPluginDocument> valueList = ((DocumentSelectionOption)option).getDocuments();
+                if(valueList.size() == 0) {
+                    return "None";
+                }
+                AnnotatedPluginDocument firstValue = valueList.get(0);
+                return firstValue.getName();
             }
-            AnnotatedPluginDocument firstValue = valueList.get(0);
-            return firstValue.getName();
+            value = option.getValue();
+            if(value instanceof Options.OptionValue) {
+                return ((Options.OptionValue)value).getLabel();
+            }
         }
-        Object value = option.getValue();
-        if(value instanceof Options.OptionValue) {
-            return ((Options.OptionValue)value).getLabel();
-        }
-        if(value == null && fimsSample != null) { //check the FIMS data
+        else if(fimsSample != null) { //check the FIMS data
             value = fimsSample.getFimsAttributeValue(fieldCode);
         }
         return value == null ? "" : value;
@@ -501,6 +501,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public String getDisplayableValue(DocumentField field) {
         Object value = getFieldValue(field.getCode());
+        if(value == null) {
+            value = "";
+        }
         if(value instanceof String) {
             return (String)value;
         }
@@ -950,8 +953,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
         public Color getColor(Reaction reaction) {
             if(documentField != null) {
-                Color value = color.get(reaction.getFieldValue(documentField.getCode()));
-                return value != null ? value : Color.white;
+                return getColor(reaction.getFieldValue(documentField.getCode()));
             }
             return Color.white;
         }

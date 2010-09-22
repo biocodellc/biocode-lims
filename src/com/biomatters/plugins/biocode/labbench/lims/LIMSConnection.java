@@ -410,7 +410,7 @@ public class LIMSConnection {
             sql.append("(");
             FimsSample[] samplesArray = samples.toArray(new FimsSample[samples.size()]);
             for(int i=0; i < samplesArray.length; i++) {
-                sql.append(" extraction.sampleId=?");
+                sql.append(" LOWER(extraction.sampleId)=?");
                 sqlValues.add(samplesArray[i].getId());
                 if(i != samples.size()-1) {
                     sql.append(" OR");
