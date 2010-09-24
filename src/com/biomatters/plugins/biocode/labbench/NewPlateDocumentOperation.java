@@ -65,7 +65,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         final Plate.Size sizeFromOptions = options.getPlateSize();
         final Reaction.Type typeFromOptions = options.getReactionType();
         final boolean fromExisting = options.isFromExisting();
-        final boolean copyOnlyPassed = options.copyOnlyPassedReactions();
+        final boolean copyOnlyFailed = options.copyOnlyFailedReactions();
         final AtomicReference<DocumentOperationException> exception = new AtomicReference<DocumentOperationException>();
         final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
         final int numberOfReactionsFromOptions = (Integer)options.getOption("reactionNumber").getValue();
@@ -116,10 +116,10 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
 
                         if(plateSize == sizeFromOptions) {
-                            copyPlateOfSameSize(plate, editingPlate, copyOnlyPassed);
+                            copyPlateOfSameSize(plate, editingPlate, copyOnlyFailed);
                         }
                         else if(sizeFromOptions == Plate.Size.w96){
-                            copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"), copyOnlyPassed);
+                            copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"), copyOnlyFailed);
 
                         }
                         else if(sizeFromOptions == Plate.Size.w384) {
@@ -204,7 +204,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
     }
 
-    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, boolean onlyPassed) throws DocumentOperationException{
+    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, boolean onlyFailed) throws DocumentOperationException{
         quadrant = quadrant-1;//zero-index it
         Reaction[] srcReactions = srcPlate.getReactions();
         for(int i=0; i < srcReactions.length; i++) {
@@ -214,7 +214,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 for(int row = 0; row < destPlate.getRows(); row++) {
                     Reaction destReaction = destPlate.getReaction(row, col);
                     Reaction srcReaction = srcPlate.getReaction(row*2 + yOffset, col*2 + xoffset);
-                    if(!onlyPassed || ReactionOptions.PASSED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
+                    if(!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
                         ReactionUtilities.copyReaction(srcReaction, destReaction);
                     }
                 }
@@ -226,7 +226,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     }
 
-    static void copyPlateOfSameSize(Plate srcPlate, Plate destPlate, boolean onlyPassed) throws DocumentOperationException{
+    static void copyPlateOfSameSize(Plate srcPlate, Plate destPlate, boolean onlyFailed) throws DocumentOperationException{
         if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
             throw new IllegalArgumentException("Plates were of different sizes");
         }
@@ -238,7 +238,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         Reaction[] srcReactions = srcPlate.getReactions();
         Reaction[] destReactions = destPlate.getReactions();
         for(int i=0; i < srcReactions.length; i++) {
-            if(!onlyPassed || ReactionOptions.PASSED_VALUE.getName().equals(srcReactions[i].getFieldValue(ReactionOptions.RUN_STATUS))) {
+            if(!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReactions[i].getFieldValue(ReactionOptions.RUN_STATUS))) {
                 ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
             }
         }

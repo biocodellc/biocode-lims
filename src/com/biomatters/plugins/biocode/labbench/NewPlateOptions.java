@@ -68,18 +68,18 @@ public class NewPlateOptions extends Options{
         };
 
         Options.BooleanOption fromExistingOption = null;
-        Options.BooleanOption onlyPassed = null;
+        Options.BooleanOption onlyFailed = null;
         if(fromExistingPossible) {
             fromExistingOption = addBooleanOption("fromExisting", "Create plate from existing document", false);
             fromExistingOption.setSpanningComponent(true);
-            onlyPassed = addBooleanOption("onlyPassed", "Copy only passed reactions", false);
-            onlyPassed.setSpanningComponent(true);
-            onlyPassed.setDisabledValue(false);
+            onlyFailed = addBooleanOption("onlyFailed", "Copy only failed reactions", false);
+            onlyFailed.setSpanningComponent(true);
+            onlyFailed.setDisabledValue(false);
             if(allPcrOrSequencing) {
-                fromExistingOption.addDependent(onlyPassed, true);
+                fromExistingOption.addDependent(onlyFailed, true);
             }
             else {
-                onlyPassed.setEnabled(false);
+                onlyFailed.setEnabled(false);
             }
         }
 
@@ -172,8 +172,8 @@ public class NewPlateOptions extends Options{
         return "true".equals(getValueAsString("fromExisting"));
     }
 
-    public boolean copyOnlyPassedReactions() {
-        return "true".equals(getValueAsString("onlyPassed"));
+    public boolean copyOnlyFailedReactions() {
+        return "true".equals(getValueAsString("onlyFailed"));
     }
 
     @Override
