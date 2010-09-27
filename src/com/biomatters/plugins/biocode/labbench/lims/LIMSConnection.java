@@ -474,7 +474,7 @@ public class LIMSConnection {
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
         int prevWorkflowId = -1;
         while(resultSet.next()) {
-            if(cancelable != null && callback.isCanceled()) {
+            if(cancelable != null && cancelable.isCanceled()) {
                 resultSet.close();
                 return Collections.EMPTY_LIST;
             }
