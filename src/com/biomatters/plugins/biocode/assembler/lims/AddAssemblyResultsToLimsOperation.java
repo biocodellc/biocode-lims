@@ -116,7 +116,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     docsToMark.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
                 }
             } else {
-                docsToMark.put(document, null);
+                docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()).getSequenceString());
             }
         }
 
@@ -155,8 +155,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 consensus = consensusDocument.getSequenceString();
             }
             if (isPass && consensus == null) {
-                issueTracker.setIssue(annotatedDocument, "Not a consensus sequence, cannot pass");
-                continue;
+                assert false: "there should be a consensus here!";
             }
             int[] qualities = null;
             if(NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
@@ -167,16 +166,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
 
             if (workflowsWithResults.containsKey(assemblyResult.workflowId)) {
-                if (isPass) {
-                    issueTracker.setIssue(annotatedDocument, "Another selected result matches same workflow");
-                    continue;
-                } else {
-                    AssemblyResult existingAssemblyResult = workflowsWithResults.get(assemblyResult.workflowId);
-                    for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> chromatogramEntry : assemblyResult.getReactions().entrySet()) {
-                        existingAssemblyResult.addReaction(chromatogramEntry.getKey(), chromatogramEntry.getValue());
-                    }
-                    continue;
+                AssemblyResult existingAssemblyResult = workflowsWithResults.get(assemblyResult.workflowId);
+                for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> chromatogramEntry : assemblyResult.getReactions().entrySet()) {
+                    existingAssemblyResult.addReaction(chromatogramEntry.getKey(), chromatogramEntry.getValue());
                 }
+                continue;
             }
             assemblyResult.setContigProperties(annotatedDocument, consensus, qualities, coverage, disagreements, trims, edits, ambiguities == null ? 0 : ambiguities, bin);
             workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
@@ -358,7 +352,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         }
         for (AssemblyResult result : assemblyResults) {
             progress.beginSubtask();
-            if (progress.isCanceled()) {
+            if (progress.isCanceled() || true) {
                 break;
             }
             try {
