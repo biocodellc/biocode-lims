@@ -650,7 +650,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 //                    callback.add(doc, Collections.<String, Object>emptyMap());
 //                }
             }
-            if((Boolean)query.getExtendedOptionValue("sequenceDocuments") && !workflowsToSearch.isEmpty()) {
+            if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments") && !workflowsToSearch.isEmpty()) {
                 callback.setMessage("Downloading Sequences");
                 List<AnnotatedPluginDocument> assemblyDocuments = limsConnection.getMatchingAssemblyDocuments(workflowsToSearch, callback, callback);
             }
