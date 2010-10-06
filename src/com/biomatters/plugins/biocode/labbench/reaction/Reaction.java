@@ -620,7 +620,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public void setWorkflow(Workflow workflow) {
         this.workflow = workflow;
         getOptions().setValue("workflowId", workflow != null ? workflow.getName() : "");
-        if(getFimsSample() != null) {
+        if(getFimsSample() != null && workflow != null) {
             workflow.setFimsSample(getFimsSample());
         }
         //getOptions().setValue("locus", workflow != null ? workflow.getLocus() : ""); //lets not clear this - we want to be able to create new workflows for this locus...

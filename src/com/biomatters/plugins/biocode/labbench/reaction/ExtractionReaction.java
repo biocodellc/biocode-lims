@@ -219,18 +219,18 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             //check that the extraction id's don't already exist in the database...
             List<String> reactionOrs = new ArrayList<String>();
             for(Reaction r : reactions) {
-                if(r.getId() < 0) {
+                if(r.getId() < 0 && r.getExtractionId().length() > 0) {
                     reactionOrs.add("extraction.extractionId=?");
                 }
             }
             if(reactionOrs.size() > 0) {
-                String sql = "SELECT * FROM extraction, workflow, plate WHERE workflow.extractionId=extraction.id AND plate.id = extraction.plate AND ("+StringUtilities.join(" OR ", reactionOrs)+")";
+                String sql = "SELECT * FROM extraction, plate WHERE plate.id = extraction.plate AND ("+StringUtilities.join(" OR ", reactionOrs)+")";
                 Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
 
                 PreparedStatement statement = connection.prepareStatement(sql);
                 int count=1;
                 for(Reaction r : reactions) {
-                    if(r.getId() < 0) {
+                    if(r.getId() < 0 && r.getExtractionId().length() > 0) {
                         statement.setString(count, r.getExtractionId());
                         count++;
                     }
