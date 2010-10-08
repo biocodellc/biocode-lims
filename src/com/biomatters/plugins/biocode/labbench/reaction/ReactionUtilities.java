@@ -766,6 +766,10 @@ public class ReactionUtilities {
 
     public static void copyReaction(Reaction srcReaction, Reaction destReaction) {
         destReaction.setExtractionId(srcReaction.getExtractionId());
+        Object locus = srcReaction.getFieldValue("locus");
+        if(locus != null) {
+            destReaction.getOptions().setValue("locus", locus);
+        }
         destReaction.setWorkflow(srcReaction.getWorkflow());
         if(destReaction.getType() == Reaction.Type.Extraction) {
             FimsSample fimsSample = srcReaction.getFimsSample();

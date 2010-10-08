@@ -148,7 +148,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             Double coverage = (Double) annotatedDocument.getFieldValue(DocumentField.CONTIG_MEAN_COVERAGE);
             Integer disagreements = (Integer) annotatedDocument.getFieldValue(DocumentField.DISAGREEMENTS);
             Integer ambiguities = (Integer) annotatedDocument.getFieldValue(DocumentField.AMBIGUITIES);
-            String bin = (String) annotatedDocument.getFieldValue(DocumentField.BIN);
+            String bin = (String) annotatedDocument.getFieldValue(DocumentField.BIN);   //todo: seems to be getting the wrong value from here?
 
             int edits = getEdits(annotatedDocument);
             String[] trims = getTrimParameters(annotatedDocument);
@@ -177,7 +177,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
                 continue;
             }
-            assemblyResult.setContigProperties(annotatedDocument, consensus, qualities, coverage, disagreements, trims, edits, ambiguities == null ? 0 : ambiguities, bin);
+            assemblyResult.setContigProperties(annotatedDocument, consensus, qualities, coverage, disagreements, trims, edits, ambiguities, bin);
             workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
             results.add(assemblyResult);
         }
@@ -296,15 +296,15 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         public Integer disagreements;
         public String[] trims;
         public int[] qualities;
-        public int edits;
-        public int ambiguities;
+        public Integer edits;
+        public Integer ambiguities;
         public String bin;
         public AnnotatedPluginDocument assembly;
 
         private Map<Integer, List<AnnotatedPluginDocument>> chromatograms = new HashMap<Integer, List<AnnotatedPluginDocument>>();
         private Map<Integer, CycleSequencingReaction> reactionsById = new HashMap<Integer, CycleSequencingReaction>();
 
-        public void setContigProperties(AnnotatedPluginDocument assembly, String consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, int edits, int ambiguities, String bin) {
+        public void setContigProperties(AnnotatedPluginDocument assembly, String consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, Integer edits, Integer ambiguities, String bin) {
             this.consensus = consensus;
             this.coverage = coverage;
             this.disagreements = disagreements;
@@ -357,13 +357,19 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         }
         for (AssemblyResult result : assemblyResults) {
             progress.beginSubtask();
-            if (progress.isCanceled() || true) {
-                break;
+            if (progress.isCanceled()) {
+                return null;
             }
             try {
                 PreparedStatement statement;
-                statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
+                    statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                        "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                }
+                else {
+                    statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
                         "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                }
                 statement.setString(1, result.extractionId);
                 statement.setInt(2, result.workflowId);
                 statement.setString(3, isPass ? "passed" : "failed");
@@ -415,6 +421,24 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
                 statement.setNull(15, Types.LONGVARCHAR); //notes
 
+                if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
+                    //technician, date, bin, ambiguities
+                    statement.setString(16, options.getValueAsString("technician"));
+
+                    if(result.bin != null) {
+                        statement.setString(17, result.bin);
+                    }
+                    else {
+                        statement.setNull(17, Types.LONGVARCHAR);
+                    }
+                    if(result.ambiguities != null) {
+                        statement.setInt(18, result.ambiguities);
+                    }
+                    else {
+                        statement.setNull(18, Types.INTEGER);
+                    }
+                }
+                   
                 statement.execute();
 
                 BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
