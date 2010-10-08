@@ -109,11 +109,16 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
             }
 
-            if (isAlignment && BiocodeUtilities.isAlignmentOfContigs(document)) {
-                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
-                for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
-                    if (i == alignment.getContigReferenceSequenceIndex()) continue;
-                    docsToMark.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
+            if (isAlignment) {
+                if(BiocodeUtilities.isAlignmentOfContigs(document)) {
+                    SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
+                    for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+                        if (i == alignment.getContigReferenceSequenceIndex()) continue;
+                        docsToMark.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
+                    }
+                }
+                else {
+                    docsToMark.put(document, null);
                 }
             } else {
                 docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()).getSequenceString());
