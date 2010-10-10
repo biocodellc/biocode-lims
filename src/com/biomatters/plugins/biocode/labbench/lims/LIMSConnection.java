@@ -360,7 +360,15 @@ public class LIMSConnection {
         doc.setFieldValue(AnnotateUtilities.EDITS_FIELD, resultSet.getInt("edits"));
         doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_FWD_FIELD, resultSet.getString("trim_params_fwd"));
         doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_REV_FIELD, resultSet.getString("trim_params_rev"));
+        doc.setHiddenFieldValue(AnnotateUtilities.LIMS_ID, resultSet.getInt("id"));
         //todo: fields that require a schema change
+        if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
+            doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, resultSet.getString("technician"));
+            doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(resultSet.getDate("date").getTime()));
+            String bin = resultSet.getString("bin");
+            doc.setFieldValue(DocumentField.BIN, bin);
+            doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, resultSet.getInt("ambiguities"));
+        }
         return doc;
     }
 

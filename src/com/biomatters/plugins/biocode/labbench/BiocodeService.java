@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -12,6 +13,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -90,7 +92,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     public boolean canDeleteDocuments(List<AnnotatedPluginDocument> documents) {
         for(AnnotatedPluginDocument doc : documents) {
-            if(!PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+            if(!PlateDocument.class.isAssignableFrom(doc.getDocumentClass()) && !SequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
                 return false;
             }
         }
@@ -99,6 +101,57 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     @Override
     public void deleteDocuments(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
+        deletePlates(documents);
+        deleteSequences(documents);
+    }
+
+    public void deleteSequences(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
+        List<Integer> sequencesToDelete = new ArrayList<Integer>();
+        List<AnnotatedPluginDocument> documentsWithNoIdField = new ArrayList<AnnotatedPluginDocument>();
+        for(AnnotatedPluginDocument doc : documents) {
+            if(SequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                Integer id = (Integer)doc.getFieldValue(AnnotateUtilities.LIMS_ID);
+                if(id != null) {
+                    sequencesToDelete.add(id);
+                }
+                else {
+                    documentsWithNoIdField.add(doc);
+                }
+            }
+        }
+
+        StringBuilder sql = new StringBuilder("DELETE FROM assembly WHERE (");
+        for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
+            sql.append("id=?");
+            if(i1 < sequencesToDelete.size()-1) {
+                sql.append(" OR ");
+            }
+        }
+        sql.append(")");
+        try {
+            PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
+
+
+            for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
+                Integer i = sequencesToDelete.get(i1);
+                statement.setInt(i1+1, i);
+            }
+
+            int notDeletedCount = sequencesToDelete.size() - statement.executeUpdate();
+            if(notDeletedCount > 0) {
+                throw new DatabaseServiceException(notDeletedCount + " sequences were not deleted.", false);
+            }
+        }
+        catch(SQLException e) {
+            throw new DatabaseServiceException(e, "Could not delete sequences: "+e.getMessage(), true);
+        }
+
+        if(documentsWithNoIdField.size() > 0) {
+            throw new DatabaseServiceException("Some of your selected documents were not correctly annotated with LIMS data, and could not be deleted.  Please contact Biomatters for assistance.", false);
+        }
+    }
+
+    public void deletePlates(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
         List<Plate> platesToDelete = new ArrayList<Plate>();
         for(AnnotatedPluginDocument doc : documents) {
             if(PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
