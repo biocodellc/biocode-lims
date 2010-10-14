@@ -29,6 +29,7 @@ public class AnnotateUtilities {
     public static final DocumentField TECHNICIAN_FIELD =  new DocumentField("Technician", "", "technician", String.class, true, false);
     public static final DocumentField AMBIGUITIES_FIELD = new DocumentField("# Ambiguities", "", "ambiguities", Integer.class, true, false);
     public static final DocumentField LIMS_ID = new DocumentField("id", "", "lims_id", Integer.class, false, false);
+    public static final DocumentField ASSEMBLY_PARAMS_FIELD = new DocumentField("Assembly Parameters", "", "assemblyParams", String.class, true, false);
 
     private AnnotateUtilities() {
     }

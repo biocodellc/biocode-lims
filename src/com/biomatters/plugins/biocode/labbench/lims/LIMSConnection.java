@@ -2,10 +2,7 @@ package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.Condition;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
@@ -44,7 +41,7 @@ import jebl.util.Cancelable;
  * To change this template use File | Settings | File Templates.
  */
 public class LIMSConnection {
-    public static final int EXPECTED_SERVER_VERSION = 7;
+    public static final int EXPECTED_SERVER_VERSION = 8;
     Driver driver;
     Connection connection;
     Connection connection2;
@@ -368,6 +365,7 @@ public class LIMSConnection {
             String bin = resultSet.getString("bin");
             doc.setFieldValue(DocumentField.BIN, bin);
             doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, resultSet.getInt("ambiguities"));
+            doc.setFieldValue(AnnotateUtilities.ASSEMBLY_PARAMS_FIELD, resultSet.getString("params"));
         }
         return doc;
     }

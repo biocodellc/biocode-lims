@@ -419,7 +419,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
                 statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
                 statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
-                statement.setNull(15, Types.LONGVARCHAR); //notes
+
+                statement.setString(15, options.getValueAsString("notes")); //notes
 
                 if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
                     //technician, date, bin, ambiguities
