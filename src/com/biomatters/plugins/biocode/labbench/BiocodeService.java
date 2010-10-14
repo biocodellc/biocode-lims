@@ -710,7 +710,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            throw new DatabaseServiceException(e, e.getMessage(), true);
+            String message = e.getMessage();
+            boolean isNetwork = true;
+            if(message != null && message.contains("Streaming result") && message.contains("is still active")) {
+                message = "Your previous search did not cancel properly.  Try logging out, and logging in again.\n\n"+message;
+                isNetwork = false;
+            }
+            throw new DatabaseServiceException(e, message, isNetwork);
         }
 
 
