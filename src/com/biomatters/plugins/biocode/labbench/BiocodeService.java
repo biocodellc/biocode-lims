@@ -120,30 +120,32 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         }
 
-        StringBuilder sql = new StringBuilder("DELETE FROM assembly WHERE (");
-        for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
-            sql.append("id=?");
-            if(i1 < sequencesToDelete.size()-1) {
-                sql.append(" OR ");
-            }
-        }
-        sql.append(")");
-        try {
-            PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
-
-
+        if (!sequencesToDelete.isEmpty()) {
+            StringBuilder sql = new StringBuilder("DELETE FROM assembly WHERE (");
             for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
-                Integer i = sequencesToDelete.get(i1);
-                statement.setInt(i1+1, i);
+                sql.append("id=?");
+                if(i1 < sequencesToDelete.size()-1) {
+                    sql.append(" OR ");
+                }
             }
+            sql.append(")");
+            try {
+                PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
 
-            int notDeletedCount = sequencesToDelete.size() - statement.executeUpdate();
-            if(notDeletedCount > 0) {
-                throw new DatabaseServiceException(notDeletedCount + " sequences were not deleted.", false);
+
+                for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
+                    Integer i = sequencesToDelete.get(i1);
+                    statement.setInt(i1+1, i);
+                }
+
+                int notDeletedCount = sequencesToDelete.size() - statement.executeUpdate();
+                if(notDeletedCount > 0) {
+                    throw new DatabaseServiceException(notDeletedCount + " sequences were not deleted.", false);
+                }
             }
-        }
-        catch(SQLException e) {
-            throw new DatabaseServiceException(e, "Could not delete sequences: "+e.getMessage(), true);
+            catch(SQLException e) {
+                throw new DatabaseServiceException(e, "Could not delete sequences: "+e.getMessage(), true);
+            }
         }
 
         if(documentsWithNoIdField.size() > 0) {
