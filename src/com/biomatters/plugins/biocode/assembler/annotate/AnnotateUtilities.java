@@ -45,11 +45,12 @@ public class AnnotateUtilities {
             }
             if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument) annotatedDocument.getDocument();
-                for (AnnotatedPluginDocument doc : alignment.getReferencedDocuments()) {
-                    if (doc != null) {
-                        annotateDocument(fimsDataGetter, failBlog, doc);
+                for (int i = 0; i < alignment.getNumberOfSequences(); i ++)  {
+                    AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
+                    if (referencedDocument != null) {
+                        annotateDocument(fimsDataGetter, failBlog, referencedDocument);
                     } else {
-                        noReferencesList.add(doc.getName());
+                        noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
                 copyMatchingFieldsToContig(annotatedDocument);
