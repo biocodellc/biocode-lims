@@ -143,6 +143,14 @@ public class ExcelFimsConnection extends FIMSConnection{
     private List<DocumentField> fields;
      List<DocumentField> taxonomyFields;
 
+    private static int parseInt(String number, String errorMessage) throws ConnectionException {
+        try {
+            return Integer.parseInt(number);
+        } catch (NumberFormatException e) {
+            throw new ConnectionException(errorMessage);
+        }
+    }
+
     public void connect(Options options) throws ConnectionException {
         String excelFileLocation = options.getValueAsString("excelFile");
         if(excelFileLocation.length() == 0) {
@@ -152,12 +160,12 @@ public class ExcelFimsConnection extends FIMSConnection{
         if(!excelFile.exists()) {
             throw new ConnectionException("Cannot find the file "+excelFile.getAbsolutePath());
         }
-        tissueCol = Integer.parseInt(((Options.OptionValue)options.getValue("tissueId")).getName());
-        specimenCol = Integer.parseInt(((Options.OptionValue)options.getValue("specimenId")).getName());
+        tissueCol = parseInt(((Options.OptionValue)options.getValue("tissueId")).getName(), "You have not set a tissue column");
+        specimenCol = parseInt(((Options.OptionValue)options.getValue("specimenId")).getName(), "You have not set a specimen column");
         storePlates = (Boolean)options.getValue("storePlates");
         if(storePlates) {
-            plateCol = Integer.parseInt(((Options.OptionValue)options.getValue("plateName")).getName());
-            wellCol = Integer.parseInt(((Options.OptionValue)options.getValue("plateWell")).getName());
+            plateCol = parseInt(((Options.OptionValue)options.getValue("plateName")).getName(), "You have not set a plate column");
+            wellCol = parseInt(((Options.OptionValue)options.getValue("plateWell")).getName(), "You have not set a well column");
         }
         fields = new ArrayList<DocumentField>();
         taxonomyFields = new ArrayList<DocumentField>();
