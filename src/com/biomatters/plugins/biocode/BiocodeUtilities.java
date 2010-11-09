@@ -387,7 +387,7 @@ public class BiocodeUtilities {
      */
     public static Well getWellFromFileName(String fileName, String separator, int partNumber) {
         String wellStringBig = getStringFromFileName(fileName, separator, partNumber);
-        if(wellStringBig == null) {
+        if(wellStringBig == null || wellStringBig.length() == 0) {
             return null;
         }
         int count = 1;
