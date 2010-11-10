@@ -371,7 +371,7 @@ public class BiocodeUtilities {
 
     public static String getStringFromFileName(String fileName, String separator, int partNumber) {
         String[] parts = fileName.split(separator);
-        if(parts.length < partNumber) {
+        if(parts.length < partNumber+1) {
             return null;
         }
         return parts[partNumber];
