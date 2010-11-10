@@ -55,13 +55,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection = new LIMSConnection();
-    private String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
-    static Driver driver;
-    static Driver localDriver;
+    private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
+    private static Driver driver;
+    private static Driver localDriver;
     private static BiocodeService instance = null;
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
-    private Preferences preferences = Preferences.userNodeForPackage(BiocodeService.class);
+    private final Preferences preferences = Preferences.userNodeForPackage(BiocodeService.class);
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
     public static final DateFormat XMLDateFormat = new SimpleDateFormat("yyyy MMM dd hh:mm:ss");
@@ -707,7 +707,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments") && !workflowsToSearch.isEmpty()) {
                 callback.setMessage("Downloading Sequences");
-                List<AnnotatedPluginDocument> assemblyDocuments = limsConnection.getMatchingAssemblyDocuments(workflowsToSearch, callback, callback);
+                limsConnection.getMatchingAssemblyDocuments(workflowsToSearch, callback, callback);
             }
 
         } catch (SQLException e) {
@@ -930,7 +930,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private void saveCocktails(File file, List<Cocktail> cocktails) throws IOException, XMLSerializationException {
         if(cocktails == null || cocktails.size() == 0) {
-            file.delete();
+            if(!file.delete()) {
+                file.deleteOnExit();
+            }
             return;
         }
         Element cocktailsElement = new Element("cocktails");
@@ -949,7 +951,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             createNewFile(file);
         }
         if(templates == null || templates.size() == 0) {
-            file.delete();
+            if(!file.delete()) {
+                file.deleteOnExit();
+            }
             return;
         }
 
@@ -970,7 +974,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             createNewFile(file);
         }
         if(thermocycles == null || thermocycles.size() == 0) {
-            file.delete();
+            if(!file.delete()) {
+                file.deleteOnExit();
+            }
             return;
         }
 
@@ -986,9 +992,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private void createNewFile(File f) throws IOException {
         if(f.getParentFile() != null && !f.getParentFile().exists()) {
-            f.getParentFile().mkdirs();
+            if(!f.getParentFile().mkdirs()) {
+                throw new IOException("Cannot create parent directories for the requested file");
+            }
         }
-        f.createNewFile();
+        if(!f.createNewFile()) {
+            throw new IOException("Could not create "+f.getAbsolutePath());
+        }
     }
 
     private List<Cocktail> getPCRCocktailsFromDatabase() throws TransactionException{
@@ -1143,7 +1153,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 catch(SQLException ex) {
                     try {
                         connection.rollback(savepoint);
-                    } catch (SQLException e) {}
+                    } catch (SQLException ignored) {}
                     throw ex;
                 }
                 finally {
@@ -1283,11 +1293,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
 
         int count = 0;
-        for(int i=0; i < reactions.size(); i++) {
-            if(reactions.get(i).isEmpty()) {
+        for (Reaction reaction : reactions) {
+            if (reaction.isEmpty()) {
                 continue;
             }
-            if(count > 0) {
+            if (count > 0) {
                 sql.append(" OR ");
             }
             sql.append("extraction.extractionId=?");
@@ -1299,11 +1309,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
         int reactionCount = 1;
-        for(int i=0; i < reactions.size(); i++) {
-            if(reactions.get(i).isEmpty()) {
+        for (Reaction reaction : reactions) {
+            if (reaction.isEmpty()) {
                 continue;
             }
-            statement.setString(reactionCount, reactions.get(i).getExtractionId());
+            statement.setString(reactionCount, reaction.getExtractionId());
             reactionCount++;
         }
 
@@ -1354,17 +1364,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         catch(SQLException ex) {
             try {
                 connection.rollback(savepoint);
-            } catch (SQLException e) {}
-            finally {
-                throw ex;
-            }
+            } catch (SQLException ignored) {}
+            throw ex;
         } finally {
             connection.setAutoCommit(autoCommit);
         }
     }
 
     public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException{
-        List<String> extractionIds = new ArrayList<String>();
 
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
@@ -1376,7 +1383,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
                 if(!reaction.isEmpty()) {
-                    extractionIds.add(reaction.getExtractionId());
                     reactionsToSave.add(reaction);
                 }
             }
@@ -1400,10 +1406,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         } catch(BadDataException e) {
             try {
                 connection.rollback(savepoint);
-            } catch (SQLException e1) {} //ignore - if this fails, then we are already rolled back.
-            finally {
-                throw e;
-            }
+            } catch (SQLException ignored) {} //ignore - if this fails, then we are already rolled back.
+            throw e;
         } finally {
             connection.setAutoCommit(autoCommit);
         }
@@ -1463,7 +1467,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         ArrayList<Integer> workflows = new ArrayList<Integer>();
         ArrayList<Integer> ids = new ArrayList<Integer>();
-        ArrayList<String> extractionNames = new ArrayList<String>();
 
 
         boolean first = true;
@@ -1473,7 +1476,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         for(Reaction r : reactions) { //get the extraction id's and set up the query to get the workflow id's
             if(r.getId() >= 0) {
                 ids.add(r.getId());
-                extractionNames.add("'"+r.getExtractionId()+"'");
                 if(!first) {
                     builder.append(" OR ");
                 }
@@ -1540,7 +1542,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
      * @param plateIds the ids of the plates to check
      * returns all the empty plates in the database...
      * @return all the empty plates in the database...
-     * @throws SQLException
+     * @throws SQLException if the database cannot be queried for some reason
      */
     private List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws SQLException{
         if(plateIds == null || plateIds.size() == 0) {
@@ -1599,9 +1601,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                                 reaction.setHasError(true);
                                 throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
                             }
-                            if(reaction.getWorkflow().getName().equals(workflowId)) {
-                                continue;
-                            }
+//                          ssh: commenting this out because it appears to have no effect
+//                            if(reaction.getWorkflow().getName().equals(workflowId)) {
+//                                continue;
+//                            }
                         }
                         else {
                             reaction.setWorkflow(null);
@@ -1628,8 +1631,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     Object tissueId = reaction.getFieldValue("sampleId");
                     String extractionId = reaction.getExtractionId();
 
-                    if(reaction.getWorkflow() == null && tissueId != null && tissueId.toString().length() > 0){
-                        Workflow workflow = map.get(workflowId);
+                    if(workflowId != null && reaction.getWorkflow() == null && tissueId != null && tissueId.toString().length() > 0){
+                        Workflow workflow = map.get(workflowId.toString());
                         if(workflow != null) {
                             if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
                                 reaction.setHasError(true);
@@ -1674,10 +1677,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             plate.setId(originalPlateId);
             try {
                 connection.rollback(savepoint);
-            } catch (SQLException e1) {} //ignore - if this fails, then we are already rolled back.
-            finally {
-                throw e;
-            }
+            } catch (SQLException ignored) {} //ignore - if this fails, then we are already rolled back.
+            throw e;
         } finally {
             connection.setAutoCommit(autoCommit);
         }
@@ -1694,7 +1695,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         statement.execute();
         statement.close();
         if(plate.getId() < 0) {
-            PreparedStatement statement1 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");;
+            PreparedStatement statement1 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
             ResultSet resultSet = statement1.executeQuery();
             resultSet.next();
             int plateId = resultSet.getInt(1);
@@ -2023,8 +2024,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         public void setMessage(String s) {
             message = s;
-            label.setText(message);
-            pack();
+            Runnable runnable = new Runnable() {
+                public void run() {
+                    label.setText(message);
+                    pack();
+                }
+            };
+            ThreadUtilities.invokeNowOrLater(runnable);
         }
 
         public Component getComponentForOwner() {
