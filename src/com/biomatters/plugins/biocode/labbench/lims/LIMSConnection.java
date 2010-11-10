@@ -34,13 +34,12 @@ import java.text.SimpleDateFormat;
 import jebl.util.Cancelable;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 27/05/2009
- * Time: 6:28:38 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 27/05/2009 6:28:38 AM steve $
  */
+@SuppressWarnings({"ConstantConditions"})
 public class LIMSConnection {
+    @SuppressWarnings({"ConstantConditions"})
     public static final int EXPECTED_SERVER_VERSION = 8;
     Driver driver;
     Connection connection;
@@ -83,9 +82,7 @@ public class LIMSConnection {
             localLIMS = new LocalLIMS();
             localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
         }
-        Options localOptions = localLIMS.getConnectionOptions();
-        
-        return localOptions;
+        return localLIMS.getConnectionOptions();
     }
 
     public boolean isLocal() {
@@ -163,7 +160,7 @@ public class LIMSConnection {
         }
     }
 
-    public void disconnect() throws ConnectionException{
+    public void disconnect() {
 //        if(connection != null) {
 //            Thread t = new Thread() {
 //                public void run() {
@@ -227,10 +224,8 @@ public class LIMSConnection {
     }
 
     public void executeUpdate(String sql) throws TransactionException {
-        Savepoint savepoint = null;
         try {
             connection.setAutoCommit(false);
-            savepoint = connection.setSavepoint();
             for(String s : sql.split("\n")) {
                 PreparedStatement statement = connection.prepareStatement(s);
                 statement.execute();
@@ -359,6 +354,7 @@ public class LIMSConnection {
         doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_REV_FIELD, resultSet.getString("trim_params_rev"));
         doc.setHiddenFieldValue(AnnotateUtilities.LIMS_ID, resultSet.getInt("id"));
         //todo: fields that require a schema change
+        //noinspection ConstantConditions
         if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
             doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, resultSet.getString("technician"));
             doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(resultSet.getDate("date").getTime()));
@@ -595,14 +591,16 @@ public class LIMSConnection {
 //                    }
                 //}
                 //else {
-                    sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
+                //noinspection StringConcatenationInsideStringBufferAppend
+                sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
 
-                    for (int j = 0; j < queryValues.length; j++) {
-                        appendValue(inserts, sql, i < queryValues.length - 1, termSurrounder, queryValues[j], q.getCondition());
-                    }
+                for (Object queryValue : queryValues) {
+                    appendValue(inserts, sql, i < queryValues.length - 1, termSurrounder, queryValue, q.getCondition());
+                }
                 //}
             }
             if(i < queries.size()-1) {
+                //noinspection StringConcatenationInsideStringBufferAppend
                 sql.append(" "+mainJoin);
             }
         }
@@ -639,6 +637,7 @@ public class LIMSConnection {
         return getMatchingPlateDocuments(query, workflowDocuments, callback, callback);
     }
 
+    @SuppressWarnings({"MismatchedQueryAndUpdateOfCollection"})
     public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
@@ -680,6 +679,7 @@ public class LIMSConnection {
             sql.append(" (");
             for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
                 Integer intg = it.next();
+                //noinspection StringConcatenationInsideStringBufferAppend
                 sql.append(" plate.id=" + intg);
                 if(it.hasNext()) {
                     sql.append(" OR");
@@ -755,6 +755,7 @@ public class LIMSConnection {
                     prevPlate.initialiseReactions();
                     String error = checkReactions(prevPlate);
                     if(error != null) {
+                        //noinspection StringConcatenationInsideStringBufferAppend
                         totalErrors.append(error+"\n");
                     }
                     System.out.println("Adding "+prevPlate.getName());
@@ -795,6 +796,7 @@ public class LIMSConnection {
                 prevPlate.initialiseReactions();
                 String error = checkReactions(prevPlate);
                 if(error != null) {
+                    //noinspection StringConcatenationInsideStringBufferAppend
                     totalErrors.append(error+"\n");
                 }
                 System.out.println("Adding "+prevPlate.getName());
@@ -940,6 +942,7 @@ public class LIMSConnection {
         StringBuilder sql = new StringBuilder("SELECT * FROM gelimages WHERE (");
         for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
             Integer i = it.next();
+            //noinspection StringConcatenationInsideStringBufferAppend
             sql.append("gelimages.plate=" + i);
             if (it.hasNext()) {
                 sql.append(" OR ");

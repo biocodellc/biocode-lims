@@ -6,19 +6,14 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 11/05/2009
- * Time: 6:31:47 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 11/05/2009 6:31:47 PM steve $
  */
 public interface FimsSample extends XMLSerializable {
 
     public String getId();
 
     public String getSpecimenId();
-
-    public String getFimsConnectionId();//todo: seems unused - remove it!
 
     public List<DocumentField> getFimsAttributes();
 

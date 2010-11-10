@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
@@ -24,11 +23,8 @@ import javax.swing.table.TableModel;
 import javax.swing.event.TableModelListener;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Steve
- * Date: 20/05/2010
- * Time: 12:49:42 PM
- * To change this template use File | Settings | File Templates.
+ * @author Steve
+ * @version $Id: 20/05/2010 12:49:42 PM steve $
  */
 public class PlateExporter extends DocumentFileExporter{
 
@@ -74,7 +70,7 @@ public class PlateExporter extends DocumentFileExporter{
     private static TableModel getTableModel(PlateDocument plateDoc, boolean includeFims) {
         final Plate plate = plateDoc.getPlate();
         final Reaction firstReaction = plate.getReaction(0,0);
-        final List<DocumentField> documentFields = includeFims ? firstReaction.getAllDisplayableFields() : firstReaction.getDisplayableFields();
+        @SuppressWarnings({"unchecked"}) final List<DocumentField> documentFields = includeFims ? firstReaction.getAllDisplayableFields() : firstReaction.getDisplayableFields();
 
         return new TableModel() {
             public int getRowCount() {

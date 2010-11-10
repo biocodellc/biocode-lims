@@ -51,6 +51,7 @@ public class ExtraSubmissionFieldsOptions extends Options {
 
     /**
      * pairs of submission field name to document field code
+     * @return
      */
     List<Pair<String, String>> getExtraFields() {
         if (!enableExtraFieldsOption.getValue()) {

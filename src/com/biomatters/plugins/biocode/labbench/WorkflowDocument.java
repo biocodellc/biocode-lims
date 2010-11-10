@@ -190,9 +190,9 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public Reaction getMostRecentReaction(Reaction.Type type) {
         Reaction r = null;
-        for(int i=0; i < reactions.size(); i++) {
-            if(reactions.get(i).getType() == type) {
-                r = reactions.get(i);
+        for (Reaction reaction : reactions) {
+            if (reaction.getType() == type) {
+                r = reaction;
             }
         }
         return r;
@@ -200,9 +200,9 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public Reaction getMostRecentSequencingReaction(boolean forward) {
         Reaction r = null;
-        for(int i=0; i < reactions.size(); i++) {
-            if(reactions.get(i).getType() == Reaction.Type.CycleSequencing && CycleSequencingOptions.FORWARD_VALUE.equals(reactions.get(i).getOptions().getValueAsString(CycleSequencingOptions.DIRECTION)) == forward) {
-                r = reactions.get(i);
+        for (Reaction reaction : reactions) {
+            if (reaction.getType() == Reaction.Type.CycleSequencing && CycleSequencingOptions.FORWARD_VALUE.equals(reaction.getOptions().getValueAsString(CycleSequencingOptions.DIRECTION)) == forward) {
+                r = reaction;
             }
         }
         return r;
@@ -214,9 +214,9 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public List<Reaction> getReactions(Reaction.Type type) {
         List<Reaction> reactionsList = new ArrayList<Reaction>();
-        for(int i=0; i < reactions.size(); i++) {
-            if(reactions.get(i).getType() == type) {
-                reactionsList.add(reactions.get(i));
+        for (Reaction reaction : reactions) {
+            if (reaction.getType() == type) {
+                reactionsList.add(reaction);
             }
         }
         return reactionsList;
@@ -331,7 +331,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
                     ReactionUtilities.editReactions(Arrays.asList(reaction), panel, false);
-                    SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
+                    @SuppressWarnings({"UnusedDeclaration", "UnnecessaryLocalVariable", "UnusedAssignment"}) SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
                     if(reaction.hasError()) {
                         try {
                             reaction.setOptions(XMLSerializer.classFromXML(oldOptions, ReactionOptions.class));

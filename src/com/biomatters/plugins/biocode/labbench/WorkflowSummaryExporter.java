@@ -8,7 +8,6 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
 import java.io.File;
 import java.io.IOException;
-import java.awt.*;
 
 import jebl.util.ProgressListener;
 
@@ -16,14 +15,10 @@ import javax.swing.table.TableModel;
 
 import jxl.write.*;
 import jxl.Workbook;
-import jxl.format.Colour;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Steve
- * Date: 19/05/2010
- * Time: 8:38:02 PM
- * To change this template use File | Settings | File Templates.
+ * @author Steve
+ * @version $Id: 19/05/2010 8:38:02 PM steve $
  */
 public class WorkflowSummaryExporter extends DocumentFileExporter{
 
@@ -51,10 +46,9 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
             WritableWorkbook workbook = Workbook.createWorkbook(file);
 
             int count = 0;
-            for (int i = 0; i < factoriesToExport.length; i++) {
-                TableDocumentViewerFactory factory = factoriesToExport[i];
+            for (TableDocumentViewerFactory factory : factoriesToExport) {
                 TableModel tableModel = factory.getTableModel(documents);
-                if(tableModel != null) {
+                if (tableModel != null) {
                     WritableSheet sheet = workbook.createSheet(factory.getName(), count);
                     ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);
                     count++;

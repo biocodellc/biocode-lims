@@ -33,6 +33,7 @@ import java.util.zip.ZipOutputStream;
  * @author Richard
  * @version $Id$
  */
+@SuppressWarnings({"ConstantConditions"})
 public class BarstoolExportHandler {
 
     private final ExportForBarstoolOptions options;
@@ -155,7 +156,10 @@ public class BarstoolExportHandler {
     /**
      * export fasta consensus sequences in format ">sequence_ID [organism=Genus species]"
      *
+     * @param contigDocumentsMap
+     * @param progress
      * @return map of contig docs to consensus sequence, never null
+     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      */
     private Map<AnnotatedPluginDocument, String> exportConsensusSequences(Map<AnnotatedPluginDocument, String> contigDocumentsMap, CompositeProgressListener progress) throws DocumentOperationException {
         List<AnnotatedPluginDocument> consensusDocs = new ArrayList<AnnotatedPluginDocument>();
@@ -208,7 +212,10 @@ public class BarstoolExportHandler {
 
     /**
      *
+     * @param consensusStringsMap
+     * @param progress
      * @return true if canceled
+     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      */
     private boolean exportTranslations(Map<AnnotatedPluginDocument, String> consensusStringsMap, CompositeProgressListener progress) throws DocumentOperationException {
         GeneticCode geneticCode = options.getGeneticCode();

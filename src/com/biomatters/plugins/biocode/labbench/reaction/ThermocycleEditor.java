@@ -23,11 +23,8 @@ import java.util.List;
 import java.util.Collections;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 14/05/2009
- * Time: 1:04:57 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 14/05/2009 1:04:57 PM steve $
  */
 public class ThermocycleEditor extends JPanel {
 
@@ -83,7 +80,7 @@ public class ThermocycleEditor extends JPanel {
         frame.getContentPane().add(editor);
         frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.show();
+        frame.setVisible(true);
 
     }
 
@@ -233,6 +230,7 @@ public class ThermocycleEditor extends JPanel {
         JTextArea textArea = new JTextArea();
         textArea.setWrapStyleWord(true);
         textArea.setLineWrap(true);
+        textArea.setText(notes);
     }
 
 

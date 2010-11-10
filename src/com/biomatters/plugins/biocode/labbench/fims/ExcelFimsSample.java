@@ -8,8 +8,6 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import java.util.*;
 
 import org.jdom.Element;
-import org.jdom.CDATA;
-import org.jdom.Verifier;
 import jxl.Sheet;
 
 /**
@@ -54,9 +52,6 @@ public class ExcelFimsSample implements FimsSample {
         return values.get(""+specimenCol);
     }
 
-    public String getFimsConnectionId() {
-        return null;
-    }
 
     public List<DocumentField> getFimsAttributes() {
         return fields;
@@ -133,8 +128,9 @@ public class ExcelFimsSample implements FimsSample {
                 values.put(field.getCode(), value);
             }
         } catch (Exception e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } 
+            e.printStackTrace();
+            throw new XMLSerializationException("Could not deserialize FIMS sample: "+e.getMessage(), e);
+        }
     }
 
     private DocumentField getDocumentField(String fieldCode) {

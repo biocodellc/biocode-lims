@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -54,11 +53,7 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
         final AnnotateLimsDataOptions options = (AnnotateLimsDataOptions) o;
         FimsDataGetter fimsDataGetter = new FimsDataGetter() {
             public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
-                try {
-                    return options.getFimsData(document);
-                } catch (ConnectionException e) {
-                    throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
-                }
+                return options.getFimsData(document);
             }
         };
         AnnotateUtilities.annotateFimsData(annotatedDocuments, progressListener, fimsDataGetter);

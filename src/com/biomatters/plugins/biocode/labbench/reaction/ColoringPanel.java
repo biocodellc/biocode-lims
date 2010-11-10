@@ -14,11 +14,8 @@ import java.awt.event.ItemListener;
 import java.awt.event.ItemEvent;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Steve
- * Date: 14/01/2010
- * Time: 1:57:43 PM
- * To change this template use File | Settings | File Templates.
+ * @author Steve
+ * @version $Id: 14/01/2010 1:57:43 PM steve $
  */
 public class ColoringPanel extends JPanel {
     final Vector<DocumentField> availableFieldsVector;
@@ -174,7 +171,7 @@ public class ColoringPanel extends JPanel {
             if(colorer.getDocumentField() != null && documentFields.get(i).getDocumentField() != null && colorer.getDocumentField().getCode().equals(documentFields.get(i).getDocumentField().getCode())) {
                 fieldToColor.setSelectedIndex(i);
                 for(ColorPanel panel : colorPanels) {
-                    Color color = colorer.getColorMap().get(panel.getValue());
+                    Color color = colorer.getColorMap().get(panel.getValue().toString());
                     if(color != null) {
                         panel.setColor(color);
                     }

@@ -22,11 +22,8 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 27/05/2009
- * Time: 6:15:23 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 27/05/2009 6:15:23 AM steve $
  */
 public class TAPIRFimsConnection extends FIMSConnection{
     private List<DocumentField> searchAttributes;
@@ -65,7 +62,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         }
     }
 
-    public void disconnect() throws ConnectionException {
+    public void disconnect() {
         
     }
 
@@ -102,10 +99,10 @@ public class TAPIRFimsConnection extends FIMSConnection{
                 "http://rs.tdwg.org/dwc/dwcore/Genus",
                 "http://rs.tdwg.org/dwc/dwcore/SpecificEpithet"
         };
-        for(int i=0; i < taxonomyCodes.length; i++) {
-            if(taxonomyCodes[i].equals(code)) {
+        for (String taxonomyCode : taxonomyCodes) {
+            if (taxonomyCode.equals(code)) {
                 return true;
-            } 
+            }
         }
         return false;
     }
@@ -172,10 +169,9 @@ public class TAPIRFimsConnection extends FIMSConnection{
                 Element recordsElement = searchElement.getChild("records", namespace);
                 if(recordsElement != null) {
                     List<Element> recordList = new ArrayList<Element>(recordsElement.getChildren("record", namespace));
-                    for (int i = 0; i < recordList.size(); i++) {
-                        Element e = recordList.get(i);
+                    for (Element e : recordList) {
                         e.detach();
-                        samples.add(new TapirFimsSample(this, e, searchAttributes, taxonomyAttributes));
+                        samples.add(new TapirFimsSample(e, searchAttributes, taxonomyAttributes));
                     }
                     return samples;
                 }

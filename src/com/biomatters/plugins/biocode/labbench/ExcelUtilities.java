@@ -10,11 +10,11 @@ import javax.swing.table.TableModel;
 import jebl.util.ProgressListener;
 import com.biomatters.geneious.publicapi.plugin.Options;
 
-import java.io.IOException;
 import java.awt.*;
 
 public class ExcelUtilities {
-    public static void exportTable(WritableSheet sheet, TableModel table, ProgressListener progressListener, Options options) throws IOException, WriteException {
+    @SuppressWarnings({"UnusedDeclaration"})
+    public static void exportTable(WritableSheet sheet, TableModel table, ProgressListener progressListener, Options options) throws WriteException {
         WritableFont defaultFont = new WritableFont(WritableFont.ARIAL);
 
         //write out the column headers

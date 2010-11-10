@@ -362,6 +362,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             try {
                 PreparedStatement statement;
+                //noinspection ConstantConditions
                 if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
                     statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
                         "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -422,6 +423,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
                 statement.setString(15, options.getValueAsString("notes")); //notes
 
+                //noinspection ConstantConditions
                 if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
                     //technician, date, bin, ambiguities
                     statement.setString(16, options.getValueAsString("technician"));
@@ -446,7 +448,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 Options chromatogramExportOptions = null;
                 File tempFolder;
                 try {
-                    tempFolder = FileUtilities.createTempFile("chromat", ".ab1").getParentFile();
+                    tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -454,7 +456,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
                     if (options.isAddChromatograms()) {
                         if (chromatogramExportOptions == null) {
-                            chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());;
+                            chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
                             chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
                         }
                         List<NucleotideSequenceDocument> sequences = new ArrayList<NucleotideSequenceDocument>();
@@ -610,6 +612,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
      *
      * @param annotatedDocument
      * @return String[2] where String[0] = forward trim params and String[1] = reverse trim params. May contain null but never null.
+     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      */
     private String[] getTrimParameters(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         String[] trims = {null, null};

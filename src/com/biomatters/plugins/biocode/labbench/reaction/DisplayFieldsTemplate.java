@@ -36,8 +36,8 @@ public class DisplayFieldsTemplate implements XMLSerializable{
         this.displayedFields = displayedFields;
         this.name = name;
         this.type = type;
-        if(displayedFields == null) {
-            displayedFields = Collections.EMPTY_LIST;
+        if(this.displayedFields == null) {
+            this.displayedFields = Collections.emptyList();
         }
         if(name == null) {
             throw new IllegalArgumentException("Name cannot be null!");

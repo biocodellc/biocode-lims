@@ -1,11 +1,8 @@
 package com.biomatters.plugins.biocode.labbench;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 13/05/2009
- * Time: 5:31:06 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 13/05/2009 5:31:06 AM steve $
  */
 public class ConnectionException extends Exception{
     private String mainMessage;

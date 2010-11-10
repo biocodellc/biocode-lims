@@ -201,8 +201,8 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
 
         final ObjectAndColor[][] tableValues = new ObjectAndColor[workflows.size()][primerNamesSet.size()];
         ObjectAndColor notTriedValue = new ObjectAndColor("Not tried", Color.black);
-        for(int i=0; i < tableValues.length; i++) {
-            Arrays.fill(tableValues[i], notTriedValue);
+        for (ObjectAndColor[] tableValue : tableValues) {
+            Arrays.fill(tableValue, notTriedValue);
         }
 
         for (int i = 0; i < workflows.size(); i++) {

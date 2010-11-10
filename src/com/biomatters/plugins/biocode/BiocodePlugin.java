@@ -25,7 +25,7 @@ import java.util.Map;
 public class BiocodePlugin extends GeneiousPlugin {
 
     private File pluginUserDirectory;
-    public static final Map<String, Icons> pluginIcons;
+    private static final Map<String, Icons> pluginIcons;
     static {
         pluginIcons = new HashMap<String, Icons>();
     }

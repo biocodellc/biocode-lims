@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *          <p/>
  *          Created on 2/07/2009 11:30:04 AM
  */
+@SuppressWarnings({"ConstantConditions"})
 public class PlateDocumentViewer extends DocumentViewer{
     private PlateDocument plateDoc;
 
@@ -58,7 +59,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         actionsChangedListeners = new ArrayList<SimpleListener>();
         this.plateDoc = doc;
         this.isLocal = local;
-        Plate plate = null;
+        Plate plate;
         addTracesAction.setProOnly(true);
         try {
             plate = new Plate(plateDoc.getPlate().toXML());
@@ -599,11 +600,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
 
             public int getPagesRequired(Dimension dimensions, Options options) {
-                try {
-                    return printAndPagesRequired(null, dimensions, -1, options);
-                } catch (PrinterException e) {
-                    return 0;
-                }
+                return printAndPagesRequired(null, dimensions, -1, options);
             }
 
             @Override
@@ -616,7 +613,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 return o;
             }
 
-            public int printAndPagesRequired(Graphics2D g, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
+            public int printAndPagesRequired(Graphics2D g, Dimension dimensions, int pageIndex, Options options) {
                 int page = 1;
 
                 //everything is too big by default...
@@ -714,8 +711,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                 }
 
                 if(plateView.getPlate().getThermocycle() != null) {
-                    int x = 0;
-                    int y = 0;
+                    int x;
+                    int y;
 
 
                     JPanel thermocyclePanel = getThermocyclePanel(plateView.getPlate());

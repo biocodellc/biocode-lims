@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.assembler.verify;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.implementations.Percentage;
 import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;

@@ -31,7 +31,7 @@ public class ExtractionOptions extends ReactionOptions{
                 new OptionValue("positive", "Positive"),
                 new OptionValue("negative", "Negative")
         };
-        ComboBoxOption controlOption = addComboBoxOption("control", "Control", controlValues, controlValues[0]);
+        addComboBoxOption("control", "Control", controlValues, controlValues[0]);
         ComboBoxOption concStoredOption = addComboBoxOption("concentrationStored", "Sample Spec'd", concStoredValues, concStoredValues[1]);
         DoubleOption concOption = addDoubleOption("concentration", "Concentration/Purity", 0.0, 0.0, Double.MAX_VALUE);
         concOption.setUnits("ng/µL");
@@ -63,11 +63,6 @@ public class ExtractionOptions extends ReactionOptions{
 
     public ExtractionOptions(Element element) throws XMLSerializationException {
         super(element);
-    }
-
-    @Override
-    public Element toXML() {
-        return super.toXML();
     }
 
     public Cocktail getCocktail() {

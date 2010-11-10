@@ -1,12 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -58,7 +56,7 @@ public class CycleSequencingCocktail extends Cocktail{
     public Options getOptions() {
         if(options == null) {
             options = new Options(this.getClass());
-            Options.StringOption nameOption = options.addStringOption("name", "Name", "");
+            options.addStringOption("name", "Name", "");
             options.beginAlignHorizontally("Template/Target", true);
             Options.DoubleOption templateConcOption = options.addDoubleOption("Template Conc", "", 0.0, 0.0, Double.MAX_VALUE);
             templateConcOption.setUnits("ng/µL");

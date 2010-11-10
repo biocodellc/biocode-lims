@@ -18,7 +18,7 @@ public class AnnotateUtilities {
                 DocumentField.FIRST_SEQUENCE_RESIDUES.getCode(), DocumentField.HIGH_QUALITY_PERCENT.getCode(), DocumentField.LOW_QUALITY_PERCENT.getCode(),
                 DocumentField.MEDIMUM_QUALITY_PERCENT.getCode(), DocumentField.NAME_FIELD.getCode(), DocumentField.POST_TRIM_LENGTH.getCode(),
                 DocumentField.SEQUENCE_LENGTH.getCode(), DocumentField.TOPOLOGY_FIELD.getCode(), DocumentField.UNREAD_FIELD.getCode(),
-                PluginDocument.MODIFIED_DATE_FIELD.getCode(), "document_size", DocumentField.SEQUENCE_COUNT.getCode());;
+                PluginDocument.MODIFIED_DATE_FIELD.getCode(), "document_size", DocumentField.SEQUENCE_COUNT.getCode());
 
     public static final DocumentField NOTES_FIELD = new DocumentField("Notes", "", "notes", String.class, false, false);
     public static final DocumentField PROGRESS_FIELD = new DocumentField("Progress", "", "progress", String.class, true, false);
@@ -86,7 +86,7 @@ public class AnnotateUtilities {
      * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      *
      */
-    public static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
+    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
         SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
         Map<DocumentField, Object> displayableFieldsToCopy = null;
         for (int i = 0; i < contig.getNumberOfSequences(); i++) {
@@ -173,6 +173,7 @@ public class AnnotateUtilities {
         Object organism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
         if (organism != null && !((String) organism).contains(" ")) {
             //the database seems to have cases where just the Genus has been entered in the organism column eventhough the species has been entered in the taxonomy columns -> Throw that crap away
+            //noinspection UnusedAssignment
             organism = null;
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         } else if (organism == null && genus != null && species != null) {

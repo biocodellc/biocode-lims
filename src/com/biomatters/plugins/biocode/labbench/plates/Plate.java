@@ -289,6 +289,7 @@ public class Plate implements XMLSerializable {
     /**
      * wellName must be in the form A1, or A01
      * @param well
+     * @param size
      * @return
      */
     public static int getWellLocation(BiocodeUtilities.Well well, Size size) {

@@ -25,11 +25,8 @@ import java.util.*;
 import java.util.prefs.Preferences;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 12/05/2009
- * Time: 8:00:41 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 12/05/2009 8:00:41 AM steve $
  */
 public class ExcelFimsConnection extends FIMSConnection{
     Preferences prefs = Preferences.userNodeForPackage(this.getClass());
@@ -219,7 +216,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         return null;
     }
 
-    public void disconnect() throws ConnectionException {
+    public void disconnect() {
         tissueCol = specimenCol = -1;
         fields = null;
         if(workbook != null) {

@@ -66,8 +66,7 @@ public class TissueSampleViewerFactory extends DocumentViewerFactory{
                 htmlBuilder.append("</body></html>");
                 JEditorPane editorPane = new JEditorPane("text/html", htmlBuilder.toString());
                 editorPane.setEditable(false);
-                JScrollPane scroller = new JScrollPane(editorPane);
-                return scroller;
+                return new JScrollPane(editorPane);
             }
         };
     }

@@ -2,8 +2,6 @@ package com.biomatters.plugins.biocode.labbench.fims.tapir;
 
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.plugins.biocode.labbench.fims.TAPIRFimsConnection;
@@ -23,11 +21,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 19/08/2009
- * Time: 12:01:40 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 19/08/2009 12:01:40 PM steve $
  */
 public class TAPIRClient {
     private URL accessPoint;
@@ -40,7 +35,7 @@ public class TAPIRClient {
         }
     }
 
-     public List<DocumentField> getSearchAttributes2() throws JDOMException, IOException {
+     public List<DocumentField> getSearchAttributes2() {
          return Arrays.asList(
                  //new DocumentField("@catnum", "", "http://rs.tdwg.org/dwc/dwcore/CatalogNumber", String.class, true, true)  //,
                  new DocumentField("Collector", "", "http://rs.tdwg.org/dwc/dwcore/Collector", String.class, true, true)
@@ -92,6 +87,7 @@ public class TAPIRClient {
     /**
      * surrounds the query with the tapir XML that goes around every request...
      * @param queryToSurround
+     * @return
      */
     private Element padQueryXML(Element queryToSurround) {
         Element request = new Element("request");
@@ -137,7 +133,7 @@ public class TAPIRClient {
         //read in the response...
         BufferedReader in = new BufferedReader(new InputStreamReader((connection.getInputStream())));
         String xml = "";
-        String buffer = null;
+        String buffer;
         while((buffer = in.readLine()) != null){
             xml += buffer+"\n";
         }
@@ -150,7 +146,7 @@ public class TAPIRClient {
         return doc.detachRootElement();
     }
 
-    public Element getStructure(List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
+    public Element getStructure(List<DocumentField> fieldsToSearch) {
         Element structure = new Element("structure");
 
         Namespace namespace = Namespace.getNamespace("xs", "http://www.w3.org/2001/XMLSchema");
@@ -203,8 +199,7 @@ public class TAPIRClient {
         XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
         out.output(searchXML, System.out);
         System.out.println("---------------------------------");
-        Element result = queryServer(searchXML);
-        return result;
+        return queryServer(searchXML);
     }
 
     public static void clearNamespace(Element e) {
@@ -216,7 +211,7 @@ public class TAPIRClient {
 
 
 
-    public Element generateSearchXML(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
+    public Element generateSearchXML(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) {
         Element searchElement = new Element("search");
         searchElement.setAttribute("count", "true").setAttribute("start", "0").setAttribute("limit", "65536").setAttribute("envelope", "true");
 

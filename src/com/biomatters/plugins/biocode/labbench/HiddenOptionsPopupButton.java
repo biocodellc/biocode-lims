@@ -11,11 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 14/05/2009
- * Time: 5:56:05 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 14/05/2009 5:56:05 PM steve $
  */
 public class HiddenOptionsPopupButton extends Options.Option<String, JPanel>{
     private String childOptionsName;

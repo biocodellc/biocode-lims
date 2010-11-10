@@ -12,11 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 14/05/2009
- * Time: 4:55:18 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 14/05/2009 4:55:18 PM steve $
  */
 public class ButtonOption extends Options.Option<String, JPanel> {
     List<ActionListener> actionListeners = new ArrayList<ActionListener>();

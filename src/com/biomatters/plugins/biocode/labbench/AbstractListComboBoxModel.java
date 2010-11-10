@@ -9,7 +9,7 @@ import javax.swing.*;
  *          Created on 10/06/2009 7:47:30 PM
  */
 public abstract class AbstractListComboBoxModel extends AbstractListModel implements ComboBoxModel{
-    Object selectedObject;
+    private Object selectedObject;
 
     public void setSelectedItem(Object anObject) {
         if ((selectedObject != null && !selectedObject.equals( anObject )) ||

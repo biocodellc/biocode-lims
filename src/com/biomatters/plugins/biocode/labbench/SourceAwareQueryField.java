@@ -5,11 +5,8 @@ import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 13/05/2009
- * Time: 3:26:05 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 13/05/2009 3:26:05 PM steve $
  */
 public class SourceAwareQueryField extends QueryField{
     private String sourceId;

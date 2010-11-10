@@ -56,7 +56,7 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                             if(savepoint != null) {
                                 try {
                                     connection.rollback(savepoint);
-                                } catch (SQLException e1) {} //don't need to catch
+                                } catch (SQLException ignored) {} //don't need to catch
                             }
                             Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
                         } finally {
@@ -141,7 +141,7 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                     Options childOptions = part.getExtendedPrintable().getOptions(isSavingToFile);
                     if(childOptions != null) {
                         o.addChildOptions(""+i, "", "", childOptions);
-                        if(doc.getNumberOfParts() > 1) {
+                        if(doc.getNumberOfParts() > 1 && booleanOption != null) {
                             booleanOption.addChildOptionsDependent(childOptions, true, true);
                         }
                     }

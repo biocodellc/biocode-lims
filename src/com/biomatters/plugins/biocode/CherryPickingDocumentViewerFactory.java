@@ -2,24 +2,18 @@ package com.biomatters.plugins.biocode;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.plugins.biocode.labbench.CherryPickingDocument;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
-import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 21/04/2010
- * Time: 7:35:00 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 21/04/2010 7:35:00 AM steve $
  */
 public class CherryPickingDocumentViewerFactory extends TableDocumentViewerFactory {
 

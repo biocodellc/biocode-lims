@@ -20,14 +20,13 @@ import java.util.*;
 import java.util.Date;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 12/05/2009
- * Time: 5:51:15 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 12/05/2009 5:51:15 AM steve $
  */
+@SuppressWarnings({"ConstantConditions"})
 public class MooreaFimsConnection extends FIMSConnection{
 
+    @SuppressWarnings({"FieldCanBeLocal"})
     private Driver driver;
     private Connection connection;
 
@@ -88,7 +87,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         }
     }
 
-    public void disconnect() throws ConnectionException{
+    public void disconnect() {
 //        if(connection != null) {
 //            try {
 //                connection.close();
@@ -201,7 +200,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         String sqlString = getQuerySQLString(query);
         if(sqlString == null) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
         queryBuilder.append(sqlString);
         
@@ -238,7 +237,6 @@ public class MooreaFimsConnection extends FIMSConnection{
             if(searchText == null || searchText.trim().length() == 0) {
                 return null;
             }
-            join = " OR ";
             queryBuilder.append("(");
             List<Query> queryList = new ArrayList<Query>();
             for (int i = 0; i < getSearchAttributes().size(); i++) {
@@ -319,9 +317,11 @@ public class MooreaFimsConnection extends FIMSConnection{
             if(fieldCode.equals("tissueId")) {
                 String[] tissueIdParts = aquery.getValues()[0].toString().split("\\.");
                 if(tissueIdParts.length == 2) {
+                    //noinspection StringConcatenationInsideStringBufferAppend
                     queryBuilder.append("(biocode_tissue.bnhm_id "+join+" '"+tissueIdParts[0]+"' AND biocode_tissue.tissue_num "+join+" "+tissueIdParts[1]+")");
                 }
                 else {
+                    //noinspection StringConcatenationInsideStringBufferAppend
                     queryBuilder.append("biocode_tissue.bnhm_id "+join+" '"+aquery.getValues()[0]+"'");
                 }
             }
@@ -351,6 +351,7 @@ public class MooreaFimsConnection extends FIMSConnection{
                 else if (fieldCode.equals(DocumentField.COMMON_NAME_FIELD.getCode())) {
                     fieldCode = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
                 }
+                //noinspection StringConcatenationInsideStringBufferAppend
                 queryBuilder.append(fieldCode +" "+ join +" ");
 
                 Object[] queryValues = aquery.getValues();
@@ -384,18 +385,15 @@ public class MooreaFimsConnection extends FIMSConnection{
             queryBuilder.append("(");
             int count = 0;
             boolean firstTime = true;
-            for (Iterator<? extends Query> it = cquery.getChildren().iterator(); it.hasNext();) {
-                Query childQuery = it.next();
-
+            for (Query childQuery : cquery.getChildren()) {
                 String s = getQuerySQLString(childQuery);
-                if(s == null) {
+                if (s == null) {
                     continue;
-                }
-                else if(!firstTime) {
+                } else if (!firstTime) {
                     queryBuilder.append(join);
                 }
                 firstTime = false;
-                count ++;
+                count++;
                 queryBuilder.append(s);
             }
             if(count == 0) {
@@ -433,7 +431,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         String query = "SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_tissue.well_number96 FROM biocode_tissue WHERE biocode_tissue.format_name96='"+plateId+"'";
 
         try {
-            PreparedStatement statement = connection.prepareStatement(query.toString());
+            PreparedStatement statement = connection.prepareStatement(query);
             ResultSet resultSet = statement.executeQuery();
             Map<String, String> result = new HashMap<String, String>();
             while(resultSet.next()) {
@@ -477,7 +475,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         String query = "SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_extract.format_name96, biocode_extract.well_number96, biocode_tissue.well_number96 FROM biocode_extract, biocode_tissue WHERE biocode_extract.from_tissue_seq_num = biocode_tissue.seq_num  AND "+andQuery;
 
         try {
-            PreparedStatement statement = connection.prepareStatement(query.toString());
+            PreparedStatement statement = connection.prepareStatement(query);
             ResultSet resultSet = statement.executeQuery();
             Map<String, String> result = new HashMap<String, String>();
             while(resultSet.next()) {

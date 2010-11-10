@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
-import com.biomatters.plugins.biocode.labbench.plates.PlateBulkEditor;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
@@ -17,11 +16,8 @@ import java.sql.SQLException;
 import java.util.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Steve
- * Date: 25/08/2010
- * Time: 2:38:08 AM
- * To change this template use File | Settings | File Templates.
+ * @author Steve
+ * @version $Id: 25/08/2010 2:38:08 AM steve $
  */
 public class OneOffHackOperation extends DocumentOperation{
 
@@ -104,7 +100,7 @@ public class OneOffHackOperation extends DocumentOperation{
 
                 //set the workflows and extraction/tissue ID's
                 if(r.getType() == Reaction.Type.Extraction) {
-                    Map<String,String> tissueIds = null;
+                    Map<String,String> tissueIds;
                     try {
                         tissueIds = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateName);
                     } catch (ConnectionException e) {
@@ -155,7 +151,7 @@ public class OneOffHackOperation extends DocumentOperation{
 
     private static void populateWells96(Map<String, String> ids, String fieldName, Plate p) {
         for(Map.Entry<String, String> entry : ids.entrySet()) {
-            BiocodeUtilities.Well well = null;
+            BiocodeUtilities.Well well;
             try {
                 well = new BiocodeUtilities.Well(entry.getKey());
             } catch (IllegalArgumentException e) {

@@ -42,6 +42,7 @@ import java.io.*;
  *          <p/>
  *          Created on 17/06/2009 12:39:03 PM
  */
+@SuppressWarnings({"ConstantConditions", "ConstantConditions"})
 public class PlateBulkEditor {
     private Plate plate;
     private boolean newPlate;
@@ -470,7 +471,6 @@ public class PlateBulkEditor {
                                 putMappedValuesIntoEditor(editorToCheck, workflowEditor, idToWorkflow, plate, true);
                             } catch (SQLException e1) {
                                 Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
-                                return;
                             }
                         }
                     };
@@ -549,10 +549,12 @@ public class PlateBulkEditor {
                     options.setValue(editor.getField().getCode(), ""); //erase records if the user has blanked out the line...
                     if (value != null) {
                         if (editor.getField().getCode().equals(workflowField.getCode()) && workflows != null) {
-                            Workflow workflow = workflows.get(value);
+                            Workflow workflow = workflows.get(value.toString());
                             if (workflow == null) {
+                                //noinspection StringConcatenationInsideStringBufferAppend
                                 badWorkflows.append(value + "\n");
                             } else {
+                                //noinspection StringConcatenationInsideStringBufferAppend
                                 reaction.setWorkflow(workflow);
                             }
                         }
@@ -605,7 +607,7 @@ public class PlateBulkEditor {
                 editorField.setText("");
                 editorField.valuesFromTextView();
                 for(Map.Entry<String, String> entry : ids.entrySet()) {
-                    BiocodeUtilities.Well well = null;
+                    BiocodeUtilities.Well well;
                     try {
                         well = new BiocodeUtilities.Well(entry.getKey());
                     } catch (IllegalArgumentException e) {
@@ -815,16 +817,20 @@ public class PlateBulkEditor {
             if(direction == Direction.DOWN_AND_ACROSS) {
                 for(int row = 0; row < plate.getRows(); row++) {
                     for(int col = 0; col < plate.getCols(); col++) {
+                        //noinspection StringConcatenationInsideStringBufferAppend
                         valuesBuilder.append(values[row][col]+"\n");
-                        lineNumbersBuilder.append(plate.getWellName(row, col)+"\n");
+                        //noinspection StringConcatenationInsideStringBufferAppend
+                        lineNumbersBuilder.append(Plate.getWellName(row, col)+"\n");
                     }
                 }
             }
             else {
                 for(int col = 0; col < plate.getCols(); col++) {
                     for(int row = 0; row < plate.getRows(); row++) {
+                        //noinspection StringConcatenationInsideStringBufferAppend
                         valuesBuilder.append(values[row][col]+"\n");
-                        lineNumbersBuilder.append(plate.getWellName(row, col)+"\n");
+                        //noinspection StringConcatenationInsideStringBufferAppend
+                        lineNumbersBuilder.append(Plate.getWellName(row, col)+"\n");
                     }
                 }
             }

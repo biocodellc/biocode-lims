@@ -7,7 +7,6 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -21,12 +20,10 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 16/05/2009
- * Time: 10:56:30 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 16/05/2009 10:56:30 AM steve $
  */
+@SuppressWarnings({"ConstantConditions"})
 public class PCRReaction extends Reaction<PCRReaction> {
 
     private ReactionOptions options;
@@ -143,18 +140,14 @@ public class PCRReaction extends Reaction<PCRReaction> {
 
     public static List<DocumentField> getDefaultDisplayedFields() {
         if(BiocodeService.getInstance().isLoggedIn()) {
-            return Arrays.asList(new DocumentField[] {
-                    BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
+            return Arrays.asList(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
                     new DocumentField("Forward Primer", "", PCROptions.PRIMER_OPTION_ID, String.class, true, false),
                     new DocumentField("Reverse Primer", "", PCROptions.PRIMER_REVERSE_OPTION_ID, String.class, true, false),
-                    new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
-            });
+                    new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false));
         }
-        return Arrays.asList(new DocumentField[] {
-                new DocumentField("Forward Primer", "", PCROptions.PRIMER_OPTION_ID, String.class, true, false),
+        return Arrays.asList(new DocumentField("Forward Primer", "", PCROptions.PRIMER_OPTION_ID, String.class, true, false),
                 new DocumentField("Reverse Primer", "", PCROptions.PRIMER_REVERSE_OPTION_ID, String.class, true, false),
-                new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
-        });
+                new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false));
     }
 
     public String getExtractionId() {
@@ -177,7 +170,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         Set<String> samplesToGet = new HashSet<String>();
 
         //check the extractions exist in the database...
-        Map<String, String> tissueMapping = null;
+        Map<String, String> tissueMapping;
         try {
             tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("extraction", reactions);
         } catch (SQLException e) {
@@ -250,9 +243,10 @@ public class PCRReaction extends Reaction<PCRReaction> {
                         reaction.setHasError(true);
                         error += "The locus of the workflow "+workflowId+" ("+reaction.getWorkflow().getLocus()+") does not match the reaction's locus ("+reaction.getLocus()+")<br>";    
                     }
-                    if(reaction.getWorkflow().getName().equals(workflowId)) {
-                        continue;
-                    }
+//                  ssh: commenting out because this appears to have no effect  
+//                    if(reaction.getWorkflow().getName().equals(workflowId)) {
+//                        continue;
+//                    }
                 }
                 else {
                     reaction.setWorkflow(null);
@@ -269,7 +263,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
                 for(Reaction reaction : reactions) {
                     Object workflowId = reaction.getFieldValue("workflowId");
                     if(workflowId != null && workflowId.toString().length() > 0 && reaction.getWorkflow() == null && reaction.getType() != Reaction.Type.Extraction) {
-                        Workflow workflow = map.get(workflowId);
+                        Workflow workflow = map.get(workflowId.toString());
                         String extractionId = reaction.getExtractionId();
                         if(workflow == null) {
                             error += "The workflow "+workflowId+" does not exist in the database.\n";    

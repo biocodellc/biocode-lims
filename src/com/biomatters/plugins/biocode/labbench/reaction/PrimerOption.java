@@ -90,10 +90,8 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
     }
 
     private void init() {
-        final PrimerOption selfReference = this;
         primerListener = new SimpleListener() {
             public void objectChanged() {
-                PrimerOption primerOption = selfReference;
                 ArrayList<Options.OptionValue> valueList = new ArrayList<Options.OptionValue>(primerValues);
                 if(extraPrimer != null) {
                     boolean alreadyHasPrimer = NO_PRIMER_VALUE.getName().equals(extraPrimer.getName()) && NO_PRIMER_VALUE.getDescription().equals(extraPrimer.getName());
@@ -127,8 +125,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
     }
 
     private static Options.OptionValue getOptionValue(String sequence, String name) {
-        Options.OptionValue optionValue = new Options.OptionValue(name, name, sequence);
-        return optionValue;
+        return new Options.OptionValue(name, name, sequence);
     }
 
     private static Options.OptionValue getOptionValue(OligoSequenceDocument seq, String overrideName) {
@@ -164,7 +161,6 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
 
     @Override
     public void setPossibleValues(List<? extends Options.OptionValue> possibleValues) {
-        return;
     }
 
 

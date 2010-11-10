@@ -258,7 +258,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             return displayFieldsTemplate.getDisplayedFields();
         }
         return Collections.EMPTY_LIST;
-    };
+    }
 
     public DisplayFieldsTemplate getDefaultDisplayedFieldsTemplate() {
         final String templateName = preferences.get(getType() + "_fields", null);
@@ -444,7 +444,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public Dimension getPreferredSize() {
         int y = PADDING+3;
         int x = 10;
-        String maxLabel = " ";
         List<DocumentField> fieldsToDisplay = getFieldsToDisplay();
 
         if(fieldWidthCache == null || fieldWidthCache.length != fieldsToDisplay.size()) {
@@ -458,7 +457,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 }
                 continue;
             }
-            String value = getDisplayableValue(field).toString();
+            String value = getDisplayableValue(field);
             if (value.length() == 0) {
                 continue;
             }
@@ -481,7 +480,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
         fieldWidthCache = new int[fieldList.size()];       
         for(int i=0; i < fieldList.size(); i++) {
-            String value = getDisplayableValue(fieldList.get(i)).toString();
+            String value = getDisplayableValue(fieldList.get(i));
             if(value.length() == 0) {
                 continue;
             }
@@ -550,13 +549,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             g.setFont(i == 0 ? firstLabelFont : labelFont);
 
             DocumentField field = getFieldsToDisplay().get(i);
-            String value = getDisplayableValue(field).toString();
+            String value = getDisplayableValue(field);
             if (value.length() == 0) {
                 continue;
             }
             int textHeight = charHeight;
             int textWidth = fieldWidthCache != null ? fieldWidthCache[i] : location.width;
-            g.drawString(value.toString(), location.x + (location.width - textWidth) / 2, y + textHeight);
+            g.drawString(value, location.x + (location.width - textWidth) / 2, y + textHeight);
             y += textHeight + LINE_SPACING;
         }
 
@@ -765,7 +764,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         }
                         statement.setInt(4, reaction.getPlateId());
                         statement.setInt(5, reaction.getPosition());
-                        int cocktailId = -1;
+                        int cocktailId;
                         Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
                         try {
                             cocktailId = Integer.parseInt(cocktailValue.getName());
@@ -854,7 +853,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         }
                         statement.setInt(5, reaction.getPlateId());
                         statement.setInt(6, reaction.getPosition());
-                        int cocktailId = -1;
+                        int cocktailId;
                         Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
                         try {
                             cocktailId = Integer.parseInt(cocktailValue.getName());
@@ -959,7 +958,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
 
         public Color getColor(Object value) {
-            Color valueColor = color.get(value);
+            if(value == null) {
+                return null;
+            }
+            Color valueColor = color.get(value.toString());
             return valueColor != null ? valueColor : Color.white;
         }
 

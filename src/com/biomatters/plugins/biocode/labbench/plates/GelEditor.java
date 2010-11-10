@@ -122,13 +122,6 @@ public class GelEditor {
                 if(index < 0) {
                     return;
                 }
-                File f = new File("c:/temp.jpg");
-                try {
-                BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
-                out.write(gelimages.get(index).getImageBytes());
-                out.close();
-                }
-                catch(Exception ex){}
                 gelimages.remove(index);
                 for(ListDataListener listener : listModel.getListDataListeners()){
                     listener.contentsChanged(new ListDataEvent(listModel, ListDataEvent.CONTENTS_CHANGED, 0, listModel.getSize()-1));

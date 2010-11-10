@@ -125,7 +125,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                         else if(sizeFromOptions == Plate.Size.w384) {
                             Plate[] plates = new Plate[4];
                             for (int i = 0; i < plates.length; i++) {
-                                AnnotatedPluginDocument doc = null;
+                                AnnotatedPluginDocument doc;
                                 doc = options.getPlateForQuadrant(documents, i);
                                 if(doc != null) {
                                     PlateDocument pDoc = (PlateDocument) doc.getDocument();
@@ -144,9 +144,6 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                         Reaction[] plateReactions = editingPlate.getReactions();
                         plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null, true);
                         progressListener.setProgress(1.0);
-                        if(progressListener.isCanceled()) {
-                            return;
-                        }
                     }
 
 
@@ -156,6 +153,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             }
         };
         ThreadUtilities.invokeNowOrWait(runnable);
+        //noinspection ThrowableResultOfMethodCallIgnored
         if(exception.get() != null) {
             throw exception.get();
         }
@@ -187,13 +185,13 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             }
             Plate srcPlate = srcPlates[quadrant];
             Reaction[] srcReactions = srcPlate.getReactions();
-            for(int i=0; i < srcReactions.length; i++) {
+            for (Reaction srcReaction1 : srcReactions) {
                 int xoffset = quadrant % 2 == 0 ? 0 : 1;
                 int yOffset = quadrant > 1 ? 1 : 0;
-                for(int col = 0; col < srcPlate.getCols(); col++) {
-                    for(int row = 0; row < srcPlate.getRows(); row++) {
+                for (int col = 0; col < srcPlate.getCols(); col++) {
+                    for (int row = 0; row < srcPlate.getRows(); row++) {
                         Reaction srcReaction = srcPlate.getReaction(row, col);
-                        Reaction destReaction = destPlate.getReaction(row*2 + yOffset, col*2 + xoffset);
+                        Reaction destReaction = destPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
                         ReactionUtilities.copyReaction(srcReaction, destReaction);
                     }
                 }
@@ -207,14 +205,14 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, boolean onlyFailed) throws DocumentOperationException{
         quadrant = quadrant-1;//zero-index it
         Reaction[] srcReactions = srcPlate.getReactions();
-        for(int i=0; i < srcReactions.length; i++) {
+        for (Reaction srcReaction1 : srcReactions) {
             int xoffset = quadrant % 2 == 0 ? 0 : 1;
             int yOffset = quadrant > 1 ? 1 : 0;
-            for(int col = 0; col < destPlate.getCols(); col++) {
-                for(int row = 0; row < destPlate.getRows(); row++) {
+            for (int col = 0; col < destPlate.getCols(); col++) {
+                for (int row = 0; row < destPlate.getRows(); row++) {
                     Reaction destReaction = destPlate.getReaction(row, col);
-                    Reaction srcReaction = srcPlate.getReaction(row*2 + yOffset, col*2 + xoffset);
-                    if(!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
+                    Reaction srcReaction = srcPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
+                    if (!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
                         ReactionUtilities.copyReaction(srcReaction, destReaction);
                     }
                 }

@@ -8,16 +8,10 @@ import com.sun.media.jai.codec.SeekableStream;
 import com.sun.media.jai.codec.ByteArraySeekableStream;
 import com.sun.media.jai.codec.ImageDecoder;
 
-import javax.swing.*;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
 import javax.media.jai.RenderedImageAdapter;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
 import java.io.*;
 import java.sql.*;
-import java.util.Iterator;
 
 import org.jdom.Element;
 
@@ -47,8 +41,10 @@ public class GelImage implements XMLSerializable {
         if(imageFile.length() > Integer.MAX_VALUE) {
             throw new IOException("The file "+imageFile.getName()+" is too large");
         }
+        assert imageFile.length() < Integer.MAX_VALUE;
         imageBytes = new byte[(int)imageFile.length()];
-        in.read(imageBytes);
+        int bytesRead = in.read(imageBytes);
+        assert bytesRead == imageFile.length();
         createImage();
     }
 

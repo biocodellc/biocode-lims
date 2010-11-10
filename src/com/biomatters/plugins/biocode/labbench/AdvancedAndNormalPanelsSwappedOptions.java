@@ -7,11 +7,8 @@ import org.jdom.Element;
 import javax.swing.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 14/05/2009
- * Time: 6:07:19 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 14/05/2009 6:07:19 PM steve $
  */
 public class AdvancedAndNormalPanelsSwappedOptions extends Options {
 

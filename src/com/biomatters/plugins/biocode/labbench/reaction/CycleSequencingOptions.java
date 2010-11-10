@@ -254,10 +254,10 @@ public class CycleSequencingOptions extends ReactionOptions {
         for(AnnotatedPluginDocument adoc : docs) {
             PluginDocument doc = adoc.getDocumentOrNull();
             if(doc == null) {
-                //todo: handle
+                continue;
             }
             if(!(doc instanceof NucleotideSequenceDocument)) {
-                //todo: handle
+                continue;
             }
             sequencesStrongReference.add((NucleotideSequenceDocument)doc);
         }
@@ -294,15 +294,12 @@ public class CycleSequencingOptions extends ReactionOptions {
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
         addLabel("");
-        DocumentSelectionOption primerOption = addPrimerSelectionOption(PRIMER_OPTION_ID, "Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());//new PrimerOption(PRIMER_OPTION_ID, "Primer");
-        //addCustomOption(primerOption);
+        addPrimerSelectionOption(PRIMER_OPTION_ID, "Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());//new PrimerOption(PRIMER_OPTION_ID, "Primer");
 
         OptionValue[] directionValues = new OptionValue[] {new OptionValue(FORWARD_VALUE, "Forward"), new OptionValue("reverse", "Reverse")};
         addComboBoxOption(DIRECTION, "Direction", directionValues, directionValues[0]);
 
 
-//        IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-//        primerAmountOption.setUnits("uL");
 
 
         List<OptionValue> cocktails = getCocktails();
@@ -332,9 +329,8 @@ public class CycleSequencingOptions extends ReactionOptions {
     private List<OptionValue> getCocktails() {
         List<OptionValue> cocktails = new ArrayList<OptionValue>();
         List<? extends Cocktail> cycleSequencingCocktails = Cocktail.getAllCocktailsOfType(Reaction.Type.CycleSequencing);
-        for (int i = 0; i < cycleSequencingCocktails.size(); i++) {
-            Cocktail cocktail = cycleSequencingCocktails.get(i);
-            cocktails.add(new OptionValue(""+cocktail.getId(), cocktail.getName()));
+        for (Cocktail cocktail : cycleSequencingCocktails) {
+            cocktails.add(new OptionValue("" + cocktail.getId(), cocktail.getName()));
         }
         if(cocktails.size() == 0) {
             cocktails.add(new OptionValue("-1", "No available cocktails"));

@@ -49,7 +49,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
         if(workflowDocuments.size() == 0) {
             return null;
         }
-        TableModel tableModel = new TableModel(){
+        return new TableModel(){
             public int getRowCount() {
                 return workflowDocuments.size();
             }
@@ -124,6 +124,5 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                 //To change body of implemented methods use File | Settings | File Templates.
             }
         };
-        return tableModel;
     }
 }

@@ -7,11 +7,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 13/05/2009
- * Time: 8:03:12 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 13/05/2009 8:03:12 AM steve $
  */
 public class TissueDocument implements PluginDocument {
     private FimsSample fimsResults;
@@ -70,7 +67,9 @@ public class TissueDocument implements PluginDocument {
 
     public String getTissueHTML() {
         StringBuilder htmlBuilder = new StringBuilder();
+        //noinspection StringConcatenationInsideStringBufferAppend
         htmlBuilder.append("<h1>"+getName()+"</h1>\n");
+        //noinspection StringConcatenationInsideStringBufferAppend
         htmlBuilder.append("<table border=\"0\">\n");
         List<DocumentField> fimsAttributes = fimsResults.getFimsAttributes();
         if(fimsAttributes == null || fimsAttributes.size() == 0) {
@@ -82,6 +81,7 @@ public class TissueDocument implements PluginDocument {
             if(value == null) {
                 value = "";
             }
+            //noinspection StringConcatenationInsideStringBufferAppend
             htmlBuilder.append("<tr><td align=\"right\"><b>"+name+":</b></td><td>"+value+"</td></tr>\n");
         }
         htmlBuilder.append("</table>\n");
@@ -90,6 +90,7 @@ public class TissueDocument implements PluginDocument {
 
     public String getTaxonomyHTML() {
         StringBuilder htmlBuilder = new StringBuilder();
+        //noinspection StringConcatenationInsideStringBufferAppend
         htmlBuilder.append("<h1>"+getName()+"</h1>\n");
         htmlBuilder.append("<table border=\"0\">\n");
         List<DocumentField> taxonomyAttributes = fimsResults.getTaxonomyAttributes();
@@ -102,6 +103,7 @@ public class TissueDocument implements PluginDocument {
             if(value == null) {
                 value = "";
             }
+            //noinspection StringConcatenationInsideStringBufferAppend
             htmlBuilder.append("<tr><td align=\"right\"><b>"+name+":</b></td><td>"+value+"</td></tr>\n");
         }
         htmlBuilder.append("</table>\n");

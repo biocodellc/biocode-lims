@@ -67,7 +67,6 @@ public class PlateView extends JPanel {
 
 
         for(int i=0; i < rows; i++) {
-            boolean lastRow = i == rows-1;
             for(int j = 0; j < cols; j++) {
                 final Reaction reaction = reactions[cols*i + j];
                 Rectangle reactionBounds = new Rectangle(1+cellWidth * j, 1+cellHeight * i, cellWidth - 1, cellHeight - 1);
@@ -140,13 +139,12 @@ public class PlateView extends JPanel {
 
                 if(e.getClickCount() == 1) {
                     //select just the cell the user clicked on
-                    for(int i=0; i < reactions.length; i++) {
-                        if(reactions[i].getBounds().contains(e.getPoint())) {
-                            reactions[i].setSelected(ctrlIsDown ? !reactions[i].isSelected() : true);
-                        }
-                        else {
-                            if(!ctrlIsDown){
-                                reactions[i].setSelected(false);
+                    for (Reaction reaction : reactions) {
+                        if (reaction.getBounds().contains(e.getPoint())) {
+                            reaction.setSelected(ctrlIsDown ? !reaction.isSelected() : true);
+                        } else {
+                            if (!ctrlIsDown) {
+                                reaction.setSelected(false);
                             }
                         }
                     }
@@ -191,13 +189,8 @@ public class PlateView extends JPanel {
                 if(plate.isDeleted()) {
                     return;
                 }
-                //long time = System.currentTimeMillis();
                 selectRectangle(e);
-                long time2 = System.currentTimeMillis();
                 repaint();
-
-                //System.out.println("selectin: "+(System.currentTimeMillis()-time));
-
             }
         });
 

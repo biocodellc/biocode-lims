@@ -11,7 +11,6 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import javax.swing.*;
 import java.util.*;
@@ -25,6 +24,7 @@ import java.sql.*;
  *          <p/>
  *          Created on 12/06/2009 5:27:29 PM
  */
+@SuppressWarnings({"ConstantConditions"})
 public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
     public ExtractionReaction(){}
@@ -246,13 +246,14 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     //ask the user if they want to move the extractions that are already attached to a plate.
                     StringBuilder moveMessage = new StringBuilder("The following extractions already exist in the database.\nDo you want to move them to this plate?\n\n");
                     for(ExtractionReaction reaction : extractionsThatExist) {
+                        //noinspection StringConcatenationInsideStringBufferAppend
                         moveMessage.append(reaction.getExtractionId()+"\n");
                     }
                     if(!showDialogs || Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", dialogParent, Dialogs.DialogIcon.QUESTION)) {
-                        for (int i = 0; i < reactions.size(); i++) {
-                            Reaction r = reactions.get(i);
+                        for (ExtractionReaction reaction : reactions) {
+                            Reaction r = reaction;
                             for (ExtractionReaction r2 : extractionsThatExist) {
-                                if(r.getExtractionId().equals(r2.getExtractionId())) {
+                                if (r.getExtractionId().equals(r2.getExtractionId())) {
                                     ReactionUtilities.copyReaction(r2, r);
                                     r.setPlateId(r.getPlateId());
                                     r.setPosition(r.getPosition());

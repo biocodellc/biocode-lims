@@ -10,11 +10,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 21/04/2010
- * Time: 7:11:54 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 21/04/2010 7:11:54 AM steve $
  */
 public class CherryPickingDocument implements PluginDocument {
     private String name;
@@ -29,7 +26,7 @@ public class CherryPickingDocument implements PluginDocument {
 
 
     public List<DocumentField> getDisplayableFields() {
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     public Object getFieldValue(String fieldCodeName) {

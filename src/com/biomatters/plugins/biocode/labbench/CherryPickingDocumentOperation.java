@@ -22,11 +22,8 @@ import org.jdom.Element;
 import javax.swing.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Steve
- * Date: 22/12/2009
- * Time: 7:04:21 PM
- * To change this template use File | Settings | File Templates.
+ * @author Steve
+ * @version $Id: 22/12/2009 7:04:21 PM steve $
  */
 public class CherryPickingDocumentOperation extends DocumentOperation {
 
@@ -91,7 +88,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         Options.Option<String, ? extends JComponent> label = options.addLabel("Geneious will select reactions that conform to the following:");
         label.setSpanningComponent(true);
 
-        Options.MultipleOptions multipleOptions = options.addMultipleOptions("conditions", cherryPickingConditionsOptions, false);
+        options.addMultipleOptions("conditions", cherryPickingConditionsOptions, false);
 
         return options;
     }
@@ -113,12 +110,12 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             super(sourceClass);
             beginAlignHorizontally("", false);
 
-            final Options.ComboBoxOption<Options.OptionValue> conditionOption = addComboBoxOption("condition", "", cherryPickingConditions, cherryPickingConditions[0]);
+            addComboBoxOption("condition", "", cherryPickingConditions, cherryPickingConditions[0]);
 
 
-            final ComboBoxOption valueOption = addComboBoxOption("value", "is", valueValues, valueValues[0]);
+            addComboBoxOption("value", "is", valueValues, valueValues[0]);
 
-            final Options.StringOption valueOption2 = addStringOption("value2", "contains", "");
+            addStringOption("value2", "contains", "");
 
             final PrimerOption valueOption3 = new PrimerOption("value3", "is");
             addCustomOption(valueOption3);
@@ -152,10 +149,6 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             };
             listener.objectChanged();
             conditionOption.addChangeListener(listener);
-        }
-
-        public Element toXML() {
-            return super.toXML();
         }
 
 
@@ -212,7 +205,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             throw new DocumentOperationException("The selected plates do not contain any reactions that match your criteria");
         }
 
-        Map<String, Reaction> newReactions = null;
+        Map<String, Reaction> newReactions;
         String reactionTypeString = options.getValueAsString("plateType");
         final Reaction.Type plateType = Reaction.Type.valueOf(reactionTypeString);
         if(plateType == null) {
@@ -232,7 +225,8 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         String plateSizeString = options.getValueAsString("plateSize");
         if(plateSizeString.equals("null")) {
-            return Arrays.asList(DocumentUtilities.createAnnotatedPluginDocument(new CherryPickingDocument("Results", failedReactions)));
+            DocumentUtilities.addGeneratedDocument(DocumentUtilities.createAnnotatedPluginDocument(new CherryPickingDocument(getDocumentTitle(annotatedDocuments), failedReactions)), true);
+            return null;
         }
         final Plate.Size plateSize = Plate.Size.valueOf(plateSizeString);
 
@@ -273,6 +267,17 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         };
         ThreadUtilities.invokeNowOrWait(runnable);
         return null;
+    }
+
+    public String getDocumentTitle(AnnotatedPluginDocument[] selectedPlates) {
+        String title = "Cherry picking of ";
+        if(selectedPlates.length > 1) {
+            title += selectedPlates.length+" plates";
+        }
+        else {
+            title += selectedPlates[0].getName();
+        }
+        return title;
     }
 
     Map<String, Reaction> getNewReactions(List<Reaction> failedReactions, Reaction.Type reactionType) {

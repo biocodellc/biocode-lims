@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.assembler.annotate;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
 /**
  * @author Steve

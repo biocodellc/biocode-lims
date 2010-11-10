@@ -27,6 +27,7 @@ class DatabaseScriptRunner {
      * @param connection The connection to a database to run the script on
      * @param scriptFile The script file to run
      * @param allowDrops If this is false then any DROP commands will not be run.
+     * @param ignoreErrors if false the script will stop running when an error is encountered.  if true will continue running subsequent statements.
      * @throws SQLException if a problem is encountered while communicating with the database, this may include bad syntax
      * @throws IOException if a problem occurs reading the script file.  This is a FileNotFoundException if the script file did not exist.
      */

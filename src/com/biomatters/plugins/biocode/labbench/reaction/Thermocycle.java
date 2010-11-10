@@ -11,11 +11,8 @@ import java.sql.*;
 import org.jdom.Element;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 14/05/2009
- * Time: 12:58:02 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 14/05/2009 12:58:02 PM steve $
  */
 public class Thermocycle implements XMLSerializable {
 
@@ -86,7 +83,7 @@ public class Thermocycle implements XMLSerializable {
             int stateLength = resultSet.getInt("state.length");
             State state = new State(stateId, stateTemp, stateLength);
             currentCycle.addState(state);
-            if(resultSet.next() == false) {
+            if(!resultSet.next()) {
                 break;
             }
         }
@@ -108,7 +105,7 @@ public class Thermocycle implements XMLSerializable {
         statement1.close();
 
         //get the id of the thermocycle record
-        PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");;
+        PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");
         ResultSet resultSet = statement.executeQuery();
         resultSet.next();
         int thermoId = resultSet.getInt(1);
@@ -121,7 +118,7 @@ public class Thermocycle implements XMLSerializable {
             statement2.close();
 
             //get the id of the cycle record
-            statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");;
+            statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");
             resultSet = statement.executeQuery();
             resultSet.next();
             int cycleId = resultSet.getInt(1);

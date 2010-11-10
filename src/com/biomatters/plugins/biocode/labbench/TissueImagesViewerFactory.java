@@ -101,7 +101,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                                         try {
                                             m.waitForAll();
                                         }
-                                        catch(InterruptedException ex){}
+                                        catch(InterruptedException ignored){}
 
                                         BiocodeService.imageCache.put(doc.getSpecimenId(), images);
 

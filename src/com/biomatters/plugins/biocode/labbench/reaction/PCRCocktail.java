@@ -1,12 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -47,7 +45,7 @@ public class PCRCocktail extends Cocktail{
 
     public PCRCocktail() {
         options = new Options(this.getClass());
-        Options.StringOption nameOption = options.addStringOption("name", "Name", "");
+        options.addStringOption("name", "Name", "");
         options.beginAlignHorizontally("Template/Target", true);
         Options.DoubleOption tempateConcOption = options.addDoubleOption("template Conc", "", 0.0, 0.0, Double.MAX_VALUE);
         tempateConcOption.setUnits("ng/µL");

@@ -21,16 +21,11 @@ import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.*;
-import javax.swing.plaf.basic.BasicSplitPaneDivider;
-import javax.swing.plaf.basic.BasicSplitPaneUI;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -38,7 +33,6 @@ import java.io.PrintWriter;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 import java.sql.SQLException;
 
@@ -59,7 +53,7 @@ public class ReactionUtilities {
      * @param owner
      * @return true if the user clicked OK on the dialog
      */
-    public static boolean bulkLoadChromatograms(Plate plate, JComponent owner) {
+    public static void bulkLoadChromatograms(Plate plate, JComponent owner) {
         if(plate == null || plate.getReactionType() != Reaction.Type.CycleSequencing) {
             throw new IllegalArgumentException("You may only call this method with Cycle Sequencing plates");
         }
@@ -116,7 +110,7 @@ public class ReactionUtilities {
         options.endAlignHorizontally();
 
         if(!Dialogs.showOptionsDialog(options, "Bulk add traces", true, owner)){
-            return false;    
+            return;
         }
 
         final int platePart = namePartOption.getPart();
@@ -126,8 +120,9 @@ public class ReactionUtilities {
         if(optionValuesAreEqual(chooseValues[1], chooseOption.getValue())) {
             field = getDocumentField(reactions.get(0).getAllDisplayableFields(), fieldOption.getValue().getName());
             assert field != null; //this shouldn't happen unless the list changes between when the options were displayed and when the user clicks ok.
+            //noinspection ConstantConditions
             if(field == null) {
-                return false;
+                return;
             }
         }
 
@@ -148,7 +143,6 @@ public class ReactionUtilities {
         };
         BiocodeService.block("Importing traces", owner, runnable);
 
-        return true;
     }
 
     private static DocumentField getDocumentField(List<DocumentField> fields, String code) {
@@ -184,6 +178,7 @@ public class ReactionUtilities {
      * @param separatorString
      * @param platePart
      * @param partToMatch
+     * @param fieldToCheck
      * @param checkPlate
      * @param folder
      */
@@ -238,7 +233,7 @@ public class ReactionUtilities {
                         break;
                     }
                 }
-                List<AnnotatedPluginDocument> annotatedDocuments = null;
+                List<AnnotatedPluginDocument> annotatedDocuments;
                 try {
                     annotatedDocuments = importDocuments(new File[]{f}, ProgressListener.EMPTY);
                 } catch (IOException e) {
@@ -248,10 +243,11 @@ public class ReactionUtilities {
                     Dialogs.showMessageDialog("Error importing sequences: "+e.getMessage());
                     break;
                 }
-                List<NucleotideSequenceDocument> sequences = null;
+                List<NucleotideSequenceDocument> sequences;
                 try {
                     sequences = getSequencesFromAnnotatedPluginDocuments(annotatedDocuments);
-                } catch (Exception e) {
+                } catch (IllegalArgumentException e) {
+                    e.printStackTrace();
                     continue;
                 }
                 List<MemoryFile> files = new ArrayList<MemoryFile>();
@@ -289,7 +285,7 @@ public class ReactionUtilities {
 
         byte[] result = new byte[(int)f.length()];
         FileInputStream in = new FileInputStream(f);
-        in.read(result);
+        assert in.read(result) == f.length();
         in.close();
         return result;
     }
@@ -328,7 +324,7 @@ public class ReactionUtilities {
     }
 
 
-    public static boolean saveAbiFileFromPlate(Plate plate, JComponent owner) {
+    public static void saveAbiFileFromPlate(Plate plate, JComponent owner) {
         Options options = new Options(ReactionUtilities.class);
         options.addStringOption("owner", "Owner", "");
         options.addStringOption("operator", "Operator", "");
@@ -338,12 +334,12 @@ public class ReactionUtilities {
         options.addStringOption("analysisProtocol", "Analysis Protocol", "Standard_3.1");
 
         if(!Dialogs.showOptionsDialog(options, "Export API config file", true, owner)) {
-            return false;
+            return;
         }
 
         if(plate.getReactionType() == Reaction.Type.Extraction) {
             Dialogs.showMessageDialog("You cannot create ABI input files from extraction plates", "Error creating ABI input", owner, Dialogs.DialogIcon.WARNING);
-            return false;
+            return;
         }
 
         Preferences prefs = Preferences.userNodeForPackage(ReactionUtilities.class);
@@ -351,7 +347,7 @@ public class ReactionUtilities {
         JFileChooser chooser = new JFileChooser(prefs.get("abiFileLocation", System.getProperty("user.home")));
 
         if(chooser.showSaveDialog(owner) != JFileChooser.APPROVE_OPTION) {
-            return false;
+            return;
         }
 
         File outFile = chooser.getSelectedFile();
@@ -376,8 +372,6 @@ public class ReactionUtilities {
             }
         }
 
-        return true;
-
     }
 
     public static void showDisplayDialog(Plate plate, JComponent owner) {
@@ -391,7 +385,7 @@ public class ReactionUtilities {
         for(Reaction r : reactions) {//todo: may be slow
             List<DocumentField> displayableFields = r.getFieldsToDisplay();
             if(displayableFields == null || displayableFields.size() == 0) {
-                displayableFields = r.getDefaultDisplayedFields();
+                displayableFields = Reaction.getDefaultDisplayedFields();
             }
             for(DocumentField df : displayableFields) {
                 if(!selectedFieldsVector.contains(df)) {
@@ -485,12 +479,12 @@ public class ReactionUtilities {
         }
     }
 
-    public static boolean editReactions(List<Reaction> reactions, JComponent owner, boolean creating) {
+    public static void editReactions(List<Reaction> reactions, JComponent owner, boolean creating) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
 
-        ReactionOptions options = null;
+        ReactionOptions options;
         try {
             options = XMLSerializer.clone(reactions.get(0).getOptions());
             options.refreshValuesFromCaches();
@@ -510,7 +504,6 @@ public class ReactionUtilities {
                 Object reactionValue = reaction.getOptions().getValue(option.getName());
                 if(!optionValuesAreEqual(optionValue, reactionValue)) {
                     haveAllSameValues.put(option.getName(), false);
-                    continue;
                 }
             }
         }
@@ -559,7 +552,6 @@ public class ReactionUtilities {
                 }
             }
         }
-        return hasChanges;
     }
 
     private static boolean optionValuesAreEqual(Object optionValue, Object reactionValue) {
@@ -607,7 +599,7 @@ public class ReactionUtilities {
                         checkbox.setEnabled(false);
                         checkbox.setSelected(false);
                     }
-                    checkbox.setAlignmentY(JCheckBox.RIGHT_ALIGNMENT);
+                    checkbox.setAlignmentX(JCheckBox.RIGHT_ALIGNMENT);
                     checkboxes.add(checkbox);
                     ChangeListener listener = new ChangeListener() {
                         public void stateChanged(ChangeEvent e) {
@@ -697,7 +689,10 @@ public class ReactionUtilities {
     /**
      * if an existing template matches the one we're trying to create, that one is returned instead unless createNewEvenIfItMatchesExisting is true
      * @param listSelector
+     * @param colorSelector
      * @param type
+     * @param instruction
+     * @param createNewEvenIfItMatchesExisting
      * @return
      */
     private static DisplayFieldsTemplate createNewTemplate(SplitPaneListSelector<DocumentField> listSelector, ColoringPanel colorSelector, Reaction.Type type, String instruction, boolean createNewEvenIfItMatchesExisting) {
@@ -740,9 +735,7 @@ public class ReactionUtilities {
         Set allValues = new HashSet();
         if(field != null) {
             if(field.isEnumeratedField()) {
-                for(String s : field.getEnumerationValues()) {
-                    allValues.add(s);
-                }
+                allValues.addAll(Arrays.asList(field.getEnumerationValues()));
             }
             else {
                 for(Reaction r : reactions) {
@@ -803,8 +796,7 @@ public class ReactionUtilities {
         while(extractionIds.contains(tissueId+"."+i)) {
             i++;
         }
-        String valueString = tissueId + "." + i;
-        return valueString;
+        return tissueId + "." + i;
     }
 
     public static class MemoryFile{

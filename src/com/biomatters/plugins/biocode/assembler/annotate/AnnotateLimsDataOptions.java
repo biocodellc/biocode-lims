@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
 import org.virion.jam.util.SimpleListener;
@@ -118,9 +117,12 @@ public class AnnotateLimsDataOptions extends Options {
 
     /**
      *
+     * @param annotatedDocument
      * @return never null
+     * @throws com.biomatters.plugins.biocode.labbench.ConnectionException
+     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      */
-    public FimsData getFimsData(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException, ConnectionException {
+    public FimsData getFimsData(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         if(useExistingPlates.getValue() == useExistingValues[0]) {
             return getFIMSDataForGivenPlate(annotatedDocument);
         }
@@ -136,7 +138,7 @@ public class AnnotateLimsDataOptions extends Options {
         if(plateName == null) {
             return null;
         }
-        Map<BiocodeUtilities.Well, WorkflowDocument> workflowMap = null;
+        Map<BiocodeUtilities.Well, WorkflowDocument> workflowMap;
         try {
             workflowMap = getWorkflowMap(plateName.toString());
         } catch (SQLException e) {

@@ -1,8 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 
@@ -17,8 +15,6 @@ import java.util.LinkedHashSet;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.sql.*;
-import java.net.URL;
-import java.net.URISyntaxException;
 
 import org.virion.jam.util.SimpleListener;
 
@@ -38,7 +34,9 @@ public class LocalLIMS {
 
     public void initialize(File dataDirectory) {
         if(!dataDirectory.exists()) {
-            dataDirectory.mkdirs();
+            if(!dataDirectory.mkdirs()) {
+                //todo:handle
+            }
         }
         this.dataDirectory = dataDirectory;
 
@@ -104,9 +102,9 @@ public class LocalLIMS {
                     update();
                     if(databaseOption != null) {
                         databaseOption.setPossibleValues(getDbValues());
+                        databaseOption.setValueFromString(newDbName);
                     }
-                    databaseOption.setPossibleValues(getDbValues());
-                    databaseOption.setValueFromString(newDbName);
+
                 }
             }
         });
@@ -192,7 +190,7 @@ public class LocalLIMS {
 
     public Connection connect(Options options) throws ConnectionException{
         String dbName = options.getValueAsString("database");
-        String path = null;
+        String path;
         try {
             Class.forName("org.hsqldb.jdbc.JDBCDriver");
         } catch (ClassNotFoundException e) {
@@ -215,7 +213,7 @@ public class LocalLIMS {
 
 
     public void upgradeDatabase(Options options) throws SQLException{
-        Connection connection = null;
+        Connection connection;
         try {
             connection = connect(options);
         }

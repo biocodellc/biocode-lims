@@ -109,7 +109,7 @@ public abstract class Cocktail implements XMLSerializable {
         leftPanel.add(scroller, BorderLayout.CENTER);
         addButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                Cocktail newCocktail = null;
+                Cocktail newCocktail;
                 try {
                     newCocktail = cocktailClass.newInstance();
                 } catch (InstantiationException e1) {
@@ -160,7 +160,7 @@ public abstract class Cocktail implements XMLSerializable {
         sp.setDividerLocation(location);
     }
 
-    public boolean Equals(Object o) {
+    public boolean equals(Object o) {
         if(o instanceof Cocktail) {
             return ((Cocktail)o).getId() == getId();
         }

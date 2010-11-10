@@ -69,10 +69,6 @@ public class PlateDocument implements PluginDocument {
         plate = new Plate(element);
     }
 
-    public int getNumberOfParts() {
-        return 1;
-    }
-
     public Plate getPlate() {
         return plate;
     }

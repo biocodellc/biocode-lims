@@ -61,7 +61,10 @@ public class BiocodeUtilities {
 
     /**
      *
+     * @param doc
+     * @param consensusOptions
      * @return generated consensus if doc is an alignment, doc if doc is a sequence, null if doc is a sequence with trace information (obviously isn't a consensus sequence)
+     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      */
     public static AnnotatedPluginDocument getConsensusSequence(AnnotatedPluginDocument doc, Options consensusOptions) throws DocumentOperationException {
         if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass())) {
@@ -83,7 +86,7 @@ public class BiocodeUtilities {
     public static int getJavaVersion() {
         String version = System.getProperty("java.version");
         char minor = version.charAt(2);
-        char point = version.charAt(4);
+        //char point = version.charAt(4);
         return Integer.parseInt(""+minor);
     }
 
@@ -114,12 +117,11 @@ public class BiocodeUtilities {
         if (decimalPlaces >= 0) {
             fmt.setMaximumFractionDigits(decimalPlaces);
         }
-        final double size = bytes;
-        double val = size / (1024 * 1024);
+        double val = bytes / (1024 * 1024);
         if (val > 1) {
             return fmt.format(val).concat(" MB");
         }
-        val = size / 1024;
+        val = bytes / 1024;
         if (val > 10) {
             return fmt.format(val).concat(" KB");
         }

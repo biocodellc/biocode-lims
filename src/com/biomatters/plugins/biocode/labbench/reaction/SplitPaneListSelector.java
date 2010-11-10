@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
@@ -27,7 +26,6 @@ import java.awt.event.MouseEvent;
  */
 public class SplitPaneListSelector<T> extends JPanel {
     private java.util.List<ListSelectionListener> listSelectionListeners = new ArrayList<ListSelectionListener>();
-    private List<T> selectedFields;
     private Vector<T> allFieldsVector;
     private Vector<T> availableFieldsVector;
     private Vector<T> selectedFieldsVector;
@@ -42,10 +40,9 @@ public class SplitPaneListSelector<T> extends JPanel {
         availableFieldsVector = new Vector<T>(allFields);
 
         this.selectedFieldsVector = new Vector<T>();
-        this.selectedFields = new ArrayList();
         if(selectedIndicies != null) {
-            for(int i=0; i < selectedIndicies.length; i++) {
-                selectedFieldsVector.add(allFieldsVector.get(selectedIndicies[i]));
+            for (int selectedIndicy : selectedIndicies) {
+                selectedFieldsVector.add(allFieldsVector.get(selectedIndicy));
             }
         }
         for(T item : selectedFieldsVector) {
@@ -62,29 +59,28 @@ public class SplitPaneListSelector<T> extends JPanel {
 
         final JButton addButton = new JButton(IconUtilities.getIcons("arrow_right.png").getIcon16());
         addButton.setOpaque(false);
+        //noinspection SuspiciousNameCombination
         addButton.setPreferredSize(new Dimension(addButton.getPreferredSize().height, addButton.getPreferredSize().height));
         addButton.setCursor(Cursor.getDefaultCursor());
         final JButton removeButton = new JButton(IconUtilities.getIcons("arrow_left.png").getIcon16());
         removeButton.setOpaque(false);
         removeButton.setCursor(Cursor.getDefaultCursor());
+        //noinspection SuspiciousNameCombination
         removeButton.setPreferredSize(new Dimension(removeButton.getPreferredSize().height, removeButton.getPreferredSize().height));
 
         final JButton moveUpButton = new JButton(IconUtilities.getIcons("arrow_up.png").getIcon16());
         moveUpButton.setOpaque(false);
+        //noinspection SuspiciousNameCombination
         moveUpButton.setPreferredSize(new Dimension(moveUpButton.getPreferredSize().height, moveUpButton.getPreferredSize().height));
         final JButton moveDownButton = new JButton(IconUtilities.getIcons("arrow_down.png").getIcon16());
         moveDownButton.setOpaque(false);
+        //noinspection SuspiciousNameCombination
         moveDownButton.setPreferredSize(new Dimension(moveDownButton.getPreferredSize().height, moveDownButton.getPreferredSize().height));
 
         ListSelectionListener selectionListener = new ListSelectionListener(){
             public void valueChanged(ListSelectionEvent e) {
                 addButton.setEnabled(availableListBox.getSelectedIndices().length > 0);
                 removeButton.setEnabled(selectedListBox.getSelectedIndices().length > 0);
-                final ListModel model = selectedListBox.getModel();
-                selectedFields = new ArrayList<T>();
-                for(int i=0; i < model.getSize(); i++) {
-                    selectedFields.add((T)model.getElementAt(i));
-                }
                 for(ListSelectionListener listener : listSelectionListeners) {
                     listener.valueChanged(e);
                 }
@@ -97,8 +93,8 @@ public class SplitPaneListSelector<T> extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 int offset = 0;
                 int[] indices = availableListBox.getSelectedIndices();
-                for (int i = 0; i < indices.length; i++) {
-                    int index = indices[i]-offset;
+                for (int indice : indices) {
+                    int index = indice - offset;
                     selectedFieldsVector.add(availableFieldsVector.get(index));
                     availableFieldsVector.remove(index);
                     offset++;
@@ -130,13 +126,11 @@ public class SplitPaneListSelector<T> extends JPanel {
                 List selectedValues = Arrays.asList(selectedListBox.getSelectedValues());
                 Vector<T> newValues = new Vector<T>();
                 T current = null;
-                for(int i=0; i < selectedFieldsVector.size(); i++) {
-                    T currentField = selectedFieldsVector.get(i);
-                    if(selectedValues.contains(currentField)) {
+                for (T currentField : selectedFieldsVector) {
+                    if (selectedValues.contains(currentField)) {
                         newValues.add(currentField);
-                    }
-                    else {
-                        if(current != null) {
+                    } else {
+                        if (current != null) {
                             newValues.add(current);
                         }
                         current = currentField;
@@ -311,8 +305,6 @@ public class SplitPaneListSelector<T> extends JPanel {
         availableFieldsVector.removeAllElements();
         availableFieldsVector.addAll(allFieldsVector);
         availableFieldsVector.removeAll(fields);
-        selectedFields.clear();
-        selectedFields.addAll(fields);
         selectedFieldsVector.removeAllElements();
         selectedFieldsVector.addAll(fields);
         updateListComponents();

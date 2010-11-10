@@ -28,7 +28,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     /**
      * Override this to make changes to the table before Geneious gets hold of it
      *
-     * @param table
+     * @param table ...
      */
     protected void messWithTheTable(JTable table) {
 
@@ -37,8 +37,8 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     /**
      * override this for an action provider
      *
-     * @param table
-     * @return
+     * @param table  ...
+     * @return  ...
      */
     protected ActionProvider getActionProvider(JTable table) {
         return null;
@@ -104,7 +104,11 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     }
 
     /**
-     * Returns the preferred size to set a component at in order to render an html string. You can     * specify the size of the width.
+     * Returns the preferred size to set a component at in order to render an html string. You can
+     * specify the size of the width.
+     * @param label .
+     * @param width .
+     * @return the width
      */
     protected static java.awt.Dimension getWidthRestrictedPreferredSize(JLabel label, int width) {
         View view = (View) label.getClientProperty(javax.swing.plaf.basic.BasicHTML.propertyKey);

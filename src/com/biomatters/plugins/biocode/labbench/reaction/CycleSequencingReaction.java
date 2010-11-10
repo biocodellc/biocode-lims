@@ -9,7 +9,6 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -43,7 +42,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 //        System.out.println(getWorkflow());
     }
 
-    private Options init(ResultSet r) throws SQLException {
+    private void init(ResultSet r) throws SQLException {
         setPlateId(r.getInt("cyclesequencing.plate"));
         setPosition(r.getInt("cyclesequencing.location"));
         setCreated(r.getTimestamp("cyclesequencing.date"));
@@ -121,7 +120,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 //                throw new SQLException("Couldn't deserialize the sequences: "+e.getMessage());
 //            }
 //        }
-        return options;
     }
 
     public Type getType() {
@@ -159,16 +157,12 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
     public static List<DocumentField> getDefaultDisplayedFields() {
         if(BiocodeService.getInstance().isLoggedIn()) {
-            return Arrays.asList(new DocumentField[] {
-                    BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
+            return Arrays.asList(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(),
                     new DocumentField("Primer", "", CycleSequencingOptions.PRIMER_OPTION_ID, String.class, true, false),
-                    new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
-            });
+                    new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false));
         }
-        return Arrays.asList(new DocumentField[] {
-                new DocumentField("Primer", "", CycleSequencingOptions.PRIMER_OPTION_ID, String.class, true, false),
-                new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false)
-        });
+        return Arrays.asList(new DocumentField("Primer", "", CycleSequencingOptions.PRIMER_OPTION_ID, String.class, true, false),
+                new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false));
     }
 
     public void addSequences(List<NucleotideSequenceDocument> sequences, List<ReactionUtilities.MemoryFile> rawTraces) {
@@ -231,7 +225,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         //List<Query> queries = new ArrayList<Query>();
         Set<String> samplesToGet = new HashSet<String>();
 
-        Map<String, String> tissueMapping = null;
+        Map<String, String> tissueMapping;
         try {
             tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("cyclesequencing", reactions);
         } catch (SQLException e) {
@@ -288,14 +282,12 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 reaction.setHasError(true);
                 error += "The reaction "+reaction.getExtractionId()+" does not have a locus set.<br>";
             }
-            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
-                if(reaction.getWorkflow() != null && reaction.getWorkflow().getName().equals(workflowId)){
-                    continue;
-                }
-                else {
-                    reaction.setWorkflow(null);
-                    workflowIdStrings.add(workflowId.toString());
-                }
+            if((!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction)
+            && (reaction.getWorkflow() == null || !reaction.getWorkflow().getName().equals(workflowId))){
+
+                reaction.setWorkflow(null);
+                workflowIdStrings.add(workflowId.toString());
+                
             }
         }
 
@@ -306,7 +298,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 for(Reaction reaction : reactions) {
                     Object workflowId = reaction.getFieldValue("workflowId");
                     if(workflowId != null && workflowId.toString().length() > 0) {
-                        Workflow workflow = map.get(workflowId);
+                        Workflow workflow = map.get(workflowId.toString());
                         if(workflow == null) {
                             error += "The workflow "+workflowId+" does not exist in the database.\n";
                         }

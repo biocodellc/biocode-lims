@@ -8,8 +8,6 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.virion.jam.util.SimpleListener;
 
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ChangeEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -68,7 +66,7 @@ public class NewPlateOptions extends Options{
         };
 
         Options.BooleanOption fromExistingOption = null;
-        Options.BooleanOption onlyFailed = null;
+        Options.BooleanOption onlyFailed;
         if(fromExistingPossible) {
             fromExistingOption = addBooleanOption("fromExisting", "Create plate from existing document", false);
             fromExistingOption.setSpanningComponent(true);
@@ -138,7 +136,6 @@ public class NewPlateOptions extends Options{
     }
 
     public Plate.Size getPlateSize() {
-        Plate.Size sizeFromOptions = null;
         Options.OptionValue plateSizeValue = (Options.OptionValue)getValue("plateType");
 
         if(plateSizeValue.getName().equals("48Plate")) {
@@ -179,11 +176,10 @@ public class NewPlateOptions extends Options{
     @Override
     public String verifyOptionsAreValid() {
         //analyse the documents
-        final boolean fromExistingPossible = documents.length > 0;
         final boolean fourPlates = documents.length == 4;
         Plate.Size pSize = null;
         for(AnnotatedPluginDocument doc : documents) {
-            PlateDocument plateDoc = null;
+            PlateDocument plateDoc;
             try {
                 plateDoc = (PlateDocument)doc.getDocument();
             } catch (DocumentOperationException e) {
@@ -258,7 +254,7 @@ public class NewPlateOptions extends Options{
 
     static class ComboBoxListener implements SimpleListener{
         private List<Options.ComboBoxOption<Options.OptionValue>> options;
-        private Options.ComboBoxOption sourceOption;
+        private Options.ComboBoxOption<OptionValue> sourceOption;
         List<Options.OptionValue> values;
 
         ComboBoxListener(List<Options.ComboBoxOption<Options.OptionValue>> options, Options.ComboBoxOption sourceOption, List<Options.OptionValue> values) {
@@ -279,7 +275,7 @@ public class NewPlateOptions extends Options{
                     //change it.
                     List<Options.OptionValue> values = new ArrayList(this.values);
                     values.remove(sourceOption.getValue());
-                    for(Options.ComboBoxOption optionb : options) {
+                    for(Options.ComboBoxOption<OptionValue> optionb : options) {
                         if(!optionb.getValue().toString().equals("null")) {
                             values.remove(optionb.getValue());
                         }

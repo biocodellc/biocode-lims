@@ -44,6 +44,7 @@ public abstract class MultiPartDocumentViewerFactory extends DocumentViewerFacto
      * The speed and quality of printing suffers dramatically if
      * any of the containers have double buffering turned on.
      * So this turns if off globally.
+     * @param c
      */
     public static void disableDoubleBuffering(Component c) {
         RepaintManager currentManager = RepaintManager.currentManager(c);
@@ -52,6 +53,7 @@ public abstract class MultiPartDocumentViewerFactory extends DocumentViewerFacto
 
     /**
      * Re-enables double buffering globally.
+     * @param c
      */
 
     public static void enableDoubleBuffering(Component c) {

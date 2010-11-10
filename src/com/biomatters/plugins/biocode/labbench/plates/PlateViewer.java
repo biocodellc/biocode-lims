@@ -31,11 +31,8 @@ import java.util.prefs.Preferences;
 import org.virion.jam.util.SimpleListener;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 21/05/2009
- * Time: 6:36:46 AM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 21/05/2009 6:36:46 AM steve $
  */
 public class PlateViewer extends JPanel {
 

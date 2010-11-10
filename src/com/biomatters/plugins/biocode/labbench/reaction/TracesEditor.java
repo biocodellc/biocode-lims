@@ -101,8 +101,6 @@ public class TracesEditor {
                 WritableDatabaseService selectedFolder = ServiceUtilities.getUserSelectedFolder(null);
                 if(selectedFolder != null){
                     Set<SequenceDocument> sequences = sequenceSelection.getSelectedSequences();
-                    ArrayList<NucleotideSequenceDocument> sequenceList = new ArrayList<NucleotideSequenceDocument>();
-
                     try {
                         for(SequenceDocument doc : sequences) {
                             selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(doc), ProgressListener.EMPTY).setUnread(true);

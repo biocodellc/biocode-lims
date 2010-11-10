@@ -3,10 +3,8 @@ package com.biomatters.plugins.biocode.assembler.verify;
 import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
-import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,9 +14,6 @@ import jxl.write.WritableWorkbook;
 import jxl.write.WritableSheet;
 import jxl.write.WriteException;
 import jxl.Workbook;
-
-import javax.swing.table.TableModel;
-import javax.swing.event.TableModelListener;
 
 /**
  * @author Steve

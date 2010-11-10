@@ -145,9 +145,6 @@ public class MooreaFimsSample implements FimsSample {
         return o != null ? o.toString() : null;
     }
 
-    public String getFimsConnectionId() {
-        return null;
-    }
 
     public List<DocumentField> getFimsAttributes() {
         return new ArrayList<DocumentField>(fimsAttributes.values());

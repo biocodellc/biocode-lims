@@ -8,10 +8,8 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
 import java.util.*;
-import java.lang.ref.WeakReference;
 import java.lang.ref.SoftReference;
 
 /**
@@ -55,7 +53,7 @@ public abstract class FIMSConnection {
      */
     public abstract void connect(Options options) throws ConnectionException;
 
-    public abstract void disconnect() throws ConnectionException;
+    public abstract void disconnect();
 
     public abstract DocumentField getTissueSampleDocumentField();
 

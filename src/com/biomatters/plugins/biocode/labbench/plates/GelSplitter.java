@@ -136,7 +136,6 @@ public class GelSplitter {
             return;
         }
         System.out.println(slider.getValue());
-        File folder = new File(System.getProperty("user.home")+File.separator+"images");
         for(Map.Entry<BiocodeUtilities.Well, BufferedImage> entry : imageMap.get().entrySet()) {
             BufferedImage entryImage = entry.getValue();
             try {

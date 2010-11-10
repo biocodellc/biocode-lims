@@ -51,6 +51,7 @@ import java.util.prefs.Preferences;
  *          <p/>
  *          Created on 23/02/2009 4:41:26 PM
  */
+@SuppressWarnings({"ConstantConditions"})
 public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
@@ -393,18 +394,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private void logOut() {
         isLoggedIn = false;
         if(activeFIMSConnection != null) {
-            try {
-                activeFIMSConnection.disconnect();
-                activeFIMSConnection = null;
-            } catch (ConnectionException e1) {
-                Dialogs.showMessageDialog("Could not disconnect from " + activeFIMSConnection.getLabel() + ": " + e1.getMessage());
-            }
+            activeFIMSConnection.disconnect();
+            activeFIMSConnection = null;
         }
-        try {
-            limsConnection.disconnect();
-        } catch (ConnectionException e1) {
-            Dialogs.showMessageDialog("Could not disconnect from the FIMS service: " + e1.getMessage());
-        }
+        limsConnection.disconnect();
         updateStatus();
     }
 
@@ -668,7 +661,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(query instanceof CompoundSearchQuery) {
                 isAnd = ((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND;
             }
-            Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.EMPTY_MAP);
+            Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap()) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap());
 
             if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                 callback.setMessage("Downloading Workflows");
@@ -697,7 +690,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 for(PlateDocument plate : plateList) {
                     for(Reaction r : plate.getPlate().getReactions()) {
                         if(r.getWorkflow() != null) {
-                            workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.EMPTY_LIST));
+                            workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
                         }
                     }
                 }
@@ -790,10 +783,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             saveCachesToDisk();
         } catch (IOException e) {
             throw new TransactionException("Could not write the caches to disk", e);
-        } catch (JDOMException e) {
-            throw new TransactionException("Could not write the caches to disk", e);
-        } catch (XMLSerializationException e) {
-            throw new TransactionException("Could not write the caches to disk", e);
         }
     }
 
@@ -807,7 +796,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         cycleSequencingDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.CycleSequencing);
     }
 
-    private void saveCachesToDisk() throws IOException, JDOMException, XMLSerializationException {
+    private void saveCachesToDisk() throws IOException {
         saveThermocyclesToDisk("pcr_thermocycle", PCRThermocycles);
         saveThermocyclesToDisk("cyclesequencing_thermocycle", cyclesequencingThermocycles);
         savePCRCocktailsToDisk();
@@ -848,8 +837,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             saveDisplayedFieldsToDisk(type, templates);
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (XMLSerializationException e) {
-            e.printStackTrace();
         }
         //template.toSQL(limsConnection.getConnection());
         updateDisplayFieldsTemplates();
@@ -878,7 +865,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             colors.put("passed", Color.green.darker());
             colors.put("failed", Color.red.darker());
             switch(type) {
-                case Extraction: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.Extraction, ExtractionReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.EMPTY_MAP)));
+                case Extraction: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.Extraction, ExtractionReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.<String, Color>emptyMap())));
                 case PCR: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.PCR, PCRReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
                 case CycleSequencing: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.CycleSequencing, CycleSequencingReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
                 default : throw new IllegalArgumentException("You must supply one of the supported reaction types");
@@ -912,7 +899,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     //----
 
-    private void saveCycleSequencingCocktailsToDisk() throws IOException, XMLSerializationException{
+    private void saveCycleSequencingCocktailsToDisk() throws IOException {
         File file = new File(dataDirectory, "cyclesequencingCocktails.xml");
         if(!file.exists()) {
             createNewFile(file);
@@ -920,7 +907,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         saveCocktails(file, PCRCocktails);
     }
 
-    private void savePCRCocktailsToDisk() throws IOException, XMLSerializationException {
+    private void savePCRCocktailsToDisk() throws IOException {
         File file = new File(dataDirectory, "PCRCocktails.xml");
         if(!file.exists()) {
             createNewFile(file);
@@ -928,7 +915,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         saveCocktails(file, cyclesequencingCocktails);
     }
 
-    private void saveCocktails(File file, List<Cocktail> cocktails) throws IOException, XMLSerializationException {
+    private void saveCocktails(File file, List<Cocktail> cocktails) throws IOException {
         if(cocktails == null || cocktails.size() == 0) {
             if(!file.delete()) {
                 file.deleteOnExit();
@@ -945,7 +932,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         outf.close();
     }
 
-    private void saveDisplayedFieldsToDisk(Reaction.Type type, List<DisplayFieldsTemplate> templates)  throws IOException, XMLSerializationException{
+    private void saveDisplayedFieldsToDisk(Reaction.Type type, List<DisplayFieldsTemplate> templates)  throws IOException {
         File file = new File(dataDirectory, type+"Fields.xml");
         if(!file.exists()) {
             createNewFile(file);
@@ -968,7 +955,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
 
-    private void saveThermocyclesToDisk(String type, List<Thermocycle> thermocycles)  throws IOException, XMLSerializationException{
+    private void saveThermocyclesToDisk(String type, List<Thermocycle> thermocycles)  throws IOException {
         File file = new File(dataDirectory, type+".xml");
         if(!file.exists()) {
             createNewFile(file);
@@ -1273,7 +1260,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             queries[i] = query;
         }
 
-        Query masterQuery = Query.Factory.createOrQuery(queries, Collections.EMPTY_MAP);
+        Query masterQuery = Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap());
 
         List<FimsSample> list = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(masterQuery);
         
@@ -1442,6 +1429,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(emptyPlates.size() > 0) {
                 StringBuilder message = new StringBuilder("Geneious has found the following empty plates in the database.\n  Do you want to delete them as well?\n");
                 for(Plate emptyPlate : emptyPlates) {
+                    //noinspection StringConcatenationInsideStringBufferAppend
                     message.append(emptyPlate.getName()+"\n");
                 }
                 if(Dialogs.showYesNoDialog(message.toString(), "Delete empty plates", progress.getComponentForOwner(), Dialogs.DialogIcon.QUESTION)){
@@ -1479,13 +1467,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 if(!first) {
                     builder.append(" OR ");
                 }
+                //noinspection StringConcatenationInsideStringBufferAppend
                 builder.append("extractionId="+r.getId());
                 first = false;
                 reactionCount++;
             }
         }
         if(reactionCount == 0) { //the plate is empty
-            return Collections.EMPTY_SET;    
+            return Collections.emptySet();
         }
 
         String getWorkflowSQL = "SELECT id FROM workflow WHERE "+builder.toString();
@@ -1771,13 +1760,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 workflowNameQueries.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, r.getWorkflow().getName()));
             }
         }
-        List<WorkflowDocument> docs = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]), Collections.EMPTY_MAP), null, null);
+        List<WorkflowDocument> docs = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]), Collections.<String, Object>emptyMap()), null, null);
 
         Map<BiocodeUtilities.Well, WorkflowDocument> workflows = new HashMap<BiocodeUtilities.Well, WorkflowDocument>();
         for(Reaction r : plate.getReactions()) {
             for(WorkflowDocument doc : docs) {
                 Reaction mostRecentExtraction = doc.getMostRecentReaction(Reaction.Type.Extraction);
                 assert mostRecentExtraction != null; //workflows should always have an extraction
+                //noinspection ConstantConditions
                 if(mostRecentExtraction != null && mostRecentExtraction.getFimsSample() != null && r.getFimsSample() != null && mostRecentExtraction.getFimsSample().getId().equals(r.getFimsSample().getId())) {
                     workflows.put(new BiocodeUtilities.Well(r.getLocationString()), doc);
                 }

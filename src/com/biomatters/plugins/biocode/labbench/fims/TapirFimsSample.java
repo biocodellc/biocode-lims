@@ -10,11 +10,8 @@ import org.jdom.Element;
 import java.util.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: steve
- * Date: 20/08/2009
- * Time: 2:34:58 PM
- * To change this template use File | Settings | File Templates.
+ * @author steve
+ * @version $Id: 20/08/2009 2:34:58 PM steve $
  */
 public class TapirFimsSample implements FimsSample {
     private List<DocumentField> searchFields;
@@ -25,7 +22,7 @@ public class TapirFimsSample implements FimsSample {
         fromXML(e);
     }
 
-    public TapirFimsSample(TAPIRFimsConnection connection, Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
+    public TapirFimsSample(Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
        TAPIRClient.clearNamespace(tapirHit);
         this.searchFields = new ArrayList<DocumentField>(searchFields);
         this.taxonomyFields = taxonomyFields;
@@ -73,10 +70,6 @@ public class TapirFimsSample implements FimsSample {
 
     public String getSpecimenId() {
         return ""+getFimsAttributeValue("http://rs.tdwg.org/dwc/dwcore/CatalogNumber");
-    }
-
-    public String getFimsConnectionId() {
-        return null;
     }
 
     public List<DocumentField> getFimsAttributes() {

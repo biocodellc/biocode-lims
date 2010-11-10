@@ -106,7 +106,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             }
 
             Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.EMPTY_MAP);
-            List<WorkflowDocument> workflows = null;
+            List<WorkflowDocument> workflows;
             try {
                 workflows = limsConnection.getMatchingWorkflowDocuments(workflowQuery, Collections.EMPTY_LIST, null);
             } catch (SQLException e) {

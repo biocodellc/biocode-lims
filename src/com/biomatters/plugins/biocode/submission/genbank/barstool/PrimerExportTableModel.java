@@ -38,7 +38,6 @@ public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel 
         options = exportForBarstoolOptions;
         BiocodeService labbench = BiocodeService.getInstance();
         FIMSConnection fimsConnection = labbench.getActiveFIMSConnection();
-        LIMSConnection limsConnection = labbench.getActiveLIMSConnection();
         primersMap = new HashMap<AnnotatedPluginDocument, Pair<Options.OptionValue, Options.OptionValue>>();
         for (AnnotatedPluginDocument doc : docs) {
             Object tissueId = doc.getFieldValue(fimsConnection.getTissueSampleDocumentField());
@@ -50,7 +49,7 @@ public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel 
                 throw new DocumentOperationException(doc.getName() + " does not have a workflow id, make sure you have run Annotate with FIMS Data first.");
             }
 
-            List<WorkflowDocument> matchingWorkflows = null;
+            List<WorkflowDocument> matchingWorkflows;
             try {
                 matchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingWorkflowDocuments(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, workflowName), null, null);
             } catch (SQLException e) {
