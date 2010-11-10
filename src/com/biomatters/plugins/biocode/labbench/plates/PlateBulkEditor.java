@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.GeneiousActionOptions;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -450,8 +451,18 @@ public class PlateBulkEditor {
                         return;
                     }
                     editorToCheck.valuesFromTextView();
-                    final List<String> idsToCheck = getIdsToCheck(editorToCheck, plate);
-                    final List<String> loci = getIdsToCheck(lociEditor, plate);
+                    final List<String> idsToCheck = new ArrayList<String>();
+                    final List<String> loci = new ArrayList<String>();
+                    for(int row=0; row < plate.getRows(); row++) {
+                        for(int col=0; col < plate.getCols(); col++) {
+                            Object value = editorToCheck.getValue(row, col);
+                            if(value != null && value.toString().trim().length() > 0) {
+                                idsToCheck.add(value.toString());
+                                Object lociValue = lociEditor.getValue(row, col);
+                                loci.add(lociValue != null ? lociValue.toString() : null);
+                            }
+                        }
+                    }
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
@@ -789,8 +800,8 @@ public class PlateBulkEditor {
         }
 
         public void textViewFromValues() {
-            StringBuilder valuesBuilder = new StringBuilder();
-            StringBuilder lineNumbersBuilder = new StringBuilder();
+            final StringBuilder valuesBuilder = new StringBuilder();
+            final StringBuilder lineNumbersBuilder = new StringBuilder();
             if(direction == Direction.DOWN_AND_ACROSS) {
                 for(int row = 0; row < plate.getRows(); row++) {
                     for(int col = 0; col < plate.getCols(); col++) {
@@ -808,8 +819,13 @@ public class PlateBulkEditor {
                 }
             }
 
-            valueArea.setText(valuesBuilder.toString());
-            lineNumbers.setText(lineNumbersBuilder.toString());
+            Runnable runnable = new Runnable() {
+                public void run() {
+                    valueArea.setText(valuesBuilder.toString());
+                    lineNumbers.setText(lineNumbersBuilder.toString());
+                }
+            };
+            ThreadUtilities.invokeNowOrLater(runnable);
         }
 
         public DocumentField getField() {

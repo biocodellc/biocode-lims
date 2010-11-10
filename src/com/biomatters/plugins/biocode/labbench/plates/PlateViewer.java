@@ -260,9 +260,9 @@ public class PlateViewer extends JPanel {
     }
 
     public void displayInFrame(final boolean isNew, final Component owner) {
-        final JFrame frame = new JFrame();
         Runnable runnable = new Runnable() {
             public void run() {
+                final JFrame frame = new JFrame();
                 frame.getContentPane().setLayout(new BorderLayout());
 
                 frame.setTitle((isNew ? "New " : " ") + plateView.getPlate().getReactionType());
