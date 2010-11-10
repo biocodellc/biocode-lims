@@ -570,48 +570,58 @@ public class PlateBulkEditor {
     }
 
 
-    private static void populateWells384(List<Map<String, String>> ids, DocumentFieldEditor editorField, Plate p){
+    private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){
         if(ids.size() != 4) {
             throw new IllegalArgumentException("You must have 4 maps!");
         }
 
-        editorField.setText("");
-        editorField.valuesFromTextView();
+        Runnable runnable = new Runnable() {
+            public void run() {
+                editorField.setText("");
+                editorField.valuesFromTextView();
 
-        for(int i=0; i < ids.size(); i++) {
-            int xoffset = i % 2 == 0 ? 0 : 1;
-            int yOffset = i > 1 ? 1 : 0;
-            for(Map.Entry<String, String> entry : ids.get(i).entrySet()) {
-                BiocodeUtilities.Well well = new BiocodeUtilities.Well(entry.getKey());
-                try {
-                    editorField.setValue(well.row()*2 + yOffset, well.col()*2 + xoffset, entry.getValue());
-                } catch (Exception e1) {
-                    e1.printStackTrace();
+                for(int i=0; i < ids.size(); i++) {
+                    int xoffset = i % 2 == 0 ? 0 : 1;
+                    int yOffset = i > 1 ? 1 : 0;
+                    for(Map.Entry<String, String> entry : ids.get(i).entrySet()) {
+                        BiocodeUtilities.Well well = new BiocodeUtilities.Well(entry.getKey());
+                        try {
+                            editorField.setValue(well.row()*2 + yOffset, well.col()*2 + xoffset, entry.getValue());
+                        } catch (Exception e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                    editorField.textViewFromValues();
                 }
             }
-            editorField.textViewFromValues();
-        }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
 
     }
 
-    private static void populateWells96(Map<String, String> ids, DocumentFieldEditor editorField, Plate p, String plateId) {
-        editorField.setText("");
-        editorField.valuesFromTextView();
-        for(Map.Entry<String, String> entry : ids.entrySet()) {
-            BiocodeUtilities.Well well = null;
-            try {
-                well = new BiocodeUtilities.Well(entry.getKey());
-            } catch (IllegalArgumentException e) {
-                Dialogs.showMessageDialog(e.getMessage());
-                return;
+    private static void populateWells96(final Map<String, String> ids, final DocumentFieldEditor editorField, Plate p, String plateId) {
+        Runnable runnable = new Runnable() {
+            public void run() {
+                editorField.setText("");
+                editorField.valuesFromTextView();
+                for(Map.Entry<String, String> entry : ids.entrySet()) {
+                    BiocodeUtilities.Well well = null;
+                    try {
+                        well = new BiocodeUtilities.Well(entry.getKey());
+                    } catch (IllegalArgumentException e) {
+                        Dialogs.showMessageDialog(e.getMessage());
+                        return;
+                    }
+                    try {
+                        editorField.setValue(well.row(), well.col(), entry.getValue());
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
+                }
+                editorField.textViewFromValues();
             }
-            try {
-                editorField.setValue(well.row(), well.col(), entry.getValue());
-            } catch (Exception e1) {
-                e1.printStackTrace();
-            }
-        }
-        editorField.textViewFromValues();
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
     }
 
     private static void putMappedValuesIntoEditor(DocumentFieldEditor sourceEditor, DocumentFieldEditor destEditor, Map<String, String> mappedValues, Plate plate, boolean blankUnmappedRows) {
