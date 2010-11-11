@@ -87,12 +87,15 @@ public class GelEditor {
             public void actionPerformed(ActionEvent e) {
                 FilenameFilter fileFilter = new FilenameFilter(){
                     public boolean accept(File pathname, String name) {
-                        name = name.toLowerCase();
-                        return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".gif") || name.endsWith(".tiff") || name.endsWith(".jpeg");
+                        return isValidImageFile(name);
                     }
                 };
                 File inputFile = FileUtilities.getUserSelectedFile("Open GEL", fileFilter, JFileChooser.FILES_ONLY);
                 if(inputFile != null) {
+                    if(!isValidImageFile(inputFile.getName())) {
+                        Dialogs.showMessageDialog("You must choose an image of a supported file type");
+                        return;
+                    }
                     try {
                         GelImage newGelimage = new GelImage(-1, inputFile, "");
                         gelimages.add(newGelimage);
@@ -148,6 +151,20 @@ public class GelEditor {
             return gelimages;
         }
         return plate.getImages();
+    }
+
+    private static boolean isValidImageFile(String name) {
+        String[] extensions = new String[] {
+            ".jpg", ".png", ".gif", ".tiff", ".jpeg"
+        };
+
+        String lowerName = name.toLowerCase();
+        for(String s : extensions) {
+            if(lowerName.endsWith(s)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static JComponent getGelViewerPanel(final GelImage image, final Plate plate) {

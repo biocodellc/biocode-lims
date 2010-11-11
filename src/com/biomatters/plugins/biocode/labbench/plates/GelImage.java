@@ -10,6 +10,7 @@ import com.sun.media.jai.codec.ImageDecoder;
 
 import javax.media.jai.RenderedImageAdapter;
 import java.awt.*;
+import java.awt.image.RenderedImage;
 import java.io.*;
 import java.sql.*;
 
@@ -80,7 +81,14 @@ public class GelImage implements XMLSerializable {
                 return;
             }
             ImageDecoder decoder = ImageCodec.createImageDecoder(codecNames[0], ss, null);
-            RenderedImageAdapter planarImage = new RenderedImageAdapter(decoder.decodeAsRenderedImage());
+            RenderedImage renderedImage = null;
+            try {
+                renderedImage = decoder.decodeAsRenderedImage();
+            } catch (NullPointerException e) { //GEN-11933
+                e.printStackTrace();
+                throw new RuntimeException("Decoder could not create rendered image for "+filename, e);
+            }
+            RenderedImageAdapter planarImage = new RenderedImageAdapter(renderedImage);
             image = planarImage.getAsBufferedImage();
         } catch (IOException e) {
             e.printStackTrace();
