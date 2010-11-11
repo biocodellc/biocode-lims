@@ -1494,6 +1494,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         //plates.addAll(limsConnection.deleteRecords("pcr", "extractionId", extractionNames));
         plates.addAll(limsConnection.deleteRecords("cyclesequencing", "workflow", workflows));
        // plates.addAll(limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames));
+        limsConnection.deleteRecords("assembly", "workflow", workflows);
         limsConnection.deleteRecords("workflow", "id", workflows);
         plates.addAll(limsConnection.deleteRecords("extraction", "id", ids));
 
