@@ -233,7 +233,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public static List<DocumentField> getDefaultDisplayedFields() {
-        return Collections.EMPTY_LIST;//BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getDisplayedFields();
+        return Collections.emptyList();//BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getDisplayedFields();
     }
 
     public List<DocumentField> getFieldsToDisplay(){
@@ -248,7 +248,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                     return Arrays.asList(GEL_IMAGE_DOCUMENT_FIELD);
                 }
             }
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
         if(displayableFields != null) {
             return displayableFields;
@@ -257,7 +257,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(displayFieldsTemplate != null) {
             return displayFieldsTemplate.getDisplayedFields();
         }
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     public DisplayFieldsTemplate getDefaultDisplayedFieldsTemplate() {
@@ -478,7 +478,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(fieldList.size() == 0) {
             fieldList.add(new DocumentField("a", "", "testField", String.class, false, false));
         }
-        fieldWidthCache = new int[fieldList.size()];       
+        int[] localFieldWidthCache = new int[fieldList.size()];
+        fieldWidthCache = localFieldWidthCache;
         for(int i=0; i < fieldList.size(); i++) {
             String value = getDisplayableValue(fieldList.get(i));
             if(value.length() == 0) {
@@ -488,10 +489,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             TextLayout tl = new TextLayout(value, font, fontRenderContext);
             Rectangle2D layoutBounds = tl.getBounds();
             if(layoutBounds != null) {
-                fieldWidthCache[i] = (int) layoutBounds.getWidth();
+                localFieldWidthCache[i] = (int) layoutBounds.getWidth();
             }
             else {
-                fieldWidthCache[i] = 60;
+                localFieldWidthCache[i] = 60;
                 assert false : "The text knows no bounds!";
             }
             charHeight = (int)tl.getBounds().getHeight();
