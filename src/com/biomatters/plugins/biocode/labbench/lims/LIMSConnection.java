@@ -1047,9 +1047,7 @@ public class LIMSConnection {
     }
 
     public Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws SQLException{
-         StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id " +
-                "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
-                "LEFT JOIN extraction ON workflow.extractionId = extraction.id " +
+         StringBuilder sql = new StringBuilder("SELECT * FROM extraction "+
                 "LEFT JOIN plate ON plate.id = extraction.plate "+
                 "WHERE (");
 

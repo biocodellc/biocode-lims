@@ -651,7 +651,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(reaction.getId() >= 0) { //the reaction is already in the database
                             statement = updateStatement;
                             updateCount++;
-                            statement.setInt(17+(LIMSConnection.EXPECTED_SERVER_VERSION-6)*2, reaction.getId());
+                            statement.setInt(19, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
