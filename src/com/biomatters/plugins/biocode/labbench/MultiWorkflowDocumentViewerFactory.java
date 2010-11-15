@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.utilities.ObjectAndColor;
 
@@ -9,6 +10,8 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 /**
  * @author Steven Stones-Havas
@@ -43,9 +46,27 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
         return workflows;
     }
 
+    private static List<DocumentField> getFimsFields(List<WorkflowDocument> docs) {
+        Set<DocumentField> fields = new LinkedHashSet<DocumentField>();
+        for(WorkflowDocument doc : docs) {
+            fields.addAll(doc.getFimsSample().getFimsAttributes());
+        }
+        return new ArrayList<DocumentField>(fields);
+    }
+
+    @Override
+    protected boolean columnVisibleByDefault(int columnIndex, AnnotatedPluginDocument[] selectedDocuments) {
+        if(columnIndex == 0) {
+            return true;
+        }
+        final List<WorkflowDocument> workflowDocuments = getWorkflowDocuments(selectedDocuments);
+        final List<DocumentField> fimsFields = getFimsFields(workflowDocuments);
+        return columnIndex > fimsFields.size()+1;
+    }
 
     public TableModel getTableModel(final AnnotatedPluginDocument[] docs) {
         final List<WorkflowDocument> workflowDocuments = getWorkflowDocuments(docs);
+        final List<DocumentField> fimsFields = getFimsFields(workflowDocuments);
         if(workflowDocuments.size() == 0) {
             return null;
         }
@@ -55,16 +76,28 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public int getColumnCount() {
-                return 12;
+                return 12+fimsFields.size();
             }
 
             public String getColumnName(int columnIndex) {
-                String[] names = new String[] {"Name", "Extraction", "PCR forward primer", "PCR reverse primer", "PCR plate", "PCR status", "Cycle Sequencing primer (forward)", "Cycle Sequencing Plate (forward)", "Cycle sequencing status (forward)", "Cycle Sequencing primer (reverse)", "Cycle Sequencing Plate (reverse)", "Cycle sequencing status (reverse)"};
-                return names[columnIndex];
+                if(columnIndex == 0) {
+                    return "Name";
+                }
+                if(columnIndex <= fimsFields.size()) {
+                    return fimsFields.get(columnIndex-1).getName();
+                }
+                String[] names = new String[] {"Extraction", "PCR forward primer", "PCR reverse primer", "PCR plate", "PCR status", "Cycle Sequencing primer (forward)", "Cycle Sequencing Plate (forward)", "Cycle sequencing status (forward)", "Cycle Sequencing primer (reverse)", "Cycle Sequencing Plate (reverse)", "Cycle sequencing status (reverse)"};
+                return names[columnIndex-fimsFields.size()-1];
             }
 
             public Class<?> getColumnClass(int columnIndex) {
-                return columnIndex < 2 ? String.class : ObjectAndColor.class;
+                if(columnIndex == 0) {
+                    return String.class;
+                }
+                if(columnIndex <= fimsFields.size()) {
+                    return fimsFields.get(columnIndex-1).getValueType();
+                }
+                return columnIndex < fimsFields.size()+2 ? String.class : ObjectAndColor.class;
             }
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -77,9 +110,15 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                 Reaction recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
                 Reaction recentCycleSequencingForward = doc.getMostRecentSequencingReaction(true);
                 Reaction recentCycleSequencingReverse = doc.getMostRecentSequencingReaction(false);
-                switch(columnIndex) {
-                    case 0 :
-                        return doc.getName();
+                if(columnIndex == 0) {
+                    return doc.getName();
+                }
+                if(columnIndex <= fimsFields.size()) {
+                    return doc.getFimsSample().getFimsAttributeValue(fimsFields.get(columnIndex-1).getCode());
+                }
+                int adjustedColumnIndex = columnIndex-fimsFields.size();
+
+                switch(adjustedColumnIndex) {
                     case 1 :
                         return recentExtraction != null ? recentExtraction.getExtractionId() : null;
                     case 2 :
@@ -117,11 +156,11 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             public void setValueAt(Object aValue, int rowIndex, int columnIndex) {}
 
             public void addTableModelListener(TableModelListener l) {
-                //To change body of implemented methods use File | Settings | File Templates.
+                //blank!
             }
 
             public void removeTableModelListener(TableModelListener l) {
-                //To change body of implemented methods use File | Settings | File Templates.
+                //blank!
             }
         };
     }

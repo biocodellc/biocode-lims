@@ -34,14 +34,14 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
     }
 
     @Override
-    public void messWithTheTable(JTable table) {
+    public void messWithTheTable(JTable table, TableModel model) {
         table.setSelectionBackground(new Color(180, 180, 180));
         table.setSelectionForeground(Color.black);
         table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         table.setRowHeight(table.getRowHeight() * 5);
         TableSorter sorter = (TableSorter) table.getModel();
         sorter.setSortingStatus(0, overrideBinningOptions == null ? TableSorter.DESCENDING : TableSorter.ASCENDING);
-        final VerifyTaxonomyTableModel verifyTaxonomyModel = (VerifyTaxonomyTableModel) sorter.getTableModel();
+        final VerifyTaxonomyTableModel verifyTaxonomyModel = (VerifyTaxonomyTableModel) model;
         verifyTaxonomyModel.setTable(table);
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -121,8 +121,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
     }
 
     @Override
-    protected ActionProvider getActionProvider(JTable table) {
-        TableModel model = ((TableSorter) table.getModel()).getTableModel();
+    protected ActionProvider getActionProvider(JTable table, TableModel model) {
         return ((VerifyTaxonomyTableModel)model).getActionProvider();
     }
 

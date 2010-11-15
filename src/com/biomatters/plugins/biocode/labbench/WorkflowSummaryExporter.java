@@ -47,7 +47,7 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
 
             int count = 0;
             for (TableDocumentViewerFactory factory : factoriesToExport) {
-                TableModel tableModel = factory.getTableModel(documents);
+                TableModel tableModel = factory.getColumnHidingTableModel(documents, factory.getTableModel(documents));
                 if (tableModel != null) {
                     WritableSheet sheet = workbook.createSheet(factory.getName(), count);
                     ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);

@@ -6,14 +6,24 @@ import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.utilities.ObjectAndColor;
 
 import javax.swing.*;
+import javax.swing.event.TableModelListener;
+import javax.swing.event.TableModelEvent;
 import javax.swing.text.View;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.*;
+import java.util.List;
+import java.util.prefs.Preferences;
 
 /**
  * @author Steven Stones-Havas
@@ -23,35 +33,183 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
-    public abstract TableModel getTableModel(AnnotatedPluginDocument[] docs);
+    protected abstract TableModel getTableModel(AnnotatedPluginDocument[] docs);
+    private Preferences prefs = Preferences.userNodeForPackage(getClass());
 
     /**
      * Override this to make changes to the table before Geneious gets hold of it
      *
      * @param table ...
+     * @param model ...
      */
-    protected void messWithTheTable(JTable table) {
+    protected void messWithTheTable(JTable table, TableModel model) {
 
+    }
+
+    /**
+     * override this to make some columns hidden by default...
+     * @param columnIndex the index of the column
+     * @param selectedDocuments  ...
+     * @return true if the specified column should be visible by default
+     */
+    @SuppressWarnings({"UnusedDeclaration"})
+    protected boolean columnVisibleByDefault(int columnIndex, AnnotatedPluginDocument[] selectedDocuments) {
+        return true;
     }
 
     /**
      * override this for an action provider
      *
      * @param table  ...
+     * @param model ...
      * @return  ...
      */
-    protected ActionProvider getActionProvider(JTable table) {
+    protected ActionProvider getActionProvider(JTable table, TableModel model) {
         return null;
     }
 
+    public String getUniqueId() {
+        return getClass().getName();
+    }
+
+    private String getPreferencesPrefix(AnnotatedPluginDocument[] selectedDocuments) {
+        Map<String, Integer> classes = new TreeMap<String, Integer>();
+        for(AnnotatedPluginDocument doc : selectedDocuments) {
+            String docClassName = doc.getDocumentClass().getCanonicalName();
+            Integer count = classes.get(docClassName);
+            if(count == null) {
+                count = 0;
+            }
+            count++;
+            classes.put(docClassName, count);
+        }
+        StringBuilder builder = new StringBuilder(getUniqueId()+"|");
+        for(Map.Entry<String, Integer> entry : classes.entrySet()) {
+            builder.append(entry.getKey());
+            if(entry.getValue() > 1) {
+                builder.append("*");
+            }
+        }
+        return builder.toString();
+    }
+
+    /**
+     * we save the columns that are not at their default values (this provides the best result if the available columns change between views...
+     * @param indices  x
+     * @param model     x
+     * @param selectedDocuments x
+     * @return           x
+     */
+    private String columIndiciesToString(int[] indices, TableModel model, AnnotatedPluginDocument[] selectedDocuments) {
+        ArrayList<String> names = new ArrayList<String>();
+
+        for(int i=0; i < model.getColumnCount(); i++) {
+            boolean on = contains(i, indices);
+            if(on != columnVisibleByDefault(i, selectedDocuments)) {
+                names.add(model.getColumnName(i));
+            }
+        }
+
+        return StringUtilities.join("|", names);    
+    }
+
+    /**
+     * we save the columns that are not at their default values (this provides the best result if the available columns change between views...
+     * @param idString   x
+     * @param model x
+     * @param selectedDocuments  x
+     * @return     x
+     */
+    private int[] stringToColumnIndices(String idString, TableModel model, AnnotatedPluginDocument[] selectedDocuments) {
+        String[] names = idString.split("\\|");
+        int[] indices = new int[model.getColumnCount()];
+        int count = 0;
+
+        for (int i = 0; i < model.getColumnCount(); i++) {
+            boolean visibleByDefault = columnVisibleByDefault(i, selectedDocuments);
+            String columnName = model.getColumnName(i);
+            if (visibleByDefault) {
+                if (Arrays.binarySearch(names, columnName) < 0) {
+                    indices[count] = i;
+                    count++;
+                }
+            }
+            else {
+                if (Arrays.binarySearch(names, columnName) >= 0) {
+                    indices[count] = i;
+                    count++;
+                }
+            }
+        }
+        return shrinkArray(indices, count);
+    }
+
+    private static int[] shrinkArray(int[] indices, int newSize) {
+        if(newSize < indices.length) {
+            int[] indices2 = new int[newSize];
+            System.arraycopy(indices, 0, indices2, 0, newSize);
+            indices = indices2;
+        }
+        return indices;
+    }
+
+    private int[] getDefaultIndices(TableModel model, AnnotatedPluginDocument[] selectedDocuments) {
+        int[] indices = new int[model.getColumnCount()];
+        int count = 0;
+        for(int i=0; i < model.getColumnCount(); i++) {
+            if(columnVisibleByDefault(i, selectedDocuments)) {
+                indices[count] = i;
+                count++;
+            }
+        }
+        return shrinkArray(indices, count);
+    }
+
+    public List<JCheckBoxMenuItem> getSelectedColumnMenuItems(final ColumnHidingTableModel model, final String preferencesPrefix, final AnnotatedPluginDocument[] selectedDocuments) {
+        List<JCheckBoxMenuItem> items = new ArrayList<JCheckBoxMenuItem>();
+        for(int i =0; i < model.getInternalModel().getColumnCount(); i++) {
+            final JCheckBoxMenuItem item = new JCheckBoxMenuItem(model.getInternalModel().getColumnName(i), contains(i, model.getVisibleColumns()));
+            final int i1 = i;
+            item.addActionListener(new ActionListener(){
+                public void actionPerformed(ActionEvent e) {
+                    model.setColumnVisible(i1, item.isSelected());
+                    prefs.put(preferencesPrefix, columIndiciesToString(model.getVisibleColumns(), model.getInternalModel(), selectedDocuments));
+                }
+            });
+            items.add(item);
+        }
+        return items;
+    }
+
+    private static boolean contains(int num, int[] values) {
+        for(int i : values) {
+            if(i == num) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ColumnHidingTableModel getColumnHidingTableModel(AnnotatedPluginDocument[] annotatedDocuments, TableModel model) {
+        String initialColumnState = prefs.get(getPreferencesPrefix(annotatedDocuments), columIndiciesToString(getDefaultIndices(model, annotatedDocuments), model, annotatedDocuments));
+        int[] initialIndices = stringToColumnIndices(initialColumnState, model, annotatedDocuments);
+        return new ColumnHidingTableModel(model, initialIndices);
+    }
+
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
-        final TableModel model = getTableModel(annotatedDocuments);
+        final TableModel internalModel = getTableModel(annotatedDocuments);
+        if(internalModel == null) {
+            return null;
+        }
+        final String preferencesPrefix = getPreferencesPrefix(annotatedDocuments);
+        final ColumnHidingTableModel model = getColumnHidingTableModel(annotatedDocuments, internalModel);
         if(model == null) {
             return null;
         }
         return new DocumentViewer(){
             JTable table;
             public JComponent getComponent() {
+
                 TableSorter sorter = new TableSorter(model);
                 final AtomicReference<JScrollPane> scroller = new AtomicReference<JScrollPane>();
                 table = new GTable(sorter){
@@ -62,7 +220,32 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                     }
 
                 };
+                table.getTableHeader().addMouseListener(new MouseAdapter(){
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        handleMouse(e);
+                    }
+
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        handleMouse(e);
+                    }
+
+                    public void handleMouse(MouseEvent e) {
+                        if(e.isPopupTrigger()){
+                            JPopupMenu menu = new JPopupMenu("Test");
+                            List<JCheckBoxMenuItem> selectedColumnMenuItems = getSelectedColumnMenuItems(model, preferencesPrefix, annotatedDocuments);
+                            for(JCheckBoxMenuItem item : selectedColumnMenuItems) {
+                                menu.add(item);
+                            }
+                            menu.setLocation(e.getPoint());
+                            menu.show(table.getTableHeader(), e.getX(), e.getY());
+                            e.consume();
+                        }
+                    }
+                });
                 scroller.set(new JScrollPane(table));
+
                 table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);                
                 table.setGridColor(Color.lightGray);
                 sorter.setTableHeader(table.getTableHeader());
@@ -87,7 +270,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                         return comp;
                     }
                 });
-                messWithTheTable(table);
+                messWithTheTable(table, internalModel);
                 return scroller.get();
             }
 
@@ -98,7 +281,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
             @Override
             public ActionProvider getActionProvider() {
-                return TableDocumentViewerFactory.this.getActionProvider(table);
+                return TableDocumentViewerFactory.this.getActionProvider(table, internalModel);
             }
         };
     }
@@ -124,6 +307,105 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
     protected static Color getBrighterColor(Color c) {
         return new Color(Math.min(255,c.getRed()+192), Math.min(255,c.getGreen()+192), Math.min(255,c.getBlue()+192));
+    }
+
+    private static class ColumnHidingTableModel implements TableModel{
+        private TableModel internalModel;
+        private int[] visibleColumns;
+        private java.util.List<TableModelListener> tableModelListeners;
+
+        public ColumnHidingTableModel(TableModel internalModel, int[] visibleColumns) {
+            this.internalModel = internalModel;
+            this.visibleColumns = visibleColumns;
+            tableModelListeners = new ArrayList<TableModelListener>();
+            internalModel.addTableModelListener(new TableModelListener(){
+                public void tableChanged(TableModelEvent e) {
+                    for(TableModelListener listener : tableModelListeners) {
+                        listener.tableChanged(new TableModelEvent(ColumnHidingTableModel.this, e.getFirstRow(), e.getLastRow(), ColumnHidingTableModel.this.visibleColumns[e.getColumn()]));
+                    }
+                }
+            });
+        }
+
+        public TableModel getInternalModel() {
+            return internalModel;
+        }
+
+        public void setInternalModel(TableModel internalModel) {
+            this.internalModel = internalModel;
+        }
+
+        public int[] getVisibleColumns() {
+            return visibleColumns;
+        }
+
+        public void setVisibleColumns(int[] visibleColumns) {
+            this.visibleColumns = visibleColumns;
+            for(TableModelListener listener : tableModelListeners) {
+                listener.tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
+            }
+        }
+
+        public int getRowCount() {
+            return internalModel.getRowCount();
+        }
+
+        public int getColumnCount() {
+            return visibleColumns.length;
+        }
+
+        public String getColumnName(int columnIndex) {
+            return internalModel.getColumnName(visibleColumns[columnIndex]);
+        }
+
+        public Class<?> getColumnClass(int columnIndex) {
+            return internalModel.getColumnClass(visibleColumns[columnIndex]);
+        }
+
+        public boolean isCellEditable(int rowIndex, int columnIndex) {
+            return internalModel.isCellEditable(rowIndex, visibleColumns[columnIndex]);
+        }
+
+        public Object getValueAt(int rowIndex, int columnIndex) {
+            return internalModel.getValueAt(rowIndex, visibleColumns[columnIndex]);
+        }
+
+        public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
+            internalModel.setValueAt(aValue, rowIndex, visibleColumns[columnIndex]);
+        }
+
+        public void addTableModelListener(TableModelListener l) {
+            tableModelListeners.add(l);
+        }
+
+        public void removeTableModelListener(TableModelListener l) {
+            tableModelListeners.remove(l);
+        }
+
+        public void setColumnVisible(int col, boolean selected) {
+            int[] newVisibleColumns;
+            boolean alreadySelected = contains(col, visibleColumns);
+            if(selected == alreadySelected) {
+                return;
+            }
+            if(alreadySelected){ //remove the column from the array...
+                newVisibleColumns = new int[visibleColumns.length-1];
+                int count = 0;
+                for (int visibleColumn : visibleColumns) {
+                    if (visibleColumn != col) {
+                        newVisibleColumns[count] = visibleColumn;
+                        count++;
+                    }
+                }
+            }
+            else { //add the colum to the array in the correct position
+                newVisibleColumns = new int[visibleColumns.length+1];
+                System.arraycopy(visibleColumns, 0, newVisibleColumns, 0, visibleColumns.length);
+                newVisibleColumns[visibleColumns.length] = col;
+                Arrays.sort(newVisibleColumns);
+            }
+            setVisibleColumns(newVisibleColumns);
+        }
     }
 
 }
