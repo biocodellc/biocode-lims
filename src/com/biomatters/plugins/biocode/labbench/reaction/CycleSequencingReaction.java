@@ -282,11 +282,13 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 reaction.setHasError(true);
                 error += "The reaction "+reaction.getExtractionId()+" does not have a locus set.<br>";
             }
-            if((!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction)
+            if((!reaction.isEmpty() && workflowId != null && reaction.getType() != Reaction.Type.Extraction)
             && (reaction.getWorkflow() == null || !reaction.getWorkflow().getName().equals(workflowId))){
 
                 reaction.setWorkflow(null);
-                workflowIdStrings.add(workflowId.toString());
+                if(workflowId.toString().length() > 0) {
+                    workflowIdStrings.add(workflowId.toString());
+                }
                 
             }
         }
