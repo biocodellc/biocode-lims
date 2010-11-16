@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.privateApi.PrivateApiUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
@@ -1668,6 +1669,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             try {
                 connection.rollback(savepoint);
             } catch (SQLException ignored) {} //ignore - if this fails, then we are already rolled back.
+            catch(NullPointerException ex) {
+                if(!PrivateApiUtilities.isRunningFromADistribution()) {
+                    throw ex;
+                }
+            }
             throw e;
         } finally {
             connection.setAutoCommit(autoCommit);
