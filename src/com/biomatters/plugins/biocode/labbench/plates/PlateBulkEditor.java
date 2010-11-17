@@ -119,7 +119,7 @@ public class PlateBulkEditor {
                                 }
                             }
                             editor.get().textViewFromValues();
-                            if(doWorkflows.isSelected()) {
+                            if(doWorkflows.isSelected() && autodetectAction != null) {
                                 autodetectAction.actionPerformed(null);
                             }
                         }
@@ -508,7 +508,7 @@ public class PlateBulkEditor {
                 }
             }
         }
-        if(workflowCount == 0 && fieldToCheck != null) {
+        if(workflowCount == 0 && fieldToCheck != null && autodetectAction != null) {
             if(Dialogs.showYesNoDialog("You have not entered any workflows.  You should only enter no workflows if you are intending to start new workflows with these reactions (for example if you are sequencing a new locus).  <br><br>Do you want to autodetect the workflows? (If you have forgotten to click Autodetect Workflows, click yes)", "No workflows", owner, Dialogs.DialogIcon.QUESTION)){
                 autodetectAction.actionPerformed(null);
             }

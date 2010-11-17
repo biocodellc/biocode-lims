@@ -178,7 +178,8 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new MultiPrimerDocumentViewerFactory(Reaction.Type.PCR),
                 new MultiPrimerDocumentViewerFactory(Reaction.Type.CycleSequencing),
                 new VerifyTaxonomyDocumentViewerFactory(),
-                new CherryPickingDocumentViewerFactory()
+                new CherryPickingDocumentViewerFactory(),
+                new MultiLocusDocumentViewerFactory()
         };
     }
 
@@ -202,9 +203,9 @@ public class BiocodePlugin extends GeneiousPlugin {
     @Override
     public DocumentType[] getDocumentTypes() {
         return new DocumentType[] {
-                new DocumentType("Tissue Sample", TissueDocument.class, BiocodePlugin.getIcons("specimenDocument_24.png")),
-                new DocumentType("Workflow Document", WorkflowDocument.class, BiocodePlugin.getIcons("workflowDocument_32.png")),
-                new DocumentType("Plate Document", PlateDocument.class, BiocodePlugin.getIcons("plateDocument_32.png"))
+                new DocumentType<TissueDocument>("Tissue Sample", TissueDocument.class, BiocodePlugin.getIcons("specimenDocument_24.png")),
+                new DocumentType<WorkflowDocument>("Workflow Document", WorkflowDocument.class, BiocodePlugin.getIcons("workflowDocument_32.png")),
+                new DocumentType<PlateDocument>("Plate Document", PlateDocument.class, BiocodePlugin.getIcons("plateDocument_32.png"))
         };
     }
 

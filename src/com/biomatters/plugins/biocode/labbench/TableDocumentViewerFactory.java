@@ -174,6 +174,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 public void actionPerformed(ActionEvent e) {
                     model.setColumnVisible(i1, item.isSelected());
                     prefs.put(preferencesPrefix, columIndiciesToString(model.getVisibleColumns(), model.getInternalModel(), selectedDocuments));
+                    prefs.remove(preferencesPrefix);
                 }
             });
             items.add(item);

@@ -238,7 +238,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public List<DocumentField> getFieldsToDisplay(){
         if(isEmpty()) {
-            if(displayableFields.contains(GEL_IMAGE_DOCUMENT_FIELD)) {
+            if(displayableFields != null && displayableFields.contains(GEL_IMAGE_DOCUMENT_FIELD)) {
                 return Arrays.asList(GEL_IMAGE_DOCUMENT_FIELD);
             }
             DisplayFieldsTemplate displayFieldsTemplate = getDefaultDisplayedFieldsTemplate();
@@ -1017,6 +1017,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             }
         }
 
+        @SuppressWarnings({"RedundantIfStatement"})
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;

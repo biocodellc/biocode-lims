@@ -4,14 +4,12 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.utilities.ObjectAndColor;
 
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.LinkedHashSet;
 
 /**
  * @author Steven Stones-Havas
@@ -36,37 +34,19 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
         return new DocumentSelectionSignature[] {new DocumentSelectionSignature(WorkflowDocument.class, 2, Integer.MAX_VALUE)};
     }
 
-    public List<WorkflowDocument> getWorkflowDocuments(AnnotatedPluginDocument[] docs) {
-        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
-        for(AnnotatedPluginDocument doc : docs) {
-            if(WorkflowDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-                workflows.add((WorkflowDocument)doc.getDocumentOrCrash());
-            }
-        }
-        return workflows;
-    }
-
-    private static List<DocumentField> getFimsFields(List<WorkflowDocument> docs) {
-        Set<DocumentField> fields = new LinkedHashSet<DocumentField>();
-        for(WorkflowDocument doc : docs) {
-            fields.addAll(doc.getFimsSample().getFimsAttributes());
-        }
-        return new ArrayList<DocumentField>(fields);
-    }
-
     @Override
     protected boolean columnVisibleByDefault(int columnIndex, AnnotatedPluginDocument[] selectedDocuments) {
         if(columnIndex == 0) {
             return true;
         }
-        final List<WorkflowDocument> workflowDocuments = getWorkflowDocuments(selectedDocuments);
-        final List<DocumentField> fimsFields = getFimsFields(workflowDocuments);
+        final List<WorkflowDocument> workflowDocuments = BiocodeUtilities.getWorkflowDocuments(selectedDocuments);
+        final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflowDocuments);
         return columnIndex > fimsFields.size()+1;
     }
 
     public TableModel getTableModel(final AnnotatedPluginDocument[] docs) {
-        final List<WorkflowDocument> workflowDocuments = getWorkflowDocuments(docs);
-        final List<DocumentField> fimsFields = getFimsFields(workflowDocuments);
+        final List<WorkflowDocument> workflowDocuments = BiocodeUtilities.getWorkflowDocuments(docs);
+        final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflowDocuments);
         if(workflowDocuments.size() == 0) {
             return null;
         }

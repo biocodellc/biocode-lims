@@ -207,6 +207,24 @@ public class BiocodeUtilities {
         return contigDocumentsMap;
     }
 
+    public static List<WorkflowDocument> getWorkflowDocuments(AnnotatedPluginDocument[] docs) {
+        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
+        for(AnnotatedPluginDocument doc : docs) {
+            if(WorkflowDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                workflows.add((WorkflowDocument)doc.getDocumentOrCrash());
+            }
+        }
+        return workflows;
+    }
+
+    public static List<DocumentField> getFimsFields(List<WorkflowDocument> docs) {
+        Set<DocumentField> fields = new LinkedHashSet<DocumentField>();
+        for(WorkflowDocument doc : docs) {
+            fields.addAll(doc.getFimsSample().getFimsAttributes());
+        }
+        return new ArrayList<DocumentField>(fields);
+    }
+
     public enum ReadDirection {
         NONE("N"), FORWARD("F"), REVERSE("R");
 
