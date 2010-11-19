@@ -79,11 +79,13 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         final Options.ComboBoxOption<Options.OptionValue> plateTypeOption = options.addComboBoxOption("plateType", "Plate Type", plateTypeValues, plateTypeValues[0]);
 
-        plateSizeOption.addChangeListener(new SimpleListener(){
+        SimpleListener plateTypeListener = new SimpleListener() {
             public void objectChanged() {
                 plateTypeOption.setEnabled(plateSizeOption.getValue() != sizeValues.get(0));
             }
-        });
+        };
+        plateSizeOption.addChangeListener(plateTypeListener);
+        plateTypeListener.objectChanged();
 
         Options.Option<String, ? extends JComponent> label = options.addLabel("Geneious will select reactions that conform to the following:");
         label.setSpanningComponent(true);
