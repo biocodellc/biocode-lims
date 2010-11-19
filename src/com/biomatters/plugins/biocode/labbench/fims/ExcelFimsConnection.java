@@ -8,8 +8,10 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.XmlUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import jxl.Cell;
@@ -21,8 +23,12 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.PrintWriter;
 import java.util.*;
+import java.util.List;
 import java.util.prefs.Preferences;
+import java.awt.*;
 
 /**
  * @author steve
@@ -54,13 +60,13 @@ public class ExcelFimsConnection extends FIMSConnection{
     }
 
     public Options getConnectionOptions() {
-        Options options = new Options(this.getClass());
+        final Options options = new Options(this.getClass());
         options.addLabel("<html>Choose the location of your excel file.<br>The first row should be column headers, and it should<br>have at least a tissue and specimen column.</html>");
         final Options.FileSelectionOption fileLocation = options.addFileSelectionOption("excelFile", "Excel file location:", "");
         options.restorePreferences(); //to make sure that the field chooser boxes start out with the right values
         fileLocation.setSelectionType(JFileChooser.FILES_ONLY);
 
-        List<Options.OptionValue> cols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null);
+        List<Options.OptionValue> cols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null, null);
 
         final Options.ComboBoxOption<Options.OptionValue> tissueId = options.addComboBoxOption("tissueId", "Tissue ID field:", cols, cols.get(0));
 
@@ -86,7 +92,7 @@ public class ExcelFimsConnection extends FIMSConnection{
 
         fileLocation.addChangeListener(new SimpleListener(){
             public void objectChanged() {
-                List<Options.OptionValue> newCols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null);
+                List<Options.OptionValue> newCols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null, options.getPanel());
                 tissueId.setPossibleValues(newCols);
                 specimenId.setPossibleValues(newCols);
                 plateName.setPossibleValues(newCols);
@@ -105,27 +111,35 @@ public class ExcelFimsConnection extends FIMSConnection{
         return options;
     }
 
-    private List<Options.OptionValue> getTableColumns(File excelFile) {
+    private List<Options.OptionValue> getTableColumns(File excelFile, final Component owner) {
         List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
 
         if(excelFile != null && excelFile.exists()) {
             try {
                 Workbook workbook = Workbook.getWorkbook(excelFile);
 
+                if(workbook.getNumberOfSheets() > 0) {
+                    Sheet sheet = workbook.getSheet(0);
 
-                Sheet sheet = workbook.getSheet(0);
-
-                for(int i=0; i < sheet.getColumns(); i++) {
-                    Cell cell = sheet.getCell(i,0);
-                    String cellContents = cell.getContents();
-                    if(cellContents.length() > 0) {
-                        values.add(new Options.OptionValue(""+i, XmlUtilities.encodeXMLChars(cellContents)));
+                    for(int i=0; i < sheet.getColumns(); i++) {
+                        Cell cell = sheet.getCell(i,0);
+                        String cellContents = cell.getContents();
+                        if(cellContents.length() > 0) {
+                            values.add(new Options.OptionValue(""+i, XmlUtilities.encodeXMLChars(cellContents)));
+                        }
                     }
                 }
-            } catch (BiffException e) {
-                e.printStackTrace();  //todo: anything?
-            } catch (IOException e) {
-                e.printStackTrace();  //todo: anything?
+            } catch(IOException e) {
+                Dialogs.showMessageDialog("Geneious could not read your excel file: "+e.getMessage(), "Could not read Excel file", owner, Dialogs.DialogIcon.WARNING);
+            }
+            catch(Exception e) {
+                StringWriter stacktrace = new StringWriter();
+                e.printStackTrace(new PrintWriter(stacktrace));
+                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Could not read Excel file", owner, Dialogs.DialogIcon.WARNING);
+                dialogOptions.setMoreOptionsButtonText("Show details...", "Hide details...");
+                Dialogs.showMoreOptionsDialog(dialogOptions,
+                        "Geneious could not read your EXCEL file.  It is possible that the file is corrupted, or the wrong format.  Geneious only supports EXCEL 97-2003 compatible workbooks.  \n\nIf you believe this is an error, please click the details button below, and email the information to "+ new BiocodePlugin().getEmailAddressForCrashes()+".", 
+                        stacktrace.toString());
             }
         }
 
