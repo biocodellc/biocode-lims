@@ -17,7 +17,6 @@ import com.biomatters.plugins.biocode.labbench.FimsSample;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
-import jxl.read.biff.BiffException;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -133,13 +132,7 @@ public class ExcelFimsConnection extends FIMSConnection{
                 Dialogs.showMessageDialog("Geneious could not read your excel file: "+e.getMessage(), "Could not read Excel file", owner, Dialogs.DialogIcon.WARNING);
             }
             catch(Exception e) {
-                StringWriter stacktrace = new StringWriter();
-                e.printStackTrace(new PrintWriter(stacktrace));
-                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Could not read Excel file", owner, Dialogs.DialogIcon.WARNING);
-                dialogOptions.setMoreOptionsButtonText("Show details...", "Hide details...");
-                Dialogs.showMoreOptionsDialog(dialogOptions,
-                        "Geneious could not read your EXCEL file.  It is possible that the file is corrupted, or the wrong format.  Geneious only supports EXCEL 97-2003 compatible workbooks.  \n\nIf you believe this is an error, please click the details button below, and email the information to "+ new BiocodePlugin().getEmailAddressForCrashes()+".", 
-                        stacktrace.toString());
+                handleCorruptedExcelFile(owner, e);
             }
         }
 
@@ -149,6 +142,16 @@ public class ExcelFimsConnection extends FIMSConnection{
         }
 
         return values;
+    }
+
+    private void handleCorruptedExcelFile(Component owner, Exception e) {
+        StringWriter stacktrace = new StringWriter();
+        e.printStackTrace(new PrintWriter(stacktrace));
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Could not read Excel file", owner, Dialogs.DialogIcon.WARNING);
+        dialogOptions.setMoreOptionsButtonText("Show details...", "Hide details...");
+        Dialogs.showMoreOptionsDialog(dialogOptions,
+                        "Geneious could not read your EXCEL file.  It is possible that the file is corrupted, or the wrong format.  Geneious only supports EXCEL 97-2003 compatible workbooks.  \n\nIf you believe this is an error, please click the details button below, and email the information to "+ new BiocodePlugin().getEmailAddressForCrashes()+".",
+                stacktrace.toString());
     }
 
     private List<DocumentField> fields;
@@ -212,10 +215,11 @@ public class ExcelFimsConnection extends FIMSConnection{
                 throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
             }
 
-        } catch (BiffException e) {
-            e.printStackTrace();  //todo: anything?
-        } catch (IOException e) {
-            e.printStackTrace();  //todo: anything?
+        } catch(IOException e) {
+            Dialogs.showMessageDialog("Geneious could not read your excel file: "+e.getMessage(), "Could not read Excel file", null, Dialogs.DialogIcon.WARNING);
+        }
+        catch(Exception e) {
+            handleCorruptedExcelFile(null, e);
         }
 
 
