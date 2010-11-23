@@ -4,10 +4,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
-import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
-import com.biomatters.geneious.publicapi.plugin.Icons;
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -93,6 +90,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     @Override
     public boolean canDeleteDocuments(List<AnnotatedPluginDocument> documents) {
+        if(!License.isProVersion() || !BiocodeService.getInstance().isLoggedIn()) {
+            return false;
+        }
         for(AnnotatedPluginDocument doc : documents) {
             if(!PlateDocument.class.isAssignableFrom(doc.getDocumentClass()) && !SequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
                 return false;
@@ -103,6 +103,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     @Override
     public void deleteDocuments(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
+        if(!License.isProVersion()) {
+            throw new DatabaseServiceException("You need to be a pro user to delete Biocode documents", false);
+        }
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DatabaseServiceException("You are not logged into the Biocode Service - you cannot delete biocode documents.", false);
+        }
         deletePlates(documents);
         deleteSequences(documents);
     }
