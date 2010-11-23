@@ -154,7 +154,7 @@ public class CycleSequencingOptions extends ReactionOptions {
                     return;
                 }
                 if(reaction.getId() > 0) {
-                    if(sequences == null || rawTraces == null) {
+                    if(sequences == null || sequences.get() == null || rawTraces == null || rawTraces.get() == null) {
 //                        if(!Dialogs.showYesNoDialog("You have not downloaded the sequences for this reaction from the database yet.  Would you like to do so now?", "Download sequences", tracesButton.getComponent(), Dialogs.DialogIcon.QUESTION)) {
 //                            return;
 //                        }
@@ -213,12 +213,26 @@ public class CycleSequencingOptions extends ReactionOptions {
     public void addChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
         List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
         File tempFolder = null;
+        if(rawTracesStrongReference == null) {
+            if(rawTraces != null && rawTraces.get() != null) {
+                rawTracesStrongReference = rawTraces.get();
+            }
+            else {
+                getChromats();
+            }
+        }
         if(rawTraces == null) {
-            rawTracesStrongReference = new ArrayList<ReactionUtilities.MemoryFile>();
             rawTraces = new WeakReference<List<ReactionUtilities.MemoryFile>>(rawTracesStrongReference);
         }
+        if(sequencesStrongReference == null) {
+            if(sequences != null && sequences.get() != null) {
+                sequencesStrongReference = sequences.get();
+            }
+            else {
+                getChromats();
+            }
+        }
         if(sequences == null) {
-            sequencesStrongReference = new ArrayList<NucleotideSequenceDocument>();
             sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequencesStrongReference);
         }
 
