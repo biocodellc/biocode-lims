@@ -282,11 +282,20 @@ public class ReactionUtilities {
             throw new IllegalArgumentException("The file is too long!");
         }
 
-
-        byte[] result = new byte[(int)f.length()];
         FileInputStream in = new FileInputStream(f);
-        assert in.read(result) == f.length();
-        in.close();
+        int offset=0;
+        int numRead;
+        byte[] result = new byte[(int)f.length()];
+        while (offset < result.length
+               && (numRead=in.read(result, offset, result.length-offset)) >= 0) {
+            offset += numRead;
+        }
+
+        if (offset < result.length) {
+            throw new IOException("Could not completely read file "+f.getName());
+        }
+
+
         return result;
     }
 
