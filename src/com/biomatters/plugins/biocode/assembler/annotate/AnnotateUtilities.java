@@ -164,6 +164,7 @@ public class AnnotateUtilities {
             if (taxon != null) {
                 taxonomy.append(taxon).append("; ");
             }
+            annotatedDocument.setFieldValue(new DocumentField(documentField.getName(), documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
         }
         if (taxonomy.length() > 0) {
             annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy.substring(0, taxonomy.length() - 2));
