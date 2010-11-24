@@ -15,10 +15,9 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
+import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Date;
-import java.util.Collections;
 
 /**
  * @author Steven Stones-Havas
@@ -37,6 +36,8 @@ public class PCROptions extends ReactionOptions {
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
     static final String LABEL_OPTION_ID = "label";
     static final String COCKTAIL_OPTION_ID = "cocktail";
+    static final String ADD_PRIMER_TO_LOCAL_ID = "addPrimers";
+    private ButtonOption addPrimersButton;
 
 
     public PCROptions(Class c) {
@@ -77,6 +78,7 @@ public class PCROptions extends ReactionOptions {
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
         cocktailOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
+        addPrimersButton = (ButtonOption)getOption(ADD_PRIMER_TO_LOCAL_ID);
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -156,13 +158,8 @@ public class PCROptions extends ReactionOptions {
 
         addLabel("");
         addPrimerSelectionOption(PRIMER_OPTION_ID, "Forward Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
-//        addCustomOption(primerOption);
-        //IntegerOption primerAmountOption = addIntegerOption("prAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-        //primerAmountOption.setUnits("uL");
         addPrimerSelectionOption(PRIMER_REVERSE_OPTION_ID, "Reverse Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
-//        addCustomOption(revPrimerOption);
-        //IntegerOption revPrimerAmountOption = addIntegerOption("revPrAmount", "Primer Amount", 1, 0, Integer.MAX_VALUE);
-        //revPrimerAmountOption.setUnits("uL");
+        addPrimersButton = addButtonOption(ADD_PRIMER_TO_LOCAL_ID, "", "Add primers to my local database");
 
 
         List<OptionValue> cocktails = getCocktails();

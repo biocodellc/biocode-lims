@@ -24,14 +24,13 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
-import java.util.Date;
 import java.lang.ref.WeakReference;
 
 /**
@@ -50,6 +49,8 @@ public class CycleSequencingOptions extends ReactionOptions {
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
     static final String LABEL_OPTION_ID = "label";
     static final String TRACES_BUTTON_ID = "traces";
+    static final String ADD_PRIMER_TO_LOCAL_ID = "addPrimers";
+    private ButtonOption addPrimersButton;
 
     private WeakReference<List<NucleotideSequenceDocument>> sequences;
     private WeakReference<List<ReactionUtilities.MemoryFile>> rawTraces;
@@ -113,6 +114,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
         tracesButton = (com.biomatters.plugins.biocode.labbench.ButtonOption)getOption(TRACES_BUTTON_ID);
         final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
+        addPrimersButton = (ButtonOption)getOption(ADD_PRIMER_TO_LOCAL_ID);
 
 
         ActionListener cocktailButtonListener = new ActionListener() {
@@ -312,7 +314,7 @@ public class CycleSequencingOptions extends ReactionOptions {
 
         OptionValue[] directionValues = new OptionValue[] {new OptionValue(FORWARD_VALUE, "Forward"), new OptionValue("reverse", "Reverse")};
         addComboBoxOption(DIRECTION, "Direction", directionValues, directionValues[0]);
-
+        addPrimersButton = addButtonOption(ADD_PRIMER_TO_LOCAL_ID, "", "Add primer to my local database");
 
 
 
