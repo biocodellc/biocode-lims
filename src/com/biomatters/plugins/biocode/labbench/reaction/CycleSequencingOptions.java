@@ -204,6 +204,12 @@ public class CycleSequencingOptions extends ReactionOptions {
             }
         };
 
+        addPrimersButton.addActionListener(new SaveMyPrimersActionListener(){
+            public List<DocumentSelectionOption> getPrimerOptions() {
+                return Arrays.asList((DocumentSelectionOption)getOption(PRIMER_OPTION_ID));
+            }
+        });
+
         for(Option o : getOptions()) {
             if(o instanceof IntegerOption || o.getName().equals("cocktail")) {
                 o.addChangeListener(labelListener);

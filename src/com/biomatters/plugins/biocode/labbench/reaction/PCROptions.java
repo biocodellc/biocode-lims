@@ -142,6 +142,12 @@ public class PCROptions extends ReactionOptions {
             }
         }
         labelListener.objectChanged();
+
+        addPrimersButton.addActionListener(new SaveMyPrimersActionListener(){
+            public List<DocumentSelectionOption> getPrimerOptions() {
+                return Arrays.asList((DocumentSelectionOption)getOption(PRIMER_OPTION_ID), (DocumentSelectionOption)getOption(PRIMER_REVERSE_OPTION_ID));
+            }
+        });
     }
     
     public void init() {
