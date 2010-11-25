@@ -52,6 +52,7 @@ public class LIMSConnection {
     public static final DocumentField PLATE_DATE_FIELD = new DocumentField("Last Modified (LIMS plate)", "", "plate.date", Date.class, false, false);
     public static final DocumentField WORKFLOW_DATE_FIELD = new DocumentField("Last Modified (LIMS workflow)", "", "workflow.date", Date.class, false, false);
     public static final DocumentField WORKFLOW_LOCUS_FIELD = new DocumentField("Locus", "The locus of the workflow", "locus", String.class, true, false);
+    public static final DocumentField EXTRACTION_NAME_FIELD = new DocumentField("Extraction ID", "The Extraction ID", "extraction.extractionId", String.class, true, false);
     private boolean isLocal;
 
     public Options getConnectionOptions() {
@@ -255,7 +256,8 @@ public class LIMSConnection {
                 DATE_FIELD,
                 PLATE_DATE_FIELD,
                 WORKFLOW_DATE_FIELD,
-                WORKFLOW_LOCUS_FIELD
+                WORKFLOW_LOCUS_FIELD,
+                EXTRACTION_NAME_FIELD
         );
     }
 
@@ -648,12 +650,13 @@ public class LIMSConnection {
             query = generateAdvancedQueryFromBasicQuery(query);
         }
 
+        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId");
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("workflow.name", "workflow.date", "locus"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), fieldsToRemove);
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("workflow.name", "workflow.date", "locus"));
+            refinedQueries = removeFields(Arrays.asList(query), fieldsToRemove);
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((workflowDocuments == null || workflowDocuments.size() == 0) && refinedQueries.size() == 0) {
