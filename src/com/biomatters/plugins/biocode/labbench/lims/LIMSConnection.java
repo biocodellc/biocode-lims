@@ -1047,6 +1047,10 @@ public class LIMSConnection {
     }
 
     public Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws SQLException{
+        if(barcodes.size() == 0) {
+            System.out.println("empty!");
+            return Collections.emptyMap();
+        }
          StringBuilder sql = new StringBuilder("SELECT * FROM extraction "+
                 "LEFT JOIN plate ON plate.id = extraction.plate "+
                 "WHERE (");
