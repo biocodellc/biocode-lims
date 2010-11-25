@@ -49,6 +49,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         options.setValue("concentration", r.getDouble("concentration"));
         options.setValue("dilution", r.getInt("extraction.dilution"));
         options.setValue("notes", r.getString("extraction.notes"));
+        //noinspection unchecked
         options.getOption("date").setValue(r.getDate("extraction.date")); //we use getOption() here because the toString() method of java.sql.Date is different to the toString() method of java.util.Date, so setValueFromString() fails in DateOption
         options.setValue("technician", r.getString("extraction.technician"));
         setPlateId(r.getInt("extraction.plate"));
@@ -251,16 +252,15 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     }
                     if(!showDialogs || Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", dialogParent, Dialogs.DialogIcon.QUESTION)) {
                         for (ExtractionReaction reaction : reactions) {
-                            Reaction r = reaction;
                             for (ExtractionReaction r2 : extractionsThatExist) {
-                                if (r.getExtractionId().equals(r2.getExtractionId())) {
-                                    ReactionUtilities.copyReaction(r2, r);
-                                    r.setPlateId(r.getPlateId());
-                                    r.setPosition(r.getPosition());
-                                    r.setId(r2.getId());
-                                    r.setExtractionId(r2.getExtractionId());
-                                    r.setThermocycle(r.getThermocycle());
-                                    r.setLocationString(r.getLocationString());
+                                if (reaction.getExtractionId().equals(r2.getExtractionId())) {
+                                    ReactionUtilities.copyReaction(r2, reaction);
+                                    reaction.setPlateId(reaction.getPlateId());
+                                    reaction.setPosition(reaction.getPosition());
+                                    reaction.setId(r2.getId());
+                                    reaction.setExtractionId(r2.getExtractionId());
+                                    reaction.setThermocycle(reaction.getThermocycle());
+                                    reaction.setLocationString(reaction.getLocationString());
                                 }
                             }
                         }
@@ -289,7 +289,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                 reactionsWithNoIds.add(r);
             }
         }
-        if(reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("You have added information to reactions on your plate which have no tissue data.  Would you like to discard this information so that the wells remain empty?<br>(This is for the case where you are creating a control reaction, or if you have wells filled with cocktail, but no DNA)", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
+        if(reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("You have added information to reactions on your plate which have no tissue data.  Would you like to discard this information so that the wells remain empty?<br>(Cases where you might not want to make the reaction blank would be where you are creating a control reaction, or if you have wells filled with cocktail, but no DNA)", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
             for(Reaction r : reactionsWithNoIds) {
                 r.getOptions().restoreDefaults();
                 r.isEmpty();
