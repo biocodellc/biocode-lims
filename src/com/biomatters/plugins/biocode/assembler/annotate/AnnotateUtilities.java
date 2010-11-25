@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -148,6 +149,12 @@ public class AnnotateUtilities {
         }
         if (fimsData.workflow != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
+        }
+        if (fimsData.extractionId != null) {
+            annotatedDocument.setFieldValue(LIMSConnection.EXTRACTION_NAME_FIELD, fimsData.extractionId);
+        }
+        if(fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0) {
+            annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);
         }
         StringBuilder taxonomy = new StringBuilder();
         String genus = null;

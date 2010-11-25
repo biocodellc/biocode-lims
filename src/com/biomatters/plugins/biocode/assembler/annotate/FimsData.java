@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.assembler.annotate;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
 /**
  * @author Steve
@@ -10,16 +11,23 @@ import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
  */
 public class FimsData {
 
-        FimsSample fimsSample;
-        String sequencingPlateName;
-        BiocodeUtilities.Well well;
-        WorkflowDocument workflow;
+    FimsSample fimsSample;
+    String sequencingPlateName;
+    BiocodeUtilities.Well well;
+    WorkflowDocument workflow;
+    String extractionId;
+    String extractionBarcode;
 
         public FimsData(WorkflowDocument workflowDocument, String sequencingPlateName, BiocodeUtilities.Well well) {
             this.fimsSample = workflowDocument != null ? workflowDocument.getFimsSample() : null;
             this.workflow = workflowDocument;
             this.sequencingPlateName = sequencingPlateName;
             this.well = well;
+            Reaction extraction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
+            if(extraction != null) {
+                extractionId = extraction.getExtractionId();
+                extractionBarcode = (String)extraction.getFieldValue("extractionBarcode");
+            }
         }
 
     public FimsData(FimsSample sample, String plateName, BiocodeUtilities.Well well) {

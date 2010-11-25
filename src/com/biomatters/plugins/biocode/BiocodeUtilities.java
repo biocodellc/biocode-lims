@@ -45,6 +45,7 @@ public class BiocodeUtilities {
     public static final DocumentField SEQUENCING_WELL_FIELD = DocumentField.createStringField("Sequencing Well", "Well location on the cycle sequencing plate in the LIMS that this read was created from", "sequencingPlateWell", false, false);
     public static final DocumentField WORKFLOW_NAME_FIELD = DocumentField.createStringField("Workflow Name", "The name of the workflow that generated this trace", "workflowName", false, false);
     public static final DocumentField TRACE_ID_FIELD = DocumentField.createStringField("Trace ID", "A concatenation of the sequencing plate and well", "traceId", false, false);
+    public static final DocumentField EXTRACTION_BARCODE_FIELD = DocumentField.createStringField("Extraction Barcode", "The code of the 2D-barcode on the well containing the extraction (if present)", "extractionBarcode", true, false);
 
     public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
         DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
