@@ -34,7 +34,7 @@ public class ExtractionOptions extends ReactionOptions{
         addComboBoxOption("control", "Control", controlValues, controlValues[0]);
         ComboBoxOption concStoredOption = addComboBoxOption("concentrationStored", "Sample Spec'd", concStoredValues, concStoredValues[1]);
         DoubleOption concOption = addDoubleOption("concentration", "Concentration/Purity", 0.0, 0.0, Double.MAX_VALUE);
-        concOption.setUnits("ng/µL");
+        concOption.setUnits("ng/uL");
         concOption.setDisabledValue(0.0);
         concOption.setIncrement(0.01);
         concStoredOption.addDependent(concOption, concStoredValues[0]);

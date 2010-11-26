@@ -518,7 +518,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         ChangeListener changeListener = new ChangeListener(){
             public void stateChanged(ChangeEvent e) {
                 double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
-                DecimalFormat format = new DecimalFormat("#0.0 µL");
+                DecimalFormat format = new DecimalFormat("#0.0 uL");
                 double vol = fudgeFactor * ct.getReactionVolume(ct.getOptions());
                 double totalVol = vol * count;
                 perReactionCount.setText("<html><b>" + format.format(vol) + "</b></html>");
