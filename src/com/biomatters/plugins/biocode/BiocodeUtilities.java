@@ -446,6 +446,25 @@ public class BiocodeUtilities {
         return nameParts[partNumber];
     }
 
+    public static boolean isAlignmentOfContigConsensusSequences(AnnotatedPluginDocument alignmentDoc) throws DocumentOperationException {
+        SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)alignmentDoc.getDocument();
+        for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+            if (i == alignment.getContigReferenceSequenceIndex()) continue;
+           AnnotatedPluginDocument referenceDoc = alignment.getReferencedDocument(i);
+            if(referenceDoc == null) {
+                return false;
+            }
+            if(!SequenceAlignmentDocument.class.isAssignableFrom(referenceDoc.getDocumentClass())) {
+                return false;
+            }
+            SequenceAlignmentDocument referenceAlignment = (SequenceAlignmentDocument)referenceDoc.getDocument();
+            if(!referenceAlignment.isContig()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static boolean isAlignmentOfContigs(AnnotatedPluginDocument alignmentDoc) throws DocumentOperationException {
         SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)alignmentDoc.getDocument();
         for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {

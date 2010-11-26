@@ -110,7 +110,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
 
             if (isAlignment) {
-                if(BiocodeUtilities.isAlignmentOfContigs(document)) {
+                if(BiocodeUtilities.isAlignmentOfContigs(document) || BiocodeUtilities.isAlignmentOfContigConsensusSequences(document)) {
                     SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                     for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
