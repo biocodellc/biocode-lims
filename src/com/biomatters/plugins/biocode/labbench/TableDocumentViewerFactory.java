@@ -321,7 +321,14 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
             internalModel.addTableModelListener(new TableModelListener(){
                 public void tableChanged(TableModelEvent e) {
                     for(TableModelListener listener : tableModelListeners) {
-                        listener.tableChanged(new TableModelEvent(ColumnHidingTableModel.this, e.getFirstRow(), e.getLastRow(), ColumnHidingTableModel.this.visibleColumns[e.getColumn()]));
+                        int column;
+                        if(e.getColumn() < ColumnHidingTableModel.this.visibleColumns.length && e.getColumn() >= 0) {
+                            column = ColumnHidingTableModel.this.visibleColumns[e.getColumn()];
+                        }
+                        else {
+                            column = e.getColumn();
+                        }
+                        listener.tableChanged(new TableModelEvent(ColumnHidingTableModel.this, e.getFirstRow(), e.getLastRow(), column));
                     }
                 }
             });
