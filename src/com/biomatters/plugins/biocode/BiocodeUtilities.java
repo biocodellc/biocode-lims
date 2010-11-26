@@ -130,7 +130,14 @@ public class BiocodeUtilities {
     }
 
 
-    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions, ProgressListener progressListener) throws SQLException, IOException, DocumentImportException{
+    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions_a, ProgressListener progressListener) throws SQLException, IOException, DocumentImportException{
+        List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
+        for(CycleSequencingReaction reaction : reactions_a) { //try not to download if we've already downloaded!
+            if(!reaction.hasDownloadedChromats()) {
+                reactions.add(reaction);
+            }
+        }
+
         List<String> idQueries = new ArrayList<String>();
         for(Reaction r : reactions) {
             if(r.getId() >= 0) {
@@ -177,7 +184,7 @@ public class BiocodeUtilities {
             //todo: there might be multiple instances of the same reaction in this list, so we loop through everything each time.  maybe we could sort the list if this is too slow?
             for(CycleSequencingReaction r : reactions) {
                 if(r.getId() == result.getKey()) {
-                    ((CycleSequencingOptions)r.getOptions()).addChromats(result.getValue());
+                    ((CycleSequencingOptions)r.getOptions()).setChromats(result.getValue());
                 }
             }
         }

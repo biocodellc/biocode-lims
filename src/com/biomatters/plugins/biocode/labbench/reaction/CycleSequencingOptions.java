@@ -218,9 +218,29 @@ public class CycleSequencingOptions extends ReactionOptions {
         labelListener.objectChanged();
     }
 
+    public void setChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+        if (rawTracesStrongReference == null) {
+            rawTracesStrongReference = new ArrayList<ReactionUtilities.MemoryFile>();
+        } else {
+            rawTracesStrongReference.clear();
+        }
+        if (rawTraces == null) {
+            rawTraces = new WeakReference<List<ReactionUtilities.MemoryFile>>(rawTracesStrongReference);
+        }
+        if(sequencesStrongReference == null) {
+            sequencesStrongReference = new ArrayList<NucleotideSequenceDocument>();
+        }
+        else {
+            sequencesStrongReference.clear();
+        }
+        if(sequences == null) {
+            sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequencesStrongReference);
+        }
+
+        convertRawTracesToTraceDocuments(files);
+    }
+
     public void addChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
-        List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
-        File tempFolder = null;
         if(rawTracesStrongReference == null) {
             if(rawTraces != null && rawTraces.get() != null) {
                 rawTracesStrongReference = rawTraces.get();
@@ -243,6 +263,14 @@ public class CycleSequencingOptions extends ReactionOptions {
         if(sequences == null) {
             sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequencesStrongReference);
         }
+
+
+        convertRawTracesToTraceDocuments(files);
+    }
+
+    private void convertRawTracesToTraceDocuments(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+        List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
+        File tempFolder = null;
 
         for(ReactionUtilities.MemoryFile mFile : files) {
             if(tempFolder == null) {
@@ -267,7 +295,7 @@ public class CycleSequencingOptions extends ReactionOptions {
             rawTracesStrongReference.add(mFile);
             if(!abiFile.delete()){
                 abiFile.deleteOnExit();
-            }           
+            }
         }
         if(tempFolder != null && !tempFolder.delete()){
             tempFolder.deleteOnExit();
