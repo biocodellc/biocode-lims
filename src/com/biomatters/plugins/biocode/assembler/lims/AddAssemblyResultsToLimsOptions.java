@@ -26,7 +26,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         addMultipleLineStringOption("notes", "Notes", "", 5, true);
         boolean contigSelected = false;
         for (AnnotatedPluginDocument doc : documents) {
-            if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass()) && !BiocodeUtilities.isAlignmentOfContigs(doc)) {
+            if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass()) && !BiocodeUtilities.isAlignmentOfChromatograms(doc)) {
                 contigSelected = true;
                 break;
             }

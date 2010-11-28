@@ -90,7 +90,7 @@ public class VerifyTaxonomyOptions extends Options {
 
         boolean contigSelected = false;
         for (AnnotatedPluginDocument doc : documents) {
-            if (!BiocodeUtilities.isAlignmentOfContigs(doc)) {
+            if (!BiocodeUtilities.isAlignmentOfChromatograms(doc)) {
                 contigSelected = true;
                 break;
             }

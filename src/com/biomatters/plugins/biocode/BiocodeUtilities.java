@@ -7,10 +7,10 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSeque
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -22,15 +22,15 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import jebl.util.ProgressListener;
 import jebl.util.Cancelable;
+import jebl.util.ProgressListener;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
 import java.text.NumberFormat;
+import java.util.*;
 
 /**
  * @author Richard
@@ -202,7 +202,7 @@ public class BiocodeUtilities {
             if (!(((SequenceAlignmentDocument)document.getDocument()).getSequence(0) instanceof NucleotideSequenceDocument)) {
                 throw new DocumentOperationException("Selected alignment \"" + document.getName() + "\" is not an alignment of DNA sequences");
             }
-            if (isAlignmentOfContigs(document)) {
+            if (isAlignmentOfChromatograms(document)) {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                     if (i == alignment.getContigReferenceSequenceIndex()) continue;
@@ -465,7 +465,7 @@ public class BiocodeUtilities {
         return true;
     }
 
-    public static boolean isAlignmentOfContigs(AnnotatedPluginDocument alignmentDoc) throws DocumentOperationException {
+    public static boolean isAlignmentOfChromatograms(AnnotatedPluginDocument alignmentDoc) throws DocumentOperationException {
         SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)alignmentDoc.getDocument();
         for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
             if (i == alignment.getContigReferenceSequenceIndex()) continue;
