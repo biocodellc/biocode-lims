@@ -23,10 +23,12 @@ public class FimsData {
             this.workflow = workflowDocument;
             this.sequencingPlateName = sequencingPlateName;
             this.well = well;
-            Reaction extraction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
-            if(extraction != null) {
-                extractionId = extraction.getExtractionId();
-                extractionBarcode = (String)extraction.getFieldValue("extractionBarcode");
+            if(workflowDocument != null) {
+                Reaction extraction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
+                if(extraction != null) {
+                    extractionId = extraction.getExtractionId();
+                    extractionBarcode = (String)extraction.getFieldValue("extractionBarcode");
+                }
             }
         }
 
