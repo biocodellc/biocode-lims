@@ -202,7 +202,7 @@ public class BiocodeUtilities {
             if (!(((SequenceAlignmentDocument)document.getDocument()).getSequence(0) instanceof NucleotideSequenceDocument)) {
                 throw new DocumentOperationException("Selected alignment \"" + document.getName() + "\" is not an alignment of DNA sequences");
             }
-            if (isAlignmentOfChromatograms(document)) {
+            if (isAlignmentOfContigConsensusSequences(document)) {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                     if (i == alignment.getContigReferenceSequenceIndex()) continue;
