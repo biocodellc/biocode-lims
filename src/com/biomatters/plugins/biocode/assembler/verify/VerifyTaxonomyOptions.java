@@ -64,10 +64,17 @@ public class VerifyTaxonomyOptions extends Options {
         for (Map.Entry<String, Options> childOptionsEntry : childOptionsToAdd.entrySet()) {
             Options options = childOptionsEntry.getValue();
             options.setVisible(false);
-            //noinspection unchecked
-            options.getOption("maxHits").setDefaultValue(5);
-            //noinspection unchecked
-            options.getOption("getHitAnnos").setDefaultValue(true);
+            Option maxHitsOption = options.getOption("maxHits");
+            if(maxHitsOption != null) {
+                //noinspection unchecked
+                maxHitsOption.setDefaultValue(5);
+                maxHitsOption.setVisible(true);
+            }
+            Option hitAnnosOption = options.getOption("getHitAnnos");
+            if(hitAnnosOption != null) {
+                //noinspection unchecked
+                hitAnnosOption.setDefaultValue(true);
+            }
             addChildOptions(childOptionsEntry.getKey(), "", null, options);
         }
         SimpleListener programListener = new SimpleListener() {
