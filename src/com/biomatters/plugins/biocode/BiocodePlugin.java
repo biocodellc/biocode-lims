@@ -62,7 +62,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public String getEmailAddressForCrashes() {
-        return "support@biomatters.com";
+        return "support@mooreabiocode.org";
     }
 
     public String getVersion() {
