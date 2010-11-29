@@ -97,7 +97,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
     public List<AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options) throws DocumentOperationException {
 
-        Map<AnnotatedPluginDocument, String> docsToMark = new HashMap<AnnotatedPluginDocument, String>();
+        Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = new HashMap<AnnotatedPluginDocument, SequenceDocument>();
         for (AnnotatedPluginDocument document : annotatedDocuments) {
             boolean isAlignment = SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass());
             if (isAlignment) {
@@ -114,14 +114,17 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                     for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
-                        docsToMark.put(alignment.getReferencedDocument(i), alignment.getSequence(i).getSequenceString().replace("-", ""));
+                        SequenceDocument sequenceToExtract = alignment.getSequence(i);
+                        SequenceExtractionUtilities.ExtractionOptions extractionOptions = new SequenceExtractionUtilities.ExtractionOptions(0, sequenceToExtract.getSequenceLength());
+                        SequenceDocument extractedSequence = SequenceExtractionUtilities.extract(sequenceToExtract, extractionOptions);
+                        docsToMark.put(alignment.getReferencedDocument(i), extractedSequence);
                     }
                 }
                 else {
                     docsToMark.put(document, null);
                 }
             } else {
-                docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()).getSequenceString());
+                docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()));
             }
         }
 
@@ -153,11 +156,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             int edits = getEdits(annotatedDocument);
             String[] trims = getTrimParameters(annotatedDocument);
 
-            String consensus = docsToMark.get(annotatedDocument);
-            SequenceDocument consensusDocument = null;
+            SequenceDocument consensus = docsToMark.get(annotatedDocument);
             if (consensus == null && SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
-                consensusDocument = (SequenceDocument) BiocodeUtilities.getConsensusSequence(annotatedDocument, options.getConsensusOptions()).getDocument();
-                consensus = consensusDocument.getSequenceString();
+                consensus = (SequenceDocument) BiocodeUtilities.getConsensusSequence(annotatedDocument, options.getConsensusOptions()).getDocument();
             }
             if (isPass && consensus == null) {
                 assert false: "there should be a consensus here!";
@@ -166,8 +167,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             if(NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
                 qualities = getQualities((SequenceDocument)annotatedDocument.getDocument());
             }
-            else if(consensusDocument != null) {
-                qualities = getQualities(consensusDocument);
+            else if(consensus != null) {
+                qualities = getQualities(consensus);
             }
 
             if (workflowsWithResults.containsKey(assemblyResult.workflowId)) {
@@ -177,7 +178,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
                 continue;
             }
-            assemblyResult.setContigProperties(annotatedDocument, consensus, qualities, coverage, disagreements, trims, edits, ambiguities, bin);
+            assemblyResult.setContigProperties(annotatedDocument, consensus.getSequenceString(), qualities, coverage, disagreements, trims, edits, ambiguities, bin);
             workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
             results.add(assemblyResult);
         }
