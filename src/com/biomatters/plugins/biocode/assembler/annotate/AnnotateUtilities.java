@@ -6,9 +6,9 @@ import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceD
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -161,6 +161,7 @@ public class AnnotateUtilities {
         String species = null;
         for (DocumentField documentField : fimsData.fimsSample.getTaxonomyAttributes()) {
             Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
+            annotatedDocument.setFieldValue(new DocumentField(documentField.getName(), documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
             if (documentField.getName().equalsIgnoreCase("genus")) {
                 genus = (String) taxon;
             }
@@ -171,7 +172,6 @@ public class AnnotateUtilities {
             if (taxon != null) {
                 taxonomy.append(taxon).append("; ");
             }
-            annotatedDocument.setFieldValue(new DocumentField(documentField.getName(), documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
         }
         if (taxonomy.length() > 0) {
             annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy.substring(0, taxonomy.length() - 2));
