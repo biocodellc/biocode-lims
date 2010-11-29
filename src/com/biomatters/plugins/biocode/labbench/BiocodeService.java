@@ -690,7 +690,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             if((Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                 callback.setMessage("Downloading Plates");
-                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
+                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, Collections.<WorkflowDocument>emptyList(), (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
                 if(callback.isCanceled()) {
                     return;
                 }
@@ -701,9 +701,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         }
                     }
                 }
-//                for(PluginDocument doc : plateList) {
-//                    callback.add(doc, Collections.<String, Object>emptyMap());
-//                }
+                plateList = limsConnection.getMatchingPlateDocuments(null, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
             }
             if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments") && !workflowsToSearch.isEmpty()) {
                 callback.setMessage("Downloading Sequences");

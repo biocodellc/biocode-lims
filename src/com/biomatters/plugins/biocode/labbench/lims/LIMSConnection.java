@@ -651,7 +651,11 @@ public class LIMSConnection {
         }
 
         List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId");
-        if(query instanceof CompoundSearchQuery) {
+        if(query == null) {
+            refinedQueries = Collections.emptyList();
+            operator = CompoundSearchQuery.Operator.AND;
+        }
+        else if(query instanceof CompoundSearchQuery) {
             refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), fieldsToRemove);
             operator = ((CompoundSearchQuery)query).getOperator();
         }
