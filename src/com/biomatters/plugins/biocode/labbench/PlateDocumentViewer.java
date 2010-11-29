@@ -1,9 +1,9 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -93,7 +93,11 @@ public class PlateDocumentViewer extends DocumentViewer{
                                         ((CycleSequencingReaction)r).purgeChromats();
                                     }
                                 }
-                                reloadViewer();
+                                ThreadUtilities.invokeNowOrLater(new Runnable() {
+                                    public void run() {
+                                        reloadViewer();
+                                    }
+                                });
                             } catch (SQLException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());    
                             } catch(BadDataException e2) {
@@ -518,7 +522,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         ChangeListener changeListener = new ChangeListener(){
             public void stateChanged(ChangeEvent e) {
                 double fudgeFactor = 1 + (((Integer) fudgeSpinner.getValue()) / 100.0);
-                DecimalFormat format = new DecimalFormat("#0.0 uL");
+                DecimalFormat format = new DecimalFormat("#0.0 " + '\u00B5' + "L");
                 double vol = fudgeFactor * ct.getReactionVolume(ct.getOptions());
                 double totalVol = vol * count;
                 perReactionCount.setText("<html><b>" + format.format(vol) + "</b></html>");

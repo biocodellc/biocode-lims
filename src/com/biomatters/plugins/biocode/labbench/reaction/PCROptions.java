@@ -1,10 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
@@ -15,9 +15,7 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.*;
 import java.util.*;
-import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -89,19 +87,18 @@ public class PCROptions extends ReactionOptions {
                             try {
                                 BiocodeService.block("Adding Cocktails", cocktailButton.getComponent());
                                 BiocodeService.getInstance().addNewPCRCocktails(newCocktails);
-                                List<OptionValue> cocktails = getCocktails();
+                                final List<OptionValue> cocktails = getCocktails();
 
                                 if(cocktails.size() > 0) {
-                                    cocktailOption.setPossibleValues(cocktails);
+                                    Runnable runnable = new Runnable() {
+                                        public void run() {
+                                            cocktailOption.setPossibleValues(cocktails);
+                                        }
+                                    };
+                                    ThreadUtilities.invokeNowOrLater(runnable);
                                 }
                             } catch (final TransactionException e1) {
-                                Runnable runnable = new Runnable() {
-                                    public void run() {
-                                        Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
-
-                                    }
-                                };
-                                ThreadUtilities.invokeNowOrLater(runnable);
+                                Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
                             } finally {
                                 BiocodeService.unBlock();
                             }
