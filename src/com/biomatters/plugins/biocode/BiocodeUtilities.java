@@ -228,7 +228,10 @@ public class BiocodeUtilities {
     public static List<DocumentField> getFimsFields(List<WorkflowDocument> docs) {
         Set<DocumentField> fields = new LinkedHashSet<DocumentField>();
         for(WorkflowDocument doc : docs) {
-            fields.addAll(doc.getFimsSample().getFimsAttributes());
+            FimsSample fimsSample = doc.getFimsSample();
+            if(fimsSample != null) {
+                fields.addAll(fimsSample.getFimsAttributes());
+            }
         }
         return new ArrayList<DocumentField>(fields);
     }

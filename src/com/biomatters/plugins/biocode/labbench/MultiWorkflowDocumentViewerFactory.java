@@ -94,7 +94,11 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                     return doc.getName();
                 }
                 if(columnIndex <= fimsFields.size()) {
-                    return doc.getFimsSample().getFimsAttributeValue(fimsFields.get(columnIndex-1).getCode());
+                    FimsSample fimsSample = doc.getFimsSample();
+                    if(fimsSample == null) {
+                        return null;
+                    }
+                    return fimsSample.getFimsAttributeValue(fimsFields.get(columnIndex-1).getCode());
                 }
                 int adjustedColumnIndex = columnIndex-fimsFields.size();
 

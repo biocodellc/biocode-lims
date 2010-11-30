@@ -53,6 +53,7 @@ public class LIMSConnection {
     public static final DocumentField WORKFLOW_DATE_FIELD = new DocumentField("Last Modified (LIMS workflow)", "", "workflow.date", Date.class, false, false);
     public static final DocumentField WORKFLOW_LOCUS_FIELD = new DocumentField("Locus", "The locus of the workflow", "locus", String.class, true, false);
     public static final DocumentField EXTRACTION_NAME_FIELD = new DocumentField("Extraction ID", "The Extraction ID", "extraction.extractionId", String.class, true, false);
+    public static final DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", String.class, true, false);
     private boolean isLocal;
 
     public Options getConnectionOptions() {
@@ -257,7 +258,8 @@ public class LIMSConnection {
                 PLATE_DATE_FIELD,
                 WORKFLOW_DATE_FIELD,
                 WORKFLOW_LOCUS_FIELD,
-                EXTRACTION_NAME_FIELD
+                EXTRACTION_NAME_FIELD,
+                EXTRACTION_BARCODE_FIELD
         );
     }
 
@@ -650,7 +652,7 @@ public class LIMSConnection {
             query = generateAdvancedQueryFromBasicQuery(query);
         }
 
-        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId");
+        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode");
         if(query == null) {
             refinedQueries = Collections.emptyList();
             operator = CompoundSearchQuery.Operator.AND;
