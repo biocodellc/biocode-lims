@@ -1143,7 +1143,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 catch(SQLException ex) {
                     try {
-                        connection.rollback(savepoint);
+                        if(!limsConnection.isLocal()) {
+                            connection.rollback(savepoint);
+                        }
                     } catch (SQLException ignored) {}
                     throw ex;
                 }
@@ -1323,7 +1325,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         List<Workflow> workflows = new ArrayList<Workflow>();
         Connection connection = limsConnection.getConnection();
         boolean autoCommit = connection.getAutoCommit();
-        connection.setAutoCommit(false);     
+        connection.setAutoCommit(false);
         Savepoint savepoint = connection.setSavepoint();
         try {
             PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
@@ -1354,7 +1356,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         catch(SQLException ex) {
             try {
-                connection.rollback(savepoint);
+                if(!limsConnection.isLocal()) {
+                    connection.rollback(savepoint);
+                }
             } catch (SQLException ignored) {}
             throw ex;
         } finally {
@@ -1396,7 +1400,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         } catch(BadDataException e) {
             try {
-                connection.rollback(savepoint);
+                if(!limsConnection.isLocal()) {
+                    connection.rollback(savepoint);
+                }
             } catch (SQLException ignored) {} //ignore - if this fails, then we are already rolled back.
             throw e;
         } finally {
@@ -1670,7 +1676,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         } catch(BadDataException e) {
             plate.setId(originalPlateId);
             try {
-                connection.rollback(savepoint);
+                if(!limsConnection.isLocal()) {
+                    connection.rollback(savepoint);
+                }
             } catch (SQLException ignored) {} //ignore - if this fails, then we are already rolled back.
             catch(NullPointerException ex) {
                 if(!PrivateApiUtilities.isRunningFromADistribution()) {

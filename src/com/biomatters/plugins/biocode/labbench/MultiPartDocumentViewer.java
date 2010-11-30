@@ -55,7 +55,9 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                         catch(SQLException ex) {
                             if(savepoint != null) {
                                 try {
-                                    connection.rollback(savepoint);
+                                    if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+                                        connection.rollback(savepoint);
+                                    }
                                 } catch (SQLException ignored) {} //don't need to catch
                             }
                             Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
