@@ -54,6 +54,7 @@ public class LIMSConnection {
     public static final DocumentField WORKFLOW_LOCUS_FIELD = new DocumentField("Locus", "The locus of the workflow", "locus", String.class, true, false);
     public static final DocumentField EXTRACTION_NAME_FIELD = new DocumentField("Extraction ID", "The Extraction ID", "extraction.extractionId", String.class, true, false);
     public static final DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", String.class, true, false);
+    public static final DocumentField SEQUENCE_PROGRESS = DocumentField.createEnumeratedField(new String[] {"passed", "failed"}, "Sequence Progress", "The progress of your sequence in the workflow (passed or failed)", "progress", true, false);
     private boolean isLocal;
 
     public Options getConnectionOptions() {
@@ -259,30 +260,71 @@ public class LIMSConnection {
                 WORKFLOW_DATE_FIELD,
                 WORKFLOW_LOCUS_FIELD,
                 EXTRACTION_NAME_FIELD,
-                EXTRACTION_BARCODE_FIELD
+                EXTRACTION_BARCODE_FIELD,
+                SEQUENCE_PROGRESS
         );
     }
 
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
-        return getMatchingAssemblyDocuments(workflows, callback, callback);    
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
+        return getMatchingAssemblyDocuments(query, workflows, callback, callback);
     }
 
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
-        String sql = "SELECT * FROM assembly WHERE (";
-        List<String> terms = new ArrayList<String>();
-        for(WorkflowDocument workflow : workflows) {
-            terms.add("workflow="+workflow.getId());
-        }
-        sql = sql+StringUtilities.join(" OR ", terms)+")";
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, final Collection<WorkflowDocument> workflows, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
+        List<? extends Query> refinedQueries;
+        CompoundSearchQuery.Operator operator;
 
-        Statement statement = connection.createStatement();
+        if(query instanceof BasicSearchQuery) {
+            query = generateAdvancedQueryFromBasicQuery(query);
+        }
+
+        if(query instanceof CompoundSearchQuery) {
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date", "workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode"));
+            operator = ((CompoundSearchQuery)query).getOperator();
+        }
+        else {
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date", "workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode"));
+            operator = CompoundSearchQuery.Operator.AND;
+        }
+
+        if(refinedQueries.size() == 0 && (workflows == null || workflows.size() == 0)) {
+            return Collections.emptyList();
+        }
+
+        String sql = "SELECT * FROM assembly WHERE ";
+        List<String> terms = new ArrayList<String>();
+        List<Object> sqlValues = new ArrayList<Object>();
+        if(workflows != null && workflows.size() > 0) {
+            for(WorkflowDocument workflow : workflows) {
+                terms.add("workflow=?");
+                sqlValues.add(workflow.getId());
+            }
+            sql = sql+"("+StringUtilities.join(" OR ", terms)+")";
+        }
+
+        if(refinedQueries.size() > 0)  {
+            if(workflows != null && workflows.size() > 0) {
+                String join;
+                switch(operator) {
+                    case AND:
+                        join = " AND ";
+                        break;
+                    default:
+                        join = " OR ";
+                }
+                sql = sql + join;
+            }
+            sql = sql+queryToSql(refinedQueries, operator, "assembly", sqlValues);
+        }
+        System.out.println(sql);
+        PreparedStatement statement = connection.prepareStatement(sql);
+        fillStatement(sqlValues, statement);
         BiocodeUtilities.CancelListeningThread listeningThread = null;
         if(cancelable != null) {
             //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
         }
         statement.setFetchSize(1);
         try {
-            final ResultSet resultSet = statement.executeQuery(sql);
+            final ResultSet resultSet = statement.executeQuery();
             List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
             while(resultSet.next()) {
                 AnnotatedPluginDocument doc = createAssemblyDocument(resultSet);
@@ -391,11 +433,11 @@ public class LIMSConnection {
         }
 
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date", "progress"));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date"));
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date", "progress"));
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((samples == null || samples.size() == 0) && refinedQueries.size() == 0) {
@@ -457,24 +499,7 @@ public class LIMSConnection {
                 position++;
             }
         }
-        for (int i = 0; i < sqlValues.size(); i++) {
-            Object o = sqlValues.get(i);
-            if(Integer.class.isAssignableFrom(o.getClass())) {
-                statement.setInt(i+1, (Integer)o);
-            }
-            else if(Double.class.isAssignableFrom(o.getClass())) {
-                statement.setDouble(i+1, (Double)o);
-            }
-            else if(String.class.isAssignableFrom(o.getClass())) {
-                statement.setString(i+1, o.toString().toLowerCase());
-            }
-            else if(Date.class.isAssignableFrom(o.getClass())) {
-                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
-            }
-            else {
-                throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
-            }
-        }
+        fillStatement(sqlValues, statement);
         ResultSet resultSet = statement.executeQuery();
 
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
@@ -513,6 +538,27 @@ public class LIMSConnection {
         }
         statement.close();
         return new ArrayList<WorkflowDocument>(workflowDocs.values());
+    }
+
+    private void fillStatement(List<Object> sqlValues, PreparedStatement statement) throws SQLException {
+        for (int i = 0; i < sqlValues.size(); i++) {
+            Object o = sqlValues.get(i);
+            if(Integer.class.isAssignableFrom(o.getClass())) {
+                statement.setInt(i+1, (Integer)o);
+            }
+            else if(Double.class.isAssignableFrom(o.getClass())) {
+                statement.setDouble(i+1, (Double)o);
+            }
+            else if(String.class.isAssignableFrom(o.getClass())) {
+                statement.setString(i+1, o.toString().toLowerCase());
+            }
+            else if(Date.class.isAssignableFrom(o.getClass())) {
+                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
+            }
+            else {
+                throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
+            }
+        }
     }
 
     private List<? extends Query> removeFields(List<? extends Query> queries, List<String>  codesToIgnore) {
@@ -652,7 +698,7 @@ public class LIMSConnection {
             query = generateAdvancedQueryFromBasicQuery(query);
         }
 
-        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode");
+        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode", "progress");
         if(query == null) {
             refinedQueries = Collections.emptyList();
             operator = CompoundSearchQuery.Operator.AND;
@@ -719,24 +765,7 @@ public class LIMSConnection {
             statement.setFetchSize(Integer.MIN_VALUE);
         }
 
-        for (int i = 0; i < sqlValues.size(); i++) {
-            Object o = sqlValues.get(i);
-            if(Integer.class.isAssignableFrom(o.getClass())) {
-                statement.setInt(i+1, (Integer)o);
-            }
-            else if(Double.class.isAssignableFrom(o.getClass())) {
-                statement.setDouble(i+1, (Double)o);
-            }
-            else if(String.class.isAssignableFrom(o.getClass())) {
-                statement.setString(i+1, o.toString().toLowerCase());
-            }
-            else if(Date.class.isAssignableFrom(o.getClass())) {
-                statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
-            }
-            else {
-                throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
-            }
-        }
+        fillStatement(sqlValues, statement);
         System.out.println("EXECUTING PLATE QUERY");
 
         ResultSet resultSet = statement.executeQuery();
