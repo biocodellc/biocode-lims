@@ -594,6 +594,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve) throws DatabaseServiceException {
+        retrieve(query, callback, urnsToNotRetrieve, false);
+    }
+
+    public void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
         List<FimsSample> tissueSamples = null;
         List<Query> fimsQueries = new ArrayList<Query>();
         List<Query> limsQueries = new ArrayList<Query>();
@@ -712,14 +716,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             String message = e.getMessage();
             boolean isNetwork = true;
             if(message != null && message.contains("Streaming result") && message.contains("is still active")) {
-                try {
-                    System.out.println("attempting a reconnect...");
-                    limsConnection.reconnect();
-                } catch (ConnectionException e1) {
-                    throw new DatabaseServiceException(e1, "Your previous search did not cancel properly, and Geneious was unable to correct the problem.  Try logging out, and logging in again.\n\n"+message, false);
+                if(!hasAlreadyTriedReconnect) {
+                    try {
+                        System.out.println("attempting a reconnect...");
+                        limsConnection.reconnect();
+                    } catch (ConnectionException e1) {
+                        throw new DatabaseServiceException(e1, "Your previous search did not cancel properly, and Geneious was unable to correct the problem.  Try logging out, and logging in again.\n\n"+message, false);
+                    }
+                    retrieve(query, callback, urnsToNotRetrieve, true);
+                    return;
                 }
-                retrieve(query, callback, urnsToNotRetrieve);
-                return;
+                else {
+                    message = "Your previous search did not cancel properly.  Try logging out, and logging in again.\n\n"+message;
+                    isNetwork = false;
+                }
             }
             throw new DatabaseServiceException(e, message, isNetwork);
         }
