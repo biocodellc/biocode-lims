@@ -712,7 +712,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             String message = e.getMessage();
             boolean isNetwork = true;
             if(message != null && message.contains("Streaming result") && message.contains("is still active")) {
-                message = "Your previous search did not cancel properly.  Try logging out, and logging in again.\n\n"+message;
+                try {
+                    System.out.println("attempting a reconnect...");
+                    limsConnection.reconnect();
+                } catch (ConnectionException e1) {
+                    throw new DatabaseServiceException(e1, "Your previous search did not cancel properly, and Geneious was unable to correct the problem.  Try logging out, and logging in again.\n\n"+message, false);
+                }
+                message = "Your previous search did not cancel properly.  Please try your search again.";
                 isNetwork = false;
             }
             throw new DatabaseServiceException(e, message, isNetwork);

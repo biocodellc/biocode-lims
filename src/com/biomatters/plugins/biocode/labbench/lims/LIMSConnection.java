@@ -47,6 +47,7 @@ public class LIMSConnection {
     Connection connection;
     Connection connection2;
     private LocalLIMS localLIMS;
+    private Options limsOptions;
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
@@ -109,6 +110,7 @@ public class LIMSConnection {
     private void connectLocal(Options LIMSOptions, boolean alreadyAskedBoundUpgrade) throws ConnectionException {
         isLocal = true;
         connection = localLIMS.connect(LIMSOptions);
+        this.limsOptions = LIMSOptions;
         try {
             ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
             if(!resultSet.next()) {
@@ -139,6 +141,7 @@ public class LIMSConnection {
     private void connectRemote(Options LIMSOptions) throws ConnectionException {
         isLocal = false;
         //connect to the LIMS
+        this.limsOptions = LIMSOptions;
         Properties properties = new Properties();
         properties.put("user", LIMSOptions.getValueAsString("username"));
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
@@ -184,7 +187,23 @@ public class LIMSConnection {
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
         connection = null;
         connection2 = null;
+        limsOptions = null;
         isLocal = false;
+    }
+
+    public void reconnect() throws ConnectionException{
+        if(this.limsOptions == null) {
+            return;
+        }
+        Options limsOptions = this.limsOptions;
+        boolean isLocal = this.isLocal;
+        disconnect();
+        if(isLocal) {
+            connectLocal(limsOptions, true);
+        }
+        else {
+            connectRemote(limsOptions);
+        }
     }
 
     public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
