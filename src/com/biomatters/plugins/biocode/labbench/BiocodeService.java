@@ -597,7 +597,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         retrieve(query, callback, urnsToNotRetrieve, false);
     }
 
-    public void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
+    private void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
         List<FimsSample> tissueSamples = null;
         List<Query> fimsQueries = new ArrayList<Query>();
         List<Query> limsQueries = new ArrayList<Query>();
