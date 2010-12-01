@@ -2,7 +2,10 @@ package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
@@ -12,6 +15,8 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.options.PasswordOption;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
@@ -22,16 +27,13 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.options.PasswordOption;
+import jebl.util.Cancelable;
 
 import java.sql.*;
-import java.util.*;
-import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-
-import jebl.util.Cancelable;
+import java.util.*;
+import java.util.Date;
 
 /**
  * @author steve
@@ -75,7 +77,7 @@ public class LIMSConnection {
         LIMSOptions.addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);
 
 
-        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
+        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
 
         return  LIMSOptions;
     }
@@ -349,7 +351,7 @@ public class LIMSConnection {
                 AnnotateUtilities.annotateDocument(getter, new ArrayList<String>(), doc);
                 resultDocuments.add(doc);
                 if(callback != null) {
-                    callback.add(doc, Collections.EMPTY_MAP);
+                    callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
             if(listeningThread != null) {
@@ -507,7 +509,7 @@ public class LIMSConnection {
         while(resultSet.next()) {
             if(cancelable != null && cancelable.isCanceled()) {
                 resultSet.close();
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
             }
             int workflowId = resultSet.getInt("workflow.id");
             if(callback != null && prevWorkflowId >= 0 && prevWorkflowId != workflowId) {
@@ -781,7 +783,7 @@ public class LIMSConnection {
 
             if(cancelable != null && cancelable.isCanceled()) {
                 resultSet.close();
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
             }
 
             Plate plate;
@@ -918,7 +920,7 @@ public class LIMSConnection {
                 queryTerms.add(Query.Factory.createFieldQuery(field, Condition.CONTAINS, value));
             }
         }
-        query = Query.Factory.createOrQuery(queryTerms.toArray(new Query[queryTerms.size()]), Collections.EMPTY_MAP);
+        query = Query.Factory.createOrQuery(queryTerms.toArray(new Query[queryTerms.size()]), Collections.<String, Object>emptyMap());
         return query;
     }
 
@@ -950,7 +952,7 @@ public class LIMSConnection {
 
     public Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws SQLException{
         if(sourceReactions == null || sourceReactions.size() == 0) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
         StringBuilder sql = new StringBuilder("SELECT * FROM extraction WHERE (");
         for (int i=0; i < sourceReactions.size(); i++) {
@@ -975,7 +977,7 @@ public class LIMSConnection {
 
     private Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws SQLException{
         if(plateIds == null || plateIds.size() == 0) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
         StringBuilder sql = new StringBuilder("SELECT * FROM gelimages WHERE (");
         for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
@@ -1062,6 +1064,7 @@ public class LIMSConnection {
     public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws SQLException{
         
         List<String> queries = new ArrayList<String>();
+        //noinspection UnusedDeclaration
         for(String s : tissueIds) {
             queries.add("extractionId LIKE ?");
         }
@@ -1094,6 +1097,7 @@ public class LIMSConnection {
                 "WHERE (");
 
         List<String> queryParams = new ArrayList<String>();
+        //noinspection UnusedDeclaration
         for(String barcode : barcodes) {
             queryParams.add("extraction.extractionBarcode = ?");
         }
