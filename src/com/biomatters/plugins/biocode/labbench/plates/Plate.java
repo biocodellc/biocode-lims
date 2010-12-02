@@ -171,6 +171,19 @@ public class Plate implements XMLSerializable {
         return reactions;
     }
 
+    public void setReactions(Reaction[] newReactions) {
+        if(newReactions.length != reactions.length) {
+            throw new IllegalArgumentException("You cannot change the size of an existing plate!  Expected "+reactions.length+" reactions, but you set "+newReactions.length);
+        }
+        for(Reaction r : newReactions) {
+            if(r.getType() != getReactionType()) {
+                throw new IllegalArgumentException("You cannot change the type of an existing plate!  Expected "+getReactionType()+" but you set at least one reaction that is "+r.getType());
+            }
+        }
+        reactions = newReactions;
+    }
+
+
     public Thermocycle getThermocycle() {
         return thermocycle;
     }

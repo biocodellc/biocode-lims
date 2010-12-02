@@ -304,7 +304,8 @@ public class PlateDocumentViewer extends DocumentViewer{
                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing && plateView.getPlate().getPlateSize() != null) {
                     actions.addAll(Arrays.asList(
                             addTracesAction,
-                            exportPlateAction
+                            exportPlateAction,
+                            flipAction
                     ));
                 }
 
@@ -347,6 +348,26 @@ public class PlateDocumentViewer extends DocumentViewer{
             plateView.getPlate().setImages(gelimages);
             saveAction.setEnabled(true);
             updatePanel();
+        }
+    };
+
+    GeneiousAction flipAction = new GeneiousAction("Whoops, my plate is backwards!"){
+        public void actionPerformed(ActionEvent e) {
+            Plate plate = plateView.getPlate();
+            Reaction[] reactions = plate.getReactions();
+            Reaction[] newReactions = new Reaction[reactions.length];
+            for(int i=0; i < reactions.length; i++) {
+                int newIndex = reactions.length-1-i;
+                Reaction reaction = reactions[i];
+                reaction.setPosition(newIndex);
+                reaction.setLocationString(plate.getWell(newIndex, plate.getPlateSize()).toString());
+                newReactions[newIndex] = reaction;
+            }
+            plate.setReactions(newReactions);
+            if(saveAction != null) {
+                saveAction.setEnabled(true);
+            }
+            plateView.repaint();
         }
     };
 
