@@ -53,7 +53,7 @@ public class ReactionUtilities {
      * @param owner
      * @return true if the user clicked OK on the dialog
      */
-    public static void bulkLoadChromatograms(Plate plate, JComponent owner) {
+    public static void bulkLoadChromatograms(final Plate plate, JComponent owner) {
         if(plate == null || plate.getReactionType() != Reaction.Type.CycleSequencing) {
             throw new IllegalArgumentException("You may only call this method with Cycle Sequencing plates");
         }
@@ -81,6 +81,10 @@ public class ReactionUtilities {
         Options.ComboBoxOption<Options.OptionValue> fieldOption = options.addComboBoxOption("field", "", fieldValues, fieldValues.get(0));
         chooseOption.setDependentPosition(Options.RadioOption.DependentPosition.RIGHT);
         chooseOption.addDependent(fieldOption, chooseValues[1]);
+        final Options.BooleanOption plateBackwards = options.addBooleanOption("plateBackwards", "Whoops! I sequenced my plate backwards.  Please fix it!", false);
+        final Options.BooleanOption fixNames = options.addBooleanOption("fixNames", "Also try to correct the well number in the trace filenames", false);
+        fixNames.setDisabledValue(false);
+        plateBackwards.addDependent(fixNames, true);
 
 
         options.beginAlignHorizontally(null, false);
@@ -138,7 +142,7 @@ public class ReactionUtilities {
         final DocumentField finalField = field;
         Runnable runnable = new Runnable() {
             public void run() {
-                importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder);
+                importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
             }
         };
         BiocodeService.block("Importing traces", owner, runnable);
@@ -154,9 +158,9 @@ public class ReactionUtilities {
         return null;
     }
 
-    private static CycleSequencingReaction getReaction(List<CycleSequencingReaction> reactions, DocumentField field, String value) {
+    private static CycleSequencingReaction getReaction(List<CycleSequencingReaction> reactions, DocumentField field, BiocodeUtilities.Well value) {
         for(CycleSequencingReaction r : reactions) {
-            if(value.equals(""+r.getDisplayableValue(field))) {
+            if(value.toPaddedString().equals(""+r.getDisplayableValue(field)) || value.toString().equals(""+r.getDisplayableValue(field))) {
                 return r;
             }
         }
@@ -181,8 +185,11 @@ public class ReactionUtilities {
      * @param fieldToCheck
      * @param checkPlate
      * @param folder
+     * @param plateSize
+     * @param flipPlate
+     * @param checkNames
      */
-    private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder) {
+    private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (SQLException e) {
@@ -206,19 +213,35 @@ public class ReactionUtilities {
             if(f.getName().startsWith(".")) { //stupid macos files
                 continue;
             }
+            BiocodeUtilities.Well originalWell;
+            BiocodeUtilities.Well newWell;
             if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
                 String[] nameParts = f.getName().split(separatorString);
                 CycleSequencingReaction r;
                 if(fieldToCheck != null && nameParts.length > partToMatch) {
-                    r = getReaction(reactions, fieldToCheck, nameParts[partToMatch]);
+
+                    //get the correct well (either flipped or not)
+                    String wellName = nameParts[partToMatch];
+                    try {
+                        originalWell = new BiocodeUtilities.Well(wellName);
+                        int location = flipPlate ? plateSize.numberOfReactions()-Plate.getWellLocation(originalWell, plateSize)-1 : Plate.getWellLocation(originalWell, plateSize);
+                        newWell = Plate.getWell(location, plateSize);
+                    } catch (IllegalArgumentException e) {
+                        continue; //the well string isn't a valid well...
+                    }
+
+                    r = getReaction(reactions, fieldToCheck, newWell);
                     if(r == null) {
                         continue;
                     }
                 }
                 else {
-                    BiocodeUtilities.Well well = BiocodeUtilities.getWellFromFileName(f.getName(), separatorString, partToMatch);
-                    if (well == null) continue;
-                    String wellString = well.toString();
+                    originalWell = BiocodeUtilities.getWellFromFileName(f.getName(), separatorString, partToMatch);
+                    if (originalWell == null) continue;
+                    int location = flipPlate ? plateSize.numberOfReactions()-Plate.getWellLocation(originalWell, plateSize)-1 : Plate.getWellLocation(originalWell, plateSize);
+                    newWell = Plate.getWell(location, plateSize);
+
+                    String wellString = newWell.toString();
                     r = getReaction(reactions, wellString);
                     if(r == null) {
                         continue;
@@ -253,7 +276,13 @@ public class ReactionUtilities {
                 List<MemoryFile> files = new ArrayList<MemoryFile>();
 
                 try {
-                    files.add(loadFileIntoMemory(f));
+                    MemoryFile memoryFile = loadFileIntoMemory(f);
+                    if(checkNames && originalWell != null && newWell != null) {
+                        String name = memoryFile.getName().replace(originalWell.toPaddedString(), newWell.toPaddedString()); //prioritise padded names (eg A01) because that's what most sequencers produce
+                        name = name.replace(originalWell.toString(), newWell.toString());
+                        memoryFile.setName(name);
+                    }
+                    files.add(memoryFile);
                 } catch (IOException e) {
                     assert false : e.getMessage();
                     //todo: handle
@@ -823,6 +852,10 @@ public class ReactionUtilities {
 
         public byte[] getData() {
             return data;
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
     }
 

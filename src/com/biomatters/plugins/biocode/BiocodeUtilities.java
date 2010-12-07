@@ -438,6 +438,9 @@ public class BiocodeUtilities {
             wellNumberString += numberChar;
             count++;
         }
+        if(wellNumberString.length() == 0) {
+            return null;
+        }
         return new Well(wellStringBig.toUpperCase().charAt(0), wellNumber);
     }
 

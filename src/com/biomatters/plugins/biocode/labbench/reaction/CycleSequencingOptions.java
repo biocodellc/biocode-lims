@@ -236,6 +236,9 @@ public class CycleSequencingOptions extends ReactionOptions {
         if(sequences == null) {
             sequences = new WeakReference<List<NucleotideSequenceDocument>>(sequencesStrongReference);
         }
+        if(files == null) {
+            return;
+        }
 
         convertRawTracesToTraceDocuments(files);
     }
