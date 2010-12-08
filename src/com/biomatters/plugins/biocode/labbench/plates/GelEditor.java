@@ -1,14 +1,14 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
-import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
-import com.biomatters.plugins.biocode.labbench.ImagePanel;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.labbench.ImagePanel;
 
 import javax.swing.*;
 import javax.swing.event.ListDataEvent;
@@ -32,7 +32,6 @@ import java.util.prefs.Preferences;
  *          Created on 12/06/2009 12:09:01 PM
  */
 public class GelEditor {
-    static Preferences preferences = Preferences.userNodeForPackage(GelEditor.class);
 
     public static List<GelImage> editGels(final Plate plate, Component owner) {
         final List<GelImage> gelimages = new ArrayList<GelImage>(plate.getImages());

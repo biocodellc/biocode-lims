@@ -3,18 +3,22 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
-import com.sun.media.jai.codec.ImageCodec;
-import com.sun.media.jai.codec.SeekableStream;
 import com.sun.media.jai.codec.ByteArraySeekableStream;
+import com.sun.media.jai.codec.ImageCodec;
 import com.sun.media.jai.codec.ImageDecoder;
+import com.sun.media.jai.codec.SeekableStream;
+import org.jdom.Element;
 
 import javax.media.jai.RenderedImageAdapter;
 import java.awt.*;
 import java.awt.image.RenderedImage;
-import java.io.*;
-import java.sql.*;
-
-import org.jdom.Element;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -81,7 +85,8 @@ public class GelImage implements XMLSerializable {
                 return;
             }
             ImageDecoder decoder = ImageCodec.createImageDecoder(codecNames[0], ss, null);
-            RenderedImage renderedImage = null;
+            RenderedImage renderedImage;
+            //noinspection ProhibitedExceptionCaught
             try {
                 renderedImage = decoder.decodeAsRenderedImage();
             } catch (NullPointerException e) { //GEN-11933
@@ -157,9 +162,5 @@ public class GelImage implements XMLSerializable {
 
     public String getFilename() {
         return filename;
-    }
-
-    public void setImageBytes(byte[] imageBytes) {
-        this.imageBytes = imageBytes;
     }
 }
