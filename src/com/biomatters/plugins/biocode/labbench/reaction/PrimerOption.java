@@ -3,12 +3,9 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentSearchCache;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceAnnotation;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceAnnotationInterval;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentType;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.SequenceUtilities;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -80,6 +77,7 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
             }
     }
 
+    @SuppressWarnings({"UnusedDeclaration"})
     protected PrimerOption(Element e) throws XMLSerializationException {
         super(e);
         Element extraPrimerElement = e.getChild("ExtraPrimer");
@@ -163,13 +161,6 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
     public void setPossibleValues(List<? extends Options.OptionValue> possibleValues) {
     }
 
-
-    public void setAndAddValue(String name, String sequence) {
-        extraPrimer = new SequenceAndName(sequence, name);
-        primerListener.objectChanged();
-        setValue(getOptionValue(sequence, name));
-    }
-
     @Override
     protected String getExtraPersistentInformation() {
         if(extraPrimer != null) {
@@ -189,27 +180,6 @@ public class PrimerOption extends Options.ComboBoxOption<Options.OptionValue>{
                 setValue(getOptionValue(extraPrimer.getSequence(), extraPrimer.getName()));
             }
         }
-    }
-
-    private static SequenceAnnotation getOligoAnnotationIfValid(OligoSequenceDocument originalDoc) {
-        SequenceAnnotation correctOligo = null;
-        List<SequenceAnnotation> oligoAnnotations = new ArrayList<SequenceAnnotation>();
-        oligoAnnotations.addAll(SequenceUtilities.getAnnotationsOfType(originalDoc.getSequenceAnnotations(), SequenceAnnotation.TYPE_PRIMER_BIND));
-        oligoAnnotations.addAll(SequenceUtilities.getAnnotationsOfType(originalDoc.getSequenceAnnotations(), SequenceAnnotation.TYPE_PRIMER_BIND_REVERSE));
-        oligoAnnotations.addAll(SequenceUtilities.getAnnotationsOfType(originalDoc.getSequenceAnnotations(), SequenceAnnotation.TYPE_DNA_PROBE));
-        for (SequenceAnnotation annotation : oligoAnnotations) {
-            if (annotation.getIntervals().size() == 0) continue;
-            SequenceAnnotationInterval interval = annotation.getIntervals().get(0);
-            if(interval.getLength() == originalDoc.getSequenceLength() && interval.getMinimumIndex() == 1 &&
-                    interval.getMaximumIndex() == originalDoc.getSequenceLength()) {
-                if (correctOligo != null && (!correctOligo.getType().equals(annotation.getType()) ||
-                        interval.getDirection() != correctOligo.getIntervals().get(0).getDirection())) {
-                    return null; //found another matching primer annotation of a different type or in a different direction
-                }
-                correctOligo = annotation;
-            }
-        }
-        return correctOligo;
     }
 
     private static class SequenceAndName{
