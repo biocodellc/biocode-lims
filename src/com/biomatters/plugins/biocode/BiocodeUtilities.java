@@ -13,11 +13,8 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
@@ -82,35 +79,6 @@ public class BiocodeUtilities {
             }
             return doc;
         }
-    }
-
-    public static int getJavaVersion() {
-        String version = System.getProperty("java.version");
-        char minor = version.charAt(2);
-        //char point = version.charAt(4);
-        return Integer.parseInt(""+minor);
-    }
-
-    public static WorkflowDocument getMostRecentWorkflow(LIMSConnection limsConnection, FIMSConnection fimsConnection, Object tissueId) throws DocumentOperationException {
-        WorkflowDocument mostRecent = null;
-        try {
-            List<FimsSample> tissues = fimsConnection.getMatchingSamples(Arrays.asList(tissueId.toString()));
-            if (tissues.size() != 1) {
-                return null;
-            }
-
-            List<WorkflowDocument> workflows = limsConnection.getMatchingWorkflowDocuments(null, tissues, null);
-            for (WorkflowDocument workflow : workflows) {
-                if (mostRecent == null || workflow.getNumberOfParts() > mostRecent.getNumberOfParts()) {
-                    mostRecent = workflow;
-                }
-            }
-        } catch (SQLException e) {
-            throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
-        } catch (ConnectionException e) {
-            throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
-        }
-        return mostRecent;
     }
 
     public static String formatSize(long bytes, int decimalPlaces) {
@@ -442,14 +410,6 @@ public class BiocodeUtilities {
             return null;
         }
         return new Well(wellStringBig.toUpperCase().charAt(0), wellNumber);
-    }
-
-    public static String getBarcodeFromFileName(String fileName, String separator, int partNumber) {
-        String[] nameParts = fileName.split(separator);
-        if(partNumber >= nameParts.length) {
-            return null;
-        }
-        return nameParts[partNumber];
     }
 
     public static boolean isAlignmentOfContigConsensusSequences(AnnotatedPluginDocument alignmentDoc) throws DocumentOperationException {
