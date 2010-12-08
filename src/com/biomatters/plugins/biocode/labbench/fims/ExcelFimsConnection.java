@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
 import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
@@ -8,10 +9,9 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.XmlUtilities;
-import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import jxl.Cell;
@@ -20,21 +20,21 @@ import jxl.Workbook;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.PrintWriter;
-import java.util.*;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.prefs.Preferences;
-import java.awt.*;
+import java.util.Map;
 
 /**
  * @author steve
  * @version $Id: 12/05/2009 8:00:41 AM steve $
  */
 public class ExcelFimsConnection extends FIMSConnection{
-    Preferences prefs = Preferences.userNodeForPackage(this.getClass());
 
     private Workbook workbook;
 
@@ -114,6 +114,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
 
         if(excelFile != null && excelFile.exists()) {
+            //noinspection CatchGenericClass
             try {
                 Workbook workbook = Workbook.getWorkbook(excelFile);
 
@@ -184,45 +185,48 @@ public class ExcelFimsConnection extends FIMSConnection{
         fields = new ArrayList<DocumentField>();
         taxonomyFields = new ArrayList<DocumentField>();
 
+        List<String> columnNames = new ArrayList<String>();
+        //noinspection CatchGenericClass
         try {
             workbook = Workbook.getWorkbook(excelFile);
-
-
             Sheet sheet = workbook.getSheet(0);
-
-            List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
-            for(Options taxOptionsValue : taxOptions){
-                Options.OptionValue colValue = (Options.OptionValue)((Options.ComboBoxOption)taxOptionsValue.getOption("taxCol")).getValue();
-                taxonomyFields.add(new DocumentField(XmlUtilities.encodeXMLChars(colValue.getLabel()), XmlUtilities.encodeXMLChars(colValue.getLabel()), colValue.getName(), String.class, true, false));
-            }
-
             for(int i=0; i < sheet.getColumns(); i++) {
                 Cell cell = sheet.getCell(i,0);
                 String cellContents = cell.getContents();
                 if(cellContents.length() > 0) {
-                    DocumentField field = new DocumentField(XmlUtilities.encodeXMLChars(cellContents), XmlUtilities.encodeXMLChars(cellContents), "" + i, String.class, true, false);
-                    if(!taxonomyFields.contains(field)) {
-                        fields.add(field);
-                    }
+                    columnNames.add(cellContents);
                 }
-            }
-
-            //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
-            if(getTableCol(fields, tissueCol) == null) {
-                throw new ConnectionException(null, "You have listed your tissue sample field as also being a taxonomy field.  This is not allowed.");
-            }
-            if(getTableCol(fields, specimenCol) == null) {
-                throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
             }
 
         } catch(IOException e) {
             Dialogs.showMessageDialog("Geneious could not read your excel file: "+e.getMessage(), "Could not read Excel file", null, Dialogs.DialogIcon.WARNING);
-        }
-        catch(Exception e) {
+            return;
+        } catch(Exception e) {
             handleCorruptedExcelFile(null, e);
+            return;
         }
 
+        List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
+        for(Options taxOptionsValue : taxOptions){
+            Options.OptionValue colValue = (Options.OptionValue)((Options.ComboBoxOption)taxOptionsValue.getOption("taxCol")).getValue();
+            taxonomyFields.add(new DocumentField(XmlUtilities.encodeXMLChars(colValue.getLabel()), XmlUtilities.encodeXMLChars(colValue.getLabel()), colValue.getName(), String.class, true, false));
+        }
 
+        for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
+            String cellContents = columnNames.get(i);
+            DocumentField field = new DocumentField(XmlUtilities.encodeXMLChars(cellContents), XmlUtilities.encodeXMLChars(cellContents), "" + i, String.class, true, false);
+            if (!taxonomyFields.contains(field)) {
+                fields.add(field);
+            }
+        }
+
+        //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
+        if(getTableCol(fields, tissueCol) == null) {
+            throw new ConnectionException(null, "You have listed your tissue sample field as also being a taxonomy field.  This is not allowed.");
+        }
+        if(getTableCol(fields, specimenCol) == null) {
+            throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
+        }
     }
 
     private static DocumentField getTableCol(List<DocumentField> fields, int colIndex) {
