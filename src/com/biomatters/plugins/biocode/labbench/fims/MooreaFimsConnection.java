@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.options.PasswordOption;
 
 import java.sql.*;
@@ -49,16 +50,8 @@ public class MooreaFimsConnection extends FIMSConnection{
         return "A connection to the Moorea FIMS database";
     }
 
-    public Options getConnectionOptions() {
-        Options options = new Options(this.getClass(), "mooreaFIMS");
-        options.addStringOption("serverUrl", "Server:", "darwin.berkeley.edu");
-        options.addIntegerOption("serverPort", "Port:", 3306, 0, Integer.MAX_VALUE);
-        options.addStringOption("username", "Username:", "");
-        //options.addStringOption("password", "Password", "");
-        PasswordOption password = new PasswordOption("password", "Password:", true);
-        options.addCustomOption(password);
-
-        return options;
+    public PasswordOptions getConnectionOptions() {
+        return new MooreaFimsConnectionOptions(this.getClass(), "mooreaFIMS");
     }
 
     public void connect(Options options) throws ConnectionException {

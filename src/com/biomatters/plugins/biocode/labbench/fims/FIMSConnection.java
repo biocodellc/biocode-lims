@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 
 import java.util.*;
 import java.lang.ref.SoftReference;
@@ -44,7 +45,7 @@ public abstract class FIMSConnection {
      * @return some options allowing the user to enter all necessary information to connect to the database
      * (eg username/password, server address etc)
      */
-    public abstract Options getConnectionOptions();
+    public abstract PasswordOptions getConnectionOptions();
 
     /**
      *  connects to the field management database

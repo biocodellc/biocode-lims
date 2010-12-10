@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.tapir.TAPIRClient;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -42,8 +43,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return "TAPIR";
     }
 
-    public Options getConnectionOptions() {
-        Options connectionOptions = new Options(this.getClass());
+    public PasswordOptions getConnectionOptions() {
+        PasswordOptions connectionOptions = new PasswordOptions(this.getClass());
         connectionOptions.addStringOption("accessPoint", "Access Point:", "http://tapirlink.berkeley.edu/tapir.php/biocode");
         return connectionOptions;
     }

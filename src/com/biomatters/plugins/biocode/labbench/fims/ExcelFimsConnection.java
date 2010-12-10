@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
@@ -58,8 +59,8 @@ public class ExcelFimsConnection extends FIMSConnection{
         return "Excel";
     }
 
-    public Options getConnectionOptions() {
-        final Options options = new Options(this.getClass());
+    public PasswordOptions getConnectionOptions() {
+        final PasswordOptions options = new PasswordOptions(this.getClass());
         options.addLabel("<html>Choose the location of your excel file.<br>The first row should be column headers, and it should<br>have at least a tissue and specimen column.</html>");
         final Options.FileSelectionOption fileLocation = options.addFileSelectionOption("excelFile", "Excel file location:", "");
         options.restorePreferences(); //to make sure that the field chooser boxes start out with the right values
@@ -203,7 +204,7 @@ public class ExcelFimsConnection extends FIMSConnection{
             return;
         } catch(Exception e) {
             handleCorruptedExcelFile(null, e);
-            return;
+            throw ConnectionException.NO_DIALOG;
         }
 
         List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();

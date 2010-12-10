@@ -30,7 +30,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -64,6 +63,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
     public static final DateFormat XMLDateFormat = new SimpleDateFormat("yyyy MMM dd hh:mm:ss");
+
+    private ConnectionManager connectionManager;
 
     private BiocodeService() {
     }
@@ -274,7 +275,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         };
     }
 
-    private static FIMSConnection[] getFimsConnections() {
+    static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
 //                new GoogleFimsConnection(),
@@ -408,160 +409,164 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         updateStatus();
     }
 
+    private void saveConnectionManager() throws IOException {
+        File file = new File(dataDirectory, "connectionManager.xml");
+        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        out.output(connectionManager.toXML(), new FileOutputStream(file));
+    }
+
     private void logIn() {
-        Options FIMSOptions = new Options(this.getClass());
-        for (FIMSConnection connection : getFimsConnections()) {
-            FIMSOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new Options(this.getClass()));
-        }
-        FIMSOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
+        final ConnectionManager.Connection connection = connectionManager.getConnectionFromUser(null);
 
-        final Options LIMSOptions = limsConnection.getConnectionOptions();
-
-        Options loginOptions = new Options(this.getClass());
-        loginOptions.addChildOptions("fims", null, null, FIMSOptions);
-        loginOptions.addChildOptions("lims", null, null, LIMSOptions);
-
-        Options.FileSelectionOption driverOption = loginOptions.addFileSelectionOption("driver", "MySQL Driver:", "", new String[0], "Browse...", new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                return name.toLowerCase().endsWith(".jar");
-            }
-        });
-        driverOption.setDescription("A file similar to \"mysql-connector-java-5.1.12-bin.jar\", available for download from http://dev.mysql.com/downloads/connector/j/");
-        driverOption.setSelectionType(JFileChooser.FILES_ONLY);
-
-        loginOptions.restorePreferences();
-
-        String logIn = "Log In";
-        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {logIn, "Cancel"}, logIn, null, Dialogs.DialogIcon.NO_ICON);
-        dialogOptions.setMaxWidth(dialogOptions.getMaxDimensions().width + 200);
-        dialogOptions.setMaxHeight(dialogOptions.getMaxDimensions().height + 200);
-        Object result = Dialogs.showDialog(dialogOptions, loginOptions.getPanel());
-        if (logIn.equals(result)) {
-            loginOptions.savePreferences();
-
-            //load the connection driver -------------------------------------------------------------------
-            String driverFileName = (String) loginOptions.getValue("driver");
-
-            ClassLoader loader;
+        if (connection != null) {
             try {
-                File driverFile = new File(driverFileName);
-                if(!driverFile.exists() || driverFile.isDirectory()) {
-                    Dialogs.showMessageDialog("You need to specify a valid MySql Driver!");
-                    logOut();
-                    return;
-                }
-                URL driverUrl = driverFile.toURL();
-                loader = new URLClassLoader(new URL[]{driverUrl}, getClass().getClassLoader());
-            } catch (MalformedURLException ex) {
-                Dialogs.showMessageDialog("Could not load the MySql Driver!");
-                logOut();
-                return;
+                saveConnectionManager();
+            } catch (IOException e) {
+                e.printStackTrace();
+                //todo: error handling
             }
-
-            String error = null;
-
-            try {
-                Class driverClass = loader.loadClass("com.mysql.jdbc.Driver");
-                driver = (Driver) driverClass.newInstance();
-            } catch (ClassNotFoundException e1) {
-                error = "Could not find MySQL driver class";
-            } catch (IllegalAccessException e1) {
-                error = "Could not access MySQL driver class";
-            } catch (InstantiationException e1) {
-                error = "Could not instantiate MySQL driver class";
-            } catch (ClassCastException e1) {
-                error = "MySQL Driver class exists, but is not an SQL driver";
-            }
-
-            try {
-                Class driverClass = loader.loadClass("org.hsqldb.jdbc.JDBCDriver");
-                localDriver = (Driver) driverClass.newInstance();
-            } catch (ClassNotFoundException e1) {
-                error = "Could not find HSQL driver class";
-            } catch (IllegalAccessException e1) {
-                error = "Could not access HSQL driver class";
-            } catch (InstantiationException e1) {
-                error = "Could not instantiate HSQL driver class";
-            } catch (ClassCastException e1) {
-                error = "HSQL Driver class exists, but is not an SQL driver";
-            }
-
-            if (error != null) {
-                Dialogs.showMessageDialog(error);
-                logOut();
-                return;
-            }
-            //----------------------------------------------------------------------------------------------
-
-
-            //get the selected fims service.
-            String selectedFimsServiceName = FIMSOptions.getValueAsString("fims");
-            final Options selectedFimsOptions = FIMSOptions.getChildOptions().get(selectedFimsServiceName);
-            for (FIMSConnection connection : getFimsConnections()) {
-                if (connection.getName().equals(selectedFimsServiceName)) {
-                    activeFIMSConnection = connection;
-                }
-            }
-            if (activeFIMSConnection == null) {
-                throw new RuntimeException("Could not find a FIMS connection called " + selectedFimsServiceName);
-            }
-
 
             //try to connect to the selected service
             Runnable runnable = new Runnable() {
                 public void run() {
-                    block("Connecting to the FIMS", null);
-                    try {
-                        activeFIMSConnection.connect(selectedFimsOptions);
-                        isLoggedIn = true;
-                    }
-                    catch (ConnectionException ex) {
-                        unBlock();
-                        String message = ex.getMainMessage() == null ? "There was an error connecting to "+activeFIMSConnection.getLabel() : ex.getMainMessage();
-                        if(ex.getMessage() != null) {
-                            Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"},"Error connecting to FIMS"), message, ex.getMessage());
-                        }
-                        else {
-                            Dialogs.showMessageDialog(message, "Error connecting to FIMS");
-                        }
-                        logOut();
-                        return;
-                    }
-
-                    try {
-                        if(!(activeFIMSConnection instanceof MooreaFimsConnection) && LIMSOptions.getValueAsString("server").equalsIgnoreCase("darwin.berkeley.edu")) {
-                            Dialogs.showMessageDialog("You cannot connect to the Moorea Lab Bench database using a field database other than the Moorea FIMS");
-                            logOut();
-                            unBlock();
-                            return;
-                        }
-
-                        block("Connecting to the LIMS", null);
-                        limsConnection.connect(LIMSOptions);
-                        block("Building Caches", null);
-                        buildCaches();
-                    } catch (ConnectionException e1) {
-                        unBlock();
-                        logOut();
-                        String title = "Connection Failure";
-                        String message = "Geneious could not connect to the LIMS database";
-                        showErrorDialog(e1, title, message);
-                        return;
-                    } catch (TransactionException e2) {
-                        logOut();
-                        unBlock();
-                        String title = "Connection Failure";
-                        String message = "Geneious could not connect to the LIMS database";
-                        showErrorDialog(e2, title, message);
-                        return;
-                    }
-                    unBlock();
-                    updateStatus();
+                    connect(connection, true);
                 }
 
             };
             new Thread(runnable).start();
         }
+    }
+
+    private void connect(ConnectionManager.Connection connection, boolean block) {
+        //load the connection driver -------------------------------------------------------------------
+        String driverFileName = connectionManager.getSqlLocationOptions();
+
+        ClassLoader loader;
+        try {
+            File driverFile = new File(driverFileName);
+            if(!driverFile.exists() || driverFile.isDirectory()) {
+                if(block) {
+                    Dialogs.showMessageDialog("You need to specify a valid MySql Driver!");
+                }
+                logOut();
+                return;
+            }
+            URL driverUrl = driverFile.toURL();
+            loader = new URLClassLoader(new URL[]{driverUrl}, getClass().getClassLoader());
+        } catch (MalformedURLException ex) {
+            if(block) {
+                Dialogs.showMessageDialog("Could not load the MySql Driver!");
+            }
+            logOut();
+            return;
+        }
+
+        String error = null;
+
+        try {
+            Class driverClass = loader.loadClass("com.mysql.jdbc.Driver");
+            driver = (Driver) driverClass.newInstance();
+        } catch (ClassNotFoundException e1) {
+            error = "Could not find MySQL driver class";
+        } catch (IllegalAccessException e1) {
+            error = "Could not access MySQL driver class";
+        } catch (InstantiationException e1) {
+            error = "Could not instantiate MySQL driver class";
+        } catch (ClassCastException e1) {
+            error = "MySQL Driver class exists, but is not an SQL driver";
+        }
+
+        try {
+            Class driverClass = loader.loadClass("org.hsqldb.jdbc.JDBCDriver");
+            localDriver = (Driver) driverClass.newInstance();
+        } catch (ClassNotFoundException e1) {
+            error = "Could not find HSQL driver class";
+        } catch (IllegalAccessException e1) {
+            error = "Could not access HSQL driver class";
+        } catch (InstantiationException e1) {
+            error = "Could not instantiate HSQL driver class";
+        } catch (ClassCastException e1) {
+            error = "HSQL Driver class exists, but is not an SQL driver";
+        }
+
+        if (error != null) {
+            if(block) {
+                Dialogs.showMessageDialog(error);
+            }
+            logOut();
+            return;
+        }
+
+        //get the selected fims service.
+        activeFIMSConnection = connection.getFimsConnection();
+        if(block) {
+            block("Connecting to the FIMS", null);
+        }
+        try {
+            activeFIMSConnection.connect(connection.getFimsOptions());
+            isLoggedIn = true;
+        }
+        catch (ConnectionException ex) {
+            if(block) {
+                unBlock();
+            }
+            if(ex != ConnectionException.NO_DIALOG) {
+                String message = ex.getMainMessage() == null ? "There was an error connecting to "+activeFIMSConnection.getLabel() : ex.getMainMessage();
+                if(ex.getMessage() != null) {
+                    Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"},"Error connecting to FIMS"), message, ex.getMessage());
+                }
+                else {
+                    Dialogs.showMessageDialog(message, "Error connecting to FIMS");
+                }
+            }
+            logOut();
+            return;
+        }
+
+        try {
+            if(!(activeFIMSConnection instanceof MooreaFimsConnection) && connection.getLimsOptions().getValueAsString("server").equalsIgnoreCase("darwin.berkeley.edu")) {
+                Dialogs.showMessageDialog("You cannot connect to the Moorea Lab Bench database using a field database other than the Moorea FIMS");
+                logOut();
+                if(block) {
+                    unBlock();
+                }
+                return;
+            }
+
+            if(block) {
+                block("Connecting to the LIMS", null);
+            }
+            limsConnection.connect(connection.getLimsOptions());
+            if(block) {
+                block("Building Caches", null);
+            }
+            buildCaches();
+        } catch (ConnectionException e1) {
+            if(block) {
+                unBlock();
+            }
+            logOut();
+            if(e1 == ConnectionException.NO_DIALOG) {
+                return;
+            }
+            String title = "Connection Failure";
+            String message = "Geneious could not connect to the LIMS database";
+            showErrorDialog(e1, title, message);
+            return;
+        } catch (TransactionException e2) {
+            logOut();
+            if(block) {
+                unBlock();
+            }
+            String title = "Connection Failure";
+            String message = "Geneious could not connect to the LIMS database";
+            showErrorDialog(e2, title, message);
+            return;
+        }
+        if(block) {
+            unBlock();
+        }
+        updateStatus();
     }
 
     private void showErrorDialog(Throwable e1, String title, String message) {
@@ -579,11 +584,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void updateStatus() {
-        for(DatabaseServiceListener listener : getDatabaseServiceListeners()) {
-            listener.searchableStatusChanged(isLoggedIn, isLoggedIn ? "Logged in" : loggedOutMessage);
-            listener.extendedSearchOptionsChanged();
-            listener.fieldsChanged();
-            listener.actionsChanged();
+        for(final DatabaseServiceListener listener : getDatabaseServiceListeners()) {
+            Runnable runnable = new Runnable() {
+                public void run() {
+                    listener.searchableStatusChanged(isLoggedIn, isLoggedIn ? "Logged in" : loggedOutMessage);
+                    listener.extendedSearchOptionsChanged();
+                    listener.fieldsChanged();
+                    listener.actionsChanged();
+                }
+            };
+            ThreadUtilities.invokeNowOrWait(runnable);
         }
     }
 
@@ -1554,6 +1564,34 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         limsConnection.deleteRecords(tableName, "id", terms);
     }
 
+    @Override
+    protected void initialize(GeneiousServiceListener listener) {
+        File file = new File(dataDirectory, "connectionManager.xml");
+        if(!file.exists()) {
+            connectionManager = new ConnectionManager();
+        }
+        
+        SAXBuilder builder = new SAXBuilder();
+        try {
+            connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
+        } catch (XMLSerializationException e) {
+            e.printStackTrace();
+            connectionManager = new ConnectionManager();
+        } catch (JDOMException e) {
+            e.printStackTrace();
+            connectionManager = new ConnectionManager();
+        } catch (IOException e) {
+            e.printStackTrace();
+            connectionManager = new ConnectionManager();
+        }
+        if(connectionManager.connectOnStartup()) {
+            if(connectionManager.checkIfWeCanLogIn()) {
+                ConnectionManager.Connection connection = connectionManager.getCurrentlySelectedConnection();
+                connect(connection, false);
+            }
+        }
+    }
+
     /**
      * @param plateIds the ids of the plates to check
      * returns all the empty plates in the database...
@@ -1855,6 +1893,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             return result;
         } catch (ConnectionException e) {
+            if(e == ConnectionException.NO_DIALOG) {
+                return null;
+            }
             if(e.getCause() instanceof SQLException){
                 throw (SQLException)e.getCause();
             }

@@ -1,0 +1,597 @@
+package com.biomatters.plugins.biocode.labbench;
+
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GLabel;
+import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import org.jdom.Element;
+import org.virion.jam.util.SimpleListener;
+
+import javax.swing.*;
+import javax.swing.event.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
+
+/**
+ * @author Steve
+ * @version $Id$
+ */
+public class ConnectionManager implements XMLSerializable{
+    private static LIMSConnection limsConnection = new LIMSConnection();
+
+    private List<Connection> connections;
+    private List<ListDataListener> listeners = new ArrayList<ListDataListener>();
+    private int selectedConnection = -1;
+    private boolean connectOnStartup = false;
+    private JPanel centerPanel;
+    private JList connectionsList;
+    private Options sqlConnectorLocationOptions;
+    private JButton removeButton;
+
+    public ConnectionManager() {
+        connections = new ArrayList<Connection>();
+        Connection previousConnection = getConnectionFromPreviousVersion();
+        if(previousConnection != null) {
+            connections.add(previousConnection);
+            selectedConnection = 0;
+        }
+    }
+
+    public ConnectionManager(Element e) throws XMLSerializationException {
+        fromXML(e);
+    }
+
+    private ListModel connectionsListModel = new ListModel(){
+        public int getSize() {
+            return connections.size();
+        }
+
+        public Object getElementAt(int index) {
+            return connections.get(index);
+        }
+
+        public void addListDataListener(ListDataListener l) {
+            listeners.add(l);
+        }
+
+        public void removeListDataListener(ListDataListener l) {
+            listeners.remove(l);
+        }
+    };
+
+    private void fireListListeners() {
+        for(ListDataListener listener: listeners) {
+            listener.contentsChanged(new ListDataEvent(connectionsListModel, ListDataEvent.CONTENTS_CHANGED, 0, connections.size()));
+        }
+    }
+
+    private static Connection getConnectionFromPreviousVersion() {
+        if(getPreferencesFromPreviousVersion() == null) {
+            return null;
+        }
+        Options fimsOptions = new Options(BiocodeService.class);
+        for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
+            fimsOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new Options(BiocodeService.class));
+        }
+        fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
+
+        Options limsOptions = limsConnection.getConnectionOptions();
+
+        Options loginOptions = new Options(BiocodeService.class);
+        loginOptions.addChildOptions("fims", null, null, fimsOptions);
+        loginOptions.addChildOptions("lims", null, null, limsOptions);
+        loginOptions.restorePreferences();
+        return new Connection("My Default Connection", loginOptions.valuesToXML("root"));
+    }
+
+    private static Preferences getPreferencesFromPreviousVersion() {
+        return getPreferences("/com/biomatters/geneious/publicapi/plugin/Options/com/biomatters/plugins/biocode/labbench/BiocodeService");
+    }
+
+    private static Preferences getPreferences(String preferenceNode) {
+        Preferences preferences = Preferences.userRoot();
+        for (String s : preferenceNode.split("\\.")) {
+            try {
+                if(!preferences.nodeExists(s)) {
+                    return null;
+                }
+            } catch (BackingStoreException e) {
+                return null;
+            }
+            preferences = preferences.node(s);
+        }
+        return preferences;
+    }
+
+    private static Options createLoginOptions() {
+        Options fimsOptions = new Options(ConnectionManager.class);
+        for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
+            fimsOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new PasswordOptions(BiocodeService.class));
+        }
+        fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
+
+        PasswordOptions limsOptions = limsConnection.getConnectionOptions();
+
+        Options loginOptions = new Options(ConnectionManager.class);
+        loginOptions.addChildOptions("fims", null, null, fimsOptions);
+        loginOptions.addChildOptions("lims", null, null, limsOptions);
+        return loginOptions;
+    }
+
+
+    /**
+     *
+     * @param dialogParent a component for the connection dialog to be modal over (can be null)
+     * @return The selected connection, if the user clicked connect, or null if the user clicked cancel
+     */
+    public Connection getConnectionFromUser(JComponent dialogParent) {
+        final JPanel connectionsPanel = new GPanel(new BorderLayout());
+
+        //the stuff on the LHS of the dialog...
+        connectionsList = new JList(connectionsListModel);
+        connectionsList.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        if(selectedConnection >= 0) {
+            connectionsList.setSelectedIndex(selectedConnection);
+        }
+
+        connectionsList.getSelectionModel().addListSelectionListener(new ListSelectionListener(){
+            public void valueChanged(ListSelectionEvent e) {
+                int newSelectedIndex = connectionsList.getSelectedIndex();
+                if(newSelectedIndex == selectedConnection) {
+                    return;
+                }
+                selectedConnection = newSelectedIndex;
+                removeButton.setEnabled(connections.size() > 0);
+                updateCenterPanel();
+            }
+        });
+
+
+        JPanel leftPanel = new GPanel(new BorderLayout());
+        leftPanel.add(new JLabel("Connections"), BorderLayout.NORTH);
+        JScrollPane scroller = new JScrollPane(connectionsList);
+        scroller.setPreferredSize(connectionsList.getPreferredSize());
+        scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        leftPanel.add(scroller, BorderLayout.CENTER);
+        JPanel leftBottomPanel = new GPanel(new BorderLayout());
+        JPanel addRemovePanel = new GPanel(new FlowLayout());
+        JButton addButton = new JButton("Add");
+        addButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                addConnection(new Connection("Untitled"));
+                fireListListeners();
+                connectionsList.setSelectedIndex(connections.size()-1);
+            }
+        });
+        addRemovePanel.add(addButton);
+        removeButton = new JButton("Remove");
+        removeButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                if(selectedConnection >= 0) {
+                    connections.remove(selectedConnection);
+                }
+                selectedConnection--;
+                if(connections.size() > 0) {
+                    selectedConnection = Math.max(0, selectedConnection);
+                }
+                fireListListeners();
+                updateCenterPanel();
+            }
+        });
+        addRemovePanel.add(removeButton);
+        final JCheckBox connectBox = new JCheckBox("Connect on startup...", connectOnStartup);
+        connectBox.addChangeListener(new ChangeListener(){
+            public void stateChanged(ChangeEvent e) {
+                connectOnStartup = connectBox.isSelected();
+            }
+        });
+        leftBottomPanel.add(addRemovePanel, BorderLayout.CENTER);
+        leftBottomPanel.add(connectBox, BorderLayout.SOUTH);
+        leftPanel.add(leftBottomPanel, BorderLayout.SOUTH);
+
+        final Image introImage = Toolkit.getDefaultToolkit().createImage(getClass().getResource("biocode_intro.png"));
+
+        centerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                if(selectedConnection == -1) {
+                    g.drawImage(introImage,0,0,connectionsPanel);
+                }
+                else {
+                    super.paintComponent(g);
+                }
+            }
+
+            @Override
+            public Dimension getPreferredSize() {
+                if(selectedConnection == -1) {
+                    return new Dimension(512,384);
+                }
+                return super.getPreferredSize();
+            }
+        };
+
+        connectionsPanel.add(leftPanel, BorderLayout.WEST);
+        connectionsPanel.add(centerPanel, BorderLayout.CENTER);
+
+        createSqlOptions();
+
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Biocode Connections", dialogParent);
+        dialogOptions.setMaxWidth(Integer.MAX_VALUE);
+        updateCenterPanel();
+        if(Dialogs.showDialog(dialogOptions, connectionsPanel, sqlConnectorLocationOptions.getPanel()).equals(Dialogs.OK)) {
+            if(checkIfWeCanLogIn()) {
+                return selectedConnection >= 0 ? connections.get(selectedConnection) : null;
+            }
+        }
+        return null;
+    }
+
+    private void createSqlOptions() {
+        sqlConnectorLocationOptions = new Options(ConnectionManager.class);
+        String driverDefault;
+        Preferences prefs = getPreferencesFromPreviousVersion();
+        if(prefs != null) {
+            driverDefault = prefs.get("driver", "");
+        }
+        else {
+            driverDefault = "";
+        }
+        Options.FileSelectionOption driverOption = sqlConnectorLocationOptions.addFileSelectionOption("driver", "MySQL Driver:", driverDefault, new String[0], "Browse...", new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                return name.toLowerCase().endsWith(".jar");
+            }
+        });
+        driverOption.setDescription("A file similar to \"mysql-connector-java-5.1.12-bin.jar\", available for download from http://dev.mysql.com/downloads/connector/j/");
+        driverOption.setSelectionType(JFileChooser.FILES_ONLY);
+    }
+
+    public Connection getCurrentlySelectedConnection() {
+        if(selectedConnection >= 0) {
+            return connections.get(selectedConnection);
+        }
+        return null;
+    }
+
+    public boolean checkIfWeCanLogIn() {
+        if(selectedConnection >= 0) {
+            Connection conn = connections.get(selectedConnection);
+            final Options passwordOptions = conn.getEnterPasswordOptions();
+            if(passwordOptions != null) {
+                final AtomicBoolean dialogResult = new AtomicBoolean();
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        dialogResult.set(Dialogs.showOptionsDialog(passwordOptions, "Enter your credentials", false));
+                    }
+                };
+                ThreadUtilities.invokeNowOrWait(runnable);
+                if(!dialogResult.get()) {
+                    return false;
+                }
+                conn.setPasswordsFromOptions(passwordOptions);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public boolean connectOnStartup() {
+        return connectOnStartup;
+    }
+
+    public String getSqlLocationOptions() {
+        if(sqlConnectorLocationOptions == null) {
+            createSqlOptions();
+        }
+        return ""+sqlConnectorLocationOptions.getValue("driver");
+    }
+
+    private void updateCenterPanel() {
+        centerPanel.removeAll();
+        if(selectedConnection < 0) {
+            connectionsList.clearSelection();
+            centerPanel.repaint();
+            packAncestor(centerPanel);
+            return;    
+        }
+
+        Connection selectedConnection = connections.get(this.selectedConnection);
+        centerPanel.add(selectedConnection.getConnectionOptionsPanel(), BorderLayout.CENTER);
+        centerPanel.revalidate();
+        if(selectedConnection.optionsCreated()) {
+            packAncestor(centerPanel);
+        }
+    }
+
+    public Element toXML() {
+        Element root = new Element("ConnectionManager");
+        for(int i=0; i < connections.size(); i++) {
+            root.addContent(connections.get(i).getXml(i == selectedConnection)); //reserialize just the new connections, and the one that we have selected
+        }
+        root.addContent(new Element("SelectedConnection").setText(""+selectedConnection));
+        if(connectOnStartup) {
+            root.setAttribute("connectOnStartup", "true");
+        }
+        return root;
+    }
+
+    public void fromXML(Element element) throws XMLSerializationException {
+        List<Element> connectionElements = element.getChildren("Connection");
+        connectOnStartup = element.getAttribute("connectOnStartup") != null;
+        connections = new ArrayList<Connection>();
+        for(Element e : connectionElements) {
+            Connection newConnection = new Connection(e);
+            addConnection(newConnection);
+        }
+        selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
+        if(selectedConnection >= connectionElements.size()) {
+            selectedConnection = connectionElements.size()-1;
+        }
+    }
+
+    private SimpleListener connectionNameChangedListener = new SimpleListener(){
+        public void objectChanged() {
+            fireListListeners();
+        }
+    };
+
+    private void addConnection(Connection newConnection) {
+        connections.add(newConnection);
+        newConnection.addNameChangedListener(connectionNameChangedListener);
+        connectionNameChangedListener.objectChanged();
+    }
+
+    private static void packAncestor(final JComponent panel) {
+        Runnable runnable = new Runnable() {
+            public void run() {
+                JRootPane rootPane = panel.getRootPane();
+                if(rootPane != null) {
+                    Container frame = rootPane.getParent();
+                    if(frame != null && frame instanceof Dialog) {
+                        ((Dialog)frame).pack();
+                    }
+                    if(frame != null && frame instanceof Frame) {
+                        ((Frame)frame).pack();
+                    }
+                }
+            }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
+    }
+
+    public static class Connection implements XMLSerializable{
+        private Options loginOptions;
+        private String name;
+        private Element loginOptionsValues;
+        private List<SimpleListener> nameChangedListeners = new ArrayList<SimpleListener>();
+
+
+        public Connection(String name) {
+            this.name = name;
+            //setLocationOptions();
+            //loginOptions.restoreDefaults();
+        }
+
+        public Connection(Element e) throws XMLSerializationException{
+            fromXML(e);
+        }
+
+        public Connection(String name, Element connectionOptions) {
+            this.name = name;
+            loginOptions = createLoginOptions();
+            loginOptions.valuesFromXML(connectionOptions);
+            this.loginOptionsValues = connectionOptions;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+            fireNameChangedListeners();
+        }
+
+        private void setLocationOptions() {
+            this.loginOptions = createLoginOptions();
+        }
+
+        public boolean optionsCreated() {
+            return loginOptions != null;
+        }
+
+        public void addNameChangedListener(SimpleListener l) {
+            nameChangedListeners.add(l);
+        }
+
+        public void removeNameChangedListener(SimpleListener l) {
+            nameChangedListeners.remove(l);
+        }
+
+        private void fireNameChangedListeners() {
+            for(SimpleListener listener : nameChangedListeners) {
+                listener.objectChanged();
+            }
+        }
+
+        public Options getEnterPasswordOptions() {
+            if(loginOptions == null) {
+                createLoginOptions();
+            }
+            int count = 0;
+
+            Options passwordOptions = new Options(this.getClass());
+            passwordOptions.addLabel("Please enter your credentials for "+getName());
+            PasswordOptions fimsOptions = getFimsOptions();
+            Options fimsEnterPasswordOptions = fimsOptions.getEnterPasswordOptions();
+            if(fimsEnterPasswordOptions != null) {
+                passwordOptions.addChildOptions("fimsOptions", "FIMS account", "The connection options for your FIMS account", fimsEnterPasswordOptions);
+                count++;
+            }
+            PasswordOptions limsOptions = getLimsOptions();
+            Options limsEnterPasswordOptions = limsOptions.getEnterPasswordOptions();
+            if(limsEnterPasswordOptions != null) {
+                passwordOptions.addChildOptions("limsOptions", "LIMS account", "The connection options for your LIMS account", limsEnterPasswordOptions);
+                count++;
+            }
+
+            if(count > 0) {
+                return passwordOptions;
+            }
+            return null;
+        }
+
+        public void setPasswordsFromOptions(final Options enterPasswordOptions) {
+            Runnable runnable = new Runnable() {
+                public void run() {
+                    loginOptions.getPanel(); //we need to create the panel first so that password options keep their save/don't save status
+                    Options fimsOptions = enterPasswordOptions.getChildOptions().get("fimsOptions");
+                    Options limsOptions = enterPasswordOptions.getChildOptions().get("limsOptions");
+                    if(fimsOptions != null) {
+                        getFimsOptions().setPasswordsFromOptions(fimsOptions);
+                    }
+                    if(limsOptions != null) {
+                        getLimsOptions().setPasswordsFromOptions(limsOptions);
+                    }
+                }
+            };
+            ThreadUtilities.invokeNowOrWait(runnable);
+        }
+
+
+
+
+        public JPanel getConnectionOptionsPanel(){  //we only set the values when the panel is actually required - constructing the options can take some time for large excel files...
+            final JPanel panel = new GPanel(new BorderLayout());
+            final Options nameOptions = new Options(ConnectionManager.class);
+            final Options.StringOption nameOption = nameOptions.addStringOption("name", "Connection Name: ", "");
+            nameOption.setValue(name);
+            nameOption.addChangeListener(new SimpleListener(){
+                public void objectChanged() {
+                    setName(nameOption.getValue());
+                }
+            });
+            if(loginOptions != null) {
+                panel.add(loginOptions.getPanel());
+                panel.add(nameOptions.getPanel(), BorderLayout.NORTH);
+            }
+            else {
+                JPanel labelPanel = new GPanel(new GridBagLayout());
+                AnimatedIcon activityIcon = AnimatedIcon.getActivityIcon();
+                JLabel label = new GLabel("Loading connection options...", activityIcon, SwingConstants.CENTER);
+                activityIcon.startAnimation();
+                labelPanel.add(label, new GridBagConstraints());
+                panel.add(labelPanel, BorderLayout.CENTER);
+
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        ThreadUtilities.sleep(100); //let's give the UI a chance to update before we use up all the CPU
+                        setLocationOptions();
+                        if(loginOptionsValues != null) {
+                            loginOptions.valuesFromXML(loginOptionsValues);
+                        }
+                        Runnable runnable = new Runnable() {
+                            public void run() {
+                                panel.removeAll();
+                                panel.add(nameOptions.getPanel(), BorderLayout.NORTH);
+                                panel.add(loginOptions.getPanel(), BorderLayout.CENTER);
+                                panel.revalidate();
+                                panel.invalidate();
+                                packAncestor(panel);
+                            }
+                        };
+                        ThreadUtilities.invokeNowOrLater(runnable);
+                    }
+                };
+                new Thread(runnable).start();
+            }
+            return panel;
+        }
+
+
+        @Override
+        public String toString() {
+            return getName();
+        }
+
+        public String getName() {
+            if(name == null || name.length() == 0) {
+                return "Untitled";
+            }
+            return name;
+        }
+
+        public Element toXML() {
+            return getXml(true);
+        }
+
+        public Element getXml(boolean reserializeOptionsIfTheyExist) {
+            Element connectionElement = new Element("Connection");
+            if(loginOptions != null && (reserializeOptionsIfTheyExist || loginOptionsValues == null)) {
+                connectionElement.addContent(loginOptions.valuesToXML("connectionOptions"));
+            }
+            else if(loginOptionsValues != null) {
+                connectionElement.addContent(loginOptionsValues.detach());
+            }
+            else {
+                throw new RuntimeException("We have a connection with no options or options values!");
+            }
+            connectionElement.addContent(new Element("Name").setText(name));
+            return connectionElement;
+        }
+
+        public void fromXML(Element element) throws XMLSerializationException {
+            loginOptionsValues = element.getChild("connectionOptions");
+            name = element.getChildText("Name");
+        }
+
+
+        public FIMSConnection getFimsConnection() {
+            if(loginOptions == null) {
+                createLoginOptions();
+            }
+            Options fimsOptions = loginOptions.getChildOptions().get("fims");
+            String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
+            FIMSConnection activeFIMSConnection = null;
+            for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
+                if (connection.getName().equals(selectedFimsServiceName)) {
+                    activeFIMSConnection = connection;
+                }
+            }
+            if (activeFIMSConnection == null) {
+                throw new RuntimeException("Could not find a FIMS connection called " + selectedFimsServiceName);
+            }
+            return activeFIMSConnection;
+        }
+
+        public PasswordOptions getFimsOptions() {
+            if(loginOptions == null) {
+                loginOptions = createLoginOptions();
+                loginOptions.valuesFromXML(loginOptionsValues);
+            }
+            Options fimsOptions = loginOptions.getChildOptions().get("fims");
+            String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
+            return (PasswordOptions)fimsOptions.getChildOptions().get(selectedFimsServiceName);
+        }
+
+        public PasswordOptions getLimsOptions() {
+            if(loginOptions == null) {
+                createLoginOptions();
+            }
+            return (PasswordOptions)loginOptions.getChildOptions().get("lims");
+        }
+    }
+
+
+}

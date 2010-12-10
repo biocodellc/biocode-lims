@@ -60,30 +60,11 @@ public class LIMSConnection {
     public static final DocumentField SEQUENCE_PROGRESS = DocumentField.createEnumeratedField(new String[] {"passed", "failed"}, "Sequence Progress", "Whether the sequence passed or failed sequencing and assembly", "progress", true, false);
     private boolean isLocal;
 
-    public Options getConnectionOptions() {
-        Options LIMSOptions = new Options(this.getClass());
-
-        Options remoteOptions = new Options(this.getClass());
-        remoteOptions.addStringOption("server", "Server Address:", "");
-        remoteOptions.addIntegerOption("port", "Port:", 3306, 1, Integer.MAX_VALUE);
-        remoteOptions.addStringOption("database", "Database Name:", "labbench");
-        remoteOptions.addStringOption("username", "Username:", "");
-        remoteOptions.addCustomOption(new PasswordOption("password", "Password:", true));
-
-        LIMSOptions.addChildOptions("remote", "Remote Server", "Connect to a LIMS database on a remote MySQL server", remoteOptions);
-
-        Options localOptions = getLocalOptions();
-
-
-        LIMSOptions.addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);
-
-
-        LIMSOptions.addChildOptionsPageChooser("connectionType", "LIMS location", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
-
-        return  LIMSOptions;
+    public PasswordOptions getConnectionOptions() {
+        return new LimsConnectionOptions(this, this.getClass());
     }
 
-    private Options getLocalOptions() {
+    Options getLocalOptions() {
         if(localLIMS == null) {
             localLIMS = new LocalLIMS();
             localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
@@ -109,6 +90,10 @@ public class LIMSConnection {
 
     private void connectLocal(Options LIMSOptions, boolean alreadyAskedBoundUpgrade) throws ConnectionException {
         isLocal = true;
+        if(localLIMS == null) {
+            localLIMS = new LocalLIMS();
+            localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
+        }
         connection = localLIMS.connect(LIMSOptions);
         this.limsOptions = LIMSOptions;
         try {

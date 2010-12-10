@@ -5,6 +5,8 @@ package com.biomatters.plugins.biocode.labbench;
  * @version $Id: 13/05/2009 5:31:06 AM steve $
  */
 public class ConnectionException extends Exception{
+    public static final ConnectionException NO_DIALOG = new ConnectionException("");
+
     private String mainMessage;
 
     public ConnectionException() {
