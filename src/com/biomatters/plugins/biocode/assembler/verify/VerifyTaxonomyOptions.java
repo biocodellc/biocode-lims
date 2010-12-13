@@ -4,6 +4,8 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseService;
 import com.biomatters.geneious.publicapi.databaseservice.SequenceDatabaseSuperService;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -26,6 +28,25 @@ public class VerifyTaxonomyOptions extends Options {
     private Options currentProgramOptions = null;
 
     public VerifyTaxonomyOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
+
+        //check the integrity of the documents
+        for(AnnotatedPluginDocument doc : documents) {
+            SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)doc.getDocument();
+            if(!alignment.isContig()) {
+                for(int i=0; i < alignment.getNumberOfSequences(); i++) {
+                    if(i == alignment.getContigReferenceSequenceIndex()) {
+                        continue;
+                    }
+                    AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
+                    if(referencedDocument == null) {
+                        throw new DocumentOperationException("Your alignment needs to have reference sequences to work with verify taxonomy");
+                    }
+                    if(referencedDocument.getFieldValue(DocumentField.TAXONOMY_FIELD) == null) {
+                        throw new DocumentOperationException("Your referenced sequence for '"+alignment.getSequence(i).getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
+                    }
+                }
+            }
+        }
 
         GeneiousService blastSuperService = PluginUtilities.getGeneiousService("NCBI_BLAST");
         if (!(blastSuperService instanceof SequenceDatabaseSuperService)) {
