@@ -56,8 +56,9 @@ public class GelSplitter {
 
         Options options = new Options(GelSplitter.class);
         options.setHorizontallyCompact(true);
-        final Options.IntegerOption numberOfRowsOption = options.addIntegerOption("numberOfRows", "Number of Rows", 8, 1, plate.getReactions().length);
-        final Options.IntegerOption numberOfColsOption = options.addIntegerOption("numberOfCols", "Number of Columns", 12, 1, plate.getReactions().length);
+        int numberOfReactions = plate.getReactions().length;
+        final Options.IntegerOption numberOfRowsOption = options.addIntegerOption("numberOfRows", "Number of Rows", plate.getRows(), 1, numberOfReactions);
+        final Options.IntegerOption numberOfColsOption = options.addIntegerOption("numberOfCols", "Number of Columns", plate.getCols(), 1, numberOfReactions);
         final Options.StringOption startLetter = options.addStringOption("startLetter", "Start", "A");
         startLetter.setNumberOfColumns(1);
         final Options.IntegerOption startNumber = options.addIntegerOption("startNumber", "Start", 1, 1, plate.getCols());
