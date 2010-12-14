@@ -92,7 +92,11 @@ public class VerifyBinOptions extends Options {
         if (((Percentage) hitDocument.getFieldValue(DocumentField.ALIGNMENT_PERCENTAGE_IDENTICAL)).doubleValue() < minIdentityOption.getValue()) {
             return false;
         }
-        Bin bin = Bin.valueOf(result.queryDocument.getFieldValue(DocumentField.BIN).toString().replaceAll("<html>.*'>", "").replaceAll("</font.*html>", ""));
+        Object binValue = result.queryDocument.getFieldValue(DocumentField.BIN);
+        if(binValue == null) {
+            return false;
+        }
+        Bin bin = Bin.valueOf(binValue.toString().replaceAll("<html>.*'>", "").replaceAll("</font.*html>", ""));
         Bin minimumBin = Bin.valueOf(minContigBinOption.getValue().getName());
         if (bin.getRank() < minimumBin.getRank()) {
             return false;

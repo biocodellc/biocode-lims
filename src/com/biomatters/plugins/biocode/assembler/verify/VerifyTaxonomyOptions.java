@@ -41,9 +41,6 @@ public class VerifyTaxonomyOptions extends Options {
                     if(referencedDocument == null) {
                         throw new DocumentOperationException("Your alignment needs to have reference sequences to work with verify taxonomy");
                     }
-                    if(referencedDocument.getFieldValue(DocumentField.TAXONOMY_FIELD) == null) {
-                        throw new DocumentOperationException("Your referenced sequence for '"+alignment.getSequence(i).getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
-                    }
                 }
             }
         }
