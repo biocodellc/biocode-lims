@@ -34,6 +34,12 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
     }
 
     @Override
+    protected int getColumnWidth(TableModel model, int column) {
+        VerifyTaxonomyTableModel taxonomyModel = (VerifyTaxonomyTableModel)model;
+        return taxonomyModel.getColumnWidth(column);
+    }
+
+    @Override
     public void messWithTheTable(JTable table, TableModel model) {
         table.setSelectionBackground(new Color(180, 180, 180));
         table.setSelectionForeground(Color.black);

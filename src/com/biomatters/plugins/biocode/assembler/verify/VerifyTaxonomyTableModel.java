@@ -128,8 +128,12 @@ public class VerifyTaxonomyTableModel implements TableModel {
         }
     }
 
+    public int getColumnWidth(int column) {
+        return columns[column].getPreferredWidth();
+    }
+
     public void setColumnWidths(TableColumnModel columnModel) {
-        for (int i = 0; i < columns.length; i++) {
+        for (int i = 0; i < Math.min(columns.length, columnModel.getColumnCount()); i++) {
             VerifyColumn column = columns[i];
             columnModel.getColumn(i).setPreferredWidth(column.getPreferredWidth());
             if (column.fixedWidth) {

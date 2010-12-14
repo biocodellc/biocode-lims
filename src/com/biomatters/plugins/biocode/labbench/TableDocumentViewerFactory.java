@@ -15,6 +15,7 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.text.View;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
+import javax.swing.table.TableColumnModel;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.ActionListener;
@@ -44,6 +45,10 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
      */
     protected void messWithTheTable(JTable table, TableModel model) {
 
+    }
+
+    protected int getColumnWidth(TableModel model, int column) {
+        return -1;
     }
 
     /**
@@ -165,7 +170,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
         return shrinkArray(indices, count);
     }
 
-    public List<JCheckBoxMenuItem> getSelectedColumnMenuItems(final ColumnHidingTableModel model, final String preferencesPrefix, final AnnotatedPluginDocument[] selectedDocuments) {
+    public List<JCheckBoxMenuItem> getSelectedColumnMenuItems(final JTable table, final ColumnHidingTableModel model, final String preferencesPrefix, final AnnotatedPluginDocument[] selectedDocuments) {
         List<JCheckBoxMenuItem> items = new ArrayList<JCheckBoxMenuItem>();
         for(int i =0; i < model.getInternalModel().getColumnCount(); i++) {
             final JCheckBoxMenuItem item = new JCheckBoxMenuItem(model.getInternalModel().getColumnName(i), contains(i, model.getVisibleColumns()));
@@ -173,7 +178,12 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
             item.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     model.setColumnVisible(i1, item.isSelected());
-                    prefs.put(preferencesPrefix, columIndiciesToString(model.getVisibleColumns(), model.getInternalModel(), selectedDocuments));
+                    int[] visibleCols = model.getVisibleColumns();
+                    prefs.put(preferencesPrefix, columIndiciesToString(visibleCols, model.getInternalModel(), selectedDocuments));
+                    for(int i=0; i < visibleCols.length; i++) {
+                        int preferredWidth = getColumnWidth(model.getInternalModel(), visibleCols[i]);
+                        table.getColumnModel().getColumn(i).setPreferredWidth(preferredWidth);    
+                    }
                 }
             });
             items.add(item);
@@ -234,7 +244,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                     public void handleMouse(MouseEvent e) {
                         if(e.isPopupTrigger()){
                             JPopupMenu menu = new JPopupMenu("Test");
-                            List<JCheckBoxMenuItem> selectedColumnMenuItems = getSelectedColumnMenuItems(model, preferencesPrefix, annotatedDocuments);
+                            List<JCheckBoxMenuItem> selectedColumnMenuItems = getSelectedColumnMenuItems(table, model, preferencesPrefix, annotatedDocuments);
                             for(JCheckBoxMenuItem item : selectedColumnMenuItems) {
                                 menu.add(item);
                             }
