@@ -46,6 +46,19 @@ public class ReactionUtilities {
     private static String PRO_VERSION_INFO = "<html><b>All Fields</b></html>";
     private static String FREE_VERSION_INFO = "Editing in Geneious Pro only";
 
+    public static final DefaultListCellRenderer DOCUMENT_FIELD_CELL_RENDERER = new DefaultListCellRenderer() {
+        @Override
+        public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            Component superComponent = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);    //To change body of overridden methods use File | Settings | File Templates.
+            if (superComponent instanceof JLabel) {
+                JLabel label = (JLabel) superComponent;
+                DocumentField field = (DocumentField) value;
+                label.setText(field.getName());
+            }
+            return superComponent;
+        }
+    };
+
 
     /**
      * Shows a dialog and tries to get chromatograms for each reaction by parsing the well name out of the abi file names
@@ -460,21 +473,7 @@ public class ReactionUtilities {
             }
         }
 
-
-        DefaultListCellRenderer cellRenderer = new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                Component superComponent = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);    //To change body of overridden methods use File | Settings | File Templates.
-                if (superComponent instanceof JLabel) {
-                    JLabel label = (JLabel) superComponent;
-                    DocumentField field = (DocumentField) value;
-                    label.setText(field.getName());
-                }
-                return superComponent;
-            }
-        };
-
-        final SplitPaneListSelector<DocumentField> listSelector = new SplitPaneListSelector<DocumentField>(availableFieldsVector, selectedIndicies, cellRenderer);
+        final SplitPaneListSelector<DocumentField> listSelector = new SplitPaneListSelector<DocumentField>(availableFieldsVector, selectedIndicies, DOCUMENT_FIELD_CELL_RENDERER);
 
 
         fieldsPanel.add(listSelector, BorderLayout.CENTER);
@@ -515,6 +514,19 @@ public class ReactionUtilities {
                 r.setBackgroundColorer(colorPanel.getColorer());
             }
         }
+    }
+
+    public static boolean documentFieldsAreEqual(DocumentField a, DocumentField b) {
+        return a != null && b != null && a.getCode().equals(b.getCode());
+    }
+
+    public static int documentFieldIndexOf(List<DocumentField> fields, DocumentField value) {
+        for(int i=0; i < fields.size(); i++) {
+            if(documentFieldsAreEqual(fields.get(i), value)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public static void editReactions(List<Reaction> reactions, JComponent owner, boolean creating) {

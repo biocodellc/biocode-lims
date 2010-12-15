@@ -1,13 +1,17 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.GTable;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
 import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.utilities.ObjectAndColor;
+import com.biomatters.plugins.biocode.labbench.reaction.SplitPaneListSelector;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 
 import javax.swing.*;
 import javax.swing.event.TableModelListener;
@@ -15,7 +19,6 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.text.View;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
-import javax.swing.table.TableColumnModel;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.ActionListener;
@@ -230,6 +233,8 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                     }
 
                 };
+                sorter.setTableHeader(table.getTableHeader());
+                                
                 table.getTableHeader().addMouseListener(new MouseAdapter(){
                     @Override
                     public void mousePressed(MouseEvent e) {
@@ -243,7 +248,40 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
                     public void handleMouse(MouseEvent e) {
                         if(e.isPopupTrigger()){
-                            JPopupMenu menu = new JPopupMenu("Test");
+                            JPopupMenu menu = new JPopupMenu("Columns");
+                            JMenuItem manageColumnsItem = new JMenuItem("Manage Columns...");
+                            manageColumnsItem.addActionListener(new ActionListener(){
+                                public void actionPerformed(ActionEvent e) {
+                                    Vector<DocumentField> availableFields = new Vector<DocumentField>();
+                                    for(int i=0; i < model.getInternalModel().getColumnCount(); i++) {
+                                        String colName = model.getInternalModel().getColumnName(i);
+                                        availableFields.add(new DocumentField(colName, colName, colName, String.class, false, false));
+                                    }
+
+
+                                    final SplitPaneListSelector<DocumentField> fieldChooser = new SplitPaneListSelector<DocumentField>(availableFields, model.getVisibleColumns(), ReactionUtilities.DOCUMENT_FIELD_CELL_RENDERER, false);
+                                    fieldChooser.setPreferredSize(new Dimension(400, 500));
+                                    if (Dialogs.showOkCancelDialog(fieldChooser, "Manage Columns", table, Dialogs.DialogIcon.NO_ICON)) {
+                                        Vector<DocumentField> newSelectedFields = fieldChooser.getSelectedFields();
+                                        int[] selectedFields = new int[newSelectedFields.size()];
+                                        int index = 0;
+                                        for (DocumentField availableField : availableFields) {
+                                            boolean visible = newSelectedFields.contains(availableField);
+                                            if(visible) {
+                                                int indexOf = availableFields.indexOf(availableField);
+                                                if(indexOf >= 0) {
+                                                    selectedFields[index] = indexOf;
+                                                    index++;
+                                                }
+                                            }
+                                            model.setVisibleColumns(selectedFields);
+                                            prefs.put(preferencesPrefix, columIndiciesToString(selectedFields, model.getInternalModel(), annotatedDocuments));
+                                        }
+                                    }
+                                }
+                            });
+                            menu.add(manageColumnsItem);
+                            menu.addSeparator();
                             List<JCheckBoxMenuItem> selectedColumnMenuItems = getSelectedColumnMenuItems(table, model, preferencesPrefix, annotatedDocuments);
                             for(JCheckBoxMenuItem item : selectedColumnMenuItems) {
                                 menu.add(item);
@@ -258,7 +296,6 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
                 table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);                
                 table.setGridColor(Color.lightGray);
-                sorter.setTableHeader(table.getTableHeader());
                 table.setDefaultRenderer(ObjectAndColor.class, new DefaultTableCellRenderer(){
                     @Override
                     public Component getTableCellRendererComponent(JTable table, Object avalue, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -422,6 +459,15 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 Arrays.sort(newVisibleColumns);
             }
             setVisibleColumns(newVisibleColumns);
+        }
+
+        public boolean isColumnVisible(int col) {
+            for (int visibleColumn : visibleColumns) {
+                if (visibleColumn == col) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

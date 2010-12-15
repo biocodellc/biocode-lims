@@ -64,6 +64,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static final int PADDING = 10;
     private Thermocycle thermocycle;
     public static final DocumentField GEL_IMAGE_DOCUMENT_FIELD = new DocumentField("GELImage", "", "gelImage", String.class, false, false);
+    public static final DocumentField PLATE_NAME_DOCUMENT_FIELD = new DocumentField("Plate", "", "_plateName_", String.class, false, false);
+    public static final DocumentField WELL_DOCUMENT_FIELD = new DocumentField("Well", "", "_plateWell_", String.class, false, false);
 
     public abstract String getLocus();
 
@@ -211,7 +213,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         List<DocumentField> fields = new ArrayList<DocumentField>();
         fields.add(GEL_IMAGE_DOCUMENT_FIELD);
         for(Options.Option op : getOptions().getOptions()) {
-            if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption)){
+            if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption) && !(op instanceof Options.ButtonOption)){
                 if(op instanceof Options.ComboBoxOption) {
                     final List possibleValues = ((Options.ComboBoxOption) op).getPossibleOptionValues();
                     String[] enumValues = new String[possibleValues.size()];
@@ -303,6 +305,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
         else if(fimsSample != null) { //check the FIMS data
             value = fimsSample.getFimsAttributeValue(fieldCode);
+        }
+        if(value == null) {
+            if(fieldCode.equals(PLATE_NAME_DOCUMENT_FIELD.getCode())) {
+                return plateName;
+            }
+            if(fieldCode.equals(WELL_DOCUMENT_FIELD.getCode())) {
+                return locationString;
+            }
         }
         return value == null ? "" : value;
     }

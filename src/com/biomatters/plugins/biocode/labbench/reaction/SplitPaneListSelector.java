@@ -32,8 +32,11 @@ public class SplitPaneListSelector<T> extends JPanel {
     private JList availableListBox;
     private JList selectedListBox;
 
-
     public SplitPaneListSelector(final Vector<T> allFields, final int[] selectedIndicies, ListCellRenderer renderer) {
+        this(allFields,  selectedIndicies, renderer, true);
+    }
+
+    public SplitPaneListSelector(final Vector<T> allFields, final int[] selectedIndicies, ListCellRenderer renderer, boolean orderMatters) {
         setLayout(new BorderLayout());
         setOpaque(false);
         allFieldsVector = new Vector<T>(allFields);
@@ -232,11 +235,13 @@ public class SplitPaneListSelector<T> extends JPanel {
 
         final JPanel movePanel = new JPanel();
         movePanel.setOpaque(false);
-        movePanel.add(moveUpButton);
-        movePanel.add(moveDownButton);
-        movePanel.setLayout(new BoxLayout(movePanel, BoxLayout.Y_AXIS));
-        movePanel.add(moveUpButton);
-        movePanel.add(moveDownButton);
+        if(orderMatters) {
+            movePanel.add(moveUpButton);
+            movePanel.add(moveDownButton);
+            movePanel.setLayout(new BoxLayout(movePanel, BoxLayout.Y_AXIS));
+            movePanel.add(moveUpButton);
+            movePanel.add(moveDownButton);
+        }
 
         JPanel availableListBoxPanel = new JPanel(new BorderLayout());
         availableListBoxPanel.add(new JScrollPane(availableListBox), BorderLayout.CENTER);

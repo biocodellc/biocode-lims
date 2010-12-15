@@ -179,7 +179,8 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new MultiPrimerDocumentViewerFactory(Reaction.Type.CycleSequencing),
                 new VerifyTaxonomyDocumentViewerFactory(),
                 new CherryPickingDocumentViewerFactory(),
-                new MultiLocusDocumentViewerFactory()
+                new MultiLocusDocumentViewerFactory(),
+                new TabularPlateDocumentViewerFactory()
         };
     }
 
