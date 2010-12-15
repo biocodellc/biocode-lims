@@ -1586,14 +1586,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             connectionManager = new ConnectionManager();
         }
 
-        //make sure the main frame is showing
-        AbstractFrame mainFrame = GuiUtilities.getMainFrame();
-        while(mainFrame == null || !mainFrame.isShowing()) {
-            ThreadUtilities.sleep(100);
-            mainFrame = GuiUtilities.getMainFrame();
-        }
 
         if(connectionManager.connectOnStartup()) {
+            //make sure the main frame is showing
+            AbstractFrame mainFrame = GuiUtilities.getMainFrame();
+            while(mainFrame == null || !mainFrame.isShowing()) {
+                ThreadUtilities.sleep(100);
+                mainFrame = GuiUtilities.getMainFrame();
+            }
             if(connectionManager.checkIfWeCanLogIn()) {
                 ConnectionManager.Connection connection = connectionManager.getCurrentlySelectedConnection();
                 connect(connection, false);
