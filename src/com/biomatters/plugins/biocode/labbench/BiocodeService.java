@@ -22,6 +22,7 @@ import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
+import org.virion.jam.framework.AbstractFrame;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -1584,6 +1585,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             e.printStackTrace();
             connectionManager = new ConnectionManager();
         }
+
+        //make sure the main frame is showing
+        AbstractFrame mainFrame = GuiUtilities.getMainFrame();
+        while(mainFrame == null || !mainFrame.isShowing()) {
+            ThreadUtilities.sleep(100);
+            mainFrame = GuiUtilities.getMainFrame();
+        }
+
         if(connectionManager.connectOnStartup()) {
             if(connectionManager.checkIfWeCanLogIn()) {
                 ConnectionManager.Connection connection = connectionManager.getCurrentlySelectedConnection();

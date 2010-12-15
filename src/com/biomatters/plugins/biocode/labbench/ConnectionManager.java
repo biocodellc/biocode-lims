@@ -276,7 +276,7 @@ public class ConnectionManager implements XMLSerializable{
                 final AtomicBoolean dialogResult = new AtomicBoolean();
                 Runnable runnable = new Runnable() {
                     public void run() {
-                        dialogResult.set(Dialogs.showOptionsDialog(passwordOptions, "Enter your credentials", false));
+                        dialogResult.set(Dialogs.showOptionsDialog(passwordOptions, "Biocode Plugin", false));
                     }
                 };
                 ThreadUtilities.invokeNowOrWait(runnable);
