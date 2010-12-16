@@ -3,8 +3,8 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.components.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.GeneiousActionOptions;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -13,10 +13,10 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 
 import javax.swing.*;
@@ -25,16 +25,16 @@ import javax.swing.event.ChangeListener;
 import javax.swing.text.Caret;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
-import java.awt.event.ActionListener;
+import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
-import java.io.*;
 
 /**
  * @author Steven Stones-Havas
@@ -454,11 +454,12 @@ public class PlateBulkEditor {
                     editorToCheck.valuesFromTextView();
                     final List<String> idsToCheck = new ArrayList<String>();
                     final List<String> loci = new ArrayList<String>();
+                    //todo "noTissue"?
                     for(int row=0; row < plate.getRows(); row++) {
                         for(int col=0; col < plate.getCols(); col++) {
                             Object value = editorToCheck.getValue(row, col);
                             if(value != null && value.toString().trim().length() > 0) {
-                                idsToCheck.add(value.toString());
+                                idsToCheck.add(value.toString().trim());
                                 Object lociValue = lociEditor.getValue(row, col);
                                 loci.add(lociValue != null ? lociValue.toString() : null);
                             }
@@ -650,7 +651,7 @@ public class PlateBulkEditor {
             for(int col=0; col < p.getCols(); col++) {
                 Object value = editorToCheck.getValue(row, col);
                 if(value != null && value.toString().trim().length() > 0) {
-                    idsToCheck.add(value.toString());
+                    idsToCheck.add(value.toString().trim());
                 }
             }
         }
