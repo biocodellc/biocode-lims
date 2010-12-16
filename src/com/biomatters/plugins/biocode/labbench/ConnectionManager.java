@@ -498,11 +498,11 @@ public class ConnectionManager implements XMLSerializable{
                     public void run() {
                         ThreadUtilities.sleep(100); //let's give the UI a chance to update before we use up all the CPU
                         setLocationOptions();
-                        if(loginOptionsValues != null) {
-                            loginOptions.valuesFromXML(loginOptionsValues);
-                        }
                         Runnable runnable = new Runnable() {
                             public void run() {
+                                if(loginOptionsValues != null) {
+                                    loginOptions.valuesFromXML(loginOptionsValues);
+                                }
                                 panel.removeAll();
                                 panel.add(nameOptions.getPanel(), BorderLayout.NORTH);
                                 panel.add(loginOptions.getPanel(), BorderLayout.CENTER);
@@ -578,7 +578,11 @@ public class ConnectionManager implements XMLSerializable{
         public PasswordOptions getFimsOptions() {
             if(loginOptions == null) {
                 loginOptions = createLoginOptions();
-                loginOptions.valuesFromXML(loginOptionsValues);
+                ThreadUtilities.invokeNowOrWait(new Runnable() {
+                    public void run() {
+                        loginOptions.valuesFromXML(loginOptionsValues);
+                    }
+                });
             }
             Options fimsOptions = loginOptions.getChildOptions().get("fims");
             String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
