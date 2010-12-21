@@ -24,7 +24,7 @@ public class FimsData {
             this.sequencingPlateName = sequencingPlateName;
             this.well = well;
             if(workflowDocument != null) {
-                Reaction extraction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
+                Reaction extraction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction); //there is only one extraction per workflow, getMostRecent is just an easy way to get it :)
                 if(extraction != null) {
                     extractionId = extraction.getExtractionId();
                     extractionBarcode = (String)extraction.getFieldValue("extractionBarcode");
