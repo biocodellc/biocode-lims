@@ -3,8 +3,8 @@ package com.biomatters.plugins.biocode.assembler.verify;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseService;
 import com.biomatters.geneious.publicapi.databaseservice.SequenceDatabaseSuperService;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -40,6 +40,9 @@ public class VerifyTaxonomyOptions extends Options {
                     AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
                     if(referencedDocument == null) {
                         throw new DocumentOperationException("Your alignment needs to have reference sequences to work with verify taxonomy");
+                    }
+                    if(referencedDocument.getFieldValue(DocumentField.TAXONOMY_FIELD) == null) {
+                        throw new DocumentOperationException("Your referenced sequence for '"+alignment.getSequence(i).getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
                     }
                 }
             }
