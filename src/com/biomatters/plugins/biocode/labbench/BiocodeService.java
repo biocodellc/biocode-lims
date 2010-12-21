@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.privateApi.PrivateApiUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
@@ -8,11 +9,13 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.privateApi.PrivateApiUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
-import com.biomatters.plugins.biocode.labbench.fims.*;
+import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnection;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
+import com.biomatters.plugins.biocode.labbench.fims.TAPIRFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -41,6 +44,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 
 /**
@@ -174,7 +178,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(platesToDelete.size() == 0) {
             return;
         }
-        BlockingDialog blockingDialog = BlockingDialog.getDialog("Deleting documents", null);
+        final BlockingDialog blockingDialog = BlockingDialog.getDialog("Deleting documents", null);
+        ThreadUtilities.invokeNowOrLater(new Runnable() {
+            public void run() {
+                blockingDialog.setVisible(true);
+            }
+        });
         try {
             for(Plate plate : platesToDelete) {
                 deletePlate(blockingDialog, plate);
@@ -183,7 +192,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         catch (SQLException e) {
             throw new DatabaseServiceException(e.getMessage(), true);
         } finally {
-            blockingDialog.setVisible(false);
+            while (!blockingDialog.isVisible()) {
+                ThreadUtilities.sleep(50);
+            }
+            ThreadUtilities.invokeNowOrLater(new Runnable() {
+                public void run() {
+                    blockingDialog.dispose();
+                }
+            });
         }
     }
 
@@ -1480,7 +1496,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
 
         plate.setDeleted(true);
-        progress.dispose();
 
     }
 
@@ -2035,15 +2050,23 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         private String message;
         private JLabel label;
 
-        public static BlockingDialog getDialog(String message, Component owner) {
-            Window w = getParentFrame(owner);
-            if(w instanceof JFrame) {
-                return new BlockingDialog(message, (JFrame)w);
-            }
-            else if(w instanceof JDialog) {
-                return new BlockingDialog(message, (JDialog)w);
-            }
-            return new BlockingDialog(message, GuiUtilities.getMainFrame());
+        public static BlockingDialog getDialog(final String message, final Component owner) {
+            final AtomicReference<BlockingDialog> dialog = new AtomicReference<BlockingDialog>();
+            ThreadUtilities.invokeNowOrWait(new Runnable() {
+                public void run() {
+                    Window w = getParentFrame(owner);
+                    if(w instanceof JFrame) {
+                        dialog.set(new BlockingDialog(message, (JFrame)w));
+                    }
+                    else if(w instanceof JDialog) {
+                        dialog.set(new BlockingDialog(message, (JDialog)w));
+                    }
+                    else {
+                        dialog.set(new BlockingDialog(message, GuiUtilities.getMainFrame()));
+                    }
+                }
+            });
+            return dialog.get();
         }
 
         private static Window getParentFrame(Component component) {
