@@ -151,7 +151,7 @@ public class PCROptions extends ReactionOptions {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
         addStringOption("workflowId", "Workflow ID", "");
-        String[] sampleLoci = new String[] {"COI", "16s", "18s"};
+        String[] sampleLoci = new String[] {"None", "COI", "16s", "18s"};
         addEditableComboBoxOption("locus", "Locus", "COI", sampleLoci);
         addDateOption("date", "Date", new Date());
 
