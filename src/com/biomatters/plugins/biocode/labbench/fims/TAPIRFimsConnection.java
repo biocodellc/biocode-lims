@@ -43,6 +43,10 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return "TAPIR";
     }
 
+    public boolean requiresMySql() {
+        return false;
+    }
+
     public PasswordOptions getConnectionOptions() {
         PasswordOptions connectionOptions = new PasswordOptions(this.getClass());
         connectionOptions.addStringOption("accessPoint", "Access Point:", "http://tapirlink.berkeley.edu/tapir.php/biocode");

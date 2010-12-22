@@ -302,7 +302,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public static Class getDriverClass() {
-        return driver.getClass();
+        return driver != null ? driver.getClass() : null;
     }
 
     public static Driver getDriver() {
@@ -452,49 +452,23 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             };
             new Thread(runnable).start();
         }
+        else {
+            initializeConnectionManager(); //undo changes...
+        }
     }
 
     private void connect(ConnectionManager.Connection connection, boolean block) {
         //load the connection driver -------------------------------------------------------------------
         String driverFileName = connectionManager.getSqlLocationOptions();
 
-        ClassLoader loader;
-        try {
-            File driverFile = new File(driverFileName);
-            if(!driverFile.exists() || driverFile.isDirectory()) {
-                if(block) {
-                    Dialogs.showMessageDialog("You need to specify a valid MySql Driver!");
-                }
-                logOut();
-                return;
-            }
-            URL driverUrl = driverFile.toURL();
-            loader = new URLClassLoader(new URL[]{driverUrl}, getClass().getClassLoader());
-        } catch (MalformedURLException ex) {
-            if(block) {
-                Dialogs.showMessageDialog("Could not load the MySql Driver!");
-            }
-            logOut();
-            return;
-        }
-
         String error = null;
 
-        try {
-            Class driverClass = loader.loadClass("com.mysql.jdbc.Driver");
-            driver = (Driver) driverClass.newInstance();
-        } catch (ClassNotFoundException e1) {
-            error = "Could not find MySQL driver class";
-        } catch (IllegalAccessException e1) {
-            error = "Could not access MySQL driver class";
-        } catch (InstantiationException e1) {
-            error = "Could not instantiate MySQL driver class";
-        } catch (ClassCastException e1) {
-            error = "MySQL Driver class exists, but is not an SQL driver";
+        if(!limsConnection.isLocal(connection.getLimsOptions()) || !connection.getFimsConnection().requiresMySql()) {
+            error = loadMySqlDriver(block, driverFileName);
         }
 
         try {
-            Class driverClass = loader.loadClass("org.hsqldb.jdbc.JDBCDriver");
+            Class driverClass = getClass().getClassLoader().loadClass("org.hsqldb.jdbc.JDBCDriver");
             localDriver = (Driver) driverClass.newInstance();
         } catch (ClassNotFoundException e1) {
             error = "Could not find HSQL driver class";
@@ -584,6 +558,42 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             unBlock();
         }
         updateStatus();
+    }
+
+    private String loadMySqlDriver(boolean block, String driverFileName) {
+        ClassLoader loader = getClass().getClassLoader();
+        String error = null;
+        try {
+            File driverFile = new File(driverFileName);
+            if(!driverFile.exists() || driverFile.isDirectory()) {
+               error = "You need to specify a valid MySql Driver!";
+            }
+            else {
+                URL driverUrl = driverFile.toURL();
+                loader = new URLClassLoader(new URL[]{driverUrl}, loader);
+            }
+        } catch (MalformedURLException ex) {
+            if(block) {
+                error = "Could not load the MySql Driver!";
+            }
+        }
+
+
+        if(error != null) {
+            try {
+                Class driverClass = loader.loadClass("com.mysql.jdbc.Driver");
+                driver = (Driver) driverClass.newInstance();
+            } catch (ClassNotFoundException e1) {
+                error = "Could not find MySQL driver class";
+            } catch (IllegalAccessException e1) {
+                error = "Could not access MySQL driver class";
+            } catch (InstantiationException e1) {
+                error = "Could not instantiate MySQL driver class";
+            } catch (ClassCastException e1) {
+                error = "MySQL Driver class exists, but is not an SQL driver";
+            }
+        }
+        return error;
     }
 
     private void showErrorDialog(Throwable e1, String title, String message) {
@@ -1582,24 +1592,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     @Override
     protected void initialize(GeneiousServiceListener listener) {
-        File file = new File(dataDirectory, "connectionManager.xml");
-        if(!file.exists()) {
-            connectionManager = new ConnectionManager();
-        }
-        
-        SAXBuilder builder = new SAXBuilder();
-        try {
-            connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
-        } catch (XMLSerializationException e) {
-            e.printStackTrace();
-            connectionManager = new ConnectionManager();
-        } catch (JDOMException e) {
-            e.printStackTrace();
-            connectionManager = new ConnectionManager();
-        } catch (IOException e) {
-            e.printStackTrace();
-            connectionManager = new ConnectionManager();
-        }
+        initializeConnectionManager();
 
 
         if(connectionManager.connectOnStartup()) {
@@ -1613,6 +1606,27 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 ConnectionManager.Connection connection = connectionManager.getCurrentlySelectedConnection();
                 connect(connection, false);
             }
+        }
+    }
+
+    private void initializeConnectionManager() {
+        File file = new File(dataDirectory, "connectionManager.xml");
+        if(!file.exists()) {
+            connectionManager = new ConnectionManager();
+        }
+
+        SAXBuilder builder = new SAXBuilder();
+        try {
+            connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
+        } catch (XMLSerializationException e) {
+            e.printStackTrace();
+            connectionManager = new ConnectionManager();
+        } catch (JDOMException e) {
+            e.printStackTrace();
+            connectionManager = new ConnectionManager();
+        } catch (IOException e) {
+            e.printStackTrace();
+            connectionManager = new ConnectionManager();
         }
     }
 

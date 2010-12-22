@@ -156,4 +156,5 @@ public abstract class FIMSConnection {
         return Collections.emptyMap();
     }
 
+    public abstract boolean requiresMySql();
 }

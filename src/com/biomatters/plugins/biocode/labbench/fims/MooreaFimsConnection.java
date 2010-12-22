@@ -50,6 +50,10 @@ public class MooreaFimsConnection extends FIMSConnection{
         return "A connection to the Moorea FIMS database";
     }
 
+    public boolean requiresMySql() {
+        return false;
+    }
+
     public PasswordOptions getConnectionOptions() {
         return new MooreaFimsConnectionOptions(this.getClass(), "mooreaFIMS");
     }

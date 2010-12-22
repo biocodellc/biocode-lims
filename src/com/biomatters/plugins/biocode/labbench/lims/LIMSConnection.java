@@ -76,6 +76,10 @@ public class LIMSConnection {
         return isLocal;
     }
 
+    public static boolean isLocal(PasswordOptions connectionOptions) {
+        return !connectionOptions.getValueAsString("connectionType").equals("remote");    
+    }
+
 
     public void connect(Options LIMSOptions) throws ConnectionException {
         if(LIMSOptions.getValueAsString("connectionType").equals("remote")) {
@@ -159,7 +163,7 @@ public class LIMSConnection {
 //                public void run() {
 //                    try {
 //                        connection.close();
-//                        isLocal = false;
+//                        requiresMySql = false;
 //                    } catch (SQLException e) {
 //                        System.out.println(e);
 //                        e.printStackTrace();

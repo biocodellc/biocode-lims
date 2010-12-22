@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -47,7 +48,7 @@ public class ConnectionManager implements XMLSerializable{
         Connection previousConnection = getConnectionFromPreviousVersion();
         if(previousConnection != null) {
             connections.add(previousConnection);
-            selectedConnection = 0;
+            selectedConnection = -1;
         }
     }
 
@@ -147,16 +148,46 @@ public class ConnectionManager implements XMLSerializable{
         if(selectedConnection >= 0) {
             connectionsList.setSelectedIndex(selectedConnection);
         }
+        final AtomicReference<JButton> okButton = new AtomicReference<JButton>();
 
-        connectionsList.getSelectionModel().addListSelectionListener(new ListSelectionListener(){
+        ListSelectionListener selectionListener = new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent e) {
                 int newSelectedIndex = connectionsList.getSelectedIndex();
-                if(newSelectedIndex == selectedConnection) {
+                boolean enabled = connections.size() > 0 && newSelectedIndex >= 0;
+                removeButton.setEnabled(enabled);
+                if(okButton.get() != null) {
+                    okButton.get().setEnabled(enabled);
+                }
+                if (newSelectedIndex == selectedConnection) {
                     return;
                 }
-                selectedConnection = newSelectedIndex;
-                removeButton.setEnabled(connections.size() > 0);
+                selectedConnection = newSelectedIndex;               
                 updateCenterPanel();
+            }
+        };
+        connectionsList.getSelectionModel().addListSelectionListener(selectionListener);
+
+        connectionsPanel.addAncestorListener(new AncestorListener(){
+            public void ancestorAdded(AncestorEvent event) {
+                setOkButtonEnabledness();
+
+            }
+
+            public void ancestorRemoved(AncestorEvent event) {
+                setOkButtonEnabledness();
+            }
+
+            public void ancestorMoved(AncestorEvent event) {
+                setOkButtonEnabledness();
+            }
+
+            private void setOkButtonEnabledness() {
+                if(okButton.get() != null) {
+                    okButton.get().setEnabled(connections.size() > 0 && selectedConnection >= 0);
+                }
+                else {
+                    okButton.set(getPanelOkButton(connectionsPanel));
+                }
             }
         });
 
@@ -193,8 +224,9 @@ public class ConnectionManager implements XMLSerializable{
                 updateCenterPanel();
             }
         });
+        selectionListener.valueChanged(null);
         addRemovePanel.add(removeButton);
-        final JCheckBox connectBox = new JCheckBox("Connect on startup...", connectOnStartup);
+        final JCheckBox connectBox = new JCheckBox("Connect on startup", connectOnStartup);
         connectBox.addChangeListener(new ChangeListener(){
             public void stateChanged(ChangeEvent e) {
                 connectOnStartup = connectBox.isSelected();
@@ -204,13 +236,14 @@ public class ConnectionManager implements XMLSerializable{
         leftBottomPanel.add(connectBox, BorderLayout.SOUTH);
         leftPanel.add(leftBottomPanel, BorderLayout.SOUTH);
 
-        final Image introImage = Toolkit.getDefaultToolkit().createImage(getClass().getResource("biocode_intro.png"));
+        int imageNumber = (int)(6*Math.random())+1;
+        final Image introImage = Toolkit.getDefaultToolkit().createImage(getClass().getResource("biocode_intro"+imageNumber+".jpg"));
 
         centerPanel = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
                 if(selectedConnection == -1) {
-                    g.drawImage(introImage,0,0,connectionsPanel);
+                    g.drawImage(introImage,10,0,connectionsPanel);
                 }
                 else {
                     super.paintComponent(g);
@@ -220,7 +253,7 @@ public class ConnectionManager implements XMLSerializable{
             @Override
             public Dimension getPreferredSize() {
                 if(selectedConnection == -1) {
-                    return new Dimension(512,384);
+                    return new Dimension(522,384);
                 }
                 return super.getPreferredSize();
             }
@@ -233,11 +266,20 @@ public class ConnectionManager implements XMLSerializable{
 
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Biocode Connections", dialogParent);
         dialogOptions.setMaxWidth(Integer.MAX_VALUE);
+        dialogOptions.setMaxHeight(Integer.MAX_VALUE);
         updateCenterPanel();
         if(Dialogs.showDialog(dialogOptions, connectionsPanel, sqlConnectorLocationOptions.getPanel()).equals(Dialogs.OK)) {
             if(checkIfWeCanLogIn()) {
                 return selectedConnection >= 0 ? connections.get(selectedConnection) : null;
             }
+        }
+        return null;
+    }
+
+    private JButton getPanelOkButton(JPanel panel) {
+        JRootPane rootPane = panel.getRootPane();
+        if(rootPane != null) {
+            return rootPane.getDefaultButton();
         }
         return null;
     }
@@ -309,6 +351,9 @@ public class ConnectionManager implements XMLSerializable{
             packAncestor(centerPanel);
             return;    
         }
+        else {
+            connectionsList.setSelectedIndex(selectedConnection);
+        }
 
         Connection selectedConnection = connections.get(this.selectedConnection);
         centerPanel.add(selectedConnection.getConnectionOptionsPanel(), BorderLayout.CENTER);
@@ -338,10 +383,10 @@ public class ConnectionManager implements XMLSerializable{
             Connection newConnection = new Connection(e);
             addConnection(newConnection);
         }
-        selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
-        if(selectedConnection >= connectionElements.size()) {
-            selectedConnection = connectionElements.size()-1;
-        }
+//        selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
+//        if(selectedConnection >= connectionElements.size()) {
+//            selectedConnection = connectionElements.size()-1;
+//        }
     }
 
     private SimpleListener connectionNameChangedListener = new SimpleListener(){
@@ -552,6 +597,7 @@ public class ConnectionManager implements XMLSerializable{
         }
 
         public void fromXML(Element element) throws XMLSerializationException {
+            loginOptions = null;
             loginOptionsValues = element.getChild("connectionOptions");
             name = element.getChildText("Name");
         }

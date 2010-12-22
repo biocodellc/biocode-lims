@@ -59,6 +59,10 @@ public class ExcelFimsConnection extends FIMSConnection{
         return "Excel";
     }
 
+    public boolean requiresMySql() {
+        return true;
+    }
+
     public PasswordOptions getConnectionOptions() {
         final PasswordOptions options = new PasswordOptions(this.getClass());
         options.addLabel("<html>Choose the location of your excel file.<br>The first row should be column headers, and it should<br>have at least a tissue and specimen column.</html>");
