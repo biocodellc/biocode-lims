@@ -12,6 +12,7 @@ import java.util.List;
 /**
  * @author Richard
  * @version $Id$
+ * @deprecated - remove this class when we release Geneious 5.4
  */
 public class SetReadDirectionOperation extends DocumentOperation {
     private static final Options.OptionValue FORWARD_OPTION_VALUE = new Options.OptionValue("forward", "Forward");

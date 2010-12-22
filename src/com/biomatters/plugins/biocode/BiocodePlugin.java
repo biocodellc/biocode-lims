@@ -18,6 +18,8 @@ import java.io.File;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * @version $Id: BiocodePlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -186,11 +188,11 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public DocumentOperation[] getDocumentOperations() {
-        return new DocumentOperation[] {
+        ArrayList<DocumentOperation> operations = new ArrayList<DocumentOperation>(Arrays.asList( new DocumentOperation[] {
                 new CherryPickingDocumentOperation(),
                 new NewPlateDocumentOperation(),
                 new DownloadChromatogramsFromLimsOperation(false),
-                new SetReadDirectionOperation(),
+                //new SetReadDirectionOperation(),
                 new BatchChromatogramExportOperation(),
                 new VerifyTaxonomyOperation(),
                 new AnnotateLimsDataOperation(),
@@ -198,7 +200,11 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
 //                new ExportForBarstoolOperation(false)
-        };
+        }));
+        if(Geneious.getMinorApiVersion() < 40) {  //we moved the set read direction operation into the assembly plugin in version 4.40 of the API
+            operations.add(new SetReadDirectionOperation());    
+        }
+        return operations.toArray(new DocumentOperation[operations.size()]);
     }
 
     @Override
