@@ -1614,19 +1614,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(!file.exists()) {
             connectionManager = new ConnectionManager();
         }
-
-        SAXBuilder builder = new SAXBuilder();
-        try {
-            connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
-        } catch (XMLSerializationException e) {
-            e.printStackTrace();
-            connectionManager = new ConnectionManager();
-        } catch (JDOMException e) {
-            e.printStackTrace();
-            connectionManager = new ConnectionManager();
-        } catch (IOException e) {
-            e.printStackTrace();
-            connectionManager = new ConnectionManager();
+        else {
+            SAXBuilder builder = new SAXBuilder();
+            try {
+                connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
+            } catch (XMLSerializationException e) {
+                e.printStackTrace();
+                connectionManager = new ConnectionManager();
+            } catch (JDOMException e) {
+                e.printStackTrace();
+                connectionManager = new ConnectionManager();
+            } catch (IOException e) {
+                e.printStackTrace();
+                connectionManager = new ConnectionManager();
+            }
         }
     }
 
