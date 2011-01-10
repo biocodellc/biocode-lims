@@ -272,6 +272,7 @@ public class ConnectionManager implements XMLSerializable{
             if(checkIfWeCanLogIn()) {
                 return selectedConnection >= 0 ? connections.get(selectedConnection) : null;
             }
+            sqlConnectorLocationOptions.savePreferences();
         }
         return null;
     }
@@ -301,6 +302,7 @@ public class ConnectionManager implements XMLSerializable{
         });
         driverOption.setDescription("A file similar to \"mysql-connector-java-5.1.12-bin.jar\", available for download from http://dev.mysql.com/downloads/connector/j/");
         driverOption.setSelectionType(JFileChooser.FILES_ONLY);
+        sqlConnectorLocationOptions.restorePreferences();
     }
 
     public Connection getCurrentlySelectedConnection() {
@@ -383,10 +385,10 @@ public class ConnectionManager implements XMLSerializable{
             Connection newConnection = new Connection(e);
             addConnection(newConnection);
         }
-//        selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
-//        if(selectedConnection >= connectionElements.size()) {
-//            selectedConnection = connectionElements.size()-1;
-//        }
+        selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
+        if(selectedConnection >= connectionElements.size()) {
+            selectedConnection = connectionElements.size()-1;
+        }
     }
 
     private SimpleListener connectionNameChangedListener = new SimpleListener(){
