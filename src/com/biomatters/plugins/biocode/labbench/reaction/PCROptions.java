@@ -152,7 +152,7 @@ public class PCROptions extends ReactionOptions {
         addStringOption("extractionId", "Extraction ID", "");
         addStringOption("workflowId", "Workflow ID", "");
         String[] sampleLoci = new String[] {"None", "COI", "16s", "18s"};
-        addEditableComboBoxOption("locus", "Locus", "COI", sampleLoci);
+        addEditableComboBoxOption("locus", "Locus", "None", sampleLoci);
         addDateOption("date", "Date", new Date());
 
 
