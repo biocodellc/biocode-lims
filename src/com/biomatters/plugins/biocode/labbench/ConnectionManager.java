@@ -296,6 +296,9 @@ public class ConnectionManager implements XMLSerializable{
         else {
             driverDefault = "";
         }
+        if(sqlDirverLocation == null) {
+            sqlDirverLocation = driverDefault;
+        }
         Options.FileSelectionOption driverOption = sqlConnectorLocationOptions.addFileSelectionOption("driver", "MySQL Driver:", driverDefault, new String[0], "Browse...", new FilenameFilter() {
             public boolean accept(File dir, String name) {
                 return name.toLowerCase().endsWith(".jar");
@@ -303,6 +306,7 @@ public class ConnectionManager implements XMLSerializable{
         });
         driverOption.setDescription("A file similar to \"mysql-connector-java-5.1.12-bin.jar\", available for download from http://dev.mysql.com/downloads/connector/j/");
         driverOption.setSelectionType(JFileChooser.FILES_ONLY);
+        driverOption.setValue(sqlDirverLocation);
         sqlConnectorLocationOptions.restorePreferences();
     }
 
