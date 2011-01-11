@@ -579,7 +579,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
 
 
-        if(error != null) {
+        if(error == null) {
             try {
                 Class driverClass = loader.loadClass("com.mysql.jdbc.Driver");
                 driver = (Driver) driverClass.newInstance();

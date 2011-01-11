@@ -41,6 +41,7 @@ public class ConnectionManager implements XMLSerializable{
     private JPanel centerPanel;
     private JList connectionsList;
     private Options sqlConnectorLocationOptions;
+    private String sqlDirverLocation;
     private JButton removeButton;
 
     public ConnectionManager() {
@@ -272,7 +273,7 @@ public class ConnectionManager implements XMLSerializable{
             if(checkIfWeCanLogIn()) {
                 return selectedConnection >= 0 ? connections.get(selectedConnection) : null;
             }
-            sqlConnectorLocationOptions.savePreferences();
+            sqlDirverLocation = sqlConnectorLocationOptions.getValueAsString("driver");
         }
         return null;
     }
@@ -374,6 +375,9 @@ public class ConnectionManager implements XMLSerializable{
         if(connectOnStartup) {
             root.setAttribute("connectOnStartup", "true");
         }
+        if(sqlDirverLocation != null) {
+            root.addContent(new Element("driverLocation").setText(sqlDirverLocation));
+        }
         return root;
     }
 
@@ -389,6 +393,7 @@ public class ConnectionManager implements XMLSerializable{
         if(selectedConnection >= connectionElements.size()) {
             selectedConnection = connectionElements.size()-1;
         }
+        sqlDirverLocation = element.getChildText("driverLocation");
     }
 
     private SimpleListener connectionNameChangedListener = new SimpleListener(){
