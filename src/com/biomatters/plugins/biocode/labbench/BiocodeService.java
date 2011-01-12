@@ -285,7 +285,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     public ExtendedSearchOption[] getExtendedSearchOptions(boolean isAdvancedSearch) {
         return new ExtendedSearchOption[] {
-                new CheckboxSearchOption("tissueDocuments", "Tissue-samples", true),
+                new CheckboxSearchOption("tissueDocuments", "Tissues", true),
                 new CheckboxSearchOption("workflowDocuments", "Workflows", true),
                 new CheckboxSearchOption("plateDocuments", "Plates", true),
                 new CheckboxSearchOption("sequenceDocuments", "Sequences", false)

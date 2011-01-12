@@ -270,10 +270,10 @@ public class ConnectionManager implements XMLSerializable{
         dialogOptions.setMaxHeight(Integer.MAX_VALUE);
         updateCenterPanel();
         if(Dialogs.showDialog(dialogOptions, connectionsPanel, sqlConnectorLocationOptions.getPanel()).equals(Dialogs.OK)) {
+            sqlDirverLocation = sqlConnectorLocationOptions.getValueAsString("driver");
             if(checkIfWeCanLogIn()) {
                 return selectedConnection >= 0 ? connections.get(selectedConnection) : null;
             }
-            sqlDirverLocation = sqlConnectorLocationOptions.getValueAsString("driver");
         }
         return null;
     }
