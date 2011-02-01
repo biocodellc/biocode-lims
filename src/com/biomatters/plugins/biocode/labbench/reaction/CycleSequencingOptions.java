@@ -338,7 +338,7 @@ public class CycleSequencingOptions extends ReactionOptions {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
         addStringOption("workflowId", "Workflow ID", "");
-        String[] sampleLoci = new String[] {"None", "COI", "16s", "18s"};
+        String[] sampleLoci = new String[] {"None", "COI", "16s", "18s", "ITS", "ITS1", "ITS2", "28S", "12S", "rbcl", "matK", "trnH-psba"};
         addEditableComboBoxOption("locus", "Locus", "None", sampleLoci);
         addDateOption("date", "Date", new Date());
 
