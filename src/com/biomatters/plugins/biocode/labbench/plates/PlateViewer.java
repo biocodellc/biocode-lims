@@ -72,6 +72,28 @@ public class PlateViewer extends JPanel {
         });
         leftToolbar.add(nameOptions.getPanel());
 
+        final GeneiousAction zoomInAction = new GeneiousAction("", "Zoom in", IconUtilities.getIcons("zoomin.png")) {
+            public void actionPerformed(ActionEvent e) {
+                plateView.increaseZoom();
+                plateView.revalidate();
+            }
+        };
+        final GeneiousAction fullZoomAction = new GeneiousAction("", "Full Zoom", IconUtilities.getIcons("fullzoom.png")) {
+            public void actionPerformed(ActionEvent e) {
+                plateView.setDefaultZoom();
+                plateView.revalidate();
+            }
+        };
+        final GeneiousAction zoomOutAction = new GeneiousAction("", "Zoom out", IconUtilities.getIcons("zoomout.png")) {
+            public void actionPerformed(ActionEvent e) {
+                plateView.decreaseZoom();
+                plateView.revalidate();
+            }
+        };
+        toolbar.addAction(zoomInAction);
+        toolbar.addAction(fullZoomAction);
+        toolbar.addAction(zoomOutAction);
+
         if (plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
             final DefaultComboBoxModel thermocycleModel = new DefaultComboBoxModel();
             for (Thermocycle cycle : getThermocycles()) {
@@ -261,10 +283,27 @@ public class PlateViewer extends JPanel {
             public void run() {
                 final JFrame frame = new JFrame();
                 frame.getContentPane().setLayout(new BorderLayout());
+                frame.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosing(WindowEvent e) {
+                        for (Reaction r : plateView.getPlate().getReactions()) {
+                            if (!r.isEmpty()) {
+                                if (Dialogs.showOkCancelDialog("Your plate has unsaved changes.  Are you sure you want to close this window?", "Unsaved Changes", plateView)) {
+                                    break;
+                                }
+                                else {
+                                    return;
+                                }
+                            }
+                        }
+                        frame.setVisible(false);
+                    }
+
+                });
 
                 frame.setTitle((isNew ? "New " : " ") + plateView.getPlate().getReactionType());
                 frame.getContentPane().add(selfReference, BorderLayout.CENTER);
-                frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
 
                 JPanel closeButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));

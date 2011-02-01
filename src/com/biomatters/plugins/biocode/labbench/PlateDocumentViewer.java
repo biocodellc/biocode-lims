@@ -44,6 +44,9 @@ public class PlateDocumentViewer extends DocumentViewer{
     private PlateDocument plateDoc;
 
     private GeneiousAction saveAction;
+    private GeneiousAction zoomInAction;
+    private GeneiousAction zoomOutAction;
+    private GeneiousAction fullZoomAction;
     private GeneiousAction thermocycleAction;
     private List<Thermocycle> cycles;
     List<SimpleListener> actionsChangedListeners;
@@ -67,6 +70,24 @@ public class PlateDocumentViewer extends DocumentViewer{
             throw new RuntimeException("Could not serialise the plate!",e);
         }
         this.plateView = new PlateView(plate, false);
+        zoomInAction = new GeneiousAction("", "Zoom in", IconUtilities.getIcons("zoomin.png")) {
+            public void actionPerformed(ActionEvent e) {
+                plateView.increaseZoom();
+                plateView.revalidate();
+            }
+        };
+        fullZoomAction = new GeneiousAction("", "Full Zoom", IconUtilities.getIcons("fullzoom.png")) {
+            public void actionPerformed(ActionEvent e) {
+                plateView.setDefaultZoom();
+                plateView.revalidate();
+            }
+        };
+        zoomOutAction = new GeneiousAction("", "Zoom out", IconUtilities.getIcons("zoomout.png")) {
+            public void actionPerformed(ActionEvent e) {
+                plateView.decreaseZoom();
+                plateView.revalidate();
+            }
+        };
         saveAction = new GeneiousAction("Save") {
             public void actionPerformed(ActionEvent e) {
                 if(!isLocal && !BiocodeService.getInstance().isLoggedIn()) {
@@ -287,6 +308,9 @@ public class PlateDocumentViewer extends DocumentViewer{
             @Override
             public List<GeneiousAction> getOtherActions() {
                 List<GeneiousAction> actions = new ArrayList<GeneiousAction>();
+                actions.add(zoomInAction);
+                actions.add(fullZoomAction);
+                actions.add(zoomOutAction);
                 if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
                     thermocycleAction = editThermocycleAction = null;
                     actions.addAll(Arrays.asList(editAction,

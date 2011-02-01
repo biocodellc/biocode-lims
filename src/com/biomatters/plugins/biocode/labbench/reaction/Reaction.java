@@ -69,6 +69,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract String getLocus();
 
+    public void setBaseFontSize(int fontSze) {
+        labelFont = new Font("sansserif", Font.PLAIN, fontSze);
+        firstLabelFont = new Font("sansserif", Font.BOLD, fontSze+2);
+        fieldWidthCache = null;
+    }
+
 
     public enum Type {
         Extraction,
@@ -207,6 +213,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             displayableFields.addAll(fimsSample.getTaxonomyAttributes());
         }
         return displayableFields;
+    }
+
+    public DocumentField getDisplayableField(String code) {
+        for(DocumentField field : getAllDisplayableFields()) {
+            if(field.getCode().equals(code)) {
+                return field;
+            }
+        }
+        return null;
     }
 
     public List<DocumentField> getDisplayableFields() {
@@ -540,13 +555,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
         if(locationString != null && locationString.length() > 0) {
             g.setColor(new Color(0,0,0,128));
-            g.setFont(new Font("sansserif", Font.PLAIN, 12));
+            g.setFont(firstLabelFont.deriveFont(Font.PLAIN));
             g.drawString(locationString, location.x+2, location.y+charHeight + 2);
         }
 
         g.setColor(enabled ? Color.black : Color.gray);
 
-        int y = location.y + 8;
+        int y = location.y + charHeight;
         y += (location.height - getPreferredSize().height + PADDING)/2;
         for (int i = 0; i < getFieldsToDisplay().size(); i++) {
             if(getFieldsToDisplay().get(i).equals(GEL_IMAGE_DOCUMENT_FIELD)) {

@@ -381,17 +381,24 @@ public class LIMSConnection {
     private AnnotatedPluginDocument createAssemblyDocument(ResultSet resultSet) throws SQLException{
         String qualities = resultSet.getString("confidence_scores");
         SequenceDocument sequence;
-        if(qualities == null) {
+        if(qualities == null || resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
             String name = resultSet.getString("extraction_id");
             String consensus = resultSet.getString("consensus");
+            String description = "Assembly consensus sequence for "+name;
             java.sql.Date created = resultSet.getDate("date");
             if(consensus == null || created == null) {
-                return null;
+                consensus="";
             }
+            else if(resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
+                consensus = "";
+                description = "Sequencing failed for this well";
+            }
+            consensus = consensus.replace("-","");
             sequence = new DefaultNucleotideSequence(name, "Assembly consensus sequence for "+name, consensus, new Date(created.getTime()));
         }
         else {
             String sequenceString = resultSet.getString("consensus");
+            sequenceString = sequenceString.replace("-", "");
             NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
             String name = resultSet.getString("extraction_id");
             sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, new Date(resultSet.getDate("date").getTime()), graph);

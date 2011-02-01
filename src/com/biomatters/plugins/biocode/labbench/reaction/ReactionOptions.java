@@ -14,6 +14,7 @@ public abstract class ReactionOptions extends Options {
 
     public static final String RUN_STATUS = "runStatus";
     public static final OptionValue NOT_RUN_VALUE = new OptionValue("not run", "not run");
+    public static final OptionValue RUN_VALUE = new OptionValue("run", "run");
     public static final OptionValue PASSED_VALUE = new OptionValue("passed", "passed");
     public static final OptionValue FAILED_VALUE = new OptionValue("failed", "failed");
     protected Reaction reaction;

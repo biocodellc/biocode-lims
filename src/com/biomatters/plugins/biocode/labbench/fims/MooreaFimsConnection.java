@@ -139,10 +139,16 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Specimen ID", "", "biocode_tissue.bnhm_id", String.class, false, false));
         fields.add(new DocumentField("Catalog Number", "", "biocode.CatalogNumberNumeric", String.class, false, false));
         fields.add(new DocumentField("Specimen Num Collector", "", "biocode.Specimen_Num_Collector", String.class, false, true));
+        fields.add(new DocumentField("Specimen Holding Institution", "", "biocode.HoldingInstitution", String.class, false, true));
+        fields.add(new DocumentField("Specimen Holding Institution Accession", "", "biocode.AccessionNumber", String.class, false, true));
+        fields.add(new DocumentField("Tissue Holding Institution", "", "biocode_tissue.HoldingInstitution", String.class, false, true));
 
         fields.add(MOOREA_PLATE_NAME_FIELD);
         fields.add(MOOREA_WELL_NUMBER_FIELD);
         fields.add(MOOREA_TISSUE_BARCODE_FIELD);
+
+        fields.add(new DocumentField("Preservative", "", "biocode_tissue.preservative", String.class, false, true));
+        fields.add(new DocumentField("Tissue Type", "", "biocode_tissue.tissuetype", String.class, false, true));
 
         fields.add(new DocumentField("BOLD ProcessID", "", "biocode_tissue.molecular_id", String.class, true, false));
 
@@ -160,6 +166,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(new DocumentField("Lowest Taxon", "", "biocode.LowestTaxon", String.class, true, false));
         fields.add(new DocumentField("Lowest Taxon Level", "", "biocode.LowestTaxonLevel", String.class, true, false));
+        fields.add(new DocumentField("Lowest Taxon (Generated)", "", "biocode.LowestTaxon_Generated", String.class, true, false));
 
         //fields.add(new DocumentField("Taxon Notes", "", "biocode_collecting_event.TaxonNotes", String.class, false, false));
 

@@ -92,10 +92,17 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        return new AddAssemblyResultsToLimsOptions(documents);
+        boolean isAssembly = false;
+        for(AnnotatedPluginDocument doc : documents) {
+            if(SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                isAssembly = true;
+                break;
+            }
+        }
+        return new AddAssemblyResultsToLimsOptions(documents, isPass);
     }
 
-    public List<AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options) throws DocumentOperationException {
+    public List<AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options, SequenceSelection selection) throws DocumentOperationException {
 
         Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = new HashMap<AnnotatedPluginDocument, SequenceDocument>();
         for (AnnotatedPluginDocument document : annotatedDocuments) {
@@ -115,6 +122,23 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
                         SequenceDocument sequenceToExtract = alignment.getSequence(i);
+
+                        if(selection != null && selection.getSelectedSequenceCount() > 0) {
+                            boolean found = false;
+                            for(SequenceSelection.SelectionInterval interval : selection.getIntervals()) {
+                                if(sequenceToExtract.equals(interval.getSequence())) {
+                                    if(interval.getMinResidue() != sequenceToExtract.getCharSequence().getLeadingGapsLength() || interval.getMaxResidue() != sequenceToExtract.getCharSequence().getTrailingGapsStartIndex()) {
+                                        throw new DocumentOperationException("Please select only entire sequences.  Partial sequences cannot be marked as pass or fail");
+                                    }
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if(!found) {
+                                continue;
+                            }
+                        }
+
                         SequenceExtractionUtilities.ExtractionOptions extractionOptions = new SequenceExtractionUtilities.ExtractionOptions(0, sequenceToExtract.getSequenceLength());
                         SequenceDocument extractedSequence = SequenceExtractionUtilities.extract(sequenceToExtract, extractionOptions);
                         docsToMark.put(alignment.getReferencedDocument(i), extractedSequence);
@@ -337,11 +361,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
     @Override
-    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
+    public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o, SequenceSelection selection) throws DocumentOperationException {
         AddAssemblyResultsToLimsOptions options = (AddAssemblyResultsToLimsOptions) o;
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.4, 0.2);
         progress.beginSubtask("Checking results");
-        List<AssemblyResult> assemblyResults = getAssemblyResults(annotatedDocuments, progress, options);
+        List<AssemblyResult> assemblyResults = getAssemblyResults(annotatedDocuments, progress, options, selection);
 
         for(AssemblyResult result : assemblyResults) {
             Collection<CycleSequencingReaction> reactions = result.reactionsById.values();
@@ -353,9 +377,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         progress.beginSubtask("Saving to LIMS");
         Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
         progress = new CompositeProgressListener(progress, assemblyResults.size());
-        if (progress.getRootProgressListener() instanceof ProgressFrame) {
-            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
-        }
+//        if (progress.getRootProgressListener() instanceof ProgressFrame) {
+//            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
+//        }
         for (AssemblyResult result : assemblyResults) {
             progress.beginSubtask();
             if (progress.isCanceled()) {

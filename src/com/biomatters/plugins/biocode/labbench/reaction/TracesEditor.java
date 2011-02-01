@@ -215,7 +215,7 @@ public class TracesEditor {
                 }
             }
             documentViewer = createViewer(DefaultSequenceListDocument.forNucleotideSequences(nucleotideDocuments), factory);
-            documentViewer.setEditingEnabled(false, "Hammertime!");
+            documentViewer.setEditingEnabled(false, "You cannot edit raw reads.  If you wish to change the sequence, please remove it and attach a replacement.");
             documentViewer.setInSplitLayout(new DocumentViewer.ViewerLocation(false, true,""));
             documentViewer.setOutgoingMessageHandler(messageHandler);
             sequenceHolder.add(documentViewer.getComponent(), BorderLayout.CENTER);

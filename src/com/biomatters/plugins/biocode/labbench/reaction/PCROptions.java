@@ -156,7 +156,7 @@ public class PCROptions extends ReactionOptions {
         addDateOption("date", "Date", new Date());
 
 
-        OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, PASSED_VALUE, FAILED_VALUE };
+        OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, RUN_VALUE, PASSED_VALUE, FAILED_VALUE };
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
         addLabel("");

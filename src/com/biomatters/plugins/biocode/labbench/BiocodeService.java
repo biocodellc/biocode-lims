@@ -20,6 +20,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
@@ -919,6 +920,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(!file.exists()) {
             Map<String, Color> colors = new HashMap<String, Color>();
             colors.put("not run", Color.white);
+            colors.put("run", Color.white);
             colors.put("passed", Color.green.darker());
             colors.put("failed", Color.red.darker());
             switch(type) {
@@ -1593,6 +1595,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     protected void initialize(GeneiousServiceListener listener) {
         initializeConnectionManager();
+        listener.childServiceAdded(new ReportingService());
 
 
         if(connectionManager.connectOnStartup()) {

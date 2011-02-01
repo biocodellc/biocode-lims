@@ -289,6 +289,9 @@ public class MultiLocusDocumentViewerFactory extends TableDocumentViewerFactory{
             else if(ReactionOptions.PASSED_VALUE.getLabel().equals(r.getFieldValue(ReactionOptions.RUN_STATUS))) {
                 return " color='#49993F'";
             }
+            else if (ReactionOptions.RUN_VALUE.getLabel().equals(r.getFieldValue(ReactionOptions.RUN_STATUS))) {
+                return " color='#fe9418'";
+            }
             else {
                 return " color='#000000'";
             }
