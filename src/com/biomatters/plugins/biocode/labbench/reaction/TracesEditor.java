@@ -82,7 +82,7 @@ public class TracesEditor {
 
         removeSequencesAction = new GeneiousAction("Remove sequence(s)") {
             public void actionPerformed(ActionEvent e) {
-                for(SequenceDocument selectedDoc : sequenceSelection.getSelectedSequences()) {
+                for(SequenceDocument selectedDoc : sequenceSelection.getSelectedSequences()) {//todo
                     for (int i = 0; i < sequences.size(); i++) {
                         NucleotideSequenceDocument doc = sequences.get(i);
                         if (doc.getName().equals(selectedDoc.getName()) && doc.getSequenceString().equalsIgnoreCase(selectedDoc.getSequenceString())) {
@@ -100,7 +100,7 @@ public class TracesEditor {
             public void actionPerformed(ActionEvent e) {
                 WritableDatabaseService selectedFolder = ServiceUtilities.getUserSelectedFolder(null);
                 if(selectedFolder != null){
-                    Set<SequenceDocument> sequences = sequenceSelection.getSelectedSequences();
+                    Set<SequenceDocument> sequences = sequenceSelection.getSelectedSequences(); //todo
                     try {
                         for(SequenceDocument doc : sequences) {
                             selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(doc), ProgressListener.EMPTY).setUnread(true);

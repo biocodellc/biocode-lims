@@ -126,7 +126,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                         if(selection != null && selection.getSelectedSequenceCount() > 0) {
                             boolean found = false;
                             for(SequenceSelection.SelectionInterval interval : selection.getIntervals()) {
-                                if(sequenceToExtract.equals(interval.getSequence())) {
+                                if(sequenceToExtract.equals(interval.getSequence())) { //todo
                                     if(interval.getMinResidue() != sequenceToExtract.getCharSequence().getLeadingGapsLength() || interval.getMaxResidue() != sequenceToExtract.getCharSequence().getTrailingGapsStartIndex()) {
                                         throw new DocumentOperationException("Please select only entire sequences.  Partial sequences cannot be marked as pass or fail");
                                     }
