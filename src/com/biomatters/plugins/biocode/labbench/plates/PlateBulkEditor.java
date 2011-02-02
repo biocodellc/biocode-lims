@@ -429,7 +429,7 @@ public class PlateBulkEditor {
             GeneiousAction.SubMenu toolsAction = new GeneiousAction.SubMenu(new GeneiousActionOptions("Tools", "", IconUtilities.getIcons("tools16.png")), toolsActions);
             toolbar.addAction(toolsAction);
         }
-        if(fieldToCheck != null && newPlate) {
+        if(fieldToCheck != null) {
             autodetectAction = new GeneiousAction("Autodetect workflows", "Autodetect workflows from the extraction id's you have entered", BiocodePlugin.getIcons("workflow_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     if (fieldToCheck == null) {
@@ -695,6 +695,7 @@ public class PlateBulkEditor {
                 }
                 else {
                     return Arrays.asList(
+                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
                         LIMSConnection.WORKFLOW_LOCUS_FIELD,
                         new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
                     );
