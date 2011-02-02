@@ -36,7 +36,7 @@ public class ReportingService extends GeneiousServiceWithPanel {
         splitPane.setBottomComponent(new GPanel());
         splitPane.setOneTouchExpandable(true);
         splitPane.setDividerLocation(-1);
-        final PiePlot piePlot = new PiePlot3D();
+        final PiePlot piePlot = new PiePlot();
         piePlot.setLabelGenerator(new PieSectionLabelGenerator() {
             public String generateSectionLabel(PieDataset pieDataset, Comparable comparable) {
                 Number value = pieDataset.getValue(comparable);

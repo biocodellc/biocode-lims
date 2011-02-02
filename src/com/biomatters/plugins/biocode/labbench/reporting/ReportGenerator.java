@@ -35,6 +35,13 @@ public class ReportGenerator {
     private Options reportingOptions;
     private SimpleListener chartChangedListener;
 
+    private static final Map<String, String> geneiousFieldToTableField = new HashMap<String, String>();
+
+    static {
+        geneiousFieldToTableField.put("runStatus", "progress");
+    }
+
+
 
     public JPanel getReportingPanel() {
         reportingOptions = new Options(this.getClass());
@@ -48,8 +55,7 @@ public class ReportGenerator {
                 counts.clear();
                 for(Options option : values) {
                     SingleFieldOptions sfOption = (SingleFieldOptions)option;
-                    counts.put(sfOption.getTableName()+" "+sfOption.getValue(), getFieldCount(sfOption));
-                    System.out.println(sfOption.getValue()+": "+getFieldCount(sfOption));
+                    counts.put(sfOption.getTableName()+" "+sfOption.getFieldLabel()+" "+sfOption.getValue(), getFieldCount(sfOption));
                     if(chartChangedListener != null)
                         chartChangedListener.objectChanged();
                 }
@@ -88,6 +94,10 @@ public class ReportGenerator {
         return values;
     }
 
+    public static String getTableFieldName(String geneiousFieldName) {
+        return geneiousFieldToTableField.get(geneiousFieldName);
+    }
+
 
     public int getFieldCount(SingleFieldOptions options) {
         StringBuilder builder = new StringBuilder();
@@ -95,7 +105,7 @@ public class ReportGenerator {
         builder.append("SELECT count(*) FROM ");
         builder.append(options.getTableName().toLowerCase());
         builder.append(" WHERE ");
-        builder.append(options.getFieldName());
+        builder.append(getTableFieldName(options.getFieldName()));
         if(options.isExactMatch()) {
             builder.append("=?");
             value = options.getValue();

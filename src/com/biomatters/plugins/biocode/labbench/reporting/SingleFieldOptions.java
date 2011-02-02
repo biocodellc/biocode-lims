@@ -106,6 +106,11 @@ public class SingleFieldOptions extends Options {
         return fieldOption.getValue().getName();
     }
 
+    public String getFieldLabel() {
+        final ComboBoxOption<OptionValue> fieldOption = (ComboBoxOption)getOption("field");
+        return fieldOption.getValue().getLabel();    
+    }
+
     public String getValue() {
         final StringOption containsValueOption = (StringOption)getOption("containsValue");
         final ComboBoxOption<OptionValue> isValueOption = (ComboBoxOption<OptionValue>)getOption("isValue");
