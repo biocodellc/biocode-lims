@@ -15,6 +15,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.options.PasswordOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
@@ -337,6 +338,10 @@ public class LIMSConnection {
             final ResultSet resultSet = statement.executeQuery();
             List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
             while(resultSet.next()) {
+                if(SystemUtilities.isAvailableMemoryLessThan(50)) {
+                    resultSet.close();
+                    throw new SQLException("Search cancelled due to lack of free memory");
+                }
                 AnnotatedPluginDocument doc = createAssemblyDocument(resultSet);
                 if(doc == null) {
                     continue;
@@ -522,6 +527,10 @@ public class LIMSConnection {
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
         int prevWorkflowId = -1;
         while(resultSet.next()) {
+            if(SystemUtilities.isAvailableMemoryLessThan(50)) {
+                resultSet.close();
+                throw new SQLException("Search cancelled due to lack of free memory");
+            }
             if(cancelable != null && cancelable.isCanceled()) {
                 resultSet.close();
                 return Collections.emptyList();
@@ -795,7 +804,10 @@ public class LIMSConnection {
         System.out.println("Creating Reactions...");
         int previousId = -1;
         while(resultSet.next()) {
-
+            if(SystemUtilities.isAvailableMemoryLessThan(50)) {
+                resultSet.close();
+                throw new SQLException("Search cancelled due to lack of free memory");
+            }
             if(cancelable != null && cancelable.isCanceled()) {
                 resultSet.close();
                 return Collections.emptyList();
