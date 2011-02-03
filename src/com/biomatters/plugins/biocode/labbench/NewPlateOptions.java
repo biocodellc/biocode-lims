@@ -210,8 +210,8 @@ public class NewPlateOptions extends Options{
             if(plateSize == null && getPlateSize() != null) {
                 return "You cannot create a "+getPlateSize()+" plate from a set of reactions.";
             }
-            if((plateSize != null && getPlateSize() != null) && (getPlateSize() != Plate.Size.w96 && getPlateSize() != Plate.Size.w384)) {
-                return "You cannot create a "+getPlateSize()+" well plate from a "+plateSize+" well plate.";
+            if(!(plateSize == Plate.Size.w96 && getPlateSize() == Plate.Size.w384) && !(plateSize == Plate.Size.w384 && getPlateSize() == Plate.Size.w96) && plateSize != getPlateSize()) {
+                return "You cannot create a "+(getPlateSize() == null ? "set of reactions" : getPlateSize()+" well")+" plate from a "+plateSize+" well plate.";
             }
             if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w384) {
                 int docCount = 0;
