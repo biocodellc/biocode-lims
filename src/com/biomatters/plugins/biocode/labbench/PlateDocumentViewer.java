@@ -252,7 +252,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         else {
             switch(plateView.getPlate().getReactionType()) {
                 case Extraction:
-                    cycles = Collections.EMPTY_LIST;
+                    cycles = Collections.emptyList();
                 case PCR:
                     cycles = BiocodeService.getInstance().getPCRThermocycles();
                     break;

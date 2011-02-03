@@ -51,7 +51,7 @@ public class Thermocycle implements XMLSerializable {
     }
 
     public String getName() {
-        return name == null ? "" : name;
+        return name == null ? "Untitled" : name;
     }
 
     public int getId() {
@@ -59,7 +59,7 @@ public class Thermocycle implements XMLSerializable {
     }
 
     public String toString() {
-        return getName() != null ? getName() : "Untitled";
+        return getName();
     }
 
     public static Thermocycle fromSQL(ResultSet resultSet) throws SQLException{
