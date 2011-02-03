@@ -242,7 +242,8 @@ public class PlateDocumentViewer extends DocumentViewer{
             return;
         }
         List<GeneiousAction> actions = new ArrayList<GeneiousAction>();
-        final AtomicReference<String> name = new AtomicReference<String>(plateView.getPlate().getThermocycle().getName());
+        Thermocycle thermocycle = plateView.getPlate().getThermocycle();
+        final AtomicReference<String> name = new AtomicReference<String>(thermocycle == null ? "None" : thermocycle.getName());
         if(!BiocodeService.getInstance().isLoggedIn()) {
             if(showDialogs) {
                 Dialogs.showMessageDialog("Please log in");

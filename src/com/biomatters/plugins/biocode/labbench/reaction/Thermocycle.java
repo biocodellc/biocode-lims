@@ -51,7 +51,7 @@ public class Thermocycle implements XMLSerializable {
     }
 
     public String getName() {
-        return name;
+        return name == null ? "" : name;
     }
 
     public int getId() {
