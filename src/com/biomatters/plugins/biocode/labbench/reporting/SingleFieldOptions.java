@@ -111,14 +111,27 @@ public class SingleFieldOptions extends Options {
         return fieldOption.getValue().getLabel();    
     }
 
-    public String getValue() {
+    public Object getValue() {
         final StringOption containsValueOption = (StringOption)getOption("containsValue");
         final ComboBoxOption<OptionValue> isValueOption = (ComboBoxOption<OptionValue>)getOption("isValue");
 
-        if(containsValueOption.isVisible()) {
-            return containsValueOption.getValue();
+        //special cases
+        if(getFieldName().equals("cleanupPerformed") || getFieldName().equals("concentrationStored")) {
+            return isValueOption.getValue().getName().equals("Yes");
         }
-        return isValueOption.getValue().getName();
+
+        String value;
+        if(containsValueOption.isVisible()) {
+            value = containsValueOption.getValue();
+        }
+        else {
+            value = isValueOption.getValue().getName();
+        }
+
+        if(!isExactMatch()) {
+            value = "%"+value+"%";
+        }
+        return value;
     }
 
     public boolean isExactMatch() {

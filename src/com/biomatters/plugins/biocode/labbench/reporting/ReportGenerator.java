@@ -3,10 +3,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import org.jfree.data.DefaultKeyedValues;
 import org.jfree.data.general.DefaultKeyedValuesDataset;
 import org.jfree.data.general.PieDataset;
@@ -19,10 +16,7 @@ import java.awt.event.ActionListener;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -36,9 +30,15 @@ public class ReportGenerator {
     private SimpleListener chartChangedListener;
 
     private static final Map<String, String> geneiousFieldToTableField = new HashMap<String, String>();
+    private static final Set<String> workflowFields = new HashSet<String>();
 
     static {
+        workflowFields.add("workflowName");
+        workflowFields.add("locus");
+
         geneiousFieldToTableField.put("runStatus", "progress");
+        geneiousFieldToTableField.put(PCROptions.PRIMER_OPTION_ID, "prName");
+        geneiousFieldToTableField.put(PCROptions.PRIMER_REVERSE_OPTION_ID, "revPrName");
     }
 
 
@@ -94,37 +94,73 @@ public class ReportGenerator {
         return values;
     }
 
-    public static String getTableFieldName(String geneiousFieldName) {
-        return geneiousFieldToTableField.get(geneiousFieldName);
+    public static String getTableFieldName(String tableName, String geneiousFieldName) {
+        String overridename = geneiousFieldToTableField.get(geneiousFieldName);
+        String fieldName = overridename != null ? overridename : geneiousFieldName;
+        if(tableName.equals("extraction")) {
+            return fieldName;
+        }
+        if(workflowFields.contains(geneiousFieldName)) {
+            return "workflow."+fieldName;
+        }
+        return tableName+"."+fieldName;
     }
 
 
     public int getFieldCount(SingleFieldOptions options) {
         StringBuilder builder = new StringBuilder();
-        String value;
+        Object value = options.getValue();
         builder.append("SELECT count(*) FROM ");
-        builder.append(options.getTableName().toLowerCase());
+        String tableName = options.getTableName().toLowerCase();
+        builder.append(tableName);
+        boolean notExtraction = !tableName.equals("extraction");
+        if(notExtraction) {
+            builder.append(", workflow");
+        }
         builder.append(" WHERE ");
-        builder.append(getTableFieldName(options.getFieldName()));
+        if(notExtraction) {
+            builder.append(tableName+".workflow = workflow.id AND ");
+        }
+        builder.append(getTableFieldName(tableName, options.getFieldName()));
         if(options.isExactMatch()) {
             builder.append("=?");
-            value = options.getValue();
         }
         else {
             builder.append(" LIKE ?");
-            value = "%"+options.getValue()+"%";
         }
         try {
             PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().prepareStatement(builder.toString());
-            statement.setString(1,value);
+            System.out.print(builder.toString()+" ");
+            System.out.print(value+" ");
+            setSqlParam(statement, 1, value);
             ResultSet resultSet = statement.executeQuery();
             resultSet.next();
-            return resultSet.getInt(1);
+            int result = resultSet.getInt(1);
+            System.out.println(result);
+            return result;
         } catch (SQLException e) {
             e.printStackTrace();
             assert false : e.getMessage();
         }
         return 0;
+    }
+
+    private static void setSqlParam(PreparedStatement statement, int paramIndex, Object param) throws SQLException{
+        if(param instanceof Integer) {
+            statement.setInt(paramIndex, (Integer)param);
+        }
+        else if(param instanceof Double) {
+            statement.setDouble(paramIndex, (Double)param);
+        }
+        else if(param instanceof Date) {
+            statement.setDate(paramIndex, new java.sql.Date(((Date)param).getTime()));
+        }
+        else if(param instanceof Boolean) {
+            statement.setObject(paramIndex, param);
+        }
+        else {
+            statement.setString(paramIndex, param.toString());
+        }
     }
 
     static DocumentField getField(String reactionType, String fieldCode) {
