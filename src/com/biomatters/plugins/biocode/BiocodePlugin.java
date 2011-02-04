@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode;
 
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOperation;
@@ -15,11 +17,16 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import org.jdom.input.SAXBuilder;
+import org.jdom.JDOMException;
+import org.jdom.Document;
 
 /**
  * @version $Id: BiocodePlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -88,6 +95,65 @@ public class BiocodePlugin extends GeneiousPlugin {
             }
         };
         new Thread(r).start();
+
+        Runnable r2 = new Runnable(){
+            public void run() {
+                SAXBuilder builder = new SAXBuilder();
+                try {
+                    final Document document = builder.build(new URL("http://www.biomatters.com/assets/plugins/biocode/PluginVersions.xml?Version="+getVersion())+"&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" + System.getProperty("os.version", "").replace(" ", "_") + "&OSArch=" + System.getProperty("os.arch").replace(" ", "_"));
+                    final String latestVersion = document.getRootElement().getChildText("LatestVersion");
+                    if(latestVersion != null && compareVersions(getVersion(), latestVersion) < 0) {
+                        Runnable runnable = new Runnable() {
+                            public void run() {
+                                String url = document.getRootElement().getChildText("LatestVersionURL");
+                                Dialogs.showDialogWithDontShowAgain(new Dialogs.DialogOptions(new String[] {"OK"}, "New Biocode Plugin Available"), "<html>There is a new version of the Biocode plugin available ("+latestVersion+").  You are using "+getVersion()+".  If you would like to upgrade, please visit <a href=\""+ url +"\">"+url+"</a></html>", "BiocodeUpgrade_"+latestVersion, "Don't remind me again");
+                            }
+                        };
+                        ThreadUtilities.invokeNowOrLater(runnable);
+                    }
+
+                } catch (JDOMException e) {
+                    e.printStackTrace();
+                    //ignore
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    //ignore
+                }
+            }
+        };
+        new Thread(r2, "Checking for update versions of the biocode plugin").start();
+    }
+
+
+    /**
+     *
+     * @param version1 program version of the form nnn[.nnn[.nnn]]
+     * @param version2 program version of the form nnn[.nnn[.nnn]]
+     * @return 0 if the two versions are equal, or a negative number if version1 < version2
+     * or a positive number of version1 > version2.
+     */
+    private static int compareVersions(String version1, String version2) {
+        String[]ver1 = version1.split("\\.");
+        String[]ver2 = version2.split("\\.");
+
+        for(int i=0; i < Math.max(ver1.length,ver2.length); i++){
+            if(ver1.length > i && ver1.length > i){
+                if(Integer.parseInt(ver1[i]) > Integer.parseInt(ver2[i])){
+                    return 1;
+                }
+                if(Integer.parseInt(ver1[i]) < Integer.parseInt(ver2[i])){
+                    return -1;
+                }
+            }
+
+            else if(ver1.length <= i){
+                return -1;
+            }
+            else if(ver2.length <= i){
+               return 1;
+            }
+        }
+        return 0;
     }
 
     private static void initialiseIcons() {
