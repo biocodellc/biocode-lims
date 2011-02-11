@@ -59,7 +59,7 @@ public class LIMSConnection {
     public static final DocumentField EXTRACTION_NAME_FIELD = new DocumentField("Extraction ID", "The Extraction ID", "extraction.extractionId", String.class, true, false);
     public static final DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", String.class, true, false);
     public static final DocumentField SEQUENCE_PROGRESS = DocumentField.createEnumeratedField(new String[] {"passed", "failed"}, "Sequence Progress", "Whether the sequence passed or failed sequencing and assembly", "progress", true, false);
-    public static final DocumentField SEQUENCE_SUBMISSION_PROGRESS = DocumentField.createEnumeratedField(new String[] {"Yes", "No"}, "Submitted", "Indicates whether this sequence has been submitte to a sequence database (e.g. Genbank)", "submitted", false, false);
+    public static final DocumentField SEQUENCE_SUBMISSION_PROGRESS = DocumentField.createEnumeratedField(new String[] {"Yes", "No"}, "Sequence Submitted", "Indicates whether this sequence has been submitte to a sequence database (e.g. Genbank)", "submitted", false, false);
     public static final DocumentField SEQUENCE_ID = DocumentField.createIntegerField("LIMS Sequence ID", "The Unique ID of this sequence in LIMS", "LimsSequenceId", false, false);
     public static final DocumentField EDIT_RECORD = DocumentField.createStringField("Edit Record", "A record of edits made to this sequence", "editRecord", false, false);
     private boolean isLocal;
@@ -275,7 +275,8 @@ public class LIMSConnection {
                 WORKFLOW_LOCUS_FIELD,
                 EXTRACTION_NAME_FIELD,
                 EXTRACTION_BARCODE_FIELD,
-                SEQUENCE_PROGRESS
+                SEQUENCE_PROGRESS,
+                SEQUENCE_SUBMISSION_PROGRESS
         );
     }
 
@@ -459,11 +460,11 @@ public class LIMSConnection {
         }
 
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date", "progress"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date", "progress", "submitted"));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date", "progress"));
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date", "progress", "submitted"));
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((samples == null || samples.size() == 0) && refinedQueries.size() == 0) {
@@ -585,6 +586,9 @@ public class LIMSConnection {
             else if(Date.class.isAssignableFrom(o.getClass())) {
                 statement.setDate(i+1, new java.sql.Date(((Date)o).getTime()));
             }
+            else if(Boolean.class.isAssignableFrom(o.getClass())) {
+                statement.setBoolean(i+1,(Boolean)o);
+            }
             else {
                 throw new SQLException("You have a field parameter with an invalid type: "+o.getClass().getCanonicalName());
             }
@@ -642,11 +646,18 @@ public class LIMSConnection {
                 AdvancedSearchQueryTerm q = (AdvancedSearchQueryTerm)queries.get(i);
                 QueryTermSurrounder termSurrounder = getQueryTermSurrounder(q);
                 String code = q.getField().getCode();
+                boolean isBooleanQuery = false;
                 if("date".equals(code)) {
                     code = tableName+".date"; //hack for last modified date...
                 }
                 if(String.class.isAssignableFrom(q.getField().getValueType())) {
-                    code = "LOWER("+code+")";
+                    DocumentField field = q.getField();
+                    if(field.isEnumeratedField() && field.getEnumerationValues().length == 2 && field.getEnumerationValues()[0].equals("Yes") && field.getEnumerationValues()[1].equals("No")) {
+                        isBooleanQuery = true;
+                    }
+                    else {
+                        code = "LOWER("+code+")";
+                    }
                 }
 
                 Object[] queryValues = q.getValues();
@@ -675,6 +686,9 @@ public class LIMSConnection {
                 sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
 
                 for (Object queryValue : queryValues) {
+                    if(isBooleanQuery) {
+                        queryValue = queryValue.equals("Yes") ? 1 : 0;
+                    }
                     appendValue(inserts, sql, i < queryValues.length - 1, termSurrounder, queryValue, q.getCondition());
                 }
                 //}
@@ -728,7 +742,7 @@ public class LIMSConnection {
             query = generateAdvancedQueryFromBasicQuery(query);
         }
 
-        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode", "progress");
+        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode", "progress", "submitted");
         if(query == null) {
             refinedQueries = Collections.emptyList();
             operator = CompoundSearchQuery.Operator.AND;
