@@ -43,7 +43,7 @@ import java.util.Date;
 @SuppressWarnings({"ConstantConditions"})
 public class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
-    public static final int EXPECTED_SERVER_VERSION = 8;
+    public static final int EXPECTED_SERVER_VERSION = 9;
     Driver driver;
     Connection connection;
     Connection connection2;
@@ -59,6 +59,9 @@ public class LIMSConnection {
     public static final DocumentField EXTRACTION_NAME_FIELD = new DocumentField("Extraction ID", "The Extraction ID", "extraction.extractionId", String.class, true, false);
     public static final DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", String.class, true, false);
     public static final DocumentField SEQUENCE_PROGRESS = DocumentField.createEnumeratedField(new String[] {"passed", "failed"}, "Sequence Progress", "Whether the sequence passed or failed sequencing and assembly", "progress", true, false);
+    public static final DocumentField SEQUENCE_SUBMISSION_PROGRESS = DocumentField.createEnumeratedField(new String[] {"Yes", "No"}, "Submitted", "Indicates whether this sequence has been submitte to a sequence database (e.g. Genbank)", "submitted", false, false);
+    public static final DocumentField SEQUENCE_ID = DocumentField.createIntegerField("LIMS Sequence ID", "The Unique ID of this sequence in LIMS", "LimsSequenceId", false, false);
+    public static final DocumentField EDIT_RECORD = DocumentField.createStringField("Edit Record", "A record of edits made to this sequence", "editRecord", false, false);
     private boolean isLocal;
 
     public PasswordOptions getConnectionOptions() {
@@ -389,7 +392,7 @@ public class LIMSConnection {
         if(qualities == null || resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
             String name = resultSet.getString("extraction_id");
             String consensus = resultSet.getString("consensus");
-            String description = "Assembly consensus sequence for "+name;
+            String description = "Sequence record for "+name;
             java.sql.Date created = resultSet.getDate("date");
             if(consensus == null || created == null) {
                 consensus="";
@@ -423,14 +426,15 @@ public class LIMSConnection {
         doc.setHiddenFieldValue(AnnotateUtilities.LIMS_ID, resultSet.getInt("id"));
         //todo: fields that require a schema change
         //noinspection ConstantConditions
-        if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
-            doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, resultSet.getString("technician"));
-            doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(resultSet.getDate("date").getTime()));
-            String bin = resultSet.getString("bin");
-            doc.setFieldValue(DocumentField.BIN, bin);
-            doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, resultSet.getInt("ambiguities"));
-            doc.setFieldValue(AnnotateUtilities.ASSEMBLY_PARAMS_FIELD, resultSet.getString("params"));
-        }
+        doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, resultSet.getString("technician"));
+        doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(resultSet.getDate("date").getTime()));
+        String bin = resultSet.getString("bin");
+        doc.setFieldValue(DocumentField.BIN, bin);
+        doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, resultSet.getInt("ambiguities"));
+        doc.setFieldValue(AnnotateUtilities.ASSEMBLY_PARAMS_FIELD, resultSet.getString("params"));
+        doc.setFieldValue(SEQUENCE_ID, resultSet.getInt("id"));
+        doc.setFieldValue(LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS, resultSet.getBoolean("submitted"));
+        doc.setFieldValue(LIMSConnection.EDIT_RECORD, resultSet.getString("editrecord"));
         return doc;
     }
 

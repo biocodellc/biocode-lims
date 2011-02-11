@@ -43,8 +43,10 @@ CREATE TABLE `assembly` (
   `other_processing_fwd` longtext,
   `other_processing_rev` longtext,
   `date` timestamp NOT NULL default CURRENT_TIMESTAMP,
+  `submitted` tinyint(1) NOT NULL default '0',
+  `editrecord` longtext,
   `notes` longtext,
-  `technician` varchar(255), 
+  `technician` varchar(255),
   `bin` varchar(255),
   `ambiguities` int(10),
   PRIMARY KEY  (`id`),
@@ -197,7 +199,7 @@ CREATE TABLE `databaseversion` (
 
 /*!40000 ALTER TABLE `databaseversion` DISABLE KEYS */;
 INSERT INTO `databaseversion` (`version`) VALUES
- (8);
+ (9);
 /*!40000 ALTER TABLE `databaseversion` ENABLE KEYS */;
 
 

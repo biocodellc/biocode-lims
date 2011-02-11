@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.assembler.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.*;
@@ -32,10 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.*;
 
 /**
@@ -104,60 +100,14 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
     public List<AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options, SequenceSelection selection) throws DocumentOperationException {
 
-        Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = new HashMap<AnnotatedPluginDocument, SequenceDocument>();
-        for (AnnotatedPluginDocument document : annotatedDocuments) {
-            boolean isAlignment = SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass());
-            if (isAlignment) {
-                if (!(((SequenceAlignmentDocument)document.getDocument()).getSequence(0) instanceof NucleotideSequenceDocument)) {
-                    throw new DocumentOperationException("Selected alignment \"" + document.getName() + "\" is not an alignment of DNA sequences");
-                }
-            } else if (!NucleotideSequenceDocument.class.isAssignableFrom(document.getDocumentClass())) {
-                throw new DocumentOperationException("Selected sequence \"" + document.getName() + "\" is not DNA");
-
-            }
-
-            if (isAlignment) {
-                if(BiocodeUtilities.isAlignmentOfChromatograms(document) || BiocodeUtilities.isAlignmentOfContigConsensusSequences(document)) {
-                    SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
-                    for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
-                        if (i == alignment.getContigReferenceSequenceIndex()) continue;
-                        SequenceDocument sequenceToExtract = alignment.getSequence(i);
-
-                        if(selection != null && selection.getSelectedSequenceCount() > 0) {
-                            boolean found = false;
-                            for(SequenceSelection.SelectionInterval interval : selection.getIntervals()) {
-                                if(sequenceToExtract.equals(interval.getSequence())) { //todo
-                                    if(interval.getMinResidue() != sequenceToExtract.getCharSequence().getLeadingGapsLength() || interval.getMaxResidue() != sequenceToExtract.getCharSequence().getTrailingGapsStartIndex()) {
-                                        throw new DocumentOperationException("Please select only entire sequences.  Partial sequences cannot be marked as pass or fail");
-                                    }
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if(!found) {
-                                continue;
-                            }
-                        }
-
-                        SequenceExtractionUtilities.ExtractionOptions extractionOptions = new SequenceExtractionUtilities.ExtractionOptions(0, sequenceToExtract.getSequenceLength());
-                        SequenceDocument extractedSequence = SequenceExtractionUtilities.extract(sequenceToExtract, extractionOptions);
-                        docsToMark.put(alignment.getReferencedDocument(i), extractedSequence);
-                    }
-                }
-                else {
-                    docsToMark.put(document, null);
-                }
-            } else {
-                docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()));
-            }
-        }
+        Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = MarkInLimsUtilities.getDocsToMark(annotatedDocuments, selection);
 
         Map<String, Plate> sequencingPlateCache = new HashMap<String, Plate>();
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         IssueTracker issueTracker = new IssueTracker(isAutomated);
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, docsToMark.size());
         List<AssemblyResult> results = new ArrayList<AssemblyResult>();
-        Map<Integer, AssemblyResult> workflowsWithResults = new HashMap<Integer, AssemblyResult>();
+//        Map<Integer, AssemblyResult> workflowsWithResults = new HashMap<Integer, AssemblyResult>();
         for (AnnotatedPluginDocument annotatedDocument : docsToMark.keySet()) {
             progress.beginSubtask();
             if (progress.isCanceled()) {
@@ -195,15 +145,16 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 qualities = getQualities(consensus);
             }
 
-            if (workflowsWithResults.containsKey(assemblyResult.workflowId)) {
-                AssemblyResult existingAssemblyResult = workflowsWithResults.get(assemblyResult.workflowId);
-                for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> chromatogramEntry : assemblyResult.getReactions().entrySet()) {
-                    existingAssemblyResult.addReaction(chromatogramEntry.getKey(), chromatogramEntry.getValue());
-                }
-                continue;
-            }
+//            ssh: allowing only one consensus per workflow kinda makes sense when you're marking assemblies, but which of the two do we mark? and sometimes you're marking traces which have at least two entries per workflow, so this needs to go
+//            if (workflowsWithResults.containsKey(assemblyResult.workflowId)) {
+//                AssemblyResult existingAssemblyResult = workflowsWithResults.get(assemblyResult.workflowId);
+//                for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> chromatogramEntry : assemblyResult.getReactions().entrySet()) {
+//                    existingAssemblyResult.addReaction(chromatogramEntry.getKey(), chromatogramEntry.getValue());
+//                }
+//                continue;
+//            }
             assemblyResult.setContigProperties(annotatedDocument, consensus.getSequenceString(), qualities, coverage, disagreements, trims, edits, ambiguities, bin);
-            workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
+//            workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
             results.add(assemblyResult);
         }
         if (!issueTracker.promptToContinue(!results.isEmpty())) {
@@ -375,26 +326,32 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         }
 
         progress.beginSubtask("Saving to LIMS");
-        Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
+        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+        Connection connection = limsConnection.getConnection();
         progress = new CompositeProgressListener(progress, assemblyResults.size());
 //        if (progress.getRootProgressListener() instanceof ProgressFrame) {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
 //        }
-        for (AssemblyResult result : assemblyResults) {
-            progress.beginSubtask();
-            if (progress.isCanceled()) {
-                return null;
+
+        PreparedStatement statement = null;
+        PreparedStatement statement2 = null;
+        //noinspection ConstantConditions
+        try {
+            if(LIMSConnection.EXPECTED_SERVER_VERSION >= 9) {
+                statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                    "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             }
-            try {
-                PreparedStatement statement;
-                //noinspection ConstantConditions
-                if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
-                    statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                        "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                }
-                else {
-                    statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                        "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            else {
+                statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                    "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            }
+
+
+            statement2 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
+            for (AssemblyResult result : assemblyResults) {
+                progress.beginSubtask();
+                if (progress.isCanceled()) {
+                    return null;
                 }
                 statement.setString(1, result.extractionId);
                 statement.setInt(2, result.workflowId);
@@ -448,26 +405,39 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
                 statement.setString(15, options.getValueAsString("notes")); //notes
 
-                //noinspection ConstantConditions
-                if(LIMSConnection.EXPECTED_SERVER_VERSION >= 8) {
-                    //technician, date, bin, ambiguities
-                    statement.setString(16, options.getValueAsString("technician"));
 
-                    if(result.bin != null) {
-                        statement.setString(17, result.bin);
-                    }
-                    else {
-                        statement.setNull(17, Types.LONGVARCHAR);
-                    }
-                    if(result.ambiguities != null) {
-                        statement.setInt(18, result.ambiguities);
-                    }
-                    else {
-                        statement.setNull(18, Types.INTEGER);
+                //technician, date, bin, ambiguities
+                statement.setString(16, options.getValueAsString("technician"));
+
+                if(result.bin != null) {
+                    statement.setString(17, result.bin);
+                }
+                else {
+                    statement.setNull(17, Types.LONGVARCHAR);
+                }
+                if(result.ambiguities != null) {
+                    statement.setInt(18, result.ambiguities);
+                }
+                else {
+                    statement.setNull(18, Types.INTEGER);
+                }
+                if(LIMSConnection.EXPECTED_SERVER_VERSION >= 9) {
+                    statement.setString(19, MarkInLimsUtilities.getEditRecords(result.assembly));
+                }
+
+                statement.execute();
+
+                ResultSet resultSet = statement2.executeQuery();
+                resultSet.next();
+                int sequenceId = resultSet.getInt(1);
+                for(List<AnnotatedPluginDocument> docSets : result.getReactions().values()) {
+                    for(AnnotatedPluginDocument doc : docSets) {
+                        doc.setFieldValue(LIMSConnection.SEQUENCE_ID, sequenceId);
+                        doc.save();
                     }
                 }
-                   
-                statement.execute();
+                result.assembly.setFieldValue(LIMSConnection.SEQUENCE_ID, sequenceId);
+                result.assembly.save();
 
                 BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
                 Options chromatogramExportOptions = null;
@@ -504,16 +474,24 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
                 Reaction.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, connection, null);
 
-                statement.close();
+
 
                 for(CycleSequencingReaction reaction : result.reactionsById.values()) {
                     reaction.purgeChromats();
                 }
 
-            } catch (SQLException e) {
-                e.printStackTrace();
-                throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DocumentOperationException("Failed to park as pass/fail in LIMS: " + e.getMessage(), e);
+        } finally {
+            try {
+                if(statement != null)
+                    statement.close();
+                if(statement2 != null)
+                    statement2.close();
+            } catch (SQLException e) {}
         }
         return null;
     }

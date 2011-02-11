@@ -18,8 +18,8 @@
 -- Create schema labbench
 --
 
-CREATE DATABASE IF NOT EXISTS labbench2;
-USE labbench2;
+CREATE DATABASE IF NOT EXISTS labbench;
+USE labbench;
 
 --
 -- Definition of table `assembly`

@@ -1355,7 +1355,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(count == 0) {
             return Collections.emptyMap();
         }
-        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
+        Connection connection = limsConnection.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql.toString());
         int reactionCount = 1;
         for (Reaction reaction : reactions) {
             if (reaction.isEmpty()) {

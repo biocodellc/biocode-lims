@@ -9,6 +9,7 @@ import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOperati
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOperation;
 import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFromLimsOperation;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
+import com.biomatters.plugins.biocode.assembler.lims.MarkSequencesAsSubmittedInLimsOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyDocumentViewerFactory;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
@@ -268,6 +269,7 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AnnotateFimsDataOperation(),
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
+                new MarkSequencesAsSubmittedInLimsOperation()
 //                new ExportForBarstoolOperation(false)
         }));
         if(Geneious.getMinorApiVersion() < 40) {  //we moved the set read direction operation into the assembly plugin in version 4.40 of the API
