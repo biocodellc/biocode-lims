@@ -28,7 +28,7 @@ public class MarkSequencesAsSubmittedInLimsOperation extends DocumentOperation {
 
 
     public GeneiousActionOptions getActionOptions() {
-        GeneiousActionOptions actionOptions = new GeneiousActionOptions("Mark Sequences as Submitted in LIMS", "Mark the selected sequences as submitted to a sequence database (e.g. Genbank).  The sequences must first have been marked as passed");
+        GeneiousActionOptions actionOptions = new GeneiousActionOptions("Mark as Submitted in LIMS...", "Mark the selected sequences as submitted to a sequence database (e.g. Genbank).  The sequences must first have been marked as passed").setInPopupMenu(true, 0.67).setProOnly(true);
 
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), actionOptions);
     }

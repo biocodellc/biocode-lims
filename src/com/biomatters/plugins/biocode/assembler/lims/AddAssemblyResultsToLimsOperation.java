@@ -318,6 +318,10 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         progress.beginSubtask("Checking results");
         List<AssemblyResult> assemblyResults = getAssemblyResults(annotatedDocuments, progress, options, selection);
 
+        if(assemblyResults == null) {
+            return null;
+        }
+
         for(AssemblyResult result : assemblyResults) {
             Collection<CycleSequencingReaction> reactions = result.reactionsById.values();
             for(CycleSequencingReaction reaction : reactions) {

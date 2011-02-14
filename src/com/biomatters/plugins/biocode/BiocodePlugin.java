@@ -20,10 +20,8 @@ import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
+import java.util.prefs.Preferences;
 
 import org.jdom.input.SAXBuilder;
 import org.jdom.JDOMException;
@@ -76,7 +74,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "2.1";
+        return "2.0.99";
     }
 
     public int getMaximumApiVersion() {
@@ -122,7 +120,12 @@ public class BiocodePlugin extends GeneiousPlugin {
                 }
             }
         };
-        new Thread(r2, "Checking for update versions of the biocode plugin").start();
+        long lastRun = Preferences.userNodeForPackage(BiocodePlugin.class).getLong("LastUpgradeCheck", 0);
+
+        if(System.currentTimeMillis() - lastRun > 1000 * 60 * 60 * 24) {
+            Preferences.userNodeForPackage(BiocodePlugin.class).putLong("LastUpgradeCheck", System.currentTimeMillis());
+            new Thread(r2, "Checking for update versions of the biocode plugin").start();
+        }
     }
 
 
