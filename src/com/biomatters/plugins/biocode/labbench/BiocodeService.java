@@ -71,6 +71,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public static final DateFormat XMLDateFormat = new SimpleDateFormat("yyyy MMM dd hh:mm:ss");
 
     private ConnectionManager connectionManager;
+    private boolean loggingIn;
 
     private BiocodeService() {
     }
@@ -410,7 +411,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(isLoggedIn) {
             actions.add(logoutAction);
         }
-        else {
+        else if(!loggingIn){
             actions.add(loginAction);
         }
 
@@ -419,6 +420,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private void logOut() {
         isLoggedIn = false;
+        loggingIn = false;
         if(activeFIMSConnection != null) {
             activeFIMSConnection.disconnect();
             activeFIMSConnection = null;
@@ -459,6 +461,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     private void connect(ConnectionManager.Connection connection, boolean block) {
+        loggingIn = true;
         //load the connection driver -------------------------------------------------------------------
         String driverFileName = connectionManager.getSqlLocationOptions();
 
@@ -496,7 +499,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         try {
             activeFIMSConnection.connect(connection.getFimsOptions());
-            isLoggedIn = true;
         }
         catch (ConnectionException ex) {
             if(block) {
@@ -533,6 +535,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 block("Building Caches", null);
             }
             buildCaches();
+            loggingIn = false;
+            isLoggedIn = true;
         } catch (ConnectionException e1) {
             if(block) {
                 unBlock();
