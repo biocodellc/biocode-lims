@@ -182,9 +182,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         }
         tissueCol = parseInt(((Options.OptionValue)options.getValue("tissueId")).getName(), "You have not set a tissue column");
         specimenCol = parseInt(((Options.OptionValue)options.getValue("specimenId")).getName(), "You have not set a specimen column");
-        if(getTissueSampleDocumentField() == null) {
-            throw new ConnectionException("You have not set a tissue column");
-        }
+
         storePlates = (Boolean)options.getValue("storePlates");
         if(storePlates) {
             plateCol = parseInt(((Options.OptionValue)options.getValue("plateName")).getName(), "You have not set a plate column");
@@ -234,6 +232,9 @@ public class ExcelFimsConnection extends FIMSConnection{
         }
         if(getTableCol(fields, specimenCol) == null) {
             throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
+        }
+        if(getTissueSampleDocumentField() == null) {
+            throw new ConnectionException("You have not set a tissue column");
         }
     }
 
