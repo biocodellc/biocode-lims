@@ -10,7 +10,7 @@ import java.util.List;
  * @author steve
  * @version $Id: 13/05/2009 8:03:12 AM steve $
  */
-public class TissueDocument implements PluginDocument {
+public class TissueDocument implements PluginDocument, FimsSample {
     private FimsSample fimsResults;
 
 
@@ -38,6 +38,18 @@ public class TissueDocument implements PluginDocument {
 
     public Object getFieldValue(String fieldCodeName) {
         return fimsResults.getFimsAttributeValue(fieldCodeName);
+    }
+
+    public List<DocumentField> getFimsAttributes() {
+        return fimsResults.getFimsAttributes();
+    }
+
+    public List<DocumentField> getTaxonomyAttributes() {
+        return fimsResults.getTaxonomyAttributes();
+    }
+
+    public Object getFimsAttributeValue(String attributeName) {
+        return fimsResults.getFimsAttributeValue(attributeName);
     }
 
     public String getName() {

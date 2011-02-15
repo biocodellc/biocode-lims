@@ -1,19 +1,13 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
-import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.options.PasswordOption;
 
 import java.sql.*;
@@ -198,6 +192,23 @@ public class MooreaFimsConnection extends FIMSConnection{
             return null;
         }
         return new BiocodeUtilities.LatLong((Double)latObject, (Double)longObject);
+    }
+
+    public void getAllSamples(RetrieveCallback callback) throws ConnectionException{
+        String query = "SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID";
+        try {
+            Statement statement = connection.createStatement();
+
+            statement.setFetchSize(1);
+
+            ResultSet resultSet = statement.executeQuery(query);
+            while(resultSet.next() && !callback.isCanceled()) {
+                callback.add(new TissueDocument(new MooreaFimsSample(resultSet, this)), null);
+            }
+
+        } catch (SQLException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{

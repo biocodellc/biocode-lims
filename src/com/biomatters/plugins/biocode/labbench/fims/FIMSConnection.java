@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
@@ -86,6 +87,8 @@ public abstract class FIMSConnection {
         SoftReference<FimsSample> fimsSampleSoftReference = sampleCache.get(tissueId);
         return fimsSampleSoftReference != null ? fimsSampleSoftReference.get() : null;
     }
+
+    public abstract void getAllSamples(RetrieveCallback callback) throws ConnectionException;
 
     public List<FimsSample> getMatchingSamples(Collection<String> tissueIds) throws ConnectionException{
         List<String> samplesToSearch = new ArrayList<String>();

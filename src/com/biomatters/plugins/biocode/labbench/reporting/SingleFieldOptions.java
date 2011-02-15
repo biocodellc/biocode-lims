@@ -53,7 +53,7 @@ public class SingleFieldOptions extends Options {
                 new Options.OptionValue("Extraction", "Extraction reactions"),
                 new Options.OptionValue("PCR", "PCR reactions"),
                 new Options.OptionValue("CycleSequencing", "Sequencing reactions"),
-                new Options.OptionValue("Sequences", "Sequences")
+                new Options.OptionValue("assembly", "Sequences")
         };
         final Options.ComboBoxOption<Options.OptionValue> reactionType = addComboBoxOption("reactionType", "Number of ", reactionTypes, reactionTypes[0]);
         List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName());

@@ -1,9 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
-import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -118,6 +115,10 @@ public class TAPIRFimsConnection extends FIMSConnection{
 
     public List<DocumentField> getTaxonomyAttributes() {
         return taxonomyAttributes;
+    }
+
+    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
+        throw new RuntimeException("Not Implemented!"); //todo:
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{

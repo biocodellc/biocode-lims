@@ -1,10 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
-import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -15,6 +12,7 @@ import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.biomatters.plugins.biocode.labbench.TissueDocument;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
@@ -273,6 +271,13 @@ public class ExcelFimsConnection extends FIMSConnection{
 
     public List<DocumentField> getTaxonomyAttributes() {
         return taxonomyFields;
+    }
+
+    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
+        Sheet sheet = workbook.getSheet(0);
+        for(int i=1; i < sheet.getRows(); i++) {
+            callback.add(new TissueDocument(new ExcelFimsSample(sheet, i, this)), Collections.<String,Object>emptyMap());
+        }
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) {

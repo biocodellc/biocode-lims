@@ -2,7 +2,11 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import org.jfree.data.DefaultKeyedValues;
 import org.jfree.data.general.DefaultKeyedValuesDataset;
@@ -58,6 +62,18 @@ public class ReportGenerator {
                     counts.put(sfOption.getTableName()+" "+sfOption.getFieldLabel()+" "+sfOption.getValue(), getFieldCount(sfOption));
                     if(chartChangedListener != null)
                         chartChangedListener.objectChanged();
+                }
+            }
+        });
+
+        Options.ButtonOption buttonOption2 = reportingOptions.addButtonOption("button2", "", "Test");
+        buttonOption2.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    FimsToLims.createFimsTable(new ProgressFrame("Copying FIMS", "Copying your FIMS data into the LIMS", 1000, false));
+                } catch (ConnectionException e1) {
+                    e1.printStackTrace();
+                    Dialogs.showMessageDialog(e1.getMessage());
                 }
             }
         });
@@ -164,26 +180,46 @@ public class ReportGenerator {
     }
 
     static DocumentField getField(String reactionType, String fieldCode) {
-        Reaction.Type type = Reaction.Type.valueOf(reactionType);
-        Reaction reaction = getNewReaction(type);
-        return reaction.getDisplayableField(fieldCode);
+        Reaction.Type type = null;
+        try {
+            type = Reaction.Type.valueOf(reactionType);
+            Reaction reaction = getNewReaction(type);
+            return reaction.getDisplayableField(fieldCode);
+        } catch (IllegalArgumentException e) {
+            for(DocumentField field : sequenceFields) {
+                if(field.getCode().equals(fieldCode)) {
+                    return field;
+                }
+            }
+        }
+        assert false;
+        return null;
+    }
+
+    private static List<DocumentField> sequenceFields = new ArrayList<DocumentField>();
+    static {
+        sequenceFields.add(LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS);
+        sequenceFields.add(LIMSConnection.SEQUENCE_ID);
+        sequenceFields.add(LIMSConnection.SEQUENCE_PROGRESS);
+        sequenceFields.add(LIMSConnection.EDIT_RECORD);
     }
 
     public static List<Options.OptionValue> getPossibleFields(String reactionType) {
         List<Options.OptionValue> fields = new ArrayList<Options.OptionValue>();
+        List<DocumentField> displayableFields;
         try {
             Reaction.Type type = Reaction.Type.valueOf(reactionType);
             Reaction reaction = getNewReaction(type);
-            List<DocumentField> displayableFields = reaction.getDisplayableFields();
-            for(DocumentField f : displayableFields){
-                if(f.equals(Reaction.GEL_IMAGE_DOCUMENT_FIELD)) {
-                    continue;
-                }
-                fields.add(new Options.OptionValue(f.getCode(), f.getName()));
-            }
+            displayableFields = reaction.getDisplayableFields();
+
         } catch (IllegalArgumentException e) {
-            //must be a sequence (which has no reaction type)
-            //todo
+            displayableFields = sequenceFields;
+        }
+        for(DocumentField f : displayableFields){
+            if(f.equals(Reaction.GEL_IMAGE_DOCUMENT_FIELD)) {
+                continue;
+            }
+            fields.add(new Options.OptionValue(f.getCode(), f.getName()));
         }
         return fields;
     }
