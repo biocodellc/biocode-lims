@@ -71,6 +71,47 @@ public abstract class FIMSConnection {
 
     public abstract BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument);
 
+    public Condition[] getFieldConditions(Class fieldClass) {
+        if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
+            return new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL,
+                    Condition.GREATER_THAN,
+                    Condition.GREATER_THAN_OR_EQUAL_TO,
+                    Condition.LESS_THAN,
+                    Condition.LESS_THAN_OR_EQUAL_TO
+            };
+        }
+        else if(String.class.equals(fieldClass)) {
+            return new Condition[] {
+                    Condition.CONTAINS,
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL,
+                    Condition.NOT_CONTAINS,
+                    Condition.STRING_LENGTH_GREATER_THAN,
+                    Condition.STRING_LENGTH_GREATER_THAN,
+                    Condition.BEGINS_WITH,
+                    Condition.ENDS_WITH
+            };
+        }
+        else if(Date.class.equals(fieldClass)) {
+            return new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL,
+                    Condition.GREATER_THAN,
+                    Condition.GREATER_THAN_OR_EQUAL_TO,
+                    Condition.LESS_THAN,
+                    Condition.LESS_THAN_OR_EQUAL_TO
+            };
+        }
+        else {
+            return new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL
+            };
+        }
+    }
+
     public final List<FimsSample> getMatchingSamples(Query query) throws ConnectionException {
         List<FimsSample> samples = _getMatchingSamples(query);
         for(FimsSample sample : samples) {

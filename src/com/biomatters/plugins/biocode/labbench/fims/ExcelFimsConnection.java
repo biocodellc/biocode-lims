@@ -276,7 +276,7 @@ public class ExcelFimsConnection extends FIMSConnection{
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
         Sheet sheet = workbook.getSheet(0);
         for(int i=1; i < sheet.getRows(); i++) {
-            callback.add(new TissueDocument(new ExcelFimsSample(sheet, i, this)), Collections.<String,Object>emptyMap());
+            callback.add(new TissueDocument(new TableFimsSample(sheet, i, this)), Collections.<String,Object>emptyMap());
         }
     }
 
@@ -348,7 +348,7 @@ public class ExcelFimsConnection extends FIMSConnection{
                         colMatch = false;
                 }
                 if (colMatch && (operator == CompoundSearchQuery.Operator.OR || i == queriesSize-1)) {
-                    result.add(new ExcelFimsSample(sheet, i, this));
+                    result.add(new TableFimsSample(sheet, i, this));
                     break;
                 } else if (!colMatch && operator == CompoundSearchQuery.Operator.AND) {
                     break;

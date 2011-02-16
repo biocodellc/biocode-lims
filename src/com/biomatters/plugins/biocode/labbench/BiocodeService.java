@@ -12,10 +12,7 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
-import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnection;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
-import com.biomatters.plugins.biocode.labbench.fims.TAPIRFimsConnection;
+import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -297,7 +294,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
-//                new GoogleFimsConnection(),
+                new FusionTablesFimsConnection(),
                 new MooreaFimsConnection(),
                 new TAPIRFimsConnection()
         };
@@ -333,7 +330,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 };
             }
             else {
-                conditions = getFieldConditions(field.getValueType());
+                conditions = limsConnection.getFieldConditions(field.getValueType());
             }
             fieldList.add(new QueryField(field, conditions));
         }
@@ -342,7 +339,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             List<DocumentField> fimsAttributes = activeFIMSConnection.getSearchAttributes();
             if(fimsAttributes != null) {
                 for(DocumentField field : fimsAttributes) {
-                    Condition[] conditions = getFieldConditions(field.getValueType());
+                    Condition[] conditions = activeFIMSConnection.getFieldConditions(field.getValueType());
                     fieldList.add(new QueryField(field, conditions));
                 }
             }
@@ -352,46 +349,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return fieldList.toArray(new QueryField[fieldList.size()]);
     }
 
-    private Condition[] getFieldConditions(Class fieldClass) {
-        if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
-            return new Condition[] {
-                    Condition.EQUAL,
-                    Condition.NOT_EQUAL,
-                    Condition.GREATER_THAN,
-                    Condition.GREATER_THAN_OR_EQUAL_TO,
-                    Condition.LESS_THAN,
-                    Condition.LESS_THAN_OR_EQUAL_TO
-            };
-        }
-        else if(String.class.equals(fieldClass)) {
-            return new Condition[] {
-                    Condition.CONTAINS,
-                    Condition.EQUAL,
-                    Condition.NOT_EQUAL,
-                    Condition.NOT_CONTAINS,
-                    Condition.STRING_LENGTH_GREATER_THAN,
-                    Condition.STRING_LENGTH_GREATER_THAN,
-                    Condition.BEGINS_WITH,
-                    Condition.ENDS_WITH
-            };
-        }
-        else if(Date.class.equals(fieldClass)) {
-            return new Condition[] {
-                    Condition.EQUAL,
-                    Condition.NOT_EQUAL,
-                    Condition.GREATER_THAN,
-                    Condition.GREATER_THAN_OR_EQUAL_TO,
-                    Condition.LESS_THAN,
-                    Condition.LESS_THAN_OR_EQUAL_TO
-            };
-        }
-        else {
-            return new Condition[] {
-                    Condition.EQUAL,
-                    Condition.NOT_EQUAL
-            };
-        }
-    }
 
     @Override
     public List<GeneiousAction> getActionsAlwaysEnabled() {

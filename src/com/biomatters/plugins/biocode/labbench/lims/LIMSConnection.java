@@ -280,6 +280,47 @@ public class LIMSConnection {
         );
     }
 
+    public Condition[] getFieldConditions(Class fieldClass) {
+        if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
+            return new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL,
+                    Condition.GREATER_THAN,
+                    Condition.GREATER_THAN_OR_EQUAL_TO,
+                    Condition.LESS_THAN,
+                    Condition.LESS_THAN_OR_EQUAL_TO
+            };
+        }
+        else if(String.class.equals(fieldClass)) {
+            return new Condition[] {
+                    Condition.CONTAINS,
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL,
+                    Condition.NOT_CONTAINS,
+                    Condition.STRING_LENGTH_GREATER_THAN,
+                    Condition.STRING_LENGTH_GREATER_THAN,
+                    Condition.BEGINS_WITH,
+                    Condition.ENDS_WITH
+            };
+        }
+        else if(Date.class.equals(fieldClass)) {
+            return new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL,
+                    Condition.GREATER_THAN,
+                    Condition.GREATER_THAN_OR_EQUAL_TO,
+                    Condition.LESS_THAN,
+                    Condition.LESS_THAN_OR_EQUAL_TO
+            };
+        }
+        else {
+            return new Condition[] {
+                    Condition.EQUAL,
+                    Condition.NOT_EQUAL
+            };
+        }
+    }
+
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
         return getMatchingAssemblyDocuments(query, workflows, callback, callback);
     }
