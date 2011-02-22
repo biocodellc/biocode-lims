@@ -31,4 +31,6 @@ public class PasswordOptions extends Options{
 
     public void setPasswordsFromOptions(Options enterPasswordOptions) {}
 
+    public void update() {}
+
 }

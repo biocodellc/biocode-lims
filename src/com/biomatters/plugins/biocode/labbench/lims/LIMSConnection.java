@@ -64,16 +64,12 @@ public class LIMSConnection {
     public static final DocumentField EDIT_RECORD = DocumentField.createStringField("Edit Record", "A record of edits made to this sequence", "editRecord", false, false);
     private boolean isLocal;
 
-    public PasswordOptions getConnectionOptions() {
-        return new LimsConnectionOptions(this, this.getClass());
+    public static PasswordOptions getConnectionOptions() {
+        return new LimsConnectionOptions(LIMSConnection.class);
     }
 
-    Options getLocalOptions() {
-        if(localLIMS == null) {
-            localLIMS = new LocalLIMS();
-            localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
-        }
-        return localLIMS.getConnectionOptions();
+    static Options getLocalOptions() {
+        return LocalLIMS.getConnectionOptions();
     }
 
     public boolean isLocal() {

@@ -337,11 +337,11 @@ public class MooreaFimsConnection extends FIMSConnection{
                 String[] tissueIdParts = aquery.getValues()[0].toString().split("\\.");
                 if(tissueIdParts.length == 2) {
                     //noinspection StringConcatenationInsideStringBufferAppend
-                    queryBuilder.append("(biocode_tissue.bnhm_id "+join+" '"+tissueIdParts[0]+"' AND biocode_tissue.tissue_num "+join+" "+tissueIdParts[1]+")");
+                    queryBuilder.append("(biocode_tissue.bnhm_id "+join+" '"+prepend+tissueIdParts[0]+"' AND biocode_tissue.tissue_num "+join+" "+tissueIdParts[1]+")");
                 }
                 else {
                     //noinspection StringConcatenationInsideStringBufferAppend
-                    queryBuilder.append("biocode_tissue.bnhm_id "+join+" '"+aquery.getValues()[0]+"'");
+                    queryBuilder.append("biocode_tissue.bnhm_id "+join+" '"+prepend+aquery.getValues()[0]+append+"'");
                 }
             }
             else if(fieldCode.equals("biocode_collecting_event.CollectionTime")) {

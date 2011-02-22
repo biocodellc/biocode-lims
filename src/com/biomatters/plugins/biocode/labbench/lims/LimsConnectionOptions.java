@@ -11,26 +11,22 @@ import java.util.Collections;
  * @version $Id$
  */
 public class LimsConnectionOptions extends PasswordOptions{
-    private LIMSConnection limsConnection;
     private PasswordOption passwordOption;
     private StringOption usernameOption;
     private Option childOptionsChooser;
     private StringOption serverOption;
 
-    public LimsConnectionOptions(LIMSConnection limsConnection) {
-        this.limsConnection = limsConnection;
+    public LimsConnectionOptions() {
         init();
     }
 
-    public LimsConnectionOptions(LIMSConnection limsConnection, Class cl) {
+    public LimsConnectionOptions(Class cl) {
         super(cl);
-        this.limsConnection = limsConnection;
         init();
     }
 
-    public LimsConnectionOptions(LIMSConnection limsConnection, Class cl, String preferenceNameSuffix) {
+    public LimsConnectionOptions(Class cl, String preferenceNameSuffix) {
         super(cl, preferenceNameSuffix);
-        this.limsConnection = limsConnection;
         init();
     }
 
@@ -45,7 +41,7 @@ public class LimsConnectionOptions extends PasswordOptions{
 
         addChildOptions("remote", "Remote Server", "Connect to a LIMS database on a remote MySQL server", remoteOptions);
 
-        Options localOptions = limsConnection.getLocalOptions();
+        Options localOptions = LIMSConnection.getLocalOptions();
 
 
         addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);

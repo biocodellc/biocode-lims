@@ -38,11 +38,14 @@ public class MarkInLimsUtilities {
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
                         SequenceDocument sequenceToExtract = alignment.getSequence(i);
 
-                        if(selection != null && selection.getSelectedSequenceCount() > 0) {
+                        if(!sequenceSelectionIsEmpty(selection) && selection.getSelectedSequenceCount() > 0) {
                             boolean found = false;
                             for(SequenceSelection.SelectionInterval interval : selection.getIntervals()) {
+                                if(interval.getMinResidue() == interval.getMaxResidue()) {
+                                    continue;
+                                }
                                 if(sequenceToExtract.equals(interval.getSequence())) { //todo
-                                    if(interval.getMinResidue() != sequenceToExtract.getCharSequence().getLeadingGapsLength() || interval.getMaxResidue() != sequenceToExtract.getCharSequence().getTrailingGapsStartIndex()) {
+                                    if(interval.getMinResidue() > sequenceToExtract.getCharSequence().getLeadingGapsLength() || interval.getMaxResidue() < sequenceToExtract.getCharSequence().getTrailingGapsStartIndex()) {
                                         throw new DocumentOperationException("Please select only entire sequences.  Partial sequences cannot be marked as pass or fail");
                                     }
                                     found = true;
@@ -67,6 +70,18 @@ public class MarkInLimsUtilities {
             }
         }
         return docsToMark;
+    }
+
+    private static boolean sequenceSelectionIsEmpty(SequenceSelection selection) {
+        if(selection == null) {
+            return true;
+        }
+        for(SequenceSelection.SelectionInterval interval : selection.getIntervals()) {
+            if(interval.getMinResidue() != interval.getMaxResidue()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

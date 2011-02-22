@@ -53,7 +53,7 @@ public class TissueDocument implements PluginDocument, FimsSample {
     }
 
     public String getName() {
-        return getId();
+        return ""+getId();
     }
 
     public Class getFimsSampleClass() {

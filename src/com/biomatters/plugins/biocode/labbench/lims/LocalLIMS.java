@@ -8,10 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.sql.*;
@@ -29,23 +26,23 @@ public class LocalLIMS {
 
 
 
-    private List<String> dbNames;
-    private File dataDirectory;
+    private static File dataDirectory;
 
-    public void initialize(File dataDirectory) {
+    public static void initialize(File dataDirectory) {
         if(!dataDirectory.exists()) {
             if(!dataDirectory.mkdirs()) {
                 //todo:handle
             }
         }
-        this.dataDirectory = dataDirectory;
-
-        update();
+        LocalLIMS.dataDirectory = dataDirectory;
     }
 
-    private void update() {
+    private static List<String> update() {
         Set<String> dbNamesSet = new LinkedHashSet<String>();
-        for(File f : this.dataDirectory.listFiles()) {
+        if(dataDirectory == null) {
+            return Collections.EMPTY_LIST;
+        }
+        for(File f : dataDirectory.listFiles()) {
             if(f.getName().endsWith(".db.log")) {
                 dbNamesSet.add(f.getName().substring(0, f.getName().length()-7));
             }
@@ -56,13 +53,13 @@ public class LocalLIMS {
                 dbNamesSet.add(f.getName().substring(0, f.getName().length()-10));
             }
         }
-        dbNames = new ArrayList<String>(dbNamesSet);
+        return new ArrayList<String>(dbNamesSet);
     }
 
-    public Options getConnectionOptions() {
-        final Options connectionOptions = new Options(this.getClass());
+    public static Options getConnectionOptions() {
+        final Options connectionOptions = new Options(LocalLIMS.class);
 
-        List<Options.OptionValue> dbValues = getDbValues();
+        List<Options.OptionValue> dbValues = getDbValues(update());
 
         connectionOptions.beginAlignHorizontally("Choose database", false);
         final Options.ComboBoxOption<Options.OptionValue> databaseOption = connectionOptions.addComboBoxOption("database", "", dbValues, dbValues.get(0));
@@ -83,9 +80,9 @@ public class LocalLIMS {
                 Options addDatabaseOptions = new Options(this.getClass());
                 addDatabaseOptions.addStringOption("dbName", "Database name", "");
                 if(Dialogs.showOkCancelDialog(addDatabaseOptions.getPanel(), "Add Database", connectionOptions.getPanel())) {
-                    update();
+                    List<String> dbNames = update();
                     if(databaseOption != null) {
-                        databaseOption.setPossibleValues(getDbValues());
+                        databaseOption.setPossibleValues(getDbValues(dbNames));
                     }
                     String newDbName = addDatabaseOptions.getValueAsString("dbName");
                     for(String s : dbNames) {
@@ -99,9 +96,9 @@ public class LocalLIMS {
                     } catch (SQLException e1) {
                         Dialogs.showMessageDialog("Could not create database: "+e1.getMessage(), "Could not create database", connectionOptions.getPanel(), Dialogs.DialogIcon.WARNING);
                     }
-                    update();
                     if(databaseOption != null) {
-                        databaseOption.setPossibleValues(getDbValues());
+                        dbNames = update();
+                        databaseOption.setPossibleValues(getDbValues(dbNames));
                         databaseOption.setValueFromString(newDbName);
                     }
 
@@ -127,9 +124,8 @@ public class LocalLIMS {
                         ex.printStackTrace();
                         Dialogs.showMessageDialog(ex.getMessage(), "Error deleting database", connectionOptions.getPanel(), Dialogs.DialogIcon.ERROR);
                     } finally {
-                        update();
                         if(databaseOption != null) {
-                            databaseOption.setPossibleValues(getDbValues());
+                            databaseOption.setPossibleValues(getDbValues(update()));
                         }
                     }
                 }
@@ -140,11 +136,11 @@ public class LocalLIMS {
         return connectionOptions;
     }
 
-    private void createDatabase(String newDbName) throws SQLException {
+    private static void createDatabase(String newDbName) throws SQLException {
         try {
-            InputStream scriptStream = getClass().getResourceAsStream(SCRIPT_NAME);
+            InputStream scriptStream = LocalLIMS.class.getResourceAsStream(SCRIPT_NAME);
             if(scriptStream == null) {
-                throw new FileNotFoundException("Could not find resource "+getClass().getPackage().getName()+"."+SCRIPT_NAME);
+                throw new FileNotFoundException("Could not find resource "+LocalLIMS.class.getPackage().getName()+"."+SCRIPT_NAME);
             }
             try {
                 Class.forName("org.hsqldb.jdbc.JDBCDriver");
@@ -159,7 +155,7 @@ public class LocalLIMS {
         } 
     }
 
-    private void deleteDatabase(String dbName) throws IOException{
+    private static void deleteDatabase(String dbName) throws IOException{
         String[] extensions = new String[] {"properties", "script", "log", "data", "backup", "lobs", "lck", "tmp"};
         for(String extension : extensions) {
             File dbFile = new File(getDbPath(dbName)+"."+extension);
@@ -172,11 +168,11 @@ public class LocalLIMS {
         }
     }
 
-    private String getDbPath(String newDbName) throws IOException {
+    private static String getDbPath(String newDbName) throws IOException {
         return dataDirectory.getCanonicalPath() + File.separator + newDbName + ".db";
     }
 
-    private List<Options.OptionValue> getDbValues() {
+    private static List<Options.OptionValue> getDbValues(List<String> dbNames) {
         List<Options.OptionValue> dbValues = new ArrayList<Options.OptionValue>();
         for(String s : dbNames) {
             dbValues.add(new Options.OptionValue(s,s));

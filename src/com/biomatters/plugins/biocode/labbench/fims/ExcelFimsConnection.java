@@ -20,6 +20,8 @@ import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -84,13 +86,42 @@ public class ExcelFimsConnection extends FIMSConnection{
         storePlates.addDependent(plateWell, true);
 
         options.addLabel(" ");
+        options.beginAlignHorizontally("", false);
         options.addLabel("Specify your taxonomy fields, in order of highest to lowest");
+        Options.ButtonOption autodetectTaxonomyButton = options.addButtonOption("autodetectTaxonomy", "", "Autodetect");
+        options.endAlignHorizontally();
         Options taxonomyOptions = new Options(this.getClass());
         taxonomyOptions.beginAlignHorizontally("", false);
         final Options.ComboBoxOption<Options.OptionValue> taxCol = taxonomyOptions.addComboBoxOption("taxCol", "", cols, cols.get(0));
         taxonomyOptions.endAlignHorizontally();
 
         final Options.MultipleOptions taxOptions = options.addMultipleOptions("taxFields", taxonomyOptions, false);
+
+        autodetectTaxonomyButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                taxOptions.restoreDefaults();
+                int foundCount = 0;
+                for(String s : BiocodeUtilities.taxonomyNames) {
+                    for(Options.OptionValue ov : taxCol.getPossibleOptionValues()) {
+                        if(ov.getLabel().equalsIgnoreCase(s)) {
+                            Options newOptions;
+                            if(foundCount == 0) {
+                                newOptions = taxOptions.getValues().get(0);
+                            }
+                            else {
+                                newOptions = taxOptions.addValue(false);
+                            }
+                            Options.ComboBoxOption<Options.OptionValue> list = (Options.ComboBoxOption<Options.OptionValue>)newOptions.getOption("taxCol");
+                            list.setValueFromString(ov.getName());
+                            foundCount ++;
+                        }
+                    }
+                }
+                if(foundCount == 0) {
+                    taxOptions.addValue(true);
+                }
+            }
+        });
 
         fileLocation.addChangeListener(new SimpleListener(){
             public void objectChanged() {

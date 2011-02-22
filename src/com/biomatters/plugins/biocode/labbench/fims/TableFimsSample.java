@@ -95,7 +95,11 @@ public class TableFimsSample implements FimsSample {
         Element values = new Element("values");
         for(Map.Entry entry : this.values.entrySet()) {
             Element entryElement = new Element("entry");
-            entryElement.addContent(new Element("key").setText(entry.getKey().toString()));
+            Object key = entry.getKey();
+            if(key == null) {
+                continue;
+            }
+            entryElement.addContent(new Element("key").setText(key.toString()));
             Object value = entry.getValue();
             entryElement.addContent(new Element("value").setText(value != null ? XmlUtilities.encodeXMLChars(value.toString()) : ""));
             values.addContent(entryElement);

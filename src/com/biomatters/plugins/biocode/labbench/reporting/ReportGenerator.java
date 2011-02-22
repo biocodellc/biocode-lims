@@ -66,17 +66,17 @@ public class ReportGenerator {
             }
         });
 
-        Options.ButtonOption buttonOption2 = reportingOptions.addButtonOption("button2", "", "Test");
-        buttonOption2.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    FimsToLims.createFimsTable(new ProgressFrame("Copying FIMS", "Copying your FIMS data into the LIMS", 1000, false));
-                } catch (ConnectionException e1) {
-                    e1.printStackTrace();
-                    Dialogs.showMessageDialog(e1.getMessage());
-                }
-            }
-        });
+//        Options.ButtonOption buttonOption2 = reportingOptions.addButtonOption("button2", "", "Test");
+//        buttonOption2.addActionListener(new ActionListener() {
+//            public void actionPerformed(ActionEvent e) {
+//                try {
+//                    FimsToLims.createFimsTable(new ProgressFrame("Copying FIMS", "Copying your FIMS data into the LIMS", 1000, false));
+//                } catch (ConnectionException e1) {
+//                    e1.printStackTrace();
+//                    Dialogs.showMessageDialog(e1.getMessage());
+//                }
+//            }
+//        });
 
         return reportingOptions.getPanel();
     }

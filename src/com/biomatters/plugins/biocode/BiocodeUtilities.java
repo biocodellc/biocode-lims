@@ -43,6 +43,13 @@ public class BiocodeUtilities {
     public static final DocumentField WORKFLOW_NAME_FIELD = DocumentField.createStringField("Workflow Name", "The name of the workflow that generated this trace", "workflowName", false, false);
     public static final DocumentField TRACE_ID_FIELD = DocumentField.createStringField("Trace ID", "A concatenation of the sequencing plate and well", "traceId", false, false);
     public static final DocumentField EXTRACTION_BARCODE_FIELD = DocumentField.createStringField("Extraction Barcode", "The code of the 2D-barcode on the well containing the extraction (if present)", "extractionBarcode", true, false);
+    public static final String[] taxonomyNames = new String [] {"kingdom", "phylum", "subphylum", "sub phylum",
+            "sub-phylum", "superclass", "super class", "super-class", "class", "subclass", "sub class", "sub-class",
+            "infraclass", "infra class", "infra-class", "superorder", "super order", "super-order", "ordr", "order",
+            "suborder", "sub order", "sub-order", "infraorder", "infra order", "infra-order", "superfamily",
+            "super family", "super-family", "family", "tribe", "subtribe", "sub tribe", "sub-tribe", "genus",
+            "subgenus", "sub genus", "sub-genus", "specificepithet", "specific epithet", "subspecificepithet",
+            "subspecific epithet", "scientificname", "scientific name"};
 
     public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
         DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");

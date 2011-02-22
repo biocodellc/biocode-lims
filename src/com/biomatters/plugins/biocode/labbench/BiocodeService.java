@@ -421,6 +421,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         loggingIn = true;
         //load the connection driver -------------------------------------------------------------------
         String driverFileName = connectionManager.getSqlLocationOptions();
+        try {
+            new XMLOutputter().output(connection.loginOptionsValues, System.out);
+        } catch (IOException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
 
         String error = null;
 
@@ -1557,7 +1562,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     protected void initialize(GeneiousServiceListener listener) {
         initializeConnectionManager();
-        listener.childServiceAdded(new ReportingService());
+        //listener.childServiceAdded(new ReportingService());
 
 
         if(connectionManager.connectOnStartup()) {

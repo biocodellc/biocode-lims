@@ -119,21 +119,6 @@ public class ConnectionManager implements XMLSerializable{
         return preferences;
     }
 
-    private static Options createLoginOptions() {
-        Options fimsOptions = new Options(ConnectionManager.class);
-        for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
-            fimsOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new PasswordOptions(BiocodeService.class));
-        }
-        fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
-
-        PasswordOptions limsOptions = limsConnection.getConnectionOptions();
-
-        Options loginOptions = new Options(ConnectionManager.class);
-        loginOptions.addChildOptions("fims", null, null, fimsOptions);
-        loginOptions.addChildOptions("lims", null, null, limsOptions);
-        return loginOptions;
-    }
-
 
     /**
      *
@@ -431,9 +416,9 @@ public class ConnectionManager implements XMLSerializable{
     }
 
     public static class Connection implements XMLSerializable{
-        private Options loginOptions;
+        private LoginOptions loginOptions;
         private String name;
-        private Element loginOptionsValues;
+        Element loginOptionsValues;
         private List<SimpleListener> nameChangedListeners = new ArrayList<SimpleListener>();
 
 
@@ -449,7 +434,7 @@ public class ConnectionManager implements XMLSerializable{
 
         public Connection(String name, Element connectionOptions) {
             this.name = name;
-            loginOptions = createLoginOptions();
+            loginOptions = new LoginOptions(ConnectionManager.class);
             loginOptions.valuesFromXML(connectionOptions);
             this.loginOptionsValues = connectionOptions;
         }
@@ -460,7 +445,7 @@ public class ConnectionManager implements XMLSerializable{
         }
 
         private void setLocationOptions() {
-            this.loginOptions = createLoginOptions();
+            createLoginOptions();
         }
 
         public boolean optionsCreated() {
@@ -557,7 +542,7 @@ public class ConnectionManager implements XMLSerializable{
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 if(loginOptionsValues != null) {
-                                    loginOptions.valuesFromXML(loginOptionsValues);
+                                    createLoginOptions();
                                 }
                                 panel.removeAll();
                                 panel.add(nameOptions.getPanel(), BorderLayout.NORTH);
@@ -634,16 +619,24 @@ public class ConnectionManager implements XMLSerializable{
 
         public PasswordOptions getFimsOptions() {
             if(loginOptions == null) {
-                loginOptions = createLoginOptions();
-                ThreadUtilities.invokeNowOrWait(new Runnable() {
-                    public void run() {
-                        loginOptions.valuesFromXML(loginOptionsValues);
-                    }
-                });
+                createLoginOptions();
             }
             Options fimsOptions = loginOptions.getChildOptions().get("fims");
             String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
             return (PasswordOptions)fimsOptions.getChildOptions().get(selectedFimsServiceName);
+        }
+
+        private void createLoginOptions() {
+            loginOptions = new LoginOptions(ConnectionManager.class);
+            if(loginOptionsValues != null) {
+                ThreadUtilities.invokeNowOrWait(new Runnable() {
+                    public void run() {
+                        loginOptions.valuesFromXML(loginOptionsValues);
+                        loginOptions.updateOptions();
+                        loginOptions.valuesFromXML(loginOptionsValues);
+                    }
+                });
+            }
         }
 
         public PasswordOptions getLimsOptions() {

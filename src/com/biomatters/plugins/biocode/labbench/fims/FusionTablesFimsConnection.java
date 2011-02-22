@@ -377,9 +377,11 @@ public class FusionTablesFimsConnection extends FIMSConnection{
             boolean firstTime = true;
             String line = null;
             while ((line = reader.readLine()) != null) {
-                line = URLDecoder.decode(line, "UTF-8");
                 System.out.println(line);
-                String[] elements = line.split(",");
+                String[] elements = tokenizeLine(line);
+                if(!firstTime) {
+                    System.out.println(colHeaders.size()+", "+ elements.length);
+                }
                 for (int i = 0; i < elements.length; i++) {
                     String element = elements[i];
                     String decoded = (element == null || element.length() == 0) ? null : element.replaceAll("\"\"", "\"").trim();
@@ -414,7 +416,12 @@ public class FusionTablesFimsConnection extends FIMSConnection{
         for(DocumentField field : columns) {
             if(field.getName().equals(columnName)) {
                 if(Double.class.isAssignableFrom(field.getValueType())) {
-                    return Double.parseDouble(value);
+                    try {
+                        return Double.parseDouble(value);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Not a number: "+field.getName()+", "+value);
+                        return null;
+                    }
                 }
                 else if(Date.class.isAssignableFrom(field.getValueType())) {
                     try {
@@ -424,7 +431,8 @@ public class FusionTablesFimsConnection extends FIMSConnection{
                             return new SimpleDateFormat("yyyy").parse(value);
                         } catch (ParseException e1) {
                             e.printStackTrace();
-                            assert false : e.getMessage();
+                            //assert false : e.getMessage();
+                            System.out.println("Not a date: "+columnName+", "+value);
                             return null;
                         }
                     }
@@ -456,7 +464,7 @@ public class FusionTablesFimsConnection extends FIMSConnection{
             boolean firstTime = true;
             String line = null;
             while ((line = reader.readLine()) != null) {
-                String[] elements = line.split(",");
+                String[] elements = tokenizeLine(line);
                 for (int i = 0; i < elements.length; i++) {
                     String element = elements[i];
                     String decoded = element == null ? "" : element.replaceAll("\"\"", "\"");
@@ -481,6 +489,32 @@ public class FusionTablesFimsConnection extends FIMSConnection{
             throw new ConnectionException(e.getMessage(), e);
         }
 
+    }
+
+    /**
+     * splits a line into tokens on commas, but keeps text inside quotes together
+     * @param line the line to tokenize
+     * @return the line tokenized as described above
+     */
+     static String[] tokenizeLine(String line) {
+        List<String> tokens = new ArrayList<String>();
+        int previousSplitIndex = 0;
+        boolean inAQuote = false;
+        for(int i=0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if(c == '\"') {
+                inAQuote = !inAQuote;
+            }
+            if(!inAQuote){
+                if(c == ',' || i == line.length()-1) {
+                    int splitIndex = i == line.length() -1 ? i+1 : i;
+                    String token = line.substring(previousSplitIndex, splitIndex);
+                    tokens.add(token.replace("\"", "").trim());
+                    previousSplitIndex = i+1;
+                }
+            }
+        }
+        return tokens.toArray(new String[tokens.size()]);
     }
 
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException {
