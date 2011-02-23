@@ -121,6 +121,14 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 issueTracker.setIssue(annotatedDocument, errorString);
                 continue;
             }
+            if(options.removePreviousSequences()) {
+                try {
+                    removeAllExistingSequencesInDatabase(assemblyResult);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    throw new DocumentOperationException("Could not remove existing sequences: "+e.getMessage(), e);
+                }
+            }
 
             Double coverage = (Double) annotatedDocument.getFieldValue(DocumentField.CONTIG_MEAN_COVERAGE);
             Integer disagreements = (Integer) annotatedDocument.getFieldValue(DocumentField.DISAGREEMENTS);
@@ -161,6 +169,22 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             return null;
         }
         return results;
+    }
+
+    private int removeAllExistingSequencesInDatabase(AssemblyResult assemblyResult) throws SQLException, DocumentOperationException {
+        if(assemblyResult.workflowId == null || assemblyResult.extractionId == null) {
+            return 0;
+        }
+
+        String sql = "DELETE FROM assembly WHERE workflow=? AND extraction_id=?";
+        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+        if(limsConnection == null) {
+            throw new DocumentOperationException("You have been disconnected from the LIMS database.  Please reconnect and try again.");
+        }
+        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);
+        statement.setInt(1, assemblyResult.workflowId);
+        statement.setString(2, assemblyResult.extractionId);
+        return statement.executeUpdate();
     }
 
     private String getChromatogramProperties(Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,

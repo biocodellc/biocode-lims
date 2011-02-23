@@ -18,6 +18,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
     private BooleanOption addChromatogramsOption;
     private Option<String, ? extends JComponent> warningLabel;
     private Option<String,? extends JComponent> downloadLabel;
+    private BooleanOption removePrevious;
 
     public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents, boolean passed) throws DocumentOperationException {
 //        boolean isAlignmentSelected = SequenceAlignmentDocument.class.isAssignableFrom(documents[0].getDocumentClass());
@@ -42,6 +43,8 @@ public class AddAssemblyResultsToLimsOptions extends Options {
                                                     "chromatograms will be attached to the appropriate cycle sequencing entry in the LIMS</html>");
         addStringOption("technician", "Your name", "");
         addMultipleLineStringOption("notes", "Notes", "", 5, true);
+        removePrevious = addBooleanOption("removePrevious", "Remove previous entries for " + (documents.length > 1 || contigSelected ? "these workflows." : "this workflow."), false);
+        removePrevious.setDescription("<html>Normally marking as pass or failed always creates a new sequence entry.  <br>Use this option if you are correcting a previous entry, and wish to erase it from the database.</html>");
         if (contigSelected) {
             Options consensusOptions = BiocodeUtilities.getConsensusOptions(documents);
             if (consensusOptions == null) {
@@ -62,6 +65,10 @@ public class AddAssemblyResultsToLimsOptions extends Options {
 
     public boolean isAddChromatograms() {
         return addChromatogramsOption.getValue();
+    }
+
+    public boolean removePreviousSequences() {
+        return removePrevious.getValue();
     }
 
     @Override
