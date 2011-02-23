@@ -153,7 +153,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 //                }
 //                continue;
 //            }
-            assemblyResult.setContigProperties(annotatedDocument, consensus.getSequenceString(), qualities, coverage, disagreements, trims, edits, ambiguities, bin);
+            assemblyResult.setContigProperties(annotatedDocument, consensus, qualities, coverage, disagreements, trims, edits, ambiguities, bin);
 //            workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
             results.add(assemblyResult);
         }
@@ -268,6 +268,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         public String extractionId;
         public Integer workflowId;
         public String consensus;
+        public SequenceDocument consensusDoc;
         public Double coverage;
         public Integer disagreements;
         public String[] trims;
@@ -282,6 +283,19 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         public void setContigProperties(AnnotatedPluginDocument assembly, String consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, Integer edits, Integer ambiguities, String bin) {
             this.consensus = consensus;
+            this.coverage = coverage;
+            this.disagreements = disagreements;
+            this.trims = trims;
+            this.edits = edits;
+            this.ambiguities = ambiguities;
+            this.bin = bin;
+            this.qualities = qualities;
+            this.assembly = assembly;
+        }
+
+        public void setContigProperties(AnnotatedPluginDocument assembly, SequenceDocument consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, Integer edits, Integer ambiguities, String bin) {
+            this.consensusDoc = consensus;
+            this.consensus = consensusDoc.getSequenceString();
             this.coverage = coverage;
             this.disagreements = disagreements;
             this.trims = trims;
@@ -426,7 +440,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     statement.setNull(18, Types.INTEGER);
                 }
                 if(LIMSConnection.EXPECTED_SERVER_VERSION >= 9) {
-                    statement.setString(19, MarkInLimsUtilities.getEditRecords(result.assembly));
+                    statement.setString(19, MarkInLimsUtilities.getEditRecords(result.assembly, result.consensusDoc));
                 }
 
                 statement.execute();

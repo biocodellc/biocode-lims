@@ -108,9 +108,9 @@ public class MarkInLimsUtilities {
      * @return the edit annotations, serialized to string as above.
      * @throws DocumentOperationException
      */
-    static String getEditRecords(AnnotatedPluginDocument doc) throws DocumentOperationException{
+    static String getEditRecords(AnnotatedPluginDocument doc, SequenceDocument consensus) throws DocumentOperationException{
         if(SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-            return getEditRecords((SequenceAlignmentDocument)doc.getDocument());
+            return getEditRecords((SequenceAlignmentDocument)doc.getDocument(), consensus);
         }
         else if(SequenceDocument.class.isAssignableFrom(doc.getDocumentClass())){
             return getEditRecords((SequenceDocument)doc.getDocument(), getPlateLocationOrName(doc));
@@ -121,8 +121,11 @@ public class MarkInLimsUtilities {
 
 
 
-    private static String getEditRecords(SequenceAlignmentDocument contig) throws DocumentOperationException{
+    private static String getEditRecords(SequenceAlignmentDocument contig, SequenceDocument consensus) throws DocumentOperationException{
         List<String> editEntries = new ArrayList<String>();
+        if(consensus != null) {
+            editEntries.add(getEditRecords(consensus, "consensus"));
+        }
         for (int i = 0; i < contig.getSequences().size(); i++) {
             SequenceDocument doc = contig.getSequences().get(i);
             if (i == contig.getContigReferenceSequenceIndex()) {
@@ -168,7 +171,7 @@ public class MarkInLimsUtilities {
                 editRecords.add(annotation.getType() + ":" + annotation.getQualifierValue(SequenceAnnotationQualifier.EDITING_HISTORY_ORIGINAL_BASES)+","+getBases(doc.getCharSequence(), interval)+","+interval.getMinimumIndex()+","+interval.getMaximumIndex());
             }
         }
-        String value = null;
+        String value = "";
         if (editRecords.size() > 0) {
             builder.append(StringUtilities.join(",", editRecords));
             builder.append("]");
