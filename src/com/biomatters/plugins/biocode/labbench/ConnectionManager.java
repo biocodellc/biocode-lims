@@ -583,10 +583,10 @@ public class ConnectionManager implements XMLSerializable{
                 connectionElement.addContent(loginOptions.valuesToXML("connectionOptions"));
             }
             else if(loginOptionsValues != null) {
-                connectionElement.addContent(loginOptionsValues.detach());
+                connectionElement.addContent((Element)loginOptionsValues.clone());
             }
             else {
-                throw new RuntimeException("We have a connection with no options or options values!");
+                throw new RuntimeException("The connection "+getName()+" has no options or options values!");
             }
             connectionElement.addContent(new Element("Name").setText(name));
             return connectionElement;
