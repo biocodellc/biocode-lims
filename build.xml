@@ -5,7 +5,6 @@
 
    <property file="plugin.properties"/>
    <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
-   <property name="plugin-build" location="build"/>
    <property name="classes" location="bin"/>
    <property name="lib" location="lib"/>
    <property name="resources" location="resources"/>
@@ -24,46 +23,34 @@
       <pathelement location="testdata"/>
    </path>
 
-   <target name="dist" depends="build">
+   <target name="dist">
       <zip zipfile="${dist}/${short-plugin-name}.gplugin">
-         <fileset dir="${plugin-build}"/>
+         <fileset dir="${build.externalPlugins}/${plugin-name}"/>
       </zip>
    </target>
 
-   <!--<target name= "dist" depends="build">-->
-      <!--<copy file="${plugin-build}/${plugin.name}.jar"-->
-            <!--tofile="${dist}/${short-plugin-name}.gplugin"/>-->
-   <!--</target>-->
-
    <target name="install-for-test" depends="build">
-      <move file="${plugin-build}/${plugin-name}" todir="${build.plugins}"/>
+      <move file="${build.externalPlugins}/${plugin-name}" todir="${build.plugins}"/>
    </target>
 
    <target name="build" depends="compile">
-      <jar jarfile="${plugin-build}/${plugin-name}/${short-plugin-name}.jar">
+      <jar jarfile="${build.externalPlugins}/${plugin-name}/${short-plugin-name}.jar">
          <fileset dir="${classes}"/>
          <fileset dir="${resources}">
             <exclude name="plugin.properties"/>
          </fileset>
       </jar>
-      <copy todir="${plugin-build}/${plugin-name}">
+      <copy todir="${build.externalPlugins}/${plugin-name}">
          <fileset dir="${lib}"/>
          <fileset dir="">
             <include name="plugin.properties"/>
          </fileset>
       </copy>
+      <echo file="${plugins.proguard}" append="true"
+            message="-injars ${build.externalPlugins}/${plugin-name}/${plugin-name}.jar${line.separator}"/>
+      <echo file="${plugins.proguard}" append="true"
+            message="-outjars ${build.externalPlugins}/${plugin-name}/${plugin-name}-obfuscated.jar${line.separator}"/>
    </target>
-
-   <!--<target name="build" depends="compile">-->
-      <!--<jar jarfile="${plugin-build}/${plugin.name}.jar">-->
-         <!--<fileset dir="${classes}"/>-->
-         <!--<fileset dir="${resources}"/>-->
-         <!--<fileset dir="${lib}"/>-->
-         <!--<fileset dir="">-->
-            <!--<include name="plugin.properties"/>-->
-         <!--</fileset>-->
-      <!--</jar>-->
-   <!--</target>-->
 
    <target name="compile" depends="build-public-api, prepare">
       <javac destdir="${classes}" debug="true" target="1.5">
@@ -80,12 +67,12 @@
    </target>
 
    <target name="prepare" depends="clean">
-      <mkdir dir="${plugin-build}/${plugin-name}"/>
+      <mkdir dir="${build.externalPlugins}/${plugin-name}"/>
       <mkdir dir="${classes}"/>
    </target>
 
    <target name="clean">
-      <delete dir="${plugin-build}"/>
+      <delete dir="${build.externalPlugins}/${plugin-name}"/>
       <delete dir="${classes}"/>
       <delete  file="${dist}/${short-plugin-name}.gplugin"/>
    </target>
