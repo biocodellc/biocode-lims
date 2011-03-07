@@ -147,7 +147,7 @@ public class BarstoolExportHandler {
                 //noinspection ResultOfMethodCallIgnored
                 FileUtilities.deleteFileOrDirectory(file, true);
             }
-            if (!(e instanceof DocumentOperationException.Canceled)) {
+            if (!e.isCanceled()) {
                 throw e;
             }
         }
