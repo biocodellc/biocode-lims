@@ -30,26 +30,26 @@
    </target>
 
    <target name="install-for-test" depends="build">
-      <move file="${build.externalPlugins}/${plugin-name}" todir="${build.plugins}"/>
+      <move file="${build.externalPlugins}/${plugin-name}/${plugin-name}" todir="${build.plugins}"/>
    </target>
 
    <target name="build" depends="compile">
-      <jar jarfile="${build.externalPlugins}/${plugin-name}/${short-plugin-name}.jar">
+      <jar jarfile="${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar">
          <fileset dir="${classes}"/>
          <fileset dir="${resources}">
             <exclude name="plugin.properties"/>
          </fileset>
       </jar>
-      <copy todir="${build.externalPlugins}/${plugin-name}">
+      <copy todir="${build.externalPlugins}/${plugin-name}/${plugin-name}">
          <fileset dir="${lib}"/>
          <fileset dir="">
             <include name="plugin.properties"/>
          </fileset>
       </copy>
       <echo file="${plugins.proguard}" append="true"
-            message="-injars ${build.externalPlugins}/${plugin-name}/${short-plugin-name}.jar${line.separator}"/>
+            message="-injars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar${line.separator}"/>
       <echo file="${plugins.proguard}" append="true"
-            message="-outjars ${build.externalPlugins}/${plugin-name}/${short-plugin-name}-obfuscated.jar${line.separator}"/>
+            message="-outjars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}-obfuscated.jar${line.separator}"/>
    </target>
 
    <target name="compile" depends="build-public-api, prepare">
@@ -67,7 +67,7 @@
    </target>
 
    <target name="prepare" depends="clean">
-      <mkdir dir="${build.externalPlugins}/${plugin-name}"/>
+      <mkdir dir="${build.externalPlugins}/${plugin-name}/${plugin-name}"/>
       <mkdir dir="${classes}"/>
    </target>
 
