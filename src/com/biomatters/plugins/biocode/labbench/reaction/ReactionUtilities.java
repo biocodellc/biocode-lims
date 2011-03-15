@@ -155,7 +155,10 @@ public class ReactionUtilities {
         final DocumentField finalField = field;
         Runnable runnable = new Runnable() {
             public void run() {
-                importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
+                int count = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
+                if(count >= 0) {
+                    Dialogs.showMessageDialog("Imported "+count+" traces");
+                }
             }
         };
         BiocodeService.block("Importing traces", owner, runnable);
@@ -202,22 +205,24 @@ public class ReactionUtilities {
      * @param flipPlate
      * @param checkNames
      */
-    private static void importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames) {
+    private static int importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (SQLException e) {
             e.printStackTrace();
             Dialogs.showMessageDialog("Error reading existing sequences from database: "+e.getMessage());
-            return;
+            return -1;
         } catch (IOException e) {
             e.printStackTrace();
             Dialogs.showMessageDialog("Error writing temporary sequences to disk: "+e.getMessage());
-            return;
+            return -1;
         } catch (DocumentImportException e) {
             e.printStackTrace();
             Dialogs.showMessageDialog("Error importing existing sequences: "+e.getMessage());
-            return;
+            return -1;
         }
+
+        int count = 0;
 
         for(File f : folder.listFiles()) {
             if(f.isHidden()) {
@@ -226,26 +231,20 @@ public class ReactionUtilities {
             if(f.getName().startsWith(".")) { //stupid macos files
                 continue;
             }
-            BiocodeUtilities.Well originalWell;
-            BiocodeUtilities.Well newWell;
+            BiocodeUtilities.Well originalWell = null;
+            BiocodeUtilities.Well newWell = null;
             if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
                 String[] nameParts = f.getName().split(separatorString);
-                CycleSequencingReaction r;
+                CycleSequencingReaction r = null;
                 if(fieldToCheck != null && nameParts.length > partToMatch) {
+                    String fieldValue = nameParts[partToMatch];
 
-                    //get the correct well (either flipped or not)
-                    String wellName = nameParts[partToMatch];
-                    try {
-                        originalWell = new BiocodeUtilities.Well(wellName);
-                        int location = flipPlate ? plateSize.numberOfReactions()-Plate.getWellLocation(originalWell, plateSize)-1 : Plate.getWellLocation(originalWell, plateSize);
-                        newWell = Plate.getWell(location, plateSize);
-                    } catch (IllegalArgumentException e) {
-                        continue; //the well string isn't a valid well...
-                    }
-
-                    r = getReaction(reactions, fieldToCheck, newWell);
-                    if(r == null) {
-                        continue;
+                    for(CycleSequencingReaction reaction : reactions) {
+                        if(fieldValue.toString().equals(""+reaction.getDisplayableValue(fieldToCheck))) {
+                            r = reaction;
+                            newWell = new BiocodeUtilities.Well(r.getLocationString());
+                            break;
+                        }
                     }
                 }
                 else {
@@ -256,9 +255,9 @@ public class ReactionUtilities {
 
                     String wellString = newWell.toString();
                     r = getReaction(reactions, wellString);
-                    if(r == null) {
-                        continue;
-                    }
+                }
+                if(r == null) {
+                    continue;
                 }
                 if(checkPlate) {
                     if(nameParts.length >= platePart) {
@@ -302,11 +301,12 @@ public class ReactionUtilities {
                     e.printStackTrace();
                 }
 
-
+                count += files.size();
                 r.addSequences(sequences, files);
 
             }
         }
+        return count;
     }
 
     public static MemoryFile loadFileIntoMemory(File f) throws IOException{
@@ -813,6 +813,7 @@ public class ReactionUtilities {
         if(srcReaction.getType() != Reaction.Type.Extraction && locus != null) {
             destReaction.getOptions().setValue("locus", locus);
         }
+        destReaction.setFimsSample(srcReaction.getFimsSample());
         destReaction.setWorkflow(srcReaction.getWorkflow());
         if(destReaction.getType() == Reaction.Type.Extraction) {
             FimsSample fimsSample = srcReaction.getFimsSample();

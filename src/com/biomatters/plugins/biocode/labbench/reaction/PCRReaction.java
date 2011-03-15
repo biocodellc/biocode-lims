@@ -193,6 +193,10 @@ public class PCRReaction extends Reaction<PCRReaction> {
             else {
                 samplesToGet.add(tissue);
             }
+            if(reaction.getLocus() == null || reaction.getLocus().length() == 0 || reaction.getLocus().equalsIgnoreCase("none")) {
+                error += "The reaction in well '"+reaction.getLocationString()+"' does not have a valid locus\n";
+                reaction.isError = true;
+            }
         }
 
 
@@ -212,7 +216,6 @@ public class PCRReaction extends Reaction<PCRReaction> {
                     }
                     FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
                     if(currentFimsSample != null) {
-                        reaction.isError = false;
                         reaction.setFimsSample(currentFimsSample);
                     }
                 }
@@ -228,7 +231,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
             if(reaction.getWorkflow() != null && !reaction.getWorkflow().getName().equals(workflowId)) {
                 reaction.setWorkflow(null);
             }
-            if(!reaction.isEmpty() && (reaction.getLocus() == null || reaction.getLocus().length() == 0)) {
+            if(!reaction.isEmpty() && reaction.getExtractionId().length() != 0 && (reaction.getLocus() == null || reaction.getLocus().length() == 0)) {
                 reaction.setHasError(true);
                 error += "The reaction "+reaction.getExtractionId()+" does not have a locus set.<br>";   
             }

@@ -422,7 +422,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         //load the connection driver -------------------------------------------------------------------
         String driverFileName = connectionManager.getSqlLocationOptions();
         try {
-            new XMLOutputter().output(connection.loginOptionsValues, System.out);
+            new XMLOutputter().output(connection.getXml(true), System.out);
         } catch (IOException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
@@ -678,7 +678,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap()) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap());
 
-            if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments") || (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
+            if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
                 callback.setMessage("Downloading Workflows");
                 workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null, callback);
             }
@@ -687,7 +687,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
 
             Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
-            workflowsToSearch.addAll(workflowList);
+            //workflowsToSearch.addAll(workflowList);
 //            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
 //                for(PluginDocument doc : workflowList) {
 //                    callback.add(doc, Collections.<String, Object>emptyMap());
@@ -1714,6 +1714,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             //int workflowCount = 0;
             List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
+                if(reaction.getType() == Reaction.Type.Extraction) {
+                    continue;
+                }
                 Object extractionId = reaction.getFieldValue("extractionId");
                 if(!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
                     reactionsWithoutWorkflows.add(reaction);

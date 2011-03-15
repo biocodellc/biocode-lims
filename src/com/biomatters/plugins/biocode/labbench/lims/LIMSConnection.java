@@ -8,7 +8,6 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
@@ -58,11 +57,20 @@ public class LIMSConnection {
     public static final DocumentField WORKFLOW_LOCUS_FIELD = new DocumentField("Locus", "The locus of the workflow", "locus", String.class, true, false);
     public static final DocumentField EXTRACTION_NAME_FIELD = new DocumentField("Extraction ID", "The Extraction ID", "extraction.extractionId", String.class, true, false);
     public static final DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", String.class, true, false);
-    public static final DocumentField SEQUENCE_PROGRESS = DocumentField.createEnumeratedField(new String[] {"passed", "failed"}, "Sequence Progress", "Whether the sequence passed or failed sequencing and assembly", "progress", true, false);
-    public static final DocumentField SEQUENCE_SUBMISSION_PROGRESS = DocumentField.createEnumeratedField(new String[] {"Yes", "No"}, "Sequence Submitted", "Indicates whether this sequence has been submitte to a sequence database (e.g. Genbank)", "submitted", false, false);
+    public static final DocumentField SEQUENCE_PROGRESS = DocumentField.createEnumeratedField(new String[] {"passed", "failed"}, "Sequence Progress", "Whether the sequence passed or failed sequencing and assembly", "assembly.progress", true, false);
+    public static final DocumentField SEQUENCE_SUBMISSION_PROGRESS = DocumentField.createEnumeratedField(new String[]{"Yes", "No"}, "Sequence Submitted", "Indicates whether this sequence has been submitte to a sequence database (e.g. Genbank)", "assembly.submitted", false, false);
     public static final DocumentField SEQUENCE_ID = DocumentField.createIntegerField("LIMS Sequence ID", "The Unique ID of this sequence in LIMS", "LimsSequenceId", false, false);
     public static final DocumentField EDIT_RECORD = DocumentField.createStringField("Edit Record", "A record of edits made to this sequence", "editRecord", false, false);
+    public static final DocumentField ASSEMBLY_TECHNICIAN = DocumentField.createStringField("Assembly Technician", "", "assembly.technician", false, false);
     private boolean isLocal;
+    private String PLATE_NAME = "plate.name";
+    private final String PLATE_TYPE = "plate.type";
+    private final String PLATE_DATE = "plate.date";
+    private final String WORKFLOW_NAME = "workflow.name";
+    private final String WORKFLOW_DATE = "workflow.date";
+    private final String LOCUS = "locus";
+    private final String EXTRACTION_ID = "extraction.extractionId";
+    private final String EXTRACTION_BARCODE = "extraction.extractionBarcode";
 
     public static PasswordOptions getConnectionOptions() {
         return new LimsConnectionOptions(LIMSConnection.class);
@@ -272,7 +280,8 @@ public class LIMSConnection {
                 EXTRACTION_NAME_FIELD,
                 EXTRACTION_BARCODE_FIELD,
                 SEQUENCE_PROGRESS,
-                SEQUENCE_SUBMISSION_PROGRESS
+                SEQUENCE_SUBMISSION_PROGRESS,
+                ASSEMBLY_TECHNICIAN
         );
     }
 
@@ -330,11 +339,11 @@ public class LIMSConnection {
         }
 
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date", "workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList(PLATE_NAME, PLATE_TYPE, PLATE_DATE));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date", "workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode"));
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList(PLATE_NAME, PLATE_TYPE, PLATE_DATE));
             operator = CompoundSearchQuery.Operator.AND;
         }
 
@@ -342,7 +351,7 @@ public class LIMSConnection {
             return Collections.emptyList();
         }
 
-        String sql = "SELECT * FROM assembly WHERE ";
+        String sql = "SELECT workflow.locus, assembly.* FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
         List<String> terms = new ArrayList<String>();
         List<Object> sqlValues = new ArrayList<Object>();
         if(workflows != null && workflows.size() > 0) {
@@ -365,7 +374,7 @@ public class LIMSConnection {
                 }
                 sql = sql + join;
             }
-            sql = sql+queryToSql(refinedQueries, operator, "assembly", sqlValues);
+            sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
         }
         System.out.println(sql);
         PreparedStatement statement = connection.prepareStatement(sql);
@@ -374,13 +383,13 @@ public class LIMSConnection {
         if(cancelable != null) {
             //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
         }
-        statement.setFetchSize(1);
+        statement.setFetchSize(Integer.MIN_VALUE);
         try {
             final ResultSet resultSet = statement.executeQuery();
             List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
             while(resultSet.next()) {
                 if(SystemUtilities.isAvailableMemoryLessThan(50)) {
-                    resultSet.close();
+                    statement.cancel();
                     throw new SQLException("Search cancelled due to lack of free memory");
                 }
                 AnnotatedPluginDocument doc = createAssemblyDocument(resultSet);
@@ -425,17 +434,17 @@ public class LIMSConnection {
     }
 
     private AnnotatedPluginDocument createAssemblyDocument(ResultSet resultSet) throws SQLException{
-        String qualities = resultSet.getString("confidence_scores");
-        SequenceDocument sequence;
+        String qualities = resultSet.getString("assembly.confidence_scores");
+        DefaultNucleotideSequence sequence;
         if(qualities == null || resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
-            String name = resultSet.getString("extraction_id");
+            String name = resultSet.getString("assembly.extraction_id");
             String consensus = resultSet.getString("consensus");
             String description = "Sequence record for "+name;
             java.sql.Date created = resultSet.getDate("date");
             if(consensus == null || created == null) {
                 consensus="";
             }
-            else if(resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
+            else if(resultSet.getString("assembly.progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
                 consensus = "";
                 description = "Sequencing failed for this well";
             }
@@ -443,36 +452,37 @@ public class LIMSConnection {
             sequence = new DefaultNucleotideSequence(name, "Assembly consensus sequence for "+name, consensus, new Date(created.getTime()));
         }
         else {
-            String sequenceString = resultSet.getString("consensus");
+            String sequenceString = resultSet.getString("assembly.consensus");
             sequenceString = sequenceString.replace("-", "");
             NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
-            String name = resultSet.getString("extraction_id");
+            String name = resultSet.getString("assembly.extraction_id");
             sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, new Date(resultSet.getDate("date").getTime()), graph);
         }
         AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
         //todo: add data as fields and notes...
-        String notes = resultSet.getString("notes");
+        String notes = resultSet.getString("assembly.notes");
         if(notes != null) {
             doc.setFieldValue(AnnotateUtilities.NOTES_FIELD, notes);
         }
-        doc.setFieldValue(AnnotateUtilities.PROGRESS_FIELD, resultSet.getString("progress"));
-        doc.setFieldValue(DocumentField.CONTIG_MEAN_COVERAGE, resultSet.getDouble("coverage"));
-        doc.setFieldValue(DocumentField.DISAGREEMENTS, resultSet.getInt("disagreements"));
-        doc.setFieldValue(AnnotateUtilities.EDITS_FIELD, resultSet.getInt("edits"));
-        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_FWD_FIELD, resultSet.getString("trim_params_fwd"));
-        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_REV_FIELD, resultSet.getString("trim_params_rev"));
-        doc.setHiddenFieldValue(AnnotateUtilities.LIMS_ID, resultSet.getInt("id"));
+        doc.setFieldValue(WORKFLOW_LOCUS_FIELD, resultSet.getString("workflow.locus"));
+        doc.setFieldValue(AnnotateUtilities.PROGRESS_FIELD, resultSet.getString("assembly.progress"));
+        doc.setFieldValue(DocumentField.CONTIG_MEAN_COVERAGE, resultSet.getDouble("assembly.coverage"));
+        doc.setFieldValue(DocumentField.DISAGREEMENTS, resultSet.getInt("assembly.disagreements"));
+        doc.setFieldValue(AnnotateUtilities.EDITS_FIELD, resultSet.getInt("assembly.edits"));
+        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_FWD_FIELD, resultSet.getString("assembly.trim_params_fwd"));
+        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_REV_FIELD, resultSet.getString("assembly.trim_params_rev"));
+        doc.setHiddenFieldValue(AnnotateUtilities.LIMS_ID, resultSet.getInt("assembly.id"));
         //todo: fields that require a schema change
         //noinspection ConstantConditions
-        doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, resultSet.getString("technician"));
-        doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(resultSet.getDate("date").getTime()));
-        String bin = resultSet.getString("bin");
+        doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, resultSet.getString("assembly.technician"));
+        doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(resultSet.getDate("assembly.date").getTime()));
+        String bin = resultSet.getString("assembly.bin");
         doc.setFieldValue(DocumentField.BIN, bin);
-        doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, resultSet.getInt("ambiguities"));
-        doc.setFieldValue(AnnotateUtilities.ASSEMBLY_PARAMS_FIELD, resultSet.getString("params"));
+        doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, resultSet.getInt("assembly.ambiguities"));
+        doc.setFieldValue(AnnotateUtilities.ASSEMBLY_PARAMS_FIELD, resultSet.getString("assembly.params"));
         doc.setFieldValue(SEQUENCE_ID, resultSet.getInt("id"));
-        doc.setFieldValue(LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS, resultSet.getBoolean("submitted"));
-        doc.setFieldValue(LIMSConnection.EDIT_RECORD, resultSet.getString("editrecord"));
+        doc.setFieldValue(LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS, resultSet.getBoolean("assembly.submitted") ? "Yes" : "No");
+        doc.setFieldValue(LIMSConnection.EDIT_RECORD, resultSet.getString("assembly.editrecord"));
         return doc;
     }
 
@@ -497,11 +507,11 @@ public class LIMSConnection {
         }
 
         if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList("plate.name", "plate.type", "plate.date", "progress", "submitted"));
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList(PLATE_NAME, PLATE_TYPE, PLATE_DATE, SEQUENCE_PROGRESS.getCode(), SEQUENCE_SUBMISSION_PROGRESS.getCode(), ASSEMBLY_TECHNICIAN.getCode()));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
         else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList("plate.name", "plate.type", "plate.date", "progress", "submitted"));
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList(PLATE_NAME, PLATE_TYPE, PLATE_DATE, SEQUENCE_PROGRESS.getCode() , SEQUENCE_SUBMISSION_PROGRESS.getCode(), ASSEMBLY_TECHNICIAN.getCode()));
             operator = CompoundSearchQuery.Operator.AND;
         }
         if((samples == null || samples.size() == 0) && refinedQueries.size() == 0) {
@@ -779,7 +789,7 @@ public class LIMSConnection {
             query = generateAdvancedQueryFromBasicQuery(query);
         }
 
-        List<String> fieldsToRemove = Arrays.asList("workflow.name", "workflow.date", "locus", "extraction.extractionId", "extraction.extractionBarcode", "progress", "submitted");
+        List<String> fieldsToRemove = Arrays.asList(WORKFLOW_NAME, WORKFLOW_DATE, LOCUS, EXTRACTION_ID, EXTRACTION_BARCODE, SEQUENCE_PROGRESS.getCode(), SEQUENCE_SUBMISSION_PROGRESS.getCode(), ASSEMBLY_TECHNICIAN.getCode());
         if(query == null) {
             refinedQueries = Collections.emptyList();
             operator = CompoundSearchQuery.Operator.AND;

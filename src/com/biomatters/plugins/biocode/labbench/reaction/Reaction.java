@@ -41,7 +41,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private String plateName;
     private Workflow workflow;
     private int position;
-    protected boolean isError = false;
+    public boolean isError = false;
     private FimsSample fimsSample = null;
     protected Date date = new Date();
     private static int charHeight = -1;

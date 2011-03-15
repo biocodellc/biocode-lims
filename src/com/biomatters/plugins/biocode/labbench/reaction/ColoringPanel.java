@@ -60,7 +60,7 @@ public class ColoringPanel extends JPanel {
                     if(defaultColorer.getDocumentField() != null && selectedDocumentField != null && selectedDocumentField.getCode().equals(defaultColorer.getDocumentField().getCode())) {
                         color = defaultColorer.getColor(o);
                     }
-                    ColorPanel cp = new ColorPanel(o, color);
+                    ColorPanel cp = new ColorPanel(o, color, true);
                     cp.setOpaque(false);
                     valuesPanel.add(cp);
                     colorPanels.add(cp);
@@ -183,11 +183,11 @@ public class ColoringPanel extends JPanel {
     }
 
 
-    private static class ColorPanel extends JPanel {
+    public static class ColorPanel extends JPanel {
         private Object value;
         private Color color;
 
-        public ColorPanel(Object value1, Color color1) {
+        public ColorPanel(Object value1, Color color1, boolean editable) {
             this.value = value1;
             this.color = color1;
 
@@ -210,19 +210,21 @@ public class ColoringPanel extends JPanel {
                     g.drawRect(0,0,getWidth()-1, getHeight()-1);
                 }
             };
-            colorPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            colorPanel.setPreferredSize(new Dimension(40, label.getPreferredSize().height));
+            if(editable) {
+                colorPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            colorPanel.addMouseListener(new MouseAdapter(){
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    Color selectedColor = GuiUtilities.getUserSelectedColor(color, null, "Choose color");
-                    if(selectedColor != null) {
-                        color = selectedColor;
-                        colorPanel.repaint();
+                colorPanel.addMouseListener(new MouseAdapter(){
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        Color selectedColor = GuiUtilities.getUserSelectedColor(color, null, "Choose color");
+                        if(selectedColor != null) {
+                            color = selectedColor;
+                            colorPanel.repaint();
+                        }
                     }
-                }
-            });
+                });
+            }
+            colorPanel.setPreferredSize(new Dimension(40, label.getPreferredSize().height));
 
             add(label, BorderLayout.CENTER);
             add(colorPanel, BorderLayout.EAST);

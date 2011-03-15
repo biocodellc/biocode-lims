@@ -22,6 +22,7 @@ public class NameSeparatorOption extends Options.ComboBoxOption<Options.OptionVa
         new Options.OptionValue("\\.", ". (Full Stop)"),
         new Options.OptionValue(",", ", (Comma)"),
         new Options.OptionValue("\\+", "+ (Plus)"),
+        new Options.OptionValue("\\~", "~ (Tilde)"),
         new Options.OptionValue("\\s+", "(Space)")
     };
 

@@ -143,6 +143,9 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                         progressListener.setIndeterminateProgress();
                         Reaction[] plateReactions = editingPlate.getReactions();
                         plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null, true);
+                        for(Reaction r : plateReactions){
+                            r.isError = false;
+                        }
                         progressListener.setProgress(1.0);
                     }
 

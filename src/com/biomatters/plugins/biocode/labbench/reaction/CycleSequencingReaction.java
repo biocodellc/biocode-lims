@@ -282,9 +282,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         Set<String> workflowIdStrings = new HashSet<String>();
         for(Reaction reaction : reactions) {
             Object workflowId = reaction.getFieldValue("workflowId");
-            if(!reaction.isEmpty() && (reaction.getLocus() == null || reaction.getLocus().length() == 0)) {
+            if(!reaction.isEmpty() && reaction.getExtractionId().length() > 0 && (reaction.getLocus() == null || reaction.getLocus().length() == 0 || reaction.getLocus().equalsIgnoreCase("none"))) {
                 reaction.setHasError(true);
-                error += "The reaction "+reaction.getExtractionId()+" does not have a locus set.<br>";
+                error += "The reaction in well "+reaction.getLocationString()+" does not have a locus set.<br>";
             }
             if((!reaction.isEmpty() && workflowId != null && reaction.getType() != Reaction.Type.Extraction)
             && (reaction.getWorkflow() == null || !reaction.getWorkflow().getName().equals(workflowId))){

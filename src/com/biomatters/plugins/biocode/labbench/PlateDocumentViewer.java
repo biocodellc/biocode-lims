@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.*;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.math.MachineAccuracy;
@@ -27,7 +28,10 @@ import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
@@ -56,6 +60,8 @@ public class PlateDocumentViewer extends DocumentViewer{
     private final boolean isLocal;
     private JComponent container;
     private JComponent thingInsideScrollPane;
+    private JPanel keyPanel;
+    private JPanel thermocyclePanel;
 
     public PlateDocumentViewer(PlateDocument doc, AnnotatedPluginDocument aDoc, boolean local) {
         this.annotatedDocument = aDoc;
@@ -120,9 +126,11 @@ public class PlateDocumentViewer extends DocumentViewer{
                                     }
                                 });
                             } catch (SQLException e1) {
-                                Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());    
+                                Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());
+                                setEnabled(true);
                             } catch(BadDataException e2) {
                                 Dialogs.showMessageDialog("You have some errors in your plate:\n\n"+e2.getMessage());
+                                setEnabled(true);
                             } finally {
                                 dialog.setVisible(false);
                             }
@@ -231,7 +239,10 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private void updatePanel() {
+        keyPanel.removeAll();
+        keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0,0).getBackgroundColorer()));
         if(thingInsideScrollPane != null) {
+            keyPanel.invalidate();
             plateView.invalidate();
             thingInsideScrollPane.revalidate();
         }
@@ -273,6 +284,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                         if(tc.getId() != plateView.getPlate().getThermocycle().getId()) {
                             plateView.getPlate().setThermocycle(tc);
                             updateToolbar(true);
+                            updateThremocycle();
                             saveAction.setEnabled(true);
                             updatePanel();
                         }
@@ -296,6 +308,14 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
+    }
+
+    private void updateThremocycle() {
+        if(thermocyclePanel != null) {
+            thermocyclePanel.removeAll();
+            thermocyclePanel.add(getThermocyclePanel(plateView.getPlate()));
+            thermocyclePanel.revalidate();
+        }
     }
 
     @Override
@@ -352,6 +372,73 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction gelAction = new GeneiousAction("GEL Images", null, BiocodePlugin.getIcons("addImage_16.png")) {
         public void actionPerformed(ActionEvent e) {
+//            String plateName = "Plate_m030";
+//            try {
+//                Map<String, String> archive = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateName);
+//                Map<String, String> extraction = new HashMap<String,String>();
+//                try {
+//                    Statement stat = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement();
+//                    ResultSet resultSet = stat.executeQuery("Select extraction.* from extraction, plate where extraction.plate = plate.id AND plate.name='M030_X2'");
+//                    while(resultSet.next()) {
+//                        extraction.put(Plate.getWell(resultSet.getInt("extraction.location"), Plate.Size.w96).toPaddedString(), resultSet.getString("extraction.extractionId"));
+//                    }
+//
+//                } catch (SQLException e1) {
+//                    e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+//                }
+//                int notissue = 1000;
+//
+//                PreparedStatement tissueUpdate = null;
+//                try {
+//                    tissueUpdate = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().prepareStatement("UPDATE extraction SET sampleId=? WHERE extractionId=?");
+//                } catch (SQLException e1) {
+//
+//
+//                    e1.printStackTrace();
+//                    return;
+//                }
+//                for(int i=0; i < 96; i++) {
+//                    BiocodeUtilities.Well well = Plate.getWell(i, Plate.Size.w96);
+//                    BiocodeUtilities.Well newWell = Plate.getWell(96-Plate.getWellLocation(well, Plate.Size.w96)-1, Plate.Size.w96);
+//                    String tissueId = archive.get(well.toPaddedString());
+//                    String newTissueId = archive.get(newWell.toPaddedString());
+//                    String extractionId = archive.get(well.toPaddedString());
+//                    String newExtractionId = archive.get(newWell.toPaddedString());
+//
+//                    extractionId = extraction.get(newWell.toPaddedString());
+//                    if(extractionId == null) {
+//                        extractionId = "";
+//                    }
+//
+//
+//                    if(tissueId == null) {
+//                        tissueId = "";
+//                    }
+//                    if(newTissueId != null) {
+//                        newExtractionId = newTissueId+".2";
+//                    }
+//                    else {
+//                        newTissueId = "";
+//                        newExtractionId = "noTissue"+notissue;
+//                        notissue++;
+//                    }
+//                    System.out.println(tissueId+", "+newTissueId);
+//                    //System.out.println(extractionId+", "+newExtractionId);
+//                    try {
+//                        tissueUpdate.setString(1, newTissueId);
+//                        tissueUpdate.setString(2, extractionId);
+//                        System.out.println(tissueUpdate.executeUpdate());
+//                    } catch (SQLException e1) {
+//                        e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+//                        break;
+//                    }
+//
+//                }
+//
+//            } catch (ConnectionException e1) {
+//                e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+//            }
+
             if(!BiocodeService.getInstance().isLoggedIn()) {
                 Dialogs.showMessageDialog("Please log in");
                 return;
@@ -483,6 +570,14 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private Map<Cocktail, OptionsPanel> panelMap = new HashMap<Cocktail, OptionsPanel>();
+
+    private OptionsPanel getColorKeyPanel(Reaction.BackgroundColorer colorer) {
+        OptionsPanel panel = new OptionsPanel();
+        for(Map.Entry<String, Color> e : colorer.getColorMap().entrySet()) {
+            panel.addSpanningComponent(new ColoringPanel.ColorPanel(e.getKey(), e.getValue(), false), false, GridBagConstraints.WEST);
+        }
+        return panel;
+    }
 
     private OptionsPanel getCocktailPanel(Map.Entry<Cocktail, Integer> entry) {
         final Cocktail ct = entry.getKey();
@@ -654,7 +749,8 @@ public class PlateDocumentViewer extends DocumentViewer{
 
                 int availableHeight = dimensions.height;
                 boolean oldColorBackground = plateView.isColorBackground();
-                plateView.setColorBackground((Boolean)options.getValue("colorPlate"));
+                boolean colorPlate = (Boolean) options.getValue("colorPlate");
+                plateView.setColorBackground(colorPlate);
                 double scaleFactor = 1;
                 scaleFactor = Math.min(scaleFactor, dimensions.getWidth()/plateView.getPreferredSize().width);
                 scaleFactor = Math.min(scaleFactor, dimensions.getHeight()/plateView.getPreferredSize().height);
@@ -697,42 +793,23 @@ public class PlateDocumentViewer extends DocumentViewer{
                 int cocktailWidth = 0;
                 int maxRowHeight = 0;
                 updateCocktailCount();
+                if(colorPlate) {
+                    JPanel panel = getColorKeyPanel(plateView.getPlate().getReaction(0,0).getBackgroundColorer());
+                    LayoutData layoutData = layoutComponent(g, dimensions, pageIndex, page, availableHeight, cocktailHeight, cocktailWidth, maxRowHeight, panel);
+                    maxRowHeight = layoutData.getMaxRowHeight();
+                    availableHeight = layoutData.getAvailableHeight();
+                    cocktailWidth = layoutData.getCocktailWidth();
+                    page = layoutData.getPage();
+                }
                 if(cocktailCount.size() > 0) {
                     for(Map.Entry<Cocktail, Integer> entry : cocktailCount.entrySet()) {
                         JPanel cocktailPanel = getCocktailPanel(entry);
                         ((Container)((JScrollPane)cocktailPanel.getComponent(0)).getViewport().getView()).getComponent(0).setVisible(false);
-                        int widthIncriment = cocktailPanel.getPreferredSize().width + 10;
-                        int heightIncriment = cocktailPanel.getPreferredSize().height + 10;
-
-                        if(cocktailWidth + widthIncriment < dimensions.width) {
-                            cocktailWidth += widthIncriment;
-                        }
-                        else {
-                            if (cocktailHeight + maxRowHeight > availableHeight) {
-                                page++;
-                                cocktailHeight = maxRowHeight;
-                                availableHeight = dimensions.height;
-                                cocktailWidth = 0;
-                            }
-                            else {
-                                cocktailWidth = 0;
-                                cocktailHeight += maxRowHeight;
-                                availableHeight -= maxRowHeight;
-                            }
-                            maxRowHeight = 0;
-                        }
-
-                        maxRowHeight = Math.max(maxRowHeight, heightIncriment);
-
-                        if(pageIndex+1 == page && g != null) {
-                            cocktailPanel.setBounds(0,0, cocktailPanel.getPreferredSize().width, cocktailPanel.getPreferredSize().height);
-                            MultiPartDocumentViewerFactory.recursiveDoLayout(cocktailPanel);
-                            cocktailPanel.validate();
-                            g.translate(cocktailWidth-widthIncriment, dimensions.height - availableHeight + cocktailHeight);
-                            cocktailPanel.print(g);
-                            g.translate(-cocktailWidth+widthIncriment, -(dimensions.height - availableHeight + cocktailHeight));
-                        }
-                        ((Container)((JScrollPane)cocktailPanel.getComponent(0)).getViewport().getView()).getComponent(0).setVisible(true);
+                        LayoutData layoutData = layoutComponent(g, dimensions, pageIndex, page, availableHeight, cocktailHeight, cocktailWidth, maxRowHeight, cocktailPanel);
+                        maxRowHeight = layoutData.getMaxRowHeight();
+                        availableHeight = layoutData.getAvailableHeight();
+                        cocktailWidth = layoutData.getCocktailWidth();
+                        page = layoutData.getPage();
 
 
                     }
@@ -811,6 +888,111 @@ public class PlateDocumentViewer extends DocumentViewer{
         };
     }
 
+    private static class LayoutData {
+        private Graphics2D g;
+        private Dimension dimensions;
+        private int pageIndex;
+        private int page;
+        private int availableHeight;
+        private int cocktailHeight;
+        private int cocktailWidth;
+        private int maxRowHeight;
+        private JPanel cocktailPanel;
+
+        public LayoutData(
+                Graphics2D g,
+                Dimension dimensions,
+                int pageIndex,
+                int page,
+                int availableHeight,
+                int cocktailHeight,
+                int cocktailWidth,
+                int maxRowHeight,
+                JPanel cocktailPanel) {
+            this.g = g;
+            this.dimensions = dimensions;
+            this.pageIndex = pageIndex;
+            this.page = page;
+            this.availableHeight = availableHeight;
+            this.cocktailHeight = cocktailHeight;
+            this.cocktailWidth = cocktailWidth;
+            this.maxRowHeight = maxRowHeight;
+            this.cocktailPanel = cocktailPanel;
+        }
+
+        public Graphics2D getG() {
+            return g;
+        }
+
+        public Dimension getDimensions() {
+            return dimensions;
+        }
+
+        public int getPageIndex() {
+            return pageIndex;
+        }
+
+        public int getPage() {
+            return page;
+        }
+
+        public int getAvailableHeight() {
+            return availableHeight;
+        }
+
+        public int getCocktailHeight() {
+            return cocktailHeight;
+        }
+
+        public int getCocktailWidth() {
+            return cocktailWidth;
+        }
+
+        public int getMaxRowHeight() {
+            return maxRowHeight;
+        }
+
+        public JPanel getCocktailPanel() {
+            return cocktailPanel;
+        }
+    }
+
+    private static LayoutData layoutComponent(Graphics2D g, Dimension dimensions, int pageIndex, int page, int availableHeight, int cocktailHeight, int cocktailWidth, int maxRowHeight, JPanel cocktailPanel) {
+        int widthIncriment = cocktailPanel.getPreferredSize().width + 10;
+        int heightIncriment = cocktailPanel.getPreferredSize().height + 10;
+
+        if(cocktailWidth + widthIncriment < dimensions.width) {
+            cocktailWidth += widthIncriment;
+        }
+        else {
+            if (cocktailHeight + maxRowHeight > availableHeight) {
+                page++;
+                cocktailHeight = maxRowHeight;
+                availableHeight = dimensions.height;
+                cocktailWidth = 0;
+            }
+            else {
+                cocktailWidth = 0;
+                cocktailHeight += maxRowHeight;
+                availableHeight -= maxRowHeight;
+            }
+            maxRowHeight = 0;
+        }
+
+        maxRowHeight = Math.max(maxRowHeight, heightIncriment);
+
+        if(pageIndex+1 == page && g != null) {
+            cocktailPanel.setBounds(0,0, cocktailPanel.getPreferredSize().width, cocktailPanel.getPreferredSize().height);
+            MultiPartDocumentViewerFactory.recursiveDoLayout(cocktailPanel);
+            cocktailPanel.validate();
+            g.translate(cocktailWidth-widthIncriment, dimensions.height - availableHeight + cocktailHeight);
+            cocktailPanel.print(g);
+            g.translate(-cocktailWidth+widthIncriment, -(dimensions.height - availableHeight + cocktailHeight));
+        }
+        ((Container)((JScrollPane)cocktailPanel.getComponent(0)).getViewport().getView()).getComponent(0).setVisible(true);
+        return new LayoutData(g, dimensions, pageIndex, page, availableHeight, cocktailHeight, cocktailWidth, maxRowHeight, cocktailPanel);
+    }
+
     public JPanel getPanel() {
         JPanel panel = new JPanel();
 
@@ -823,6 +1005,10 @@ public class PlateDocumentViewer extends DocumentViewer{
         mainPanel.addSpanningComponent(plateView);
 
         updateCocktailCount();
+
+        keyPanel = new GPanel(new FlowLayout(FlowLayout.LEFT));
+        keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0,0).getBackgroundColorer()));
+        mainPanel.addSpanningComponent(keyPanel);
 
         if(cocktailCount.size() > 0) {
             JPanel cocktailHolderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -840,7 +1026,8 @@ public class PlateDocumentViewer extends DocumentViewer{
         }
 
         if(plateView.getPlate().getThermocycle() != null) {
-            JPanel thermocyclePanel = getThermocyclePanel(plateView.getPlate());
+            thermocyclePanel = new GPanel(new BorderLayout());
+            thermocyclePanel.add(getThermocyclePanel(plateView.getPlate()), BorderLayout.CENTER);
             mainPanel.addDividerWithLabel("Thermocycle");
             mainPanel.addSpanningComponent(thermocyclePanel);
         }
