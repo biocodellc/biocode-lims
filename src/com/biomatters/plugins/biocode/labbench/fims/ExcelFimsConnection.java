@@ -64,122 +64,11 @@ public class ExcelFimsConnection extends FIMSConnection{
     }
 
     public PasswordOptions getConnectionOptions() {
-        final PasswordOptions options = new PasswordOptions(this.getClass());
-        options.addLabel("<html>Choose the location of your excel file.<br>The first row should be column headers, and it should<br>have at least a tissue and specimen column.</html>");
-        final Options.FileSelectionOption fileLocation = options.addFileSelectionOption("excelFile", "Excel file location:", "");
-        options.restorePreferences(); //to make sure that the field chooser boxes start out with the right values
-        fileLocation.setSelectionType(JFileChooser.FILES_ONLY);
-
-        List<Options.OptionValue> cols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null, null);
-
-        final Options.ComboBoxOption<Options.OptionValue> tissueId = options.addComboBoxOption("tissueId", "Tissue ID field:", cols, cols.get(0));
-
-        final Options.ComboBoxOption<Options.OptionValue> specimenId = options.addComboBoxOption("specimenId", "Specimen ID field:", cols, cols.get(0));
-
-        final Options.BooleanOption storePlates = options.addBooleanOption("storePlates", "The FIMS database contains plate information", false);
-
-        final Options.ComboBoxOption<Options.OptionValue> plateName = options.addComboBoxOption("plateName", "Plate name field:", cols, cols.get(0));
-
-        final Options.ComboBoxOption<Options.OptionValue> plateWell = options.addComboBoxOption("plateWell", "Well field:", cols, cols.get(0));
-
-        storePlates.addDependent(plateName, true);
-        storePlates.addDependent(plateWell, true);
-
-        options.addLabel(" ");
-        options.beginAlignHorizontally("", false);
-        options.addLabel("Specify your taxonomy fields, in order of highest to lowest");
-        Options.ButtonOption autodetectTaxonomyButton = options.addButtonOption("autodetectTaxonomy", "", "Autodetect");
-        options.endAlignHorizontally();
-        Options taxonomyOptions = new Options(this.getClass());
-        taxonomyOptions.beginAlignHorizontally("", false);
-        final Options.ComboBoxOption<Options.OptionValue> taxCol = taxonomyOptions.addComboBoxOption("taxCol", "", cols, cols.get(0));
-        taxonomyOptions.endAlignHorizontally();
-
-        final Options.MultipleOptions taxOptions = options.addMultipleOptions("taxFields", taxonomyOptions, false);
-
-        autodetectTaxonomyButton.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent e) {
-                taxOptions.restoreDefaults();
-                int foundCount = 0;
-                for(String s : BiocodeUtilities.taxonomyNames) {
-                    for(Options.OptionValue ov : taxCol.getPossibleOptionValues()) {
-                        if(ov.getLabel().equalsIgnoreCase(s)) {
-                            Options newOptions;
-                            if(foundCount == 0) {
-                                newOptions = taxOptions.getValues().get(0);
-                            }
-                            else {
-                                newOptions = taxOptions.addValue(false);
-                            }
-                            Options.ComboBoxOption<Options.OptionValue> list = (Options.ComboBoxOption<Options.OptionValue>)newOptions.getOption("taxCol");
-                            list.setValueFromString(ov.getName());
-                            foundCount ++;
-                        }
-                    }
-                }
-                if(foundCount == 0) {
-                    taxOptions.addValue(true);
-                }
-            }
-        });
-
-        fileLocation.addChangeListener(new SimpleListener(){
-            public void objectChanged() {
-                List<Options.OptionValue> newCols = getTableColumns(fileLocation.getValue().length() > 0 ? new File(fileLocation.getValue()) : null, options.getPanel());
-                tissueId.setPossibleValues(newCols);
-                specimenId.setPossibleValues(newCols);
-                plateName.setPossibleValues(newCols);
-                plateWell.setPossibleValues(newCols);
-                taxCol.setPossibleValues(newCols);
-                for(Options options : taxOptions.getValues()) {
-                    for(Options.Option option : options.getOptions()) {
-                        if(option instanceof Options.ComboBoxOption) {
-                            ((Options.ComboBoxOption)option).setPossibleValues(newCols);
-                        }
-                    }
-                }
-            }
-        });
-
-        return options;
+        return new ExcelFimsConnectionOptions();
     }
 
-    private List<Options.OptionValue> getTableColumns(File excelFile, final Component owner) {
-        List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
 
-        if(excelFile != null && excelFile.exists()) {
-            //noinspection CatchGenericClass
-            try {
-                Workbook workbook = Workbook.getWorkbook(excelFile);
-
-                if(workbook.getNumberOfSheets() > 0) {
-                    Sheet sheet = workbook.getSheet(0);
-
-                    for(int i=0; i < sheet.getColumns(); i++) {
-                        Cell cell = sheet.getCell(i,0);
-                        String cellContents = cell.getContents();
-                        if(cellContents.length() > 0) {
-                            values.add(new Options.OptionValue(""+i, XmlUtilities.encodeXMLChars(cellContents)));
-                        }
-                    }
-                }
-            } catch(IOException e) {
-                Dialogs.showMessageDialog("Geneious could not read your excel file: "+e.getMessage(), "Could not read Excel file", owner, Dialogs.DialogIcon.WARNING);
-            }
-            catch(Exception e) {
-                handleCorruptedExcelFile(owner, e);
-            }
-        }
-
-
-        if(values.size() == 0) {
-            values.add(new Options.OptionValue("none", "No Columns"));
-        }
-
-        return values;
-    }
-
-    private void handleCorruptedExcelFile(Component owner, Exception e) {
+    static void handleCorruptedExcelFile(Component owner, Exception e) {
         StringWriter stacktrace = new StringWriter();
         e.printStackTrace(new PrintWriter(stacktrace));
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Could not read Excel file", owner, Dialogs.DialogIcon.WARNING);
@@ -200,8 +89,9 @@ public class ExcelFimsConnection extends FIMSConnection{
         }
     }
 
-    public void connect(Options options) throws ConnectionException {
-        String excelFileLocation = options.getValueAsString("excelFile");
+    public void connect(Options optionsa) throws ConnectionException {
+        ExcelFimsConnectionOptions options = (ExcelFimsConnectionOptions)optionsa;
+        String excelFileLocation = options.getChildOptions().get(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY).getValueAsString("excelFile");
         if(excelFileLocation.length() == 0) {
             throw new ConnectionException("You must specify an Excel file");
         }
@@ -209,13 +99,12 @@ public class ExcelFimsConnection extends FIMSConnection{
         if(!excelFile.exists()) {
             throw new ConnectionException("Cannot find the file "+excelFile.getAbsolutePath());
         }
-        tissueCol = parseInt(((Options.OptionValue)options.getValue("tissueId")).getName(), "You have not set a tissue column");
-        specimenCol = parseInt(((Options.OptionValue)options.getValue("specimenId")).getName(), "You have not set a specimen column");
+        tissueCol = parseInt(options.getTissueColumn(), "You have not set a tissue column");
+        specimenCol = parseInt(options.getSpecimenColumn(), "You have not set a specimen column");
 
-        storePlates = (Boolean)options.getValue("storePlates");
-        if(storePlates) {
-            plateCol = parseInt(((Options.OptionValue)options.getValue("plateName")).getName(), "You have not set a plate column");
-            wellCol = parseInt(((Options.OptionValue)options.getValue("plateWell")).getName(), "You have not set a well column");
+        if(options.storePlates()) {
+            plateCol = parseInt(options.getPlateColumn(), "You have not set a plate column");
+            wellCol = parseInt(options.getWellColumn(), "You have not set a well column");
         }
         fields = new ArrayList<DocumentField>();
         taxonomyFields = new ArrayList<DocumentField>();

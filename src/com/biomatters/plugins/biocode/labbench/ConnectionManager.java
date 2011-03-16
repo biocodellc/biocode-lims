@@ -8,8 +8,13 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
+import org.jdom.Attribute;
+import org.jdom.output.XMLOutputter;
+import org.jdom.output.Format;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -19,6 +24,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -434,9 +440,82 @@ public class ConnectionManager implements XMLSerializable{
 
         public Connection(String name, Element connectionOptions) {
             this.name = name;
+            correctElementForBackwardsCompatibility(connectionOptions);
             loginOptions = new LoginOptions(ConnectionManager.class);
             loginOptions.valuesFromXML(connectionOptions);
             this.loginOptionsValues = connectionOptions;
+        }
+
+        public void correctElementForBackwardsCompatibility(Element e) {   //backwards compatibility - we moved some things to child options...
+            for (Element child : e.getChildren("childOption")) {
+                if ("fims".equals(child.getAttributeValue("name"))) {
+                    boolean excelActive = false;
+                    for (Element fimsOptionElement : child.getChildren("option")) {
+                        if("fims".equals(fimsOptionElement.getAttributeValue("name")) && "excel".equals(fimsOptionElement.getText())) {
+                            excelActive = true;
+                            break;
+                        }
+                    }
+                    for (Element child2 : child.getChildren("childOption")) {
+                        if ("excel".equals(child2.getAttributeValue("name"))) {
+                            if (child2.getChild("childOption") == null) {
+                                //now do the work...
+                                Element newChildOption = new Element("childOption");
+                                newChildOption.setAttribute("name", TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
+                                for (Element optionElement : child2.getChildren("option")) {
+                                    if (ExcelFimsConnectionOptions.FILE_LOCATION.equals(optionElement.getAttributeValue("name")) && excelActive) {
+                                        Element element = new Element("option").setAttribute("name", ExcelFimsConnectionOptions.FILE_LOCATION).setText(optionElement.getText());
+                                        for (Attribute a : (List<Attribute>) optionElement.getAttributes()) {
+                                            element.setAttribute(a.getName(), a.getValue());
+                                        }
+                                        newChildOption.addContent(element);
+                                    }
+                                    if ("label_1".equals(optionElement.getAttributeValue("name"))) {
+                                        optionElement.setAttribute("name", "label_0");
+                                    }
+                                    if ("label_2".equals(optionElement.getAttributeValue("name"))) {
+                                        optionElement.setAttribute("name", "label_1");
+                                    }
+                                    if ("label_3".equals(optionElement.getAttributeValue("name"))) {
+                                        optionElement.setAttribute("name", "label_2");
+                                    }
+                                }
+                                child2.addContent(newChildOption);
+                            } else if (!excelActive) {
+                                for (Element childOption : child2.getChildren("childOption")) {
+                                    if ("excel".equals(childOption.getAttributeValue("name"))) {
+                                        for (Element optionElement : child2.getChildren("option")) {
+                                            if (ExcelFimsConnectionOptions.FILE_LOCATION.equals(optionElement.getAttributeValue("name"))) {
+                                                optionElement.setText("");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if ("Google".equals(child2.getAttributeValue("name"))) {
+                            if (child2.getChild("childOption") == null) {
+                                //now do the work...
+                                Element newChildOption = new Element("childOption");
+                                newChildOption.setAttribute("name", TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
+                                for (Element optionElement : child2.getChildren("option")) {
+
+                                    if ("label_1".equals(optionElement.getAttributeValue("name"))) {
+                                        optionElement.setAttribute("name", "label_0");
+                                    }
+                                    if ("label_2".equals(optionElement.getAttributeValue("name"))) {
+                                        optionElement.setAttribute("name", "label_1");
+                                    }
+                                    if ("label_3".equals(optionElement.getAttributeValue("name"))) {
+                                        optionElement.setAttribute("name", "label_2");
+                                    }
+                                }
+                                child2.addContent(newChildOption);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public void setName(String name) {
@@ -595,6 +674,7 @@ public class ConnectionManager implements XMLSerializable{
         public void fromXML(Element element) throws XMLSerializationException {
             loginOptions = null;
             loginOptionsValues = element.getChild("connectionOptions");
+            correctElementForBackwardsCompatibility(loginOptionsValues);
             name = element.getChildText("Name");
         }
 

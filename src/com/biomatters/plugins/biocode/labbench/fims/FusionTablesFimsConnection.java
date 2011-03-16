@@ -27,7 +27,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.net.URLDecoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
@@ -54,7 +53,7 @@ public class FusionTablesFimsConnection extends FIMSConnection{
 
 
     public String getLabel() {
-        return "Google";
+        return "Google Fusion Tables";
     }
 
     public String getName() {
@@ -62,32 +61,33 @@ public class FusionTablesFimsConnection extends FIMSConnection{
     }
 
     public String getDescription() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        return "Use a remote Fusion Table as your FIMS";
     }
 
     public PasswordOptions getConnectionOptions() {
         return new FusionTablesFimsConnectionOptions();
     }
 
-    public void connect(Options options) throws ConnectionException {
-        tableId = options.getValueAsString("tableId");
+    public void connect(Options optionsa) throws ConnectionException {
+        FusionTablesFimsConnectionOptions options = (FusionTablesFimsConnectionOptions)optionsa;
+        tableId = options.getChildOptions().get(FusionTablesFimsConnectionOptions.CONNECTION_OPTIONS_KEY).getValueAsString("tableId");
         if(tableId.length() == 0) {
             throw new ConnectionException("You must specify a Fusiion Table ID");
         }
-        tissueCol = ((Options.OptionValue)options.getValue("tissueId")).getName();
-        specimenCol = ((Options.OptionValue)options.getValue("specimenId")).getName();
+        tissueCol = options.getTissueColumn();
+        specimenCol = options.getSpecimenColumn();
 
-        storePlates = (Boolean)options.getValue("storePlates");
+        storePlates = options.storePlates();
         if(storePlates) {
-            plateCol = ((Options.OptionValue)options.getValue("plateName")).getName();
-            wellCol = ((Options.OptionValue)options.getValue("plateWell")).getName();
+            plateCol = options.getPlateColumn();
+            wellCol = options.getWellColumn();
         }
         fields = new ArrayList<DocumentField>();
         taxonomyFields = new ArrayList<DocumentField>();
 
         try {
             service.setUserCredentials(options.getValueAsString("username"), ((PasswordOption)options.getOption("password")).getPassword(), ClientLoginAccountType.GOOGLE);
-            columns = FusionTablesFimsConnectionOptions.getTableColumns(tableId, service);
+            columns = FusionTablesFimsConnectionOptions.getTableColumnFields(tableId, service);
         } catch (IOException e) {
             throw new ConnectionException(e.getMessage(), e);
         } catch (ServiceException e) {
