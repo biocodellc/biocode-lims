@@ -70,7 +70,8 @@ public class FusionTablesFimsConnection extends FIMSConnection{
 
     public void connect(Options optionsa) throws ConnectionException {
         FusionTablesFimsConnectionOptions options = (FusionTablesFimsConnectionOptions)optionsa;
-        tableId = options.getChildOptions().get(FusionTablesFimsConnectionOptions.CONNECTION_OPTIONS_KEY).getValueAsString("tableId");
+        Options connectionOptions = options.getChildOptions().get(FusionTablesFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
+        tableId = connectionOptions.getValueAsString("tableId");
         if(tableId.length() == 0) {
             throw new ConnectionException("You must specify a Fusiion Table ID");
         }
@@ -86,7 +87,7 @@ public class FusionTablesFimsConnection extends FIMSConnection{
         taxonomyFields = new ArrayList<DocumentField>();
 
         try {
-            service.setUserCredentials(options.getValueAsString("username"), ((PasswordOption)options.getOption("password")).getPassword(), ClientLoginAccountType.GOOGLE);
+            service.setUserCredentials(connectionOptions.getValueAsString("username"), ((PasswordOption)connectionOptions.getOption("password")).getPassword(), ClientLoginAccountType.GOOGLE);
             columns = FusionTablesFimsConnectionOptions.getTableColumnFields(tableId, service);
         } catch (IOException e) {
             throw new ConnectionException(e.getMessage(), e);

@@ -46,7 +46,7 @@ public class LoginOptions extends Options {
         super(element);
     }
 
-    public void updateOptions() {
+    public void updateOptions() throws ConnectionException{
         Options fimsOptions = getChildOptions().get("fims");
         PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
         activeFimsOptions.update();

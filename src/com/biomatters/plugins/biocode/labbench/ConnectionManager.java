@@ -712,7 +712,12 @@ public class ConnectionManager implements XMLSerializable{
                 ThreadUtilities.invokeNowOrWait(new Runnable() {
                     public void run() {
                         loginOptions.valuesFromXML(loginOptionsValues);
-                        loginOptions.updateOptions();
+                        try {
+                            loginOptions.updateOptions();
+                        } catch (ConnectionException e) {
+                            //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
+                            e.printStackTrace();
+                        }
                         loginOptions.valuesFromXML(loginOptionsValues);
                     }
                 });

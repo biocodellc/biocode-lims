@@ -1,29 +1,16 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.options.PasswordOption;
-import com.google.gdata.client.GoogleService;
-import com.google.gdata.client.ClientLoginAccountType;
-import com.google.gdata.client.Service;
-import com.google.gdata.util.AuthenticationException;
-import com.google.gdata.util.ContentType;
-import com.google.gdata.util.ServiceException;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 
 import java.util.List;
 import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Date;
 import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.net.URL;
-import java.net.URLEncoder;
 
 import org.virion.jam.util.SimpleListener;
 
@@ -62,7 +49,11 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         if(updateAutomatically()) {
             connectionOptions.addChangeListener(new SimpleListener() {
                 public void objectChanged() {
-                    update();
+                    try {
+                        update();
+                    } catch (ConnectionException e) {
+                        Dialogs.showMessageDialog(e.getMessage());
+                    }
                 }
             });
         }
@@ -70,7 +61,11 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
             ButtonOption updateButton = addButtonOption("update", "", "Update Columns");
             updateButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent ev) {
-                    update();
+                    try {
+                        update();
+                    } catch (ConnectionException e) {
+                        Dialogs.showMessageDialog(e.getMessage());
+                    }
                 }
             });
         }
@@ -167,7 +162,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
 
     @SuppressWarnings({"unchecked"})
     @Override
-    public void update() {
+    public void update() throws ConnectionException {
         final ComboBoxOption<OptionValue> tissueId = (ComboBoxOption<OptionValue>)getOption(TISSUE_ID);
         final ComboBoxOption<OptionValue> specimenId = (ComboBoxOption<OptionValue>)getOption(SPECIMEN_ID);
         final ComboBoxOption<OptionValue> plateName = (ComboBoxOption<OptionValue>)getOption(PLATE_NAME);
@@ -179,9 +174,9 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         try {
             newCols = getTableColumns();
         } catch (IOException e) {
-            //todo: exception handling...
             e.printStackTrace();
             newCols = NO_FIELDS;
+            throw new ConnectionException(e.getMessage(), e);
         }
         tissueId.setPossibleValues(newCols);
         specimenId.setPossibleValues(newCols);

@@ -5,6 +5,8 @@ import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.options.PasswordOption;
 import com.google.gdata.client.ClientLoginAccountType;
 import com.google.gdata.client.GoogleService;
@@ -33,12 +35,20 @@ public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOption
     static final List<Options.OptionValue> NO_FIELDS = Arrays.asList(new Options.OptionValue("None", "None"));
 
     protected PasswordOptions getConnectionOptions() {
-        PasswordOptions connectionOptions = new PasswordOptions(this.getClass(), "fusionTables");
+        final PasswordOptions connectionOptions = new PasswordOptions(this.getClass(), "fusionTables");
         connectionOptions.addLabel("<html>Enter your google username and password.<br>(for example craig.venter@gmail.com)</html>");
         connectionOptions.addStringOption(USERNAME, "Username", "");
         final PasswordOption password = new PasswordOption(PASSWORD, "Password", true);
         connectionOptions.addCustomOption(password);
-        connectionOptions.addStringOption(TABLE_ID, "Fusion Table ID", "");
+        connectionOptions.beginAlignHorizontally("Fusion Table ID", false);
+        connectionOptions.addStringOption(TABLE_ID, "", "");
+        ButtonOption helpButton = connectionOptions.addButtonOption("help", "", "", IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
+        helpButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                Dialogs.showMessageDialog("To get the ID of a Fusion Table, visit the table in the Google Fusion Tables website and note the number at the end of the URL. For example, in the following URL for the Country Flags table, the table ID is 86424: <code>http://www.google.com/fusiontables/DataSource?dsrcid=86424</code>", "Getting an ID", connectionOptions.getPanel(), Dialogs.DialogIcon.INFORMATION);
+            }
+        });
+        connectionOptions.endAlignHorizontally();
         return connectionOptions;
     }
 
@@ -88,6 +98,11 @@ public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOption
             IOException ioException = new IOException(e.toString());
             ioException.setStackTrace(e.getStackTrace());
             throw ioException;
+        }
+        catch(NullPointerException e) { //why do they throw these?
+            if(e.getMessage().contains("No authentication header information")) {
+                throw new IOException("Acess denied connecting to Fusion Table: Sorry, you do not have the permissions to view the requested table ("+tableId+").");
+            }
         }
 
 
