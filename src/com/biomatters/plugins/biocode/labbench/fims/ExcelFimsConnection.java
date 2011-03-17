@@ -35,17 +35,11 @@ import java.util.Map;
  * @author steve
  * @version $Id: 12/05/2009 8:00:41 AM steve $
  */
-public class ExcelFimsConnection extends FIMSConnection{
+public class ExcelFimsConnection extends TableFimsConnection{
 
     private Workbook workbook;
-
-    int tissueCol;
-
-    int specimenCol;
-
-    int plateCol, wellCol;
-
-    boolean storePlates;
+    private File excelFile;
+    private List<String> columnNames;
 
     public String getName() {
         return "excel";
@@ -63,7 +57,7 @@ public class ExcelFimsConnection extends FIMSConnection{
         return true;
     }
 
-    public PasswordOptions getConnectionOptions() {
+    public TableFimsConnectionOptions _getConnectionOptions() {
         return new ExcelFimsConnectionOptions();
     }
 
@@ -78,9 +72,6 @@ public class ExcelFimsConnection extends FIMSConnection{
                 stacktrace.toString());
     }
 
-    private List<DocumentField> fields;
-     List<DocumentField> taxonomyFields;
-
     private static int parseInt(String number, String errorMessage) throws ConnectionException {
         try {
             return Integer.parseInt(number);
@@ -89,27 +80,20 @@ public class ExcelFimsConnection extends FIMSConnection{
         }
     }
 
-    public void connect(Options optionsa) throws ConnectionException {
+    public void _connect(TableFimsConnectionOptions optionsa) throws ConnectionException {
         ExcelFimsConnectionOptions options = (ExcelFimsConnectionOptions)optionsa;
         String excelFileLocation = options.getChildOptions().get(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY).getValueAsString("excelFile");
         if(excelFileLocation.length() == 0) {
             throw new ConnectionException("You must specify an Excel file");
         }
-        File excelFile = new File(excelFileLocation);
+        excelFile = new File(excelFileLocation);
         if(!excelFile.exists()) {
-            throw new ConnectionException("Cannot find the file "+excelFile.getAbsolutePath());
-        }
-        tissueCol = parseInt(options.getTissueColumn(), "You have not set a tissue column");
-        specimenCol = parseInt(options.getSpecimenColumn(), "You have not set a specimen column");
-
-        if(options.storePlates()) {
-            plateCol = parseInt(options.getPlateColumn(), "You have not set a plate column");
-            wellCol = parseInt(options.getWellColumn(), "You have not set a well column");
+            throw new ConnectionException("Cannot find the file "+ excelFile.getAbsolutePath());
         }
         fields = new ArrayList<DocumentField>();
         taxonomyFields = new ArrayList<DocumentField>();
 
-        List<String> columnNames = new ArrayList<String>();
+        columnNames = new ArrayList<String>();
         //noinspection CatchGenericClass
         try {
             workbook = Workbook.getWorkbook(excelFile);
@@ -129,31 +113,16 @@ public class ExcelFimsConnection extends FIMSConnection{
             handleCorruptedExcelFile(null, e);
             throw ConnectionException.NO_DIALOG;
         }
+    }
 
-        List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
-        for(Options taxOptionsValue : taxOptions){
-            Options.OptionValue colValue = (Options.OptionValue)((Options.ComboBoxOption)taxOptionsValue.getOption("taxCol")).getValue();
-            taxonomyFields.add(new DocumentField(XmlUtilities.encodeXMLChars(colValue.getLabel()), XmlUtilities.encodeXMLChars(colValue.getLabel()), colValue.getName(), String.class, true, false));
-        }
-
+    public List<DocumentField> getTableColumns() throws IOException {
+        List<DocumentField> results = new ArrayList<DocumentField>();
         for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
             String cellContents = columnNames.get(i);
             DocumentField field = new DocumentField(XmlUtilities.encodeXMLChars(cellContents), XmlUtilities.encodeXMLChars(cellContents), "" + i, String.class, true, false);
-            if (!taxonomyFields.contains(field)) {
-                fields.add(field);
-            }
+            results.add(field);
         }
-
-        //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
-        if(getTableCol(fields, tissueCol) == null) {
-            throw new ConnectionException(null, "You have listed your tissue sample field as also being a taxonomy field.  This is not allowed.");
-        }
-        if(getTableCol(fields, specimenCol) == null) {
-            throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
-        }
-        if(getTissueSampleDocumentField() == null) {
-            throw new ConnectionException("You have not set a tissue column");
-        }
+        return results;
     }
 
     private static DocumentField getTableCol(List<DocumentField> fields, int colIndex) {
@@ -165,9 +134,8 @@ public class ExcelFimsConnection extends FIMSConnection{
         return null;
     }
 
-    public void disconnect() {
-        tissueCol = specimenCol = -1;
-        fields = null;
+    public void _disconnect() {
+        excelFile = null;
         if(workbook != null) {
             workbook.close();
             workbook = null;

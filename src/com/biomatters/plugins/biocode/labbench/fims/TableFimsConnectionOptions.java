@@ -178,6 +178,9 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
             newCols = NO_FIELDS;
             throw new ConnectionException(e.getMessage(), e);
         }
+        if(newCols == null) {
+            newCols = NO_FIELDS;
+        }
         tissueId.setPossibleValues(newCols);
         specimenId.setPossibleValues(newCols);
         plateName.setPossibleValues(newCols);

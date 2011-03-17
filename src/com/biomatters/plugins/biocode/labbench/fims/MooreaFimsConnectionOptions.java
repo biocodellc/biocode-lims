@@ -14,19 +14,25 @@ public class MooreaFimsConnectionOptions extends PasswordOptions{
     private PasswordOption passwordOption;
     private StringOption usernameOption;
     private StringOption serverOption;
+    private boolean includeDatabaseAndTable=false;
 
     public MooreaFimsConnectionOptions() {
         init();
     }
 
-    public MooreaFimsConnectionOptions(Class cl) {
+    public MooreaFimsConnectionOptions(Class cl, boolean includeDatabaseAndTable) {
         super(cl);
+        this.includeDatabaseAndTable = includeDatabaseAndTable;
         init();
     }
 
     private void init() {
         serverOption = addStringOption("serverUrl", "Server:", "darwin.berkeley.edu");
         addIntegerOption("serverPort", "Port:", 3306, 0, Integer.MAX_VALUE);
+        if(includeDatabaseAndTable) {
+            addStringOption("database", "Database:", "");
+            addStringOption("table", "Table:", "");
+        }
         usernameOption = addStringOption("username", "Username:", "");
         passwordOption = new PasswordOption("password", "Password:", true);
         addCustomOption(passwordOption);

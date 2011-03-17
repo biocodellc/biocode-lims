@@ -82,7 +82,7 @@ public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOption
         }
         List<OptionValue> fields = new ArrayList<OptionValue>();
         for(DocumentField f : decodedValues) {
-            fields.add(new OptionValue(f.getCode(), f.getName(), f.getDescription()));
+            fields.add(new OptionValue(XmlUtilities.encodeXMLChars(f.getCode()), XmlUtilities.encodeXMLChars(f.getName()), XmlUtilities.encodeXMLChars(f.getDescription())));
         }
         return fields;
     }

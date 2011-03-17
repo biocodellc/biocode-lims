@@ -295,6 +295,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
                 new FusionTablesFimsConnection(),
+                new MySQLFimsConnection(),
                 new MooreaFimsConnection(),
                 new TAPIRFimsConnection()
         };
@@ -396,12 +397,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         final ConnectionManager.Connection connection = connectionManager.getConnectionFromUser(null);
 
         if (connection != null) {
-            try {
-                saveConnectionManager();
-            } catch (IOException e) {
-                e.printStackTrace();
-                //todo: error handling
-            }
+//            try {
+//                saveConnectionManager();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//                //todo: error handling
+//            }
 
             //try to connect to the selected service
             Runnable runnable = new Runnable() {

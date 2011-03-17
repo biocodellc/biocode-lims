@@ -35,20 +35,13 @@ import java.text.ParseException;
  * @author Steve
  * @version $Id$
  */
-public class FusionTablesFimsConnection extends FIMSConnection{
+public class FusionTablesFimsConnection extends TableFimsConnection{
     static final String SERVICE_URL = "https://www.google.com/fusiontables/api/query";
 
     static final Pattern CSV_VALUE_PATTERN = Pattern.compile("([^,\\r\\n\"]*|\"(([^\"]*\"\")*[^\"]*)\")(,|\\r?\\n)");
 
     private GoogleService service = new GoogleService("fusiontables", "fusiontables.ApiExample");
-    private String tissueCol;
-    private String specimenCol;
-    private boolean storePlates;
-    private String plateCol;
-    private String wellCol;
-    private List<DocumentField> fields;
-    private List<DocumentField> taxonomyFields;
-    private List<DocumentField> columns;
+
     private String tableId;
 
 
@@ -64,77 +57,33 @@ public class FusionTablesFimsConnection extends FIMSConnection{
         return "Use a remote Fusion Table as your FIMS";
     }
 
-    public PasswordOptions getConnectionOptions() {
+    public TableFimsConnectionOptions _getConnectionOptions() {
         return new FusionTablesFimsConnectionOptions();
     }
 
-    public void connect(Options optionsa) throws ConnectionException {
+    public void _connect(TableFimsConnectionOptions optionsa) throws ConnectionException {
         FusionTablesFimsConnectionOptions options = (FusionTablesFimsConnectionOptions)optionsa;
         Options connectionOptions = options.getChildOptions().get(FusionTablesFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
         tableId = connectionOptions.getValueAsString("tableId");
         if(tableId.length() == 0) {
             throw new ConnectionException("You must specify a Fusiion Table ID");
         }
-        tissueCol = options.getTissueColumn();
-        specimenCol = options.getSpecimenColumn();
-
-        storePlates = options.storePlates();
-        if(storePlates) {
-            plateCol = options.getPlateColumn();
-            wellCol = options.getWellColumn();
-        }
-        fields = new ArrayList<DocumentField>();
-        taxonomyFields = new ArrayList<DocumentField>();
 
         try {
             service.setUserCredentials(connectionOptions.getValueAsString("username"), ((PasswordOption)connectionOptions.getOption("password")).getPassword(), ClientLoginAccountType.GOOGLE);
-            columns = FusionTablesFimsConnectionOptions.getTableColumnFields(tableId, service);
-        } catch (IOException e) {
-            throw new ConnectionException(e.getMessage(), e);
         } catch (ServiceException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
 
-        List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
-        for(Options taxOptionsValue : taxOptions){
-            Options.OptionValue colValue = (Options.OptionValue)((Options.ComboBoxOption)taxOptionsValue.getOption("taxCol")).getValue();
-            String value = XmlUtilities.encodeXMLChars(colValue.getLabel());
-            taxonomyFields.add(new DocumentField(value, value, value, String.class, true, false));
-        }
-
-        for (int i = 0, cellValuesSize = columns.size(); i < cellValuesSize; i++) {
-            DocumentField field = columns.get(i);
-            if (!taxonomyFields.contains(field)) {
-                fields.add(field);
-            }
-        }
-
-        //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
-        if(getTableCol(fields, tissueCol) == null) {
-            throw new ConnectionException(null, "You have listed your tissue sample field as also being a taxonomy field.  This is not allowed.");
-        }
-        if(getTableCol(fields, specimenCol) == null) {
-            throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
-        }
-        if(getTissueSampleDocumentField() == null) {
-            throw new ConnectionException("You have not set a tissue column");
-        }
     }
 
-    public static DocumentField getTableCol(List<DocumentField> fields, String colName) {
-        for(DocumentField field : fields) {
-            if(field.getCode().equals(colName)) {
-                return field;
-            }
-        }
-        return null;
+    public List<DocumentField> getTableColumns() throws IOException {
+        return FusionTablesFimsConnectionOptions.getTableColumnFields(tableId, service);
     }
 
-    public void disconnect() {
-        tissueCol = specimenCol = tableId = null;
-        fields = null;
-        taxonomyFields = null;
-        columns = null;
+
+    public void _disconnect() {
+        tableId = null;
         if(service != null) {
             try {
                 service.setUserCredentials("", "");
@@ -285,23 +234,7 @@ public class FusionTablesFimsConnection extends FIMSConnection{
         return queryBuilder.toString();
     }
 
-    public DocumentField getTissueSampleDocumentField() {
-        return getTableCol(fields, tissueCol);
-    }
 
-    public List<DocumentField> getCollectionAttributes() {
-        return new ArrayList<DocumentField>(fields);
-    }
-
-    public List<DocumentField> getTaxonomyAttributes() {
-        return new ArrayList<DocumentField>(taxonomyFields);
-    }
-
-    public List<DocumentField> getSearchAttributes() {
-        ArrayList<DocumentField> fields = new ArrayList<DocumentField>(this.fields);
-        fields.addAll(taxonomyFields);
-        return fields;
-    }
 
     public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
         return null;  //todo:
@@ -524,26 +457,6 @@ public class FusionTablesFimsConnection extends FIMSConnection{
 
     public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException {
         return null;
-    }
-
-    public boolean canGetTissueIdsFromFimsTissuePlate() {
-        return storePlates;
-    }
-
-    @Override
-    public DocumentField getPlateDocumentField() {
-        if(!storePlates) {
-            return null;
-        }
-        return getTableCol(fields, plateCol);
-    }
-
-    @Override
-    public DocumentField getWellDocumentField() {
-        if(!storePlates) {
-            return null;
-        }
-        return getTableCol(fields, wellCol);
     }
 
     public boolean requiresMySql() {
