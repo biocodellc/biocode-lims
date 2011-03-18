@@ -21,16 +21,14 @@ import org.virion.jam.util.SimpleListener;
 public abstract class TableFimsConnectionOptions extends PasswordOptions {
     static final List<OptionValue> NO_FIELDS = Arrays.asList(new Options.OptionValue("None", "None"));
 
-    String TABLE_ID = "tableId";
-    String USERNAME = "username";
-    String PASSWORD = "password";
-    private String TISSUE_ID = "tissueId";
-    private String SPECIMEN_ID = "specimenId";
-    private String STORE_PLATES = "storePlates";
-    private String PLATE_NAME = "plateName";
-    private String PLATE_WELL = "plateWell";
-    private String TAX_FIELDS = "taxFields";
-    private String TAX_COL = "taxCol";
+    static final String TABLE_ID = "tableId";
+    static final String TISSUE_ID = "tissueId";
+    static final String SPECIMEN_ID = "specimenId";
+    static final String STORE_PLATES = "storePlates";
+    static final String PLATE_NAME = "plateName";
+    static final String PLATE_WELL = "plateWell";
+    static final String TAX_FIELDS = "taxFields";
+    static final String TAX_COL = "taxCol";
     public static final String CONNECTION_OPTIONS_KEY = "connection";
 
     protected abstract PasswordOptions getConnectionOptions();
