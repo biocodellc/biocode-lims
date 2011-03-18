@@ -430,7 +430,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         String error = null;
 
-        if(!limsConnection.isLocal(connection.getLimsOptions()) || !connection.getFimsConnection().requiresMySql()) {
+        if(!limsConnection.isLocal(connection.getLimsOptions()) || connection.getFimsConnection().requiresMySql()) {
             error = loadMySqlDriver(block, driverFileName);
         }
 
@@ -1589,6 +1589,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             SAXBuilder builder = new SAXBuilder();
             try {
                 connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
+                loadMySqlDriver(true, connectionManager.getSqlLocationOptions());
             } catch (XMLSerializationException e) {
                 e.printStackTrace();
                 connectionManager = new ConnectionManager();

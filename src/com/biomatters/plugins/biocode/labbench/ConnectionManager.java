@@ -310,7 +310,7 @@ public class ConnectionManager implements XMLSerializable{
 
     public boolean checkIfWeCanLogIn() {
         if(selectedConnection >= 0) {
-            Connection conn = connections.get(selectedConnection);
+            final Connection conn = connections.get(selectedConnection);
             final Options passwordOptions = conn.getEnterPasswordOptions();
             if(passwordOptions != null) {
                 final AtomicBoolean dialogResult = new AtomicBoolean();
@@ -324,6 +324,21 @@ public class ConnectionManager implements XMLSerializable{
                     return false;
                 }
                 conn.setPasswordsFromOptions(passwordOptions);
+                final AtomicReference<Exception> error = new AtomicReference<Exception>();
+                Runnable r = new Runnable() {
+                    public void run() {
+                        try {
+                            conn.updateNowThatWeHaveAPassword();
+                        } catch (ConnectionException e) {
+                            Dialogs.showMessageDialog("Could not log in: "+e.getMessage());
+                            error.set(e);
+                        }
+                    }
+                };
+                ThreadUtilities.invokeNowOrWait(r);
+                if(error.get() != null) {
+                    return false;
+                }
             }
             return true;
         }
@@ -729,6 +744,11 @@ public class ConnectionManager implements XMLSerializable{
                 createLoginOptions();
             }
             return (PasswordOptions)loginOptions.getChildOptions().get("lims");
+        }
+
+        public void updateNowThatWeHaveAPassword() throws ConnectionException{
+            loginOptions.updateOptions();
+            loginOptions.valuesFromXML(loginOptionsValues);
         }
     }
 
