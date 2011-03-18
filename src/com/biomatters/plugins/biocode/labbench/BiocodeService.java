@@ -397,12 +397,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         final ConnectionManager.Connection connection = connectionManager.getConnectionFromUser(null);
 
         if (connection != null) {
-//            try {
-//                saveConnectionManager();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//                //todo: error handling
-//            }
+            try {
+                saveConnectionManager();
+            } catch (IOException e) {
+                e.printStackTrace();
+                //todo: error handling
+            }
 
             //try to connect to the selected service
             Runnable runnable = new Runnable() {
@@ -640,7 +640,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 callback.setMessage("Downloading Tissues");
                 tissueSamples = activeFIMSConnection.getMatchingSamples(query);
             } catch (ConnectionException e) {
-                throw new DatabaseServiceException(e.getMessage(), false);
+                throw new DatabaseServiceException(e, e.getMessage(), false);
             }
             fimsQueries.add(query);
             limsQueries.add(query);

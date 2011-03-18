@@ -148,7 +148,7 @@ public class SqlUtilities {
                     fieldCode = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
                 }
                 //noinspection StringConcatenationInsideStringBufferAppend
-                queryBuilder.append(fieldCode +" "+ join +" ");
+                queryBuilder.append("`"+fieldCode+"`" +" "+ join +" ");
 
                 Object[] queryValues = aquery.getValues();
                 for (int i = 0; i < queryValues.length; i++) {
