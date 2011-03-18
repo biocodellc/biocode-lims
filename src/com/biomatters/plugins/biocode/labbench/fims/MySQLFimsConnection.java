@@ -1,21 +1,13 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.options.PasswordOption;
 
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.Properties;
+import java.util.*;
+import java.util.Date;
 import java.io.IOException;
 import java.sql.*;
 
@@ -27,6 +19,7 @@ public class MySQLFimsConnection extends TableFimsConnection{
     private Connection connection;
     private Driver driver;
     private String tableName;
+    static final String FIELD_PREFIX = "MYSQLFIMS:";
 
     static Driver getDriver() throws IOException {
         try {
@@ -82,10 +75,6 @@ public class MySQLFimsConnection extends TableFimsConnection{
         }
     }
 
-    private DocumentField getDocumentField(ResultSet resultSet) throws SQLException{//todo: multiple value types
-        return DocumentField.createStringField(resultSet.getString("Field"), resultSet.getString("Field"), "MYSQLFIMS:"+resultSet.getString("Field"));
-    }
-
     public List<DocumentField> getTableColumns() throws IOException {
         try {
             Statement statement = connection.createStatement();
@@ -93,11 +82,10 @@ public class MySQLFimsConnection extends TableFimsConnection{
             List<DocumentField> results = new ArrayList<DocumentField>();
 
             while(resultSet.next()) {
-                results.add(getDocumentField(resultSet));
-                for(int i=1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-                    System.out.println(resultSet.getMetaData().getColumnLabel(i)+": "+resultSet.getObject(i)+" ("+resultSet.getMetaData().getColumnClassName(i)+")");
+                DocumentField field = SqlUtilities.getDocumentField(resultSet);
+                if(field != null) {
+                    results.add(field);
                 }
-                System.out.println("------------------------------------");
             }
 
             return results;
@@ -123,11 +111,74 @@ public class MySQLFimsConnection extends TableFimsConnection{
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        StringBuilder queryBuilder = new StringBuilder();
+
+
+        queryBuilder.append("SELECT * FROM "+tableName+" WHERE ");
+
+        String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), FIELD_PREFIX, false);
+        if(sqlString == null) {
+            return Collections.emptyList();
+        }
+        queryBuilder.append(sqlString);
+
+
+        String queryString = queryBuilder.toString();
+
+        return getFimsSamplesFromSql(queryString, null);
+    }
+
+    private List<FimsSample> getFimsSamplesFromSql(String queryString, RetrieveCallback callback) throws ConnectionException {
+        System.out.println(queryString);
+        if(connection == null) {
+            throw new IllegalStateException("Not connected!");
+        }
+        try {
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(queryString);
+            List<FimsSample> samples = new ArrayList<FimsSample>();
+            ResultSetMetaData metadata = resultSet.getMetaData();
+            while(resultSet.next()){
+                Map<String, Object> data = new HashMap<String, Object>();
+                for(DocumentField f : getSearchAttributes()) {
+                    if(String.class.isAssignableFrom(f.getValueType()) ) {
+                        data.put(f.getCode(), resultSet.getString(f.getCode().substring(FIELD_PREFIX.length())));
+                    }
+                    else if(Integer.class.isAssignableFrom(f.getValueType()) ) {
+                        data.put(f.getCode(), resultSet.getInt(f.getCode().substring(FIELD_PREFIX.length())));
+                    }
+                    else if(Double.class.isAssignableFrom(f.getValueType()) ) {
+                        data.put(f.getCode(), resultSet.getDouble(f.getCode().substring(FIELD_PREFIX.length())));
+                    }
+                    else if(Date.class.isAssignableFrom(f.getValueType()) ) {
+                        java.util.Date date = resultSet.getDate(f.getCode().substring(FIELD_PREFIX.length()));
+                        if(date != null) {
+                            date = new Date(date.getTime());
+                        }
+                        data.put(f.getCode(), date);
+                    }
+                    else if(Boolean.class.isAssignableFrom(f.getValueType())) {
+                        data.put(f.getCode(), resultSet.getBoolean(f.getCode().substring(FIELD_PREFIX.length())));
+                    }
+                    else {
+                        assert false : "Unrecognised field type: "+f.toString();
+                    }
+                }
+                TableFimsSample sample = new TableFimsSample(fields, taxonomyFields, data, tissueCol, specimenCol);
+                samples.add(sample);
+                if(callback != null) {
+                    callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
+                }
+            }
+            resultSet.close();
+            return samples;
+        } catch (SQLException e) {
+            throw new ConnectionException(e);
+        }
     }
 
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        //To change body of implemented methods use File | Settings | File Templates.
+        getFimsSamplesFromSql("SELECT * FROM "+tableName, callback);
     }
 
     public boolean requiresMySql() {

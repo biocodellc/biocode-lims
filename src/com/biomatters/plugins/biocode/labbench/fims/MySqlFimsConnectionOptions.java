@@ -4,6 +4,7 @@ import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.options.PasswordOption;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 
 import java.util.List;
 import java.util.Properties;
@@ -40,11 +41,10 @@ public class MySqlFimsConnectionOptions extends TableFimsConnectionOptions{
             List<OptionValue> results = new ArrayList<OptionValue>();
 
             while(resultSet.next()) {
-                results.add(new OptionValue(XmlUtilities.encodeXMLChars("MYSQLFIMS:"+resultSet.getString("Field")), XmlUtilities.encodeXMLChars(resultSet.getString("Field"))));
-                for(int i=1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-                    System.out.println(resultSet.getMetaData().getColumnLabel(i)+": "+resultSet.getObject(i)+" ("+resultSet.getMetaData().getColumnClassName(i)+")");
+                DocumentField field = SqlUtilities.getDocumentField(resultSet);
+                if(field != null) {
+                    results.add(new OptionValue(field.getCode(), field.getName()));
                 }
-                System.out.println("------------------------------------");
             }
             connection.close();
             return results;

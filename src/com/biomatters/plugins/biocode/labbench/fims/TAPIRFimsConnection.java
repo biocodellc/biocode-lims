@@ -118,7 +118,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
     }
 
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        throw new RuntimeException("Not Implemented!"); //todo:
+        throw new ConnectionException("Retrieving all results is not currently supported for TAPIR connections.  Please contact Biomatters if you would like to see this feature"); //todo:
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{

@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
@@ -217,7 +216,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         queryBuilder.append("SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID AND ");
 
-        String sqlString = getQuerySQLString(query);
+        String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), true);
         if(sqlString == null) {
             return Collections.emptyList();
         }
@@ -240,188 +239,8 @@ public class MooreaFimsConnection extends FIMSConnection{
             resultSet.close();
             return samples;
         } catch (SQLException e) {
-            e.printStackTrace(); //todo: exception handling
             throw new ConnectionException(e);
         }
-    }
-
-    private String getQuerySQLString(Query query) {
-        String join = "";
-        String prepend = "";
-        String append = "";
-        StringBuilder queryBuilder = new StringBuilder();
-        if(query instanceof BasicSearchQuery) {
-            BasicSearchQuery basicQuery = (BasicSearchQuery)query;
-            String searchText = basicQuery.getSearchText();
-            if(searchText == null || searchText.trim().length() == 0) {
-                return null;
-            }
-            queryBuilder.append("(");
-            List<Query> queryList = new ArrayList<Query>();
-            for (int i = 0; i < getSearchAttributes().size(); i++) {
-                DocumentField field = getSearchAttributes().get(i);
-                if (!field.getValueType().equals(String.class)) {
-                    continue;
-                }
-
-                queryList.add(BasicSearchQuery.Factory.createFieldQuery(field, Condition.CONTAINS, searchText));
-            }
-            Query compoundQuery = CompoundSearchQuery.Factory.createOrQuery(queryList.toArray(new Query[queryList.size()]), Collections.EMPTY_MAP);
-            return getQuerySQLString(compoundQuery);
-        }
-        else if(query instanceof AdvancedSearchQueryTerm) {
-            AdvancedSearchQueryTerm aquery = (AdvancedSearchQueryTerm)query;
-            String fieldCode = aquery.getField().getCode();
-
-            if(aquery.getCondition() == Condition.STRING_LENGTH_GREATER_THAN) {
-                return "LEN("+fieldCode+") > "+aquery.getValues()[0];
-            }
-            else if(aquery.getCondition() == Condition.STRING_LENGTH_LESS_THAN) {
-                return "LEN("+fieldCode+") < "+aquery.getValues()[0];
-            }
-
-
-            switch(aquery.getCondition()) {
-                case EQUAL:
-                    join = "=";
-                    break;
-                case APPROXIMATELY_EQUAL:
-                    join = "LIKE";
-                    break;
-                case BEGINS_WITH:
-                    join = "LIKE";
-                    append="%";
-                    break;
-                case ENDS_WITH:
-                    join = "LIKE";
-                    prepend = "%";
-                    break;
-                case CONTAINS:
-                    join = "LIKE";
-                    append = "%";
-                    prepend = "%";
-                    break;
-                case GREATER_THAN:
-                    join = ">";
-                    break;
-                case GREATER_THAN_OR_EQUAL_TO:
-                    join = ">=";
-                    break;
-                case LESS_THAN:
-                    join = "<";
-                    break;
-                case LESS_THAN_OR_EQUAL_TO:
-                    join = "<=";
-                    break;
-                case NOT_CONTAINS:
-                    join = "NOT LIKE";
-                    append = "%";
-                    prepend = "%";
-                    break;
-                case NOT_EQUAL:
-                    join = "!=";
-                    break;
-                case IN_RANGE:
-                    join = "BETWEEN";
-                    break;
-            }
-
-            Object testSearchText = aquery.getValues()[0];
-            if(testSearchText == null || testSearchText.toString().trim().length() == 0) {
-                return null;
-            }
-
-
-            //special cases
-            if(fieldCode.equals("tissueId")) {
-                String[] tissueIdParts = aquery.getValues()[0].toString().split("\\.");
-                if(tissueIdParts.length == 2) {
-                    //noinspection StringConcatenationInsideStringBufferAppend
-                    queryBuilder.append("(biocode_tissue.bnhm_id "+join+" '"+prepend+tissueIdParts[0]+"' AND biocode_tissue.tissue_num "+join+" "+tissueIdParts[1]+")");
-                }
-                else {
-                    //noinspection StringConcatenationInsideStringBufferAppend
-                    queryBuilder.append("biocode_tissue.bnhm_id "+join+" '"+prepend+aquery.getValues()[0]+append+"'");
-                }
-            }
-            else if(fieldCode.equals("biocode_collecting_event.CollectionTime")) {
-                Date date = (Date)aquery.getValues()[0];
-                //String queryString = "(biocode_collecting_event.YearCollected "+join+")";
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(date);
-                int year = cal.get(Calendar.YEAR);
-                int month = cal.get(Calendar.MONTH);
-                int day = cal.get(Calendar.DAY_OF_MONTH);
-                String queryString;
-                switch(aquery.getCondition()) {
-                    case EQUAL :
-                    case NOT_EQUAL:
-                        queryString = "(biocode_collecting_event.YearCollected "+join+" "+year+") AND (biocode_collecting_event.MonthCollected "+join+" "+month+") AND (biocode_collecting_event.DayCollected "+join+" "+day+") AND ";
-                        break;
-                    default :
-                        queryString = "(biocode_collecting_event.YearCollected "+join+" "+year+") OR (biocode_collecting_event.YearCollected = "+year+" AND biocode_collecting_event.MonthCollected "+join+" "+month+") OR (biocode_collecting_event.YearCollected = "+year+" AND biocode_collecting_event.MonthCollected = "+month+" AND biocode_collecting_event.DayCollected "+join+" "+day+")";
-                }
-                queryBuilder.append(queryString);
-            }
-            else {
-                if (fieldCode.equals(DocumentField.ORGANISM_FIELD.getCode())) {
-                    fieldCode = "biocode.ScientificName"; //we use the standard organism field so we need to map it to the correct database id
-                }
-                else if (fieldCode.equals(DocumentField.COMMON_NAME_FIELD.getCode())) {
-                    fieldCode = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
-                }
-                //noinspection StringConcatenationInsideStringBufferAppend
-                queryBuilder.append(fieldCode +" "+ join +" ");
-
-                Object[] queryValues = aquery.getValues();
-                for (int i = 0; i < queryValues.length; i++) {
-                    Object value = queryValues[i];
-                    String valueString = value.toString();
-                    valueString = prepend+valueString+append;
-                    if(value instanceof String) {
-                        valueString = "'"+valueString+"'";
-                    }
-                    queryBuilder.append(valueString);
-                    if(i < queryValues.length-1) {
-                        queryBuilder.append(" AND ");
-                    }
-                }
-            }
-
-        }
-        else if(query instanceof CompoundSearchQuery) {
-            CompoundSearchQuery cquery = (CompoundSearchQuery)query;
-            CompoundSearchQuery.Operator operator = cquery.getOperator();
-            switch(operator) {
-                case OR:
-                    join = " OR ";
-                    break;
-                case AND:
-                    join = " AND ";
-                    break;
-            }
-
-            queryBuilder.append("(");
-            int count = 0;
-            boolean firstTime = true;
-            for (Query childQuery : cquery.getChildren()) {
-                String s = getQuerySQLString(childQuery);
-                if (s == null) {
-                    continue;
-                } else if (!firstTime) {
-                    queryBuilder.append(join);
-                }
-                firstTime = false;
-                count++;
-                queryBuilder.append(s);
-            }
-            if(count == 0) {
-                return null;
-            }
-
-            queryBuilder.append(")");
-        }
-        return queryBuilder.toString();
     }
 
     public boolean canGetTissueIdsFromFimsTissuePlate() {

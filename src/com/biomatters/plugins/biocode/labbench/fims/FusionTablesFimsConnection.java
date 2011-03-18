@@ -88,8 +88,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             try {
                 service.setUserCredentials("", "");
             } catch (AuthenticationException e) {
-                e.printStackTrace();
-                //todo: exception handling
+                //ignore - we expect this to throw an exception...
             }
         }
     }
