@@ -20,6 +20,7 @@ import java.util.ArrayList;
 public class MarkInLimsUtilities {
     static Map<AnnotatedPluginDocument, SequenceDocument> getDocsToMark(AnnotatedPluginDocument[] annotatedDocuments, SequenceSelection selection) throws DocumentOperationException {
         Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = new HashMap<AnnotatedPluginDocument, SequenceDocument>();
+        int sequenceCount = -1;
         for (AnnotatedPluginDocument document : annotatedDocuments) {
             boolean isAlignment = SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass());
             if (isAlignment) {
@@ -35,16 +36,17 @@ public class MarkInLimsUtilities {
                 if(BiocodeUtilities.isAlignmentOfChromatograms(document) || BiocodeUtilities.isAlignmentOfContigConsensusSequences(document)) {
                     SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                     for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+                        sequenceCount++;
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
                         SequenceDocument sequenceToExtract = alignment.getSequence(i);
 
                         if(!sequenceSelectionIsEmpty(selection) && selection.getSelectedSequenceCount() > 0) {
                             boolean found = false;
-                            for(SequenceSelection.SelectionInterval interval : selection.getIntervals()) {
+                            for(SequenceSelection.SelectionInterval interval : selection.getIntervals(true)) {
                                 if(interval.getMinResidue() == interval.getMaxResidue()) {
                                     continue;
                                 }
-                                if(sequenceToExtract.equals(interval.getSequence())) { //todo
+                                if(interval.getSequenceIndex().getSequenceIndex() == sequenceCount) {
                                     if(interval.getMinResidue() > sequenceToExtract.getCharSequence().getLeadingGapsLength() || interval.getMaxResidue() < sequenceToExtract.getCharSequence().getTrailingGapsStartIndex()) {
                                         throw new DocumentOperationException("Please select only entire sequences.  Partial sequences cannot be marked as pass or fail");
                                     }
@@ -63,9 +65,11 @@ public class MarkInLimsUtilities {
                     }
                 }
                 else {
+                    sequenceCount++;
                     docsToMark.put(document, null);
                 }
             } else {
+                sequenceCount++;
                 docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()));
             }
         }
@@ -76,7 +80,7 @@ public class MarkInLimsUtilities {
         if(selection == null) {
             return true;
         }
-        for(SequenceSelection.SelectionInterval interval : selection.getIntervals()) {
+        for(SequenceSelection.SelectionInterval interval : selection.getIntervals(true)) {
             if(interval.getMinResidue() != interval.getMaxResidue()) {
                 return false;
             }

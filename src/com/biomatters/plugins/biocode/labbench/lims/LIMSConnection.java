@@ -383,7 +383,9 @@ public class LIMSConnection {
         if(cancelable != null) {
             //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
         }
-        statement.setFetchSize(Integer.MIN_VALUE);
+        if(!isLocal()) {
+            statement.setFetchSize(Integer.MIN_VALUE);
+        }
         try {
             final ResultSet resultSet = statement.executeQuery();
             List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
@@ -563,7 +565,7 @@ public class LIMSConnection {
         if(cancelable != null) {
             //todo: listeningThread1 = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
         }
-        if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+        if(!isLocal()) {
             statement.setFetchSize(Integer.MIN_VALUE);
         }
         int position = 1;
@@ -852,7 +854,7 @@ public class LIMSConnection {
         if(cancelable != null) {
             //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
         }
-        if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+        if(!isLocal()) {
             statement.setFetchSize(Integer.MIN_VALUE);
         }
 
