@@ -407,12 +407,12 @@ public class ReactionUtilities {
         try {
             out = new PrintWriter(outFile);
             out.println("Container Name\tPlate ID\tDescription\tContainerType\tAppType\tOwner\tOperator\tPlateSealing\tSchedulingPref");
-            out.println(plate.getName()+"\t"+plate.getName()+"\t\t"+plate.getReactions().length+"-Well\tRegular\t"+options.getValue("owner")+"\t"+options.getValue("operator")+"\t"+options.getValue("plateSealing")+"\t1234");
+            out.println(replaceChars(plate.getName())+"\t"+replaceChars(plate.getName())+"\t\t"+plate.getReactions().length+"-Well\tRegular\t"+replaceChars(options.getValue("owner"))+"\t"+replaceChars(options.getValue("operator"))+"\t"+replaceChars(options.getValue("plateSealing"))+"\t1234");
             out.println("AppServer\tAppInstance");
             out.println("SequencingAnalysis");
             out.println("Well\tSample Name\tComment\tResults Group 1\tInstrument Protocol 1\tAnalysis Protocol 1");
             for(Reaction r : plate.getReactions()) {
-                out.println(Plate.getWell(r.getPosition(), plate.getPlateSize()).toPaddedString()+"\t"+r.getExtractionId()+"\t\t"+options.getValue("resultsGroup")+"\t"+options.getValue("instrumentProtocol")+"\t"+options.getValue("analysisProtocol"));
+                out.println(Plate.getWell(r.getPosition(), plate.getPlateSize()).toPaddedString()+"\t"+replaceChars(r.getExtractionId())+"\t\t"+replaceChars(options.getValue("resultsGroup"))+"\t"+replaceChars(options.getValue("instrumentProtocol"))+"\t"+replaceChars(options.getValue("analysisProtocol")));
             }
             
         } catch (IOException e) {
@@ -423,6 +423,15 @@ public class ReactionUtilities {
             }
         }
 
+    }
+
+    private static String replaceChars(Object o) {
+        String s = o.toString();
+        char[] charsToReplace = "\\/:*\"<>|?' ".toCharArray();
+        for(char c : charsToReplace) {
+            s = s.replace(c, '.');
+        }
+        return s;
     }
 
     public static void showDisplayDialog(Plate plate, JComponent owner) {
