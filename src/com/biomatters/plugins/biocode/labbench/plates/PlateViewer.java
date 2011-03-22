@@ -204,8 +204,8 @@ public class PlateViewer extends JPanel {
                 String error = ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
                 if(error != null) {
                     Dialogs.showMessageDialog(error);
+                    actionPerformed(e);
                 }
-                actionPerformed(e);
             }
         };
         if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
