@@ -201,7 +201,11 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk Add Traces", "Import trace files, and attach them to wells", StandardIcons.nucleotide.getIcons()) {
             public void actionPerformed(ActionEvent e) {
-                ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
+                String error = ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
+                if(error != null) {
+                    Dialogs.showMessageDialog(error);
+                }
+                actionPerformed(e);
             }
         };
         if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {

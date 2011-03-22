@@ -526,7 +526,11 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction addTracesAction = new GeneiousAction("Bulk Add Traces", null, IconUtilities.getIcons("chromatogram32.png")) {
         public void actionPerformed(ActionEvent e) {
-            ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
+            String error = ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
+            if(error != null) {
+                Dialogs.showMessageDialog(error);
+                actionPerformed(e);
+            }
             saveAction.setEnabled(true);
         }
     };

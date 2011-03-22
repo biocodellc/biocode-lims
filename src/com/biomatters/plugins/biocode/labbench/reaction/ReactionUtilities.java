@@ -66,7 +66,7 @@ public class ReactionUtilities {
      * @param owner
      * @return true if the user clicked OK on the dialog
      */
-    public static void bulkLoadChromatograms(final Plate plate, JComponent owner) {
+    public static String bulkLoadChromatograms(final Plate plate, JComponent owner) {
         if(plate == null || plate.getReactionType() != Reaction.Type.CycleSequencing) {
             throw new IllegalArgumentException("You may only call this method with Cycle Sequencing plates");
         }
@@ -127,7 +127,7 @@ public class ReactionUtilities {
         options.endAlignHorizontally();
 
         if(!Dialogs.showOptionsDialog(options, "Bulk add traces", true, owner)){
-            return;
+            return null;
         }
 
         final int platePart = namePartOption.getPart();
@@ -139,16 +139,16 @@ public class ReactionUtilities {
             assert field != null; //this shouldn't happen unless the list changes between when the options were displayed and when the user clicks ok.
             //noinspection ConstantConditions
             if(field == null) {
-                return;
+                return "Could not find the field "+fieldOption.getValue().getName()+" on your reactions.  Please try again with another field.";
             }
         }
 
         final File folder = new File(selectionOption.getValue());
         if(!folder.exists()) {
-            throw new IllegalStateException(folder.getAbsolutePath()+" does not exist!");
+            return "The folder "+folder.getAbsolutePath()+" does not exist!";
         }
         if(!folder.isDirectory()) {
-            throw new IllegalStateException(folder.getAbsolutePath()+" is not a folder!");
+            throw new IllegalStateException(folder.getAbsolutePath()+" is not a folder!");  //leave as a crash because we have specified directories only in the file selection option
         }
 
         final String separatorString = nameSeperatorOption.getSeparatorString();
@@ -162,7 +162,7 @@ public class ReactionUtilities {
             }
         };
         BiocodeService.block("Importing traces", owner, runnable);
-
+        return null;
     }
 
     private static DocumentField getDocumentField(List<DocumentField> fields, String code) {
