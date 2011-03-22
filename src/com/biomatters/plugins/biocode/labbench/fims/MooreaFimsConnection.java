@@ -44,7 +44,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     public boolean requiresMySql() {
-        return false;
+        return true;
     }
 
     public PasswordOptions getConnectionOptions() {

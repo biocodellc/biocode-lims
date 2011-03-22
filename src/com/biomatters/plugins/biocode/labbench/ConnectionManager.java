@@ -445,8 +445,6 @@ public class ConnectionManager implements XMLSerializable{
 
         public Connection(String name) {
             this.name = name;
-            //setLocationOptions();
-            //loginOptions.restoreDefaults();
         }
 
         public Connection(Element e) throws XMLSerializationException{
@@ -680,7 +678,9 @@ public class ConnectionManager implements XMLSerializable{
                 connectionElement.addContent((Element)loginOptionsValues.clone());
             }
             else {
-                throw new RuntimeException("The connection "+getName()+" has no options or options values!");
+                setLocationOptions();
+                loginOptions.restoreDefaults();
+                connectionElement.addContent(loginOptions.valuesToXML("connectionOptions"));
             }
             connectionElement.addContent(new Element("Name").setText(name));
             return connectionElement;
