@@ -51,7 +51,7 @@
       <echo file="${plugins.proguard}" append="true"
             message="-outjars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}-obfuscated.jar${line.separator}"/>
        <echo file="${plugins.proguard}" append="true"
-            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/google/*.jar"/>
+            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/google/*.jar${line.separator}"/>
    </target>
 
    <target name="compile" depends="build-public-api, prepare">
