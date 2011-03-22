@@ -147,14 +147,14 @@ public class ConnectionManager implements XMLSerializable{
                 int newSelectedIndex = connectionsList.getSelectedIndex();
                 boolean enabled = connections.size() > 0 && newSelectedIndex >= 0;
                 removeButton.setEnabled(enabled);
-                if(okButton.get() != null) {
-                    okButton.get().setEnabled(enabled);
-                }
                 if (newSelectedIndex == selectedConnection) {
                     return;
                 }
+                if(okButton.get() != null) {
+                    okButton.get().setEnabled(false);
+                }
                 selectedConnection = newSelectedIndex;               
-                updateCenterPanel();
+                updateCenterPanel(okButton.get());
             }
         };
         connectionsList.getSelectionModel().addListSelectionListener(selectionListener);
@@ -213,7 +213,7 @@ public class ConnectionManager implements XMLSerializable{
                     selectedConnection = Math.max(0, selectedConnection);
                 }
                 fireListListeners();
-                updateCenterPanel();
+                updateCenterPanel(okButton.get());
             }
         });
         selectionListener.valueChanged(null);
@@ -259,7 +259,7 @@ public class ConnectionManager implements XMLSerializable{
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Biocode Connections", dialogParent);
         dialogOptions.setMaxWidth(Integer.MAX_VALUE);
         dialogOptions.setMaxHeight(Integer.MAX_VALUE);
-        updateCenterPanel();
+        updateCenterPanel(okButton.get());
         if(Dialogs.showDialog(dialogOptions, connectionsPanel, sqlConnectorLocationOptions.getPanel()).equals(Dialogs.OK)) {
             sqlDirverLocation = sqlConnectorLocationOptions.getValueAsString("driver");
             if(checkIfWeCanLogIn()) {
@@ -356,7 +356,7 @@ public class ConnectionManager implements XMLSerializable{
         return ""+sqlConnectorLocationOptions.getValue("driver");
     }
 
-    private void updateCenterPanel() {
+    private void updateCenterPanel(JButton okButton) {
         centerPanel.removeAll();
         if(selectedConnection < 0) {
             connectionsList.clearSelection();
@@ -369,7 +369,7 @@ public class ConnectionManager implements XMLSerializable{
         }
 
         Connection selectedConnection = connections.get(this.selectedConnection);
-        centerPanel.add(selectedConnection.getConnectionOptionsPanel(), BorderLayout.CENTER);
+        centerPanel.add(selectedConnection.getConnectionOptionsPanel(okButton), BorderLayout.CENTER);
         centerPanel.revalidate();
         if(selectedConnection.optionsCreated()) {
             packAncestor(centerPanel);
@@ -605,7 +605,7 @@ public class ConnectionManager implements XMLSerializable{
 
 
 
-        public JPanel getConnectionOptionsPanel(){  //we only set the values when the panel is actually required - constructing the options can take some time for large excel files...
+        public JPanel getConnectionOptionsPanel(final JButton button){  //we only set the values when the panel is actually required - constructing the options can take some time for large excel files...
             final JPanel panel = new GPanel(new BorderLayout());
             final Options nameOptions = new Options(ConnectionManager.class);
             final Options.StringOption nameOption = nameOptions.addStringOption("name", "Connection Name: ", "");
@@ -618,6 +618,9 @@ public class ConnectionManager implements XMLSerializable{
             if(loginOptions != null) {
                 panel.add(loginOptions.getPanel());
                 panel.add(nameOptions.getPanel(), BorderLayout.NORTH);
+                if(button != null) {
+                    button.setEnabled(true);
+                }
             }
             else {
                 JPanel labelPanel = new GPanel(new GridBagLayout());
@@ -642,6 +645,9 @@ public class ConnectionManager implements XMLSerializable{
                                 panel.revalidate();
                                 panel.invalidate();
                                 packAncestor(panel);
+                                if(button != null && panel.isShowing()) {
+                                    button.setEnabled(true);
+                                }
                             }
                         };
                         ThreadUtilities.invokeNowOrLater(runnable);
