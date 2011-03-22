@@ -189,7 +189,6 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             }
             reactionType = srcPlates[quadrant].getReactionType();
             Plate srcPlate = srcPlates[quadrant];
-            Reaction[] srcReactions = srcPlate.getReactions();
             int xoffset = quadrant % 2 == 0 ? 0 : 1;
             int yOffset = quadrant > 1 ? 1 : 0;
             for (int col = 0; col < srcPlate.getCols(); col++) {
@@ -207,17 +206,14 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, boolean onlyFailed) throws DocumentOperationException{
         quadrant = quadrant-1;//zero-index it
-        Reaction[] srcReactions = srcPlate.getReactions();
-        for (Reaction srcReaction1 : srcReactions) {
-            int xoffset = quadrant % 2 == 0 ? 0 : 1;
-            int yOffset = quadrant > 1 ? 1 : 0;
-            for (int col = 0; col < destPlate.getCols(); col++) {
-                for (int row = 0; row < destPlate.getRows(); row++) {
-                    Reaction destReaction = destPlate.getReaction(row, col);
-                    Reaction srcReaction = srcPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
-                    if (!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
-                        ReactionUtilities.copyReaction(srcReaction, destReaction);
-                    }
+        int xoffset = quadrant % 2 == 0 ? 0 : 1;
+        int yOffset = quadrant > 1 ? 1 : 0;
+        for (int col = 0; col < destPlate.getCols(); col++) {
+            for (int row = 0; row < destPlate.getRows(); row++) {
+                Reaction destReaction = destPlate.getReaction(row, col);
+                Reaction srcReaction = srcPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
+                if (!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
+                    ReactionUtilities.copyReaction(srcReaction, destReaction);
                 }
             }
         }
