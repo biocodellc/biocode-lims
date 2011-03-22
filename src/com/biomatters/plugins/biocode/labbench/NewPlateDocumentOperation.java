@@ -182,25 +182,25 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             throw new IllegalArgumentException("The destination plate must be a 384 well plate");
         }
 
+        Reaction.Type reactionType = null;
         for(int quadrant = 0; quadrant < srcPlates.length; quadrant++) {
             if(srcPlates[quadrant] == null) {
                 continue;
             }
+            reactionType = srcPlates[quadrant].getReactionType();
             Plate srcPlate = srcPlates[quadrant];
             Reaction[] srcReactions = srcPlate.getReactions();
-            for (Reaction srcReaction1 : srcReactions) {
-                int xoffset = quadrant % 2 == 0 ? 0 : 1;
-                int yOffset = quadrant > 1 ? 1 : 0;
-                for (int col = 0; col < srcPlate.getCols(); col++) {
-                    for (int row = 0; row < srcPlate.getRows(); row++) {
-                        Reaction srcReaction = srcPlate.getReaction(row, col);
-                        Reaction destReaction = destPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
-                        ReactionUtilities.copyReaction(srcReaction, destReaction);
-                    }
+            int xoffset = quadrant % 2 == 0 ? 0 : 1;
+            int yOffset = quadrant > 1 ? 1 : 0;
+            for (int col = 0; col < srcPlate.getCols(); col++) {
+                for (int row = 0; row < srcPlate.getRows(); row++) {
+                    Reaction srcReaction = srcPlate.getReaction(row, col);
+                    Reaction destReaction = destPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
+                    ReactionUtilities.copyReaction(srcReaction, destReaction);
                 }
             }
         }
-        if(srcPlates[0].getReactionType() == Reaction.Type.Extraction) {
+        if(reactionType == Reaction.Type.Extraction) {
             autodetectWorkflows(destPlate);
         }
     }
