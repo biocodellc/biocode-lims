@@ -221,7 +221,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         final boolean across = options.getValueAsString("direction").equals("across");
 
-        List<Reaction> newReactions;
+        final List<Reaction> newReactions;
         String reactionTypeString = options.getValueAsString("plateType");
         final Reaction.Type plateType = Reaction.Type.valueOf(reactionTypeString);
         if(plateType == null) {
@@ -230,7 +230,16 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         if(plateType == Reaction.Type.Extraction) { //if it's an extraction we want to move the existing extractions to this plate, not make new ones...
             try {
-                newReactions = new ArrayList<Reaction>(BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(failedReactions).values());
+                Map<String, Reaction> extractionReactions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(failedReactions);
+                newReactions = new ArrayList<Reaction>();
+                for(Reaction r : failedReactions) {
+                    Reaction newReaction = extractionReactions.get(r.getExtractionId());
+                    if(newReaction == null) {
+                        newReaction = new ExtractionReaction();
+                        newReaction.setExtractionId(r.getExtractionId());
+                    }
+                    newReactions.add(r);
+                }
             } catch (SQLException e) {
                 throw new DocumentOperationException("Could not fetch existing extractions from database: "+e.getMessage());
             }
@@ -250,7 +259,6 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
 
         final List<PlateViewer> plates = new ArrayList<PlateViewer>();
-        final List<Reaction> finalNewReactions = newReactions;
         Runnable runnable = new Runnable() {
             public void run() {
                 for(int i=0; i < numberOfPlatesRequired; i++) {
@@ -267,13 +275,13 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
                         }
                         System.out.println(n+": "+plateIndex);
-                        if(n+i*plateSize.numberOfReactions() > failedReactions.size()-1) {
+                        int index = i * plateSize.numberOfReactions() + n;
+                        if(index > failedReactions.size()-1) {
                             break;
                         }
                         Reaction plateReaction = plate.getPlate().getReactions()[plateIndex];
-                        int index = i * plateSize.numberOfReactions() + n;
                         Reaction oldReaction = failedReactions.get(index);
-                        Reaction newReaction = finalNewReactions.get(index);
+                        Reaction newReaction = newReactions.get(index);
                         if(newReaction == null) {
                             continue;
                         }
