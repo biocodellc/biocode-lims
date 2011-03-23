@@ -58,10 +58,12 @@ public abstract class TableFimsConnection extends FIMSConnection{
         List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
         for(Options taxOptionsValue : taxOptions){
             Options.OptionValue colValue = (Options.OptionValue)((Options.ComboBoxOption)taxOptionsValue.getOption("taxCol")).getValue();
-            String value = XmlUtilities.encodeXMLChars(colValue.getLabel());
             String code = XmlUtilities.encodeXMLChars(colValue.getName());
-            String description = XmlUtilities.encodeXMLChars(colValue.getDescription());
-            taxonomyFields.add(new DocumentField(value, description, code, String.class, true, false));
+            for(DocumentField column : columns) {
+                if(code.equals(column.getCode())) {
+                    taxonomyFields.add(column);
+                }
+            }
         }
 
         for (int i = 0, cellValuesSize = columns.size(); i < cellValuesSize; i++) {
