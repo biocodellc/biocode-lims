@@ -130,10 +130,15 @@ public class PlateViewer extends JPanel {
                                             assert false : "Extractions do not have thermocycles!";
                                             break;
                                     }
-                                    thermocycleModel.removeAllElements();
-                                    for (Thermocycle cycle : getThermocycles()) {
-                                        thermocycleModel.addElement(cycle);
-                                    }
+                                    Runnable runnable = new Runnable() { //reset the list of thermocycles (so that we know if the user adds more)
+                                        public void run() {
+                                            thermocycleModel.removeAllElements();
+                                            for (Thermocycle cycle : getThermocycles()) {
+                                                thermocycleModel.addElement(cycle);
+                                            }
+                                        }
+                                    };
+                                    ThreadUtilities.invokeNowOrWait(runnable);
                                 } catch (final TransactionException e1) {
                                     e1.printStackTrace();
                                     Runnable runnable = new Runnable() {

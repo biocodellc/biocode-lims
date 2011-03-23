@@ -66,6 +66,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         final Reaction.Type typeFromOptions = options.getReactionType();
         final boolean fromExisting = options.isFromExisting();
         final boolean copyOnlyFailed = options.copyOnlyFailedReactions();
+        final boolean copyOnlyPassed = options.copyOnlyPassedReactions();
         final AtomicReference<DocumentOperationException> exception = new AtomicReference<DocumentOperationException>();
         final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
         final int numberOfReactionsFromOptions = (Integer)options.getOption("reactionNumber").getValue();
@@ -114,12 +115,19 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                         Plate plate = plateDoc.getPlate();
                         Plate editingPlate = plateViewer.get().getPlate();
 
+                        Boolean copy;
+                        if(copyOnlyFailed || copyOnlyPassed) {
+                            copy = copyOnlyPassed;
+                        }
+                        else {
+                            copy = null;
+                        }
 
                         if(plateSize == sizeFromOptions) {
-                            copyPlateOfSameSize(plate, editingPlate, copyOnlyFailed);
+                            copyPlateOfSameSize(plate, editingPlate, copy);
                         }
                         else if(sizeFromOptions == Plate.Size.w96){
-                            copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"), copyOnlyFailed);
+                            copy384To96(plate, editingPlate, (Integer)options.getValue("quadrant.value"), copy);
 
                         }
                         else if(sizeFromOptions == Plate.Size.w384) {
@@ -133,7 +141,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                                 }
                             }
 
-                            copy96To384(plates, editingPlate);
+                            copy96To384(plates, editingPlate, copy);
                         }
                         else if(sizeFromOptions == null) {
                             copyPlateToReactionList(plate, editingPlate);
@@ -177,7 +185,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
     }
 
-    private void copy96To384(Plate[] srcPlates, Plate destPlate) throws DocumentOperationException{
+    private void copy96To384(Plate[] srcPlates, Plate destPlate, Boolean passedOrFailed) throws DocumentOperationException{
         if(destPlate.getPlateSize() != Plate.Size.w384) {
             throw new IllegalArgumentException("The destination plate must be a 384 well plate");
         }
@@ -195,7 +203,10 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 for (int row = 0; row < srcPlate.getRows(); row++) {
                     Reaction srcReaction = srcPlate.getReaction(row, col);
                     Reaction destReaction = destPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
-                    ReactionUtilities.copyReaction(srcReaction, destReaction);
+                    boolean copy = passedOrFailed == null || passedOrFailed == ReactionOptions.PASSED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS));
+                    if(copy) {
+                        ReactionUtilities.copyReaction(srcReaction, destReaction);
+                    }
                 }
             }
         }
@@ -204,7 +215,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
     }
 
-    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, boolean onlyFailed) throws DocumentOperationException{
+    private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, Boolean passedOrFailed) throws DocumentOperationException{
         quadrant = quadrant-1;//zero-index it
         int xoffset = quadrant % 2 == 0 ? 0 : 1;
         int yOffset = quadrant > 1 ? 1 : 0;
@@ -212,7 +223,8 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             for (int row = 0; row < destPlate.getRows(); row++) {
                 Reaction destReaction = destPlate.getReaction(row, col);
                 Reaction srcReaction = srcPlate.getReaction(row * 2 + yOffset, col * 2 + xoffset);
-                if (!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS))) {
+                boolean copy = passedOrFailed == null ? true : passedOrFailed == ReactionOptions.PASSED_VALUE.getName().equals(srcReaction.getFieldValue(ReactionOptions.RUN_STATUS));
+                if (copy) {
                     ReactionUtilities.copyReaction(srcReaction, destReaction);
                 }
             }
@@ -223,7 +235,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     }
 
-    static void copyPlateOfSameSize(Plate srcPlate, Plate destPlate, boolean onlyFailed) throws DocumentOperationException{
+    static void copyPlateOfSameSize(Plate srcPlate, Plate destPlate, Boolean passedOrFailed) throws DocumentOperationException{
         if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
             throw new IllegalArgumentException("Plates were of different sizes");
         }
@@ -235,7 +247,8 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         Reaction[] srcReactions = srcPlate.getReactions();
         Reaction[] destReactions = destPlate.getReactions();
         for(int i=0; i < srcReactions.length; i++) {
-            if(!onlyFailed || ReactionOptions.FAILED_VALUE.getName().equals(srcReactions[i].getFieldValue(ReactionOptions.RUN_STATUS))) {
+            boolean copy = passedOrFailed == null ? true : passedOrFailed == ReactionOptions.PASSED_VALUE.getName().equals(srcReactions[i].getFieldValue(ReactionOptions.RUN_STATUS));
+            if(copy) {
                 ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
             }
         }

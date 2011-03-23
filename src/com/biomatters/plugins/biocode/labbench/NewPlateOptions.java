@@ -64,15 +64,24 @@ public class NewPlateOptions extends Options{
                 new Options.OptionValue("pcr", "PCR"),
                 new Options.OptionValue("cyclesequencing", "Cycle Sequencing")
         };
+        final Options.OptionValue[] passedValues = new Options.OptionValue[] {
+                new Options.OptionValue("passed", "Passed"),
+                new Options.OptionValue("failed", "Failed")
+        };
 
         Options.BooleanOption fromExistingOption = null;
         Options.BooleanOption onlyFailed;
+        ComboBoxOption passedOrFailed;
         if(fromExistingPossible) {
             fromExistingOption = addBooleanOption("fromExisting", "Create plate from existing document", false);
             fromExistingOption.setSpanningComponent(true);
-            onlyFailed = addBooleanOption("onlyFailed", "Copy only failed reactions", false);
-            onlyFailed.setSpanningComponent(true);
+            beginAlignHorizontally(null, false);
+            onlyFailed = addBooleanOption("onlyFailed", "Copy only ", false);
+            passedOrFailed = addComboBoxOption("passedOrFailed", "", passedValues, passedValues[0]);
+            addLabel(" reactions").setFillHorizontalSpace(true);
             onlyFailed.setDisabledValue(false);
+            onlyFailed.addDependent(passedOrFailed, true);
+            endAlignHorizontally();
             if(allPcrOrSequencing) {
                 fromExistingOption.addDependent(onlyFailed, true);
             }
@@ -170,7 +179,11 @@ public class NewPlateOptions extends Options{
     }
 
     public boolean copyOnlyFailedReactions() {
-        return "true".equals(getValueAsString("onlyFailed"));
+        return "true".equals(getValueAsString("onlyFailed")) && "failed".equals(getValueAsString("passedOrFailed"));
+    }
+
+    public boolean copyOnlyPassedReactions() {
+        return "true".equals(getValueAsString("onlyFailed"))&& "passed".equals(getValueAsString("passedOrFailed"));
     }
 
     @Override

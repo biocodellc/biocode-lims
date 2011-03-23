@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDo
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
@@ -66,7 +67,7 @@ public class ReactionUtilities {
      * @param owner
      * @return true if the user clicked OK on the dialog
      */
-    public static String bulkLoadChromatograms(final Plate plate, JComponent owner) {
+    public static String bulkLoadChromatograms(final Plate plate, final JComponent owner) {
         if(plate == null || plate.getReactionType() != Reaction.Type.CycleSequencing) {
             throw new IllegalArgumentException("You may only call this method with Cycle Sequencing plates");
         }
@@ -155,10 +156,14 @@ public class ReactionUtilities {
         final DocumentField finalField = field;
         Runnable runnable = new Runnable() {
             public void run() {
-                int count = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
-                if(count >= 0) {
-                    Dialogs.showMessageDialog("Imported "+count+" traces");
-                }
+                final int count = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        ThreadUtilities.sleep(100);
+                        Dialogs.showMessageDialog("Imported "+count+" traces", "Imported traces", owner, Dialogs.DialogIcon.INFORMATION);
+                    }
+                };
+                ThreadUtilities.invokeNowOrLater(runnable);
             }
         };
         BiocodeService.block("Importing traces", owner, runnable);
