@@ -33,8 +33,8 @@ public class MarkInLimsUtilities {
             }
 
             if (isAlignment) {
+                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                 if(BiocodeUtilities.isAlignmentOfChromatograms(document) || BiocodeUtilities.isAlignmentOfContigConsensusSequences(document)) {
-                    SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
                     for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                         sequenceCount++;
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
@@ -65,7 +65,7 @@ public class MarkInLimsUtilities {
                     }
                 }
                 else {
-                    sequenceCount++;
+                    sequenceCount+=alignment.getNumberOfSequences();
                     docsToMark.put(document, null);
                 }
             } else {
