@@ -2,10 +2,7 @@ package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.Condition;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
@@ -71,6 +68,7 @@ public class LIMSConnection {
     private final String LOCUS = "locus";
     private final String EXTRACTION_ID = "extraction.extractionId";
     private final String EXTRACTION_BARCODE = "extraction.extractionBarcode";
+    String serverUrn;
 
     public static PasswordOptions getConnectionOptions() {
         return new LimsConnectionOptions(LIMSConnection.class);
@@ -82,6 +80,10 @@ public class LIMSConnection {
 
     public boolean isLocal() {
         return isLocal;
+    }
+
+    public String getUrn() {
+        return serverUrn;
     }
 
     public static boolean isLocal(PasswordOptions connectionOptions) {
@@ -107,6 +109,7 @@ public class LIMSConnection {
             localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
         }
         connection = localLIMS.connect(LIMSOptions);
+        serverUrn = "local/"+LIMSOptions.getValueAsString("database");
         this.limsOptions = LIMSOptions;
         try {
             ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
@@ -144,19 +147,21 @@ public class LIMSConnection {
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
-            connection = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
-            connection2 = driver.connect("jdbc:mysql://"+LIMSOptions.getValueAsString("server")+":"+LIMSOptions.getValueAsString("port"), properties);
+            serverUrn = LIMSOptions.getValueAsString("serverUrn") + ":" + LIMSOptions.getValueAsString("port");
+            connection = driver.connect("jdbc:mysql://" + serverUrn, properties);
+            connection2 = driver.connect("jdbc:mysql://"+ serverUrn, properties);
             Statement statement = connection.createStatement();
             connection.createStatement().execute("USE "+LIMSOptions.getValueAsString("database"));
             connection2.createStatement().execute("USE "+LIMSOptions.getValueAsString("database"));
             ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
+            serverUrn += "/"+LIMSOptions.getValueAsString("database");
             if(!resultSet.next()) {
                 throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
             }
             else {
                 int version = resultSet.getInt("version");
                 if(version != EXPECTED_SERVER_VERSION) {
-                    throw new ConnectionException("The server you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
+                    throw new ConnectionException("The serverUrn you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
                 }
             }
             resultSet.close();
@@ -186,6 +191,7 @@ public class LIMSConnection {
         connection2 = null;
         limsOptions = null;
         isLocal = false;
+        serverUrn = null;
     }
 
     public void reconnect() throws ConnectionException{
@@ -327,10 +333,10 @@ public class LIMSConnection {
     }
 
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
-        return getMatchingAssemblyDocuments(query, workflows, callback, callback);
+        return getMatchingAssemblyDocuments(query, workflows, callback, null, callback);
     }
 
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, final Collection<WorkflowDocument> workflows, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, final Collection<WorkflowDocument> workflows, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
 
@@ -394,7 +400,7 @@ public class LIMSConnection {
                     statement.cancel();
                     throw new SQLException("Search cancelled due to lack of free memory");
                 }
-                AnnotatedPluginDocument doc = createAssemblyDocument(resultSet);
+                AnnotatedPluginDocument doc = createAssemblyDocument(resultSet, urnsToNotRetrieve);
                 if(doc == null) {
                     continue;
                 }
@@ -435,13 +441,21 @@ public class LIMSConnection {
         }
     }
 
-    private AnnotatedPluginDocument createAssemblyDocument(ResultSet resultSet) throws SQLException{
+    private AnnotatedPluginDocument createAssemblyDocument(ResultSet resultSet, URN[] urnsToNotRetrieve) throws SQLException{
         String qualities = resultSet.getString("assembly.confidence_scores");
         DefaultNucleotideSequence sequence;
+        URN urn = new URN("Biocode", getUrn(), "" + resultSet.getInt("id"));
+        if(urnsToNotRetrieve != null) {
+            for(URN urnNotToRetrieve : urnsToNotRetrieve) {
+                if(urn.equals(urnNotToRetrieve)) {
+                    return null;
+                }
+            }
+        }
         if(qualities == null || resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
             String name = resultSet.getString("assembly.extraction_id");
             String consensus = resultSet.getString("consensus");
-            String description = "Sequence record for "+name;
+            String description = "Assembly consensus sequence for "+name;
             java.sql.Date created = resultSet.getDate("date");
             if(consensus == null || created == null) {
                 consensus="";
@@ -451,14 +465,14 @@ public class LIMSConnection {
                 description = "Sequencing failed for this well";
             }
             consensus = consensus.replace("-","");
-            sequence = new DefaultNucleotideSequence(name, "Assembly consensus sequence for "+name, consensus, new Date(created.getTime()));
+            sequence = new DefaultNucleotideSequence(name, description, consensus, new Date(created.getTime()), urn);
         }
         else {
             String sequenceString = resultSet.getString("assembly.consensus");
             sequenceString = sequenceString.replace("-", "");
             NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
             String name = resultSet.getString("assembly.extraction_id");
-            sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, new Date(resultSet.getDate("date").getTime()), graph);
+            sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, new Date(resultSet.getDate("date").getTime()), graph, urn);
         }
         AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
         //todo: add data as fields and notes...
@@ -968,7 +982,7 @@ public class LIMSConnection {
             Runnable runnable = new Runnable() {
                 public void run() {
                     if(totalErrors.toString().contains("connection")) {
-                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", totalErrors.toString());    
+                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"}, "Connection Error"), "There was an error connecting to the serverUrn.  Try logging out and logging in again.", totalErrors.toString());
                     }
                     else {
                         Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n"+totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
