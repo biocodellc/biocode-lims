@@ -295,7 +295,11 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             return new ArrayList<FimsSample>(results);
         }
         List<FimsSample> results = new ArrayList<FimsSample>();
-        String sql = "SELECT * FROM "+tableId+" WHERE "+getQuerySQLString(query);
+        String querySQLString = getQuerySQLString(query);
+        if(querySQLString == null) {
+            return Collections.emptyList();
+        }
+        String sql = "SELECT * FROM "+tableId+" WHERE "+ querySQLString;
         System.out.println(sql);
 
         try {

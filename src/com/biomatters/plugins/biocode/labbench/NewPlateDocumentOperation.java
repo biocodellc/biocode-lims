@@ -210,8 +210,11 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        if(reactionType == Reaction.Type.Extraction) {
+        if(reactionType == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
             autodetectWorkflows(destPlate);
+        }
+        if(reactionType == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
+            generateExtractionIds(destPlate);
         }
     }
 
@@ -229,8 +232,11 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction) {
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
             autodetectWorkflows(destPlate);
+        }
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
+            generateExtractionIds(destPlate);
         }
 
     }

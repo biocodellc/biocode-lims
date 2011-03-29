@@ -147,7 +147,7 @@ public class LIMSConnection {
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
-            serverUrn = LIMSOptions.getValueAsString("serverUrn") + ":" + LIMSOptions.getValueAsString("port");
+            serverUrn = LIMSOptions.getValueAsString("server") + ":" + LIMSOptions.getValueAsString("port");
             connection = driver.connect("jdbc:mysql://" + serverUrn, properties);
             connection2 = driver.connect("jdbc:mysql://"+ serverUrn, properties);
             Statement statement = connection.createStatement();
@@ -161,7 +161,7 @@ public class LIMSConnection {
             else {
                 int version = resultSet.getInt("version");
                 if(version != EXPECTED_SERVER_VERSION) {
-                    throw new ConnectionException("The serverUrn you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
+                    throw new ConnectionException("The server you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
                 }
             }
             resultSet.close();
@@ -982,7 +982,7 @@ public class LIMSConnection {
             Runnable runnable = new Runnable() {
                 public void run() {
                     if(totalErrors.toString().contains("connection")) {
-                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"}, "Connection Error"), "There was an error connecting to the serverUrn.  Try logging out and logging in again.", totalErrors.toString());
+                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", totalErrors.toString());
                     }
                     else {
                         Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n"+totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);

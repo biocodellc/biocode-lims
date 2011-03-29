@@ -33,15 +33,14 @@ public class SqlUtilities {
             }
             queryBuilder.append("(");
             List<Query> queryList = new ArrayList<Query>();
-            for (int i = 0; i < searchAttributes.size(); i++) {
-                DocumentField field = searchAttributes.get(i);
+            for (DocumentField field : searchAttributes) {
                 if (!field.getValueType().equals(String.class)) {
                     continue;
                 }
 
                 queryList.add(BasicSearchQuery.Factory.createFieldQuery(field, Condition.CONTAINS, searchText));
             }
-            Query compoundQuery = CompoundSearchQuery.Factory.createOrQuery(queryList.toArray(new Query[queryList.size()]), Collections.EMPTY_MAP);
+            Query compoundQuery = CompoundSearchQuery.Factory.createOrQuery(queryList.toArray(new Query[queryList.size()]), Collections.<String, Object>emptyMap());
             return getQuerySQLString(compoundQuery, searchAttributes, prefixToRemoveFromFields, specialCaseForBiocode);
         }
         else if(query instanceof AdvancedSearchQueryTerm) {
@@ -147,8 +146,16 @@ public class SqlUtilities {
                 else if (specialCaseForBiocode && fieldCode.equals(DocumentField.COMMON_NAME_FIELD.getCode())) {
                     fieldCode = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
                 }
+                String[] elements = fieldCode.split("\\.");
+                for (int i1 = 0; i1 < elements.length; i1++) {
+                    //noinspection StringConcatenationInsideStringBufferAppend
+                    queryBuilder.append("`"+elements[i1]+'`');
+                    if(i1 < elements.length-1) {
+                        queryBuilder.append(".");
+                    }
+                }
                 //noinspection StringConcatenationInsideStringBufferAppend
-                queryBuilder.append("`"+fieldCode+"`" +" "+ join +" ");
+                queryBuilder.append(" "+join+" ");
 
                 Object[] queryValues = aquery.getValues();
                 for (int i = 0; i < queryValues.length; i++) {
