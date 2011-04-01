@@ -25,8 +25,10 @@ import java.util.*;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.MalformedURLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
@@ -383,6 +385,32 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             }
         }
         return null;
+    }
+
+    public int getTotalNumberOfSamples() throws ConnectionException {
+        String sql = "SELECT count(*) FROM "+tableId;
+        System.out.println(sql);
+        try {
+            URL url = new URL(SERVICE_URL + "?sql=" + URLEncoder.encode(sql, "UTF-8"));
+            System.out.println(url);
+            GDataRequest request = service.getRequestFactory().getRequest(RequestType.QUERY, url, ContentType.TEXT_PLAIN);
+            request.execute();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(request.getResponseStream()));
+            Map<String, Object> values = new LinkedHashMap<String, Object>();
+            List<String> colHeaders = new ArrayList<String>();
+            boolean firstTime = true;
+            String line = null;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new ConnectionException(e.getMessage(), e);
+        } catch (ServiceException e) {
+            e.printStackTrace();
+            throw new ConnectionException(e.getMessage(), e);
+        }
+        return -1;
     }
 
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {

@@ -117,6 +117,10 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return taxonomyAttributes;
     }
 
+    public int getTotalNumberOfSamples() throws ConnectionException {
+        return -1;
+    }
+
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
         throw new ConnectionException("Retrieving all results is not currently supported for TAPIR connections.  Please contact Biomatters if you would like to see this feature"); //todo:
     }

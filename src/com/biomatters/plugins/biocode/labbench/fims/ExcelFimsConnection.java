@@ -168,6 +168,11 @@ public class ExcelFimsConnection extends TableFimsConnection{
         }
     }
 
+    public int getTotalNumberOfSamples() throws ConnectionException {
+        Sheet sheet = workbook.getSheet(0);
+        return sheet.getRows();
+    }
+
     public List<FimsSample> _getMatchingSamples(Query query) {
         CompoundSearchQuery.Operator operator;
         List<AdvancedSearchQueryTerm> queries;

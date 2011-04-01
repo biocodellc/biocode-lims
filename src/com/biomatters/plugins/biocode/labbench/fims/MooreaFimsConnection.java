@@ -193,12 +193,26 @@ public class MooreaFimsConnection extends FIMSConnection{
         return new BiocodeUtilities.LatLong((Double)latObject, (Double)longObject);
     }
 
+    public int getTotalNumberOfSamples() throws ConnectionException {
+        String query = "SELECT count(*) FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID";
+        try {
+            Statement statement = connection.createStatement();
+
+            ResultSet resultSet = statement.executeQuery(query);
+            resultSet.next();
+            return resultSet.getInt(1);
+
+        } catch (SQLException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
+    }
+
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException{
         String query = "SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID";
         try {
             Statement statement = connection.createStatement();
 
-            statement.setFetchSize(1);
+            statement.setFetchSize(Integer.MIN_VALUE);
 
             ResultSet resultSet = statement.executeQuery(query);
             while(resultSet.next() && !callback.isCanceled()) {

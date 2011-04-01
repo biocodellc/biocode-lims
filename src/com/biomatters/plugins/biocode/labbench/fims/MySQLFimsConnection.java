@@ -165,9 +165,11 @@ public class MySQLFimsConnection extends TableFimsConnection{
                     }
                 }
                 TableFimsSample sample = new TableFimsSample(fields, taxonomyFields, data, tissueCol, specimenCol);
-                samples.add(sample);
                 if(callback != null) {
                     callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
+                }
+                else {
+                    samples.add(sample);
                 }
             }
             resultSet.close();
@@ -179,6 +181,20 @@ public class MySQLFimsConnection extends TableFimsConnection{
 
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
         getFimsSamplesFromSql("SELECT * FROM "+tableName, callback);
+    }
+
+    public int getTotalNumberOfSamples() throws ConnectionException {
+        String query = "SELECT count(*) FROM "+tableName;
+        try {
+            Statement statement = connection.createStatement();
+
+            ResultSet resultSet = statement.executeQuery(query);
+            resultSet.next();
+            return resultSet.getInt(1);
+
+        } catch (SQLException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
     }
 
     public boolean requiresMySql() {

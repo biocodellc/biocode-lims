@@ -1,9 +1,14 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.plugin.GeneiousServiceWithPanel;
 import com.biomatters.geneious.publicapi.plugin.Icons;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.components.RoundedShadowBorder;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.labels.PieSectionLabelGenerator;
@@ -16,6 +21,7 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import java.awt.*;
 import java.text.AttributedString;
+import java.sql.SQLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -24,13 +30,83 @@ import java.text.AttributedString;
  * Time: 4:05 AM
  * To change this template use File | Settings | File Templates.
  */
-public class ReportingService extends GeneiousServiceWithPanel {
+public class ReportingService extends GeneiousServiceWithPanel implements Chartable {
+    private JPanel panel;
+    ChartPanel chartPanel;
+    JSplitPane splitPane;
+
+    public void setChartPanel(final ChartPanel panel) {
+        Runnable runnable = new Runnable() {
+            public void run() {
+                if(splitPane != null) {
+                    splitPane.setBottomComponent(new GPanel());
+                }
+                chartPanel = panel;
+                if(splitPane != null && chartPanel != null) {
+                    splitPane.setBottomComponent(chartPanel);
+                    splitPane.revalidate();
+                }
+            }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
+    }
+
+    public void notifyLoginStatusChanged() {
+        if(panel != null) {
+            Runnable runnable = new Runnable() {
+                public void run() {
+                    try {
+                        fillPanel();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        e.printStackTrace();
+                        Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
+                    }
+                    panel.revalidate();
+                }
+            };
+            ThreadUtilities.invokeNowOrLater(runnable);
+        }
+    }
 
 
     @Override
     public JPanel getPanel() {
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        final ReportGenerator reportGenerator = new ReportGenerator();
+        if(panel == null) {
+            panel = new GPanel(new BorderLayout());
+        }
+        try {
+            fillPanel();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
+        }
+        return panel;
+    }
+
+    private void fillPanel() throws SQLException {
+        panel.removeAll();
+
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            JTextPane textPane = new JTextPane();
+            textPane.setContentType("text/html");
+            textPane.setText("<html>" + GuiUtilities.getHtmlHead() + "<body>" + "<center>" + "Please Log in to a LIMS to view the reporting functions." + "</center>" + "</body>" + "</html>");
+            JPanel roundedBorderPanel = new JPanel(new BorderLayout());
+            roundedBorderPanel.setBorder(new RoundedShadowBorder());
+            roundedBorderPanel.add(textPane, BorderLayout.CENTER);
+            roundedBorderPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+            Dimension textPanePreferredSize = textPane.getPreferredSize();
+            roundedBorderPanel.setPreferredSize(new Dimension(textPanePreferredSize.width + 50, textPanePreferredSize.height + 50));
+            JPanel roundedBorderPanelWrapper = new JPanel();
+            roundedBorderPanelWrapper.add(roundedBorderPanel);
+            JPanel holderPanel = new GPanel(new GridBagLayout());
+            holderPanel.add(roundedBorderPanelWrapper, new GridBagConstraints());
+            panel.add(holderPanel, BorderLayout.CENTER);
+            return;
+        }
+
+        splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        final ReportGenerator reportGenerator = new ReportGenerator(this);
         JPanel topPanel = reportGenerator.getReportingPanel();
         splitPane.setTopComponent(topPanel);
         splitPane.setBottomComponent(new GPanel());
@@ -50,21 +126,12 @@ public class ReportingService extends GeneiousServiceWithPanel {
                 return new AttributedString("arse2");
             }
         });
-        final ChartPanel chartPanel = new ChartPanel(new JFreeChart(piePlot));
-        reportGenerator.setChartChangedListener(new SimpleListener() {
-            public void objectChanged() {
-                piePlot.setDataset(reportGenerator.getDataset());
-                chartPanel.getAnchor();
-                //chartPanel.createChartPrintJob();
-
-            }
-        });
+        chartPanel = new ChartPanel(new JFreeChart(piePlot));
 
         splitPane.setBottomComponent(chartPanel);
 
-        JPanel holder = new GPanel(new BorderLayout());
-        holder.add(splitPane, BorderLayout.CENTER);
-        return holder;
+
+        panel.add(splitPane, BorderLayout.CENTER);
     }
 
     @Override

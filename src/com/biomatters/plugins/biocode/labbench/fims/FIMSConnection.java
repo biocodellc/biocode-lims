@@ -131,6 +131,8 @@ public abstract class FIMSConnection {
 
     public abstract void getAllSamples(RetrieveCallback callback) throws ConnectionException;
 
+    public abstract int getTotalNumberOfSamples() throws ConnectionException;
+
     public List<FimsSample> getMatchingSamples(Collection<String> tissueIds) throws ConnectionException{
         List<String> samplesToSearch = new ArrayList<String>();
         List<FimsSample> samplesToReturn = new ArrayList<FimsSample>();

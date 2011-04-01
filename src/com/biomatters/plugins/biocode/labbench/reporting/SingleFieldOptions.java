@@ -7,6 +7,7 @@ import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import java.util.List;
+import java.sql.SQLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -19,7 +20,13 @@ public class SingleFieldOptions extends Options {
     
     public SingleFieldOptions(){
         super(SingleFieldOptions.class);
-        init();
+        init(null);
+        initListeners();
+    }
+
+    public SingleFieldOptions(List<DocumentField> fimsFields) {
+        super(SingleFieldOptions.class);
+        init(fimsFields);
         initListeners();
     }
     
@@ -37,27 +44,34 @@ public class SingleFieldOptions extends Options {
 
     public SingleFieldOptions(Class cl) {
         super(cl);
-        init();
+        init(null);
         initListeners();
     }
 
     public SingleFieldOptions(Class cl, String preferenceNameSuffix) {
         super(cl, preferenceNameSuffix);
-        init();
+        init(null);
         initListeners();
     }
 
-    public void init() {
+    public void init(List<DocumentField> fimsFields) {
         beginAlignHorizontally("", false);
-        Options.OptionValue[] reactionTypes = new Options.OptionValue[] {
-                new Options.OptionValue("Extraction", "Extraction reactions"),
-                new Options.OptionValue("PCR", "PCR reactions"),
-                new Options.OptionValue("CycleSequencing", "Sequencing reactions"),
-                new Options.OptionValue("assembly", "Sequences")
-        };
-        final Options.ComboBoxOption<Options.OptionValue> reactionType = addComboBoxOption("reactionType", "Number of ", reactionTypes, reactionTypes[0]);
-        List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName());
-        addComboBoxOption("field", " whose ", fieldValue, fieldValue.get(0));
+        List<OptionValue> fieldValue;
+        if(fimsFields == null) {
+            Options.OptionValue[] reactionTypes = new Options.OptionValue[] {
+                    new Options.OptionValue("Extraction", "Extraction reactions"),
+                    new Options.OptionValue("PCR", "PCR reactions"),
+                    new Options.OptionValue("CycleSequencing", "Sequencing reactions"),
+                    new Options.OptionValue("assembly", "Sequences")
+            };
+            final Options.ComboBoxOption<Options.OptionValue> reactionType = addComboBoxOption("reactionType", "Number of ", reactionTypes, reactionTypes[0]);
+            fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName());
+        }
+        else {
+            fieldValue = ReportGenerator.getOptionValues(fimsFields);
+        }
+
+        addComboBoxOption("field", fimsFields == null ? " whose " : "", fieldValue, fieldValue.get(0));
 
         addComboBoxOption("isValue", " is ", ReportGenerator.getEnumeratedFieldValues(null), ReportGenerator.getEnumeratedFieldValues(null).get(0));
         addStringOption("containsValue", " contains the value ", "");
@@ -71,17 +85,32 @@ public class SingleFieldOptions extends Options {
         final ComboBoxOption<OptionValue> fieldOption = (ComboBoxOption)getOption("field");
         final StringOption containsValueOption = (StringOption)getOption("containsValue");
         final ComboBoxOption<OptionValue> isValueOption = (ComboBoxOption<OptionValue>)getOption("isValue");
-        SimpleListener reactionTypeListener = new SimpleListener() {
-            public void objectChanged() {
-                fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName()));
-            }
-        };
-        reactionType.addChangeListener(reactionTypeListener);
-        reactionTypeListener.objectChanged();
+
+        if(reactionType != null) {
+            SimpleListener reactionTypeListener = new SimpleListener() {
+                public void objectChanged() {
+                    fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName()));
+                }
+            };
+            reactionType.addChangeListener(reactionTypeListener);
+            reactionTypeListener.objectChanged();
+        }
 
         SimpleListener fieldOptionListener = new SimpleListener() {
             public void objectChanged() {
-                DocumentField field = ReportGenerator.getField(reactionType.getValue().getName(), fieldOption.getValue().getName());
+                DocumentField field;
+                if(reactionType != null) {
+                    field = ReportGenerator.getField(reactionType.getValue().getName(), fieldOption.getValue().getName());
+                }
+                else {
+                    try {
+                        field = ReportGenerator.getFimsField(fieldOption.getValue().getName());
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        assert false : e.getMessage();
+                        field = DocumentField.createStringField("temp", "temp", "temp");
+                    }
+                }
                 if (field.isEnumeratedField()) {
                     containsValueOption.setVisible(false);
                     isValueOption.setVisible(true);

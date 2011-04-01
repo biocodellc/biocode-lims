@@ -2,8 +2,9 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.components.ProgressFrame;
-import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.*;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -17,10 +18,13 @@ import org.virion.jam.util.SimpleListener;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.*;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.List;
+import java.text.DateFormat;
 
 /**
  * Created by IntelliJ IDEA.
@@ -31,10 +35,15 @@ import java.util.*;
  */
 public class ReportGenerator {
     private Options reportingOptions;
-    private SimpleListener chartChangedListener;
 
     private static final Map<String, String> geneiousFieldToTableField = new HashMap<String, String>();
     private static final Set<String> workflowFields = new HashSet<String>();
+    FimsToLims fimsToLims = new FimsToLims(BiocodeService.getInstance().getActiveFIMSConnection(), BiocodeService.getInstance().getActiveLIMSConnection());
+    private Chartable chartable;
+
+    public ReportGenerator(Chartable chartable) {
+        this.chartable = chartable;
+    }
 
     static {
         workflowFields.add("workflowName");
@@ -45,40 +54,116 @@ public class ReportGenerator {
         geneiousFieldToTableField.put(PCROptions.PRIMER_REVERSE_OPTION_ID, "revPrName");
     }
 
+    private JPanel getFimsPanel() {
+        final JPanel panel = new GPanel();
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            return panel;
+        }
 
+        try {
+            ActionListener updateFimsCopy = new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    final ProgressFrame frame = new ProgressFrame("Copying FIMS", "Copying FIMS records into your LIMS database", 1000, true, GuiUtilities.getMainFrame());
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            try {
+                                fimsToLims.createFimsTable(frame);
+                                Runnable runnable = new Runnable() {
+                                    public void run() {
+                                        panel.removeAll();
+                                        panel.add(getFimsPanel());
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrLater(runnable);
+                            } catch (ConnectionException e1) {
+                                frame.cancel();
+                                Dialogs.showMessageDialog(e1.getMessage());
+                            }
+                        }
+                    };
+                    new Thread(runnable).start();
+                }
+            };
+            if(fimsToLims.limsHasFimsValues()) {
+                Date date = fimsToLims.getDateLastCopied();
+                GLabel label = new GLabel("You last updated the copy of FIMS in your LIMS on "+ DateFormat.getDateInstance().format(date));
+                JButton button = new GButton("Copy Now");
 
-    public JPanel getReportingPanel() {
+                button.addActionListener(updateFimsCopy);
+                panel.add(label);
+                panel.add(button);
+            }
+            else {
+                JLabel label = new GLabel("You need to copy your FIMS data to the LIMS database in order to make reports based on FIMS fields");
+                JButton button = new GButton("Copy Now");
+
+                button.addActionListener(updateFimsCopy);
+                panel.add(label);
+                panel.add(button);
+            }
+        }
+        catch(SQLException ex) {
+            ex.printStackTrace();
+            //todo: properly
+            JLabel label = new GLabel(ex.getMessage());
+            panel.add(label);
+        }
+        return panel;
+    }
+
+    public Report[] getReports() {
+        return new Report[] {new ComparisonReport()};
+    }
+
+    public JPanel getReportingPanel() throws SQLException{
         reportingOptions = new Options(this.getClass());
 
-        SingleFieldOptions singleFieldOptions = new SingleFieldOptions(this.getClass());
-        final Options.MultipleOptions multiOptions = reportingOptions.addMultipleOptions("fields", singleFieldOptions, false);
+        final Report[] reports = getReports();
+        for(Report report : reports) {
+            reportingOptions.addChildOptions(report.getName(), report.getName(), "", report.getOptions(fimsToLims));
+        }
+        final Options.ComboBoxOption<Options.OptionValue> reportChooser = (Options.ComboBoxOption)reportingOptions.addChildOptionsPageChooser("report", "Report Type", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
+
         Options.ButtonOption buttonOption = reportingOptions.addButtonOption("button", "", "Calculate");
         buttonOption.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                List<Options> values = multiOptions.getValues();
-                counts.clear();
-                for(Options option : values) {
-                    SingleFieldOptions sfOption = (SingleFieldOptions)option;
-                    counts.put(sfOption.getTableName()+" "+sfOption.getFieldLabel()+" "+sfOption.getValue(), getFieldCount(sfOption));
-                    if(chartChangedListener != null)
-                        chartChangedListener.objectChanged();
+                Options.OptionValue reportValue = reportChooser.getValue();
+                Report report = null;
+                for(Report r : reports) {
+                    if(r.getName().equals(reportValue.getName())) {
+                        report = r;
+                    }
                 }
+                if(report == null) {
+                    throw new RuntimeException("Could not find a report called "+reportValue.getName());
+                }
+                if(chartable != null) {
+                    try {
+                        chartable.setChartPanel(report.getChart(reportingOptions.getChildOptions().get(reportValue.getName())));
+                    } catch (SQLException e1) {
+                        e1.printStackTrace();
+                        Dialogs.showMessageDialog(e1.getMessage()); //todo: add stacktrace
+                        chartable.setChartPanel(null);
+                    }
+                }
+//                List<Options> values = multiOptions.getValues();
+//                counts.clear();
+//                for(Options option : values) {
+//                    SingleFieldOptions sfOption = (SingleFieldOptions)option;
+//                    counts.put(sfOption.getTableName()+" "+sfOption.getFieldLabel()+" "+sfOption.getValue(), getFieldCount(sfOption));
+//                    if(chartChangedListener != null)
+//                        chartChangedListener.objectChanged();
+//                }
             }
         });
 
-//        Options.ButtonOption buttonOption2 = reportingOptions.addButtonOption("button2", "", "Test");
-//        buttonOption2.addActionListener(new ActionListener() {
-//            public void actionPerformed(ActionEvent e) {
-//                try {
-//                    FimsToLims.createFimsTable(new ProgressFrame("Copying FIMS", "Copying your FIMS data into the LIMS", 1000, false));
-//                } catch (ConnectionException e1) {
-//                    e1.printStackTrace();
-//                    Dialogs.showMessageDialog(e1.getMessage());
-//                }
-//            }
-//        });
+        GPanel panel = new GPanel(new BorderLayout());
+        panel.add(reportingOptions.getPanel(), BorderLayout.CENTER);
+        final JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(getFimsPanel(), BorderLayout.CENTER);
+        panel.add(topPanel, BorderLayout.NORTH);
 
-        return reportingOptions.getPanel();
+        return panel;
     }
 
     private Map<String, Integer> counts = new HashMap<String, Integer>();
@@ -91,10 +176,6 @@ public class ReportGenerator {
             dataset.setValue(key, value);
         }
         return dataset;
-    }
-
-    public void setChartChangedListener(SimpleListener listener) {
-        chartChangedListener = listener;
     }
 
     public static List<Options.OptionValue> getEnumeratedFieldValues(DocumentField field) {
@@ -180,6 +261,10 @@ public class ReportGenerator {
     }
 
     static DocumentField getField(String reactionType, String fieldCode) {
+        if(reactionType == null) {
+
+        }
+
         Reaction.Type type = null;
         try {
             type = Reaction.Type.valueOf(reactionType);
@@ -202,6 +287,15 @@ public class ReportGenerator {
         sequenceFields.add(LIMSConnection.SEQUENCE_ID);
         sequenceFields.add(LIMSConnection.SEQUENCE_PROGRESS);
         sequenceFields.add(LIMSConnection.EDIT_RECORD);
+    }
+
+    public static List<Options.OptionValue> getOptionValues(List<DocumentField> documentFields) {
+        List<Options.OptionValue> optionValues = new ArrayList<Options.OptionValue> ();
+
+        for(DocumentField field : documentFields) {
+            optionValues.add(new Options.OptionValue(field.getCode(), field.getName()));
+        }
+        return optionValues;
     }
 
     public static List<Options.OptionValue> getPossibleFields(String reactionType) {
@@ -245,6 +339,14 @@ public class ReportGenerator {
     }
 
 
-
-
+    public static DocumentField getFimsField(String name) throws SQLException{
+        //todo: use the proper fimsToLims
+        List<DocumentField> fimsFields = new FimsToLims(BiocodeService.getInstance().getActiveFIMSConnection(), BiocodeService.getInstance().getActiveLIMSConnection()).getFimsFields();
+        for(DocumentField f : fimsFields) {
+            if(f.getCode().equals(name)) {
+                return f;
+            }
+        }
+        return null;
+    }
 }

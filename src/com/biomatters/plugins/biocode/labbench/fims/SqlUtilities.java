@@ -208,7 +208,7 @@ public class SqlUtilities {
         return queryBuilder.toString();
     }
 
-    static DocumentField getDocumentField(ResultSet resultSet) throws SQLException {
+    public static DocumentField getDocumentField(ResultSet resultSet) throws SQLException {
         String type = resultSet.getString("Type").toUpperCase();
         if(type.startsWith("TINYBLOB") || type.startsWith("BLOB") || type.startsWith("MEDIUMBLOB") || type.startsWith("LONGBLOB")) {
             return null; //we don't support blobs...

@@ -69,6 +69,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private ConnectionManager connectionManager;
     private boolean loggingIn;
+    ReportingService reportingService;
 
     private BiocodeService() {
     }
@@ -384,6 +385,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             activeFIMSConnection = null;
         }
         limsConnection.disconnect();
+        reportingService.notifyLoginStatusChanged();
         updateStatus();
     }
 
@@ -500,6 +502,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             buildCaches();
             loggingIn = false;
             isLoggedIn = true;
+            reportingService.notifyLoginStatusChanged();
         } catch (ConnectionException e1) {
             if(block) {
                 unBlock();
@@ -1563,7 +1566,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     protected void initialize(GeneiousServiceListener listener) {
         initializeConnectionManager();
-        //listener.childServiceAdded(new ReportingService());
+        reportingService = new ReportingService();
+        listener.childServiceAdded(reportingService);
 
 
         if(connectionManager.connectOnStartup()) {
