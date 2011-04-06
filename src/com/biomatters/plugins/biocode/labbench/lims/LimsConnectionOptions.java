@@ -39,12 +39,12 @@ public class LimsConnectionOptions extends PasswordOptions{
         usernameOption = remoteOptions.addStringOption("username", "Username:", "");
         passwordOption = remoteOptions.addCustomOption(new PasswordOption("password", "Password:", true));
 
-        addChildOptions("remote", "Remote Server", "Connect to a LIMS database on a remote MySQL server", remoteOptions);
+        addChildOptions("remote", "Remote MySQL Database", "Connect to a LIMS database on a remote MySQL server", remoteOptions);
 
         Options localOptions = LIMSConnection.getLocalOptions();
 
 
-        addChildOptions("local", "Local Database", "Create and connect to LIMS databases on your local computer", localOptions);
+        addChildOptions("local", "Built-in MySQL Database", "Create and connect to a LIMS databases on your local computer (stored with your Geneious data)", localOptions);
 
 
         childOptionsChooser = addChildOptionsPageChooser("connectionType", "LIMS location", Collections.<String>emptyList(), PageChooserType.COMBO_BOX, false);

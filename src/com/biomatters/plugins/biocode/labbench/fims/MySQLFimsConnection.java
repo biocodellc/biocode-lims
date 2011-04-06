@@ -36,7 +36,7 @@ public class MySQLFimsConnection extends TableFimsConnection{
     }
 
     public String getLabel() {
-        return "MySQL Database";
+        return "Remote MySQL Database";
     }
 
     public String getName() {
