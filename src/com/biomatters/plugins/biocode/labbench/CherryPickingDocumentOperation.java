@@ -282,9 +282,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                         Reaction plateReaction = plate.getPlate().getReactions()[plateIndex];
                         Reaction oldReaction = failedReactions.get(index);
                         Reaction newReaction = newReactions.get(index);
-                        if(newReaction == null) {
-                            continue;
-                        }
+
                         plateReaction.getOptions().valuesFromXML(newReaction.getOptions().valuesToXML("values"));
                         plateReaction.setId(newReaction.getId());
                         plateReaction.setWorkflow(newReaction.getWorkflow());
