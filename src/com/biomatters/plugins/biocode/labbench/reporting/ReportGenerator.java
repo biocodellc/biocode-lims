@@ -13,6 +13,7 @@ import org.jfree.data.DefaultKeyedValues;
 import org.jfree.data.general.DefaultKeyedValuesDataset;
 import org.jfree.data.general.PieDataset;
 import org.jfree.data.xml.PieDatasetHandler;
+import org.jfree.chart.ChartPanel;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -24,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.text.DateFormat;
 
 /**
@@ -38,11 +40,12 @@ public class ReportGenerator {
 
     private static final Map<String, String> geneiousFieldToTableField = new HashMap<String, String>();
     private static final Set<String> workflowFields = new HashSet<String>();
-    FimsToLims fimsToLims = new FimsToLims(BiocodeService.getInstance().getActiveFIMSConnection(), BiocodeService.getInstance().getActiveLIMSConnection());
+    FimsToLims fimsToLims;
     private Chartable chartable;
 
-    public ReportGenerator(Chartable chartable) {
+    public ReportGenerator(Chartable chartable) throws SQLException{
         this.chartable = chartable;
+        fimsToLims = new FimsToLims(BiocodeService.getInstance().getActiveFIMSConnection(), BiocodeService.getInstance().getActiveLIMSConnection());
     }
 
     static {
@@ -112,7 +115,7 @@ public class ReportGenerator {
     }
 
     public Report[] getReports() {
-        return new Report[] {new ComparisonReport()};
+        return new Report[] {new PieChartReport(), new ComparisonReport(), new AccumulationReport()};
     }
 
     public JPanel getReportingPanel() throws SQLException{
@@ -127,7 +130,7 @@ public class ReportGenerator {
         Options.ButtonOption buttonOption = reportingOptions.addButtonOption("button", "", "Calculate");
         buttonOption.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                Options.OptionValue reportValue = reportChooser.getValue();
+                final Options.OptionValue reportValue = reportChooser.getValue();
                 Report report = null;
                 for(Report r : reports) {
                     if(r.getName().equals(reportValue.getName())) {
@@ -138,22 +141,27 @@ public class ReportGenerator {
                     throw new RuntimeException("Could not find a report called "+reportValue.getName());
                 }
                 if(chartable != null) {
-                    try {
-                        chartable.setChartPanel(report.getChart(reportingOptions.getChildOptions().get(reportValue.getName())));
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                        Dialogs.showMessageDialog(e1.getMessage()); //todo: add stacktrace
-                        chartable.setChartPanel(null);
-                    }
+                    final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report", 1000, false);
+                    final AtomicReference<ChartPanel> chart = new AtomicReference<ChartPanel>();
+                    final Report report1 = report;
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            try {
+                                chart.set(report1.getChart(reportingOptions.getChildOptions().get(reportValue.getName()), fimsToLims, progress));
+                                progress.setComplete();
+                                setChartPanel(chart.get());
+                            } catch (SQLException e1) {
+                                e1.printStackTrace();
+                                Dialogs.showMessageDialog(e1.getMessage()); //todo: add stacktrace
+                                setChartPanel(null);
+                            }
+                        }
+                    };
+                    new Thread(runnable, "Generating LIMS report").start();
+
+
+
                 }
-//                List<Options> values = multiOptions.getValues();
-//                counts.clear();
-//                for(Options option : values) {
-//                    SingleFieldOptions sfOption = (SingleFieldOptions)option;
-//                    counts.put(sfOption.getTableName()+" "+sfOption.getFieldLabel()+" "+sfOption.getValue(), getFieldCount(sfOption));
-//                    if(chartChangedListener != null)
-//                        chartChangedListener.objectChanged();
-//                }
             }
         });
 
@@ -164,6 +172,15 @@ public class ReportGenerator {
         panel.add(topPanel, BorderLayout.NORTH);
 
         return panel;
+    }
+
+    private void setChartPanel(final ChartPanel chart) {
+        Runnable runnable = new Runnable() {
+            public void run() {
+                chartable.setChartPanel(chart);
+            }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
     }
 
     private Map<String, Integer> counts = new HashMap<String, Integer>();
@@ -194,6 +211,9 @@ public class ReportGenerator {
     public static String getTableFieldName(String tableName, String geneiousFieldName) {
         String overridename = geneiousFieldToTableField.get(geneiousFieldName);
         String fieldName = overridename != null ? overridename : geneiousFieldName;
+        if(fieldName.contains(".")) {
+            fieldName = fieldName.substring(fieldName.indexOf(".")+1);
+        }
         if(tableName.equals("extraction")) {
             return fieldName;
         }
@@ -298,7 +318,7 @@ public class ReportGenerator {
         return optionValues;
     }
 
-    public static List<Options.OptionValue> getPossibleFields(String reactionType) {
+    public static List<Options.OptionValue> getPossibleFields(String reactionType, boolean onlyEnumerated) {
         List<Options.OptionValue> fields = new ArrayList<Options.OptionValue>();
         List<DocumentField> displayableFields;
         try {
@@ -313,7 +333,13 @@ public class ReportGenerator {
             if(f.equals(Reaction.GEL_IMAGE_DOCUMENT_FIELD)) {
                 continue;
             }
+            if(onlyEnumerated && !f.isEnumeratedField()) {
+                continue;
+            }
             fields.add(new Options.OptionValue(f.getCode(), f.getName()));
+        }
+        if(fields.size() == 0) {
+            fields.add(new Options.OptionValue("none", "None..."));
         }
         return fields;
     }
@@ -348,5 +374,23 @@ public class ReportGenerator {
             }
         }
         return null;
+    }
+
+    public static DocumentField getLimsField(String name) {
+        List<DocumentField> limsFields = LIMSConnection.getSearchAttributes();
+        for(DocumentField field : limsFields) {
+            if(field.getCode().equals(name)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    public static DocumentField getFimsOrLimsField(String name) throws SQLException{
+        DocumentField fimsField = getFimsField(name);
+        if(fimsField != null) {
+            return fimsField;
+        }
+        return getLimsField(name);
     }
 }

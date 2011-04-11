@@ -274,7 +274,7 @@ public class LIMSConnection {
         return connection;
     }
 
-    public List<DocumentField> getSearchAttributes() {
+    public static List<DocumentField> getSearchAttributes() {
         return Arrays.asList(
                 PLATE_NAME_FIELD,
                 WORKFLOW_NAME_FIELD,
@@ -291,7 +291,7 @@ public class LIMSConnection {
         );
     }
 
-    public Condition[] getFieldConditions(Class fieldClass) {
+    public static Condition[] getFieldConditions(Class fieldClass) {
         if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
             return new Condition[] {
                     Condition.EQUAL,

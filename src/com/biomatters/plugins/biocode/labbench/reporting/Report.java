@@ -5,6 +5,8 @@ import org.jfree.chart.ChartPanel;
 
 import java.sql.SQLException;
 
+import jebl.util.ProgressListener;
+
 /**
  * @author Steve
  * @version $Id$
@@ -15,6 +17,6 @@ public interface Report {
 
     public Options getOptions(FimsToLims fimsToLims) throws SQLException;
 
-    public ChartPanel getChart(Options options)  throws SQLException;
+    public ChartPanel getChart(Options options, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException;
 
 }

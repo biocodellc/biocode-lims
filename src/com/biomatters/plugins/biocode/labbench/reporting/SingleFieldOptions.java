@@ -17,59 +17,24 @@ import java.sql.SQLException;
  * To change this template use File | Settings | File Templates.
  */
 public class SingleFieldOptions extends Options {
-    
-    public SingleFieldOptions(){
-        super(SingleFieldOptions.class);
-        init(null);
-        initListeners();
-    }
+
 
     public SingleFieldOptions(List<DocumentField> fimsFields) {
         super(SingleFieldOptions.class);
         init(fimsFields);
         initListeners();
     }
-    
-    public SingleFieldOptions(Element e) throws XMLSerializationException{
-        super(e);
-        initListeners();
-    }
 
 
-    @Override
-    public void fromXML(Element element) throws XMLSerializationException {
-        super.fromXML(element);
-        initListeners();
-    }
-
-    public SingleFieldOptions(Class cl) {
-        super(cl);
-        init(null);
-        initListeners();
-    }
-
-    public SingleFieldOptions(Class cl, String preferenceNameSuffix) {
-        super(cl, preferenceNameSuffix);
-        init(null);
+    public SingleFieldOptions(Element element) throws XMLSerializationException {
+        super(element);
         initListeners();
     }
 
     public void init(List<DocumentField> fimsFields) {
         beginAlignHorizontally("", false);
         List<OptionValue> fieldValue;
-        if(fimsFields == null) {
-            Options.OptionValue[] reactionTypes = new Options.OptionValue[] {
-                    new Options.OptionValue("Extraction", "Extraction reactions"),
-                    new Options.OptionValue("PCR", "PCR reactions"),
-                    new Options.OptionValue("CycleSequencing", "Sequencing reactions"),
-                    new Options.OptionValue("assembly", "Sequences")
-            };
-            final Options.ComboBoxOption<Options.OptionValue> reactionType = addComboBoxOption("reactionType", "Number of ", reactionTypes, reactionTypes[0]);
-            fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName());
-        }
-        else {
-            fieldValue = ReportGenerator.getOptionValues(fimsFields);
-        }
+        fieldValue = ReportGenerator.getOptionValues(fimsFields);
 
         addComboBoxOption("field", fimsFields == null ? " whose " : "", fieldValue, fieldValue.get(0));
 
@@ -89,7 +54,7 @@ public class SingleFieldOptions extends Options {
         if(reactionType != null) {
             SimpleListener reactionTypeListener = new SimpleListener() {
                 public void objectChanged() {
-                    fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName()));
+                    fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), false));
                 }
             };
             reactionType.addChangeListener(reactionTypeListener);
@@ -104,7 +69,7 @@ public class SingleFieldOptions extends Options {
                 }
                 else {
                     try {
-                        field = ReportGenerator.getFimsField(fieldOption.getValue().getName());
+                        field = ReportGenerator.getFimsOrLimsField(fieldOption.getValue().getName());
                     } catch (SQLException e) {
                         e.printStackTrace();
                         assert false : e.getMessage();
@@ -140,6 +105,11 @@ public class SingleFieldOptions extends Options {
         return fieldOption.getValue().getLabel();    
     }
 
+    public String getFriendlyDescription() {
+        //todo: proper comparators
+        return getFieldLabel()+" "+(isExactMatch() ? "is" : "contains the value")+" '"+(isExactMatch() ? getOption("isValue").getValue() : getOption("containsValue").getValue())+"'";
+    }
+
     public Object getValue() {
         final StringOption containsValueOption = (StringOption)getOption("containsValue");
         final ComboBoxOption<OptionValue> isValueOption = (ComboBoxOption<OptionValue>)getOption("isValue");
@@ -161,6 +131,10 @@ public class SingleFieldOptions extends Options {
             value = "%"+value+"%";
         }
         return value;
+    }
+
+    public String getComparitor() {
+        return isExactMatch() ? "=" : "LIKE";
     }
 
     public boolean isExactMatch() {
