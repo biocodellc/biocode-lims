@@ -54,7 +54,7 @@
 
 
        <echo file="${plugins.proguard}" append="true"
-            message="-libraryjars   !${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar,${build.externalPlugins}/${plugin-name}/${plugin-name}/**.jar" />
+            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}(!${short-plugin-name}.jar,*.jar)" />
        <!--
        <echo file="${plugins.proguard}" append="true"
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/gdata-core-1.0.jar${line.separator}"/>
