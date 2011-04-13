@@ -56,11 +56,12 @@ public class WorkflowDocument extends MuitiPartDocument {
         return workflow != null ? workflow.hashCode() : 0;
     }
 
-    public WorkflowDocument() {
-        this(null, Collections.<Reaction>emptyList());
-    }
+    public WorkflowDocument() {} //only for fromXml()
 
     public WorkflowDocument(Workflow workflow, List<Reaction> reactions) {
+        if(workflow == null) {
+            throw new IllegalArgumentException("You cannot create a workflow document with a null workflow");
+        }
         this.workflow = workflow;
         this.reactions = new ArrayList<Reaction>(reactions);
         parts = new ArrayList<ReactionPart>();
@@ -278,6 +279,12 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public void addReaction(Reaction r) {
+        if(workflow == null) {
+            throw new IllegalStateException("This workflow document does not yet have a workflow - you cannot add reactions");
+        }
+        if(r == null) {
+            return;
+        }
         reactions.add(r);
         parts.add(new ReactionPart(r));
         if(r.getFimsSample() != null) {
