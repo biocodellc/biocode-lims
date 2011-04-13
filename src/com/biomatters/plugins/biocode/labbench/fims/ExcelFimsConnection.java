@@ -54,7 +54,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
     }
 
     public boolean requiresMySql() {
-        return true;
+        return false;
     }
 
     public TableFimsConnectionOptions _getConnectionOptions() {

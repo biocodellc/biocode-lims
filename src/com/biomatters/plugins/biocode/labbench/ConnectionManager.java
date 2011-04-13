@@ -259,6 +259,9 @@ public class ConnectionManager implements XMLSerializable{
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Biocode Connections", dialogParent);
         dialogOptions.setMaxWidth(Integer.MAX_VALUE);
         dialogOptions.setMaxHeight(Integer.MAX_VALUE);
+        if(okButton.get() != null) {
+            okButton.get().setEnabled(false);
+        }
         updateCenterPanel(okButton.get());
         if(Dialogs.showDialog(dialogOptions, connectionsPanel, sqlConnectorLocationOptions.getPanel()).equals(Dialogs.OK)) {
             sqlDirverLocation = sqlConnectorLocationOptions.getValueAsString("driver");
