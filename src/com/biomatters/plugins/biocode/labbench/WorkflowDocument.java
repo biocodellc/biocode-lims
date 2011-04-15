@@ -158,6 +158,7 @@ public class WorkflowDocument extends MuitiPartDocument {
     public void fromXML(Element element) throws XMLSerializationException {
         workflow = new Workflow(element.getChild("workflow"));
         reactions = new ArrayList<Reaction>();
+        parts = new ArrayList<ReactionPart>();
         for(Element e : element.getChildren("reaction")) {
             reactions.add(XMLSerializer.classFromXML(e, Reaction.class));
         }
