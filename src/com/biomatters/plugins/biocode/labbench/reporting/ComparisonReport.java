@@ -8,13 +8,23 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryAxis;
+import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.IntervalMarker;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
+import org.jfree.chart.renderer.category.BarPainter;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.ui.RectangleAnchor;
+import org.jfree.ui.TextAnchor;
+import org.jfree.ui.Layer;
+import org.jfree.ui.RectangleEdge;
+import org.virion.jam.util.SimpleListener;
 
 import java.awt.*;
+import java.awt.geom.RectangularShape;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -23,6 +33,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import jebl.util.ProgressListener;
+
+import javax.swing.*;
 
 /**
  * @author Steve
@@ -39,7 +51,7 @@ public class ComparisonReport implements Report{
 
     }
 
-    public ChartPanel getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException{
+    public ReportChart getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException{
 
         ComparisonReportOptions options = (ComparisonReportOptions)optionsa;
         Options.OptionValue optionValueToCompare = options.getXField();
@@ -150,21 +162,90 @@ public class ComparisonReport implements Report{
         }
 
 
-        JFreeChart barChart = ChartFactory.createBarChart("Comparison", fimsToLims.getFriendlyName(field), fieldOptions.getField() + " " + fieldOptions.getValue(), dataset, PlotOrientation.VERTICAL, false, true, false);
-        CategoryPlot plot = barChart.getCategoryPlot();
+        final String title = "Comparison";
+        final String xLabel = fimsToLims.getFriendlyName(field);
+        final String yLabel = fieldOptions.getField() + " " + fieldOptions.getValue();
+        final JFreeChart barChart = ChartFactory.createBarChart(title, xLabel, yLabel, dataset, PlotOrientation.VERTICAL, false, true, false);
+        final CategoryPlot plot = barChart.getCategoryPlot();
         barChart.getTitle().setFont(new Font("sans serif", Font.BOLD, 24));
-        BarRenderer barRenderer = new BarRenderer();
+        final BarRenderer barRenderer = new BarRenderer();
+        barRenderer.setShadowVisible(false);
         plot.setRenderer(barRenderer);
-        barRenderer.setSeriesPaint(0, new Color(0x4e6d92));
+        final Color barColor = new Color(0x4e6d92);
+        barRenderer.setSeriesPaint(0, barColor);
         barRenderer.setBarPainter(new StandardBarPainter());
         plot.setBackgroundPaint(Color.white);
         plot.setDomainGridlinePaint(Color.lightGray);
         plot.setDomainGridlinesVisible(true);
         plot.setRangeGridlinePaint(Color.lightGray);
 
-        ChartPanel panel = new ChartPanel(barChart);
+        final CategoryAxis domainAxis = plot.getDomainAxis();
+        domainAxis.setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
 
 
-        return panel;
+
+        final ChartPanel panel = new ChartPanel(barChart);
+
+
+        return new ReportChart(){
+            public JPanel getPanel() {
+                return panel;
+            }
+
+            @Override
+            public Options getOptions() {
+                Options options = new Options(this.getClass());
+                options.addDivider("Labels");
+                final Options.StringOption titleOption = options.addStringOption("title", "Title: ", title);
+                final Options.StringOption xLabelOption = options.addStringOption("xlabel", "X-label: ", xLabel);
+                final Options.StringOption yLabelOption = options.addStringOption("ylabel", "Y-label: ", yLabel);
+
+                options.addDivider("Display");
+                final ColorOption barColorOption = new ColorOption("barColor", "Bar Color: ", barColor);
+                options.addCustomOption(barColorOption);
+
+                final Options.OptionValue[] labelPositionValues = new Options.OptionValue[] {
+                        new Options.OptionValue("standard", "Horizontal"),
+                        new Options.OptionValue("up45", "Up, 45 deg"),
+                        new Options.OptionValue("up90", "Up, 90 deg"),
+                        new Options.OptionValue("down45", "Down, 45 deg"),
+                        new Options.OptionValue("down90", "Down, 90 deg")
+                };
+                final Options.ComboBoxOption<Options.OptionValue> labelPosition = options.addComboBoxOption("labelPosition", "Label position: ", labelPositionValues, labelPositionValues[0]);
+                final Options.BooleanOption shadows = options.addBooleanOption("shadows", "Draw shadows", barRenderer.getShadowsVisible());
+
+                options.setHorizontallyCompact(true);
+                //options.setVerticallyCompact(true);
+
+                options.addChangeListener(new SimpleListener(){
+                    public void objectChanged() {
+                        barChart.setTitle(titleOption.getValue());
+                        barChart.getCategoryPlot().getDomainAxis().setLabel(xLabelOption.getValue());
+                        barChart.getCategoryPlot().getRangeAxis().setLabel(yLabelOption.getValue());
+
+                        plot.getRenderer().setSeriesPaint(0, barColorOption.getValue());
+                        if(labelPosition.getValue().equals(labelPositionValues[0])) {
+                            plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
+                        }
+                        else if(labelPosition.getValue().equals(labelPositionValues[1])) {
+                            plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+                        }
+                        else if(labelPosition.getValue().equals(labelPositionValues[2])) {
+                            plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_90);
+                        }
+                        else if(labelPosition.getValue().equals(labelPositionValues[3])) {
+                            plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.DOWN_45);
+                        }
+                        else if(labelPosition.getValue().equals(labelPositionValues[4])) {
+                            plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.DOWN_90);         
+                        }
+
+                        barRenderer.setShadowVisible(shadows.getValue());
+                    }
+                });
+
+                return options;
+            }
+        };
     }
 }

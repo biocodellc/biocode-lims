@@ -44,17 +44,23 @@ public class AccumulationOptions extends Options {
         List<DocumentField> documentFields = new ArrayList<DocumentField>();
         documentFields.addAll(fimsToLims.getFimsFields());
         documentFields.addAll(LIMSConnection.getSearchAttributes());
-        addChildOptions(COUNT_OPTIONS, "", "", new ReactionFieldOptions(this.getClass(), fimsToLims, true));
+        Options countOptions = new Options(this.getClass());
+        countOptions.addMultipleOptions(COUNT_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true), false);
+        addChildOptions(COUNT_OPTIONS, "Series", "Add or remove series from your graph", countOptions);
         FimsMultiOptions fimsMultiOptions = new FimsMultiOptions(this.getClass(), fimsToLims);
         addChildOptions(FIMS_OPTIONS, "FIMS fields", "", fimsMultiOptions);
         BooleanOption fimsFieldOption = addBooleanOption(FIMS_FIELD, "Restrict by FIMS field", false);
         fimsFieldOption.addChildOptionsDependent(fimsMultiOptions, true, true);
     }
 
-    public String getSql() {
-        ReactionFieldOptions countOptions = (ReactionFieldOptions)getChildOptions().get(COUNT_OPTIONS);
+    public List<Options> getSeriesOptions() {
+        final MultipleOptions multipleOptions = getChildOptions().get(COUNT_OPTIONS).getMultipleOptions(COUNT_OPTIONS);
+        return multipleOptions.getValues();
+    }
+
+    public String getSql(ReactionFieldOptions countOptions) {
         boolean hasFims = (Boolean)getValue(FIMS_FIELD);
-        String sql = countOptions.getSql(hasFims ? "fims_values" : null, hasFims ? "fims_values.tissue_id=extraction.sampleId" : null);
+        String sql = countOptions.getSql(hasFims ? "fims_values" : null, hasFims ? "fims_values.tissueId=extraction.sampleId" : null);
         FimsMultiOptions fimsMultiOptions = (FimsMultiOptions)getChildOptions().get(FIMS_OPTIONS);
         if(hasFims) {
             sql += " AND (";
@@ -81,9 +87,8 @@ public class AccumulationOptions extends Options {
         return (Date)getValue(END_DATE);
     }
 
-    public List<Object> getObjectsForPreparedStatement() {
+    public List<Object> getObjectsForPreparedStatement(ReactionFieldOptions countOptions) {
         List<Object> object = new ArrayList<Object>();
-        ReactionFieldOptions countOptions = (ReactionFieldOptions)getChildOptions().get(COUNT_OPTIONS);
         if(countOptions.getValue() != null) {
             object.add(countOptions.getValue());
         }

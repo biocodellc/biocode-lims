@@ -32,10 +32,10 @@ import java.sql.SQLException;
  */
 public class ReportingService extends GeneiousServiceWithPanel implements Chartable {
     private JPanel panel;
-    ChartPanel chartPanel;
+    JComponent chartPanel;
     JSplitPane splitPane;
 
-    public void setChartPanel(final ChartPanel panel) {
+    public void setChartPanel(final JComponent panel) {
         Runnable runnable = new Runnable() {
             public void run() {
                 if(splitPane != null) {

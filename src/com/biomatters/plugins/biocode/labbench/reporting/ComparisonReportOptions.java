@@ -9,6 +9,8 @@ import org.jdom.Element;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 /**
  * @author Steve
@@ -30,7 +32,7 @@ public class ComparisonReportOptions extends Options{
     }
 
     private void init(final FimsToLims fimsToLims) throws SQLException {
-        List<DocumentField> documentFields = new ArrayList<DocumentField>();
+        Set<DocumentField> documentFields = new LinkedHashSet<DocumentField>();
         documentFields.addAll(fimsToLims.getFimsFields());
         documentFields.addAll(LIMSConnection.getSearchAttributes());
         addChildOptions(Y_CHILD_OPTIONS, "Y Axis (Count)", "", new ReactionFieldOptions(this.getClass(), fimsToLims, true));

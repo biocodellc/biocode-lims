@@ -1,22 +1,23 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-
-import java.sql.SQLException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.List;
-import java.util.Map;
-import java.text.AttributedString;
-
+import com.biomatters.geneious.publicapi.plugin.Options;
+import jebl.util.ProgressListener;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.labels.PieSectionLabelGenerator;
 import org.jfree.chart.plot.PiePlot;
-import org.jfree.data.general.PieDataset;
+import org.jfree.chart.title.TextTitle;
 import org.jfree.data.general.DefaultKeyedValuesDataset;
-import jebl.util.ProgressListener;
+import org.jfree.data.general.PieDataset;
+import org.virion.jam.util.SimpleListener;
+
+import javax.swing.*;
+import java.awt.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.AttributedString;
 
 /**
  * @author Steve
@@ -32,7 +33,7 @@ public class PieChartReport implements Report{
         return new PieChartOptions(this.getClass(), fimsToLims);
     }
 
-    public ChartPanel getChart(Options options, FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
+    public ReportChart getChart(Options options, FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
         final PiePlot piePlot = new PiePlot();
         piePlot.setLabelGenerator(new PieSectionLabelGenerator() {
             public String generateSectionLabel(PieDataset pieDataset, Comparable comparable) {
@@ -48,11 +49,57 @@ public class PieChartReport implements Report{
             }
         });
 
-        final ChartPanel chartPanel = new ChartPanel(new JFreeChart(piePlot));
+        final JFreeChart chart = new JFreeChart(piePlot);
+        final ChartPanel chartPanel = new ChartPanel(chart);
 
-        piePlot.setDataset(getDataset((PieChartOptions)options, fimsToLims, progress));
+        final PieDataset dataset = getDataset((PieChartOptions) options, fimsToLims, progress);
+        piePlot.setDataset(dataset);
+        piePlot.getLegendItems(); //call this to triger the chart to populate its colors...
         chartPanel.getAnchor();
-        return chartPanel;
+        return new ReportChart(){
+            public JPanel getPanel() {
+                return chartPanel;
+            }
+
+            @Override
+            public Options getOptions() {
+                final Options options = new Options(this.getClass());
+                options.addDivider("Labels");
+                if(chart.getTitle() == null) {
+                    chart.setTitle(new TextTitle(""));
+                }
+                final Options.StringOption titleOption = options.addStringOption("title", "Title: ", chart.getTitle().getText());
+
+
+                for (int i = 0; i < dataset.getItemCount(); i++) {
+                    Comparable key = dataset.getKey(i);
+                    options.addDivider("Series "+(i+1));
+                    Color existingColor = (Color)piePlot.getSectionPaint(key);
+                    if(existingColor == null) {
+                        existingColor = Color.blue;
+                    }
+                    ColorOption colorOption = new ColorOption("seriescolor"+i, "Color: ", existingColor);
+                    options.addCustomOption(colorOption);
+                }
+
+                options.setHorizontallyCompact(true);
+
+                options.addChangeListener(new SimpleListener(){
+                    public void objectChanged() {
+                        chart.setTitle(titleOption.getValue());
+
+                        for (int i = 0; i < dataset.getItemCount(); i++) {
+                            Comparable key = dataset.getKey(i);
+                            ColorOption colorOption = (ColorOption)options.getOption("seriescolor"+i);
+                            piePlot.setSectionPaint(key, colorOption.getValue());
+                        }
+
+                    }
+                });
+
+                return options;
+            }
+        };
     }
 
     public PieDataset getDataset(PieChartOptions options, FimsToLims fimsToLims, ProgressListener progress) throws SQLException{

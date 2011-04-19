@@ -9,14 +9,15 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
-import org.jfree.data.DefaultKeyedValues;
 import org.jfree.data.general.DefaultKeyedValuesDataset;
 import org.jfree.data.general.PieDataset;
-import org.jfree.data.xml.PieDatasetHandler;
 import org.jfree.chart.ChartPanel;
-import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.*;
@@ -142,18 +143,42 @@ public class ReportGenerator {
                 }
                 if(chartable != null) {
                     final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report", 1000, false);
-                    final AtomicReference<ChartPanel> chart = new AtomicReference<ChartPanel>();
                     final Report report1 = report;
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                chart.set(report1.getChart(reportingOptions.getChildOptions().get(reportValue.getName()), fimsToLims, progress));
-                                progress.setComplete();
-                                setChartPanel(chart.get());
+                                final Report.ReportChart reportChart = report1.getChart(reportingOptions.getChildOptions().get(reportValue.getName()), fimsToLims, progress);
+                                Runnable runnable = new Runnable() {
+                                    public void run() {
+                                        if(reportChart == null) {
+                                            setReportPanel(null);   
+                                        }
+                                        else if(reportChart.getOptions() == null) {
+                                            setReportPanel(reportChart.getPanel());
+                                        }
+                                        else {
+                                            JPanel splitPane = new GPanel(new BorderLayout());
+                                            splitPane.add(reportChart.getPanel(), BorderLayout.CENTER);
+                                            JPanel optionsPanel = reportChart.getOptions().getPanel();
+                                            optionsPanel.setMaximumSize(optionsPanel.getPreferredSize());
+                                            GPanel holderPanel = new GPanel();
+                                            holderPanel.setLayout(new BoxLayout(holderPanel, BoxLayout.Y_AXIS));
+                                            holderPanel.add(optionsPanel);
+                                            holderPanel.setBorder(new CompoundBorder(new LineBorder(holderPanel.getBackground().darker()), new EmptyBorder(5,5,5,5)));
+                                            splitPane.add(holderPanel, BorderLayout.EAST);
+                                            setReportPanel(splitPane);
+                                        }
+                                        progress.setComplete();
+
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrLater(runnable);
                             } catch (SQLException e1) {
                                 e1.printStackTrace();
                                 Dialogs.showMessageDialog(e1.getMessage()); //todo: add stacktrace
-                                setChartPanel(null);
+                                setReportPanel(null);
+                            } finally {
+                                progress.setComplete();
                             }
                         }
                     };
@@ -174,7 +199,7 @@ public class ReportGenerator {
         return panel;
     }
 
-    private void setChartPanel(final ChartPanel chart) {
+    private void setReportPanel(final JComponent chart) {
         Runnable runnable = new Runnable() {
             public void run() {
                 chartable.setChartPanel(chart);
@@ -309,13 +334,44 @@ public class ReportGenerator {
         sequenceFields.add(LIMSConnection.EDIT_RECORD);
     }
 
-    public static List<Options.OptionValue> getOptionValues(List<DocumentField> documentFields) {
+    public static List<Options.OptionValue> getOptionValues(Iterable<DocumentField> documentFields) {
         List<Options.OptionValue> optionValues = new ArrayList<Options.OptionValue> ();
 
         for(DocumentField field : documentFields) {
             optionValues.add(new Options.OptionValue(field.getCode(), field.getName()));
         }
         return optionValues;
+    }
+
+    /**
+     *
+     * @param reactionType the reaction type containing the field in question
+     * @param fieldCode the fieldcode of the field in question
+     * @return null if the field is not enumerated
+     */
+    public static List<Options.OptionValue> getEnumeratedFieldValues(String reactionType, String fieldCode) {
+        List<DocumentField> displayableFields;
+        try {
+            Reaction.Type type = Reaction.Type.valueOf(reactionType);
+            Reaction reaction = getNewReaction(type);
+            displayableFields = reaction.getDisplayableFields();
+
+        } catch (IllegalArgumentException e) {
+            displayableFields = sequenceFields;
+        }
+        for(DocumentField f : displayableFields){
+            if(f.equals(Reaction.GEL_IMAGE_DOCUMENT_FIELD)) {
+                continue;
+            }
+            if(f.getCode().equals(fieldCode) && f.isEnumeratedField()) {
+                List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
+                for(String s : f.getEnumerationValues()) {
+                    values.add(new Options.OptionValue(s,s));
+                }
+                return values;
+            }
+        }
+        return null;
     }
 
     public static List<Options.OptionValue> getPossibleFields(String reactionType, boolean onlyEnumerated) {

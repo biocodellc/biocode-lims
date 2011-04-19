@@ -7,6 +7,8 @@ import java.sql.SQLException;
 
 import jebl.util.ProgressListener;
 
+import javax.swing.*;
+
 /**
  * @author Steve
  * @version $Id$
@@ -17,6 +19,14 @@ public interface Report {
 
     public Options getOptions(FimsToLims fimsToLims) throws SQLException;
 
-    public ChartPanel getChart(Options options, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException;
+    public ReportChart getChart(Options options, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException;
+
+
+    public static abstract class ReportChart {
+        public Options getOptions() {
+            return null;
+        }
+        public abstract JPanel getPanel();
+    }
 
 }
