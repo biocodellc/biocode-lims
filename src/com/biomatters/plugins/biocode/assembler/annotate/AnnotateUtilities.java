@@ -9,6 +9,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -41,7 +42,7 @@ public class AnnotateUtilities {
         List<String> failBlog = new ArrayList<String>();
         Set<String> noReferencesList = new LinkedHashSet<String>();
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-            if (progressListener.isCanceled()) {
+            if (progressListener.isCanceled() || !BiocodeService.getInstance().isLoggedIn()) {
                 break;
             }
             if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {

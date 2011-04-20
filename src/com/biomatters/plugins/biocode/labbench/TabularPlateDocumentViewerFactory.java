@@ -40,9 +40,10 @@ public class TabularPlateDocumentViewerFactory extends TableDocumentViewerFactor
     protected TableModel getTableModel(AnnotatedPluginDocument[] docs) {
         Set<DocumentField> validFieldSet = new LinkedHashSet<DocumentField>();
         final List<Reaction> reactions = new ArrayList<Reaction>();
-
-        validFieldSet.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getCollectionAttributes());
-        validFieldSet.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getTaxonomyAttributes());
+        if(BiocodeService.getInstance().isLoggedIn()) {
+            validFieldSet.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getCollectionAttributes());
+            validFieldSet.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getTaxonomyAttributes());
+        }
         validFieldSet.add(Reaction.PLATE_NAME_DOCUMENT_FIELD);
         validFieldSet.add(Reaction.WELL_DOCUMENT_FIELD);
         for(AnnotatedPluginDocument doc : docs) {
@@ -87,6 +88,9 @@ public class TabularPlateDocumentViewerFactory extends TableDocumentViewerFactor
 
     @Override
     protected boolean columnVisibleByDefault(int columnIndex, AnnotatedPluginDocument[] selectedDocuments) {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            return true;
+        }
         return columnIndex >= BiocodeService.getInstance().getActiveFIMSConnection().getCollectionAttributes().size() +
                 BiocodeService.getInstance().getActiveFIMSConnection().getTaxonomyAttributes().size();
     }

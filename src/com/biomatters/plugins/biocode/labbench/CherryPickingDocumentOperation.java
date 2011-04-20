@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 
 import java.util.*;
 import java.sql.SQLException;
@@ -208,6 +209,9 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         List<PlateDocument> plateDocuments = new ArrayList<PlateDocument>();
         for(AnnotatedPluginDocument doc : annotatedDocuments) {
             plateDocuments.add((PlateDocument)doc.getDocument());

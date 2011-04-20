@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -30,6 +31,9 @@ public class AnnotateFimsDataOptions extends Options {
 
     public AnnotateFimsDataOptions(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
         super(AnnotateLimsDataOptions.class);
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         GLabel warningLabel = new GLabel("You should use a field which is unique for each tissue, or Geneious will choose the first tissue that matches", true);
         Option warningLabelOption = addCustomComponent(warningLabel);
         warningLabelOption.setSpanningComponent(true);

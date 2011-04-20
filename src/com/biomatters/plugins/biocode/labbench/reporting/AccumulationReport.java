@@ -16,6 +16,7 @@ import java.text.DateFormat;
 import org.jfree.chart.*;
 import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.plot.PlotOrientation;
@@ -101,6 +102,9 @@ public class AccumulationReport implements Report{
                 );
         final XYPlot plot = chart.getXYPlot();
         final XYItemRenderer renderer = plot.getRenderer();
+        if(renderer instanceof XYLineAndShapeRenderer) {
+            ((XYLineAndShapeRenderer)renderer).setDrawSeriesLineAsPath(true);
+        }
         for(int i=0; i < dataset.getSeriesCount(); i++) {
             renderer.setSeriesStroke(i, new BasicStroke(3.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_ROUND));
         }

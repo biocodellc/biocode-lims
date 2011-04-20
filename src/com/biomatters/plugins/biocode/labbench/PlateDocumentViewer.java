@@ -537,6 +537,10 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit", null, BiocodePlugin.getIcons("bulkEdit_16.png")) {
         public void actionPerformed(ActionEvent e) {
+            if(!BiocodeService.getInstance().isLoggedIn()) {
+                Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+                return;
+            }
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
             editor.editPlate(container);
             saveAction.setEnabled(true);

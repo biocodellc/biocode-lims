@@ -50,6 +50,9 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         final AnnotateLimsDataOptions options = (AnnotateLimsDataOptions) o;
         FimsDataGetter fimsDataGetter = new FimsDataGetter() {
             public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {

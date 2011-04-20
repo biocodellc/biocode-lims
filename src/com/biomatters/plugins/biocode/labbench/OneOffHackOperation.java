@@ -59,7 +59,7 @@ public class OneOffHackOperation extends DocumentOperation{
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
-            throw new DocumentOperationException("Please log in!");
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
 
         List<Reaction> reactions = new ArrayList<Reaction>();

@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -65,6 +66,9 @@ public class MarkSequencesAsSubmittedInLimsOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options, SequenceSelection sequenceSelection) throws DocumentOperationException {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         Map<AnnotatedPluginDocument,SequenceDocument> docsToMark = MarkInLimsUtilities.getDocsToMark(annotatedDocuments, sequenceSelection);
         boolean submitted = options.getValueAsString("markValue").equals("Yes");
         List<Integer> ids = new ArrayList<Integer>();

@@ -1283,6 +1283,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public static Map<String, String> getSpecNumToMbioMapping(List<String> mbioNumbers) throws ConnectionException {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new ConnectionException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         Query[] queries = new Query[mbioNumbers.size()];
         DocumentField field = new DocumentField("Specimen Num Collector", "", "biocode.Specimen_Num_Collector", String.class, false, true);
         for (int i = 0; i < mbioNumbers.size(); i++) {

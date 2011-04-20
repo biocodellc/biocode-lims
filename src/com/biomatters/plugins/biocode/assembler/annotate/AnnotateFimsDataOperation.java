@@ -57,6 +57,9 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o) throws DocumentOperationException {
         final AnnotateFimsDataOptions options = (AnnotateFimsDataOptions)o;
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
 
         final List<FimsSample> fimsSamples;
         try {
@@ -68,6 +71,9 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
         FimsDataGetter fimsDataGetter = new FimsDataGetter() {
             public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                if(!BiocodeService.getInstance().isLoggedIn()) {
+                    throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+                }
                 try {
                     if(options.matchField()) {
                         FimsSample sample = getFimsSample(fimsSamples, options.getFieldToMatch(), document, options);
@@ -94,12 +100,22 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
     }
 
     private Query getQuery(AnnotatedPluginDocument[] annotatedDocuments, AnnotateFimsDataOptions options) throws DocumentOperationException{
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         if(options.matchField()) {
             return getFieldQuery(options.getFieldToMatch(), getFieldValues(annotatedDocuments, DocumentField.NAME_FIELD, options.getNamePart(), options.getNameSeaparator()));
         }
         return getPlateQuery(getPlateIds(annotatedDocuments, options));
     }
 
+    /**
+     * Must have checked that we are logged in (BiocodeService.getInstance().isLoggedIn()) before calling this method
+     * @param fimsSamples
+     * @param plate
+     * @param well
+     * @return
+     */
     private static FimsSample getFimsSample(List<FimsSample> fimsSamples, String plate, BiocodeUtilities.Well well) {
         for(FimsSample sample : fimsSamples) {
             BiocodeUtilities.Well sampleWell = new BiocodeUtilities.Well(""+sample.getFimsAttributeValue(BiocodeService.getInstance().getActiveFIMSConnection().getWellDocumentField().getCode()));
@@ -138,17 +154,22 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         }
     }
 
-    private static Query getPlateQuery(List<String> plateIds) {
+    private static Query getPlateQuery(List<String> plateIds) throws DocumentOperationException{
         if(plateIds.size() == 0) {
             throw new IllegalArgumentException("You tried to search for no plates!");
         }
-        try {
-            return getFieldQuery(BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField(), plateIds);
-        } catch (DocumentOperationException e) {
-            throw new IllegalArgumentException(e.getMessage());
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
+        return getFieldQuery(BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField(), plateIds);
     }
 
+    /**
+     * must check that BiocodeService.getInstance().isLoggedIn() returns true before calling this method.
+     * @param document
+     * @param options
+     * @return
+     */
     private static String getPlateId(AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
         if(options.useExistingPlate()) {
             Object value = document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField());
@@ -169,7 +190,10 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         return null;
     }
 
-    private static BiocodeUtilities.Well getWell(AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
+    private static BiocodeUtilities.Well getWell(AnnotatedPluginDocument document, AnnotateFimsDataOptions options) throws DocumentOperationException{
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         if(options.useExistingPlate()) {
             Object value = document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getWellDocumentField());
             if(value != null) {
@@ -183,6 +207,9 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
     }
 
     private static List<String> getPlateIds(AnnotatedPluginDocument[] documents, AnnotateFimsDataOptions options) throws DocumentOperationException{
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         List<String> result = new ArrayList<String>();
         if(options.useExistingPlate()) {
             DocumentField plateField = BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField();

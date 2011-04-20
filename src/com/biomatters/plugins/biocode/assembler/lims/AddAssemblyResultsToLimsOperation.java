@@ -99,7 +99,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
     public List<AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options, SequenceSelection selection) throws DocumentOperationException {
-
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = MarkInLimsUtilities.getDocsToMark(annotatedDocuments, selection);
 
         Map<String, Plate> sequencingPlateCache = new HashMap<String, Plate>();
@@ -351,6 +353,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options o, SequenceSelection selection) throws DocumentOperationException {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         AddAssemblyResultsToLimsOptions options = (AddAssemblyResultsToLimsOptions) o;
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.4, 0.2);
         progress.beginSubtask("Checking results");

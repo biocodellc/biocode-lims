@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.submission.genbank.barstool;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.verify.Pair;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -23,8 +24,11 @@ public class SourceExportTableModel extends TabDelimitedExport.ExportTableModel 
     private final boolean includeLatLong;
     private final DateFormat dateFormat;
 
-    public SourceExportTableModel(List<AnnotatedPluginDocument> docs, ExportForBarstoolOptions options) {
+    public SourceExportTableModel(List<AnnotatedPluginDocument> docs, ExportForBarstoolOptions options) throws DocumentOperationException{
         super(docs);
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         sourceFields = options.getSourceFields();
         fixedSourceFields = options.getFixedSourceFields();
         includeLatLong = options.isIncludeLatLong();

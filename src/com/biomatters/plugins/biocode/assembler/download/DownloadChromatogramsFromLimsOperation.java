@@ -67,6 +67,9 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
 
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.2, 0.5, 0.2);
         progress.setIndeterminateProgress();
         progress.beginSubtask("Getting reactions");

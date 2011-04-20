@@ -35,6 +35,9 @@ public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel 
 
     public PrimerExportTableModel(List<AnnotatedPluginDocument> docs, ExportForBarstoolOptions exportForBarstoolOptions) throws DocumentOperationException {
         super(docs);
+        if(!BiocodeService.getInstance().isLoggedIn()) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         options = exportForBarstoolOptions;
         BiocodeService labbench = BiocodeService.getInstance();
         FIMSConnection fimsConnection = labbench.getActiveFIMSConnection();

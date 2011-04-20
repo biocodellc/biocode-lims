@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TransactionException;
@@ -184,6 +185,10 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit", "Paste data into the wells from a spreadsheet", BiocodePlugin.getIcons("bulkEdit_16.png")) {
             public void actionPerformed(ActionEvent e) {
+                if(!BiocodeService.getInstance().isLoggedIn()) {
+                    Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+                    return;
+                }
                 PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
                 if(editor.editPlate(selfReference)) {
                     nameField.setValue(plateView.getPlate().getName());
