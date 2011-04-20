@@ -371,6 +371,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         Connection connection = limsConnection.getConnection();
         progress = new CompositeProgressListener(progress, assemblyResults.size());
+        if(connection == null) {
+            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
 //        if (progress.getRootProgressListener() instanceof ProgressFrame) {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
 //        }
