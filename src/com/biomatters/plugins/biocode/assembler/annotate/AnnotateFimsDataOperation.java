@@ -182,11 +182,14 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         }
     }
 
-    private static List<String> getPlateIds(AnnotatedPluginDocument[] documents, AnnotateFimsDataOptions options) {
+    private static List<String> getPlateIds(AnnotatedPluginDocument[] documents, AnnotateFimsDataOptions options) throws DocumentOperationException{
         List<String> result = new ArrayList<String>();
         if(options.useExistingPlate()) {
             DocumentField plateField = BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField();
             List<String> fieldValues = getFieldValues(documents, plateField, options.getNamePart(), options.getNameSeaparator());
+            if(fieldValues == null || fieldValues.size() == 0) {
+                throw new DocumentOperationException("At least some of your documents do not have a plate field annotated.  Please annotate them by selecting annotate from the biocode menu, and entering a plate name in the options dialog.");
+            }
             result.addAll(fieldValues);
         }
         else {
