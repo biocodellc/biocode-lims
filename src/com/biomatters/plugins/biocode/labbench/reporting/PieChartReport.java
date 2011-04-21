@@ -43,8 +43,8 @@ public class PieChartReport implements Report{
         final AtomicBoolean showNames = new AtomicBoolean(true);
         piePlot.setLabelGenerator(new PieSectionLabelGenerator() {
             public String generateSectionLabel(PieDataset pieDataset, Comparable comparable) {
-                Number value = pieDataset.getValue(comparable);
-                if(value.intValue() == 0) {
+                int value = pieDataset.getValue(comparable).intValue();
+                if(value == 0) {
                     return null;
                 }
                 String label = null;
