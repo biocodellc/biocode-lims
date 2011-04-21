@@ -5,6 +5,8 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import jebl.util.ProgressListener;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.LegendItem;
+import org.jfree.chart.LegendItemCollection;
 import org.jfree.chart.labels.PieSectionLabelGenerator;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.title.TextTitle;
@@ -18,6 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.AttributedString;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Steve
@@ -35,13 +38,23 @@ public class PieChartReport implements Report{
 
     public ReportChart getChart(Options options, FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
         final PiePlot piePlot = new PiePlot();
+        final AtomicBoolean showNums = new AtomicBoolean(true);
+        final AtomicBoolean showLabels = new AtomicBoolean(true);
+        final AtomicBoolean showNames = new AtomicBoolean(true);
         piePlot.setLabelGenerator(new PieSectionLabelGenerator() {
             public String generateSectionLabel(PieDataset pieDataset, Comparable comparable) {
                 Number value = pieDataset.getValue(comparable);
                 if(value.intValue() == 0) {
                     return null;
                 }
-                return comparable.toString()+" ("+value+")";
+                String label = null;
+                if(showNames.get()) {
+                    label = comparable.toString() + (showNums.get() ? " (" + value + ")" : "");
+                }
+                else if(showNums.get()) {
+                    label = ""+value;
+                }
+                return label;
             }
 
             public AttributedString generateAttributedSectionLabel(PieDataset pieDataset, Comparable comparable) {
@@ -56,6 +69,10 @@ public class PieChartReport implements Report{
         piePlot.setDataset(dataset);
         piePlot.getLegendItems(); //call this to triger the chart to populate its colors...
         chartPanel.getAnchor();
+
+        final double origShadowXOffset = piePlot.getShadowXOffset();
+        final double origShadowYOffset = piePlot.getShadowYOffset();
+
         return new ReportChart(){
             public JPanel getPanel() {
                 return chartPanel;
@@ -69,11 +86,28 @@ public class PieChartReport implements Report{
                     chart.setTitle(new TextTitle(""));
                 }
                 final Options.StringOption titleOption = options.addStringOption("title", "Title: ", chart.getTitle().getText());
+                final Options.BooleanOption showLabelsOption = options.addBooleanOption("showLabels", "Show Labels", true);
+
+
+
+                Options labelOptions = new Options(this.getClass());
+                labelOptions.beginAlignHorizontally("", false);
+                final Options.BooleanOption showNamesOption = labelOptions.addBooleanOption("showNames", "Names", true);
+                final Options.BooleanOption showNumbersOption = labelOptions.addBooleanOption("showNumbers", "Values", true);
+                showNamesOption.setDisabledValue(false);
+                showNumbersOption.setDisabledValue(false);
+                labelOptions.endAlignHorizontally();
+                options.addChildOptions("Label", "", "", labelOptions);
+
+                showLabelsOption.addChildOptionsDependent(labelOptions, true, true);
+
+                final Options.BooleanOption shadowOption = options.addBooleanOption("shadow", "Shadow", true);
 
 
                 for (int i = 0; i < dataset.getItemCount(); i++) {
                     Comparable key = dataset.getKey(i);
                     options.addDivider("Series "+(i+1));
+                    options.addStringOption("seriestitle"+i, "Title: ", piePlot.getLegendItems().get(i).getLabel());
                     Color existingColor = (Color)piePlot.getSectionPaint(key);
                     if(existingColor == null) {
                         existingColor = Color.blue;
@@ -88,12 +122,25 @@ public class PieChartReport implements Report{
                     public void objectChanged() {
                         chart.setTitle(titleOption.getValue());
 
-                        for (int i = 0; i < dataset.getItemCount(); i++) {
-                            Comparable key = dataset.getKey(i);
-                            ColorOption colorOption = (ColorOption)options.getOption("seriescolor"+i);
-                            piePlot.setSectionPaint(key, colorOption.getValue());
-                        }
+                        DefaultKeyedValuesDataset newDataset = new DefaultKeyedValuesDataset();
+                        PieDataset oldDataset = piePlot.getDataset();
+                        showLabels.set(showLabelsOption.getValue());
+                        showNums.set(showNumbersOption.getValue());
+                        showNames.set(showNamesOption.getValue());
 
+                        piePlot.setShadowXOffset(shadowOption.getValue() ? origShadowXOffset : 0);
+                        piePlot.setShadowYOffset(shadowOption.getValue() ? origShadowYOffset : 0);
+
+                        piePlot.clearSectionPaints(false);
+                        for (int i = 0; i < oldDataset.getItemCount(); i++) {
+                            Comparable oldkey = oldDataset.getKey(i);
+                            Comparable key = options.getValueAsString("seriestitle" + i);
+                            ColorOption colorOption = (ColorOption)options.getOption("seriescolor"+i);
+                            newDataset.setValue(key, piePlot.getDataset().getValue(oldkey));
+                            final Color seriesColor = colorOption.getValue();
+                            piePlot.setSectionPaint(key, seriesColor);
+                        }
+                        piePlot.setDataset(newDataset);
                     }
                 });
 

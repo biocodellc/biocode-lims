@@ -3,6 +3,8 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
@@ -84,7 +86,19 @@ public class FimsToLims {
 
     public String getFriendlyName(String fieldCode) {
         String value = friendlyNameMap.get(fieldCode);
-        return value != null ? value : fieldCode;
+        if(value != null) {
+            return value;
+        }
+        for(Reaction.Type type : Reaction.Type.values()) {
+            Reaction r = Reaction.getNewReaction(type);
+            for (Iterator it = r.getDisplayableFields().iterator(); it.hasNext();) {
+                DocumentField f = (DocumentField) it.next();
+                if (f.getCode().equals(fieldCode)) {
+                    return f.getName();
+                }
+            }
+        }
+        return fieldCode;
     }
 
     public boolean limsHasFimsValues() throws SQLException{

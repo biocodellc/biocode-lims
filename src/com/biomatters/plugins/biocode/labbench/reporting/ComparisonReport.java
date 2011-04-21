@@ -164,7 +164,7 @@ public class ComparisonReport implements Report{
 
         final String title = "Comparison";
         final String xLabel = fimsToLims.getFriendlyName(field);
-        final String yLabel = fieldOptions.getField() + " " + fieldOptions.getValue();
+        final String yLabel = fimsToLims.getFriendlyName(fieldOptions.getField()) + " " + fieldOptions.getValue();
         final JFreeChart barChart = ChartFactory.createBarChart(title, xLabel, yLabel, dataset, PlotOrientation.VERTICAL, false, true, false);
         final CategoryPlot plot = barChart.getCategoryPlot();
         barChart.getTitle().setFont(new Font("sans serif", Font.BOLD, 24));
