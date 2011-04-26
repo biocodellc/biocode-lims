@@ -357,7 +357,7 @@ public class LIMSConnection {
             return Collections.emptyList();
         }
 
-        String sql = "SELECT workflow.locus, assembly.* FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
+        String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
         List<String> terms = new ArrayList<String>();
         List<Object> sqlValues = new ArrayList<Object>();
         if(workflows != null && workflows.size() > 0) {
@@ -395,6 +395,8 @@ public class LIMSConnection {
         try {
             final ResultSet resultSet = statement.executeQuery();
             List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
+            final List<String> missingTissueIds = new ArrayList<String>();
+            ArrayList<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
             while(resultSet.next()) {
                 if(SystemUtilities.isAvailableMemoryLessThan(50)) {
                     statement.cancel();
@@ -407,10 +409,21 @@ public class LIMSConnection {
                 FimsDataGetter getter = new FimsDataGetter(){
                     public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                         try {
-                            for(WorkflowDocument workflow : workflows) {
-                                if(workflow.getId() == resultSet.getInt("workflow")) {
-                                    return new FimsData(workflow, null, null);
+                            if(workflows != null) {
+                                for(WorkflowDocument workflow : workflows) {
+                                    if(workflow.getId() == resultSet.getInt("workflow")) {
+                                        return new FimsData(workflow, null, null);
+                                    }
                                 }
+                            }
+                            String tissueId = resultSet.getString("sampleId");
+                            FimsSample fimsSample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(tissueId);
+                            if(fimsSample != null) {
+                                return new FimsData(fimsSample, null, null);
+                            }
+                            else {
+                                document.setFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), tissueId);
+                                missingTissueIds.add(tissueId);
                             }
                         }
                         catch(SQLException ex) {
@@ -419,18 +432,51 @@ public class LIMSConnection {
                         return null;
                     }
                 };
-                AnnotateUtilities.annotateDocument(getter, new ArrayList<String>(), doc);
-                resultDocuments.add(doc);
+                ArrayList<String> failBlog = new ArrayList<String>();
+                AnnotateUtilities.annotateDocument(getter, failBlog, doc);
+                if(failBlog.size() == 0) {
+                    resultDocuments.add(doc);
+                }
+                else {
+                    documentsWithoutFimsData.add(doc);
+                }
                 if(callback != null) {
                     callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
+
+            //annotate with FIMS data if we couldn't before...
+            final List<FimsSample> fimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(missingTissueIds);
+            FimsDataGetter fimsDataGetter = new FimsDataGetter() {
+                public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                    String tissueId = (String)document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
+                    if(tissueId != null) {
+                        for(FimsSample sample : fimsSamples) {
+                            if(sample.getId().equals(tissueId)) {
+                                return new FimsData(sample, null, null);
+                            }
+                        }
+                    }
+                    return null;
+                }
+            };
+            for(AnnotatedPluginDocument doc : documentsWithoutFimsData) {
+                AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc);
+                callback.add(doc, Collections.<String, Object>emptyMap());
+            }
+
             if(listeningThread != null) {
                 listeningThread.finish();
             }
             return resultDocuments;
         }
         catch (DocumentOperationException e) {
+            e.printStackTrace();
+            if(e.getCause() != null && e.getCause() instanceof SQLException) {
+                throw (SQLException)e.getCause();
+            }
+            throw new SQLException(e.getMessage());
+        } catch (ConnectionException e) {
             e.printStackTrace();
             if(e.getCause() != null && e.getCause() instanceof SQLException) {
                 throw (SQLException)e.getCause();

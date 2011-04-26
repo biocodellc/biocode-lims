@@ -144,35 +144,45 @@ public class ReportGenerator {
                 if(chartable != null) {
                     final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report", 1000, false);
                     final Report report1 = report;
+                    reportingOptions.setEnabled(false);
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                final Report.ReportChart reportChart = report1.getChart(reportingOptions.getChildOptions().get(reportValue.getName()), fimsToLims, progress);
-                                Runnable runnable = new Runnable() {
-                                    public void run() {
-                                        if(reportChart == null) {
-                                            setReportPanel(null);   
-                                        }
-                                        else if(reportChart.getOptions() == null) {
-                                            setReportPanel(reportChart.getPanel());
-                                        }
-                                        else {
-                                            JPanel splitPane = new GPanel(new BorderLayout());
-                                            splitPane.add(reportChart.getPanel(), BorderLayout.CENTER);
-                                            JPanel optionsPanel = reportChart.getOptions().getPanel();
-                                            optionsPanel.setMaximumSize(optionsPanel.getPreferredSize());
-                                            GPanel holderPanel = new GPanel();
-                                            holderPanel.setLayout(new BoxLayout(holderPanel, BoxLayout.Y_AXIS));
-                                            holderPanel.add(optionsPanel);
-                                            holderPanel.setBorder(new CompoundBorder(new LineBorder(holderPanel.getBackground().darker()), new EmptyBorder(5,5,5,5)));
-                                            splitPane.add(holderPanel, BorderLayout.EAST);
-                                            setReportPanel(splitPane);
-                                        }
-                                        progress.setComplete();
+                                try {
+                                    final Report.ReportChart reportChart = report1.getChart(reportingOptions.getChildOptions().get(reportValue.getName()), fimsToLims, progress);
+                                    Runnable runnable = new Runnable() {
+                                        public void run() {
+                                            if(reportChart == null) {
+                                                setReportPanel(null);
+                                            }
+                                            else if(reportChart.getOptions() == null) {
+                                                setReportPanel(reportChart.getPanel());
+                                            }
+                                            else {
+                                                JPanel splitPane = new GPanel(new BorderLayout());
+                                                splitPane.add(reportChart.getPanel(), BorderLayout.CENTER);
+                                                JPanel optionsPanel = reportChart.getOptions().getPanel();
+                                                optionsPanel.setMaximumSize(optionsPanel.getPreferredSize());
+                                                GPanel holderPanel = new GPanel();
+                                                holderPanel.setLayout(new BoxLayout(holderPanel, BoxLayout.Y_AXIS));
+                                                holderPanel.add(optionsPanel);
+                                                holderPanel.setBorder(new CompoundBorder(new LineBorder(holderPanel.getBackground().darker()), new EmptyBorder(5,5,5,5)));
+                                                splitPane.add(holderPanel, BorderLayout.EAST);
+                                                setReportPanel(splitPane);
+                                            }
+                                            progress.setComplete();
 
-                                    }
-                                };
-                                ThreadUtilities.invokeNowOrLater(runnable);
+                                        }
+                                    };
+                                    ThreadUtilities.invokeNowOrLater(runnable);
+                                } finally {
+                                    Runnable runnable = new Runnable() {
+                                        public void run() {
+                                            reportingOptions.setEnabled(true);
+                                        }
+                                    };
+                                    ThreadUtilities.invokeNowOrLater(runnable);
+                                }
                             } catch (SQLException e1) {
                                 e1.printStackTrace();
                                 Dialogs.showMessageDialog(e1.getMessage()); //todo: add stacktrace
@@ -396,6 +406,9 @@ public class ReportGenerator {
         }
         if(fields.size() == 0) {
             fields.add(new Options.OptionValue("none", "None..."));
+        }
+        else if(!onlyEnumerated){
+            fields.add(0, new Options.OptionValue("nofield", "All "+reactionType+" reactions"));
         }
         return fields;
     }

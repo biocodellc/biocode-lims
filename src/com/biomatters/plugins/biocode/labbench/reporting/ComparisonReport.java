@@ -16,6 +16,7 @@ import org.jfree.chart.plot.IntervalMarker;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.chart.renderer.category.BarPainter;
+import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.ui.RectangleAnchor;
 import org.jfree.ui.TextAnchor;
@@ -29,6 +30,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -135,7 +138,7 @@ public class ComparisonReport implements Report{
         System.out.println(sql1);
 
         PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql1);
-        List<Integer> results = new ArrayList<Integer>();
+        final List<FieldResult> results = new ArrayList<FieldResult>();
 
         for (int i1 = 0; i1 < values.size(); i1++) {
             String value = values.get(i1);
@@ -143,28 +146,38 @@ public class ComparisonReport implements Report{
             if(progress.isCanceled()) {
                 return null;
             }
-            statement.setString(1, fieldOptions.getValue());
-            statement.setString(2, value);
+            if(fieldOptions.getValue() != null) {
+                statement.setString(1, fieldOptions.getValue());
+                statement.setString(2, value);
+            }
+            else {
+                statement.setString(1, value);
+            }
             long time = System.currentTimeMillis();
             ResultSet set = statement.executeQuery();
             System.out.println(System.currentTimeMillis() - time + " millis for " + value);
             while (set.next()) {
                 int result = set.getInt(1);
                 System.out.println(result);
-                results.add(result);
+                results.add(new FieldResult(value != null && value.length() > 0 ? value : "None", result));
             }
         }
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        for(int i=0; i < values.size(); i++) {
-            String value = values.get(i);
-            dataset.addValue(results.get(i), field, value != null && value.length() > 0 ? value : "None");
+        for(int i=0; i < results.size(); i++) {
+            dataset.addValue(results.get(i).getResult(), field, results.get(i).getField());
         }
 
 
         final String title = "Comparison";
         final String xLabel = fimsToLims.getFriendlyName(field);
-        final String yLabel = fimsToLims.getFriendlyName(fieldOptions.getField()) + " " + fieldOptions.getValue();
+        final String yLabel;
+        if(fieldOptions.getValue() != null) {
+            yLabel = fimsToLims.getFriendlyName(fieldOptions.getField()) + " " + fieldOptions.getValue();
+        }
+        else {
+            yLabel = fieldOptions.getFriendlyTableName();
+        }
         final JFreeChart barChart = ChartFactory.createBarChart(title, xLabel, yLabel, dataset, PlotOrientation.VERTICAL, false, true, false);
         final CategoryPlot plot = barChart.getCategoryPlot();
         barChart.getTitle().setFont(new Font("sans serif", Font.BOLD, 24));
@@ -187,6 +200,7 @@ public class ComparisonReport implements Report{
         final ChartPanel panel = new ChartPanel(barChart);
 
 
+        final String finalField = field;
         return new ReportChart(){
             public JPanel getPanel() {
                 return panel;
@@ -212,6 +226,17 @@ public class ComparisonReport implements Report{
                         new Options.OptionValue("down90", "Down, 90 deg")
                 };
                 final Options.ComboBoxOption<Options.OptionValue> labelPosition = options.addComboBoxOption("labelPosition", "Label position: ", labelPositionValues, labelPositionValues[0]);
+
+                final Options.OptionValue[] orderingValues = new Options.OptionValue[] {
+                        new Options.OptionValue("natural", "Natural Ordering"),
+                        new Options.OptionValue("field", xLabel),
+                        new Options.OptionValue("countasc", "Count (Ascending)"),
+                        new Options.OptionValue("countdesc", "Count (Descending)"),
+                };
+                final Options.ComboBoxOption<Options.OptionValue> ordering = options.addComboBoxOption("ordering", "Order by: ", orderingValues, orderingValues[0]);
+
+
+
                 final Options.BooleanOption shadows = options.addBooleanOption("shadows", "Draw shadows", barRenderer.getShadowsVisible());
 
                 options.setHorizontallyCompact(true);
@@ -244,8 +269,85 @@ public class ComparisonReport implements Report{
                     }
                 });
 
+                SimpleListener orderingListener = new SimpleListener() {
+                    public void objectChanged() {
+                        List<FieldResult> newResults = new ArrayList<FieldResult>(results);
+                        Options.OptionValue sorting = ordering.getValue();
+
+                        //don't need to do anything for the first sorting order...
+                        if(sorting.equals(orderingValues[1])) {
+                            Collections.sort(newResults, new Comparator<FieldResult>() {
+                                public int compare(FieldResult o1, FieldResult o2) {
+                                    return o1.getField().compareTo(o2.getField());
+                                }
+                            });
+                        }
+                        else if(sorting.equals(orderingValues[2])) {
+                            Collections.sort(newResults, new Comparator<FieldResult>() {
+                                public int compare(FieldResult o1, FieldResult o2) {
+                                    int dif = o1.result - o2.result;
+                                    if(dif == 0) {
+                                        return o1.getField().compareTo(o2.getField());
+                                    }
+                                    return dif;
+                                }
+                            });
+                        }
+                        else if(sorting.equals(orderingValues[3])) {
+                            Collections.sort(newResults, new Comparator<FieldResult>() {
+                                public int compare(FieldResult o1, FieldResult o2) {
+                                    int dif = o2.result - o1.result;
+                                    if(dif == 0) {
+                                        return o1.getField().compareTo(o2.getField());
+                                    }
+                                    return dif;
+                                }
+                            });
+                        }
+                        DefaultCategoryDataset plotDataset = (DefaultCategoryDataset) plot.getDataset();
+                        plotDataset.clear();
+
+                        for(int i=0; i < newResults.size(); i++) {
+                            plotDataset.addValue(newResults.get(i).getResult(), finalField, newResults.get(i).getField());
+                        }
+                    }
+                };
+
+                ordering.addChangeListener(orderingListener);
+                orderingListener.objectChanged();
+
+
+
                 return options;
             }
         };
+    }
+
+    private static class FieldResult implements Comparable{
+        String field;
+        int result;
+
+        public String getField() {
+            return field;
+        }
+
+        public int getResult() {
+            return result;
+        }
+
+        private FieldResult(String field, int result) {
+
+            this.field = field;
+            this.result = result;
+        }
+
+        public int compareTo(Object o) {
+            FieldResult result = (FieldResult)o;
+            int dif = result.result - this.result;
+            if(dif == 0) {
+                return field.compareTo(result.field);
+            }
+            return dif;
+        }
     }
 }

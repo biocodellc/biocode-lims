@@ -2,9 +2,11 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -48,7 +50,9 @@ public class ReactionFieldOptions extends Options {
             stringOption.setVisible(false);
                         
         }
-        addComboBoxOption(LOCUS, "Locus", fimsToLims.getLoci(), fimsToLims.getLoci().get(0));
+        List<OptionValue> loci = fimsToLims.getLoci();
+        ComboBoxOption<OptionValue> locusOption = addComboBoxOption(LOCUS, "Locus", loci, loci.get(0));
+        locusOption.setDisabledValue(loci.get(0));
         endAlignHorizontally();
     }
 
@@ -61,13 +65,24 @@ public class ReactionFieldOptions extends Options {
 
         final boolean enumOnly = value == null;
 
-        reactionType.addChangeListener(new SimpleListener(){
+        SimpleListener reactionTypesListener = new SimpleListener() {
 
             public void objectChanged() {
                 field.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), enumOnly));
                 locus.setEnabled(!reactionType.getValue().equals(reactionTypes[0]));
             }
-        });
+        };
+        reactionType.addChangeListener(reactionTypesListener);
+        reactionTypesListener.objectChanged();
+        SimpleListener fieldListener = new SimpleListener() {
+            public void objectChanged() {
+                if (value != null) {
+                    value.setEnabled(!field.getValue().equals(field.getPossibleOptionValues().get(0)));
+                }
+            }
+        };
+        field.addChangeListener(fieldListener);
+        fieldListener.objectChanged();
         if(!enumOnly) {
             SimpleListener listener = new SimpleListener() {
                 public void objectChanged() {
@@ -83,7 +98,7 @@ public class ReactionFieldOptions extends Options {
                 }
             };
             field.addChangeListener(listener);
-            //listener.objectChanged();
+            listener.objectChanged();
         }
     }
 
@@ -96,10 +111,10 @@ public class ReactionFieldOptions extends Options {
     }
 
     public String getValue() {
-        if(getOption(ENUM_FIELD).isVisible()) {
+        if(getOption(ENUM_FIELD) != null && getOption(ENUM_FIELD).isVisible()) {
             return getValueAsString(ENUM_FIELD);
         }
-        return getValueAsString(VALUE_FIELD);
+        return getValue(VALUE_FIELD) != null && getOption(VALUE_FIELD).isEnabled() ? getValueAsString(VALUE_FIELD) : null;
     }
 
     public String getField() {
@@ -123,20 +138,71 @@ public class ReactionFieldOptions extends Options {
         boolean hasWorkflow = getLocus() != null;
         String reactionType = ((OptionValue)getValue(REACTION_TYPE)).getName();
         if(reactionType.equals("Extraction")) {
-            return "SELECT COUNT(extraction.id) FROM extraction "+(hasWorkflow ? ", workflow" : "")+(extraTable != null ? ", "+extraTable : "")+" WHERE "+(hasWorkflow ? "workflow.extractionId = extracion.id AND " : "")+(extraWhere != null ? extraWhere+" AND " : "")+ ReportGenerator.getTableFieldName("extraction", fieldName)+" "+getComparator()+" "+"?";
+            String start = "SELECT COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTable != null ? ", " + extraTable : "")+" WHERE ";
+            List<String> terms = new ArrayList<String>();
+            if(hasWorkflow) {
+                terms.add("workflow.extractionId = extracion.id");
+            }
+            if(extraWhere != null) {
+                terms.add(extraWhere);
+            }
+            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+                terms.add(ReportGenerator.getTableFieldName("extraction", fieldName)+" "+getComparator()+" "+"?");
+            }
+            return getSql(start, terms);
         }
         else if(reactionType.equals("PCR")) {
-            return "SELECT COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE pcr.workflow = workflow.id AND extraction.id = workflow.extractionId "+(extraWhere != null ? " AND "+extraWhere : "")+(hasWorkflow && getLocus() != null ? " AND workflow.locus='"+getLocus()+"'" : "")+" AND "+ReportGenerator.getTableFieldName("pcr", fieldName)+" "+getComparator()+" "+"?";
+            String start = "SELECT COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE ";
+            List<String> terms = new ArrayList<String>();
+            terms.add("pcr.workflow = workflow.id AND extraction.id = workflow.extractionId");
+            if(extraWhere != null) {
+                terms.add(extraWhere);
+            }
+            if(hasWorkflow && getLocus() != null) {
+                terms.add("workflow.locus='"+getLocus()+"'");
+            }
+            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+                terms.add(ReportGenerator.getTableFieldName("pcr", fieldName)+" "+getComparator()+" "+"?");
+            }
+            return getSql(start, terms);
         }
         else if(reactionType.equals("CycleSequencing")) {
-            return "SELECT COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE cyclesequencing.workflow = workflow.id AND extraction.id = workflow.extractionId "+(extraWhere != null ? " AND "+extraWhere : "")+(hasWorkflow && getLocus() != null ? " AND workflow.locus='"+getLocus()+"'" : "")+" AND "+ReportGenerator.getTableFieldName("cyclesequencing", fieldName)+" "+getComparator()+" "+"?";
+            String start = "SELECT COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE ";
+            List<String> terms = new ArrayList<String>();
+            terms.add("cyclesequencing.workflow = workflow.id AND extraction.id = workflow.extractionId");
+            if(extraWhere != null) {
+                terms.add(extraWhere);
+            }
+            if(hasWorkflow && getLocus() != null) {
+                terms.add("workflow.locus='"+getLocus());
+            }
+            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+                terms.add(ReportGenerator.getTableFieldName("cyclesequencing", fieldName)+" "+getComparator()+" "+"?");
+            }
+            return getSql(start, terms);
         }
         else if(reactionType.equals("assembly")) {
-            return "SELECT COUNT(assembly.id) from assembly, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE assembly.workflow = workflow.id AND workflow.extractionId = extraction.id "+(extraWhere != null ? " AND "+extraWhere : "")+(hasWorkflow && getLocus() != null ? " AND workflow.locus='"+getLocus()+"'" : "")+" AND "+ReportGenerator.getTableFieldName("assembly", fieldName)+" "+getComparator()+" "+"?";
+            String start = "SELECT COUNT(assembly.id) from assembly, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE ";
+            List<String> terms = new ArrayList<String>();
+            terms.add("assembly.workflow = workflow.id AND workflow.extractionId = extraction.id");
+            if(extraWhere != null) {
+                terms.add(extraWhere);
+            }
+            if(hasWorkflow && getLocus() != null) {
+                terms.add("workflow.locus='"+getLocus());
+            }
+            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+                terms.add(ReportGenerator.getTableFieldName("assembly", fieldName)+" "+getComparator()+" "+"?");
+            }
+            return getSql(start, terms);
         }
         else {
             throw new RuntimeException("Unknown reaction type: "+reactionType);
         }
+    }
+
+    private String getSql(String start, List<String> terms) {
+        return start + " " + StringUtilities.join(" AND ", terms);
     }
 
     public String getTable() {
@@ -144,12 +210,21 @@ public class ReactionFieldOptions extends Options {
         return table.toLowerCase();
     }
 
+    public String getFriendlyTableName() {
+        OptionValue value = (OptionValue)getValue(REACTION_TYPE);
+        return value.getLabel();
+    }
+
     public String getNiceName() {
         String reactionType = ((OptionValue)getValue(REACTION_TYPE)).getName();
+        String niceReactionName = ((OptionValue)getValue(REACTION_TYPE)).getLabel();
         OptionValue locus = (OptionValue)getValue(LOCUS);
         String locusString = " ["+getValueAsString(LOCUS)+"]";
         if((locus.getName().equals("all") && locus.getLabel().equals("All..."))) {
             locusString = "";
+        }
+        if(getValue() == null) {
+            return niceReactionName+locusString;
         }
         return reactionType+" "+getField()+" "+getComparator()+" "+getValue()+locusString;
     }

@@ -130,6 +130,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
      */
     private int[] stringToColumnIndices(String idString, TableModel model, AnnotatedPluginDocument[] selectedDocuments) {
         String[] names = idString.split("\\|");
+        Arrays.sort(names);
         int[] indices = new int[model.getColumnCount()];
         int count = 0;
 

@@ -75,7 +75,7 @@ public class AccumulationOptions extends Options {
             }
             sql += ")";
         }
-        sql += " AND "+countOptions.getTable()+".date < ?";
+        sql += (sql.trim().endsWith("WHERE") ? "" : " AND ")+countOptions.getTable()+".date < ?";
         return sql;
     }
 
