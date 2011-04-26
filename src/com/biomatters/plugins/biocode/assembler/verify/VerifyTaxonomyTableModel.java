@@ -435,6 +435,9 @@ public class VerifyTaxonomyTableModel implements TableModel {
         final Icons icons;
 
         IconsWithToString(String toString, Icons icons) {
+            if(toString == null || icons == null) {
+                throw new IllegalArgumentException("You cannot pass null parameters to this method");
+            }
             this.toString = toString;
             this.icons = icons;
         }

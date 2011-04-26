@@ -119,7 +119,12 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
                     JLabel label = (JLabel) cellRendererComponent;
                     label.setVerticalAlignment(JLabel.CENTER);
                     label.setHorizontalAlignment(JLabel.CENTER);
-                    label.setIcon(((VerifyTaxonomyTableModel.IconsWithToString)value).icons.getOriginalIcon());
+                    if(value != null) {
+                        label.setIcon(((VerifyTaxonomyTableModel.IconsWithToString)value).icons.getOriginalIcon());
+                    }
+                    else {
+                        label.setIcon(null);
+                    }
                 }
                 return cellRendererComponent;
             }
