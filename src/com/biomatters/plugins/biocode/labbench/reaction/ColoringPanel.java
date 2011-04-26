@@ -65,7 +65,8 @@ public class ColoringPanel extends JPanel {
                     valuesPanel.add(cp);
                     colorPanels.add(cp);
                 }
-                if(originalColorer != null && selectedDocumentField != null && originalColorer.getDocumentField() != null && originalColorer.getDocumentField().getCode().equals(selectedDocumentField.getCode())) {
+                boolean originalColorerHasDocumentField = originalColorer != null  && originalColorer.getDocumentField() != null;
+                if(selectedDocumentField != null && originalColorerHasDocumentField && originalColorer.getDocumentField().getCode().equals(selectedDocumentField.getCode())) {
                     for(ColorPanel panel : colorPanels) {
                         Color newValue = originalColorer.getColorMap().get(panel.getValue().toString());
                         if(newValue == null) newValue = Color.white;

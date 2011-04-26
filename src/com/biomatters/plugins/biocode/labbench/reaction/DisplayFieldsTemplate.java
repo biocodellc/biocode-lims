@@ -45,6 +45,9 @@ public class DisplayFieldsTemplate implements XMLSerializable{
         if(type == null) {
             throw new IllegalArgumentException("Type cannot be null!");
         }
+        if(colorer == null) {
+            throw new IllegalArgumentException("Colorer cannot be null!");
+        }
         this.colorer = colorer;
     }
 
