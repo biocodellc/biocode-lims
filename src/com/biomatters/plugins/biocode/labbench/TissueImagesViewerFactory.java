@@ -52,9 +52,9 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
         TissueDocument tissueDoc = (TissueDocument)annotatedDocuments[0].getDocumentOrCrash();
         final Boolean isMooreaFims = MooreaFimsSample.class.isAssignableFrom(tissueDoc.getFimsSampleClass());
-//        if(!isMooreaFims) {
-//            return null;
-//        }
+        if(!isMooreaFims) {
+            return null;
+        }
         return new DocumentViewer(){
             JPanel panel;
             public JComponent getComponent() {
@@ -165,7 +165,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
 
 
     private List<String> getImageUrlsFlickr(TissueDocument doc) throws IOException, JDOMException {
-        URL xmlUrl = new URL("http://www.flickr.com/services/rest/?method=flickr.photos.search&format=rest&machine_tags=bioValidator:specimen="+URLEncoder.encode(doc.getSpecimenId(), "UTF-8")+"&api_key=724c92d972c3822bdb9c8ff501fb3d6a");
+        URL xmlUrl = new URL("http://www.flickr.com/services/rest/?method=flickr.photos.search&format=rest&machine_tags=bioValidator:specimen="+URLEncoder.encode("\""+doc.getSpecimenId()+"\"", "UTF-8")+"&api_key=724c92d972c3822bdb9c8ff501fb3d6a");
         System.out.println(xmlUrl);
         final HttpURLConnection urlConnection = (HttpURLConnection)xmlUrl.openConnection();
         urlConnection.setRequestMethod("GET");
