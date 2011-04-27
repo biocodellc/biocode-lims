@@ -53,16 +53,16 @@
 
 
 
-       <!--<echo file="${plugins.proguard}" append="true"
-            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}(!${short-plugin-name}.jar,*.jar)${line.separator}" />-->
        <echo file="${plugins.proguard}" append="true"
+            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}(!${short-plugin-name}.jar,*.jar)${line.separator}" />
+       <!--<echo file="${plugins.proguard}" append="true"
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/gdata-core-1.0.jar${line.separator}"/>
        <echo file="${plugins.proguard}" append="true"
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-collect-1.0.jar${line.separator}"/>
        <echo file="${plugins.proguard}" append="true"
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jai_core.jar${line.separator}"/>
        <echo file="${plugins.proguard}" append="true"
-            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jfreechart-1.0.13.jar${line.separator}"/>
+            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jfreechart-1.0.13.jar${line.separator}"/>-->
    </target>
 
    <target name="compile" depends="build-public-api, prepare">
