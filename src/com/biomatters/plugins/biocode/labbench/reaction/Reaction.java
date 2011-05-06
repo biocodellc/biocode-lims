@@ -985,7 +985,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
         public Color getColor(Object value) {
             if(value == null) {
-                return null;
+                return Color.white;
             }
             Color valueColor = color.get(value.toString());
             return valueColor != null ? valueColor : Color.white;

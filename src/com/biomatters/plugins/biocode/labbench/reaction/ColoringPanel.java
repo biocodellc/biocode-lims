@@ -57,7 +57,10 @@ public class ColoringPanel extends JPanel {
                 colorPanels = new ArrayList<ColorPanel>();
                 for(Object o : allValues) {
                     Color color = Reaction.BackgroundColorer.getRandomColor(o);
-                    if(defaultColorer.getDocumentField() != null && selectedDocumentField != null && selectedDocumentField.getCode().equals(defaultColorer.getDocumentField().getCode())) {
+                    if(selectedDocumentField == null) {
+                        color = Color.white;
+                    }
+                    else if(defaultColorer.getDocumentField() != null && selectedDocumentField.getCode().equals(defaultColorer.getDocumentField().getCode())) {
                         color = defaultColorer.getColor(o);
                     }
                     ColorPanel cp = new ColorPanel(o, color, true);

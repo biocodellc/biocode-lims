@@ -890,9 +890,9 @@ public class ReactionUtilities {
         private DocumentField documentField;
 
         DocumentFieldWrapper(DocumentField documentField) {
-            if(documentField == null) {
-                throw new IllegalArgumentException("You cannot wrap a null document field");
-            }
+//            if(documentField == null) {
+//                throw new IllegalArgumentException("You cannot wrap a null document field");
+//            }
             this.documentField = documentField;
         }
 
