@@ -157,21 +157,15 @@ public class PlateBulkEditor {
         };
         toolbar.addAction(swapAction);
         List<GeneiousAction> toolsActions = new ArrayList<GeneiousAction>();
-        if(plate.getReactionType() == Reaction.Type.Extraction && (plate.getPlateSize() == Plate.Size.w96 || plate.getPlateSize() == Plate.Size.w384) && BiocodeService.getInstance().getActiveFIMSConnection().canGetTissueIdsFromFimsTissuePlate()) {
+        if(plate.getReactionType() == Reaction.Type.Extraction && (plate.getPlateSize() != null) && BiocodeService.getInstance().getActiveFIMSConnection().canGetTissueIdsFromFimsTissuePlate()) {
             archivePlateAction = new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", IconUtilities.getIcons("database16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
                     List<JTextField> jTextFields = new ArrayList<JTextField>();
                     JPanel textFieldPanel = new JPanel();
 
-                    final boolean size96 = plate.getPlateSize() == Plate.Size.w96;
-                    if (size96) {
-                        textFieldPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-                        textFieldPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
-                        JTextField tf1 = new JTextField(15);
-                        jTextFields.add(tf1);
-                        textFieldPanel.add(tf1);
-                    } else {
+                    final boolean size384 = plate.getPlateSize() == Plate.Size.w384;
+                    if (size384) {
                         textFieldPanel.setLayout(new GridLayout(2, 2, 2, 2));
                         JTextField tf1 = new GTextField(); //top left
                         JTextField tf2 = new GTextField(); //top right
@@ -185,8 +179,14 @@ public class PlateBulkEditor {
                         textFieldPanel.add(tf2);
                         textFieldPanel.add(tf3);
                         textFieldPanel.add(tf4);
+                    } else {
+                        textFieldPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+                        textFieldPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
+                        JTextField tf1 = new JTextField(15);
+                        jTextFields.add(tf1);
+                        textFieldPanel.add(tf1);
                     }
-                    if (Dialogs.showInputDialog("", "Get FIMS plate", platePanel, new JLabel(" "), new JLabel("Enter the plate ID" + (size96 ? "" : "s")), textFieldPanel)) {
+                    if (Dialogs.showInputDialog("", "Get FIMS plate", platePanel, new JLabel(" "), new JLabel("Enter the plate ID" + (size384 ? "s" : "")), textFieldPanel)) {
                         final List<String> plateIds = new ArrayList<String>();
                         for (JTextField field : jTextFields) {
                             plateIds.add(field.getText());
@@ -210,10 +210,10 @@ public class PlateBulkEditor {
                                         }
                                     }
 
-                                    if (size96) {
-                                        populateWells96(tissueIds.get(0), tissueEditor, plate, plateIds.get(0));
-                                    } else {
+                                    if (size384) {
                                         populateWells384(tissueIds, tissueEditor, plate);
+                                    } else {
+                                        populateWells96(tissueIds.get(0), tissueEditor, plate, plateIds.get(0));
                                     }
 
                                 } catch (ConnectionException e1) {
@@ -917,6 +917,9 @@ public class PlateBulkEditor {
         }
 
         public void setValue(int row, int col, String value) {
+            if(row >= values.length || col >= values[0].length) {
+                return;
+            }
             values[row][col] = value;
         }
 
