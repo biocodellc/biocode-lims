@@ -198,6 +198,8 @@ public class ComparisonReport implements Report{
 
 
         final ChartPanel panel = new ChartPanel(barChart);
+        panel.setMaximumDrawWidth(Integer.MAX_VALUE);
+        panel.setMaximumDrawHeight(Integer.MAX_VALUE);
 
 
         final String finalField = field;

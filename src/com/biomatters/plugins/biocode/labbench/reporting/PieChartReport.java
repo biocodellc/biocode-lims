@@ -64,6 +64,8 @@ public class PieChartReport implements Report{
 
         final JFreeChart chart = new JFreeChart(piePlot);
         final ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setMaximumDrawWidth(Integer.MAX_VALUE);
+        chartPanel.setMaximumDrawHeight(Integer.MAX_VALUE);
 
         final PieDataset dataset = getDataset((PieChartOptions) options, fimsToLims, progress);
         piePlot.setDataset(dataset);

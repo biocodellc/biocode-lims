@@ -116,6 +116,8 @@ public class AccumulationReport implements Report{
         plot.setDomainAxis(new DateAxis());
 
         final ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setMaximumDrawHeight(Integer.MAX_VALUE);
+        chartPanel.setMaximumDrawWidth(Integer.MAX_VALUE);
 
         return new ReportChart(){
             public JPanel getPanel() {
