@@ -4,6 +4,8 @@ import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.plugin.GeneiousServiceWithPanel;
 import com.biomatters.geneious.publicapi.plugin.Icons;
+import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -20,6 +22,8 @@ import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.print.PrinterException;
+import java.awt.print.Printable;
 import java.text.AttributedString;
 import java.sql.SQLException;
 
@@ -82,6 +86,28 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
             Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
         }
         return panel;
+    }
+
+    public ExtendedPrintable getExtendedPrintable() {
+        return new ExtendedPrintable() {
+            public int print(Graphics2D graphics, Dimension dimensions, int pageIndex, Options options) throws PrinterException {
+                if(chartPanel == null || pageIndex > 0) {
+                    return Printable.NO_SUCH_PAGE;
+                }
+                Component component;
+                component = chartPanel.getComponent(0);
+                Rectangle bounds = component.getBounds();
+                component.setBounds(0,0,dimensions.width, dimensions.height);
+                ((JComponent)component).setOpaque(false);
+                component.print(graphics);
+                component.setBounds(bounds);
+                return Printable.PAGE_EXISTS;
+            }
+
+            public int getPagesRequired(Dimension dimensions, Options options) {
+                return chartPanel == null ? 0 : 1;
+            }
+        };
     }
 
     private void fillPanel() throws SQLException {

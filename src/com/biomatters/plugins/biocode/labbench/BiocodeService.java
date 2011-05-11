@@ -1570,7 +1570,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     protected void initialize(GeneiousServiceListener listener) {
         initializeConnectionManager();
         reportingService = new ReportingService();
-        listener.childServiceAdded(reportingService);
+        //listener.childServiceAdded(reportingService);
 
 
         if(connectionManager.connectOnStartup()) {
@@ -1596,7 +1596,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             SAXBuilder builder = new SAXBuilder();
             try {
                 connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
-                loadMySqlDriver(true, connectionManager.getSqlLocationOptions());
+                String sqlLocation = connectionManager.getSqlLocationOptions();
+                String error = loadMySqlDriver(true, sqlLocation);
+                if(error != null) {
+                    Dialogs.showMessageDialog("Could not load MySQL driver file "+sqlLocation+" \n\n"+error);
+                }
             } catch (XMLSerializationException e) {
                 e.printStackTrace();
                 connectionManager = new ConnectionManager();

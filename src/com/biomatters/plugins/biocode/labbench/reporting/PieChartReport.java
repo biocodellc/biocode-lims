@@ -63,7 +63,8 @@ public class PieChartReport implements Report{
         });
 
         final JFreeChart chart = new JFreeChart(piePlot);
-        final ChartPanel chartPanel = new ChartPanel(chart);
+        chart.setBackgroundPaint(Color.white);
+        final ChartPanel chartPanel = new ChartPanel(chart, false);
         chartPanel.setMaximumDrawWidth(Integer.MAX_VALUE);
         chartPanel.setMaximumDrawHeight(Integer.MAX_VALUE);
 
