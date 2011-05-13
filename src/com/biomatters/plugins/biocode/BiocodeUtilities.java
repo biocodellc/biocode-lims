@@ -206,6 +206,7 @@ public class BiocodeUtilities {
             FimsSample fimsSample = doc.getFimsSample();
             if(fimsSample != null) {
                 fields.addAll(fimsSample.getFimsAttributes());
+                fields.addAll(fimsSample.getTaxonomyAttributes());
             }
         }
         return new ArrayList<DocumentField>(fields);

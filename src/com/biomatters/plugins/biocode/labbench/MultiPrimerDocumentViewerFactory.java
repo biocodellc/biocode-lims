@@ -2,12 +2,14 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.labbench.reaction.Cocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.utilities.ObjectAndColor;
 
 import javax.swing.event.TableModelListener;
@@ -153,6 +155,7 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
     public TableModel getTableModel(final AnnotatedPluginDocument[] docs) {
         Set<PrimerIdentifier> primerNamesSet = new HashSet<PrimerIdentifier>();
         final List<WorkflowDocument> workflows = combineWorkflows(getWorkflows(docs, type));
+        final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflows);
         if(workflows.size() < 2) {
             return null;
         }
@@ -244,7 +247,7 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
             }
 
             public int getColumnCount() {
-                return 2+primerList.size();
+                return 2+fimsFields.size()+primerList.size();
             }
 
             public String getColumnName(int columnIndex) {
@@ -254,13 +257,19 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 if(columnIndex == 1) {
                     return "Extraction";
                 }
-                PrimerIdentifier primerIdentifier = primerList.get(columnIndex - 2);
+                if(columnIndex < fimsFields.size()+2) {
+                    return fimsFields.get(columnIndex-2).getName();
+                }
+                PrimerIdentifier primerIdentifier = primerList.get(columnIndex - 2 - fimsFields.size());
                 return primerIdentifier.getName() + " ("+primerIdentifier.getType()+")";
             }
 
             public Class<?> getColumnClass(int columnIndex) {
                 if(columnIndex < 2) {
                     return String.class;
+                }
+                if(columnIndex < fimsFields.size() + 2) {
+                    return fimsFields.get(columnIndex-2).getValueType();
                 }
                 return ObjectAndColor.class;
             }
@@ -289,7 +298,14 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                     }
                     return "";
                 }
-                return tableValues[rowIndex][columnIndex-2];
+                if(columnIndex < fimsFields.size() + 2) {
+                    WorkflowDocument workflowDocument = workflows.get(rowIndex);
+                    if(workflowDocument.getFimsSample() == null) {
+                        return "";
+                    }
+                    return workflowDocument.getFimsSample().getFimsAttributeValue(fimsFields.get(columnIndex-2).getCode());
+                }
+                return tableValues[rowIndex][columnIndex-2-fimsFields.size()];
             }
 
             public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
@@ -304,5 +320,12 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 //empty!
             }
         };
+    }
+
+    @Override
+    protected boolean columnVisibleByDefault(int columnIndex, AnnotatedPluginDocument[] selectedDocuments) {
+        final List<WorkflowDocument> workflows = combineWorkflows(getWorkflows(selectedDocuments, type));
+        final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflows);
+        return columnIndex < 2 || columnIndex >= fimsFields.size() + 2;
     }
 }

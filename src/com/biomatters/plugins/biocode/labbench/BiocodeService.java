@@ -537,7 +537,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         try {
             File driverFile = new File(driverFileName);
             if(!driverFile.exists() || driverFile.isDirectory()) {
-               error = "You need to specify a valid MySql Driver!";
+               error = "Could not find the file "+driverFileName+".  Please check that this file exists, and is not a directory.";
             }
             else {
                 URL driverUrl = driverFile.toURL();
