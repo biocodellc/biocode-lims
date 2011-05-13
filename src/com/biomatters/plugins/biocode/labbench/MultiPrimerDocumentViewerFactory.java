@@ -108,7 +108,9 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                         Workflow reactionWorkflow = r.getWorkflow();
                           //workflows can be null if reactions don't have extraction id's
                         if(reactionWorkflow != null) {
-                            reactionList.add(new WorkflowDocument(reactionWorkflow, Arrays.asList(r)));
+                            WorkflowDocument workflowDocument = new WorkflowDocument(reactionWorkflow, Arrays.asList(r));
+                            workflowDocument.setFimsSample(r.getFimsSample());
+                            reactionList.add(workflowDocument);
                         }
                     }
                 }
