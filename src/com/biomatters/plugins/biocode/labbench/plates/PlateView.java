@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.virion.jam.util.SimpleListener;
+
 
 public class PlateView extends JPanel {
 
@@ -182,7 +184,9 @@ public class PlateView extends JPanel {
                 if(e.getClickCount() == 2) {
                     List<Reaction> selectedReactions = getSelectedReactions();
                     if(selectedReactions.size() > 0) {
-                        ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), selfReference, creating);
+                        if(ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), selfReference, creating)) {
+                            fireEditListeners();
+                        }
                     }
                     revalidate();
                     repaint();
@@ -262,9 +266,24 @@ public class PlateView extends JPanel {
     }
 
     private List<ListSelectionListener> selectionListeners = new ArrayList<ListSelectionListener>();
+    private List<SimpleListener> editListeners = new ArrayList<SimpleListener>();
 
     public void addSelectionListener(ListSelectionListener lsl) {
         selectionListeners.add(lsl);
+    }
+
+    /**
+     * adds a listener that's fired when one or more of the wells in this plate are edited
+     * @param listener
+     */
+    public void addEditListener(SimpleListener listener) {
+        editListeners.add(listener);
+    }
+
+    private void fireEditListeners() {
+        for(SimpleListener listener : editListeners) {
+            listener.objectChanged();
+        }
     }
 
     private void fireSelectionListeners() {

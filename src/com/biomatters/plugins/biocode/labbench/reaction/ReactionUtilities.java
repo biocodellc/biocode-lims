@@ -543,7 +543,7 @@ public class ReactionUtilities {
         return -1;
     }
 
-    public static void editReactions(List<Reaction> reactions, JComponent owner, boolean creating) {
+    public static boolean editReactions(List<Reaction> reactions, JComponent owner, boolean creating) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -615,7 +615,9 @@ public class ReactionUtilities {
                     Dialogs.showMessageDialog(error, "Invalid Reactions", owner, Dialogs.DialogIcon.INFORMATION);
                 }
             }
+            return true;
         }
+        return false;
     }
 
     private static boolean optionValuesAreEqual(Object optionValue, Object reactionValue) {

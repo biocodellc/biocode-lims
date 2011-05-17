@@ -150,6 +150,12 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
         });
 
+        plateView.addEditListener(new SimpleListener(){
+            public void objectChanged() {
+                saveAction.setEnabled(true);    
+            }
+        });
+
         cocktailCount = new HashMap<Cocktail, Integer>();
         
 
@@ -511,8 +517,9 @@ public class PlateDocumentViewer extends DocumentViewer{
             if (selectedReactions.isEmpty()) {
                 selectedReactions = Arrays.asList(plateView.getPlate().getReactions());
             }
-            ReactionUtilities.editReactions(selectedReactions, plateView, false);
-            saveAction.setEnabled(true);
+            if(ReactionUtilities.editReactions(selectedReactions, plateView, false)) {
+                saveAction.setEnabled(true);
+            }
             updatePanel();
         }
     };
