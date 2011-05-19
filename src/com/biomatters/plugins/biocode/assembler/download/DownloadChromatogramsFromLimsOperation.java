@@ -22,6 +22,7 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.Trace;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -148,13 +149,22 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             if (tracesProgress.isCanceled()) return null;
             CycleSequencingOptions sequencingOptions = (CycleSequencingOptions) reaction.getOptions();
             boolean isForward = sequencingOptions.getValueAsString(CycleSequencingOptions.DIRECTION).equals(CycleSequencingOptions.FORWARD_VALUE);
-            List<NucleotideSequenceDocument> traceSequences = sequencingOptions.getSequences();
-            if (traceSequences == null) continue;
-            for (NucleotideSequenceDocument traceSequence : traceSequences) {
-                AnnotatedPluginDocument traceDocument = DocumentUtilities.createAnnotatedPluginDocument(traceSequence);
-                traceDocument.setFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD, isForward);
-                fimsData.put(traceDocument, fimsDataForReactions.get(reaction));
-                chromatogramDocuments.add(traceDocument);
+            List<Trace> traces = sequencingOptions.getTraces();
+            if (traces == null) continue;
+            for(Trace trace : traces) {
+                List<NucleotideSequenceDocument> traceSequences = trace.getSequences();
+                if(traceSequences == null) {
+                    continue;
+                }
+                for (NucleotideSequenceDocument traceSequence : traceSequences) {
+                    if(traceSequence == null) {
+                        continue;
+                    }
+                    AnnotatedPluginDocument traceDocument = DocumentUtilities.createAnnotatedPluginDocument(traceSequence);
+                    traceDocument.setFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD, isForward);
+                    fimsData.put(traceDocument, fimsDataForReactions.get(reaction));
+                    chromatogramDocuments.add(traceDocument);
+                }
             }
             reaction.purgeChromats();
         }

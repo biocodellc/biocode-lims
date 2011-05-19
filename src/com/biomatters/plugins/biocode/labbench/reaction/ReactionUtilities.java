@@ -283,15 +283,8 @@ public class ReactionUtilities {
                     Dialogs.showMessageDialog("Error importing sequences: "+e.getMessage());
                     break;
                 }
-                List<NucleotideSequenceDocument> sequences;
-                try {
-                    sequences = getSequencesFromAnnotatedPluginDocuments(annotatedDocuments);
-                } catch (IllegalArgumentException e) {
-                    e.printStackTrace();
-                    continue;
-                }
-                List<MemoryFile> files = new ArrayList<MemoryFile>();
 
+                List<Trace> traces = new ArrayList<Trace>();
                 try {
                     MemoryFile memoryFile = loadFileIntoMemory(f);
                     if(checkNames && originalWell != null && newWell != null) {
@@ -299,15 +292,20 @@ public class ReactionUtilities {
                         name = name.replace(originalWell.toString(), newWell.toString());
                         memoryFile.setName(name);
                     }
-                    files.add(memoryFile);
+                    traces.add(new Trace(memoryFile));
                 } catch (IOException e) {
                     assert false : e.getMessage();
                     //todo: handle
                     e.printStackTrace();
                 }
+                catch (DocumentImportException e) {
+                    assert false : e.getMessage();
+                    //todo: handle
+                    e.printStackTrace();
+                }
 
-                count += files.size();
-                r.addSequences(sequences, files);
+                count += traces.size();
+                r.addSequences(traces);
 
             }
         }
@@ -864,6 +862,16 @@ public class ReactionUtilities {
             i++;
         }
         return tissueId + "." + i;
+    }
+
+    public static List<NucleotideSequenceDocument> getAllSequences(List<Trace> traces) {
+        List<NucleotideSequenceDocument> sequences = new ArrayList<NucleotideSequenceDocument>();
+        for(Trace trace : traces) {
+            if(trace.getSequences() != null) {
+                sequences.addAll(trace.getSequences());
+            }
+        }
+        return sequences;
     }
 
     public static class MemoryFile{

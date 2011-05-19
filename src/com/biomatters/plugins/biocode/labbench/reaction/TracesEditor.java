@@ -8,7 +8,6 @@ import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
-import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseService;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
@@ -16,7 +15,6 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import javax.swing.*;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Set;
 import java.util.prefs.Preferences;
 import java.awt.*;
@@ -34,8 +32,7 @@ import org.jdom.Element;
  *          Created on 9/07/2009 10:59:03 PM
  */
 public class TracesEditor {
-    private List<NucleotideSequenceDocument> sequences;
-    private List<ReactionUtilities.MemoryFile> rawTraces;
+    private List<Trace> traces;
     private DocumentViewerFactory factory;
     Preferences preferences = Preferences.userNodeForPackage(getClass());
     private JPanel holder = new JPanel(new BorderLayout());
@@ -46,7 +43,7 @@ public class TracesEditor {
     private DocumentViewer documentViewer;
     private String name;
 
-    public TracesEditor(final List<NucleotideSequenceDocument> sequencesa, final List<ReactionUtilities.MemoryFile> memoryFiles, String reactionName) {
+    public TracesEditor(final List<Trace> tracesa, String reactionName) {
         this.name = reactionName;
         sequenceHolder.setPreferredSize(new Dimension(640,480));
         addSequenceAction = new GeneiousAction("Add sequence(s)") {
@@ -62,11 +59,11 @@ public class TracesEditor {
                         public void run() {
                             try {
                                 List<AnnotatedPluginDocument> pluginDocuments = ReactionUtilities.importDocuments(sequenceFiles, progress);
-                                if (!progress.isCanceled()) {
-                                    updatePanel(pluginDocuments);
-                                }
                                 for(File f : sequenceFiles) {
-                                    rawTraces.add(ReactionUtilities.loadFileIntoMemory(f));
+                                    traces.add(new Trace(ReactionUtilities.loadFileIntoMemory(f)));
+                                }
+                                if (!progress.isCanceled()) {
+                                    updateViewer(traces);
                                 }
                             } catch (IOException e1) {
                                 showMessageDialog("Could not import your documents: " + e1.getMessage());
@@ -83,16 +80,22 @@ public class TracesEditor {
         removeSequencesAction = new GeneiousAction("Remove sequence(s)") {
             public void actionPerformed(ActionEvent e) {
                 for(SequenceDocument selectedDoc : sequenceSelection.getSelectedSequences()) {//todo
-                    for (int i = 0; i < sequences.size(); i++) {
-                        NucleotideSequenceDocument doc = sequences.get(i);
-                        if (doc.getName().equals(selectedDoc.getName()) && doc.getSequenceString().equalsIgnoreCase(selectedDoc.getSequenceString())) {
-                            sequences.remove(i);
-                            rawTraces.remove(i);
+                    for (int i = 0; i < traces.size(); i++) {
+                        Trace trace = traces.get(i);
+                        boolean removed = false;
+                        for(NucleotideSequenceDocument doc : trace.getSequences()){
+                            if (doc.getName().equals(selectedDoc.getName()) && doc.getSequenceString().equalsIgnoreCase(selectedDoc.getSequenceString())) {
+                                traces.remove(i);
+                                removed = true;
+                                break;
+                            }
+                        }
+                        if(removed) {
                             break;
                         }
                     }
                 }
-                updateViewer(sequences);
+                updateViewer(traces);
             }
         };
 
@@ -127,26 +130,10 @@ public class TracesEditor {
         };
 
 
-        this.sequences = new ArrayList<NucleotideSequenceDocument>(sequencesa);
-        this.rawTraces = new ArrayList<ReactionUtilities.MemoryFile>(memoryFiles);
-        boolean faked = false;
-        DefaultSequenceListDocument sequenceList;
-        if(sequences == null || sequences.size() == 0) {
-            faked = true;
-            sequenceList = DefaultSequenceListDocument.forNucleotideSequences(Arrays.asList((NucleotideSequenceDocument)new DefaultNucleotideSequence("test", "atgc")));
+        this.traces = new ArrayList<Trace>(tracesa);
+        if(traces != null && traces.size() > 0) {
+            updateViewer(traces);
         }
-        else {
-            sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
-        }
-        factory = getViewerFactory(sequenceList);
-        if(factory == null) {
-            throw new RuntimeException("Could not find the sequence viewer!");
-        }
-        if(!faked) {
-            updateViewer(sequences);
-        }
-
-
     }
 
     public static DocumentViewerFactory getViewerFactory(DefaultSequenceListDocument sequenceList) {
@@ -182,47 +169,65 @@ public class TracesEditor {
     }
 
 
-    private void updatePanel(final List<AnnotatedPluginDocument> pluginDocuments){
+//    private void updatePanel(final List<AnnotatedPluginDocument> pluginDocuments){
+//        Runnable runnable = new Runnable() {
+//            public void run() {
+//                List<NucleotideSequenceDocument> sequences = new ArrayList<NucleotideSequenceDocument>();
+//                for(Trace trace : traces) {
+//                    if(trace.getSequences() != null) {
+//                        sequences.addAll(trace.getSequences());
+//                    }
+//                }
+//                List<NucleotideSequenceDocument> nucleotideDocuments = null;
+//                try {
+//                    nucleotideDocuments = ReactionUtilities.getSequencesFromAnnotatedPluginDocuments(pluginDocuments);
+//                } catch (IllegalArgumentException e) {
+//                    Dialogs.showMessageDialog(e.getMessage());
+//                }
+//                if(nucleotideDocuments != null) {
+//                    if(sequences != null) {
+//                        nucleotideDocuments.addAll(sequences);
+//                    }
+//                    sequences = nucleotideDocuments;
+//                    updateViewer(nucleotideDocuments);
+//                }
+//            }
+//        };
+//        ThreadUtilities.invokeNowOrLater(runnable);
+//    }
+
+    private void updateViewer(final List<Trace> traces) {
+
         Runnable runnable = new Runnable() {
             public void run() {
-                List<NucleotideSequenceDocument> nucleotideDocuments = null;
-                try {
-                    nucleotideDocuments = ReactionUtilities.getSequencesFromAnnotatedPluginDocuments(pluginDocuments);
-                } catch (IllegalArgumentException e) {
-                    Dialogs.showMessageDialog(e.getMessage());
-                }
-                if(nucleotideDocuments != null) {
-                    if(sequences != null) {
-                        nucleotideDocuments.addAll(sequences);
+                sequenceHolder.removeAll();
+                sequenceSelection = null;
+                if(traces != null && traces.size() > 0) {
+                    List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(traces);
+                    if(factory == null) {
+                        factory = getViewerFactory(DefaultSequenceListDocument.forNucleotideSequences(sequences));
+                        if(factory == null) {
+                            throw new RuntimeException("Could not find the sequence viewer!");
+                        }
                     }
-                    sequences = nucleotideDocuments;
-                    updateViewer(nucleotideDocuments);
+                    if(documentViewer != null) {
+                        NoLongerViewedListener listener = documentViewer.getNoLongerViewedListener();
+                        if(listener != null) {
+                            listener.noLongerViewed(false);
+                        }
+                    }
+                    documentViewer = createViewer(DefaultSequenceListDocument.forNucleotideSequences(sequences), factory);
+                    documentViewer.setEditingEnabled(false, "You cannot edit raw reads.  If you wish to change the sequence, please remove it and attach a replacement.");
+                    documentViewer.setInSplitLayout(new DocumentViewer.ViewerLocation(false, true,""));
+                    documentViewer.setOutgoingMessageHandler(messageHandler);
+                    sequenceHolder.add(documentViewer.getComponent(), BorderLayout.CENTER);
                 }
+                holder.validate();
+                holder.repaint();
+                updateToolbar();
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
-    }
-
-    private void updateViewer(List<NucleotideSequenceDocument> nucleotideDocuments) {
-
-        sequenceHolder.removeAll();
-        sequenceSelection = null;
-        if(nucleotideDocuments != null && nucleotideDocuments.size() > 0) {
-            if(documentViewer != null) {
-                NoLongerViewedListener listener = documentViewer.getNoLongerViewedListener();
-                if(listener != null) {
-                    listener.noLongerViewed(false);
-                }
-            }
-            documentViewer = createViewer(DefaultSequenceListDocument.forNucleotideSequences(nucleotideDocuments), factory);
-            documentViewer.setEditingEnabled(false, "You cannot edit raw reads.  If you wish to change the sequence, please remove it and attach a replacement.");
-            documentViewer.setInSplitLayout(new DocumentViewer.ViewerLocation(false, true,""));
-            documentViewer.setOutgoingMessageHandler(messageHandler);
-            sequenceHolder.add(documentViewer.getComponent(), BorderLayout.CENTER);
-        }
-        holder.validate();
-        holder.repaint();
-        updateToolbar();
     }
 
     private void updateToolbar() {
@@ -231,12 +236,9 @@ public class TracesEditor {
         importSequencesAction.setEnabled(enabled);
     }
 
-    public List<NucleotideSequenceDocument> getSequences() {
-        return sequences;
-    }
 
-    public List<ReactionUtilities.MemoryFile> getRawTraces() {
-        return rawTraces;
+    public List<Trace> getTraces() {
+        return traces;
     }
 
     private static DocumentViewer createViewer(DefaultSequenceListDocument sequenceList, DocumentViewerFactory factory) {

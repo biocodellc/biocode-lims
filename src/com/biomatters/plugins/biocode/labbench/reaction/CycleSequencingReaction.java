@@ -4,6 +4,8 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -21,6 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.Connection;
 import java.util.*;
 import java.util.List;
+import java.io.IOException;
 
 /**
  * @author Steven Stones-Havas
@@ -165,12 +168,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 new DocumentField("Reaction Cocktail", "", "cocktail", String.class, true, false));
     }
 
-    public void addSequences(List<NucleotideSequenceDocument> sequences, List<ReactionUtilities.MemoryFile> rawTraces) {
-        if(sequences != null) {
-            options.addSequences(sequences);
-        }
-        if(rawTraces != null) {
-            options.addRawTraces(rawTraces);
+    public void addSequences(List<Trace> traces) {
+        if(traces != null) {
+            options.addTraces(traces);
         }
     }
 
@@ -193,9 +193,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         getOptions().setValue("extractionId", s);
     }
 
-    List<ReactionUtilities.MemoryFile> getChromats() throws SQLException {
+    List<Trace> getChromats() throws SQLException, IOException, DocumentImportException {
         if(getId() < 0) {
-            return new ArrayList<ReactionUtilities.MemoryFile>();
+            return new ArrayList<Trace>();
         }
 
         String sql = "SELECT * FROM traces WHERE reaction = ?";
@@ -205,16 +205,16 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         statement.setInt(1, getId());
         ResultSet set = statement.executeQuery();
 
-        List<ReactionUtilities.MemoryFile> result = new ArrayList<ReactionUtilities.MemoryFile>();
+        List<Trace> result = new ArrayList<Trace>();
         while(set.next()) {
-            result.add(new ReactionUtilities.MemoryFile(set.getString("name"), set.getBytes("data")));
+            result.add(new Trace(new ReactionUtilities.MemoryFile(set.getString("name"), set.getBytes("data")), set.getInt("id")));
         }
         statement.close();
         return result;
     }
 
     public boolean hasDownloadedChromats() {
-        return options.getRawTraces() != null;
+        return options.getTraces() != null;
     }
 
     public String areReactionsValid(List<CycleSequencingReaction> reactions, JComponent dialogParent, boolean showDialogs) {

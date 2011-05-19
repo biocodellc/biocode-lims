@@ -16,10 +16,7 @@ import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
-import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import org.jdom.Document;
@@ -504,19 +501,17 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                             chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
                             chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
                         }
-                        List<NucleotideSequenceDocument> sequences = new ArrayList<NucleotideSequenceDocument>();
-                        List<ReactionUtilities.MemoryFile> rawTraces = new ArrayList<ReactionUtilities.MemoryFile>();
+                        List<Trace> traces = new ArrayList<Trace>();
                         for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
-                            sequences.add((NucleotideSequenceDocument)chromatogramDocument.getDocument());
                             chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
                             File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
                             try {
-                                rawTraces.add(ReactionUtilities.loadFileIntoMemory(exportedFile));
+                                traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument)chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
                         }
-                        entry.getKey().addSequences(sequences, rawTraces);
+                        entry.getKey().addSequences(traces);
                     }
                     entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
                 }

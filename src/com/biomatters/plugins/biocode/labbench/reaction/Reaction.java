@@ -907,7 +907,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         GelImage image = reaction.getGelImage();
                         statement.setBytes(16, image != null ? image.getImageBytes() : null);
 
-//                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getSequences();
+//                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getTraces();
 //                        String sequenceString = "";
 //                        if(sequences != null && sequences.size() > 0) {
 //                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
@@ -924,7 +924,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 //
 //                        statement.setString(14, sequenceString);
                         statement.execute();
-                        if(((CycleSequencingOptions)reaction.getOptions()).getSequences() != null) {
+                        if(((CycleSequencingOptions)reaction.getOptions()).getTraces() != null) {
                             int reactionId = reaction.getId();
                             if(reactionId > 0 && ((CycleSequencingReaction)reaction).removeExistingTracesOnSave()) {
                                 clearTracesStatement.setInt(1, reactionId);
@@ -936,13 +936,16 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                                 reactionId = reactionIdResultSet.getInt(1);
                             }
 
-                            List<ReactionUtilities.MemoryFile> memoryFiles = ((CycleSequencingOptions) reaction.getOptions()).getRawTraces();
-                            if(memoryFiles != null) {
-                                for(ReactionUtilities.MemoryFile file : memoryFiles) {
-                                    insertTracesStatement.setInt(1, reactionId);
-                                    insertTracesStatement.setString(2, file.getName());
-                                    insertTracesStatement.setBytes(3, file.getData());
-                                    insertTracesStatement.execute();
+                            List<Trace> traces = ((CycleSequencingOptions) reaction.getOptions()).getTraces();
+                            if(traces != null) {
+                                for(Trace trace : traces) {
+                                    ReactionUtilities.MemoryFile file = trace.getFile();
+                                    if(file != null) {
+                                        insertTracesStatement.setInt(1, reactionId);
+                                        insertTracesStatement.setString(2, file.getName());
+                                        insertTracesStatement.setBytes(3, file.getData());
+                                        insertTracesStatement.execute();
+                                    }
                                 }
                             }
                         }
