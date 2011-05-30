@@ -308,14 +308,14 @@ public class ConnectionManager implements XMLSerializable{
     }
 
     public Connection getCurrentlySelectedConnection() {
-        if(selectedConnection >= 0) {
+        if(selectedConnection >= 0 && selectedConnection < connections.size()) {
             return connections.get(selectedConnection);
         }
         return null;
     }
 
     public boolean checkIfWeCanLogIn() {
-        if(selectedConnection >= 0) {
+        if(selectedConnection >= 0 && selectedConnection < connections.size()) {
             final Connection conn = connections.get(selectedConnection);
             final Options passwordOptions = conn.getEnterPasswordOptions();
             if(passwordOptions != null) {
