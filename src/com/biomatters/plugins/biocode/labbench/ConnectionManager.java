@@ -452,6 +452,7 @@ public class ConnectionManager implements XMLSerializable{
         private String name;
         Element loginOptionsValues;
         private List<SimpleListener> nameChangedListeners = new ArrayList<SimpleListener>();
+        protected String CONNECTION_OPTIONS_ELEMENT_NAME = "connectionOptions";
 
 
         public Connection(String name) {
@@ -692,15 +693,15 @@ public class ConnectionManager implements XMLSerializable{
         public Element getXml(boolean reserializeOptionsIfTheyExist) {
             Element connectionElement = new Element("Connection");
             if(loginOptions != null && (reserializeOptionsIfTheyExist || loginOptionsValues == null)) {
-                connectionElement.addContent(loginOptions.valuesToXML("connectionOptions"));
+                connectionElement.addContent(loginOptions.valuesToXML(CONNECTION_OPTIONS_ELEMENT_NAME));
             }
             else if(loginOptionsValues != null) {
-                connectionElement.addContent((Element)loginOptionsValues.clone());
+                connectionElement.addContent(((Element)loginOptionsValues.clone()).setName(CONNECTION_OPTIONS_ELEMENT_NAME));
             }
             else {
                 setLocationOptions();
                 loginOptions.restoreDefaults();
-                connectionElement.addContent(loginOptions.valuesToXML("connectionOptions"));
+                connectionElement.addContent(loginOptions.valuesToXML(CONNECTION_OPTIONS_ELEMENT_NAME));
             }
             connectionElement.addContent(new Element("Name").setText(name));
             return connectionElement;
@@ -708,7 +709,10 @@ public class ConnectionManager implements XMLSerializable{
 
         public void fromXML(Element element) throws XMLSerializationException {
             loginOptions = null;
-            loginOptionsValues = element.getChild("connectionOptions");
+            loginOptionsValues = element.getChild(CONNECTION_OPTIONS_ELEMENT_NAME);
+            if(loginOptionsValues == null) {
+                throw new XMLSerializationException("The child element "+CONNECTION_OPTIONS_ELEMENT_NAME+" does not exist");
+            }
             correctElementForBackwardsCompatibility(loginOptionsValues);
             name = element.getChildText("Name");
         }
