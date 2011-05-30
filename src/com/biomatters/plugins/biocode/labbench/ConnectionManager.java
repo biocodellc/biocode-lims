@@ -60,6 +60,9 @@ public class ConnectionManager implements XMLSerializable{
     }
 
     public ConnectionManager(Element e) throws XMLSerializationException {
+        if(e == null) {
+            throw new XMLSerializationException("You cannot construct a connection manager with a null element");
+        }
         fromXML(e);
     }
 
@@ -399,8 +402,13 @@ public class ConnectionManager implements XMLSerializable{
         connectOnStartup = element.getAttribute("connectOnStartup") != null;
         connections = new ArrayList<Connection>();
         for(Element e : connectionElements) {
-            Connection newConnection = new Connection(e);
-            addConnection(newConnection);
+            try {
+                Connection newConnection = new Connection(e);
+                addConnection(newConnection);
+            } catch (XMLSerializationException e1) {
+                e1.printStackTrace();
+                //do nothing - don't add the connection
+            }
         }
         selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
         if(selectedConnection >= connectionElements.size()) {
@@ -451,6 +459,9 @@ public class ConnectionManager implements XMLSerializable{
         }
 
         public Connection(Element e) throws XMLSerializationException{
+            if(e == null) {
+                throw new XMLSerializationException("You cannot create a new connection with a null element");
+            }
             fromXML(e);
         }
 
