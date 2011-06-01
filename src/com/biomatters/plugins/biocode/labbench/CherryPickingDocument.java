@@ -4,10 +4,7 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.jdom.Element;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author steve
@@ -22,6 +19,17 @@ public class CherryPickingDocument implements PluginDocument {
     public CherryPickingDocument(String name, List<Reaction> reactions) {
         this.name = name;
         this.reactions = reactions;
+    }
+
+    public List<DocumentField> getFimsFields() {
+        Set<DocumentField> fimsFields = new LinkedHashSet<DocumentField>();
+        for(Reaction r : reactions) {
+            FimsSample fimsSample = r.getFimsSample();
+            if(fimsSample != null) {
+                fimsFields.addAll(fimsSample.getFimsAttributes());
+            }
+        }
+        return new ArrayList<DocumentField>(fimsFields);
     }
 
 
