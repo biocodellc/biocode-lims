@@ -49,6 +49,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         setPlateId(r.getInt("cyclesequencing.plate"));
         setPosition(r.getInt("cyclesequencing.location"));
         setCreated(r.getTimestamp("cyclesequencing.date"));
+        extractionBarcode = r.getString("extraction.extractionBarcode");
         setId(r.getInt("cyclesequencing.id"));
         Options options = getOptions();
 

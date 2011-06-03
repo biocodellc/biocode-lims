@@ -40,6 +40,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private int plateId;
     private String plateName;
     private Workflow workflow;
+    String extractionBarcode;
     private int position;
     public boolean isError = false;
     private FimsSample fimsSample = null;
@@ -335,6 +336,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public abstract String getExtractionId();
 
     public abstract void setExtractionId(String s);
+
+    public String getExtractionBarcode() {
+        return extractionBarcode;
+    }
     
     public final Color getBackgroundColor() {
         if(isError) {
@@ -363,6 +368,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
         if(plateName != null && plateName.length() > 0) {
             element.addContent(new Element("plateName").setText(plateName));
+        }
+        if(extractionBarcode != null) {
+            element.addContent(new Element("extractionBarcode").setText(extractionBarcode));
         }
         if(isError) {
             element.addContent(new Element("isError").setText("true"));
@@ -408,6 +416,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(locationStringElement != null) {
             locationString = locationStringElement.getText();
         }
+        extractionBarcode = element.getChildText("extractionBarcode");
         if(plateNameElement != null) {
             plateName = plateNameElement.getText();
         }

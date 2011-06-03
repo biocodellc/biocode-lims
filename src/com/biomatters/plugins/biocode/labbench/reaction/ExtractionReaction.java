@@ -39,7 +39,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         setCreated(r.getTimestamp("extraction.date"));
         options.setValue("sampleId", r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
-        options.setValue("extractionBarcode", r.getString("extraction.extractionBarcode"));
+        extractionBarcode = r.getString("extraction.extractionBarcode");
+        options.setValue("extractionBarcode", extractionBarcode);
         options.setValue("extractionMethod", r.getString("extraction.method"));
         options.setValue("previousPlate", r.getString("extraction.previousPlate"));
         options.setValue("previousWell", r.getString("extraction.previousWell"));

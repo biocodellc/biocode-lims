@@ -716,7 +716,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                 callback.setMessage("Downloading Sequences");
-                limsConnection.getMatchingAssemblyDocuments(limsQuery, workflowsToSearch, callback, urnsToNotRetrieve, callback);
+                if((tissueSamples != null && tissueSamples.size() > 0) && (workflowList == null || workflowList.size() == 0)) {
+                    limsConnection.getMatchingAssemblyDocumentsForTissues(limsQuery, tissueSamples, callback, urnsToNotRetrieve, callback);    
+                }
+                else {
+                    limsConnection.getMatchingAssemblyDocuments(limsQuery, workflowsToSearch, callback, urnsToNotRetrieve, callback);
+                }
             }
 
         } catch (SQLException e) {
@@ -1570,7 +1575,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     protected void initialize(GeneiousServiceListener listener) {
         initializeConnectionManager();
         reportingService = new ReportingService();
-        //listener.childServiceAdded(reportingService);
+        listener.childServiceAdded(reportingService);
 
 
         if(connectionManager.connectOnStartup()) {

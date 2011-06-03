@@ -5,11 +5,13 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 
@@ -27,6 +29,8 @@ import javax.swing.*;
  * @version $Id: 22/12/2009 7:04:21 PM steve $
  */
 public class CherryPickingDocumentOperation extends DocumentOperation {
+    protected DocumentSelectionSignature PLATE_DOCUMENT_SELECTION_SIGNATURE = new DocumentSelectionSignature(PlateDocument.class, 1, Integer.MAX_VALUE);
+    protected DocumentSelectionSignature SEQUENCE_DOCUMENT_SELECTION_SIGNATURE = new DocumentSelectionSignature(SequenceDocument.class, 1, Integer.MAX_VALUE);
 
     public GeneiousActionOptions getActionOptions() {
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(),new GeneiousActionOptions("Cherry picking", "Create new Reactions from Failed Reactions", BiocodePlugin.getIcons("cherry_24.png"))
@@ -43,25 +47,24 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
-        return new DocumentSelectionSignature[]{new DocumentSelectionSignature(PlateDocument.class, 1, Integer.MAX_VALUE)};
+        return new DocumentSelectionSignature[]{PLATE_DOCUMENT_SELECTION_SIGNATURE, SEQUENCE_DOCUMENT_SELECTION_SIGNATURE};
     }
 
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
-        //Reaction.Type reactionType = null;
-        for(AnnotatedPluginDocument doc : documents) {
-            PlateDocument plateDoc = (PlateDocument)doc.getDocument();
-            if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                throw new DocumentOperationException("You must select either PCR or Cycle Sequencing plates");
-            }
-//            if(reactionType != null && plateDoc.getPlate().getReactionType() != reactionType) {
-//                throw new DocumentOperationException("You must select plates of the same type");
-//            }
-//            reactionType = plateDoc.getPlate().getReactionType();
+
+        boolean sequences = SEQUENCE_DOCUMENT_SELECTION_SIGNATURE.matches(Arrays.asList(documents));
+        if(sequences) {
+            validateSequenceDocuments(documents);
         }
-//        if(reactionType == Reaction.Type.Extraction) {
-//            throw new DocumentOperationException("You must select either PCR or Cycle Sequencing plates");
-//        }
+        else {
+            for(AnnotatedPluginDocument doc : documents) {
+                PlateDocument plateDoc = (PlateDocument)doc.getDocument();
+                if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+                    throw new DocumentOperationException("You must select either PCR or Cycle Sequencing plates");
+                }
+            }
+        }
 
         Options options = new Options(this.getClass());
 
@@ -100,10 +103,11 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         plateSizeOption.addChangeListener(plateTypeListener);
         plateTypeListener.objectChanged();
 
-        Options.Option<String, ? extends JComponent> label = options.addLabel("Geneious will select reactions that conform to the following:");
-        label.setSpanningComponent(true);
-
-        options.addMultipleOptions("conditions", cherryPickingConditionsOptions, false);
+        if(!sequences) {
+            Options.Option<String, ? extends JComponent> label = options.addLabel("Geneious will select reactions that conform to the following:");
+            label.setSpanningComponent(true);
+            options.addMultipleOptions("conditions", cherryPickingConditionsOptions, false);
+        }
 
         return options;
     }
@@ -212,12 +216,34 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        List<PlateDocument> plateDocuments = new ArrayList<PlateDocument>();
-        for(AnnotatedPluginDocument doc : annotatedDocuments) {
-            plateDocuments.add((PlateDocument)doc.getDocument());
-        }
 
-        final List<Reaction> failedReactions = getFailedReactions(plateDocuments, options);
+
+        return cherryPick(annotatedDocuments, options);
+    }
+
+    private void validateSequenceDocuments(AnnotatedPluginDocument... documents) throws DocumentOperationException{
+        for(AnnotatedPluginDocument doc : documents) {
+            if(doc.getFieldValue(LIMSConnection.EXTRACTION_NAME_FIELD) == null) {
+                throw new DocumentOperationException("At least one of your documents ("+doc.getName()+") appears not to be an sequence document from LIMS.  You can only cherry pick assembly documents returned from a LIMS search");
+            }
+        }
+    }
+
+
+    private List<AnnotatedPluginDocument> cherryPick(AnnotatedPluginDocument[] annotatedDocuments, Options options) throws DocumentOperationException {
+        final List<Reaction> failedReactions;
+        if(SEQUENCE_DOCUMENT_SELECTION_SIGNATURE.matches(Arrays.asList(annotatedDocuments))) {
+            validateSequenceDocuments(annotatedDocuments);
+            failedReactions = getReactionsFromSequences(annotatedDocuments);
+        }
+        else {
+            List<PlateDocument> plateDocuments = new ArrayList<PlateDocument>();
+            for(AnnotatedPluginDocument doc : annotatedDocuments) {
+                plateDocuments.add((PlateDocument)doc.getDocument());
+            }
+
+            failedReactions = getMatchingReactionsFromPlates(plateDocuments, options);
+        }
 
         if(failedReactions.size() == 0) {
             throw new DocumentOperationException("The selected plates do not contain any reactions that match your criteria");
@@ -304,7 +330,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             }
         };
         ThreadUtilities.invokeNowOrWait(runnable);
-        return null;
+        return Collections.emptyList();
     }
 
     public String getDocumentTitle(AnnotatedPluginDocument[] selectedPlates) {
@@ -332,7 +358,26 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
     }
 
-    List<Reaction> getFailedReactions(List<PlateDocument> plates, Options options) {
+    private List<Reaction> getReactionsFromSequences(AnnotatedPluginDocument[] annotatedDocuments) throws DocumentOperationException {
+        List<Reaction> reactions = new ArrayList<Reaction>();
+        for(AnnotatedPluginDocument doc : annotatedDocuments) {
+            ExtractionReaction reaction = new ExtractionReaction();
+            reaction.getOptions().setValue("extractionId", doc.getFieldValue(LIMSConnection.EXTRACTION_NAME_FIELD));
+            Object extractionBarcode = doc.getFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD);
+            if(extractionBarcode != null) {
+                reaction.getOptions().setValue("extractionBarcode", extractionBarcode);
+            }
+            reactions.add(reaction);
+        }
+        try {
+            return new ArrayList<Reaction>(BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(reactions).values());
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DocumentOperationException("Error getting extraction reactions from database: "+e.getMessage(), e);
+        }
+    }
+
+    List<Reaction> getMatchingReactionsFromPlates(List<PlateDocument> plates, Options options) {
         List<Reaction> reactions = new ArrayList<Reaction>();
         for(PlateDocument doc : plates) {
             Plate plate = doc.getPlate();

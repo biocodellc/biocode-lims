@@ -332,6 +332,58 @@ public class LIMSConnection {
         }
     }
 
+
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissues(Query query, List<FimsSample> tissueSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, RetrieveCallback callback1) throws SQLException{
+        List<? extends Query> refinedQueries;
+        CompoundSearchQuery.Operator operator;
+
+        if(query instanceof BasicSearchQuery) {
+            query = generateAdvancedQueryFromBasicQuery(query);
+        }
+
+        if(query instanceof CompoundSearchQuery) {
+            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList(PLATE_NAME, PLATE_TYPE, PLATE_DATE));
+            operator = ((CompoundSearchQuery)query).getOperator();
+        }
+        else {
+            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList(PLATE_NAME, PLATE_TYPE, PLATE_DATE));
+            operator = CompoundSearchQuery.Operator.AND;
+        }
+
+        if(refinedQueries.size() == 0 && (tissueSamples == null || tissueSamples.size() == 0)) {
+            return Collections.emptyList();
+        }
+
+        String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
+        List<String> terms = new ArrayList<String>();
+        List<Object> sqlValues = new ArrayList<Object>();
+        if(tissueSamples != null && tissueSamples.size() > 0) {
+            for(FimsSample sample : tissueSamples) {
+                terms.add("extraction.sampleId=?");
+                sqlValues.add(sample.getId());
+            }
+            sql = sql+"("+StringUtilities.join(" OR ", terms)+")";
+        }
+
+        if(refinedQueries.size() > 0)  {
+            if(tissueSamples != null && tissueSamples.size() > 0) {
+                String join;
+                switch(operator) {
+                    case AND:
+                        join = " AND ";
+                        break;
+                    default:
+                        join = " OR ";
+                }
+                sql = sql + join;
+            }
+            sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
+        }
+        System.out.println(sql);
+        return getMatchingAssemblyDocuments(null, tissueSamples, callback, urnsToNotRetrieve, callback, sql, sqlValues);
+    }
+
+
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
         return getMatchingAssemblyDocuments(query, workflows, callback, null, callback);
     }
@@ -357,7 +409,7 @@ public class LIMSConnection {
             return Collections.emptyList();
         }
 
-        String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
+        String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
         List<String> terms = new ArrayList<String>();
         List<Object> sqlValues = new ArrayList<Object>();
         if(workflows != null && workflows.size() > 0) {
@@ -383,6 +435,10 @@ public class LIMSConnection {
             sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
         }
         System.out.println(sql);
+        return getMatchingAssemblyDocuments(workflows, null, callback, urnsToNotRetrieve, cancelable, sql, sqlValues);
+    }
+
+    private List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(sql);
         fillStatement(sqlValues, statement);
         BiocodeUtilities.CancelListeningThread listeningThread = null;
@@ -417,6 +473,13 @@ public class LIMSConnection {
                                 }
                             }
                             String tissueId = resultSet.getString("sampleId");
+                            if(fimsSamples != null) {
+                                for(FimsSample sample : fimsSamples) {
+                                    if(sample.getId().equals(tissueId)) {
+                                        return new FimsData(sample, null, null);
+                                    }
+                                }
+                            }
                             FimsSample fimsSample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(tissueId);
                             if(fimsSample != null) {
                                 return new FimsData(fimsSample, null, null);
@@ -446,12 +509,12 @@ public class LIMSConnection {
             }
 
             //annotate with FIMS data if we couldn't before...
-            final List<FimsSample> fimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(missingTissueIds);
+            final List<FimsSample> newFimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(missingTissueIds);
             FimsDataGetter fimsDataGetter = new FimsDataGetter() {
                 public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                     String tissueId = (String)document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
                     if(tissueId != null) {
-                        for(FimsSample sample : fimsSamples) {
+                        for(FimsSample sample : newFimsSamples) {
                             if(sample.getId().equals(tissueId)) {
                                 return new FimsData(sample, null, null);
                             }
@@ -545,6 +608,8 @@ public class LIMSConnection {
         doc.setFieldValue(SEQUENCE_ID, resultSet.getInt("id"));
         doc.setFieldValue(LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS, resultSet.getBoolean("assembly.submitted") ? "Yes" : "No");
         doc.setFieldValue(LIMSConnection.EDIT_RECORD, resultSet.getString("assembly.editrecord"));
+        doc.setFieldValue(LIMSConnection.EXTRACTION_NAME_FIELD, resultSet.getString("extraction.extractionId"));
+        doc.setFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD, resultSet.getString("extraction.extractionBarcode"));
         return doc;
     }
 
@@ -1108,7 +1173,7 @@ public class LIMSConnection {
         if(sourceReactions == null || sourceReactions.size() == 0) {
             return Collections.emptyMap();
         }
-        StringBuilder sql = new StringBuilder("SELECT * FROM extraction WHERE (");
+        StringBuilder sql = new StringBuilder("SELECT plate.name, plate.size, extraction.* FROM extraction, plate WHERE plate.id = extraction.plate AND (");
         for (int i=0; i < sourceReactions.size(); i++) {
             sql.append("extractionId=?");
             if (i < sourceReactions.size() - 1) {

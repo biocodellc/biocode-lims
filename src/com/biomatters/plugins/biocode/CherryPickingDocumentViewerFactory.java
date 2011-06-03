@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.plugins.biocode.labbench.CherryPickingDocument;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
@@ -69,20 +70,23 @@ public class CherryPickingDocumentViewerFactory extends TableDocumentViewerFacto
                         return reaction.getLocationString();
                     case 2:
                         return reaction.getExtractionId();
+                    case 3:
+                        return reaction.getExtractionBarcode();
 
                 }
-                return reaction.getFieldValue(fimsFieldsList.get(columnIndex-3).getCode());
+                return reaction.getFieldValue(fimsFieldsList.get(columnIndex-4).getCode());
             }
             @Override
             public String getColumnName(int column) {
-                if(column < 3) {
+                if(column < 4) {
                     return new String[] {
                             "Plate",
                             "Well",
-                            "Extraction ID"
+                            "Extraction ID",
+                            "Extraction Barcode"
                     }[column];
                 }
-                return fimsFieldsList.get(column-3).getName();
+                return fimsFieldsList.get(column-4).getName();
             }
 
 
