@@ -79,16 +79,19 @@ public class TracesEditor {
 
         removeSequencesAction = new GeneiousAction("Remove sequence(s)") {
             public void actionPerformed(ActionEvent e) {
-                for(SequenceDocument selectedDoc : sequenceSelection.getSelectedSequences()) {//todo
+                int currentIndex = 0;
+                for(SequenceSelection.SequenceIndex selectedIndex : sequenceSelection.getSelectedSequenceIndices()) {//todo
                     for (int i = 0; i < traces.size(); i++) {
                         Trace trace = traces.get(i);
                         boolean removed = false;
                         for(NucleotideSequenceDocument doc : trace.getSequences()){
-                            if (doc.getName().equals(selectedDoc.getName()) && doc.getSequenceString().equalsIgnoreCase(selectedDoc.getSequenceString())) {
+                            if (currentIndex == selectedIndex.getSequenceIndex()) {
                                 traces.remove(i);
                                 removed = true;
+                                currentIndex++;
                                 break;
                             }
+                            currentIndex++;
                         }
                         if(removed) {
                             break;
@@ -103,12 +106,19 @@ public class TracesEditor {
             public void actionPerformed(ActionEvent e) {
                 WritableDatabaseService selectedFolder = ServiceUtilities.getUserSelectedFolder(null);
                 if(selectedFolder != null){
-                    Set<SequenceDocument> sequences = sequenceSelection.getSelectedSequences(); //todo
+                    int currentIndex = 0;
                     try {
-                        for(SequenceDocument doc : sequences) {
-                            selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(doc), ProgressListener.EMPTY).setUnread(true);
+                        for(SequenceSelection.SequenceIndex selectedIndex : sequenceSelection.getSelectedSequenceIndices()) {//todo
+                            for (int i = 0; i < traces.size(); i++) {
+                                Trace trace = traces.get(i);
+                                for(NucleotideSequenceDocument doc : trace.getSequences()){
+                                    if (currentIndex == selectedIndex.getSequenceIndex()) {
+                                        selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(doc), ProgressListener.EMPTY).setUnread(true);
+                                    }
+                                    currentIndex++;
+                                }
+                            }
                         }
-
                     } catch (DatabaseServiceException e1) {
                         Dialogs.showMessageDialog(e1.getMessage());
                     }
