@@ -80,7 +80,7 @@ public class TracesEditor {
         removeSequencesAction = new GeneiousAction("Remove sequence(s)") {
             public void actionPerformed(ActionEvent e) {
                 int currentIndex = 0;
-                for(SequenceSelection.SequenceIndex selectedIndex : sequenceSelection.getSelectedSequenceIndices()) {//todo
+                for(SequenceSelection.SequenceIndex selectedIndex : sequenceSelection.getSelectedSequenceIndices()) {
                     for (int i = 0; i < traces.size(); i++) {
                         Trace trace = traces.get(i);
                         boolean removed = false;
@@ -108,7 +108,7 @@ public class TracesEditor {
                 if(selectedFolder != null){
                     int currentIndex = 0;
                     try {
-                        for(SequenceSelection.SequenceIndex selectedIndex : sequenceSelection.getSelectedSequenceIndices()) {//todo
+                        for(SequenceSelection.SequenceIndex selectedIndex : sequenceSelection.getSelectedSequenceIndices()) {
                             for (int i = 0; i < traces.size(); i++) {
                                 Trace trace = traces.get(i);
                                 for(NucleotideSequenceDocument doc : trace.getSequences()){
