@@ -159,7 +159,7 @@ public class BiocodeUtilities {
             //todo: there might be multiple instances of the same reaction in this list, so we loop through everything each time.  maybe we could sort the list if this is too slow?
             for(CycleSequencingReaction r : reactions) {
                 if(r.getId() == result.getKey()) {
-                    ((CycleSequencingOptions)r.getOptions()).setChromats(result.getValue());
+                    r.setChromats(result.getValue());
                 }
             }
         }

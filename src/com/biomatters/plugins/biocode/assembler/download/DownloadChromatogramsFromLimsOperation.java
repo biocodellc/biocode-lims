@@ -149,7 +149,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             if (tracesProgress.isCanceled()) return null;
             CycleSequencingOptions sequencingOptions = (CycleSequencingOptions) reaction.getOptions();
             boolean isForward = sequencingOptions.getValueAsString(CycleSequencingOptions.DIRECTION).equals(CycleSequencingOptions.FORWARD_VALUE);
-            List<Trace> traces = sequencingOptions.getTraces();
+            List<Trace> traces = reaction.getTraces();
             if (traces == null) continue;
             for(Trace trace : traces) {
                 List<NucleotideSequenceDocument> traceSequences = trace.getSequences();

@@ -33,6 +33,7 @@ import org.jdom.Element;
  */
 public class TracesEditor {
     private List<Trace> traces;
+    private List<Trace> deletedTraces;
     private DocumentViewerFactory factory;
     Preferences preferences = Preferences.userNodeForPackage(getClass());
     private JPanel holder = new JPanel(new BorderLayout());
@@ -86,6 +87,9 @@ public class TracesEditor {
                         boolean removed = false;
                         for(NucleotideSequenceDocument doc : trace.getSequences()){
                             if (currentIndex == selectedIndex.getSequenceIndex()) {
+                                if(traces.get(i).getId() >= 0) {
+                                    deletedTraces.add(traces.get(i));
+                                }
                                 traces.remove(i);
                                 removed = true;
                                 currentIndex++;
@@ -141,9 +145,14 @@ public class TracesEditor {
 
 
         this.traces = new ArrayList<Trace>(tracesa);
+        this.deletedTraces = new ArrayList<Trace>();
         if(traces != null && traces.size() > 0) {
             updateViewer(traces);
         }
+    }
+
+    public List<Trace> getDeletedTraces() {
+        return deletedTraces;
     }
 
     public static DocumentViewerFactory getViewerFactory(DefaultSequenceListDocument sequenceList) {

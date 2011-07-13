@@ -59,6 +59,10 @@ public class Trace implements XMLSerializable {
         return id;
     }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public Element toXML() {
         Element element = new Element("trace");
 
@@ -94,6 +98,10 @@ public class Trace implements XMLSerializable {
         Element rawTraceElement = element.getChild("rawTrace");
         if(rawTraceElement != null) {
             file = new ReactionUtilities.MemoryFile(rawTraceElement.getAttributeValue("name"), Base64Coder.decode(rawTraceElement.getText().toCharArray()));
+        }
+        id = -1;
+        if(element.getChild("id") != null) {
+            id = Integer.parseInt(element.getChildText("id"));
         }
     }
 

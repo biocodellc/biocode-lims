@@ -10,14 +10,14 @@ import org.jdom.Element;
  *          <p/>
  *          Created on 14/07/2009 7:15:35 PM
  */
-public abstract class ReactionOptions extends Options {
+public abstract class ReactionOptions<T extends Reaction> extends Options {
 
     public static final String RUN_STATUS = "runStatus";
     public static final OptionValue NOT_RUN_VALUE = new OptionValue("not run", "not run");
     public static final OptionValue RUN_VALUE = new OptionValue("run", "run");
     public static final OptionValue PASSED_VALUE = new OptionValue("passed", "passed");
     public static final OptionValue FAILED_VALUE = new OptionValue("failed", "failed");
-    protected Reaction reaction;
+    protected T reaction;
 
     public ReactionOptions() {
     }
@@ -40,7 +40,7 @@ public abstract class ReactionOptions extends Options {
 
     public abstract Cocktail getCocktail();
 
-    public void setReaction(Reaction r) {
+    public void setReaction(T r) {
         this.reaction = r;
     }
 }

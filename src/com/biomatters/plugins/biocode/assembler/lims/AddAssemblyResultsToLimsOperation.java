@@ -365,13 +365,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             return null;
         }
 
-        for(AssemblyResult result : assemblyResults) {
-            Collection<CycleSequencingReaction> reactions = result.reactionsById.values();
-            for(CycleSequencingReaction reaction : reactions) {
-                reaction.setRemoveExistingTracesOnSave(false); //tell the reaction not to remove the existing traces in the database on save so we don't have to download all the existing ones just to add some...
-            }
-        }
-
         progress.beginSubtask("Saving to LIMS");
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         Connection connection = limsConnection.getConnection();

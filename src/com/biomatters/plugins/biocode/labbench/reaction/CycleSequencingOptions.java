@@ -39,7 +39,7 @@ import java.lang.ref.WeakReference;
  *          <p/>
  *          Created on 24/06/2009 7:35:20 PM
  */
-public class CycleSequencingOptions extends ReactionOptions {
+public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReaction> {
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
     private com.biomatters.plugins.biocode.labbench.ButtonOption tracesButton;
@@ -52,8 +52,7 @@ public class CycleSequencingOptions extends ReactionOptions {
     static final String ADD_PRIMER_TO_LOCAL_ID = "addPrimers";
     private ButtonOption addPrimersButton;
 
-    private WeakReference<List<Trace>> traces;
-    private List<Trace> tracesStrongReference;
+
 
     public static final String FORWARD_VALUE = "forward";
     public static final String DIRECTION = "direction";
@@ -66,14 +65,6 @@ public class CycleSequencingOptions extends ReactionOptions {
 
     public CycleSequencingOptions(Element e) throws XMLSerializationException {
         super(e);
-        List<Element> traceElements = e.getChildren("trace");
-        if(traceElements.size() > 0) {
-            List<Trace> traces = new ArrayList<Trace>();
-            for(Element traceElement : traceElements) {
-                traces.add(XMLSerializer.classFromXML(traceElement, Trace.class));
-            }
-            this.traces = new WeakReference<List<Trace>>(traces);
-        }
         initListeners();
     }
 
@@ -148,24 +139,25 @@ public class CycleSequencingOptions extends ReactionOptions {
                     return;
                 }
                 if(reaction.getId() > 0) {
-                    if(traces == null || traces.get() == null) {
+                    if(reaction.getTraces() == null) {
 //                        if(!Dialogs.showYesNoDialog("You have not downloaded the sequences for this reaction from the database yet.  Would you like to do so now?", "Download sequences", tracesButton.getComponent(), Dialogs.DialogIcon.QUESTION)) {
 //                            return;
 //                        }
                         Runnable r = new Runnable() {
                             public void run() {
-                                getChromats();
+                                reaction.getChromats();
                             }
                         };
                         BiocodeService.block("Downloading sequences", tracesButton.getComponent(), r);
 
                     }
                 }
-                TracesEditor editor = new TracesEditor((traces==null || traces.get() == null) ? Collections.EMPTY_LIST : traces.get(), getValueAsString("extractionId"));
+                TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"));
                 if(editor.showDialog(tracesButton.getComponent())) {
-                    List<Trace> traces = editor.getTraces();
-                    CycleSequencingOptions.this.traces = new WeakReference<List<Trace>>(traces);
-                    tracesStrongReference = editor.getTraces();
+                    reaction.setTraces(editor.getTraces());
+                    for(Trace t : editor.getDeletedTraces()) {
+                        reaction.addTraceToRemoveOnSave(t.getId());
+                    }
                 }
 
             }
@@ -205,63 +197,6 @@ public class CycleSequencingOptions extends ReactionOptions {
             }
         }
         labelListener.objectChanged();
-    }
-
-    public void setChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
-        if (tracesStrongReference == null) {
-            tracesStrongReference = new ArrayList<Trace>();
-        } else {
-            tracesStrongReference.clear();
-        }
-        if (traces == null) {
-            traces = new WeakReference<List<Trace>>(tracesStrongReference);
-        }
-        if(files == null) {
-            return;
-        }
-
-        convertRawTracesToTraceDocuments(files);
-    }
-
-    public void addChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
-        if(tracesStrongReference == null) {
-            if(traces != null && traces.get() != null) {
-                tracesStrongReference = traces.get();
-            }
-            else {
-                getChromats();
-            }
-        }
-        if(traces == null) {
-            traces = new WeakReference<List<Trace>>(tracesStrongReference);
-        }
-
-
-        convertRawTracesToTraceDocuments(files);
-    }
-
-    private void convertRawTracesToTraceDocuments(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
-        List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
-        File tempFolder = null;
-        for(ReactionUtilities.MemoryFile mFile : files) {
-            tracesStrongReference.add(new Trace(mFile));
-        }
-    }
-
-    private void getChromats() {
-        try {
-            List<Trace> chromatFiles = ((CycleSequencingReaction) reaction).getChromats();
-            tracesStrongReference = new ArrayList<Trace>();
-            traces = new WeakReference<List<Trace>>(tracesStrongReference);
-            addTraces(chromatFiles);
-
-        } catch (SQLException e1) {
-            Dialogs.showMessageDialog("Could not get the sequences: "+e1.getMessage());
-        } catch (IOException e1) {
-            Dialogs.showMessageDialog("Could not write temp files to disk: "+e1.getMessage());
-        } catch (DocumentImportException e1) {
-            Dialogs.showMessageDialog("Could not import the sequences.  Perhaps your traces have become corrupted in the LIMS database?: "+e1.getMessage());
-        }
     }
 
     public void init() {
@@ -321,18 +256,6 @@ public class CycleSequencingOptions extends ReactionOptions {
         return cocktails;
     }
 
-    public List<Trace> getTraces() {
-        return traces == null ? null : traces.get();
-    }
-
-    public void addTraces(List<Trace> traces) {
-        if(this.traces == null || this.traces.get() == null) {
-            tracesStrongReference = new ArrayList<Trace>();
-            this.traces = new WeakReference<List<Trace>>(tracesStrongReference);
-        }
-        this.traces.get().addAll(traces);
-    }
-
     private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
         ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
         for(AnnotatedPluginDocument doc : documents) {
@@ -342,24 +265,4 @@ public class CycleSequencingOptions extends ReactionOptions {
         return primerList;
     }
 
-
-    @Override
-    public Element toXML() {
-        Element element = super.toXML();
-        if(traces != null && traces.get() != null) {
-            for(Trace trace : traces.get()) {
-                element.addContent(XMLSerializer.classToXML("trace", trace));
-            }
-        }
-        return element;
-    }
-
-    /**
-     * nullify the strong reference to trace documents to free up memory!.
-     */
-    public void purgeChromats() {
-        if(tracesStrongReference != null) {
-            tracesStrongReference = null;
-        }
-    }
 }

@@ -839,7 +839,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                     insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=?, technician=?, gelimage=? WHERE id=?";
                 }
-                String clearTracesSQL = "DELETE FROM traces WHERE reaction=?";
+                String clearTracesSQL = "DELETE FROM traces WHERE id=?";
                 String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
 
                 insertStatement = connection.prepareStatement(insertSQL);
@@ -933,27 +933,30 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 //
 //                        statement.setString(14, sequenceString);
                         statement.execute();
-                        if(((CycleSequencingOptions)reaction.getOptions()).getTraces() != null) {
+                        if(((CycleSequencingReaction)reaction).getTraces() != null) {
                             int reactionId = reaction.getId();
-                            if(reactionId > 0 && ((CycleSequencingReaction)reaction).removeExistingTracesOnSave()) {
-                                clearTracesStatement.setInt(1, reactionId);
+                            for(Integer traceId : ((CycleSequencingReaction)reaction).getTracesToRemoveOnSave()) {
+                                clearTracesStatement.setInt(1, traceId);
                                 clearTracesStatement.execute();
                             }
-                            else {
-                                ResultSet reactionIdResultSet = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? connection.createStatement().executeQuery("CALL IDENTITY();") : connection.createStatement().executeQuery("SELECT last_insert_id()");
-                                reactionIdResultSet.next();
-                                reactionId = reactionIdResultSet.getInt(1);
+                            ((CycleSequencingReaction)reaction).clearTracesToRemoveOnSave();
+                            if(reactionId < 0) {
+                                reactionId = getLastInsertId(connection);
                             }
 
-                            List<Trace> traces = ((CycleSequencingOptions) reaction.getOptions()).getTraces();
+                            List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
                             if(traces != null) {
                                 for(Trace trace : traces) {
+                                    if(trace.getId() >= 0) {
+                                        continue; //already added these...
+                                    }
                                     ReactionUtilities.MemoryFile file = trace.getFile();
                                     if(file != null) {
                                         insertTracesStatement.setInt(1, reactionId);
                                         insertTracesStatement.setString(2, file.getName());
                                         insertTracesStatement.setBytes(3, file.getData());
                                         insertTracesStatement.execute();
+                                        trace.setId(getLastInsertId(connection));
                                     }
                                 }
                             }
@@ -965,6 +968,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 insertTracesStatement.close();
                 break;
         }
+    }
+
+    private static int getLastInsertId(Connection connection) throws SQLException {
+        int reactionId;
+        ResultSet reactionIdResultSet = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? connection.createStatement().executeQuery("CALL IDENTITY();") : connection.createStatement().executeQuery("SELECT last_insert_id()");
+        reactionIdResultSet.next();
+        reactionId = reactionIdResultSet.getInt(1);
+        return reactionId;
     }
 
     public static class BackgroundColorer implements XMLSerializable{

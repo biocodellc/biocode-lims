@@ -440,7 +440,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                     }
                     else {
                         if(reaction instanceof CycleSequencingReaction) {
-                        List<Trace> traces = ((CycleSequencingOptions) reaction.getOptions()).getTraces();
+                        List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
                         if(traces != null && traces.size() > 0) {
                             List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(traces);
                             DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
@@ -458,7 +458,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                 public int getPagesRequired(Dimension dimensions, Options options) {
                     int pagesRequired = 1;
                     if(reaction instanceof CycleSequencingReaction) {
-                        List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(((CycleSequencingOptions) reaction.getOptions()).getTraces());
+                        List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(((CycleSequencingReaction)reaction).getTraces());
                         if(sequences != null && sequences.size() > 0) {
                             DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
                             DocumentViewerFactory factory = TracesEditor.getViewerFactory(sequenceList);

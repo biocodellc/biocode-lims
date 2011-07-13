@@ -23,7 +23,7 @@ import java.util.*;
  *          <p/>
  *          Created on 23/06/2009 12:45:32 PM
  */
-public class PCROptions extends ReactionOptions {
+public class PCROptions extends ReactionOptions<PCRReaction> {
 
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;

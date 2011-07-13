@@ -13,7 +13,7 @@ import java.util.Date;
  *          <p/>
  *          Created on 14/07/2009 7:46:04 PM
  */
-public class ExtractionOptions extends ReactionOptions{
+public class ExtractionOptions extends ReactionOptions<ExtractionReaction>{
     public boolean fieldIsFinal(String fieldCode) {
         return false;//"sampleId".equals(fieldCode) || "extractionId".equals(fieldCode);
     }
