@@ -439,6 +439,9 @@ public class LIMSConnection {
     }
 
     private List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws SQLException {
+        if(BiocodeService.getInstance().isLoggedIn()) {
+            return Collections.emptyList();
+        }
         PreparedStatement statement = connection.prepareStatement(sql);
         fillStatement(sqlValues, statement);
         BiocodeUtilities.CancelListeningThread listeningThread = null;
