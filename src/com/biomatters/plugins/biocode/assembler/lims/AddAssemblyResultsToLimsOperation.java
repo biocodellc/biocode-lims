@@ -112,6 +112,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             if (progress.isCanceled()) {
                 break;
             }
+            if(annotatedDocument == null) {
+                continue;
+            }
 
             AssemblyResult assemblyResult = new AssemblyResult();
 
