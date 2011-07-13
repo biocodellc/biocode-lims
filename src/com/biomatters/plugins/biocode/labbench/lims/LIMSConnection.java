@@ -480,6 +480,9 @@ public class LIMSConnection {
                                     }
                                 }
                             }
+                            if(!BiocodeService.getInstance().isLoggedIn()) {
+                                return null;
+                            }
                             FimsSample fimsSample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(tissueId);
                             if(fimsSample != null) {
                                 return new FimsData(fimsSample, null, null);
