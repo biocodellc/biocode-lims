@@ -94,12 +94,7 @@ public class ReactionUtilities {
         Options.RadioOption<Options.OptionValue> chooseOption = options.addRadioOption("choose", "Match", chooseValues, chooseValues[0], Options.Alignment.VERTICAL_ALIGN);
         Options.ComboBoxOption<Options.OptionValue> fieldOption = options.addComboBoxOption("field", "", fieldValues, fieldValues.get(0));
         chooseOption.setDependentPosition(Options.RadioOption.DependentPosition.RIGHT);
-        chooseOption.addDependent(fieldOption, chooseValues[1]);
-        final Options.BooleanOption plateBackwards = options.addBooleanOption("plateBackwards", "Whoops! I sequenced my plate backwards.  Please fix it!", false);
-        final Options.BooleanOption fixNames = options.addBooleanOption("fixNames", "Also try to correct the well number in the trace filenames", false);
-        fixNames.setDisabledValue(false);
-        plateBackwards.addDependent(fixNames, true);
-
+        chooseOption.addDependent(chooseValues[1], fieldOption, true);
 
         options.beginAlignHorizontally(null, false);
         Options.Option label = options.addLabel("Match:");
@@ -108,7 +103,11 @@ public class ReactionUtilities {
         options.addCustomOption(namePartOption2);
         namePartOption2.setDescription("Each name is split into segments by the given separator, then the n-th segment is used to identify the sequence's well");
         options.addLabel("part of name,");
+        options.addLabel(" seperated by");
+        NameSeparatorOption nameSeperatorOption = new NameSeparatorOption("nameSeparator", "");
+        options.addCustomOption(nameSeperatorOption);
         options.endAlignHorizontally();
+
         options.beginAlignHorizontally(null, false);
         Options.BooleanOption checkPlateName = options.addBooleanOption("checkPlateName", "", false);
         Options.Option<String, ? extends JComponent> label2 = options.addLabel("Check plate name is correct, where plate name is:");
@@ -121,11 +120,14 @@ public class ReactionUtilities {
         checkPlateName.addDependent(label2, true);
         checkPlateName.addDependent(label3, true);
         options.endAlignHorizontally();
-        options.beginAlignHorizontally(null, false);
-        options.addLabel(" seperated by");
-        NameSeparatorOption nameSeperatorOption = new NameSeparatorOption("nameSeparator", "");
-        options.addCustomOption(nameSeperatorOption);
-        options.endAlignHorizontally();
+
+        options.addLabel(" ");
+
+        final Options.BooleanOption plateBackwards = options.addBooleanOption("plateBackwards", "Whoops! I sequenced my plate backwards.  Please fix it!", false);
+        final Options.BooleanOption fixNames = options.addBooleanOption("fixNames", "Also try to correct the well number in the trace filenames", false);
+        fixNames.setDisabledValue(false);
+        plateBackwards.addDependent(fixNames, true);
+
 
         if(!Dialogs.showOptionsDialog(options, "Bulk add traces", true, owner)){
             return null;
