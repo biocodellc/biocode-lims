@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
 import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
@@ -107,16 +106,13 @@ public class Trace implements XMLSerializable {
 
     private static List<NucleotideSequenceDocument> convertRawTracesToTraceDocuments(ReactionUtilities.MemoryFile mFile) throws IOException, DocumentImportException {
         List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
-        File tempFolder = null;
 
-        if(tempFolder == null) {
-            tempFolder = File.createTempFile("biocode_sequence", "");
-            if(tempFolder.exists()) {
-                tempFolder.delete();
-            }
-            if(!tempFolder.mkdir()){
-                throw new IOException("could not create the temp dir!");
-            }
+        File tempFolder = File.createTempFile("biocode_sequence", "");
+        if(tempFolder.exists()) {
+            tempFolder.delete();
+        }
+        if(!tempFolder.mkdir()){
+            throw new IOException("could not create the temp dir!");
         }
 
         //write the data to a temp file (because Geneious file importers can't read an in-memory stream
@@ -132,7 +128,7 @@ public class Trace implements XMLSerializable {
             abiFile.deleteOnExit();
         }
 
-        if(tempFolder != null && !tempFolder.delete()){
+        if(!tempFolder.delete()){
             tempFolder.deleteOnExit();
         }
 
