@@ -213,7 +213,7 @@ public class Thermocycle implements XMLSerializable {
     public static final class State implements XMLSerializable{
         private int temp;
         private int time;
-        private int id = 0;
+        private int id = -1;
 
         public State(Element e) throws XMLSerializationException {
             fromXML(e);
@@ -244,6 +244,10 @@ public class Thermocycle implements XMLSerializable {
 
         public void setTime(int time) {
             this.time = time;
+        }
+
+        public int getId() {
+            return id;
         }
 
         public Element toXML() {

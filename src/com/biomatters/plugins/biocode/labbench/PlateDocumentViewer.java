@@ -476,22 +476,35 @@ public class PlateDocumentViewer extends DocumentViewer{
                 Dialogs.showMessageDialog("Please log in");
                 return;
             }
-            final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(cycles, container);
-            if (newThermocycles.size() > 0) {
+            ThermocycleEditor editor = new ThermocycleEditor();
+            if(!editor.editThermocycles(cycles, container)) {
+                return;
+            }
+            final List<Thermocycle> newThermocycles = editor.getNewThermocycles();
+            final List<Thermocycle> deletedThermocycles = editor.getDeletedThermocycles();
+            if (newThermocycles.size() > 0 || deletedThermocycles.size() > 0) {
                 Runnable runnable = new Runnable() {
                     public void run() {
                         BiocodeService.block("Saving Thermocycles", container);
                         try {
+
+                            String tableName;
                             switch (plateView.getPlate().getReactionType()) {
                                 case PCR:
-                                    BiocodeService.getInstance().addPCRThermoCycles(newThermocycles);
+                                    tableName = "pcr_thermocycle";
                                     break;
                                 case CycleSequencing:
-                                    BiocodeService.getInstance().addCycleSequencingThermoCycles(newThermocycles);
+                                    tableName = "cyclesequencing_thermocycle";
                                     break;
                                 default:
                                     assert false : "Extractions do not have thermocycles!";
-                                    break;
+                                    return;
+                            }
+                            if(newThermocycles.size() > 0) {
+                                BiocodeService.getInstance().insertThermocycles(newThermocycles, tableName);
+                            }
+                            if(deletedThermocycles.size() > 0) {
+                                BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, tableName);    
                             }
                         } catch (final TransactionException e1) {
                             e1.printStackTrace();

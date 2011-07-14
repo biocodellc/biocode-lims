@@ -1151,11 +1151,40 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return cycles;
     }
 
-    public void addPCRThermoCycles(List<Thermocycle> cycles) throws TransactionException{
-        insertThermocycles(cycles, "pcr_thermocycle");
+    public void removeThermoCycles(List<Thermocycle> cycles,  String tableName) throws TransactionException {
+        String sql = "DELETE  FROM state WHERE state.id=?";
+        String sql2 = "DELETE  FROM cycle WHERE cycle.id=?";
+        String sql3 = "DELETE  FROM thermocycle WHERE thermocycle.id=?";
+        String sql4 = "DELETE FROM "+tableName+" WHERE cycle =?";
+        try {
+            final PreparedStatement statement = getActiveLIMSConnection().getConnection().prepareStatement(sql);
+            final PreparedStatement statement2 = getActiveLIMSConnection().getConnection().prepareStatement(sql2);
+            final PreparedStatement statement3 = getActiveLIMSConnection().getConnection().prepareStatement(sql3);
+            final PreparedStatement statement4 = getActiveLIMSConnection().getConnection().prepareStatement(sql4);
+            for(Thermocycle thermocycle : cycles) {
+                if(thermocycle.getId() >= 0) {
+                    for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
+                        for(Thermocycle.State state : cycle.getStates()) {
+                            statement.setInt(1, state.getId());
+                            statement.executeUpdate();
+                        }
+                        statement2.setInt(1, cycle.getId());
+                        statement2.executeUpdate();
+                    }
+                    statement3.setInt(1, thermocycle.getId());
+                    statement3.executeUpdate();
+                    statement4.setInt(1, thermocycle.getId());
+                    statement4.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new TransactionException("Could not delete thermocycles: "+e.getMessage(), e);
+        }
+        buildCaches();
     }
 
-    private void insertThermocycles(List<Thermocycle> cycles, String tableName) throws TransactionException {
+    public void insertThermocycles(List<Thermocycle> cycles, String tableName) throws TransactionException {
         try {
             Connection connection = limsConnection.getConnection();
             connection.setAutoCommit(false);
@@ -1187,11 +1216,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             throw new TransactionException("Could not add thermocycle(s): "+e.getMessage(), e);
         }
         buildCaches();
-    }
-
-    public void addCycleSequencingThermoCycles(List<Thermocycle> cycles) throws TransactionException{
-        insertThermocycles(cycles, "cyclesequencing_thermocycle");
-        System.out.println("done!");
     }
 
     public boolean hasWriteAccess() {

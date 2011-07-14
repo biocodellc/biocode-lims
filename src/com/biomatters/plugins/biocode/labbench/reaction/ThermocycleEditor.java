@@ -4,9 +4,11 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.plugins.biocode.labbench.HiddenOptionsPopupButton;
 import com.biomatters.plugins.biocode.labbench.AdvancedAndNormalPanelsSwappedOptions;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -21,6 +23,8 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
+import java.sql.SQLException;
+import java.sql.ResultSet;
 
 /**
  * @author steve
@@ -375,14 +379,27 @@ public class ThermocycleEditor extends JPanel {
 
     }
 
-    public static List<Thermocycle> editThermocycles(final List<Thermocycle> thermocycles, Component owner) {
+    final List<Thermocycle> newThermocycles = new ArrayList<Thermocycle>();
+    final List<Thermocycle> deletedThermocycles = new ArrayList<Thermocycle>();
+
+    public List<Thermocycle> getNewThermocycles() {
+        return new ArrayList<Thermocycle>(newThermocycles);
+    }
+
+    public List<Thermocycle> getDeletedThermocycles() {
+        return new ArrayList<Thermocycle>(deletedThermocycles);
+    }
+
+    public boolean editThermocycles(final List<Thermocycle> tcycles, Component owner) {
+        final List<Thermocycle> thermocycles = new ArrayList<Thermocycle>(tcycles);
+        newThermocycles.clear();
+        deletedThermocycles.clear();
         JPanel editPanel = new JPanel(new BorderLayout());
         final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         editPanel.add(splitPane, BorderLayout.CENTER);
         final JList thermocycleList = new JList();
         thermocycleList.setPrototypeCellValue("ACEGIKMOQSUWY13579");
 //        Class thermocycleClass = thermocycles.get(0).getClass();
-        final List<Thermocycle> newThermocycles = new ArrayList<Thermocycle>();
         final AbstractListModel listModel = new AbstractListModel() {
             public int getSize() {
                 return thermocycles.size()+newThermocycles.size();
@@ -397,9 +414,8 @@ public class ThermocycleEditor extends JPanel {
         thermocycleList.setModel(listModel);
         JScrollPane scroller = new JScrollPane(thermocycleList);
         JPanel leftPanel = new JPanel(new BorderLayout());
-        JButton addButton = new JButton("Add");
-        leftPanel.add(addButton, BorderLayout.SOUTH);
-        leftPanel.add(scroller, BorderLayout.CENTER);
+        JButton addButton = new JButton("+");
+
         addButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
                 ThermocycleEditor editor = new ThermocycleEditor();
@@ -414,6 +430,65 @@ public class ThermocycleEditor extends JPanel {
 
             }
         });
+
+        final JButton removeButton = new JButton("-");
+        removeButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                if(thermocycleList.getSelectedValue() == null) {
+                    return;
+                }
+                if(listModel.getSize() == 1) {
+                    Dialogs.showMessageDialog("You must have at least one thermocycle in the database", "Cannot delete thermocycle", removeButton, Dialogs.DialogIcon.NO_ICON);
+                    return;
+                }
+                List<String> platesUsing = null;
+                try {
+                    platesUsing = getPlatesUsingThermocycle((Thermocycle)thermocycleList.getSelectedValue());
+                } catch (SQLException e1) {
+                    e1.printStackTrace();
+                    Dialogs.showMessageDialog("Could not query database: "+e.getModifiers(), "Could not query database", removeButton, Dialogs.DialogIcon.ERROR);
+                    return;
+                }
+                if(platesUsing.size() > 0) {
+                    if(platesUsing.size() > 20) {
+                        Dialogs.showMessageDialog("The selected thermocycle is in use by "+platesUsing.size()+" plates.  Please remove the plates or change their thermocycle.", "Cannot delete thermocycle", removeButton, Dialogs.DialogIcon.NO_ICON);
+                        return;
+                    }
+                    final StringBuilder message = new StringBuilder("The selected thermocycle is in use on the following plates.  Please remove the plates or change their thermocycle.\n\n");
+
+                    for(String name : platesUsing) {
+                        message.append("<b>");
+                        message.append(name);
+                        message.append("</b>\n");
+                    }
+
+                    Dialogs.showMessageDialog(message.toString(), "Cannot delete thermocycle", removeButton, Dialogs.DialogIcon.NO_ICON);
+                    return;
+                }
+
+                if(thermocycleList.getSelectedIndex() >= thermocycles.size()) {
+                    newThermocycles.remove(thermocycleList.getSelectedIndex()-thermocycles.size());
+                    for(ListDataListener listener : listModel.getListDataListeners()){
+                        listener.intervalAdded(new ListDataEvent(listModel, ListDataEvent.INTERVAL_ADDED, listModel.getSize(), listModel.getSize()-1));
+                    }
+                }
+                else {
+                    deletedThermocycles.add((Thermocycle)thermocycleList.getSelectedValue());
+                    int index = thermocycleList.getSelectedIndex();
+                    thermocycles.remove(thermocycleList.getSelectedValue());
+                    thermocycleList.setSelectedIndex(Math.max(0, index-1));
+                }
+                
+            }
+
+
+        });
+
+        GPanel buttonHolderPanel = new GPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        buttonHolderPanel.add(addButton);
+        buttonHolderPanel.add(removeButton);
+        leftPanel.add(buttonHolderPanel, BorderLayout.SOUTH);
+        leftPanel.add(scroller, BorderLayout.CENTER);
 
         splitPane.setLeftComponent(leftPanel);
         thermocycleList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -442,11 +517,21 @@ public class ThermocycleEditor extends JPanel {
 
         thermocycleList.setSelectedIndex(0);
 
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Thermocycles", owner), editPanel).equals("OK")) {
-            return newThermocycles;
-        }
-        return Collections.EMPTY_LIST;
+        return Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Thermocycles", owner), editPanel).equals("OK");
+    }
 
+    private static List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws SQLException {
+        if(thermocycle.getId() < 0) {
+            return Collections.emptyList();
+        }
+        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycle.getId();
+        ResultSet resultSet = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement().executeQuery(sql);
+
+        List<String> plateNames = new ArrayList<String>();
+        while(resultSet.next()) {
+            plateNames.add(resultSet.getString(1));
+        }
+        return plateNames;
     }
 
     private static void setRightComponent(JSplitPane sp, Component component) {

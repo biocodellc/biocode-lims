@@ -114,32 +114,36 @@ public class PlateViewer extends JPanel {
 
             final GeneiousAction thermocycleAction = new GeneiousAction("View/Add Thermocycles", "Create new Thermocycles, or view existing ones", BiocodePlugin.getIcons("thermocycle_16.png")) {
                 public void actionPerformed(ActionEvent e) {
-                    final List<Thermocycle> newThermocycles = ThermocycleEditor.editThermocycles(getThermocycles(), selfReference);
-                    if (newThermocycles.size() > 0) {
+                   ThermocycleEditor editor = new ThermocycleEditor();
+                    if(!editor.editThermocycles(getThermocycles(), selfReference)) {
+                        return;
+                    }
+                    final List<Thermocycle> newThermocycles = editor.getNewThermocycles();
+                    final List<Thermocycle> deletedThermocycles = editor.getDeletedThermocycles();
+                    if (newThermocycles.size() > 0 || deletedThermocycles.size() > 0) {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 BiocodeService.block("Saving Thermocycles", selfReference);
                                 try {
+
+                                    String tableName;
                                     switch (plateView.getPlate().getReactionType()) {
                                         case PCR:
-                                            BiocodeService.getInstance().addPCRThermoCycles(newThermocycles);
+                                            tableName = "pcr_thermocycle";
                                             break;
                                         case CycleSequencing:
-                                            BiocodeService.getInstance().addCycleSequencingThermoCycles(newThermocycles);
+                                            tableName = "cyclesequencing_thermocycle";
                                             break;
                                         default:
                                             assert false : "Extractions do not have thermocycles!";
-                                            break;
+                                            return;
                                     }
-                                    Runnable runnable = new Runnable() { //reset the list of thermocycles (so that we know if the user adds more)
-                                        public void run() {
-                                            thermocycleModel.removeAllElements();
-                                            for (Thermocycle cycle : getThermocycles()) {
-                                                thermocycleModel.addElement(cycle);
-                                            }
-                                        }
-                                    };
-                                    ThreadUtilities.invokeNowOrWait(runnable);
+                                    if(newThermocycles.size() > 0) {
+                                        BiocodeService.getInstance().insertThermocycles(newThermocycles, tableName);
+                                    }
+                                    if(deletedThermocycles.size() > 0) {
+                                        BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, tableName);
+                                    }
                                 } catch (final TransactionException e1) {
                                     e1.printStackTrace();
                                     Runnable runnable = new Runnable() {
@@ -149,6 +153,17 @@ public class PlateViewer extends JPanel {
                                     };
                                     ThreadUtilities.invokeNowOrLater(runnable);
                                 }
+
+
+                                Runnable runnable = new Runnable() { //reset the list of thermocycles (so that we know if the user adds more)
+                                    public void run() {
+                                        thermocycleModel.removeAllElements();
+                                        for (Thermocycle cycle : getThermocycles()) {
+                                            thermocycleModel.addElement(cycle);
+                                        }
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrWait(runnable);
                                 BiocodeService.unBlock();
                             }
                         };
