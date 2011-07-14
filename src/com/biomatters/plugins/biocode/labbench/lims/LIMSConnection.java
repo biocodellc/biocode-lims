@@ -383,11 +383,6 @@ public class LIMSConnection {
         return getMatchingAssemblyDocuments(null, tissueSamples, callback, urnsToNotRetrieve, callback, sql, sqlValues);
     }
 
-
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, Collection<WorkflowDocument> workflows, RetrieveCallback callback) throws SQLException{
-        return getMatchingAssemblyDocuments(query, workflows, callback, null, callback);
-    }
-
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, final Collection<WorkflowDocument> workflows, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
@@ -439,7 +434,7 @@ public class LIMSConnection {
     }
 
     private List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws SQLException {
-        if(BiocodeService.getInstance().isLoggedIn()) {
+        if(!BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyList();
         }
         PreparedStatement statement = connection.prepareStatement(sql);
