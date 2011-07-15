@@ -281,6 +281,9 @@ public class PlateDocumentViewer extends DocumentViewer{
                 thermocycleAction.setEnabled(false);
                 return;
             }
+            if(!cycles.contains(plateView.getPlate().getThermocycle())) {
+                plateView.getPlate().setThermocycle(cycles.get(0));
+            }
             for(final Thermocycle tc : cycles) {
                 if(tc.getName() == null) {
                     continue;
@@ -288,11 +291,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 GeneiousAction action = new GeneiousAction(tc.getName()) {
                     public void actionPerformed(ActionEvent e) {
                         if(tc.getId() != plateView.getPlate().getThermocycle().getId()) {
-                            plateView.getPlate().setThermocycle(tc);
-                            updateToolbar(true);
-                            updateThremocycle();
-                            saveAction.setEnabled(true);
-                            updatePanel();
+                            selectThermocycle(tc);
                         }
                     }
                 };
@@ -314,6 +313,14 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
+    }
+
+    private void selectThermocycle(Thermocycle tc) {
+        plateView.getPlate().setThermocycle(tc);
+        updateToolbar(true);
+        updateThremocycle();
+        saveAction.setEnabled(true);
+        updatePanel();
     }
 
     private void updateThremocycle() {

@@ -25,6 +25,26 @@ public class Thermocycle implements XMLSerializable {
 
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Thermocycle that = (Thermocycle) o;
+
+        if (id != that.id) return false;
+        if (!name.equals(that.name)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name.hashCode();
+        result = 31 * result + id;
+        return result;
+    }
+
     public Thermocycle(String name, int id) {
         this.name = name;
         this.id = id;
