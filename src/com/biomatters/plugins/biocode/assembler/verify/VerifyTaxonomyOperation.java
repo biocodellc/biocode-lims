@@ -6,6 +6,8 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.types.TaxonomyDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -20,6 +22,7 @@ import java.util.*;
  * @version $Id$
  */
 public class VerifyTaxonomyOperation extends DocumentOperation {
+    protected Object taxonomyValue;
 
     public GeneiousActionOptions getActionOptions() {
         GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Verify Taxonomy...",
@@ -35,7 +38,9 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
         return new DocumentSelectionSignature[] {
-                new DocumentSelectionSignature(SequenceAlignmentDocument.class, 1, Integer.MAX_VALUE)
+                new DocumentSelectionSignature(SequenceAlignmentDocument.class, 1, Integer.MAX_VALUE),
+                new DocumentSelectionSignature(NucleotideSequenceDocument.class, 1, Integer.MAX_VALUE),
+                new DocumentSelectionSignature(SequenceListDocument.class, 1, Integer.MAX_VALUE)
         };
     }
 
@@ -57,7 +62,28 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.2, 0.8);
         progress.beginSubtask("Retrieving full taxonomies");
         progress.setIndeterminateProgress();
-        List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> annotatedDocsWithTaxons = fillInTaxonomyFromNcbi(contigMap.keySet(), progress);
+
+        Set<String> taxonValues = new LinkedHashSet<String>();
+        for(AnnotatedPluginDocument doc : contigMap.keySet()) {
+            taxonomyValue = doc.getFieldValue(DocumentField.TAXONOMY_FIELD);
+            if(taxonomyValue != null) {
+                taxonValues.add(taxonomyValue.toString());
+            }
+        }
+        Map<String, BiocodeTaxon> fullTaxonomies = fillInTaxonomyFromNcbi(taxonValues, progress);
+        List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> annotatedDocsWithTaxons = new ArrayList<Pair<AnnotatedPluginDocument, BiocodeTaxon>>();
+        for(AnnotatedPluginDocument doc : contigMap.keySet()) {
+            taxonomyValue = doc.getFieldValue(DocumentField.TAXONOMY_FIELD);
+            if(taxonomyValue != null) {
+                doc.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomyValue);
+                doc.saveDocument();
+                annotatedDocsWithTaxons.add(new Pair<AnnotatedPluginDocument, BiocodeTaxon>(doc, fullTaxonomies.get(taxonomyValue.toString())));
+            }
+            else {
+                annotatedDocsWithTaxons.add(new Pair<AnnotatedPluginDocument, BiocodeTaxon>(doc, null));
+            }
+        }
+
         if (progress.isCanceled()) return null;
         DatabaseService database = options.getDatabase();
         progress.beginSubtask();
@@ -73,24 +99,22 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
 
     private static final Map<String, BiocodeTaxon> TAXON_CACHE = new HashMap<String, BiocodeTaxon>();
 
-    private static List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> fillInTaxonomyFromNcbi(Set<AnnotatedPluginDocument> contigs, CompositeProgressListener progress) throws DocumentOperationException {
+    static Map<String, BiocodeTaxon> fillInTaxonomyFromNcbi(Set<String> taxonomies, ProgressListener progress) throws DocumentOperationException {
         GeneiousService taxonomyService = PluginUtilities.getGeneiousService("NCBI_taxonomy");
         if (!(taxonomyService instanceof DatabaseService)) {
             throw new DocumentOperationException("Could not find NCBI Taxonomy service. Make sure the NCBI Plugin is enabled.");
         }
         DatabaseService taxonomyDatabase = (DatabaseService) taxonomyService;
-        List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> taxons = new ArrayList<Pair<AnnotatedPluginDocument, BiocodeTaxon>>();
-        for (AnnotatedPluginDocument query : contigs) {
+        Map<String, BiocodeTaxon> taxons = new LinkedHashMap<String, BiocodeTaxon>();
+        double count = 0;
+        for (String taxonomy : taxonomies) {
+            progress.setProgress(count/taxonomies.size());
+            count++;
             if (progress.isCanceled()) return null;
-            Object taxonomyObject = query.getFieldValue(DocumentField.TAXONOMY_FIELD);
-            if (taxonomyObject == null) {
-                taxons.add(new Pair<AnnotatedPluginDocument, BiocodeTaxon>(query, null));
-                continue;
-            }
-            String taxonomy = taxonomyObject.toString();
             String[] levels = taxonomy.split(";");
             BiocodeTaxon taxon = null;
             List<String> skippedLevels = new ArrayList<String>();
+            progress.setMessage(levels[levels.length-1]);
 
             bothLoops1:
             for (int i = levels.length - 1; i >= 0; i--) {
@@ -146,11 +170,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
                     }
                 }
             }
-            if (taxon != null) {
-                query.setFieldValue(DocumentField.TAXONOMY_FIELD, taxon.toString());
-                query.saveDocument();
-            }
-            taxons.add(new Pair<AnnotatedPluginDocument, BiocodeTaxon>(query, taxon));
+            taxons.put(taxonomy, taxon);
         }
         return taxons;
     }

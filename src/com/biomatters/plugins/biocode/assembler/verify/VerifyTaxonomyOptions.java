@@ -6,6 +6,9 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -31,21 +34,43 @@ public class VerifyTaxonomyOptions extends Options {
 
         //check the integrity of the documents
         for(AnnotatedPluginDocument doc : documents) {
-            SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)doc.getDocument();
-            if(!alignment.isContig()) {
-                for(int i=0; i < alignment.getNumberOfSequences(); i++) {
-                    if(i == alignment.getContigReferenceSequenceIndex()) {
-                        continue;
+            if(SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)doc.getDocument();
+                if(!alignment.isContig()) {
+                    for(int i=0; i < alignment.getNumberOfSequences(); i++) {
+                        if(i == alignment.getContigReferenceSequenceIndex()) {
+                            continue;
+                        }
+                        AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
+                        if(referencedDocument == null) {
+                            throw new DocumentOperationException("Your alignment needs to have reference sequences to work with verify taxonomy");
+                        }
+                        if(referencedDocument.getFieldValue(DocumentField.TAXONOMY_FIELD) == null) {
+                            throw new DocumentOperationException("Your referenced sequence for '"+alignment.getSequence(i).getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
+                        }
                     }
-                    AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
-                    if(referencedDocument == null) {
-                        throw new DocumentOperationException("Your alignment needs to have reference sequences to work with verify taxonomy");
+                }
+                else if(SequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                    if(doc.getFieldValue(DocumentField.TAXONOMY_FIELD) == null) {
+                        throw new DocumentOperationException("Your sequence '"+doc.getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
                     }
-                    if(referencedDocument.getFieldValue(DocumentField.TAXONOMY_FIELD) == null) {
-                        throw new DocumentOperationException("Your referenced sequence for '"+alignment.getSequence(i).getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
+                }
+                else if(SequenceListDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                    //just test the first ten of each type - can't load the whole lot
+                    SequenceListDocument sequenceList = (SequenceListDocument)doc.getDocument();
+                    for(int i=0; i < Math.min(10, sequenceList.getNucleotideSequences().size()); i++) {
+                        if(sequenceList.getNucleotideSequences().get(i).getFieldValue(DocumentField.TAXONOMY_FIELD.getCode()) == null) {
+                            throw new DocumentOperationException("Your sequence '"+sequenceList.getNucleotideSequences().get(i).getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
+                        }
+                    }
+                    for(int i=0; i < Math.min(10, sequenceList.getAminoAcidSequences().size()); i++) {
+                        if(sequenceList.getAminoAcidSequences().get(i).getFieldValue(DocumentField.TAXONOMY_FIELD.getCode()) == null) {
+                            throw new DocumentOperationException("Your sequence '"+sequenceList.getNucleotideSequences().get(i).getName()+"' does not have any taxonomy annotated.  You need to have a valid taxonomy field on your document.");
+                        }
                     }
                 }
             }
+            
         }
 
         GeneiousService blastSuperService = PluginUtilities.getGeneiousService("NCBI_BLAST");
@@ -118,7 +143,7 @@ public class VerifyTaxonomyOptions extends Options {
 
         boolean contigSelected = false;
         for (AnnotatedPluginDocument doc : documents) {
-            if (!BiocodeUtilities.isAlignmentOfChromatograms(doc)) {
+            if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass()) && !BiocodeUtilities.isAlignmentOfChromatograms(doc)) {
                 contigSelected = true;
                 break;
             }

@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.assembler.lims.MarkSequencesAsSubmittedInL
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyDocumentViewerFactory;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
+import com.biomatters.plugins.biocode.assembler.verify.FillInTaxonomyOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMS;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
@@ -264,6 +265,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     @Override
     public DocumentOperation[] getDocumentOperations() {
         ArrayList<DocumentOperation> operations = new ArrayList<DocumentOperation>(Arrays.asList(
+                new FillInTaxonomyOperation(),
                 new CherryPickingDocumentOperation(),
                 new NewPlateDocumentOperation(),
                 new DownloadChromatogramsFromLimsOperation(false),
@@ -295,5 +297,10 @@ public class BiocodePlugin extends GeneiousPlugin {
     @Override
     public DocumentFileExporter[] getDocumentFileExporters() {
         return new DocumentFileExporter[] {new WorkflowSummaryExporter(), new PlateExporter(), new VerifyTaxonomyExporter(), new CherryPickingTableExporter()};
+    }
+
+    @Override
+    public DocumentFileImporter[] getDocumentFileImporters() {
+        return new DocumentFileImporter[] {new BoldTsvImporter()};
     }
 }
