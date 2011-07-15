@@ -115,6 +115,14 @@ public class CycleSequencingCocktail extends Cocktail{
         return new CycleSequencingCocktail();
     }
 
+    public String getTableName() {
+        return "cyclesequencing_cocktail";
+    }
+
+    public Reaction.Type getReactionType() {
+        return Reaction.Type.CycleSequencing;
+    }
+
     public String getSQLString() {
         String s = "INSERT INTO cyclesequencing_cocktail (name, ddh2o, buffer, bigDye, notes, bufferConc, bigDyeConc, templateConc, templateAmount, extraItem, extraItemAmount, primerAmount, primerConc) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddH2O")+", "+options.getValueAsString("BufferX")+", "+options.getValueAsString("Big Dye")+", '"+options.getValueAsString("notes").replace("'", "''")+"', "+options.getValueAsString("BufferVol")+",  "+options.getValueAsString("Big DyeConc")+", "+options.getValueAsString("Template Conc")+", '"+options.getValueAsString("Template")+"', '"+options.getValueAsString("extraItem")+"', "+options.getValueAsString("extraItemAmount")+", '"+options.getValueAsString("Primer")+"', "+options.getValueAsString("PrimerConc")+")";
         System.out.println(s);

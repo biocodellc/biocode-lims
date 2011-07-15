@@ -80,32 +80,34 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(Cocktail.getAllCocktailsOfType(Reaction.Type.PCR), PCRCocktail.class, cocktailOption.getComponent());
-                if (newCocktails.size() > 0) {
-                    Runnable runnable = new Runnable() {
-                        public void run() {
-                            try {
-                                BiocodeService.block("Adding Cocktails", cocktailButton.getComponent());
-                                BiocodeService.getInstance().addNewPCRCocktails(newCocktails);
-                                final List<OptionValue> cocktails = getCocktails();
-
-                                if(cocktails.size() > 0) {
-                                    Runnable runnable = new Runnable() {
-                                        public void run() {
-                                            cocktailOption.setPossibleValues(cocktails);
-                                        }
-                                    };
-                                    ThreadUtilities.invokeNowOrLater(runnable);
-                                }
-                            } catch (final TransactionException e1) {
-                                Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
-                            } finally {
-                                BiocodeService.unBlock();
-                            }
-                        }
-                    };
-                    new Thread(runnable).start();
+                final CocktailEditor<PCRCocktail> editor = new CocktailEditor<PCRCocktail>();
+                if(!editor.editCocktails(BiocodeService.getInstance().getPCRCocktails(), PCRCocktail.class, cocktailOption.getComponent())) {
+                    return;
                 }
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        try {
+                            BiocodeService.block("Adding Cocktails", cocktailButton.getComponent());
+                            BiocodeService.getInstance().addNewCocktails(editor.getNewCocktails());
+                            BiocodeService.getInstance().removeCocktails(editor.getDeletedCocktails());
+                            final List<OptionValue> cocktails = getCocktails();
+
+                            if(cocktails.size() > 0) {
+                                Runnable runnable = new Runnable() {
+                                    public void run() {
+                                        cocktailOption.setPossibleValues(cocktails);
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrLater(runnable);
+                            }
+                        } catch (final TransactionException e1) {
+                            Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
+                        } finally {
+                            BiocodeService.unBlock();
+                        }
+                    }
+                };
+                new Thread(runnable).start();
                 updateCocktailOption(cocktailOption);
             }
         };
@@ -120,8 +122,8 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
 //                    }
                     if(o.getName().equals("cocktail")) {
                         Integer cocktailId = Integer.parseInt(((Options.OptionValue)o.getValue()).getName());
-                        List<Cocktail> cocktailList = BiocodeService.getInstance().getPCRCocktails();
-                        for(Cocktail cocktail : cocktailList) {
+                        List<PCRCocktail> cocktailList = BiocodeService.getInstance().getPCRCocktails();
+                        for(PCRCocktail cocktail : cocktailList) {
                             if(cocktail.getId() == cocktailId) {
                                 sum += cocktail.getReactionVolume(cocktail.getOptions());
                             }

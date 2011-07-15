@@ -102,32 +102,39 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final List<? extends Cocktail> newCocktails = Cocktail.editCocktails(Cocktail.getAllCocktailsOfType(Reaction.Type.CycleSequencing), CycleSequencingCocktail.class, cocktailButton.getComponent());
-                if (newCocktails.size() > 0) {
-                    Runnable runnable = new Runnable() {
-                        public void run() {
-                            try {
-                                BiocodeService.block("Adding Cocktails", cocktailButton.getComponent());
-                                BiocodeService.getInstance().addNewCycleSequencingCocktails(newCocktails);
-                                List<OptionValue> cocktails = getCocktails();
+                final CocktailEditor<CycleSequencingCocktail> editor = new CocktailEditor<CycleSequencingCocktail>();
+                if(!editor.editCocktails(BiocodeService.getInstance().getCycleSequencingCocktails(), CycleSequencingCocktail.class, cocktailButton.getComponent())) {
+                    return;
+                }
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        try {
+                            BiocodeService.block("Adding Cocktails", cocktailButton.getComponent());
+                            BiocodeService.getInstance().addNewCocktails(editor.getNewCocktails());
+                            BiocodeService.getInstance().removeCocktails(editor.getDeletedCocktails());
+                            final List<OptionValue> cocktails = getCocktails();
 
-                                if(cocktails.size() > 0) {
-                                    cocktailsOption.setPossibleValues(cocktails);
-                                }
-                            } catch (final TransactionException e1) {
+                            if(cocktails.size() > 0) {
                                 Runnable runnable = new Runnable() {
                                     public void run() {
-                                        Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
+                                        cocktailsOption.setPossibleValues(cocktails);
                                     }
                                 };
                                 ThreadUtilities.invokeNowOrLater(runnable);
-                            } finally {
-                                BiocodeService.unBlock();
                             }
+                        } catch (final TransactionException e1) {
+                            Runnable runnable = new Runnable() {
+                                public void run() {
+                                    Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
+                                }
+                            };
+                            ThreadUtilities.invokeNowOrLater(runnable);
+                        } finally {
+                            BiocodeService.unBlock();
                         }
-                    };
-                    new Thread(runnable).start();
-                }
+                    }
+                };
+                new Thread(runnable).start();
             }
         };
         cocktailButton.addActionListener(cocktailButtonListener);
@@ -172,8 +179,8 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
 //                    }
                     if(o.getName().equals("cocktail")) {
                         Integer cocktailId = Integer.parseInt(((Options.OptionValue)o.getValue()).getName());
-                        List<Cocktail> cocktailList = BiocodeService.getInstance().getCycleSequencingCocktails();
-                        for(Cocktail cocktail : cocktailList) {
+                        List<CycleSequencingCocktail> cocktailList = BiocodeService.getInstance().getCycleSequencingCocktails();
+                        for(CycleSequencingCocktail cocktail : cocktailList) {
                             if(cocktail.getId() == cocktailId) {
                                 sum += cocktail.getReactionVolume(cocktail.getOptions());    
                             }

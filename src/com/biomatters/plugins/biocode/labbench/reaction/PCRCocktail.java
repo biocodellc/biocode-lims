@@ -108,6 +108,14 @@ public class PCRCocktail extends Cocktail{
         options.addCustomOption(areaOption);
     }
 
+    public String getTableName() {
+        return "pcr_cocktail";
+    }
+
+    public Reaction.Type getReactionType() {
+        return Reaction.Type.PCR;
+    }
+
     public String getSQLString() {
         return "INSERT INTO pcr_cocktail (name, ddH20, buffer, mg, bsa, dNTP, taq, notes, bufferConc, mgConc, dNTPConc, taqConc, templateAmount, templateConc, bsaConc, fwPrAmount, fwPrConc, revPrAmount, revPrConc, extraItem, extraItemAmount) VALUES ('"+options.getValueAsString("name").replace("'", "''")+"', "+options.getValueAsString("ddH20")+", "+options.getValueAsString("Buffer")+", "+options.getValueAsString("Mg")+", "+options.getValueAsString("BSA")+", "+options.getValueAsString("dNTP")+", "+options.getValueAsString("TAQ")+", '"+options.getValueAsString("notes")+"', "+options.getValue("BufferConc")+", "+options.getValue("MgConc")+", "+options.getValue("dNTPConc")+", "+options.getValue("TAQConc")+", "+options.getValue("template")+", "+options.getValue("template Conc")+", "+options.getValue("BSAConc")+", "+options.getValue("fwd Primer")+", "+options.getValue("fwd PrimerConc")+", "+options.getValue("rev Primer")+", "+options.getValue("rev PrimerConc")+", '"+options.getValueAsString("extraItem")+"', "+options.getValue("extraItemAmount")+")";
     }

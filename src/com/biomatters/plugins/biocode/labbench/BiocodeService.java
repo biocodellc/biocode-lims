@@ -772,7 +772,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return BiocodePlugin.getIcons("biocode24.png");
     }
 
-    public void addNewPCRCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{
+    public void addNewCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{
         if(newCocktails.size() > 0) {
             for(Cocktail cocktail : newCocktails) {
                 limsConnection.executeUpdate(cocktail.getSQLString());
@@ -781,19 +781,59 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         buildCaches();
     }
 
-    public void addNewCycleSequencingCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{
-        if(newCocktails.size() > 0) {
-            for(Cocktail cocktail : newCocktails) {
-                limsConnection.executeUpdate(cocktail.getSQLString());
+    public void removeCocktails(List<? extends Cocktail> deletedCocktails) throws TransactionException{
+        try {
+            for(Cocktail cocktail : deletedCocktails) {
+
+                String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
+                PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);           
+                if(cocktail.getId() >= 0) {
+                    if(getPlatesUsingCocktail(cocktail).size() > 0) {
+                        throw new TransactionException("The cocktail "+cocktail.getName()+" is in use by reactions in your database.  Only unused cocktails can be removed.");
+                    }
+                    statement.setInt(1, cocktail.getId());
+                    statement.executeUpdate();
+                }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new TransactionException("Could not delete cocktails: "+e.getMessage(), e);
         }
         buildCaches();
+    }
+
+    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws SQLException{
+        if(limsConnection == null) {
+            throw new SQLException("You are not logged in");
+        }
+        if(cocktail.getId() < 0) {
+            return Collections.emptyList();
+        }
+        String tableName;
+        switch(cocktail.getReactionType()) {
+            case PCR:
+                tableName = "pcr";
+                break;
+            case CycleSequencing:
+                tableName = "cyclesequencing";
+                break;
+            default:
+                throw new RuntimeException(cocktail.getReactionType()+" reactions cannot have a cocktail");
+        }
+        String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktail.getId();
+        ResultSet resultSet = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement().executeQuery(sql);
+
+        Set<String> plateNames = new LinkedHashSet<String>();
+        while(resultSet.next()) {
+            plateNames.add(resultSet.getString(1));
+        }
+        return plateNames;
     }
 
     private List<Thermocycle> PCRThermocycles = null;
     private List<Thermocycle> cyclesequencingThermocycles = null;
-    private List<Cocktail> PCRCocktails = null;
-    private List<Cocktail> cyclesequencingCocktails = null;
+    private List<PCRCocktail> PCRCocktails = null;
+    private List<CycleSequencingCocktail> cyclesequencingCocktails = null;
     private List<DisplayFieldsTemplate> extractionDisplayedFields = null;
     private List<DisplayFieldsTemplate> pcrDisplayedFields = null;
     private List<DisplayFieldsTemplate> cycleSequencingDisplayedFields = null;
@@ -839,17 +879,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         saveDisplayedFieldsToDisk(Reaction.Type.CycleSequencing, cycleSequencingDisplayedFields);
     }
 
-    private List<Cocktail> getCycleSequencingCocktailsFromDisk() throws JDOMException, IOException, XMLSerializationException{
+    private List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDisk() throws JDOMException, IOException, XMLSerializationException{
         File file = new File(dataDirectory, "cyclesequencingCocktails.xml");
-        return getCocktails(file);
+        return (List<CycleSequencingCocktail>)getCocktails(file);
     }
 
-    private List<Cocktail> getPCRCocktailsFromDisk() throws IOException, JDOMException, XMLSerializationException {
+    private List<PCRCocktail> getPCRCocktailsFromDisk() throws IOException, JDOMException, XMLSerializationException {
         File file = new File(dataDirectory, "PCRCocktails.xml");
-        return getCocktails(file);
+        return (List<PCRCocktail>)getCocktails(file);
     }
 
-    private List<Cocktail> getCocktails(File file) throws JDOMException, IOException, XMLSerializationException {
+    private List<? extends Cocktail> getCocktails(File file) throws JDOMException, IOException, XMLSerializationException {
         if(!file.exists()) {
             return Collections.emptyList();
         }
@@ -938,7 +978,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(!file.exists()) {
             createNewFile(file);
         }
-        saveCocktails(file, PCRCocktails);
+        saveCocktails(file, cyclesequencingCocktails);
     }
 
     private void savePCRCocktailsToDisk() throws IOException {
@@ -946,10 +986,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(!file.exists()) {
             createNewFile(file);
         }
-        saveCocktails(file, cyclesequencingCocktails);
+        saveCocktails(file, PCRCocktails);
     }
 
-    private void saveCocktails(File file, List<Cocktail> cocktails) throws IOException {
+    private void saveCocktails(File file, List<? extends Cocktail> cocktails) throws IOException {
         if(cocktails == null || cocktails.size() == 0) {
             if(!file.delete()) {
                 file.deleteOnExit();
@@ -1022,9 +1062,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    private List<Cocktail> getPCRCocktailsFromDatabase() throws TransactionException{
+    private List<PCRCocktail> getPCRCocktailsFromDatabase() throws TransactionException{
         ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM pcr_cocktail");
-        List<Cocktail> cocktails = new ArrayList<Cocktail>();
+        List<PCRCocktail> cocktails = new ArrayList<PCRCocktail>();
         try {
             while(resultSet.next()) {
                 cocktails.add(new PCRCocktail(resultSet));    
@@ -1038,9 +1078,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return cocktails;
     }
 
-    private List<Cocktail> getCycleSequencingCocktailsFromDatabase() throws TransactionException{
+    private List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase() throws TransactionException{
         ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM cyclesequencing_cocktail");
-        List<Cocktail> cocktails = new ArrayList<Cocktail>();
+        List<CycleSequencingCocktail> cocktails = new ArrayList<CycleSequencingCocktail>();
         try {
             while(resultSet.next()) {
                 cocktails.add(new CycleSequencingCocktail(resultSet));    
@@ -1163,6 +1203,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             final PreparedStatement statement4 = getActiveLIMSConnection().getConnection().prepareStatement(sql4);
             for(Thermocycle thermocycle : cycles) {
                 if(thermocycle.getId() >= 0) {
+                    if(getPlatesUsingThermocycle(thermocycle).size() > 0) {
+                        throw new SQLException("The thermocycle "+thermocycle.getName()+" is being used by plates in your database.  Only unused thermocycles can be removed");
+                    }
                     for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
                         for(Thermocycle.State state : cycle.getStates()) {
                             statement.setInt(1, state.getId());
@@ -1185,6 +1228,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void insertThermocycles(List<Thermocycle> cycles, String tableName) throws TransactionException {
+        if(limsConnection == null) {
+            throw new TransactionException("You are not logged in");
+        }
         try {
             Connection connection = limsConnection.getConnection();
             connection.setAutoCommit(false);
@@ -1216,6 +1262,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             throw new TransactionException("Could not add thermocycle(s): "+e.getMessage(), e);
         }
         buildCaches();
+    }
+
+    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws SQLException {
+        if(thermocycle.getId() < 0) {
+            return Collections.emptyList();
+        }
+        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycle.getId();
+        ResultSet resultSet = limsConnection.getConnection().createStatement().executeQuery(sql);
+
+        List<String> plateNames = new ArrayList<String>();
+        while(resultSet.next()) {
+            plateNames.add(resultSet.getString(1));
+        }
+        return plateNames;
     }
 
     public boolean hasWriteAccess() {
@@ -1293,8 +1353,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         ThreadUtilities.invokeNowOrLater(runnable);
     }
 
-    public List<Cocktail> getPCRCocktails() {
-        List<Cocktail> cocktailList = new ArrayList<Cocktail>();
+    public List<PCRCocktail> getPCRCocktails() {
+        List<PCRCocktail> cocktailList = new ArrayList<PCRCocktail>();
         //cocktailList.add(new PCRCocktail("No Cocktail"));
         if(PCRCocktails != null) {
             cocktailList.addAll(PCRCocktails);
@@ -1302,8 +1362,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return cocktailList;
     }
 
-    public List<Cocktail> getCycleSequencingCocktails() {
-        List<Cocktail> cocktailList = new ArrayList<Cocktail>();
+    public List<CycleSequencingCocktail> getCycleSequencingCocktails() {
+        List<CycleSequencingCocktail> cocktailList = new ArrayList<CycleSequencingCocktail>();
         //cocktailList.add(new CycleSequencingCocktail("No Cocktail"));
         if(cyclesequencingCocktails != null) {
             cocktailList.addAll(cyclesequencingCocktails);
