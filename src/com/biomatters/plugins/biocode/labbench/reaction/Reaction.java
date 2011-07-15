@@ -936,6 +936,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         if(((CycleSequencingReaction)reaction).getTraces() != null) {
                             int reactionId = reaction.getId();
                             for(Integer traceId : ((CycleSequencingReaction)reaction).getTracesToRemoveOnSave()) {
+                                if(!BiocodeService.getInstance().deleteAllowed("traces")) {
+                                    throw new SQLException("It appears that you do not have permission to delete traces.  Please contact your System Administrator for assistance");
+                                }
                                 clearTracesStatement.setInt(1, traceId);
                                 clearTracesStatement.execute();
                             }

@@ -177,6 +177,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         if(assemblyResult.workflowId == null || assemblyResult.extractionId == null) {
             return 0;
         }
+        if(!BiocodeService.getInstance().deleteAllowed("assembly")) {
+            throw new DocumentOperationException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance");
+        }
 
         String sql = "DELETE FROM assembly WHERE workflow=? AND extraction_id=?";
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();

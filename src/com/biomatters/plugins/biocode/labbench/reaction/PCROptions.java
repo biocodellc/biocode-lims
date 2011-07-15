@@ -101,7 +101,12 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
                                 ThreadUtilities.invokeNowOrLater(runnable);
                             }
                         } catch (final TransactionException e1) {
-                            Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", getPanel()), e1.getMessage());
+                            Runnable runnable = new Runnable() {
+                                public void run() {
+                                    Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", cocktailButton.getComponent()), e1.getMessage());
+                                }
+                            };
+                            ThreadUtilities.invokeNowOrLater(runnable);
                         } finally {
                             BiocodeService.unBlock();
                         }

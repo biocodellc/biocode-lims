@@ -45,6 +45,8 @@ public class LIMSConnection {
     Connection connection2;
     private LocalLIMS localLIMS;
     private Options limsOptions;
+    private String username;
+    private String schema;
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
@@ -90,6 +92,19 @@ public class LIMSConnection {
         return !connectionOptions.getValueAsString("connectionType").equals("remote");    
     }
 
+    public String getUsername() {
+        if(isLocal()) {
+            throw new IllegalStateException("Username does not apply to local connections");
+        }
+        return username;
+    }
+
+    public String getSchema() {
+        if(isLocal()) {
+            throw new IllegalStateException("Schema does not apply to local connections");
+        }
+        return schema;
+    }
 
     public void connect(Options LIMSOptions) throws ConnectionException {
         if(LIMSOptions.getValueAsString("connectionType").equals("remote")) {
@@ -143,7 +158,8 @@ public class LIMSConnection {
         //connect to the LIMS
         this.limsOptions = LIMSOptions;
         Properties properties = new Properties();
-        properties.put("user", LIMSOptions.getValueAsString("username"));
+        username = LIMSOptions.getValueAsString("username");
+        properties.put("user", username);
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
@@ -151,10 +167,11 @@ public class LIMSConnection {
             connection = driver.connect("jdbc:mysql://" + serverUrn, properties);
             connection2 = driver.connect("jdbc:mysql://"+ serverUrn, properties);
             Statement statement = connection.createStatement();
-            connection.createStatement().execute("USE "+LIMSOptions.getValueAsString("database"));
-            connection2.createStatement().execute("USE "+LIMSOptions.getValueAsString("database"));
+            schema = LIMSOptions.getValueAsString("database");
+            connection.createStatement().execute("USE "+ schema);
+            connection2.createStatement().execute("USE "+ schema);
             ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
-            serverUrn += "/"+LIMSOptions.getValueAsString("database");
+            serverUrn += "/"+ schema;
             if(!resultSet.next()) {
                 throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
             }
@@ -210,6 +227,10 @@ public class LIMSConnection {
     }
 
     public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
+        if(!BiocodeService.getInstance().deleteAllowed(tableName)) {
+            throw new SQLException("It appears that you do not have permission to delete from "+tableName+".  Please contact your System Administrator for assistance");
+        }
+
         List<String> terms = new ArrayList<String>();
         int count = 0;
         for(Object id : ids) {

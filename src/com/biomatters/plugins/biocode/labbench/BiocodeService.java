@@ -120,6 +120,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void deleteSequences(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
+        try {
+            if(!deleteAllowed("assembly")) {
+                throw new DatabaseServiceException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance", false);
+            }
+        } catch (SQLException e) {
+            //this might not be a real error so I'm going to let it continue...
+            e.printStackTrace();
+            assert false : e.getMessage();
+        }
+
         List<Integer> sequencesToDelete = new ArrayList<Integer>();
         List<AnnotatedPluginDocument> documentsWithNoIdField = new ArrayList<AnnotatedPluginDocument>();
         for(AnnotatedPluginDocument doc : documents) {
@@ -781,8 +791,54 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         buildCaches();
     }
 
+    public boolean deleteAllowed(String tableName) throws SQLException{
+        if(!isLoggedIn) {
+            throw new SQLException("You need to be logged in");
+        }
+        if(limsConnection.isLocal()) {
+            return true;
+        }
+
+        try {
+            //check schema privileges
+            String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE GRANTEE LIKE ? AND PRIVILEGE_TYPE='DELETE' AND TABLE_SCHEMA=?;";
+            PreparedStatement statement = limsConnection.getConnection().prepareStatement(schemaSql);
+            statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
+            statement.setString(2, limsConnection.getSchema());
+            ResultSet resultSet = statement.executeQuery();
+            if(resultSet.next()) {
+                return true;
+            }
+            resultSet.close();
+
+            //check table privileges
+            String tableSql = "select * from information_schema.TABLE_PRIVILEGES WHERE GRANTEE LIKE ? AND PRIVILEGE_TYPE='DELETE' AND TABLE_SCHEMA=? AND TABLE_NAME=?;";
+            statement = limsConnection.getConnection().prepareStatement(tableSql);
+            statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
+            statement.setString(2, limsConnection.getSchema());
+            statement.setString(3, tableName);
+            resultSet = statement.executeQuery();
+            if(resultSet.next()) {
+                return true;
+            }
+            resultSet.close();
+        }
+        catch(SQLException ex) {
+            ex.printStackTrace();
+            assert false : ex.getMessage();
+            // there could be a number of errors here due to the user not having privileges to access the schema information,
+            // so I don't want to halt on this error as it could stop the user from deleting when they are actually allowed...
+        }
+
+        //Can't find privileges...
+        return false;
+    }
+
     public void removeCocktails(List<? extends Cocktail> deletedCocktails) throws TransactionException{
         try {
+            if(!BiocodeService.getInstance().deleteAllowed("cocktail")) {
+                throw new TransactionException("It appears that you do not have permission to delete cocktails.  Please contact your System Administrator for assistance");
+            }
             for(Cocktail cocktail : deletedCocktails) {
 
                 String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
@@ -1197,6 +1253,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String sql3 = "DELETE  FROM thermocycle WHERE thermocycle.id=?";
         String sql4 = "DELETE FROM "+tableName+" WHERE cycle =?";
         try {
+            if(!BiocodeService.getInstance().deleteAllowed("state") || !BiocodeService.getInstance().deleteAllowed("cycle") || !BiocodeService.getInstance().deleteAllowed("thermocycle") || !BiocodeService.getInstance().deleteAllowed(tableName)) {
+                throw new TransactionException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance");
+            }
+
             final PreparedStatement statement = getActiveLIMSConnection().getConnection().prepareStatement(sql);
             final PreparedStatement statement2 = getActiveLIMSConnection().getConnection().prepareStatement(sql2);
             final PreparedStatement statement3 = getActiveLIMSConnection().getConnection().prepareStatement(sql3);
@@ -1880,6 +1940,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         //replace the images
         if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
+            if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
+                throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
+            }
             PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
             deleteImagesStatement.execute();
             for(GelImage image : plate.getImages()) {
