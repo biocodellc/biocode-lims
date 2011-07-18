@@ -1,21 +1,20 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
-import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GButton;
+import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.geneious.publicapi.components.GPanel;
-import com.biomatters.geneious.publicapi.components.GButton;
-import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import org.jdom.Element;
-import org.virion.jam.panels.OptionsPanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
-import java.util.List;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Steve
@@ -67,7 +66,7 @@ public class ButtonMultipleOptions extends Options {
         }
     }
 
-    public void setMultipleOptions(String name, Options multipleOptions) {
+    public void setButtonMultipleOptions(String name, Options multipleOptions) {
         addMultipleOptions(name, multipleOptions, false);
     }
 
@@ -110,7 +109,7 @@ public class ButtonMultipleOptions extends Options {
         return panel;
     }
 
-    public List<Options> getMultipleOptions() {
+    public List<Options> getButtonMultipleOptions() {
         return new ArrayList<Options>(optionsList);
     }
 
