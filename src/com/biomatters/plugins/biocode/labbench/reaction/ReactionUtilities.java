@@ -109,8 +109,8 @@ public class ReactionUtilities {
         options.endAlignHorizontally();
 
         options.beginAlignHorizontally(null, false);
-        Options.BooleanOption checkPlateName = options.addBooleanOption("checkPlateName", "", false);
-        Options.Option<String, ? extends JComponent> label2 = options.addLabel("Check plate name is correct, where plate name is:");
+        Options.BooleanOption checkPlateName = options.addBooleanOption("checkPlateName", "Check plate name is correct.", false);
+        Options.Option<String, ? extends JComponent> label2 = options.addLabel("Plate name is");
         checkPlateName.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
         NamePartOption namePartOption = new NamePartOption("namePart", "");
         options.addCustomOption(namePartOption);
