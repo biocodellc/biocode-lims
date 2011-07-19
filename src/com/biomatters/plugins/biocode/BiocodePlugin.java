@@ -265,7 +265,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     @Override
     public DocumentOperation[] getDocumentOperations() {
         ArrayList<DocumentOperation> operations = new ArrayList<DocumentOperation>(Arrays.asList(
-                new FillInTaxonomyOperation(),
+//                new FillInTaxonomyOperation(),
                 new CherryPickingDocumentOperation(),
                 new NewPlateDocumentOperation(),
                 new DownloadChromatogramsFromLimsOperation(false),
@@ -299,8 +299,8 @@ public class BiocodePlugin extends GeneiousPlugin {
         return new DocumentFileExporter[] {new WorkflowSummaryExporter(), new PlateExporter(), new VerifyTaxonomyExporter(), new CherryPickingTableExporter()};
     }
 
-    @Override
-    public DocumentFileImporter[] getDocumentFileImporters() {
-        return new DocumentFileImporter[] {new BoldTsvImporter()};
-    }
+//    @Override
+//    public DocumentFileImporter[] getDocumentFileImporters() {
+//        return new DocumentFileImporter[] {new BoldTsvImporter()};
+//    }
 }
