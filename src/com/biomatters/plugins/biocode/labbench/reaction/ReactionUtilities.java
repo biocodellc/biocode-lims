@@ -115,7 +115,7 @@ public class ReactionUtilities {
         NamePartOption namePartOption = new NamePartOption("namePart", "");
         options.addCustomOption(namePartOption);
         namePartOption.setDescription("Each name is split into segments by the given separator, then the n-th segment is used to identify the sequence's plate");
-        Options.Option<String, ? extends JComponent> label3 = options.addLabel("part of name,");
+        Options.Option<String, ? extends JComponent> label3 = options.addLabel("part of name");
         checkPlateName.addDependent(namePartOption,  true);
         checkPlateName.addDependent(label2, true);
         checkPlateName.addDependent(label3, true);
