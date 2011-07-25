@@ -82,7 +82,9 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
                     File file = getExportFile(directory, annotatedDocument, abiExporter);
                     AnnotatedPluginDocument[] documentArray = {annotatedDocument};
                     Options exporterOptions = abiExporter.getOptions(documentArray);
-                    exporterOptions.setValue("exportMethod", "originalSource");
+                    if(exporterOptions != null) {
+                        exporterOptions.setValue("exportMethod", "originalSource");
+                    }
                     abiExporter.export(file, documentArray, ProgressListener.EMPTY, exporterOptions);
                     formats.put(annotatedDocument, "ABI");
                     names.put(annotatedDocument, file.getName());
