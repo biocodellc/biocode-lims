@@ -748,16 +748,17 @@ public class ConnectionManager implements XMLSerializable{
         private void createLoginOptions() {
             loginOptions = new LoginOptions(ConnectionManager.class);
             if(loginOptionsValues != null) {
+                final Element loginOptionsValuesLocal = loginOptionsValues;
                 ThreadUtilities.invokeNowOrWait(new Runnable() {
                     public void run() {
-                        loginOptions.valuesFromXML(loginOptionsValues);
+                        loginOptions.valuesFromXML((Element)loginOptionsValuesLocal.clone());
                         try {
                             loginOptions.updateOptions();
                         } catch (ConnectionException e) {
                             //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
                             e.printStackTrace();
                         }
-                        loginOptions.valuesFromXML(loginOptionsValues);
+                        loginOptions.valuesFromXML((Element)loginOptionsValuesLocal.clone());
                     }
                 });
             }
