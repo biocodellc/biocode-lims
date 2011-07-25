@@ -187,7 +187,11 @@ public class PlateView extends JPanel {
                         if(ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), selfReference, creating)) {
                             fireEditListeners();
                         }
+                        for(Reaction r : selectedReactions) {
+                            r.invalidateFieldWidthCache();
+                        }
                     }
+                    repaint();
                     revalidate();
                     repaint();
                 }

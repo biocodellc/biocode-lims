@@ -244,6 +244,10 @@ public class PlateViewer extends JPanel {
                     reactions = Arrays.asList(plateView.getPlate().getReactions());
                 }
                 ReactionUtilities.editReactions(reactions, plateView, true);
+                for(Reaction r : reactions) {
+                    r.invalidateFieldWidthCache();
+                }
+                plateView.repaint();
                 plateView.invalidate();
                 scroller.getViewport().validate();
                 plateView.repaint();

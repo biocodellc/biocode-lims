@@ -73,6 +73,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public void setBaseFontSize(int fontSze) {
         labelFont = new Font("sansserif", Font.PLAIN, fontSze);
         firstLabelFont = new Font("sansserif", Font.BOLD, fontSze+2);
+        invalidateFieldWidthCache();
+    }
+
+    public void invalidateFieldWidthCache() {
         fieldWidthCache = null;
     }
 
@@ -111,7 +115,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public void setFimsSample(FimsSample sample) {
         this.fimsSample = sample;
-        fieldWidthCache = null;
+        invalidateFieldWidthCache();
         if(workflow != null) {
             workflow.setFimsSample(fimsSample);
         }
@@ -292,7 +296,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public void setFieldsToDisplay(List<DocumentField> fields) {
         this.displayableFields = fields;
-        fieldWidthCache = null;
+        invalidateFieldWidthCache();
     }
 
     public Object getFieldValue(String fieldCode) {

@@ -539,6 +539,9 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
             if(ReactionUtilities.editReactions(selectedReactions, plateView, false)) {
                 saveAction.setEnabled(true);
+                for(Reaction r : selectedReactions) {
+                    r.invalidateFieldWidthCache();
+                }
             }
             updatePanel();
         }

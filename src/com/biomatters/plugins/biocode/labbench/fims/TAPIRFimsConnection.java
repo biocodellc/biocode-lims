@@ -180,8 +180,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
                 if(recordsElement != null) {
                     List<Element> recordList = new ArrayList<Element>(recordsElement.getChildren("record", namespace));
                     for (Element e : recordList) {
-                        e.detach();
-                        samples.add(new TapirFimsSample(e, searchAttributes, taxonomyAttributes));
+                        samples.add(new TapirFimsSample((Element)e.clone(), searchAttributes, taxonomyAttributes));
                     }
                     return samples;
                 }
