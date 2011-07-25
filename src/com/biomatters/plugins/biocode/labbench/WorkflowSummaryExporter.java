@@ -42,8 +42,9 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
 
     @Override
     public void export(File file, AnnotatedPluginDocument[] documents, ProgressListener progressListener, Options options) throws IOException {
+        WritableWorkbook workbook = null;
         try {
-            WritableWorkbook workbook = Workbook.createWorkbook(file);
+            workbook = Workbook.createWorkbook(file);
 
             int count = 0;
             for (TableDocumentViewerFactory factory : factoriesToExport) {
@@ -56,10 +57,18 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
                 }
             }
 
-            workbook.write();
+            if(count > 0) {
+                workbook.write();
+            }
             workbook.close();
         } catch (WriteException e) {
             throw new IOException(e.getMessage());
+        } finally {
+            if(workbook != null) {
+                try {
+                    workbook.close();
+                } catch (WriteException e) {}
+            }
         }
     }
 
