@@ -145,22 +145,6 @@ public class ConnectionManager implements XMLSerializable{
         }
         final AtomicReference<JButton> okButton = new AtomicReference<JButton>();
 
-        ListSelectionListener selectionListener = new ListSelectionListener() {
-            public void valueChanged(ListSelectionEvent e) {
-                int newSelectedIndex = connectionsList.getSelectedIndex();
-                boolean enabled = connections.size() > 0 && newSelectedIndex >= 0;
-                removeButton.setEnabled(enabled);
-                if (newSelectedIndex == selectedConnection) {
-                    return;
-                }
-                if(okButton.get() != null) {
-                    okButton.get().setEnabled(false);
-                }
-                selectedConnection = newSelectedIndex;               
-                updateCenterPanel(okButton.get());
-            }
-        };
-        connectionsList.getSelectionModel().addListSelectionListener(selectionListener);
 
         connectionsPanel.addAncestorListener(new AncestorListener(){
             public void ancestorAdded(AncestorEvent event) {
@@ -219,7 +203,6 @@ public class ConnectionManager implements XMLSerializable{
                 updateCenterPanel(okButton.get());
             }
         });
-        selectionListener.valueChanged(null);
         addRemovePanel.add(removeButton);
         final JCheckBox connectBox = new JCheckBox("Connect on startup", connectOnStartup);
         connectBox.addChangeListener(new ChangeListener(){
@@ -253,6 +236,24 @@ public class ConnectionManager implements XMLSerializable{
                 return super.getPreferredSize();
             }
         };
+
+        ListSelectionListener selectionListener = new ListSelectionListener() {
+            public void valueChanged(ListSelectionEvent e) {
+                int newSelectedIndex = connectionsList.getSelectedIndex();
+                boolean enabled = connections.size() > 0 && newSelectedIndex >= 0;
+                removeButton.setEnabled(enabled);
+                if (newSelectedIndex == selectedConnection) {
+                    return;
+                }
+                if(okButton.get() != null) {
+                    okButton.get().setEnabled(false);
+                }
+                selectedConnection = newSelectedIndex;
+                updateCenterPanel(okButton.get());
+            }
+        };
+        connectionsList.getSelectionModel().addListSelectionListener(selectionListener);
+        selectionListener.valueChanged(null);   
 
         connectionsPanel.add(leftPanel, BorderLayout.WEST);
         connectionsPanel.add(centerPanel, BorderLayout.CENTER);
