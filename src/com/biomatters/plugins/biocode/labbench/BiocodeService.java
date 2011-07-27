@@ -178,6 +178,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void deletePlates(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
+        try {
+            if(!deleteAllowed("plate")) {
+                throw new DatabaseServiceException("It appears that you do not have permission to delete plate records.  Please contact your System Administrator for assistance", false);
+            }
+        } catch (SQLException e) {
+            //this might not be a real error so I'm going to let it continue...
+            e.printStackTrace();
+            assert false : e.getMessage();
+        }
         List<Plate> platesToDelete = new ArrayList<Plate>();
         for(AnnotatedPluginDocument doc : documents) {
             if(PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
