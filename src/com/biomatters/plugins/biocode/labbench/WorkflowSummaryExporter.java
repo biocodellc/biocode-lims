@@ -60,7 +60,9 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
             if(count > 0) {
                 workbook.write();
             }
-            workbook.close();
+            else {
+                throw new IOException("Geneious could not find any tables to export for your selected documents");
+            }
         } catch (WriteException e) {
             throw new IOException(e.getMessage());
         } finally {
