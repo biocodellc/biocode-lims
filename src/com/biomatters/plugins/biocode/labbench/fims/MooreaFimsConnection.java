@@ -51,7 +51,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         return new MooreaFimsConnectionOptions(this.getClass(), "mooreaFIMS");
     }
 
-    public void connect(Options options) throws ConnectionException {
+    public void _connect(Options options) throws ConnectionException {
 
         //instantiate the driver class
         try {

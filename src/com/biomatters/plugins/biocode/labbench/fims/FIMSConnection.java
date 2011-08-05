@@ -48,12 +48,33 @@ public abstract class FIMSConnection {
      */
     public abstract PasswordOptions getConnectionOptions();
 
+    public void connect(Options options) throws ConnectionException {
+        _connect(options);
+
+        if(getTissueSampleDocumentField() == null) {
+            throw new ConnectionException("You have an empty tissue sample field.  Please check your FIMS connection options");
+        }
+
+        if(getTaxonomyAttributes() == null || getTaxonomyAttributes().isEmpty()) {
+            throw new ConnectionException("You must have at least one taxonomy field.  Please check your FIMS connection options");
+        }
+
+        if(canGetTissueIdsFromFimsTissuePlate()) {
+            if(getPlateDocumentField() == null) {
+                throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a plate field.  Please check your FIMS connection options");
+            }
+            if(getWellDocumentField() == null) {
+                throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a well field.  Please check your FIMS connection options");    
+            }
+        }
+    }
+
     /**
      *  connects to the field management database
      * @param options the options taken from {@link #getConnectionOptions()} and passed to the user.
      * @throws com.biomatters.plugins.biocode.labbench.ConnectionException if the client is unable to connect - either because of a connection error, or bad credentials
      */
-    public abstract void connect(Options options) throws ConnectionException;
+    public abstract void _connect(Options options) throws ConnectionException;
 
     public abstract void disconnect();
 

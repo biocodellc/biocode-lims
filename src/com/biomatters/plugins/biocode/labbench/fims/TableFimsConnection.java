@@ -34,7 +34,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     public abstract TableFimsConnectionOptions _getConnectionOptions();
 
-    public final void connect(Options optionsa) throws ConnectionException {
+    public final void _connect(Options optionsa) throws ConnectionException {
 
         TableFimsConnectionOptions options = (TableFimsConnectionOptions)optionsa;
         tissueCol = options.getTissueColumn();

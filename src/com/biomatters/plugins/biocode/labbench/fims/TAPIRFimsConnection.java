@@ -50,7 +50,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return connectionOptions;
     }
 
-    public void connect(Options options) throws ConnectionException {
+    public void _connect(Options options) throws ConnectionException {
         client = new TAPIRClient(options.getValueAsString("accessPoint"));
         try {
             searchAttributes = getMatchingFields(client.getSearchAttributes(), false);
