@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.sql.*;
@@ -84,17 +86,26 @@ public class LocalLIMS {
                     if(databaseOption != null) {
                         databaseOption.setPossibleValues(getDbValues(dbNames));
                     }
-                    String newDbName = addDatabaseOptions.getValueAsString("dbName");
+                    final String newDbName = addDatabaseOptions.getValueAsString("dbName");
                     for(String s : dbNames) {
                         if(s.equalsIgnoreCase(newDbName)) {
                             Dialogs.showMessageDialog("The database "+newDbName+" already exists!", "Database Exists", connectionOptions.getPanel(), Dialogs.DialogIcon.INFORMATION);
                             return;
                         }
                     }
-                    try {
-                        createDatabase(newDbName);
-                    } catch (SQLException e1) {
-                        Dialogs.showMessageDialog("Could not create database: "+e1.getMessage(), "Could not create database", connectionOptions.getPanel(), Dialogs.DialogIcon.WARNING);
+                    final AtomicReference<Exception> exception = new AtomicReference<Exception>();
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            try {
+                                createDatabase(newDbName);
+                            } catch (SQLException e1) {
+                                exception.set(e1);
+                            }
+                        }
+                    };
+                    BiocodeService.block("Creating Database", connectionOptions.getPanel(), runnable);
+                    if(exception.get() != null) {
+                        Dialogs.showMessageDialog("Could not create database: "+exception.get().getMessage(), "Could not create database", connectionOptions.getPanel(), Dialogs.DialogIcon.WARNING);
                     }
                     if(databaseOption != null) {
                         dbNames = update();
