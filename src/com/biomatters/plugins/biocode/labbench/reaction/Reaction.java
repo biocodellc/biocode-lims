@@ -77,6 +77,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public void invalidateFieldWidthCache() {
+        assert EventQueue.isDispatchThread();
         fieldWidthCache = null;
     }
 
@@ -512,6 +513,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     private void initFieldWidthCache() {
+        assert EventQueue.isDispatchThread();
         List<DocumentField> fieldList = new ArrayList<DocumentField>(getFieldsToDisplay());
         if(fieldList.size() == 0) {
             fieldList.add(new DocumentField("a", "", "testField", String.class, false, false));
