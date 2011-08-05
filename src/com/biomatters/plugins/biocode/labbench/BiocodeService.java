@@ -1985,7 +1985,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private void isPlateValid(Plate plate, Connection connection) throws BadDataException, SQLException {
         if(plate.getName() == null || plate.getName().length() == 0) {
-            throw new BadDataException("Pates cannot have empty names");
+            throw new BadDataException("Plates cannot have empty names");
         }
         if(plate.getId() < 0) {
             PreparedStatement plateCheckStatement = connection.prepareStatement("SELECT name FROM plate WHERE name=?");
