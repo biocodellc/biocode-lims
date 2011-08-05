@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -77,8 +78,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public void invalidateFieldWidthCache() {
-        assert EventQueue.isDispatchThread();
-        fieldWidthCache = null;
+        Runnable runnable = new Runnable() {
+            public void run() {
+                fieldWidthCache = null;
+            }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
     }
 
 
@@ -518,8 +523,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(fieldList.size() == 0) {
             fieldList.add(new DocumentField("a", "", "testField", String.class, false, false));
         }
-        int[] localFieldWidthCache = new int[fieldList.size()];
-        fieldWidthCache = localFieldWidthCache;
         for(int i=0; i < fieldList.size(); i++) {
             String value = getDisplayableValue(fieldList.get(i));
             if(value.length() == 0) {
@@ -529,10 +532,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             TextLayout tl = new TextLayout(value, font, fontRenderContext);
             Rectangle2D layoutBounds = tl.getBounds();
             if(layoutBounds != null) {
-                localFieldWidthCache[i] = (int) layoutBounds.getWidth();
+                fieldWidthCache[i] = (int) layoutBounds.getWidth();
             }
             else {
-                localFieldWidthCache[i] = 60;
+                fieldWidthCache[i] = 60;
                 assert false : "The text knows no bounds!";
             }
             charHeight = (int)tl.getBounds().getHeight();
