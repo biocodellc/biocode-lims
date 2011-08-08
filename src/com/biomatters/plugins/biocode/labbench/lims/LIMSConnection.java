@@ -12,6 +12,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
+import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
 import com.biomatters.options.PasswordOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
@@ -353,8 +354,33 @@ public class LIMSConnection {
         }
     }
 
-
+    /**
+     * This splits up the query because running large queries with lots of OR statements was freezing up the server - better to have the search take a bit longer than crash out and not run at all
+     * @param query
+     * @param tissueSamples
+     * @param callback
+     * @param urnsToNotRetrieve
+     * @param callback1
+     * @return
+     * @throws SQLException
+     */
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissues(Query query, List<FimsSample> tissueSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, RetrieveCallback callback1) throws SQLException{
+        if(tissueSamples == null || tissueSamples.size() == 0) {
+            return getMatchingAssemblyDocumentsForTissue(query, null, callback,  urnsToNotRetrieve, callback1);    
+        }
+
+        List<AnnotatedPluginDocument> assemblyDocuments = new ArrayList<AnnotatedPluginDocument>();
+        for(FimsSample sample : tissueSamples) {
+            GeneralUtilities.println("Searching "+sample.getId());
+            long currentTime = System.currentTimeMillis();
+            assemblyDocuments.addAll(getMatchingAssemblyDocumentsForTissue(query, sample, callback,  urnsToNotRetrieve, callback1));
+            GeneralUtilities.println("Searching "+sample.getId()+" took "+(System.currentTimeMillis()-currentTime)/1000+" seconds");
+        }
+        return assemblyDocuments;
+    }
+
+
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissue(Query query, FimsSample tissue, RetrieveCallback callback, URN[] urnsToNotRetrieve, RetrieveCallback callback1) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
 
@@ -371,23 +397,21 @@ public class LIMSConnection {
             operator = CompoundSearchQuery.Operator.AND;
         }
 
-        if(refinedQueries.size() == 0 && (tissueSamples == null || tissueSamples.size() == 0)) {
+        if(refinedQueries.size() == 0 && tissue == null) {
             return Collections.emptyList();
         }
 
         String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
         List<String> terms = new ArrayList<String>();
         List<Object> sqlValues = new ArrayList<Object>();
-        if(tissueSamples != null && tissueSamples.size() > 0) {
-            for(FimsSample sample : tissueSamples) {
-                terms.add("extraction.sampleId=?");
-                sqlValues.add(sample.getId());
-            }
+        if(tissue != null) {
+            terms.add("extraction.sampleId=?");
+            sqlValues.add(tissue.getId());
             sql = sql+"("+StringUtilities.join(" OR ", terms)+")";
         }
 
         if(refinedQueries.size() > 0)  {
-            if(tissueSamples != null && tissueSamples.size() > 0) {
+            if(tissue != null) {
                 String join;
                 switch(operator) {
                     case AND:
@@ -400,8 +424,7 @@ public class LIMSConnection {
             }
             sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
         }
-        System.out.println(sql);
-        return getMatchingAssemblyDocuments(null, tissueSamples, callback, urnsToNotRetrieve, callback, sql, sqlValues);
+        return getMatchingAssemblyDocuments(null, Arrays.asList(tissue), callback, urnsToNotRetrieve, callback, sql, sqlValues);
     }
 
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, final Collection<WorkflowDocument> workflows, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
@@ -450,8 +473,16 @@ public class LIMSConnection {
             }
             sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
         }
-        System.out.println(sql);
+        printSql(sql, sqlValues);
         return getMatchingAssemblyDocuments(workflows, null, callback, urnsToNotRetrieve, cancelable, sql, sqlValues);
+    }
+
+    private static void printSql(String sql, List sqlValues){
+        for(Object o : sqlValues) {
+            sql = sql.replaceFirst("\\?", ""+o);
+        }
+
+        System.out.println(sql);
     }
 
     private List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws SQLException {
@@ -460,6 +491,7 @@ public class LIMSConnection {
         }
         PreparedStatement statement = connection.prepareStatement(sql);
         fillStatement(sqlValues, statement);
+        printSql(sql, sqlValues);
         BiocodeUtilities.CancelListeningThread listeningThread = null;
         if(cancelable != null) {
             //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
@@ -476,6 +508,9 @@ public class LIMSConnection {
                 if(SystemUtilities.isAvailableMemoryLessThan(50)) {
                     statement.cancel();
                     throw new SQLException("Search cancelled due to lack of free memory");
+                }
+                if(callback != null && callback.isCanceled()) {
+                    return Collections.emptyList();
                 }
                 AnnotatedPluginDocument doc = createAssemblyDocument(resultSet, urnsToNotRetrieve);
                 if(doc == null) {
@@ -858,26 +893,6 @@ public class LIMSConnection {
 
                 Object[] queryValues = q.getValues();
 
-                //if(code.contains("date") && (q.getCondition() == Condition.EQUAL || q.getCondition() == Condition.NOT_EQUAL)) {
-//                    //hack for dates - we need to check that the date is greater than 12:00am on the day in question and less than 12:00am on the next day
-//                    sql.append("(");
-//                    Date dateValue = (Date) queryValues[0];
-//                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? ">" : "<")+" ");
-//                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()-86300000), q.getCondition());//minus one day...
-//                    if(q.getCondition() == Condition.EQUAL) {
-//                        sql.append(" AND ");
-//                    }
-//                    else {
-//                        sql.append(" OR ");
-//                    }
-//                    sql.append(" "+ code +" "+(q.getCondition() == Condition.EQUAL ? "<" : ">")+" ");
-//                    appendValue(inserts, sql, false, termSurrounder, new Date(dateValue.getTime()), q.getCondition());
-//                    sql.append(")");
-//                    if(i < queryValues.length - 1) {
-//                        sql.append(" AND ");
-//                    }
-                //}
-                //else {
                 //noinspection StringConcatenationInsideStringBufferAppend
                 sql.append(" "+ code +" "+ termSurrounder.getJoin() +" ");
 

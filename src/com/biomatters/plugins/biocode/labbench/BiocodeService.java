@@ -521,7 +521,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             buildCaches();
             loggingIn = false;
             isLoggedIn = true;
-            reportingService.notifyLoginStatusChanged();
+            if(reportingService != null) {
+                reportingService.notifyLoginStatusChanged();
+            }
         } catch (ConnectionException e1) {
             if(block) {
                 unBlock();
@@ -1727,8 +1729,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     protected void initialize(GeneiousServiceListener listener) {
         initializeConnectionManager();
-        reportingService = new ReportingService();
-        listener.childServiceAdded(reportingService);
+        //reportingService = new ReportingService();
+        //listener.childServiceAdded(reportingService);
 
 
         if(connectionManager.connectOnStartup()) {

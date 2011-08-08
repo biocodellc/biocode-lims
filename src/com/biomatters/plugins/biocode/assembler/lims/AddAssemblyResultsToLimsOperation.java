@@ -222,7 +222,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             if (sequencingPlateCache.containsKey(plateName)) {
                 plate = sequencingPlateCache.get(plateName);
             } else {
-                Query q = Query.Factory.createQuery(plateName);
+                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);//Query.Factory.createQuery(plateName);
                 List<PlateDocument> plateDocuments;
                 try {
                     plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
