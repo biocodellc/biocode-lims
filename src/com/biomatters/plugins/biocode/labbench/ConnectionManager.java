@@ -22,9 +22,7 @@ import javax.swing.event.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -407,8 +405,12 @@ public class ConnectionManager implements XMLSerializable{
                 Connection newConnection = new Connection(e);
                 addConnection(newConnection);
             } catch (XMLSerializationException e1) {
-                e1.printStackTrace();
-                //do nothing - don't add the connection
+                StringWriter stringWriter = new StringWriter();
+                PrintWriter writer = new PrintWriter(stringWriter);
+                e1.printStackTrace(writer);
+                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error restoring Connection");
+                dialogOptions.setMoreOptionsButtonText("Show details", "Hide details");
+                Dialogs.showMoreOptionsDialog(dialogOptions, "There was an error restoring one or more of your saved connections from disk.  The affected connections will not be loaded.  Please send the detailed report to biocode.lims@gmail.com", stringWriter.toString());
             }
         }
         selectedConnection = Integer.parseInt(element.getChildText("SelectedConnection"));
@@ -463,6 +465,9 @@ public class ConnectionManager implements XMLSerializable{
         public Connection(Element e) throws XMLSerializationException{
             if(e == null) {
                 throw new XMLSerializationException("You cannot create a new connection with a null element");
+            }
+            else if(1 == 1) {
+                throw new XMLSerializationException("test");
             }
             fromXML(e);
         }
