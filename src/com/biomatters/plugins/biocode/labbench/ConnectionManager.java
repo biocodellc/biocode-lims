@@ -466,9 +466,6 @@ public class ConnectionManager implements XMLSerializable{
             if(e == null) {
                 throw new XMLSerializationException("You cannot create a new connection with a null element");
             }
-            else if(1 == 1) {
-                throw new XMLSerializationException("test");
-            }
             fromXML(e);
         }
 
