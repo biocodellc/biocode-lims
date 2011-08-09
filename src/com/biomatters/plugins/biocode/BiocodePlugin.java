@@ -264,12 +264,11 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public DocumentOperation[] getDocumentOperations() {
-        ArrayList<DocumentOperation> operations = new ArrayList<DocumentOperation>(Arrays.asList(
+        DocumentOperation[] operations = new DocumentOperation[] {
 //                new FillInTaxonomyOperation(),
                 new CherryPickingDocumentOperation(),
                 new NewPlateDocumentOperation(),
                 new DownloadChromatogramsFromLimsOperation(false),
-                //new SetReadDirectionOperation(),
                 new BatchChromatogramExportOperation(),
                 new VerifyTaxonomyOperation(),
                 new AnnotateLimsDataOperation(),
@@ -278,11 +277,8 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(false, false),
                 new MarkSequencesAsSubmittedInLimsOperation()
 //                new ExportForBarstoolOperation(false)
-        ));
-        if(Geneious.getMinorApiVersion() < 40) {  //we moved the set read direction operation into the assembly plugin in version 4.40 of the API
-            operations.add(new SetReadDirectionOperation());    
-        }
-        return operations.toArray(new DocumentOperation[operations.size()]);
+        };
+        return operations;
     }
 
     @Override
