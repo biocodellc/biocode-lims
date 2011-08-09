@@ -371,6 +371,9 @@ public class LIMSConnection {
 
         List<AnnotatedPluginDocument> assemblyDocuments = new ArrayList<AnnotatedPluginDocument>();
         for(FimsSample sample : tissueSamples) {
+            if(callback1 != null && callback.isCanceled()) {
+                return Collections.emptyList();
+            }
             GeneralUtilities.println("Searching "+sample.getId());
             long currentTime = System.currentTimeMillis();
             assemblyDocuments.addAll(getMatchingAssemblyDocumentsForTissue(query, sample, callback,  urnsToNotRetrieve, callback1));
@@ -618,8 +621,8 @@ public class LIMSConnection {
                 }
             }
         }
+        String name = resultSet.getString("assembly.extraction_id")+" "+resultSet.getString("workflow.locus");
         if(qualities == null || resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
-            String name = resultSet.getString("assembly.extraction_id");
             String consensus = resultSet.getString("consensus");
             String description = "Assembly consensus sequence for "+name;
             java.sql.Date created = resultSet.getDate("date");
@@ -637,7 +640,6 @@ public class LIMSConnection {
             String sequenceString = resultSet.getString("assembly.consensus");
             sequenceString = sequenceString.replace("-", "");
             NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
-            String name = resultSet.getString("assembly.extraction_id");
             sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, new Date(resultSet.getDate("date").getTime()), graph, urn);
         }
         AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
