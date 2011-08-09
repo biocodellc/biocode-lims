@@ -523,6 +523,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(fieldList.size() == 0) {
             fieldList.add(new DocumentField("a", "", "testField", String.class, false, false));
         }
+        fieldWidthCache = new int[fieldList.size()];
         for(int i=0; i < fieldList.size(); i++) {
             String value = getDisplayableValue(fieldList.get(i));
             if(value.length() == 0) {

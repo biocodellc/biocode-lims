@@ -95,10 +95,15 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public List<DocumentField> getDisplayableFields() {
-        return Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
+        List<DocumentField> fields = new ArrayList<DocumentField>();
+        if(getFimsSample() != null) {
+            fields.addAll(getFimsSample().getFimsAttributes());
+            fields.addAll(getFimsSample().getTaxonomyAttributes());
+        }
+        fields.addAll(Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
                 new DocumentField("Last Modified", "The date this document was last modified", "lastModified", java.util.Date.class, true, false),
-                LIMSConnection.WORKFLOW_LOCUS_FIELD)
-        ;
+                LIMSConnection.WORKFLOW_LOCUS_FIELD));
+        return fields;
     }
 
     public Object getFieldValue(String fieldCodeName) {
@@ -110,6 +115,9 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
         if("lastModified".equals(fieldCodeName)) {
             return new Date(workflow.getLastModified().getTime());
+        }
+        if(getFimsSample() != null) {
+            return getFimsSample().getFimsAttributeValue(fieldCodeName);
         }
         return null;
     }

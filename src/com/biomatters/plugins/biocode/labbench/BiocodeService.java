@@ -404,7 +404,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             activeFIMSConnection = null;
         }
         limsConnection.disconnect();
-        reportingService.notifyLoginStatusChanged();
+        if(reportingService != null) {
+            reportingService.notifyLoginStatusChanged();
+        }
         updateStatus();
     }
 

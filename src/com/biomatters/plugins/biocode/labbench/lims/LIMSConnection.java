@@ -356,42 +356,41 @@ public class LIMSConnection {
 
     /**
      * This splits up the query because running large queries with lots of OR statements was freezing up the server - better to have the search take a bit longer than crash out and not run at all
-     * @param query
      * @param tissueSamples
      * @param callback
      * @param urnsToNotRetrieve
-     * @param callback1
+     * @param cancelable
      * @return
      * @throws SQLException
      */
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissues(Query query, List<FimsSample> tissueSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, RetrieveCallback callback1) throws SQLException{
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissues(Query query, List<FimsSample> tissueSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
         if(tissueSamples == null || tissueSamples.size() == 0) {
-            return getMatchingAssemblyDocumentsForTissue(query, null, callback,  urnsToNotRetrieve, callback1);    
+            return Collections.emptyList();
         }
 
         List<AnnotatedPluginDocument> assemblyDocuments = new ArrayList<AnnotatedPluginDocument>();
         for(FimsSample sample : tissueSamples) {
-            if(callback1 != null && callback.isCanceled()) {
+            if(cancelable != null && cancelable.isCanceled()) {
                 return Collections.emptyList();
             }
             GeneralUtilities.println("Searching "+sample.getId());
             long currentTime = System.currentTimeMillis();
-            assemblyDocuments.addAll(getMatchingAssemblyDocumentsForTissue(query, sample, callback,  urnsToNotRetrieve, callback1));
+            assemblyDocuments.addAll(getMatchingAssemblyDocumentsForTissue(query, sample, callback,  urnsToNotRetrieve, cancelable));
             GeneralUtilities.println("Searching "+sample.getId()+" took "+(System.currentTimeMillis()-currentTime)/1000+" seconds");
         }
         return assemblyDocuments;
     }
 
 
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissue(Query query, FimsSample tissue, RetrieveCallback callback, URN[] urnsToNotRetrieve, RetrieveCallback callback1) throws SQLException{
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissue(Query query, FimsSample tissue, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
 
         if(query instanceof BasicSearchQuery) {
-            query = generateAdvancedQueryFromBasicQuery(query);
+            refinedQueries = Collections.emptyList();
+            operator = CompoundSearchQuery.Operator.OR;
         }
-
-        if(query instanceof CompoundSearchQuery) {
+        else if(query instanceof CompoundSearchQuery) {
             refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList(PLATE_NAME, PLATE_TYPE, PLATE_DATE));
             operator = ((CompoundSearchQuery)query).getOperator();
         }
@@ -404,6 +403,15 @@ public class LIMSConnection {
             return Collections.emptyList();
         }
 
+        String join;
+        switch(operator) {
+            case AND:
+                join = " AND ";
+                break;
+            default:
+                join = " OR ";
+        }
+
         String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
         List<String> terms = new ArrayList<String>();
         List<Object> sqlValues = new ArrayList<Object>();
@@ -411,23 +419,16 @@ public class LIMSConnection {
             terms.add("extraction.sampleId=?");
             sqlValues.add(tissue.getId());
             sql = sql+"("+StringUtilities.join(" OR ", terms)+")";
+            if(refinedQueries.size() > 0) {
+                sql = sql + join;
+            }
         }
 
         if(refinedQueries.size() > 0)  {
-            if(tissue != null) {
-                String join;
-                switch(operator) {
-                    case AND:
-                        join = " AND ";
-                        break;
-                    default:
-                        join = " OR ";
-                }
-                sql = sql + join;
-            }
             sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
         }
-        return getMatchingAssemblyDocuments(null, Arrays.asList(tissue), callback, urnsToNotRetrieve, callback, sql, sqlValues);
+
+        return getMatchingAssemblyDocuments(null, Arrays.asList(tissue), callback, urnsToNotRetrieve, cancelable, sql, sqlValues);
     }
 
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, final Collection<WorkflowDocument> workflows, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
@@ -726,7 +727,7 @@ public class LIMSConnection {
             }
             sql.append(")");
             if(refinedQueries.size() > 0) {
-                sql.append(" OR ");
+                sql.append(operator == CompoundSearchQuery.Operator.OR ? " OR " : " AND ");
             }
         }
         if(refinedQueries.size() > 0) {
@@ -1001,7 +1002,7 @@ public class LIMSConnection {
         }
         if(refinedQueries.size() > 0) {
             if(plateIds.size() > 0) {
-                sql.append(" OR (");
+                sql.append(operator == CompoundSearchQuery.Operator.AND ? " AND (" : " OR (");
             }
             else{
                 sql.append(" (");
@@ -1048,9 +1049,14 @@ public class LIMSConnection {
             int plateId = resultSet.getInt("plate.id");
 
             if(previousId >= 0 && previousId != plateId) {
-                Plate prevPlate = plateMap.get(previousId);
+                final Plate prevPlate = plateMap.get(previousId);
                 if(prevPlate != null) {
-                    prevPlate.initialiseReactions();
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            prevPlate.initialiseReactions();
+                        }
+                    };
+                    ThreadUtilities.invokeNowOrWait(runnable);
                     String error = checkReactions(prevPlate);
                     if(error != null) {
                         //noinspection StringConcatenationInsideStringBufferAppend

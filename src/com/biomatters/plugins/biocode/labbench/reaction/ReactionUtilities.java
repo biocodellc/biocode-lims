@@ -867,6 +867,9 @@ public class ReactionUtilities {
     }
 
     public static List<NucleotideSequenceDocument> getAllSequences(List<Trace> traces) {
+        if(traces == null) {
+            return Collections.emptyList();
+        }
         List<NucleotideSequenceDocument> sequences = new ArrayList<NucleotideSequenceDocument>();
         for(Trace trace : traces) {
             if(trace.getSequences() != null) {
