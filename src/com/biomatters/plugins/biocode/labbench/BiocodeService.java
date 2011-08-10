@@ -1468,9 +1468,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{
-        if(reactions.size() == 0) {
+        if(reactions.size() == 0 || BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyMap();
         }
+        Connection connection = limsConnection.getConnection();
         String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
         String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
         StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
@@ -1490,7 +1491,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(count == 0) {
             return Collections.emptyMap();
         }
-        Connection connection = limsConnection.getConnection();
         PreparedStatement statement = connection.prepareStatement(sql.toString());
         int reactionCount = 1;
         for (Reaction reaction : reactions) {
