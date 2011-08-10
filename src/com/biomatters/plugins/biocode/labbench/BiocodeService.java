@@ -1177,10 +1177,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             resultSet.next();
             while(true) {
                 try {
-                    resultSet.getInt("thermocycle.id");
                     Thermocycle thermocycle = Thermocycle.fromSQL(resultSet);
                     if(thermocycle != null) {
-                    tCycles.add(thermocycle);
+                        tCycles.add(thermocycle);
                     }
                     else {
                         break;

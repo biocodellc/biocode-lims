@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ public class Thermocycle implements XMLSerializable {
         Thermocycle that = (Thermocycle) o;
 
         if (id != that.id) return false;
-        if (!name.equals(that.name)) return false;
+        if (!GeneralUtilities.safeEquals(name, that.name)) return false;
 
         return true;
     }
@@ -83,14 +84,14 @@ public class Thermocycle implements XMLSerializable {
     }
 
     public static Thermocycle fromSQL(ResultSet resultSet) throws SQLException{
-        int id = resultSet.getInt("thermocycle.id");
+        int id = resultSet.getInt("cycle");
         String name = resultSet.getString("thermocycle.name");
         String notes = resultSet.getString("thermocycle.notes");
         Thermocycle tCycle = new Thermocycle(name, id);
         tCycle.setNotes(notes);
         Cycle currentCycle = null;
         int count = 0;
-        while(resultSet.getInt("thermocycle.id") == id) {
+        while(resultSet.getInt("cycle") == id) {
             count++;
             int cycleId = resultSet.getInt("cycle.id");
             if(currentCycle == null || currentCycle.getId() != cycleId) {

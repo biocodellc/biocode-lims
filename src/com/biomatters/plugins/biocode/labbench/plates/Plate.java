@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -224,20 +225,28 @@ public class Plate implements XMLSerializable {
     public void initialiseReactions() {
         for(int i=0; i < rows; i++) {
             for(int j = 0; j < cols; j++) {
-                int index = cols * i + j;
+                final int index = cols * i + j;
                 if(reactions[index] != null) {
                     continue;
                 }
                 final Reaction reaction = Reaction.getNewReaction(type);
-                reaction.setPlateId(id);
-                reaction.setPosition(index);
-                reaction.setPlateName(getName());
-                if(type != null) {
-                    reaction.setLocationString(getWellName(i,j));
-                }
-                Dimension preferredSize = reaction.getPreferredSize();
-                reaction.setBounds(new Rectangle(1+(preferredSize.width+1)*j, 1+(preferredSize.height+1)*i, preferredSize.width, preferredSize.height));
-                reaction.setThermocycle(getThermocycle());
+                final String wellName = getWellName(i, j);
+                final int j1 = j;
+                final int i1 = i;
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        reaction.setPlateId(id);
+                        reaction.setPosition(index);
+                        reaction.setPlateName(getName());
+                        if(type != null) {
+                            reaction.setLocationString(wellName);
+                        }
+                        Dimension preferredSize = reaction.getPreferredSize();
+                        reaction.setBounds(new Rectangle(1+(preferredSize.width+1)* j1, 1+(preferredSize.height+1)* i1, preferredSize.width, preferredSize.height));
+                        reaction.setThermocycle(getThermocycle());
+                    }
+                };
+                ThreadUtilities.invokeNowOrLater(runnable);
 
                 reactions[index] = reaction;
             }
