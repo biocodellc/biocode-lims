@@ -1351,10 +1351,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return plateNames;
     }
 
-    public boolean hasWriteAccess() {
-        return true; //todo: figure out how to do this...
-    }
-
     private static BlockingDialog blockingDialog;
 
     public static synchronized void block(final String message, final Component parentComponent, final Runnable task){
@@ -1468,7 +1464,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{
-        if(reactions.size() == 0 || BiocodeService.getInstance().isLoggedIn()) {
+        if(reactions.size() == 0 || !BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyMap();
         }
         Connection connection = limsConnection.getConnection();
