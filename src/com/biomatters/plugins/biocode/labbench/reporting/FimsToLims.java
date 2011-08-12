@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
@@ -36,12 +35,21 @@ public class FimsToLims {
     private List<Options.OptionValue> loci;
     private List<SimpleListener> fimsTableChangedListeners = new ArrayList<SimpleListener>();
     private Map<String, String> friendlyNameMap = new HashMap<String, String>();
+    private boolean limsHasFimsValues;
+    private Date dateLastCopied;
 
     public FimsToLims(FIMSConnection fimsConnection, LIMSConnection limsConnection) throws SQLException{
         this.fims = fimsConnection;
         this.lims = limsConnection;
+        popuplateHasFimsLimsValues();
+        updateEverything();
+    }
+
+    void updateEverything() throws SQLException {
         populateLoci();
+        populateFimsFields();
         populateFriendlyNameMap();
+        populateDateLastCopied();
     }
 
     public String getTissueColumnId() {
@@ -80,6 +88,42 @@ public class FimsToLims {
         }
     }
 
+    private void popuplateHasFimsLimsValues() throws SQLException {
+        String sql;
+        if(lims.isLocal()) {
+            sql = "SELECT * FROM INFORMATION_SCHEMA.SYSTEM_TABLES";
+        }
+        else {
+            sql = "SHOW TABLES";
+        }
+        Statement statement = lims.getConnection().createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+        while(resultSet.next()) {
+            if(FIMS_DATE_TABLE.equals(resultSet.getString(lims.isLocal() ? 3 : 1).toLowerCase())) {
+                resultSet.close();
+                limsHasFimsValues =  true;
+                return;
+            }
+        }
+        limsHasFimsValues =false;
+    }
+
+    private void populateDateLastCopied() throws SQLException {
+        if(!limsHasFimsValues()) {
+            dateLastCopied = new Date(0);
+        }
+        String sql = "SELECT value FROM "+FIMS_DATE_TABLE;
+        Statement statement = lims.getConnection().createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+        while(resultSet.next()) {
+            Date date = resultSet.getDate(1);
+            dateLastCopied = new Date(date.getTime());
+            resultSet.close();
+            return;
+        }
+        dateLastCopied = new Date(0);
+    }
+
     public List<Options.OptionValue> getLoci() {
         return loci;
     }
@@ -101,37 +145,31 @@ public class FimsToLims {
         return fieldCode;
     }
 
-    public boolean limsHasFimsValues() throws SQLException{
-        String sql;
-        if(lims.isLocal()) {
-            sql = "SELECT * FROM INFORMATION_SCHEMA.SYSTEM_TABLES";
+    private void populateFimsFields() throws SQLException {
+        String sql = "DESCRIBE "+FIMS_VALUES_TABLE;
+        List<DocumentField> results = new ArrayList<DocumentField>();
+        if(!limsHasFimsValues) {
+            return;
         }
-        else {
-            sql = "SHOW TABLES";
-        }
-        Statement statement = lims.getConnection().createStatement();
-        ResultSet resultSet = statement.executeQuery(sql);
-        while(resultSet.next()) {
-            if(FIMS_DATE_TABLE.equals(resultSet.getString(lims.isLocal() ? 3 : 1).toLowerCase())) {
-                resultSet.close();
-                return true;
+        ResultSet resultsSet = lims.getConnection().createStatement().executeQuery(sql);
+        while(resultsSet.next()) {
+        DocumentField field = SqlUtilities.getDocumentField(resultsSet);
+            if(field != null) {
+                field = new DocumentField(getFriendlyName(field.getName()), field.getDescription(), field.getCode(), field.getValueType(), field.isDefaultVisible(), field.isEditable());
+                results.add(field);
             }
         }
-        return false;
+        fimsFields = results;
     }
 
-    public Date getDateLastCopied() throws SQLException{
-        if(!limsHasFimsValues()) {
-            return null;
-        }
-        String sql = "SELECT value FROM "+FIMS_DATE_TABLE;
-        Statement statement = lims.getConnection().createStatement();
-        ResultSet resultSet = statement.executeQuery(sql);
-        while(resultSet.next()) {
-            Date date = resultSet.getDate(1);
-            return new Date(date.getTime());
-        }
-        return new Date(0);
+
+
+    public boolean limsHasFimsValues(){
+        return limsHasFimsValues;
+    }
+
+    public Date getDateLastCopied() {
+        return dateLastCopied;
     }
 
     private String getColumnDefinition(Class fieldClass) {
@@ -161,16 +199,6 @@ public class FimsToLims {
             return;
         }
 
-//        String dropDefinitionTable = "DROP TABLE IF EXISTS fims_definition";
-//        Statement statement = service.getActiveLIMSConnection().getConnection().createStatement();
-//        statement.executeUpdate(dropDefinitionTable);
-//
-//        String createDefinitionTable = "CREATE TABLE fims_definition(key  VARCHAR(999) PRIMARY KEY IDENTITY, value  VARCHAR(999) NOT NULL, type VARCHAR(99))";
-//        statement.executeUpdate(createDefinitionTable);
-//
-//        for(DocumentField field : service.getActiveFIMSConnection().getSearchAttributes()){
-//            String insertIntoDefinitionTable = "INSERT INTO fims_definition (key, value, type)"
-//        }
         try {
             listener.setIndeterminateProgress();
 
@@ -288,7 +316,7 @@ public class FimsToLims {
             for(SimpleListener tableListener : fimsTableChangedListeners) {
                 tableListener.objectChanged();
             }
-
+            updateEverything();
             listener.setProgress(1.0);
 
         }
@@ -336,20 +364,40 @@ public class FimsToLims {
         return value;
     }
 
-    public List<DocumentField> getFimsFields() throws SQLException{
+    private List<DocumentField> fimsFields;
+
+    public List<DocumentField> getFimsFields() {
         if(!limsHasFimsValues())  {
             return Arrays.asList(new DocumentField("none", "None", "None", String.class, false, false));
         }
-        String sql = "DESCRIBE "+FIMS_VALUES_TABLE;
-        List<DocumentField> results = new ArrayList<DocumentField>();
-        ResultSet resultsSet = lims.getConnection().createStatement().executeQuery(sql);
-        while(resultsSet.next()) {
-        DocumentField field = SqlUtilities.getDocumentField(resultsSet);
-            if(field != null) {
-                field = new DocumentField(getFriendlyName(field.getName()), field.getDescription(), field.getCode(), field.getValueType(), field.isDefaultVisible(), field.isEditable());
-                results.add(field);
+        return new ArrayList<DocumentField>(fimsFields);
+    }
+
+    public DocumentField getFimsField(String name) {
+        List<DocumentField> fimsFields = getFimsFields();
+        for(DocumentField f : fimsFields) {
+            if(f.getCode().equals(name)) {
+                return f;
             }
         }
-        return results;
+        return null;
+    }
+
+    public DocumentField getLimsField(String name) {
+        List<DocumentField> limsFields = LIMSConnection.getSearchAttributes();
+        for(DocumentField field : limsFields) {
+            if(field.getCode().equals(name)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    public DocumentField getFimsOrLimsField(String name) {
+        DocumentField fimsField = getFimsField(name);
+        if(fimsField != null) {
+            return fimsField;
+        }
+        return getLimsField(name);
     }
 }

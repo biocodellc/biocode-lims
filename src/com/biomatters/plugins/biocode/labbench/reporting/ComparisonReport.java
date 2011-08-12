@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -12,20 +13,13 @@ import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.IntervalMarker;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
-import org.jfree.chart.renderer.category.BarPainter;
-import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.ui.RectangleAnchor;
-import org.jfree.ui.TextAnchor;
-import org.jfree.ui.Layer;
-import org.jfree.ui.RectangleEdge;
 import org.virion.jam.util.SimpleListener;
+import org.jdom.Element;
 
 import java.awt.*;
-import java.awt.geom.RectangularShape;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,13 +37,25 @@ import javax.swing.*;
  * @author Steve
  * @version $Id$
  */
-public class ComparisonReport implements Report{
+public class ComparisonReport extends Report{
 
-    public String getName() {
+    public String getTypeName() {
         return "Bar Chart (Field Comparison)";
     }
 
-    public Options getOptions(FimsToLims fimsToLims) throws SQLException {
+    public String getTypeDescription() {
+        return "A comparison of two or more fields in a bar chart";
+    }
+
+    public ComparisonReport(FimsToLims fimsToLims) {
+        super(fimsToLims);
+    }
+
+    public ComparisonReport(Element e) throws XMLSerializationException {
+        super(e);
+    }
+
+    public Options createOptions(FimsToLims fimsToLims) {
         return new ComparisonReportOptions(this.getClass(), fimsToLims);
 
     }
@@ -80,7 +86,6 @@ public class ComparisonReport implements Report{
             //not sure whether to crash here or to suggest a reconnect?
             throw new RuntimeException("The field "+optionValueToCompare.getName()+" was not found in either the FIMS or the LIMS!");
         }
-        List<String> values = new ArrayList<String>();
         String field = fieldToCompare.getCode();
         String xTable = fims ? "fims_values" : "assembly";
         if(field.indexOf(".") >= 0) {
@@ -90,35 +95,14 @@ public class ComparisonReport implements Report{
         if(fims) {
             field = FimsToLims.getSqlColName(field);
         }
-
-        String sql;
-        if(fims) {
-            sql = "SELECT DISTINCT("+field+") FROM fims_values";
-        }
-        else {
-
-            sql = "SELECT DISTINCT ("+field+") FROM "+xTable;
-        }
-
-        ResultSet resultSet = fimsToLims.getLimsConnection().getConnection().createStatement().executeQuery(sql);
-        while(resultSet.next()) {
-            values.add(resultSet.getString(1));
-        }
-        if(values.size() > 20) {
-            final AtomicBoolean cont = new AtomicBoolean();
-            final int valueSize = values.size();
-            Runnable r = new Runnable() {
-                public void run() {
-                    cont.set(Dialogs.showYesNoDialog("The field you have chosen has "+valueSize+" distinct values in the database.  This will result in a very large chart.  Are you sure you want to contunie?", "Large Values", null, Dialogs.DialogIcon.QUESTION));
-                }
-            };
-            ThreadUtilities.invokeNowOrWait(r);
-            if(!cont.get()) {
-                return null;
-            }
-        }
-
         ReactionFieldOptions fieldOptions = options.getYAxisOptions();
+
+        List<String> values = ReportGenerator.getDistinctValues(fimsToLims, field, fims ? "fims_values" : xTable, fims ? null : fieldOptions.getLocus(), progress);
+
+        if(values == null) {
+            return null;
+        }
+
         String sql1;
         String yTable = fieldOptions.getTable();
 
@@ -147,7 +131,7 @@ public class ComparisonReport implements Report{
                 return null;
             }
             if(fieldOptions.getValue() != null) {
-                statement.setString(1, fieldOptions.getValue());
+                statement.setObject(1, fieldOptions.getValue());
                 statement.setString(2, value);
             }
             else {

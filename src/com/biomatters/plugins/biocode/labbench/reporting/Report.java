@@ -1,9 +1,18 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
-import org.jfree.chart.ChartPanel;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import org.jdom.Element;
 
 import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import jebl.util.ProgressListener;
 
@@ -13,13 +22,50 @@ import javax.swing.*;
  * @author Steve
  * @version $Id$
  */
-public interface Report {
+public abstract class Report implements XMLSerializable {
 
-    public String getName();
+    private static final int version = 1;
 
-    public Options getOptions(FimsToLims fimsToLims) throws SQLException;
+    private String name;
 
-    public ReportChart getChart(Options options, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException;
+    private Options options;
+
+    public Report(FimsToLims fimsToLims) {
+        this.options = createOptions(fimsToLims);
+    }
+
+    public Report(Element e) throws XMLSerializationException {
+        fromXML(e);
+    }
+
+    @Override
+    public String toString() {
+        return getName();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Options getOptions() {
+        return options;
+    }
+
+    public void setOptions(Options options) {
+        this.options = options;
+    }
+
+    public abstract String getTypeName();
+
+    public abstract String getTypeDescription();
+
+    public abstract Options createOptions(FimsToLims fimsToLims);
+
+    public abstract ReportChart getChart(Options options, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException;
 
 
     public static abstract class ReportChart {
@@ -29,4 +75,20 @@ public interface Report {
         public abstract JPanel getPanel();
     }
 
+    public Element toXML() {
+        Element reportElement = new Element("Report");
+        reportElement.setAttribute("version", ""+version);
+        reportElement.addContent(new Element("name").setText(name));
+        reportElement.addContent(XMLSerializer.classToXML("options", options));
+        return reportElement;
+    }
+
+    public void fromXML(Element element) throws XMLSerializationException {
+        String elementVersion = element.getAttributeValue("version");
+        if(version != Integer.parseInt(elementVersion)) {
+            throw new XMLSerializationException("Expected version "+version+" but got version "+elementVersion);
+        }
+        this.name = element.getChildText("name");
+        options = XMLSerializer.classFromXML(element.getChild("options"), Options.class);
+    }
 }

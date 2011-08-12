@@ -2,8 +2,8 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.components.GPanel;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import javax.swing.*;
 import javax.swing.table.TableModel;
@@ -19,15 +19,29 @@ import java.util.ArrayList;
 import java.awt.*;
 
 import jebl.util.ProgressListener;
+import jebl.util.CompositeProgressListener;
+import org.jdom.Element;
 
 /**
  * @author Steve
  * @version $Id$
  */
-public class WorkflowReport implements Report{
+public class WorkflowReport extends Report{
 
-    public String getName() {
+    public String getTypeName() {
         return "Workflow Completion";
+    }
+
+    public String getTypeDescription() {
+        return "Workflows";
+    }
+
+    public WorkflowReport(FimsToLims fimsToLims) {
+        super(fimsToLims);
+    }
+
+    public WorkflowReport(Element e) throws XMLSerializationException {
+        super(e);
     }
 
     private enum WorkflowProgress {
@@ -36,7 +50,7 @@ public class WorkflowReport implements Report{
         SequencePassed
     }
 
-    public Options getOptions(FimsToLims fimsToLims) throws SQLException {
+    public Options createOptions(FimsToLims fimsToLims) {
         Options options = new Options(this.getClass());
         Set<DocumentField> documentFields = new LinkedHashSet<DocumentField>();
         documentFields.addAll(fimsToLims.getFimsFields());
@@ -66,22 +80,25 @@ public class WorkflowReport implements Report{
         PreparedStatement assemblyStatement = fimsToLims.getLimsConnection().getConnection().prepareStatement(getSql(WorkflowProgress.SequencePassed, field, "="));
 
         final List<WorkflowEntry[]> table = new ArrayList<WorkflowEntry[]>();
+        CompositeProgressListener composite = new CompositeProgressListener(progress, fieldValues.size());
         for (int i = 0; i < fieldValues.size(); i++) {
             String value = fieldValues.get(i);
-            progress.setProgress(((double)i)/fieldValues.size());
+            composite.beginSubtask("Processing "+value);
+            //progress.setProgress(((double)i)/fieldValues.size());
             WorkflowEntry[] entries = new WorkflowEntry[fimsToLims.getLoci().size()];
             for (int i1 = 0; i1 < fimsToLims.getLoci().size(); i1++) {
+                composite.setProgress(((double)i1)/fimsToLims.getLoci().size());
                 Options.OptionValue locus = fimsToLims.getLoci().get(i1);
                 pcrStatement.setObject(1, locus.getName());
                 pcrStatement.setObject(2, value);
-                System.out.println("PCR "+locus+" "+value);
+                composite.setMessage("PCR "+locus);
                 ResultSet result = pcrStatement.executeQuery();
                 int pcrCount = 0;
                 while (result.next()) {
                     pcrCount = result.getInt(1);
                 }
 
-                System.out.println("Sequencing "+locus+" "+value);
+                composite.setMessage("Sequencing "+locus);
                 sequencingStatement.setObject(1, locus.getName());
                 sequencingStatement.setObject(2, value);
                 result = pcrStatement.executeQuery();
@@ -90,7 +107,7 @@ public class WorkflowReport implements Report{
                     sequencingCount = result.getInt(1);
                 }
 
-                System.out.println("assembly "+locus+" "+value);
+                composite.setMessage("Assembly "+locus);
                 assemblyStatement.setObject(1, locus.getName());
                 assemblyStatement.setObject(2, value);
                 result = pcrStatement.executeQuery();
@@ -188,7 +205,7 @@ public class WorkflowReport implements Report{
                 assert false;
         }
 
-        builder.append("SELECT COUNT(DISTINCT(workflow.id)) FROM "+table+", workflow, extraction, fims_values WHERE workflow.extractionId = extraction.id AND extraction.sampleId = fims_values.tissueId AND "+table+".progress = 'passed' AND workflow.locus = ? AND fims_values."+field+" "+comparator+" ?");
+        builder.append("SELECT COUNT(workflow.id) FROM "+table+", workflow, extraction, fims_values WHERE workflow.extractionId = extraction.id AND extraction.sampleId = fims_values.tissueId AND "+table+".progress = 'passed' AND workflow.locus = ? AND fims_values."+field+" "+comparator+" ?");
 
         return builder.toString();
     }

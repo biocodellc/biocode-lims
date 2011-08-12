@@ -24,5 +24,9 @@ public abstract class AbstractListComboBoxModel extends AbstractListModel implem
         return selectedObject;
     }
 
+    public void fireContentsChanged() {
+        fireContentsChanged(this, 0, getSize()-1);
+    }
+
     
 }

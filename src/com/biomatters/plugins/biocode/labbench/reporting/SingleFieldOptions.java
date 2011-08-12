@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -37,7 +38,6 @@ public class SingleFieldOptions extends Options {
         fieldValue = ReportGenerator.getOptionValues(fimsFields);
 
         addComboBoxOption("field", fimsFields == null ? " whose " : "", fieldValue, fieldValue.get(0));
-
         addComboBoxOption("isValue", " is ", ReportGenerator.getEnumeratedFieldValues(null), ReportGenerator.getEnumeratedFieldValues(null).get(0));
         addStringOption("containsValue", " contains the value ", "");
 
@@ -54,7 +54,7 @@ public class SingleFieldOptions extends Options {
         if(reactionType != null) {
             SimpleListener reactionTypeListener = new SimpleListener() {
                 public void objectChanged() {
-                    fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), false));
+                    fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), true));
                 }
             };
             reactionType.addChangeListener(reactionTypeListener);
@@ -63,19 +63,15 @@ public class SingleFieldOptions extends Options {
 
         SimpleListener fieldOptionListener = new SimpleListener() {
             public void objectChanged() {
+                long time = System.currentTimeMillis();
                 DocumentField field;
                 if(reactionType != null) {
                     field = ReportGenerator.getField(reactionType.getValue().getName(), fieldOption.getValue().getName());
                 }
                 else {
-                    try {
-                        field = ReportGenerator.getFimsOrLimsField(fieldOption.getValue().getName());
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                        assert false : e.getMessage();
-                        field = DocumentField.createStringField("temp", "temp", "temp");
-                    }
+                    field = BiocodeService.getInstance().getReportingService().getReportGenerator().fimsToLims.getFimsOrLimsField(fieldOption.getValue().getName());
                 }
+                System.out.println("singleFieldOptions "+(System.currentTimeMillis()-time));
                 if (field.isEnumeratedField()) {
                     containsValueOption.setVisible(false);
                     isValueOption.setVisible(true);

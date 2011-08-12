@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
+import javax.swing.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.sql.SQLException;
@@ -22,13 +23,13 @@ public class PieChartOptions extends Options {
     protected String tissueColumnId;
     static String REACTION_FIELDS = "reactionFields";
 
-    public PieChartOptions(Class cl, FimsToLims fimsToLims) throws SQLException {
+    public PieChartOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
         init(fimsToLims);
         tissueColumnId = fimsToLims.getTissueColumnId();
     }
 
-    public PieChartOptions(Class cl, String preferenceNameSuffix, FimsToLims fimsToLims) throws SQLException {
+    public PieChartOptions(Class cl, String preferenceNameSuffix, FimsToLims fimsToLims) {
         super(cl, preferenceNameSuffix);
         init(fimsToLims);
     }
@@ -45,9 +46,8 @@ public class PieChartOptions extends Options {
         return element;
     }
 
-    private void init(final FimsToLims fimsToLims) throws SQLException {
+    private void init(final FimsToLims fimsToLims) {
         ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false);
-
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
         final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by FIMS field", false);
         fimsField.setEnabled(fimsToLims.limsHasFimsValues());
@@ -56,18 +56,13 @@ public class PieChartOptions extends Options {
                 public void objectChanged() {
                     Runnable runnable = new Runnable() {
                         public void run() {
-                            try {
-                                fimsField.setEnabled(fimsToLims.limsHasFimsValues());
-                            } catch (SQLException e) {
-                                e.printStackTrace();
-                                //todo: figure out how to deal with this - probably cause of a disconnect...
-                            }
+                            fimsField.setEnabled(fimsToLims.limsHasFimsValues());
                         }
                     };
                     ThreadUtilities.invokeNowOrLater(runnable);
                 }
             });
-        }
+        } 
         SingleFieldOptions fimsOptions = new SingleFieldOptions(fimsToLims.getFimsFields());
         Options fimsMultiOptions = new Options(this.getClass());
         fimsMultiOptions.beginAlignHorizontally("", false);
@@ -82,11 +77,9 @@ public class PieChartOptions extends Options {
         fimsMultiOptions.addMultipleOptions("fims", fimsOptions, false);
         addChildOptions(FIMS_FIELD, "", "", fimsMultiOptions);
         fimsField.addChildOptionsDependent(fimsMultiOptions, true, true);
+
     }
 
-    
-
-    
 
     String getLimsSql() {
         ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);

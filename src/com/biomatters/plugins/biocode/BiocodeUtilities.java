@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceD
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -23,11 +24,15 @@ import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.PrintWriter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.List;
+import java.awt.*;
 
 /**
  * @author Richard
@@ -62,6 +67,18 @@ public class BiocodeUtilities {
     public static AnnotatedPluginDocument createPrimerDocument(String primerName, String primerSequence) {
         OligoSequenceDocument sequence = new OligoSequenceDocument(primerName, "", primerSequence, new Date());
         return DocumentUtilities.createAnnotatedPluginDocument(sequence);
+    }
+
+    public static void displayExceptionDialog(Exception exception) {
+        displayExceptionDialog("Error", exception.getMessage(), exception, null);
+    }
+
+    public static void displayExceptionDialog(String title, String message, Exception exception, Component owner) {
+        StringWriter stacktrace = new StringWriter();
+        exception.printStackTrace(new PrintWriter(stacktrace));
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, title, owner, Dialogs.DialogIcon.WARNING);
+        dialogOptions.setMoreOptionsButtonText("Show details...", "Hide details...");
+        Dialogs.showMoreOptionsDialog(dialogOptions, message, stacktrace.toString());
     }
 
     /**

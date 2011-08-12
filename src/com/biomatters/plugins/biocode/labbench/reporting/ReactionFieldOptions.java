@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -41,7 +42,7 @@ public class ReactionFieldOptions extends Options {
     private void init(FimsToLims fimsToLims, boolean includeValue) {
         beginAlignHorizontally("", false);
         ComboBoxOption<OptionValue> reactionType = addComboBoxOption(REACTION_TYPE, "Reaction type ", reactionTypes, reactionTypes[0]);
-        List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), !includeValue);
+        List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), includeValue);
         addComboBoxOption(FIELDS, "Field to compare", fieldValue, fieldValue.get(0));
         if(includeValue) {
             Options.OptionValue[] values = new OptionValue[] {new OptionValue("None", "None")};
@@ -68,7 +69,7 @@ public class ReactionFieldOptions extends Options {
         SimpleListener reactionTypesListener = new SimpleListener() {
 
             public void objectChanged() {
-                field.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), enumOnly));
+                field.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), !enumOnly));
                 locus.setEnabled(!reactionType.getValue().equals(reactionTypes[0]));
             }
         };
@@ -102,7 +103,7 @@ public class ReactionFieldOptions extends Options {
         }
     }
 
-    private String getLocus() {
+    public String getLocus() {
         ComboBoxOption<Options.OptionValue> locusOption = (ComboBoxOption<Options.OptionValue>)getOption(LOCUS);
         if(!locusOption.isEnabled() || (locusOption.getValue().getName().equals("all") && locusOption.getValue().getLabel().equals("All..."))) {
             return null;
@@ -110,15 +111,32 @@ public class ReactionFieldOptions extends Options {
         return locusOption.getValue().getName();
     }
 
-    public String getValue() {
+    public Object getValue() {
+        DocumentField field = ReportGenerator.getField(getReactionType(), getField());
+        String value;
         if(getOption(ENUM_FIELD) != null && getOption(ENUM_FIELD).isVisible()) {
-            return getValueAsString(ENUM_FIELD);
+            value = getValueAsString(ENUM_FIELD);
         }
-        return getValue(VALUE_FIELD) != null && getOption(VALUE_FIELD).isEnabled() ? getValueAsString(VALUE_FIELD) : null;
+        else {
+            value =  getValue(VALUE_FIELD) != null && getOption(VALUE_FIELD).isEnabled() ? getValueAsString(VALUE_FIELD) : null;
+        }
+        if(value != null && ReportGenerator.isBooleanField(field)) { //booleans
+            if(value.toLowerCase().equals("yes") || value.toLowerCase().equals("true")) {
+                return true;
+            }
+            if(value.toLowerCase().equals("no") || value.toLowerCase().equals("false")) {
+                return false;
+            }
+        }
+        return value;
     }
 
     public String getField() {
         return getValueAsString(FIELDS);
+    }
+
+    public String getReactionType(){
+        return ((OptionValue)getValue(REACTION_TYPE)).getName();
     }
 
     public String getComparator() {
@@ -174,7 +192,7 @@ public class ReactionFieldOptions extends Options {
                 terms.add(extraWhere);
             }
             if(hasWorkflow && getLocus() != null) {
-                terms.add("workflow.locus='"+getLocus());
+                terms.add("workflow.locus='"+getLocus()+"'");
             }
             if(getOption(VALUE_FIELD) == null || getValue() != null) {
                 terms.add(ReportGenerator.getTableFieldName("cyclesequencing", fieldName)+" "+getComparator()+" "+"?");
@@ -189,7 +207,7 @@ public class ReactionFieldOptions extends Options {
                 terms.add(extraWhere);
             }
             if(hasWorkflow && getLocus() != null) {
-                terms.add("workflow.locus='"+getLocus());
+                terms.add("workflow.locus='"+getLocus()+"'");
             }
             if(getOption(VALUE_FIELD) == null || getValue() != null) {
                 terms.add(ReportGenerator.getTableFieldName("assembly", fieldName)+" "+getComparator()+" "+"?");

@@ -2,10 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.plugin.GeneiousServiceWithPanel;
-import com.biomatters.geneious.publicapi.plugin.Icons;
-import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
-import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -15,12 +12,10 @@ import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.labels.PieSectionLabelGenerator;
 import org.jfree.chart.plot.PiePlot;
-import org.jfree.chart.plot.PiePlot3D;
-import org.jfree.chart.plot.Plot;
 import org.jfree.data.general.PieDataset;
-import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import javax.swing.border.MatteBorder;
 import java.awt.*;
 import java.awt.print.PrinterException;
 import java.awt.print.Printable;
@@ -37,18 +32,25 @@ import java.sql.SQLException;
 public class ReportingService extends GeneiousServiceWithPanel implements Chartable {
     private JPanel panel;
     JComponent chartPanel;
-    JSplitPane splitPane;
+    JPanel mainPanel;
+    private ReportGenerator reportGenerator;
+    private JPanel topPanel;
 
     public void setChartPanel(final JComponent panel) {
         Runnable runnable = new Runnable() {
             public void run() {
-                if(splitPane != null) {
-                    splitPane.setBottomComponent(new GPanel());
+                if(mainPanel != null) {
+                    mainPanel.removeAll();
+                    mainPanel.add(topPanel, BorderLayout.NORTH);
+                    mainPanel.add(new GPanel(), BorderLayout.CENTER);
                 }
                 chartPanel = panel;
-                if(splitPane != null && chartPanel != null) {
-                    splitPane.setBottomComponent(chartPanel);
-                    splitPane.revalidate();
+
+                if(mainPanel != null && chartPanel != null) {
+                    chartPanel.setBorder(new MatteBorder(1,0,1,0, panel.getBackground().darker()));
+                    mainPanel.add(topPanel, BorderLayout.NORTH);
+                    mainPanel.add(chartPanel, BorderLayout.CENTER);
+                    mainPanel.revalidate();
                 }
             }
         };
@@ -60,6 +62,13 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
             Runnable runnable = new Runnable() {
                 public void run() {
                     try {
+                        if(BiocodeService.getInstance().isLoggedIn()) {
+                            reportGenerator = new ReportGenerator(ReportingService.this, BiocodeService.getInstance().getDataDirectory());
+                            reportGenerator.update();
+                        }
+                        else {
+                            reportGenerator = null;
+                        }
                         fillPanel();
                     } catch (SQLException e) {
                         e.printStackTrace();
@@ -73,6 +82,10 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
         }
     }
 
+
+    public ReportGenerator getReportGenerator() {
+        return reportGenerator;
+    }
 
     @Override
     public JPanel getPanel() {
@@ -113,7 +126,7 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
     private void fillPanel() throws SQLException {
         panel.removeAll();
 
-        if(!BiocodeService.getInstance().isLoggedIn()) {
+        if(!BiocodeService.getInstance().isLoggedIn() || reportGenerator == null) {
             JTextPane textPane = new JTextPane();
             textPane.setContentType("text/html");
             textPane.setText("<html>" + GuiUtilities.getHtmlHead() + "<body>" + "<center>" + "Please Log in to a LIMS to view the reporting functions." + "</center>" + "</body>" + "</html>");
@@ -131,13 +144,9 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
             return;
         }
 
-        splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        final ReportGenerator reportGenerator = new ReportGenerator(this);
-        JPanel topPanel = reportGenerator.getReportingPanel();
-        splitPane.setTopComponent(topPanel);
-        splitPane.setBottomComponent(new GPanel());
-        splitPane.setOneTouchExpandable(true);
-        splitPane.setDividerLocation(-1);
+        mainPanel = new GPanel(new BorderLayout());
+        topPanel = reportGenerator.getReportingPanel();
+        mainPanel.add(topPanel, BorderLayout.NORTH);
         final PiePlot piePlot = new PiePlot();
         piePlot.setLabelGenerator(new PieSectionLabelGenerator() {
             public String generateSectionLabel(PieDataset pieDataset, Comparable comparable) {
@@ -154,10 +163,10 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
         });
         chartPanel = new ChartPanel(new JFreeChart(piePlot));
 
-        splitPane.setBottomComponent(chartPanel);
+        mainPanel.add(chartPanel, BorderLayout.CENTER);
 
 
-        panel.add(splitPane, BorderLayout.CENTER);
+        panel.add(mainPanel, BorderLayout.CENTER);
     }
 
     @Override
@@ -183,5 +192,11 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
     @Override
     public Icons getIcons() {
         return BiocodePlugin.getIcons("reporting.png");
+    }
+
+    public void updateReportGenerator() {
+        if(reportGenerator != null) {
+            reportGenerator.update();
+        }
     }
 }

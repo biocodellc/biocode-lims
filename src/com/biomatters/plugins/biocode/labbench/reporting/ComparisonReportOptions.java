@@ -22,7 +22,7 @@ public class ComparisonReportOptions extends Options{
     private String FIELD_OPTION = "field";
     private String Y_CHILD_OPTIONS = "yAxis";
 
-    public ComparisonReportOptions(Class cl, FimsToLims fimsToLims) throws SQLException{
+    public ComparisonReportOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
         init(fimsToLims);
     }
@@ -31,7 +31,7 @@ public class ComparisonReportOptions extends Options{
         super(element);
     }
 
-    private void init(final FimsToLims fimsToLims) throws SQLException {
+    private void init(final FimsToLims fimsToLims) {
         Set<DocumentField> documentFields = new LinkedHashSet<DocumentField>();
         documentFields.addAll(fimsToLims.getFimsFields());
         documentFields.addAll(LIMSConnection.getSearchAttributes());

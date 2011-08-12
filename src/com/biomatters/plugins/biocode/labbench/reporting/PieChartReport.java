@@ -1,18 +1,18 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import jebl.util.ProgressListener;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.LegendItem;
-import org.jfree.chart.LegendItemCollection;
 import org.jfree.chart.labels.PieSectionLabelGenerator;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.data.general.DefaultKeyedValuesDataset;
 import org.jfree.data.general.PieDataset;
 import org.virion.jam.util.SimpleListener;
+import org.jdom.Element;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,18 +21,31 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.AttributedString;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.*;
 
 /**
  * @author Steve
  * @version $Id$
  */
-public class PieChartReport implements Report{
+public class PieChartReport extends Report{
 
-    public String getName() {
+    public String getTypeName() {
         return "Pie Chart";
     }
 
-    public Options getOptions(FimsToLims fimsToLims) throws SQLException {
+    public PieChartReport(FimsToLims fimsToLims) {
+        super(fimsToLims);
+    }
+
+    public PieChartReport(Element e) throws XMLSerializationException {
+        super(e);
+    }
+
+    public String getTypeDescription() {
+        return "The relative amounts of all values of a single field";
+    }
+
+    public Options createOptions(FimsToLims fimsToLims) {
         return new PieChartOptions(this.getClass(), fimsToLims);
     }
 
@@ -69,6 +82,9 @@ public class PieChartReport implements Report{
         chartPanel.setMaximumDrawHeight(Integer.MAX_VALUE);
 
         final PieDataset dataset = getDataset((PieChartOptions) options, fimsToLims, progress);
+        if(dataset == null) {
+            return null;
+        }
         piePlot.setDataset(dataset);
         piePlot.getLegendItems(); //call this to triger the chart to populate its colors...
         chartPanel.getAnchor();
@@ -160,9 +176,6 @@ public class PieChartReport implements Report{
         String fimsSql = options.getFimsSql();
         String limsSql = options.getLimsSql();
         DocumentField enumeratedField = ReportGenerator.getField(reactionType, fieldName);
-        if(!enumeratedField.isEnumeratedField()) {
-            throw new RuntimeException("The document field "+enumeratedField.getName()+" is not enumerated!");
-        }
 
         String sql = limsSql;
         if(fimsSql != null) {
@@ -170,13 +183,20 @@ public class PieChartReport implements Report{
         }
         System.out.println(sql);
         PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
-        Object[] enumerationObjects = getEnumerationObjects(enumeratedField);
-        for (int i1 = 0; i1 < enumerationObjects.length; i1++) {
-            progress.setProgress(((double)i1)/enumerationObjects.length);
+        progress.setMessage("Getting all possible values for your selected field");
+        progress.setIndeterminateProgress();
+        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), reactionFields.getLocus(), progress);
+        if(enumerationObjects == null) {
+            return null;
+        }
+        progress.setMessage("Calculating...");
+
+        for (int i1 = 0; i1 < enumerationObjects.size(); i1++) {
+            progress.setProgress(((double)i1)/enumerationObjects.size());
             if(progress.isCanceled()) {
                 return null;
             }
-            Object value = enumerationObjects[i1];
+            Object value = enumerationObjects.get(i1);
             statement.setObject(1, value);
             if (fimsSql != null) {
                 for (int i = 0; i < options.getFimsValues().size(); i++) {

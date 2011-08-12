@@ -17,7 +17,7 @@ public class FimsMultiOptions extends Options {
     private static final String ALL_OR_ANY = "allOrAny";
     private static final String FIMS = "fims";
 
-    public FimsMultiOptions(Class cl, FimsToLims fimsToLims) throws SQLException {
+    public FimsMultiOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
         init(fimsToLims);
     }
@@ -31,7 +31,7 @@ public class FimsMultiOptions extends Options {
         super(element);
     }
 
-    private void init(FimsToLims fimsToLims) throws SQLException {
+    private void init(FimsToLims fimsToLims) {
         SingleFieldOptions fimsOptions = new SingleFieldOptions(fimsToLims.getFimsFields());
         beginAlignHorizontally("", false);
         addLabel("Match ");

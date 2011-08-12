@@ -22,7 +22,7 @@ public class AccumulationOptions extends Options {
     private static final String START_DATE = "startDate";
     private static final String END_DATE = "endDate";
 
-    public AccumulationOptions(Class cl, FimsToLims fimsToLims) throws SQLException {
+    public AccumulationOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
         init(fimsToLims);
     }
@@ -36,7 +36,7 @@ public class AccumulationOptions extends Options {
         super(element);
     }
 
-    private void init(FimsToLims fimsToLims) throws SQLException {
+    private void init(FimsToLims fimsToLims) {
         beginAlignHorizontally("", false);
         addDateOption(START_DATE, "Start Date", new Date());
         addDateOption(END_DATE, "     End Date", new Date());

@@ -410,6 +410,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         updateStatus();
     }
 
+    public ReportingService getReportingService() {
+        return reportingService;
+    }
+
     private void saveConnectionManager() throws IOException {
         File file = new File(dataDirectory, "connectionManager.xml");
         XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
@@ -1728,6 +1732,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         initializeConnectionManager();
         //reportingService = new ReportingService();
         //listener.childServiceAdded(reportingService);
+        //reportingService.updateReportGenerator();
 
 
         if(connectionManager.connectOnStartup()) {

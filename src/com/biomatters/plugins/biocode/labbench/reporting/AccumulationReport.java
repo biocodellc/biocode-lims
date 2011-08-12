@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 
 import java.sql.SQLException;
 import java.sql.PreparedStatement;
@@ -8,24 +9,19 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Date;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.awt.*;
-import java.text.SimpleDateFormat;
 import java.text.DateFormat;
 
 import org.jfree.chart.*;
-import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.axis.DateAxis;
-import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.data.xy.XYDataset;
-import org.jfree.data.general.Series;
 import org.virion.jam.util.SimpleListener;
+import org.jdom.Element;
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;
 
@@ -35,13 +31,25 @@ import javax.swing.*;
  * @author Steve
  * @version $Id$
  */
-public class AccumulationReport implements Report{
+public class AccumulationReport extends Report{
 
-    public String getName() {
+    public String getTypeName() {
         return "Accumulation Curve";
     }
 
-    public Options getOptions(FimsToLims fimsToLims) throws SQLException {
+    public String getTypeDescription() {
+        return "An accumulation curve of one or more fields over time";
+    }
+
+    public AccumulationReport(FimsToLims fimsToLims) {
+        super(fimsToLims);
+    }
+
+    public AccumulationReport(Element e) throws XMLSerializationException {
+        super(e);
+    }
+
+    public Options createOptions(FimsToLims fimsToLims) {
         return new AccumulationOptions(this.getClass(), fimsToLims);
     }
 
