@@ -148,9 +148,6 @@ public class ReactionFieldOptions extends Options {
 
     public Class getValueClass() {
         DocumentField field = ReportGenerator.getField(getReactionType(), getField());
-        if(getOption(ENUM_FIELD) != null && getOption(ENUM_FIELD).isVisible()) {
-            return String.class;
-        }
 
         if(field != null && ReportGenerator.isBooleanField(field)) {
             return Boolean.class;
