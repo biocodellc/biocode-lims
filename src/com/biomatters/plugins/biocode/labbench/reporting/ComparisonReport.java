@@ -87,7 +87,7 @@ public class ComparisonReport extends Report{
             throw new RuntimeException("The field "+optionValueToCompare.getName()+" was not found in either the FIMS or the LIMS!");
         }
         String field = fieldToCompare.getCode();
-        String xTable = fims ? "fims_values" : "assembly";
+        String xTable = fims ? "fims_values" : "";
         if(field.indexOf(".") >= 0) {
             xTable = field.substring(0, field.indexOf("."));
             field = field.substring(field.indexOf(".")+1);
@@ -97,7 +97,7 @@ public class ComparisonReport extends Report{
         }
         ReactionFieldOptions fieldOptions = options.getYAxisOptions();
 
-        List<String> values = ReportGenerator.getDistinctValues(fimsToLims, field, fims ? "fims_values" : xTable, fims ? null : fieldOptions.getLocus(), progress);
+        List<String> values = ReportGenerator.getDistinctValues(fimsToLims, field, xTable, fims ? null : fieldOptions.getLocus(), progress);
 
         if(values == null) {
             return null;
@@ -111,7 +111,7 @@ public class ComparisonReport extends Report{
             //sql1 = fieldOptions.getSql(fims);
         }
         else {
-            if(xTable.equals(yTable)) {
+            if(xTable.equals(yTable) || xTable.equals("workflow")) {
                 sql1 = fieldOptions.getSql(null, null);
             }
             else {

@@ -406,12 +406,14 @@ public class ReportGenerator {
 
         sql = "SELECT DISTINCT ("+field+") FROM "+table;
 
-        if(!table.equals("extraction") && !table.equals("fims_values")) {
+        boolean where = false;
+        if(!table.equals("extraction") && !table.equals("fims_values") && !table.equals("workflow")) {
+            where = true;
             sql += ", workflow WHERE workflow.id = " + table + ".workflow";
         }
 
         if(locus != null) {
-            sql += " AND workflow.locus='"+locus+"'";
+            sql += where ? " AND " : " WHERE "+"workflow.locus='"+locus+"'";
         }
 
         System.out.println(sql);
@@ -499,6 +501,21 @@ public class ReportGenerator {
     static DocumentField getField(String reactionType, String fieldCode) {
         if(reactionType == null) {
 
+        }
+
+        if(reactionType.equals("assembly")) {
+            for(DocumentField field : Arrays.asList(
+                    LIMSConnection.ASSEMBLY_TECHNICIAN,
+                    LIMSConnection.SEQUENCE_ID,
+                    LIMSConnection.EDIT_RECORD,
+                    LIMSConnection.SEQUENCE_PROGRESS,
+                    LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS
+            )) {
+                if(field.getCode().equals(fieldCode)) {
+                    return field;
+                }
+            }
+            return null;
         }
 
         Reaction.Type type = null;
@@ -614,6 +631,6 @@ public class ReportGenerator {
     }
 
     public void update() {
-        reportManager.loadReportsFromDisk();
+        reportManager.loadReportsFromDisk(fimsToLims);
     }
 }

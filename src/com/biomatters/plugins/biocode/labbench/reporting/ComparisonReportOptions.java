@@ -34,7 +34,11 @@ public class ComparisonReportOptions extends Options{
     private void init(final FimsToLims fimsToLims) {
         Set<DocumentField> documentFields = new LinkedHashSet<DocumentField>();
         documentFields.addAll(fimsToLims.getFimsFields());
-        documentFields.addAll(LIMSConnection.getSearchAttributes());
+        List<DocumentField> limsSearchFields = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
+        limsSearchFields.remove(LIMSConnection.PLATE_TYPE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
+        documentFields.addAll(limsSearchFields);
         addChildOptions(Y_CHILD_OPTIONS, "Y Axis (Count)", "", new ReactionFieldOptions(this.getClass(), fimsToLims, true));
 
         Options fieldOptions = new Options(this.getClass());

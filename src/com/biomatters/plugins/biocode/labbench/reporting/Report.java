@@ -29,9 +29,11 @@ public abstract class Report implements XMLSerializable {
     private String name;
 
     private Options options;
+    private Element optionsValues;
 
     public Report(FimsToLims fimsToLims) {
         this.options = createOptions(fimsToLims);
+        optionsValues = options.valuesToXML("Options");
     }
 
     public Report(Element e) throws XMLSerializationException {
@@ -49,6 +51,13 @@ public abstract class Report implements XMLSerializable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void setFimsToLims(FimsToLims fimsToLims) {
+        options = createOptions(fimsToLims);
+        if(optionsValues != null) {
+            options.valuesFromXML(optionsValues);
+        }
     }
 
     public Options getOptions() {
@@ -79,7 +88,12 @@ public abstract class Report implements XMLSerializable {
         Element reportElement = new Element("Report");
         reportElement.setAttribute("version", ""+version);
         reportElement.addContent(new Element("name").setText(name));
-        reportElement.addContent(XMLSerializer.classToXML("options", options));
+        if(options != null) {
+            reportElement.addContent(options.valuesToXML("Options"));
+        }
+        else if(optionsValues != null) {
+            reportElement.addContent(((Element)optionsValues.clone()).setName("Options"));
+        }
         return reportElement;
     }
 
@@ -89,6 +103,6 @@ public abstract class Report implements XMLSerializable {
             throw new XMLSerializationException("Expected version "+version+" but got version "+elementVersion);
         }
         this.name = element.getChildText("name");
-        options = XMLSerializer.classFromXML(element.getChild("options"), Options.class);
+        optionsValues = element.getChild("Options");
     }
 }

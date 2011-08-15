@@ -9,6 +9,8 @@ import org.virion.jam.util.SimpleListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Date;
+import java.util.Arrays;
 
 /**
  * @author Steve
@@ -18,13 +20,29 @@ public class ReactionFieldOptions extends Options {
     protected String LOCUS = "locus";
     protected static String FIELDS = "fields";
     protected static String REACTION_TYPE = "reactionType";
+    protected static String CONDITION_FIELD = "condition";
     protected static String VALUE_FIELD = "value";
     protected static String ENUM_FIELD = "enumeratedValue";
+    protected static String DATE_FIELD = "dateValue";
     protected static final OptionValue[] reactionTypes = new OptionValue[] {
             new OptionValue("Extraction", "Extraction reactions"),
             new OptionValue("PCR", "PCR reactions"),
             new OptionValue("CycleSequencing", "Sequencing reactions"),
             new OptionValue("assembly", "Sequences")
+    };
+
+    protected static final OptionValue[] stringComparators = new OptionValue[] {
+            new OptionValue("contains", "contains"),
+            new OptionValue("equal", "equals"),
+            new OptionValue("notEqual", "does not equal")
+    };
+
+
+    protected static final OptionValue[] numbersComparators = new OptionValue[] {
+            new OptionValue("equal", "equals"),
+            new OptionValue("lessThan", "is less than"),
+            new OptionValue("greaterThan", "is greater than"),
+            new OptionValue("notEqual", "does not equal")
     };
 
 
@@ -47,7 +65,9 @@ public class ReactionFieldOptions extends Options {
         if(includeValue) {
             Options.OptionValue[] values = new OptionValue[] {new OptionValue("None", "None")};
             ComboBoxOption<OptionValue> valuesOption = addComboBoxOption(ENUM_FIELD, "is", values, values[0]);
-            StringOption stringOption = addStringOption(VALUE_FIELD, "has the value", "");
+            ComboBoxOption<OptionValue> comparatorOption = addComboBoxOption(CONDITION_FIELD, "", values, values[0]);
+            addDateOption(DATE_FIELD, "", new Date());
+            StringOption stringOption = addStringOption(VALUE_FIELD, "", "");
             stringOption.setVisible(false);
                         
         }
@@ -63,6 +83,8 @@ public class ReactionFieldOptions extends Options {
         final ComboBoxOption locus = (ComboBoxOption)getOption(LOCUS);
         final StringOption value = (StringOption)getOption(VALUE_FIELD);
         final ComboBoxOption enumValue = (ComboBoxOption)getOption(ENUM_FIELD);
+        final ComboBoxOption condition = (ComboBoxOption)getOption(CONDITION_FIELD);
+        final DateOption dateOption = (DateOption)getOption(DATE_FIELD);
 
         final boolean enumOnly = value == null;
 
@@ -78,7 +100,9 @@ public class ReactionFieldOptions extends Options {
         SimpleListener fieldListener = new SimpleListener() {
             public void objectChanged() {
                 if (value != null) {
-                    value.setEnabled(!field.getValue().equals(field.getPossibleOptionValues().get(0)));
+                    boolean enable = !field.getValue().equals(field.getPossibleOptionValues().get(0));
+                    value.setEnabled(enable);
+                    condition.setEnabled(enable);
                 }
             }
         };
@@ -90,10 +114,21 @@ public class ReactionFieldOptions extends Options {
                     List<OptionValue> enumValues = ReportGenerator.getEnumeratedFieldValues(reactionType.getValue().getName(), field.getValue().getName());
                     if (enumValues != null) {
                         value.setVisible(false);
+                        dateOption.setVisible(false);
+                        condition.setVisible(false);
                         enumValue.setPossibleValues(enumValues);
                         enumValue.setVisible(true);
                     } else {
-                        value.setVisible(true);
+                        condition.setVisible(true);
+                        Class valueClass = getValueClass();
+                        if(valueClass == Integer.class || valueClass == Double.class || valueClass == Date.class) {
+                            condition.setPossibleValues(Arrays.asList(numbersComparators));
+                        }
+                        else {
+                            condition.setPossibleValues(Arrays.asList(stringComparators));
+                        }
+                        value.setVisible(valueClass != Date.class);
+                        dateOption.setVisible(valueClass == Date.class);
                         enumValue.setVisible(false);
                     }
                 }
@@ -111,6 +146,55 @@ public class ReactionFieldOptions extends Options {
         return locusOption.getValue().getName();
     }
 
+    public Class getValueClass() {
+        DocumentField field = ReportGenerator.getField(getReactionType(), getField());
+        if(getOption(ENUM_FIELD) != null && getOption(ENUM_FIELD).isVisible()) {
+            return String.class;
+        }
+
+        if(field != null && ReportGenerator.isBooleanField(field)) {
+            return Boolean.class;
+        }
+        return field != null ? field.getValueType() : String.class;
+    }
+
+//    protected static final OptionValue[] stringComparators = new OptionValue[] {
+//            new OptionValue("contains", "contains"),
+//            new OptionValue("equal", "equals"),
+//            new OptionValue("notEqual", "does not equal")
+//    };
+//
+//
+//    protected static final OptionValue[] numbersComparators = new OptionValue[] {
+//            new OptionValue("equal", "equals"),
+//            new OptionValue("lessThan", "is less than"),
+//            new OptionValue("greaterThan", "is greater than"),
+//            new OptionValue("notEqual", "does not equal")
+//    };
+
+    public String getComparator() {
+        Option comparatorOption = getOption(CONDITION_FIELD);
+        if(comparatorOption.isVisible()) {
+            String conditionCode = getValueAsString(CONDITION_FIELD);
+            if("equal".equals(conditionCode)) {
+                return "=";
+            }
+            else if("lessThan".equals(conditionCode)) {
+                return "<";
+            }
+            else if("greaterThan".equals(conditionCode)) {
+                return ">";
+            }
+            else if("notEqual".equals(conditionCode)) {
+                return "<>";
+            }
+            else if("contains".equals(conditionCode)) {
+                return "LIKE";
+            } 
+        }
+        return "=";
+    }
+
     public Object getValue() {
         DocumentField field = ReportGenerator.getField(getReactionType(), getField());
         String value;
@@ -120,13 +204,23 @@ public class ReactionFieldOptions extends Options {
         else {
             value =  getValue(VALUE_FIELD) != null && getOption(VALUE_FIELD).isEnabled() ? getValueAsString(VALUE_FIELD) : null;
         }
-        if(value != null && ReportGenerator.isBooleanField(field)) { //booleans
+        if(value != null && field != null && ReportGenerator.isBooleanField(field)) { //booleans
             if(value.toLowerCase().equals("yes") || value.toLowerCase().equals("true")) {
                 return true;
             }
             if(value.toLowerCase().equals("no") || value.toLowerCase().equals("false")) {
                 return false;
             }
+        }
+        Class valueType = field.getValueType();
+        if(Integer.class.equals(valueType)) {
+            return Integer.parseInt(value);
+        }
+        if(Double.class.equals(valueType)) {
+            return Double.parseDouble(value);
+        }
+        if(Date.class.equals(valueType)) {
+            return getValue(DATE_FIELD);
         }
         return value;
     }
@@ -139,12 +233,12 @@ public class ReactionFieldOptions extends Options {
         return ((OptionValue)getValue(REACTION_TYPE)).getName();
     }
 
-    public String getComparator() {
-        if(getOption(ENUM_FIELD) != null && getOption(ENUM_FIELD).isVisible()) {
-            return "=";
-        }
-        return "like";
-    }
+//    public String getComparator() {
+//        if(getOption(ENUM_FIELD) != null && getOption(ENUM_FIELD).isVisible()) {
+//            return "=";
+//        }
+//        return "like";
+//    }
 
 //    public String getSql(boolean fimsTable) {
 //        String extraTable = fimsTable ? "fims_values" : null;

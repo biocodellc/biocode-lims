@@ -33,14 +33,16 @@ public class ReportManager {
         reports = new ArrayList<Report>();
     }
 
-    public void loadReportsFromDisk() {
+    public void loadReportsFromDisk(FimsToLims fimsToLims) {
         reports = new ArrayList<Report>();
         if(reportXmlFile.exists()) {
             SAXBuilder builder = new SAXBuilder();
             try {
                 Element reportElement = builder.build(reportXmlFile).detachRootElement();
                 for(Element e : reportElement.getChildren("Report")) {
-                    reports.add(XMLSerializer.classFromXML(e, Report.class));
+                    Report report = XMLSerializer.classFromXML(e, Report.class);
+                    report.setFimsToLims(fimsToLims);
+                    reports.add(report);
                 }
             } catch (JDOMException e) {
                 BiocodeUtilities.displayExceptionDialog("Could not load report", "Geneious could not load one or more of your saved Biocode reports. "+e.getMessage(), e, null);
@@ -53,7 +55,6 @@ public class ReportManager {
     }
 
     public void addReport(Report report) throws IOException {
-        loadReportsFromDisk();
         reports.add(report);
         saveReportsToDisk();
     }
