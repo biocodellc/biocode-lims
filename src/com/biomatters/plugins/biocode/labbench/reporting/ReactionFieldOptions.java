@@ -171,7 +171,7 @@ public class ReactionFieldOptions extends Options {
 
     public String getComparator() {
         Option comparatorOption = getOption(CONDITION_FIELD);
-        if(comparatorOption.isVisible()) {
+        if(comparatorOption != null && comparatorOption.isVisible()) {
             String conditionCode = getValueAsString(CONDITION_FIELD);
             if("equal".equals(conditionCode)) {
                 return "=";
@@ -208,6 +208,9 @@ public class ReactionFieldOptions extends Options {
             if(value.toLowerCase().equals("no") || value.toLowerCase().equals("false")) {
                 return false;
             }
+        }
+        if(field == null) {
+            return null;
         }
         Class valueType = field.getValueType();
         if(Integer.class.equals(valueType)) {

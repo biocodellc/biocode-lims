@@ -413,7 +413,7 @@ public class ReportGenerator {
         }
 
         if(locus != null) {
-            sql += where ? " AND " : " WHERE "+"workflow.locus='"+locus+"'";
+            sql += (where ? " AND " : " WHERE ")+"workflow.locus='"+locus+"'";
         }
 
         System.out.println(sql);
