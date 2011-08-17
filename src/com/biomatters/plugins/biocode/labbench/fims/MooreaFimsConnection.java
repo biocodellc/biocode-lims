@@ -365,7 +365,9 @@ public class MooreaFimsConnection extends FIMSConnection{
         try {
             root = builder.build(in).detachRootElement();
         } catch (JDOMException e) {
-            throw new IOException("Error parsing server response: "+e.getMessage(), e);
+            IOException exception = new IOException("Error parsing server response: "+e.getMessage());
+            exception.initCause(e);
+            throw exception;
         }
         XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
         out.output(root, System.out);
