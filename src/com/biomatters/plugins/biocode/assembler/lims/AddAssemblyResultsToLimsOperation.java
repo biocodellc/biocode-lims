@@ -116,6 +116,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 continue;
             }
 
+            markDocumentPassedOrFailed(isPass, annotatedDocument);
+
             AssemblyResult assemblyResult = new AssemblyResult();
 
             String errorString = getChromatogramProperties(sequencingPlateCache, limsConnection, annotatedDocument, assemblyResult);
@@ -171,6 +173,25 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             return null;
         }
         return results;
+    }
+
+    /**
+     * This should handle consensus alignments, contigs, and individual sequences (marking only the traces)
+     * @param isPass pass or fail
+     * @param document the document to mark
+     * @throws DocumentOperationException
+     */
+    private void markDocumentPassedOrFailed(boolean isPass, AnnotatedPluginDocument document) throws DocumentOperationException{
+        if(SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass())) {
+            SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
+            for(int i=0; i < alignment.getNumberOfSequences(); i++) {
+                markDocumentPassedOrFailed(isPass, alignment.getReferencedDocument(i));
+            }
+        }
+        else {
+            document.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, isPass ? "passed" : "failed");
+            document.save();
+        }
     }
 
     private int removeAllExistingSequencesInDatabase(AssemblyResult assemblyResult) throws SQLException, DocumentOperationException {

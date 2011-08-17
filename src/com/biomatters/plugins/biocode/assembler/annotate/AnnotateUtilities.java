@@ -144,6 +144,9 @@ public class AnnotateUtilities {
         if(fimsData.sequencingPlateName != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
         }
+        if(fimsData.reactionStatus != null) {
+            annotatedDocument.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus);
+        }
         if(fimsData.well != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
             annotatedDocument.setFieldValue(BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString());
