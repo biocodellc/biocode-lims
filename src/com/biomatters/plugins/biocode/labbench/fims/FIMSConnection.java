@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 
 import java.util.*;
 import java.lang.ref.SoftReference;
+import java.io.IOException;
 
 /**
  *
@@ -224,4 +225,10 @@ public abstract class FIMSConnection {
     }
 
     public abstract boolean requiresMySql();
+
+    public abstract boolean hasPhotos();
+
+    public  List<String> getImageUrls(FimsSample fimsSample) throws IOException {
+        return Collections.emptyList();
+    }
 }

@@ -217,4 +217,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
     public boolean canGetTissueIdsFromFimsTissuePlate() {
         return true;
     }
+
+    public boolean hasPhotos() {
+        return false;
+    }
 }

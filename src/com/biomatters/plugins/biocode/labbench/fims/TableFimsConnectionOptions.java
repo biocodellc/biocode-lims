@@ -5,14 +5,18 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 
 import java.util.List;
 import java.util.Arrays;
 import java.io.IOException;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.*;
 
 import org.virion.jam.util.SimpleListener;
+
+import javax.swing.*;
 
 /**
  * @author Steve
@@ -72,7 +76,20 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
 
         final ComboBoxOption<OptionValue> tissueId = addComboBoxOption(TISSUE_ID, "Tissue ID field:", cols, cols.get(0));
 
-        final ComboBoxOption<OptionValue> specimenId = addComboBoxOption(SPECIMEN_ID, "Specimen ID field:", cols, cols.get(0));
+        beginAlignHorizontally("Specimen ID field:", false);
+        final ComboBoxOption<OptionValue> specimenId = addComboBoxOption(SPECIMEN_ID, "", cols, cols.get(0));
+        addBooleanOption("flickrPhotos", "Specimen photos on Flickr", false);
+        ButtonOption buttonOption = addButtonOption("flickrHelp", "", "", IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
+        buttonOption.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                String message = "<html>If you validate your specimen/tissue data using <i>BioValidator</i> (available from <a href=\"http://biovalidator.sourceforge.net/\">http://biovalidator.sourceforge.net/</a>), any photos that it uploads to Flickr will be automatically tagged for search by the Biocode LIMS plugin.  If you want to upload your photos yourself, simply add the tag <i>'bioValidator:specimen=xxx'</i> (where xxx is your specimen id) to make the images searchable from Geneious</html>";
+                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Information", (Component)e.getSource());
+                dialogOptions.setMaxWidth(400);
+                dialogOptions.setMaxHeight(600);
+                Dialogs.showDialog(dialogOptions, message);
+            }
+        });
+        endAlignHorizontally();
 
         final BooleanOption storePlates = addBooleanOption(STORE_PLATES, "The FIMS database contains plate information", false);
 
@@ -124,6 +141,10 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     public String verifyOptionsAreValid() {
         PasswordOptions pOptions = (PasswordOptions)getChildOptions().get(CONNECTION_OPTIONS_KEY);
         return pOptions.verifyOptionsAreValid();
+    }
+
+    public boolean linkPhotos() {
+        return ((Boolean)getValue("flickrPhotos"));
     }
 
     public String getTissueColumn() {

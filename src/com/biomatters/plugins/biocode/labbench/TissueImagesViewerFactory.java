@@ -10,21 +10,10 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.net.URL;
-import java.net.URLConnection;
-import java.net.HttpURLConnection;
-import java.net.URLEncoder;
-import java.io.InputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
 
-import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsSample;
-import org.jdom.input.SAXBuilder;
-import org.jdom.JDOMException;
-import org.jdom.Element;
-import org.jdom.output.XMLOutputter;
-import org.jdom.output.Format;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 
 /**
  * @author Steven Stones-Havas
@@ -50,9 +39,8 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
     }
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
-        TissueDocument tissueDoc = (TissueDocument)annotatedDocuments[0].getDocumentOrCrash();
-        final Boolean isMooreaFims = MooreaFimsSample.class.isAssignableFrom(tissueDoc.getFimsSampleClass());
-        if(!isMooreaFims) {
+        final FIMSConnection activeFIMSConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        if(activeFIMSConnection == null || !activeFIMSConnection.hasPhotos()) {
             return null;
         }
         return new DocumentViewer(){
@@ -86,7 +74,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    List<String> imageUrls = isMooreaFims ? getImageUrlsCalphotos(doc) : getImageUrlsFlickr(doc);
+                                    List<String> imageUrls = activeFIMSConnection.getImageUrls(doc);
                                     if(imageUrls != null && imageUrls.size() > 0) {
                                         Image[] images = new Image[imageUrls.size()];
                                         MediaTracker m = new MediaTracker(panel);
@@ -120,8 +108,6 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                                 } catch (IOException e1) {
                                     panel.removeAll();
                                     panel.add(new JLabel("Could not download photos: "+e1));
-                                } catch (JDOMException e1) {
-                                    e1.printStackTrace();
                                 }
                                 panel.revalidate();
                                 panel.repaint();
@@ -146,52 +132,6 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                 return panel;
             }
         };
-    }
-
-    private List<String> getImageUrlsCalphotos(TissueDocument doc) throws IOException, JDOMException {
-        URL xmlUrl = new URL("http://calphotos.berkeley.edu/cgi-bin/img_query?getthumbinfo=1&specimen_no="+URLEncoder.encode(doc.getSpecimenId(), "UTF-8")+"&format=xml&num=all&query_src=lims");
-        InputStream in = xmlUrl.openStream();
-        SAXBuilder builder = new SAXBuilder();
-        Element root = builder.build(in).detachRootElement();
-        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-        out.output(root, System.out);
-        List<Element> imageUrls = root.getChildren("enlarge_jpeg_url");
-        List<String> result = new ArrayList<String>();
-        for(Element e : imageUrls) {
-            result.add(e.getText());
-        }
-        return result;
-    }
-
-
-    private List<String> getImageUrlsFlickr(TissueDocument doc) throws IOException, JDOMException {
-        URL xmlUrl = new URL("http://www.flickr.com/services/rest/?method=flickr.photos.search&format=rest&machine_tags=bioValidator:specimen="+URLEncoder.encode("\""+doc.getSpecimenId()+"\"", "UTF-8")+"&api_key=724c92d972c3822bdb9c8ff501fb3d6a");
-        System.out.println(xmlUrl);
-        final HttpURLConnection urlConnection = (HttpURLConnection)xmlUrl.openConnection();
-        urlConnection.setRequestMethod("GET");
-        InputStream in = urlConnection.getInputStream();
-        SAXBuilder builder = new SAXBuilder();
-        Element root = builder.build(in).detachRootElement();
-        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-        out.output(root, System.out);
-        if(root.getName().equals("rsp") && "ok".equals(root.getAttributeValue("stat"))) {
-            root = root.getChild("photos");
-        }
-        else {
-            if(root.getChild("err") != null) {
-                throw new IOException(root.getChild("err").getAttributeValue("msg"));
-            }
-            return Collections.emptyList();
-        }
-        if(root == null) {
-            return Collections.emptyList();
-        }
-        List<Element> imageUrls = root.getChildren("photo");
-        List<String> result = new ArrayList<String>();
-        for(Element e : imageUrls) {
-            result.add("http://farm"+e.getAttributeValue("farm")+".static.flickr.com/"+e.getAttributeValue("server")+"/"+e.getAttributeValue("id")+"_"+e.getAttributeValue("secret")+"_z.jpg");
-        }
-        return result;
     }
 
 }

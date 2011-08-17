@@ -1730,9 +1730,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     protected void initialize(GeneiousServiceListener listener) {
         initializeConnectionManager();
-        //reportingService = new ReportingService();
-        //listener.childServiceAdded(reportingService);
-        //reportingService.updateReportGenerator();
+        reportingService = new ReportingService();
+        listener.childServiceAdded(reportingService);
+        reportingService.updateReportGenerator();
 
 
         if(connectionManager.connectOnStartup()) {

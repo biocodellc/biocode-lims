@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -11,7 +12,18 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.net.HttpURLConnection;
+
+import org.jdom.input.SAXBuilder;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.output.XMLOutputter;
+import org.jdom.output.Format;
 
 /**
  * @author Steve
@@ -22,6 +34,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     protected String tissueCol;
     protected String specimenCol;
     protected boolean storePlates;
+    protected boolean linkPhotos;
     protected String plateCol;
     protected String wellCol;
     protected List<DocumentField> fields;
@@ -39,6 +52,8 @@ public abstract class TableFimsConnection extends FIMSConnection{
         TableFimsConnectionOptions options = (TableFimsConnectionOptions)optionsa;
         tissueCol = options.getTissueColumn();
         specimenCol = options.getSpecimenColumn();
+
+        linkPhotos = options.linkPhotos();
 
         storePlates = options.storePlates();
         if(storePlates) {
@@ -157,5 +172,45 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException {
         return null;
+    }
+
+    public boolean hasPhotos() {
+        return linkPhotos;
+    }
+
+    @Override
+    public List<String> getImageUrls(FimsSample fimsSample) throws IOException {
+        URL xmlUrl = new URL("http://www.flickr.com/services/rest/?method=flickr.photos.search&format=rest&machine_tags=bioValidator:specimen="+ URLEncoder.encode("\""+fimsSample.getSpecimenId()+"\"", "UTF-8")+"&api_key=724c92d972c3822bdb9c8ff501fb3d6a");
+        System.out.println(xmlUrl);
+        final HttpURLConnection urlConnection = (HttpURLConnection)xmlUrl.openConnection();
+        urlConnection.setRequestMethod("GET");
+        InputStream in = urlConnection.getInputStream();
+        SAXBuilder builder = new SAXBuilder();
+        Element root = null;
+        try {
+            root = builder.build(in).detachRootElement();
+        } catch (JDOMException e) {
+            throw new IOException("Error parsing server response: "+e.getMessage(), e);
+        }
+        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        out.output(root, System.out);
+        if(root.getName().equals("rsp") && "ok".equals(root.getAttributeValue("stat"))) {
+            root = root.getChild("photos");
+        }
+        else {
+            if(root.getChild("err") != null) {
+                throw new IOException(root.getChild("err").getAttributeValue("msg"));
+            }
+            return Collections.emptyList();
+        }
+        if(root == null) {
+            return Collections.emptyList();
+        }
+        List<Element> imageUrls = root.getChildren("photo");
+        List<String> result = new ArrayList<String>();
+        for(Element e : imageUrls) {
+            result.add("http://farm"+e.getAttributeValue("farm")+".static.flickr.com/"+e.getAttributeValue("server")+"/"+e.getAttributeValue("id")+"_"+e.getAttributeValue("secret")+"_z.jpg");
+        }
+        return result;
     }
 }

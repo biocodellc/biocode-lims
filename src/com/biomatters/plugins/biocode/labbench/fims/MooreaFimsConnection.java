@@ -12,6 +12,16 @@ import com.biomatters.options.PasswordOption;
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.io.InputStream;
+import java.io.IOException;
+
+import org.jdom.input.SAXBuilder;
+import org.jdom.Element;
+import org.jdom.JDOMException;
+import org.jdom.output.XMLOutputter;
+import org.jdom.output.Format;
 
 /**
  * @author steve
@@ -340,5 +350,30 @@ public class MooreaFimsConnection extends FIMSConnection{
             e.printStackTrace();
             throw new ConnectionException("Error fetching tissue data from FIMS", e);
         }
+    }
+
+    public boolean hasPhotos() {
+        return true;
+    }
+
+    @Override
+    public List<String> getImageUrls(FimsSample fimsSample) throws IOException {
+        URL xmlUrl = new URL("http://calphotos.berkeley.edu/cgi-bin/img_query?getthumbinfo=1&specimen_no="+ URLEncoder.encode(fimsSample.getSpecimenId(), "UTF-8")+"&format=xml&num=all&query_src=lims");
+        InputStream in = xmlUrl.openStream();
+        SAXBuilder builder = new SAXBuilder();
+        Element root = null;
+        try {
+            root = builder.build(in).detachRootElement();
+        } catch (JDOMException e) {
+            throw new IOException("Error parsing server response: "+e.getMessage(), e);
+        }
+        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        out.output(root, System.out);
+        List<Element> imageUrls = root.getChildren("enlarge_jpeg_url");
+        List<String> result = new ArrayList<String>();
+        for(Element e : imageUrls) {
+            result.add(e.getText());
+        }
+        return result;
     }
 }
