@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.plugin.Options;
 
 import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -147,26 +148,28 @@ public class VerifyBinOptions extends Options {
     }
 
     public enum Bin {
-        High("happy.png", "High", 3),
-        Medium("ok.png", "Medium", 2),
-        Low("sad.png", "Low", 1);
+        High("happy.png", "High", Color.green.darker(), 3),
+        Medium("ok.png", "Medium", Color.orange, 2),
+        Low("sad.png", "Low", Color.red.darker(), 1);
 
         private final String icon;
         private String title;
+        private Color color;
         private final int rank;
         private VerifyTaxonomyTableModel.IconsWithToString icons;
         private final OptionValue optionValue;
 
-        Bin(String icon, String title, int rank) {
+        Bin(String icon, String title, Color color, int rank) {
             this.icon = icon;
             this.title = title;
+            this.color = color;
             this.rank = rank;
             this.optionValue = new OptionValue(name(), name());
         }
 
         public VerifyTaxonomyTableModel.IconsWithToString getIcons() {
             if (icons == null) {
-                icons = new VerifyTaxonomyTableModel.IconsWithToString(title, new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon))));
+                icons = new VerifyTaxonomyTableModel.IconsWithToString(title, new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon))), color);
             }
             return icons;
         }
@@ -177,6 +180,10 @@ public class VerifyBinOptions extends Options {
 
         public int getRank() {
             return rank;
+        }
+
+        public Color getColor() {
+            return color;
         }
     }
 }

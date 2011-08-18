@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Icons;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.TableSorter;
 import com.biomatters.utilities.ObjectAndColor;
 import org.jdom.Element;
@@ -421,10 +422,14 @@ public class VerifyTaxonomyTableModel implements TableModel {
                     return new ObjectAndColor(percentage, getColorForIdentity(percentage.doubleValue(), false), getColorForIdentity(percentage.doubleValue(), true));
                 }
             },
-            new VerifyColumn("Assembly Bin", String.class, true) {
+            new VerifyColumn("Assembly Bin", htmlify ? String.class : ObjectAndColor.class, true) {
                 @Override
                 Object getValue(VerifyResult row) {
-                    return row.queryDocument.getFieldValue(DocumentField.BIN);
+                    Object bin = row.queryDocument.getFieldValue(DocumentField.BIN);
+                    if(!htmlify && bin != null) {
+                        return BiocodeUtilities.getObjactAndColorFromBinningHtml(bin.toString());
+                    }
+                    return bin;
                 }
             }
     };
@@ -433,8 +438,10 @@ public class VerifyTaxonomyTableModel implements TableModel {
 
         final String toString;
         final Icons icons;
+        final Color color;
 
-        IconsWithToString(String toString, Icons icons) {
+        IconsWithToString(String toString, Icons icons, Color color) {
+            this.color = color;
             if(toString == null || icons == null) {
                 throw new IllegalArgumentException("You cannot pass null parameters to this method");
             }
@@ -445,6 +452,10 @@ public class VerifyTaxonomyTableModel implements TableModel {
         @Override
         public String toString() {
             return toString;
+        }
+
+        public Color getColor() {
+            return color;
         }
     }
 

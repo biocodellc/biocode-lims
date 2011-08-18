@@ -20,6 +20,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.utilities.ObjectAndColor;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
@@ -436,6 +437,24 @@ public class BiocodeUtilities {
             return null;
         }
         return new Well(wellStringBig.toUpperCase().charAt(0), wellNumber);
+    }
+
+    public static ObjectAndColor getObjactAndColorFromBinningHtml(String binningHtml) {
+        String htmlStart = "<html><head><3></head><b><font color='#";
+        if(binningHtml.startsWith(htmlStart)) {
+            try {
+                int colorEnd = binningHtml.indexOf('\'', htmlStart.length());
+                String colorString = binningHtml.substring(htmlStart.length(), colorEnd);
+                String label = binningHtml.substring(colorEnd+2, binningHtml.indexOf("<", colorEnd+2));
+                Color col = new Color(Integer.parseInt(colorString, 16));
+                return new ObjectAndColor(label, col);
+            } catch (NumberFormatException e) { //if the color definition isn't actually a color
+                assert false : e.getMessage();
+            } catch (IndexOutOfBoundsException e) { //if the parsing fails
+                assert false : e.getMessage();
+            }
+        }
+        return new ObjectAndColor(binningHtml, Color.black);
     }
 
     public static boolean isAlignmentOfContigConsensusSequences(AnnotatedPluginDocument alignmentDoc) throws DocumentOperationException {
