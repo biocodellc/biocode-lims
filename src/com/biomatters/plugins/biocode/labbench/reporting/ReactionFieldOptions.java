@@ -44,11 +44,16 @@ public class ReactionFieldOptions extends Options {
             new OptionValue("greaterThan", "is greater than"),
             new OptionValue("notEqual", "does not equal")
     };
+    private FimsToLims fimsToLims;
 
+    public void setFimsToLims(FimsToLims fimsToLims) {
+        this.fimsToLims = fimsToLims;
+    }
 
     public ReactionFieldOptions(Class cl, FimsToLims fimsToLims, boolean includeValue) {
         super(cl);
-        init(fimsToLims, includeValue);
+        this.fimsToLims = fimsToLims;
+        init(includeValue);
         initListeners();
     }
 
@@ -57,7 +62,7 @@ public class ReactionFieldOptions extends Options {
         initListeners();
     }
 
-    private void init(FimsToLims fimsToLims, boolean includeValue) {
+    private void init(boolean includeValue) {
         beginAlignHorizontally("", false);
         ComboBoxOption<OptionValue> reactionType = addComboBoxOption(REACTION_TYPE, "Reaction type ", reactionTypes, reactionTypes[0]);
         List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), includeValue);
@@ -152,6 +157,9 @@ public class ReactionFieldOptions extends Options {
         if(field != null && ReportGenerator.isBooleanField(field)) {
             return Boolean.class;
         }
+        if(field != null && isCocktailField(field.getName())) {
+            return Integer.class;
+        }
         return field != null ? field.getValueType() : String.class;
     }
 
@@ -192,6 +200,23 @@ public class ReactionFieldOptions extends Options {
         return "=";
     }
 
+    private boolean isCocktailField(String fieldName) {
+        return fieldName.toLowerCase().contains("cocktail");
+    }
+
+
+
+    public String getDisplayValue() {
+        DocumentField field = ReportGenerator.getField(getReactionType(), getField());
+        String value;
+        if(getOption(ENUM_FIELD) != null && getOption(ENUM_FIELD).isVisible()) {
+            return getValueAsString(ENUM_FIELD);
+        }
+        else {
+            return  getValue(VALUE_FIELD) != null && getOption(VALUE_FIELD).isEnabled() ? getValueAsString(VALUE_FIELD) : null;
+        }
+    }
+
     public Object getValue() {
         DocumentField field = ReportGenerator.getField(getReactionType(), getField());
         String value;
@@ -201,12 +226,17 @@ public class ReactionFieldOptions extends Options {
         else {
             value =  getValue(VALUE_FIELD) != null && getOption(VALUE_FIELD).isEnabled() ? getValueAsString(VALUE_FIELD) : null;
         }
-        if(value != null && field != null && ReportGenerator.isBooleanField(field)) { //booleans
-            if(value.toLowerCase().equals("yes") || value.toLowerCase().equals("true")) {
-                return true;
+        if (value != null && field != null) {
+            if (ReportGenerator.isBooleanField(field)) {//booleans
+                if (value.toLowerCase().equals("yes") || value.toLowerCase().equals("true")) {
+                    return true;
+                }
+                if (value.toLowerCase().equals("no") || value.toLowerCase().equals("false")) {
+                    return false;
+                }
             }
-            if(value.toLowerCase().equals("no") || value.toLowerCase().equals("false")) {
-                return false;
+            if(isCocktailField(field.getName())) {
+                return fimsToLims.getCocktailId(getReactionType(), value);
             }
         }
         if(field == null) {
@@ -338,6 +368,6 @@ public class ReactionFieldOptions extends Options {
         if(getValue() == null) {
             return niceReactionName+locusString;
         }
-        return reactionType+" "+getField()+" "+getComparator()+" "+getValue()+locusString;
+        return reactionType+" "+getField()+" "+getComparator()+" "+getDisplayValue()+locusString;
     }
 }

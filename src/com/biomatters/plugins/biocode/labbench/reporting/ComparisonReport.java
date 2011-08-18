@@ -157,7 +157,7 @@ public class ComparisonReport extends Report{
         final String xLabel = fimsToLims.getFriendlyName(field);
         final String yLabel;
         if(fieldOptions.getValue() != null) {
-            yLabel = fimsToLims.getFriendlyName(fieldOptions.getField()) + " " + fieldOptions.getValue();
+            yLabel = fieldOptions.getNiceName();
         }
         else {
             yLabel = fieldOptions.getFriendlyTableName();

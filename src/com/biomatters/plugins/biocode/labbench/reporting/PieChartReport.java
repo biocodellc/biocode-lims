@@ -204,10 +204,19 @@ public class PieChartReport extends Report{
                     statement.setObject(2 + i, o);
                 }
             }
+            String valueString = value.toString();
+
+            if(enumeratedField.getName().toLowerCase().contains("cocktail")) {
+                try {
+                    int valueInt = Integer.parseInt(valueString);
+                    valueString = fimsToLims.getCocktailName(reactionType.toLowerCase(), valueInt);
+                }
+                catch(NumberFormatException ex) {} //do nothing - keep the old value
+            }
 
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                dataset.setValue(value.toString(), resultSet.getInt(1));
+                dataset.setValue(valueString, resultSet.getInt(1));
             } else {
                 throw new RuntimeException("No result for " + value);
             }

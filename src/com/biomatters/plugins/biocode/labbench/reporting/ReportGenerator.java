@@ -51,7 +51,7 @@ public class ReportGenerator {
 
     public ReportGenerator(Chartable chartable, File userDataDirectory) throws SQLException{
         this.chartable = chartable;
-        fimsToLims = new FimsToLims(BiocodeService.getInstance().getActiveFIMSConnection(), BiocodeService.getInstance().getActiveLIMSConnection());
+        fimsToLims = new FimsToLims(BiocodeService.getInstance());
         reportManager = new ReportManager(userDataDirectory);
     }
 

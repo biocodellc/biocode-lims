@@ -3,6 +3,8 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingCocktail;
+import com.biomatters.plugins.biocode.labbench.reaction.PCRCocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
@@ -13,6 +15,8 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import jebl.util.ProgressListener;
 
 import java.sql.*;
@@ -20,6 +24,8 @@ import java.util.*;
 import java.util.Date;
 
 import org.virion.jam.util.SimpleListener;
+
+import javax.management.monitor.StringMonitor;
 
 /**
  * @author Steve
@@ -38,10 +44,11 @@ public class FimsToLims {
     private boolean limsHasFimsValues;
     private Date dateLastCopied;
 
-    public FimsToLims(FIMSConnection fimsConnection, LIMSConnection limsConnection) throws SQLException{
-        this.fims = fimsConnection;
-        this.lims = limsConnection;
+    public FimsToLims(BiocodeService service) throws SQLException{
+        this.fims = service.getActiveFIMSConnection();
+        this.lims = service.getActiveLIMSConnection();
         popuplateHasFimsLimsValues();
+        initialiseCocktailMaps(service.getPCRCocktails(), service.getCycleSequencingCocktails());
         updateEverything();
     }
 
@@ -190,6 +197,44 @@ public class FimsToLims {
             return "DATE";
         }
         return lims.isLocal() ? "LONGVARCHAR" : "LONGTEXT";
+    }
+
+    private BiMap<String, Integer> pcrCocktailMap;
+    private BiMap<String, Integer> sequencingCocktailMap;
+
+    private void initialiseCocktailMaps(List<PCRCocktail> pcrCocktails, List<CycleSequencingCocktail> cycleSequencingCocktails) {
+        pcrCocktailMap = HashBiMap.create();
+        for(PCRCocktail cocktail : pcrCocktails) {
+            pcrCocktailMap.put(cocktail.getName(), cocktail.getId());
+        }
+
+        sequencingCocktailMap = HashBiMap.create();
+        for(CycleSequencingCocktail cocktail : cycleSequencingCocktails) {
+            sequencingCocktailMap.put(cocktail.getName(), cocktail.getId());
+        }
+    }
+
+    public int getCocktailId(String tableName, String cocktailName) {
+        BiMap<String, Integer> map;
+        if(tableName.equals("pcr")) {
+            map = pcrCocktailMap;
+        }
+        else {
+            map = sequencingCocktailMap;
+        }
+        return map.get(cocktailName);
+    }
+
+
+    public String getCocktailName(String tableName, int cocktailId) {
+        BiMap<String, Integer> map;
+        if(tableName.equals("pcr")) {
+            map = pcrCocktailMap;
+        }
+        else {
+            map = sequencingCocktailMap;
+        }
+        return map.inverse().get(cocktailId);
     }
 
 

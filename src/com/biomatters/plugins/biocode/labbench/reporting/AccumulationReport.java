@@ -62,6 +62,7 @@ public class AccumulationReport extends Report{
         for (int i1 = 0; i1 < options.getSeriesOptions().size(); i1++) {
             Options seriesOptions = options.getSeriesOptions().get(i1);
             ReactionFieldOptions fieldOptions = (ReactionFieldOptions) seriesOptions;
+            fieldOptions.setFimsToLims(fimsToLims);
             final String seriesName = fieldOptions.getNiceName();
             composite.beginSubtask("Calculating series "+(i1+1)+" of "+options.getSeriesOptions().size()+" ("+seriesName+")");
                     System.out.println(options.getSql(fieldOptions));
