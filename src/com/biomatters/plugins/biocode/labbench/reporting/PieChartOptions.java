@@ -83,7 +83,7 @@ public class PieChartOptions extends Options {
 
     String getLimsSql() {
         ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);
-        return reactionFields.getSql((Boolean)getValue(FIMS_FIELD) ? "fims_values f" : null, null);
+        return reactionFields.getSql((Boolean)getValue(FIMS_FIELD) ? FimsToLims.FIMS_VALUES_TABLE+" f" : null, null);
     }
 
     String getFimsSql() {

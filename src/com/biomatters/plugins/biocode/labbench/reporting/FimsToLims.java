@@ -35,9 +35,9 @@ public class FimsToLims {
 
     private FIMSConnection fims;
     private LIMSConnection lims;
-    private static final String FIMS_DEFINITION_TABLE = "fims_definition";
-    private static final String FIMS_VALUES_TABLE = "fims_values";
-    private static final String FIMS_DATE_TABLE = "fims_date";
+    public static final String FIMS_DEFINITION_TABLE = "fims_definition";
+    public static final String FIMS_VALUES_TABLE = "fims_values";
+    public static final String FIMS_DATE_TABLE = "fims_date";
     private List<Options.OptionValue> loci;
     private List<SimpleListener> fimsTableChangedListeners = new ArrayList<SimpleListener>();
     private Map<String, String> friendlyNameMap = new HashMap<String, String>();

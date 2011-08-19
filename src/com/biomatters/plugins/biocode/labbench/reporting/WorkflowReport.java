@@ -63,7 +63,7 @@ public class WorkflowReport extends Report{
     public ReportChart getChart(Options options, final FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
         final Options.OptionValue optionValue = (Options.OptionValue)options.getValue("field");
         String field = FimsToLims.getSqlColName(optionValue.getName());
-        String sql  = "SELECT DISTINCT("+field+") FROM fims_values";
+        String sql  = "SELECT DISTINCT("+field+") FROM "+FimsToLims.FIMS_VALUES_TABLE;
         Statement statement = fimsToLims.getLimsConnection().getConnection().createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         final List<String> fieldValues = new ArrayList<String>();
@@ -205,7 +205,7 @@ public class WorkflowReport extends Report{
                 assert false;
         }
 
-        builder.append("SELECT COUNT(workflow.id) FROM "+table+", workflow, extraction, fims_values WHERE workflow.extractionId = extraction.id AND extraction.sampleId = fims_values.tissueId AND "+table+".progress = 'passed' AND workflow.locus = ? AND fims_values."+field+" "+comparator+" ?");
+        builder.append("SELECT COUNT(workflow.id) FROM "+table+", workflow, extraction, "+FimsToLims.FIMS_VALUES_TABLE+" WHERE workflow.extractionId = extraction.id AND extraction.sampleId = "+FimsToLims.FIMS_VALUES_TABLE+".tissueId AND "+table+".progress = 'passed' AND workflow.locus = ? AND "+FimsToLims.FIMS_VALUES_TABLE+"."+field+" "+comparator+" ?");
 
         return builder.toString();
     }

@@ -271,7 +271,7 @@ public class ReactionFieldOptions extends Options {
 //    }
 
 //    public String getSql(boolean fimsTable) {
-//        String extraTable = fimsTable ? "fims_values" : null;
+//        String extraTable = fimsTable ? FimsToLims.FIMS_VALUES_TABLE : null;
 //        return getSql(extraTable, false, null);
 //    }
 

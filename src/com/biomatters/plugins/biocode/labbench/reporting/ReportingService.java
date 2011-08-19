@@ -36,6 +36,26 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
     private ReportGenerator reportGenerator;
     private JPanel topPanel;
 
+    private Runnable loginStatusChangedRunnable = new Runnable() {
+        public void run() {
+            try {
+                if(BiocodeService.getInstance().isLoggedIn()) {
+                    reportGenerator = new ReportGenerator(ReportingService.this, BiocodeService.getInstance().getDataDirectory());
+                    reportGenerator.update();
+                }
+                else {
+                    reportGenerator = null;
+                }
+                fillPanel();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                e.printStackTrace();
+                Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
+            }
+            panel.revalidate();
+        }
+    };
+
     public void setChartPanel(final JComponent panel) {
         Runnable runnable = new Runnable() {
             public void run() {
@@ -59,26 +79,7 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
 
     public void notifyLoginStatusChanged() {
         if(panel != null) {
-            Runnable runnable = new Runnable() {
-                public void run() {
-                    try {
-                        if(BiocodeService.getInstance().isLoggedIn()) {
-                            reportGenerator = new ReportGenerator(ReportingService.this, BiocodeService.getInstance().getDataDirectory());
-                            reportGenerator.update();
-                        }
-                        else {
-                            reportGenerator = null;
-                        }
-                        fillPanel();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                        e.printStackTrace();
-                        Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
-                    }
-                    panel.revalidate();
-                }
-            };
-            ThreadUtilities.invokeNowOrLater(runnable);
+            ThreadUtilities.invokeNowOrLater(loginStatusChangedRunnable);
         }
     }
 
@@ -91,12 +92,15 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
     public JPanel getPanel() {
         if(panel == null) {
             panel = new GPanel(new BorderLayout());
+            loginStatusChangedRunnable.run();
         }
-        try {
-            fillPanel();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
+        else {
+            try {
+                fillPanel();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
+            }
         }
         return panel;
     }

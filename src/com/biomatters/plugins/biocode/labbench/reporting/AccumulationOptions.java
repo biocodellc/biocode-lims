@@ -60,7 +60,7 @@ public class AccumulationOptions extends Options {
 
     public String getSql(ReactionFieldOptions countOptions) {
         boolean hasFims = (Boolean)getValue(FIMS_FIELD);
-        String sql = countOptions.getSql(hasFims ? "fims_values" : null, hasFims ? "fims_values.tissueId=extraction.sampleId" : null);
+        String sql = countOptions.getSql(hasFims ? FimsToLims.FIMS_VALUES_TABLE : null, hasFims ? FimsToLims.FIMS_VALUES_TABLE+".tissueId=extraction.sampleId" : null);
         FimsMultiOptions fimsMultiOptions = (FimsMultiOptions)getChildOptions().get(FIMS_OPTIONS);
         if(hasFims) {
             sql += " AND (";
@@ -68,7 +68,7 @@ public class AccumulationOptions extends Options {
             String join = fimsMultiOptions.isOr() ? " OR " : " AND ";
             for (int i = 0; i < fimsOptions.size(); i++) {
                 SingleFieldOptions option = fimsMultiOptions.getFimsOptions().get(i);
-                sql += "fims_values." + FimsToLims.getSqlColName(option.getFieldName()) + " " + option.getComparitor() + " " + "?";
+                sql += FimsToLims.FIMS_VALUES_TABLE+"." + FimsToLims.getSqlColName(option.getFieldName()) + " " + option.getComparitor() + " " + "?";
                 if(i < fimsOptions.size()-1) {
                     sql += join;
                 }

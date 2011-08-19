@@ -97,6 +97,10 @@ public class AccumulationReport extends Report{
 
             dataset.addSeries(series);
         }
+        return createAccumulationChart(dataset);
+    }
+
+    public static ReportChart createAccumulationChart(final XYSeriesCollection dataset) {
         final String title = "Accumulation";
         final String yAxis = "Count";
         final JFreeChart chart = ChartFactory.createXYLineChart(

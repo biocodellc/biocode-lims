@@ -87,7 +87,7 @@ public class ComparisonReport extends Report{
             throw new RuntimeException("The field "+optionValueToCompare.getName()+" was not found in either the FIMS or the LIMS!");
         }
         String field = fieldToCompare.getCode();
-        String xTable = fims ? "fims_values" : "";
+        String xTable = fims ? FimsToLims.FIMS_VALUES_TABLE : "";
         if(field.indexOf(".") >= 0) {
             xTable = field.substring(0, field.indexOf("."));
             field = field.substring(field.indexOf(".")+1);
@@ -107,7 +107,7 @@ public class ComparisonReport extends Report{
         String yTable = fieldOptions.getTable();
 
         if(fims) {
-            sql1 = fieldOptions.getSql("fims_values", "fims_values." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
+            sql1 = fieldOptions.getSql(FimsToLims.FIMS_VALUES_TABLE, FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
             //sql1 = fieldOptions.getSql(fims);
         }
         else {

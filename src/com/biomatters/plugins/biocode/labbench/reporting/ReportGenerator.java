@@ -2,9 +2,11 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.components.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.AbstractListComboBoxModel;
@@ -118,10 +120,13 @@ public class ReportGenerator {
                 new PieChartReport(fimsToLims),
                 new ComparisonReport(fimsToLims),
                 new AccumulationReport(fimsToLims),
-                new WorkflowReport(fimsToLims));
+                new FimsAccumulationReport(fimsToLims)/*,
+                new WorkflowReport(fimsToLims)*/);
     }
 
     public JPanel getReportingPanel() throws SQLException{
+        final JToolBar toolbar = new JToolBar();
+        toolbar.setFloatable(false);
         final AbstractListComboBoxModel reportComboModel = new AbstractListComboBoxModel() {
             public int getSize() {
                 return Math.max(1, reportManager.getReports().size());
@@ -135,9 +140,9 @@ public class ReportGenerator {
             }
         };
         final JComboBox reportCombo = new GComboBox(reportComboModel);
+        reportCombo.setMaximumSize(reportCombo.getPreferredSize());
         reportCombo.setSelectedIndex(0);
-        final JButton calculateButton = new GButton("Calculate");
-        calculateButton.addActionListener(new ActionListener() {
+        final GeneiousAction calculateAction = new GeneiousAction("Calculate", "Calculate and graph the selected report", IconUtilities.getIcons("graph16.png")) {
             public void actionPerformed(ActionEvent e) {
                 if(reportManager.getReports().size() == 0) {
                     return;
@@ -147,7 +152,7 @@ public class ReportGenerator {
                     final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report", 1000, false);
                     final Report report1 = report;
                     reportCombo.setEnabled(false);
-                    calculateButton.setEnabled(false);
+                    setEnabled(false);
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
@@ -182,7 +187,7 @@ public class ReportGenerator {
                                     Runnable runnable = new Runnable() {
                                         public void run() {
                                             reportCombo.setEnabled(true);
-                                            calculateButton.setEnabled(true);
+                                            setEnabled(true);
                                         }
                                     };
                                     ThreadUtilities.invokeNowOrLater(runnable);
@@ -202,10 +207,48 @@ public class ReportGenerator {
 
                 }
             }
-        });
+        };
 
-        final JButton addButton = new GButton("Add Report");
-        addButton.addActionListener(new ActionListener(){
+
+        final Action editAction = new GeneiousAction("View/Edit", "View or edit the selected report", IconUtilities.getIcons("edit16.png", "edit24.png")){
+            public void actionPerformed(ActionEvent e) {
+                int selectedIndex = reportCombo.getSelectedIndex();
+                if(reportManager.getReports().size() == 0 || selectedIndex < 0 || selectedIndex >= reportManager.getReports().size()) {
+                    return;
+                }
+                Report selectedReport = reportManager.getReports().get(reportCombo.getSelectedIndex());
+                Report report = getReport(selectedReport.getName(), selectedReport.getTypeName(), selectedReport.getOptions(), toolbar);
+                if(report != null) {
+                    try {
+                        reportManager.setReport(selectedIndex, report);
+                    } catch (IOException e1) {
+                        BiocodeUtilities.displayExceptionDialog("Error saving report", "Geneious could not save your reports to disk: "+e1.getMessage(), e1, toolbar);
+                    }
+                }
+                reportComboModel.fireContentsChanged();
+                reportCombo.setSelectedIndex(selectedIndex);
+            }
+        };
+
+        final Action removeAction = new GeneiousAction("Remove", "Remove a report", IconUtilities.getIcons("remove24.png")){
+            public void actionPerformed(ActionEvent e) {
+                int selectedIndex = reportCombo.getSelectedIndex();
+                try {
+                    reportManager.removeReport(selectedIndex);
+                    if(reportManager.getReports().size() == 0) {
+                        editAction.setEnabled(false);
+                        calculateAction.setEnabled(false);
+                        setEnabled(false);
+                    }
+                } catch (IOException e1) {
+                    BiocodeUtilities.displayExceptionDialog("Error saving report", "Geneious could not save your reports to disk: "+e1.getMessage(), e1, toolbar);
+                }
+                reportComboModel.fireContentsChanged();
+                reportCombo.setSelectedIndex(Math.max(selectedIndex-1, 0));
+            }
+        };
+
+        final Action addAction = new GeneiousAction("Add", "Add a new report", IconUtilities.getIcons("add24.png")) {
             public void actionPerformed(ActionEvent e) {
                 Options reportOptions = new Options(ReportGenerator.class);
                 reportOptions.addStringOption("name", "Report Name", "");
@@ -214,65 +257,48 @@ public class ReportGenerator {
                 }
                 reportOptions.addChildOptionsPageChooser("reportType", "ReportType", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
 
-                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Create Report", addButton);
+                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Create Report", toolbar);
                 dialogOptions.setMaxWidth(Integer.MAX_VALUE);
-                Report newReport = getReport("", null, null, addButton);
+                Report newReport = getReport("", null, null, toolbar);
                 if(newReport != null) {
+                    editAction.setEnabled(true);
+                    removeAction.setEnabled(true);
+                    calculateAction.setEnabled(true);
                     try {
                         reportManager.addReport(newReport);
                     } catch (IOException e1) {
-                        BiocodeUtilities.displayExceptionDialog("Error saving report", "Geneious could not save your reports to disk: "+e1.getMessage(), e1, addButton);
+                        BiocodeUtilities.displayExceptionDialog("Error saving report", "Geneious could not save your reports to disk: "+e1.getMessage(), e1, toolbar);
                     }
                     reportComboModel.fireContentsChanged();
                     reportCombo.setSelectedIndex(reportComboModel.getSize()-1);
                 }
             }
-        });
-        final JButton removeButton = new GButton("Remove Report");
-        removeButton.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent e) {
-                int selectedIndex = reportCombo.getSelectedIndex();
-                try {
-                    reportManager.removeReport(selectedIndex);
-                } catch (IOException e1) {
-                    BiocodeUtilities.displayExceptionDialog("Error saving report", "Geneious could not save your reports to disk: "+e1.getMessage(), e1, addButton);
-                }
-                reportComboModel.fireContentsChanged();
-                reportCombo.setSelectedIndex(Math.max(selectedIndex-1, 0));
-            }
-        });
-        final JButton editButton = new GButton("View/Edit");
-        editButton.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent e) {
-                int selectedIndex = reportCombo.getSelectedIndex();
-                if(reportManager.getReports().size() == 0 || selectedIndex < 0 || selectedIndex >= reportManager.getReports().size()) {
-                    return;
-                }
-                Report selectedReport = reportManager.getReports().get(reportCombo.getSelectedIndex());
-                Report report = getReport(selectedReport.getName(), selectedReport.getTypeName(), selectedReport.getOptions(), editButton);
-                if(report != null) {
-                    try {
-                        reportManager.setReport(selectedIndex, report);
-                    } catch (IOException e1) {
-                        BiocodeUtilities.displayExceptionDialog("Error saving report", "Geneious could not save your reports to disk: "+e1.getMessage(), e1, addButton);
-                    }
-                }
-                reportComboModel.fireContentsChanged();
-                reportCombo.setSelectedIndex(selectedIndex);
-            }
-        });
+        };
 
-        GPanel panel = new GPanel(new FlowLayout());
-        panel.add(new GLabel("Choose a report"));
-        panel.add(reportCombo);
-        panel.add(calculateButton);
-        panel.add(new GLabel("   "));
-        panel.add(addButton);
-        panel.add(editButton);
-        panel.add(removeButton);
+        boolean removeEditEnabled = reportManager.getReports().size() > 0;
+        editAction.setEnabled(removeEditEnabled);
+        removeAction.setEnabled(removeEditEnabled);
+        calculateAction.setEnabled(removeEditEnabled);
+
+        toolbar.add(Box.createHorizontalGlue());
+
+        toolbar.add(addAction);
+        toolbar.add(removeAction);
+        toolbar.add(editAction);
+        toolbar.addSeparator();
+        toolbar.add(reportCombo);
+        toolbar.add(calculateAction);
+
+        toolbar.add(Box.createHorizontalGlue());
+        for(Component component : toolbar.getComponents()) {
+            if(component instanceof JButton) {
+                ((JButton)component).setHideActionText(false);
+                ((JButton)component).setHorizontalTextPosition(JButton.RIGHT);
+            }
+        }
         final JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.add(getFimsPanel(), BorderLayout.NORTH);
-        topPanel.add(panel, BorderLayout.CENTER);
+        topPanel.add(toolbar, BorderLayout.SOUTH);
 
         return topPanel;
     }
@@ -407,7 +433,7 @@ public class ReportGenerator {
         sql = "SELECT DISTINCT ("+field+") FROM "+table;
 
         boolean where = false;
-        if(!table.equals("extraction") && !table.equals("fims_values") && !table.equals("workflow")) {
+        if(!table.equals("extraction") && !table.equals(FimsToLims.FIMS_VALUES_TABLE) && !table.equals("workflow")) {
             where = true;
             sql += ", workflow WHERE workflow.id = " + table + ".workflow";
         }
