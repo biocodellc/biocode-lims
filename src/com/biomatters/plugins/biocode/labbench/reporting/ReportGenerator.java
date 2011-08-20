@@ -292,7 +292,7 @@ public class ReportGenerator {
         toolbar.add(Box.createHorizontalGlue());
         for(Component component : toolbar.getComponents()) {
             if(component instanceof JButton) {
-                ((JButton)component).setHideActionText(false);
+               // ((JButton)component).setHideActionText(false);
                 ((JButton)component).setHorizontalTextPosition(JButton.RIGHT);
             }
         }
