@@ -185,7 +185,7 @@ public class PieChartReport extends Report{
         PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
         progress.setMessage("Getting all possible values for your selected field");
         progress.setIndeterminateProgress();
-        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), reactionFields.getLocus(), progress);
+        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), Arrays.asList(reactionFields.getLocus()), progress);
         if(enumerationObjects == null) {
             return null;
         }

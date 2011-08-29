@@ -21,6 +21,7 @@ public class ComparisonReportOptions extends Options{
     private String X_CHILD_OPTIONS = "xAxis";
     private String FIELD_OPTION = "field";
     private String Y_CHILD_OPTIONS = "yAxis";
+    private String Y_MULTIPLE_OPTIONS = "reactionFieldOptions";
 
     public ComparisonReportOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -39,7 +40,12 @@ public class ComparisonReportOptions extends Options{
         limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);
         limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
         documentFields.addAll(limsSearchFields);
-        addChildOptions(Y_CHILD_OPTIONS, "Y Axis (Count)", "", new ReactionFieldOptions(this.getClass(), fimsToLims, true));
+
+        Options yAxisOptions = new Options(this.getClass());
+
+        yAxisOptions.addMultipleOptions(Y_MULTIPLE_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true), false);
+
+        addChildOptions(Y_CHILD_OPTIONS, "Y Axis (Count)", "", yAxisOptions);
 
         Options fieldOptions = new Options(this.getClass());
         fieldOptions.addLabel("Your Y Axis search will be counted across each value of this field in the database");
@@ -52,7 +58,12 @@ public class ComparisonReportOptions extends Options{
         return (Options.OptionValue)getChildOptions().get(X_CHILD_OPTIONS).getValue(FIELD_OPTION);
     }
 
-    public ReactionFieldOptions getYAxisOptions() {
-        return (ReactionFieldOptions)getChildOptions().get(Y_CHILD_OPTIONS);
+    public List<ReactionFieldOptions> getYAxisOptions() {
+        List<Options> optionsList = getChildOptions().get(Y_CHILD_OPTIONS).getMultipleOptions(Y_MULTIPLE_OPTIONS).getValues();
+        List<ReactionFieldOptions> fieldOptions = new ArrayList<ReactionFieldOptions>();
+        for(Options o : optionsList) {
+            fieldOptions.add((ReactionFieldOptions)o);
+        }
+        return fieldOptions;
     }
 }

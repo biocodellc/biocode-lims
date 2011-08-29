@@ -118,6 +118,7 @@ public class FimsToLims {
     private void populateDateLastCopied() throws SQLException {
         if(!limsHasFimsValues()) {
             dateLastCopied = new Date(0);
+            return;
         }
         String sql = "SELECT value FROM "+FIMS_DATE_TABLE;
         Statement statement = lims.getConnection().createStatement();

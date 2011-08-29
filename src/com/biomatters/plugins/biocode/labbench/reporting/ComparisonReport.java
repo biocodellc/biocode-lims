@@ -23,13 +23,12 @@ import java.awt.*;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import jebl.util.ProgressListener;
+import jebl.util.CompositeProgressListener;
 
 import javax.swing.*;
 
@@ -95,74 +94,93 @@ public class ComparisonReport extends Report{
         if(fims) {
             field = FimsToLims.getSqlColName(field);
         }
-        ReactionFieldOptions fieldOptions = options.getYAxisOptions();
+        final List<ReactionFieldOptions> fieldOptionsList = options.getYAxisOptions();
+        Set<String> loci = new LinkedHashSet<String>();
+        for(ReactionFieldOptions fieldOption : fieldOptionsList) {
+            String locusValue = fieldOption.getLocus();
+            if(locusValue != null) {
+                loci.add(locusValue);
+            }
+        }
 
-        List<String> values = ReportGenerator.getDistinctValues(fimsToLims, field, xTable, fims ? null : fieldOptions.getLocus(), progress);
+        List<String> values = ReportGenerator.getDistinctValues(fimsToLims, field, xTable, fims ? null : loci, progress);
 
         if(values == null) {
             return null;
         }
 
-        String sql1;
-        String yTable = fieldOptions.getTable();
-
-        if(fims) {
-            sql1 = fieldOptions.getSql(FimsToLims.FIMS_VALUES_TABLE, FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
-            //sql1 = fieldOptions.getSql(fims);
-        }
-        else {
-            if(xTable.equals(yTable) || xTable.equals("workflow")) {
-                sql1 = fieldOptions.getSql(null, null);
-            }
-            else {
-                sql1 = fieldOptions.getSql(xTable, xTable+".workflow = workflow.id");
-            }
-        }
-        sql1  = sql1 + " AND "+xTable+"."+field+" like ?";
-        System.out.println(sql1);
-
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql1);
-        final List<FieldResult> results = new ArrayList<FieldResult>();
-
-        for (int i1 = 0; i1 < values.size(); i1++) {
-            String value = values.get(i1);
-            progress.setProgress(((double)i1)/values.size());
-            if(progress.isCanceled()) {
-                return null;
-            }
-            if(fieldOptions.getValue() != null) {
-                statement.setObject(1, fieldOptions.getValue());
-                statement.setString(2, value);
-            }
-            else {
-                statement.setString(1, value);
-            }
-            long time = System.currentTimeMillis();
-            ResultSet set = statement.executeQuery();
-            System.out.println(System.currentTimeMillis() - time + " millis for " + value);
-            while (set.next()) {
-                int result = set.getInt(1);
-                System.out.println(result);
-                results.add(new FieldResult(value != null && value.length() > 0 ? value : "None", result));
-            }
-        }
-
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        for(int i=0; i < results.size(); i++) {
-            dataset.addValue(results.get(i).getResult(), field, results.get(i).getField());
+
+        CompositeProgressListener composite = new CompositeProgressListener(progress, fieldOptionsList.size());
+        final List<FieldResult> results = new ArrayList<FieldResult>();
+        for(ReactionFieldOptions fieldOptions : fieldOptionsList) {
+            composite.beginSubtask();
+
+            String sql1;
+            String yTable = fieldOptions.getTable();
+
+            if(fims) {
+                sql1 = fieldOptions.getSql(FimsToLims.FIMS_VALUES_TABLE, FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
+                //sql1 = fieldOptions.getSql(fims);
+            }
+            else {
+                if(xTable.equals(yTable) || xTable.equals("workflow")) {
+                    sql1 = fieldOptions.getSql(null, null);
+                }
+                else {
+                    sql1 = fieldOptions.getSql(xTable, xTable+".workflow = workflow.id");
+                }
+            }
+            sql1  = sql1 + " AND "+xTable+"."+field+" like ?";
+            System.out.println(sql1);
+
+            PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql1);
+
+            for (int i1 = 0; i1 < values.size(); i1++) {
+                String value = values.get(i1);
+                composite.setProgress(((double)i1)/values.size());
+                if(progress.isCanceled()) {
+                    return null;
+                }
+                if(fieldOptions.getValue() != null) {
+                    statement.setObject(1, fieldOptions.getValue());
+                    statement.setString(2, value);
+                }
+                else {
+                    statement.setString(1, value);
+                }
+                long time = System.currentTimeMillis();
+                ResultSet set = statement.executeQuery();
+                System.out.println(System.currentTimeMillis() - time + " millis for " + value);
+                while (set.next()) {
+                    int result = set.getInt(1);
+                    System.out.println(result);
+                    results.add(new FieldResult(fieldOptions.getNiceName(), value != null && value.length() > 0 ? value : "None", result));
+                }
+            }
+        }
+        for(FieldResult result : results) {
+            dataset.addValue(result.getResult(), result.getSeries(), result.getField());
         }
 
 
         final String title = "Comparison";
         final String xLabel = fimsToLims.getFriendlyName(field);
         final String yLabel;
-        if(fieldOptions.getValue() != null) {
-            yLabel = fieldOptions.getNiceName();
+        if(fieldOptionsList.size() == 1) {
+            ReactionFieldOptions fieldOptions = fieldOptionsList.get(0);
+            if(fieldOptions.getValue() != null) {
+                yLabel = fieldOptions.getNiceName();
+            }
+            else {
+                yLabel = fieldOptions.getFriendlyTableName();
+            }
         }
         else {
-            yLabel = fieldOptions.getFriendlyTableName();
+            yLabel = "Count";
         }
-        final JFreeChart barChart = ChartFactory.createBarChart(title, xLabel, yLabel, dataset, PlotOrientation.VERTICAL, false, true, false);
+        final JFreeChart barChart = ChartFactory.createBarChart(title, xLabel, yLabel, dataset, PlotOrientation.VERTICAL, fieldOptionsList.size() > 1, true, false);
+        //barChart.getLegendItems(); //call this to triger the chart to populate its colors...
         final CategoryPlot plot = barChart.getCategoryPlot();
         barChart.getTitle().setFont(new Font("sans serif", Font.BOLD, 24));
         final BarRenderer barRenderer = new BarRenderer();
@@ -186,7 +204,6 @@ public class ComparisonReport extends Report{
         panel.setMaximumDrawHeight(Integer.MAX_VALUE);
 
 
-        final String finalField = field;
         return new ReportChart(){
             public JPanel getPanel() {
                 return panel;
@@ -194,15 +211,22 @@ public class ComparisonReport extends Report{
 
             @Override
             public Options getOptions() {
-                Options options = new Options(this.getClass());
+                final Options options = new Options(this.getClass());
                 options.addDivider("Labels");
                 final Options.StringOption titleOption = options.addStringOption("title", "Title: ", title);
                 final Options.StringOption xLabelOption = options.addStringOption("xlabel", "X-label: ", xLabel);
                 final Options.StringOption yLabelOption = options.addStringOption("ylabel", "Y-label: ", yLabel);
 
                 options.addDivider("Display");
-                final ColorOption barColorOption = new ColorOption("barColor", "Bar Color: ", barColor);
-                options.addCustomOption(barColorOption);
+
+                for (int i = 0; i < fieldOptionsList.size(); i++) {
+                    ReactionFieldOptions fieldOptions = fieldOptionsList.get(i);
+                    barRenderer.lookupSeriesPaint(i); //call this to make sure the series paint is populated
+                    final ColorOption barColorOption = new ColorOption("barColor"+i, fieldOptions.getNiceName()+" ", (Color)plot.getRenderer().getSeriesPaint(i));
+                    options.addCustomOption(barColorOption);
+                }
+
+
 
                 final Options.OptionValue[] labelPositionValues = new Options.OptionValue[] {
                         new Options.OptionValue("standard", "Horizontal"),
@@ -234,7 +258,10 @@ public class ComparisonReport extends Report{
                         barChart.getCategoryPlot().getDomainAxis().setLabel(xLabelOption.getValue());
                         barChart.getCategoryPlot().getRangeAxis().setLabel(yLabelOption.getValue());
 
-                        plot.getRenderer().setSeriesPaint(0, barColorOption.getValue());
+                        for (int i = 0; i < fieldOptionsList.size(); i++) {
+                            ColorOption barColorOption = (ColorOption)options.getOption("barColor"+i);
+                            plot.getRenderer().setSeriesPaint(i, barColorOption.getValue());
+                        }
                         if(labelPosition.getValue().equals(labelPositionValues[0])) {
                             plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
                         }
@@ -293,8 +320,8 @@ public class ComparisonReport extends Report{
                         DefaultCategoryDataset plotDataset = (DefaultCategoryDataset) plot.getDataset();
                         plotDataset.clear();
 
-                        for(int i=0; i < newResults.size(); i++) {
-                            plotDataset.addValue(newResults.get(i).getResult(), finalField, newResults.get(i).getField());
+                        for (FieldResult newResult : newResults) {
+                            plotDataset.addValue(newResult.getResult(), newResult.getSeries(), newResult.getField());
                         }
                     }
                 };
@@ -310,6 +337,7 @@ public class ComparisonReport extends Report{
     }
 
     private static class FieldResult implements Comparable{
+        private String series;
         String field;
         int result;
 
@@ -321,19 +349,26 @@ public class ComparisonReport extends Report{
             return result;
         }
 
-        private FieldResult(String field, int result) {
-
+        private FieldResult(String series, String field, int result) {
+            this.series = series;
             this.field = field;
             this.result = result;
         }
 
         public int compareTo(Object o) {
             FieldResult result = (FieldResult)o;
+            if(result.getSeries().equals(series)) {
+                return result.getSeries().compareTo(series);
+            }
             int dif = result.result - this.result;
             if(dif == 0) {
                 return field.compareTo(result.field);
             }
             return dif;
+        }
+
+        public String getSeries() {
+            return series;
         }
     }
 }

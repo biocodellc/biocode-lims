@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.components.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.AbstractListComboBoxModel;
@@ -427,7 +428,7 @@ public class ReportGenerator {
         (field.getEnumerationValues()[0].toLowerCase().equals("true") && field.getEnumerationValues()[1].toLowerCase().equals("false")));
     }
 
-    public static List<String> getDistinctValues(FimsToLims fimsToLims, String field, String table, String locus, ProgressListener progress) throws SQLException {
+    public static List<String> getDistinctValues(FimsToLims fimsToLims, String field, String table, Collection<String> loci, ProgressListener progress) throws SQLException {
         String sql;
 
         sql = "SELECT DISTINCT ("+field+") FROM "+table;
@@ -438,8 +439,12 @@ public class ReportGenerator {
             sql += ", workflow WHERE workflow.id = " + table + ".workflow";
         }
 
-        if(locus != null) {
-            sql += (where ? " AND " : " WHERE ")+"workflow.locus='"+locus+"'";
+        if(loci != null && loci.size() > 0) {
+            List<String> locusList = new ArrayList<String>();
+            for(String s : loci) {
+                locusList.add("workflow.locus='"+s+"'");
+            }
+            sql += (where ? " AND " : " WHERE ")+ "("+StringUtilities.join(" OR ", locusList)+")";
         }
 
         System.out.println(sql);
