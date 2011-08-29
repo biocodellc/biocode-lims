@@ -82,10 +82,8 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         ButtonOption buttonOption = addButtonOption("flickrHelp", "", "", IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
         buttonOption.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                String message = "<html>If you validate your specimen/tissue data using <i>BioValidator</i> (available from <a href=\"http://biovalidator.sourceforge.net/\">http://biovalidator.sourceforge.net/</a>), any photos that it uploads to Flickr will be automatically tagged for search by the Biocode LIMS plugin.  If you want to upload your photos yourself, simply add the tag <i>'bioValidator:specimen=xxx'</i> (where xxx is your specimen id) to make the images searchable from Geneious</html>";
-                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Information", (Component)e.getSource());
-                dialogOptions.setMaxWidth(400);
-                dialogOptions.setMaxHeight(600);
+                String message = "<html>If you validate your specimen/tissue data using <i>BioValidator</i> (available from <a href=\"http://biovalidator.sourceforge.net/\">http://biovalidator.sourceforge.net/</a>), any photos that it uploads to Flickr will be automatically tagged for search by the Biocode LIMS plugin.</html>";
+                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Information", (Component)e.getSource(), Dialogs.DialogIcon.INFORMATION);
                 Dialogs.showDialog(dialogOptions, message);
             }
         });
