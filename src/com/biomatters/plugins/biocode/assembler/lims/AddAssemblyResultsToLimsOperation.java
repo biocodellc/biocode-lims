@@ -187,11 +187,18 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             for(int i=0; i < alignment.getNumberOfSequences(); i++) {
                 markDocumentPassedOrFailed(isPass, alignment.getReferencedDocument(i));
             }
+            if (alignment.isContig()) {
+                updateReactionStatusField(isPass, document);
+            }
         }
         else {
-            document.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, isPass ? "passed" : "failed");
-            document.save();
+            updateReactionStatusField(isPass, document);
         }
+    }
+
+    private void updateReactionStatusField(boolean isPass, AnnotatedPluginDocument document) {
+        document.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, isPass ? "passed" : "failed");
+        document.save();
     }
 
     private int removeAllExistingSequencesInDatabase(AssemblyResult assemblyResult) throws SQLException, DocumentOperationException {
