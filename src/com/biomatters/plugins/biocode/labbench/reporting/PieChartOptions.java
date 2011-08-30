@@ -2,8 +2,12 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -47,9 +51,9 @@ public class PieChartOptions extends Options {
     }
 
     private void init(final FimsToLims fimsToLims) {
-        ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false);
+        final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false);
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
-        final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by FIMS field", false);
+        final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaciton or FIMS field", false);
         fimsField.setEnabled(fimsToLims.limsHasFimsValues());
         if(!fimsToLims.limsHasFimsValues()) {
             fimsToLims.addFimsTableChangedListener(new SimpleListener(){
@@ -62,9 +66,17 @@ public class PieChartOptions extends Options {
                     ThreadUtilities.invokeNowOrLater(runnable);
                 }
             });
-        } 
-        SingleFieldOptions fimsOptions = new SingleFieldOptions(fimsToLims.getFimsFields());
-        Options fimsMultiOptions = new Options(this.getClass());
+        }
+        List<DocumentField> fields = new ArrayList<DocumentField>();
+        List<DocumentField> limsSearchFields = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
+        limsSearchFields.remove(LIMSConnection.PLATE_TYPE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
+        limsSearchFields.add(new DocumentField("Primer", "PCR Primer", "pcr."+PCROptions.PRIMER_OPTION_ID, String.class, false, false));
+        fields.addAll(limsSearchFields);
+        fields.addAll(fimsToLims.getFimsFields());
+        SingleFieldOptions fimsOptions = new SingleFieldOptions(fields);
+        final Options fimsMultiOptions = new Options(this.getClass());
         fimsMultiOptions.beginAlignHorizontally("", false);
         fimsMultiOptions.addLabel("Match ");
         Options.OptionValue[] allOrAny = new OptionValue[] {
@@ -78,6 +90,35 @@ public class PieChartOptions extends Options {
         addChildOptions(FIMS_FIELD, "", "", fimsMultiOptions);
         fimsField.addChildOptionsDependent(fimsMultiOptions, true, true);
 
+        SimpleListener fimsFieldListener = new SimpleListener() {
+            public void objectChanged() {
+                MultipleOptions multipleOptions = fimsMultiOptions.getMultipleOptions("fims");
+                for (Options options : multipleOptions.getValues()) {
+                    SingleFieldOptions fieldOptions = (SingleFieldOptions) options;
+                    fieldOptions.setFields(getFieldValues(fimsToLims), reactionFieldOptions.getReactionType());
+                }
+                ((SingleFieldOptions)multipleOptions.getMasterOptions()).setFields(getFieldValues(fimsToLims), reactionFieldOptions.getReactionType());
+            }
+        };
+        reactionFieldOptions.addChangeListener(fimsFieldListener);
+        fimsFieldListener.objectChanged();
+
+    }
+
+    private List<DocumentField> getFieldValues(FimsToLims fimsToLims) {
+        List<DocumentField> fields = new ArrayList<DocumentField>();
+        List<DocumentField> limsSearchFields = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
+        limsSearchFields.remove(LIMSConnection.PLATE_TYPE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
+        fields.addAll(limsSearchFields);
+        fields.addAll(fimsToLims.getFimsFields());
+        return fields;
+    }
+
+    public String getReactionTable() {
+        ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);
+        return reactionFields.getTable();
     }
 
 
@@ -86,21 +127,30 @@ public class PieChartOptions extends Options {
         return reactionFields.getSql((Boolean)getValue(FIMS_FIELD) ? FimsToLims.FIMS_VALUES_TABLE+" f" : null, null);
     }
 
-    String getFimsSql() {
+    private boolean isFimsField(String fieldName) {
+        return BiocodeService.getInstance().getReportingService().getReportGenerator().fimsToLims.getFimsOrLimsField(fieldName) != null;
+    }
+
+    String getExtraSql() {
         if((Boolean)getValue(FIMS_FIELD)) {
             Options fimsOptions = getChildOptions().get(FIMS_FIELD);
             MultipleOptions fimsMultipleOptions = fimsOptions.getMultipleOptions("fims");
             List<String> fimsTerms = new ArrayList<String>();
             for(Options fimsOption : fimsMultipleOptions.getValues()) {
                 SingleFieldOptions fimsFieldOptions = (SingleFieldOptions)fimsOption;
-                fimsTerms.add("f."+FimsToLims.getSqlColName(fimsFieldOptions.getFieldName())+" "+fimsFieldOptions.getComparitor()+" ?");
+
+                String table = isFimsField(fimsFieldOptions.getFieldName()) ?
+                        "f."+FimsToLims.getSqlColName(fimsFieldOptions.getFieldName())
+                        :
+                        ReportGenerator.getTableFieldName(getReactionTable(), fimsFieldOptions.getFieldName());
+                fimsTerms.add(table+" "+fimsFieldOptions.getComparitor()+" ?");
             }
             return "("+StringUtilities.join("any".equals(fimsOptions.getValueAsString("allOrAny")) ? " OR " : " AND ", fimsTerms)+")";
         }
         return null;
     }
 
-    public List<Object> getFimsValues() {
+    public List<Object> getExtraValues() {
         Options fimsOptions = getChildOptions().get(FIMS_FIELD);
         MultipleOptions fimsMultipleOptions = fimsOptions.getMultipleOptions("fims");
         List<Object> fimsTerms = new ArrayList<Object>();

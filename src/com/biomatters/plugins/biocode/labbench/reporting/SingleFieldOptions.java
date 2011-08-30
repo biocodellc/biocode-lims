@@ -19,6 +19,7 @@ import java.sql.SQLException;
  */
 public class SingleFieldOptions extends Options {
 
+    private String reactionTypeString;
 
     public SingleFieldOptions(List<DocumentField> fimsFields) {
         super(SingleFieldOptions.class);
@@ -32,17 +33,26 @@ public class SingleFieldOptions extends Options {
         initListeners();
     }
 
-    public void init(List<DocumentField> fimsFields) {
+    public void init(List<DocumentField> fields) {
         beginAlignHorizontally("", false);
         List<OptionValue> fieldValue;
-        fieldValue = ReportGenerator.getOptionValues(fimsFields);
+        fieldValue = ReportGenerator.getOptionValues(fields);
 
-        addComboBoxOption("field", fimsFields == null ? " whose " : "", fieldValue, fieldValue.get(0));
+        addComboBoxOption("field", fields == null ? " whose " : "", fieldValue, fieldValue.get(0));
         addComboBoxOption("isValue", " is ", ReportGenerator.getEnumeratedFieldValues(null), ReportGenerator.getEnumeratedFieldValues(null).get(0));
         addStringOption("containsValue", " contains the value ", "");
 
 
         endAlignHorizontally();    
+    }
+
+    public void setFields(List<DocumentField> fields, String reactionType) {
+        reactionTypeString = reactionType;
+        List<OptionValue> optionValues = ReportGenerator.getOptionValues(fields);
+        if(reactionType != null) {
+            optionValues.addAll(0, ReportGenerator.getPossibleFields(reactionType, false));
+        }
+        ((ComboBoxOption)getOption("field")).setPossibleValues(optionValues);
     }
     
     public void initListeners() {
@@ -68,11 +78,14 @@ public class SingleFieldOptions extends Options {
                 if(reactionType != null) {
                     field = ReportGenerator.getField(reactionType.getValue().getName(), fieldOption.getValue().getName());
                 }
+                else if(reactionTypeString != null) {
+                    field = ReportGenerator.getField(reactionTypeString, fieldOption.getValue().getName());    
+                }
                 else {
                     field = BiocodeService.getInstance().getReportingService().getReportGenerator().fimsToLims.getFimsOrLimsField(fieldOption.getValue().getName());
                 }
                 System.out.println("singleFieldOptions "+(System.currentTimeMillis()-time));
-                if (field.isEnumeratedField()) {
+                if (field != null && field.isEnumeratedField()) {
                     containsValueOption.setVisible(false);
                     isValueOption.setVisible(true);
                     isValueOption.setPossibleValues(ReportGenerator.getEnumeratedFieldValues(field));

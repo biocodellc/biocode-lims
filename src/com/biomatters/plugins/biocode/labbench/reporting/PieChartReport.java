@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.text.AttributedString;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.*;
+import java.util.List;
 
 /**
  * @author Steve
@@ -173,7 +174,7 @@ public class PieChartReport extends Report{
         ReactionFieldOptions reactionFields = (ReactionFieldOptions)options.getChildOptions().get(PieChartOptions.REACTION_FIELDS);
         String fieldName = reactionFields.getValueAsString(ReactionFieldOptions.FIELDS);
         String reactionType = ((Options.OptionValue)reactionFields.getValue(ReactionFieldOptions.REACTION_TYPE)).getName();
-        String fimsSql = options.getFimsSql();
+        String fimsSql = options.getExtraSql();
         String limsSql = options.getLimsSql();
         DocumentField enumeratedField = ReportGenerator.getField(reactionType, fieldName);
 
@@ -185,7 +186,14 @@ public class PieChartReport extends Report{
         PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
         progress.setMessage("Getting all possible values for your selected field");
         progress.setIndeterminateProgress();
-        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), Arrays.asList(reactionFields.getLocus()), progress);
+        List<String> loci;
+        if(reactionFields.getLocus() != null) {
+            loci = Arrays.asList(reactionFields.getLocus());
+        }
+        else {
+            loci = null;
+        }
+        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), loci, progress);
         if(enumerationObjects == null) {
             return null;
         }
@@ -199,8 +207,8 @@ public class PieChartReport extends Report{
             Object value = enumerationObjects.get(i1);
             statement.setObject(1, value);
             if (fimsSql != null) {
-                for (int i = 0; i < options.getFimsValues().size(); i++) {
-                    Object o = options.getFimsValues().get(i);
+                for (int i = 0; i < options.getExtraValues().size(); i++) {
+                    Object o = options.getExtraValues().get(i);
                     statement.setObject(2 + i, o);
                 }
             }
