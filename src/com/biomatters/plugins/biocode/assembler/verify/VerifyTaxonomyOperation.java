@@ -38,9 +38,10 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
         return new DocumentSelectionSignature[] {
-                new DocumentSelectionSignature(SequenceAlignmentDocument.class, 1, Integer.MAX_VALUE),
-                new DocumentSelectionSignature(NucleotideSequenceDocument.class, 1, Integer.MAX_VALUE),
-                new DocumentSelectionSignature(SequenceListDocument.class, 1, Integer.MAX_VALUE)
+                new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[] {
+                        new DocumentSelectionSignature.DocumentSelectionSignatureAtom(SequenceAlignmentDocument.class, 1,Integer.MAX_VALUE),
+                        new DocumentSelectionSignature.DocumentSelectionSignatureAtom(NucleotideSequenceDocument.class, 1, Integer.MAX_VALUE)
+                }),
         };
     }
 
@@ -57,14 +58,26 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocs, ProgressListener progressListener, Options o) throws DocumentOperationException {
         VerifyTaxonomyOptions options = (VerifyTaxonomyOptions) o;
-        Map<AnnotatedPluginDocument, String> contigMap = BiocodeUtilities.getContigDocuments(annotatedDocs);
-        List<AnnotatedPluginDocument> queries = options.getQueries(contigMap);
+        Map<AnnotatedPluginDocument, String> docMap = new LinkedHashMap<AnnotatedPluginDocument, String>();
+        List<AnnotatedPluginDocument> alignmentDocs = new ArrayList<AnnotatedPluginDocument>(annotatedDocs.length);
+        for(AnnotatedPluginDocument doc : annotatedDocs) {
+            if(NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                docMap.put(doc, ((NucleotideSequenceDocument)doc.getDocument()).getSequenceString());
+            }
+            else {
+                alignmentDocs.add(doc);
+            }
+        }
+
+        Map<AnnotatedPluginDocument, String> contigMap = BiocodeUtilities.getContigDocuments(alignmentDocs.toArray(new AnnotatedPluginDocument[alignmentDocs.size()]));
+        docMap.putAll(contigMap);
+        List<AnnotatedPluginDocument> queries = options.getQueries(docMap);
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.2, 0.8);
         progress.beginSubtask("Retrieving full taxonomies");
         progress.setIndeterminateProgress();
 
         Set<String> taxonValues = new LinkedHashSet<String>();
-        for(AnnotatedPluginDocument doc : contigMap.keySet()) {
+        for(AnnotatedPluginDocument doc : docMap.keySet()) {
             taxonomyValue = doc.getFieldValue(DocumentField.TAXONOMY_FIELD);
             if(taxonomyValue != null) {
                 taxonValues.add(taxonomyValue.toString());
@@ -72,7 +85,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         }
         Map<String, BiocodeTaxon> fullTaxonomies = fillInTaxonomyFromNcbi(taxonValues, progress);
         List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> annotatedDocsWithTaxons = new ArrayList<Pair<AnnotatedPluginDocument, BiocodeTaxon>>();
-        for(AnnotatedPluginDocument doc : contigMap.keySet()) {
+        for(AnnotatedPluginDocument doc : docMap.keySet()) {
             taxonomyValue = doc.getFieldValue(DocumentField.TAXONOMY_FIELD);
             if(taxonomyValue != null) {
                 doc.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomyValue);
@@ -87,7 +100,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         if (progress.isCanceled()) return null;
         DatabaseService database = options.getDatabase();
         progress.beginSubtask();
-        VerifyTaxonomyCallback callback = new VerifyTaxonomyCallback(annotatedDocsWithTaxons, progressListener, options.getKeywords());
+        VerifyTaxonomyCallback callback = new VerifyTaxonomyCallback(annotatedDocsWithTaxons, progress, options.getKeywords());
         try {
             database.batchSequenceSearch(queries, options.getProgram(), options.getSearchOptions(), callback);
         } catch (DatabaseServiceException e) {

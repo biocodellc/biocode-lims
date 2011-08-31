@@ -37,8 +37,8 @@ public class VerifyTaxonomyExporter extends DocumentFileExporter {
 
     @Override
     public void export(File file, AnnotatedPluginDocument[] documents, ProgressListener progressListener, Options options) throws IOException {
+        WritableWorkbook workbook = Workbook.createWorkbook(file);
         try {
-            WritableWorkbook workbook = Workbook.createWorkbook(file);
 
 
             VerifyTaxonomyTableModel tableModel = new VerifyTaxonomyTableModel(documents[0], null, false);
@@ -46,9 +46,14 @@ public class VerifyTaxonomyExporter extends DocumentFileExporter {
             ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);
 
             workbook.write();
-            workbook.close();
         } catch (WriteException e) {
             throw new IOException(e.getMessage());
+        } finally {
+            try {
+                workbook.close();
+            } catch (WriteException e) {
+                //ignore this - should have failed the write method so we will get an IOException anyways...
+            }
         }
     }
 }

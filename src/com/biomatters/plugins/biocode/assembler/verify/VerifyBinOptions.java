@@ -169,7 +169,7 @@ public class VerifyBinOptions extends Options {
 
         public VerifyTaxonomyTableModel.IconsWithToString getIcons() {
             if (icons == null) {
-                icons = new VerifyTaxonomyTableModel.IconsWithToString(title, new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon))), color);
+                icons = new VerifyTaxonomyTableModel.IconsWithToString(title, new Icons(new ImageIcon(VerifyBinOptions.class.getResource(icon))), color, rank);
             }
             return icons;
         }

@@ -434,14 +434,16 @@ public class VerifyTaxonomyTableModel implements TableModel {
             }
     };
 
-    static final class IconsWithToString {
+    static final class IconsWithToString implements Comparable{
 
         final String toString;
         final Icons icons;
         final Color color;
+        private int comparableVlaue;
 
-        IconsWithToString(String toString, Icons icons, Color color) {
+        IconsWithToString(String toString, Icons icons, Color color, int comparableVlaue) {
             this.color = color;
+            this.comparableVlaue = comparableVlaue;
             if(toString == null || icons == null) {
                 throw new IllegalArgumentException("You cannot pass null parameters to this method");
             }
@@ -456,6 +458,13 @@ public class VerifyTaxonomyTableModel implements TableModel {
 
         public Color getColor() {
             return color;
+        }
+
+        public int compareTo(Object o) {
+            if(comparableVlaue >= 0) {
+                return comparableVlaue-((IconsWithToString)o).comparableVlaue;
+            }
+            return toString().compareTo(o.toString());
         }
     }
 

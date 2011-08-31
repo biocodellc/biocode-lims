@@ -440,11 +440,13 @@ public class BiocodeUtilities {
     }
 
     public static ObjectAndColor getObjactAndColorFromBinningHtml(String binningHtml) {
-        String htmlStart = "<html><head><3></head><b><font color='#";
-        if(binningHtml.startsWith(htmlStart)) {
+        String htmlStart = "<html><head><";
+        String htmlStart2 = "></head><b><font color='#";
+        if(binningHtml.length() > htmlStart.length() + htmlStart2.length() && binningHtml.startsWith(htmlStart) && binningHtml.substring(htmlStart.length()+1).startsWith(htmlStart2)) {
             try {
-                int colorEnd = binningHtml.indexOf('\'', htmlStart.length());
-                String colorString = binningHtml.substring(htmlStart.length(), colorEnd);
+                int prefixLength = htmlStart.length() + 1 + htmlStart2.length();
+                int colorEnd = binningHtml.indexOf('\'', prefixLength);
+                String colorString = binningHtml.substring(prefixLength, colorEnd);
                 String label = binningHtml.substring(colorEnd+2, binningHtml.indexOf("<", colorEnd+2));
                 Color col = new Color(Integer.parseInt(colorString, 16));
                 return new ObjectAndColor(label, col);
