@@ -727,7 +727,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(callback.isCanceled()) {
                 return;
             }
-            if((Boolean)query.getExtendedOptionValue("plateDocuments")) {
+            if((Boolean)query.getExtendedOptionValue("plateDocuments") || ((Boolean)query.getExtendedOptionValue("sequenceDocuments") && limsQueries.size() > 0)) {
                 callback.setMessage("Downloading Plates");
                 List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
                 if(callback.isCanceled()) {
