@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
@@ -82,6 +83,10 @@ public abstract class Report implements XMLSerializable {
             return null;
         }
         public abstract JPanel getPanel();
+
+        public ChartExporter[] getExporters() {
+            return new ChartExporter[0];
+        }
     }
 
     public Element toXML() {

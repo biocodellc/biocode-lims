@@ -45,15 +45,17 @@ public class ReactionFieldOptions extends Options {
             new OptionValue("notEqual", "does not equal")
     };
     private FimsToLims fimsToLims;
+    private boolean allowAll;
 
     public void setFimsToLims(FimsToLims fimsToLims) {
         this.fimsToLims = fimsToLims;
     }
 
-    public ReactionFieldOptions(Class cl, FimsToLims fimsToLims, boolean includeValue) {
+    public ReactionFieldOptions(Class cl, FimsToLims fimsToLims, boolean includeValue, boolean allowAll, boolean includeLocus) {
         super(cl);
         this.fimsToLims = fimsToLims;
-        init(includeValue);
+        this.allowAll = allowAll;
+        init(includeValue, includeLocus);
         initListeners();
     }
 
@@ -62,10 +64,23 @@ public class ReactionFieldOptions extends Options {
         initListeners();
     }
 
-    private void init(boolean includeValue) {
+    @Override
+    public Element toXML() {
+        Element element = super.toXML();
+        element.addContent(new Element("allowAll").setText(""+allowAll));
+        return element;
+    }
+
+    @Override
+    public void fromXML(Element element) throws XMLSerializationException {
+        super.fromXML(element);
+        allowAll = "true".equals(element.getChildText("allowAll"));
+    }
+
+    private void init(boolean includeValue, boolean includeLocus) {
         beginAlignHorizontally("", false);
         ComboBoxOption<OptionValue> reactionType = addComboBoxOption(REACTION_TYPE, "Reaction type ", reactionTypes, reactionTypes[0]);
-        List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), includeValue);
+        List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), includeValue, true);
         addComboBoxOption(FIELDS, "Field to compare", fieldValue, fieldValue.get(0));
         if(includeValue) {
             Options.OptionValue[] values = new OptionValue[] {new OptionValue("None", "None")};
@@ -76,9 +91,11 @@ public class ReactionFieldOptions extends Options {
             stringOption.setVisible(false);
                         
         }
-        List<OptionValue> loci = fimsToLims.getLoci();
-        ComboBoxOption<OptionValue> locusOption = addComboBoxOption(LOCUS, "Locus", loci, loci.get(0));
-        locusOption.setDisabledValue(loci.get(0));
+        if(includeLocus) {
+            List<OptionValue> loci = fimsToLims.getLoci();
+            ComboBoxOption<OptionValue> locusOption = addComboBoxOption(LOCUS, "Locus", loci, loci.get(0));
+            locusOption.setDisabledValue(loci.get(0));
+        }
         endAlignHorizontally();
     }
 
@@ -96,8 +113,10 @@ public class ReactionFieldOptions extends Options {
         SimpleListener reactionTypesListener = new SimpleListener() {
 
             public void objectChanged() {
-                field.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), !enumOnly));
-                locus.setEnabled(!reactionType.getValue().equals(reactionTypes[0]));
+                field.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), !enumOnly, allowAll));
+                if(locus != null) {
+                    locus.setEnabled(!reactionType.getValue().equals(reactionTypes[0]));
+                }
             }
         };
         reactionType.addChangeListener(reactionTypesListener);
@@ -105,7 +124,7 @@ public class ReactionFieldOptions extends Options {
         SimpleListener fieldListener = new SimpleListener() {
             public void objectChanged() {
                 if (value != null) {
-                    boolean enable = !field.getValue().equals(field.getPossibleOptionValues().get(0));
+                    boolean enable = !allowAll || !field.getValue().equals(field.getPossibleOptionValues().get(0));
                     value.setEnabled(enable);
                     condition.setEnabled(enable);
                 }
@@ -145,7 +164,7 @@ public class ReactionFieldOptions extends Options {
 
     public String getLocus() {
         ComboBoxOption<Options.OptionValue> locusOption = (ComboBoxOption<Options.OptionValue>)getOption(LOCUS);
-        if(!locusOption.isEnabled() || (locusOption.getValue().getName().equals("all") && locusOption.getValue().getLabel().equals("All..."))) {
+        if(locusOption == null || !locusOption.isEnabled() || (locusOption.getValue().getName().equals("all") && locusOption.getValue().getLabel().equals("All..."))) {
             return null;
         }
         return locusOption.getValue().getName();
@@ -252,6 +271,9 @@ public class ReactionFieldOptions extends Options {
         if(Date.class.equals(valueType)) {
             return getValue(DATE_FIELD);
         }
+        if(!isExactMatch()) {
+            return "%"+value+"%";   
+        }
         return value;
     }
 
@@ -347,6 +369,14 @@ public class ReactionFieldOptions extends Options {
         return start + " " + StringUtilities.join(" AND ", terms);
     }
 
+    public boolean isExactMatch() {
+        ComboBoxOption condition = (ComboBoxOption)getOption(CONDITION_FIELD);
+        if(condition != null && condition.isEnabled()) {
+            return !condition.getValue().toString().equals("contains");
+        }
+        return true;
+    }
+
     public String getTable() {
         String table = getValueAsString(REACTION_TYPE);
         return table.toLowerCase();
@@ -361,9 +391,12 @@ public class ReactionFieldOptions extends Options {
         String reactionType = ((OptionValue)getValue(REACTION_TYPE)).getName();
         String niceReactionName = ((OptionValue)getValue(REACTION_TYPE)).getLabel();
         OptionValue locus = (OptionValue)getValue(LOCUS);
-        String locusString = " ["+getValueAsString(LOCUS)+"]";
-        if((locus.getName().equals("all") && locus.getLabel().equals("All..."))) {
+        String locusString;
+        if(locus == null || ((locus.getName().equals("all") && locus.getLabel().equals("All...")))) {
             locusString = "";
+        }
+        else {
+            locusString = " ["+getValueAsString(LOCUS)+"]";
         }
         if(getValue() == null) {
             return niceReactionName+locusString;

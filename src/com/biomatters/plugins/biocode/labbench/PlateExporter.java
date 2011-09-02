@@ -57,7 +57,7 @@ public class PlateExporter extends DocumentFileExporter{
             for (int i = 0; i < documents.length; i++) {
                 TableModel tableModel = getTableModel((PlateDocument)documents[i], includeFims);
                 WritableSheet sheet = workbook.createSheet(documents[i].getName(), i);
-                ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);
+                ExcelUtilities.exportTable(sheet, tableModel, progressListener);
             }
 
             workbook.write();

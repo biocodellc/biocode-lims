@@ -1,8 +1,11 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
+import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
 import com.biomatters.geneious.publicapi.components.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -18,6 +21,7 @@ import org.jfree.data.general.DefaultKeyedValuesDataset;
 import org.jfree.data.general.PieDataset;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.border.LineBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -30,6 +34,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
+import java.util.prefs.Preferences;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.text.DateFormat;
 import java.io.File;
@@ -46,11 +51,13 @@ import jebl.util.ProgressListener;
  */
 public class ReportGenerator {
     private ReportManager reportManager;
+    Preferences PREFS = Preferences.userNodeForPackage(getClass());
 
     private static final Map<String, String> geneiousFieldToTableField = new HashMap<String, String>();
     private static final Set<String> workflowFields = new HashSet<String>();
     FimsToLims fimsToLims;
     private Chartable chartable;
+    private Report.ReportChart currentReportChart;
 
     public ReportGenerator(Chartable chartable, File userDataDirectory) throws SQLException{
         this.chartable = chartable;
@@ -118,8 +125,10 @@ public class ReportGenerator {
 
     public List<Report> getNewReports() {
         return Arrays.asList(
+                new PlateSearchReport(fimsToLims),
+                new ComparisonReport(fimsToLims, true),
+                new ComparisonReport(fimsToLims, false),
                 new PieChartReport(fimsToLims),
-                new ComparisonReport(fimsToLims),
                 new AccumulationReport(fimsToLims),
                 new FimsAccumulationReport(fimsToLims)/*,
                 new WorkflowReport(fimsToLims)*/);
@@ -143,6 +152,65 @@ public class ReportGenerator {
         final JComboBox reportCombo = new GComboBox(reportComboModel);
         reportCombo.setMaximumSize(reportCombo.getPreferredSize());
         reportCombo.setSelectedIndex(0);
+
+
+        final Action exportAction = new GeneiousAction("Export", "Export the current view", IconUtilities.getIcons("export16.png")) {
+            public void actionPerformed(ActionEvent e) {
+                if(currentReportChart == null || currentReportChart.getExporters().length == 0) {
+                    return;
+                }
+                JFileChooser chooser = new JFileChooser(PREFS.get("reportExportPath", System.getProperty("user.home")));
+                chooser.setMultiSelectionEnabled(false);
+                chooser.setDialogTitle("Export Report");
+                chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                for(final ChartExporter exporter : currentReportChart.getExporters()) {
+                    chooser.addChoosableFileFilter(new FileFilter() {
+                        public String getDescription() {
+                            return exporter.getFileTypeDescription()+" ("+exporter.getDefaultExtension()+")";
+                        }
+
+                        public boolean accept(File f) {
+                            return f.getName().toLowerCase().endsWith("."+exporter.getDefaultExtension().toLowerCase());
+                        }
+                    });
+                }
+                chooser.showDialog(toolbar, "Export");
+                if(chooser.getSelectedFile() != null) {
+                    File selectedFile = chooser.getSelectedFile();
+                    FileFilter fileFilter = chooser.getFileFilter();
+                    ChartExporter selectedExporter = null;
+                    //if the user has selected a file format explicitly
+                    for(ChartExporter exporter : currentReportChart.getExporters()) {
+                        if(fileFilter.getDescription().startsWith(exporter.getFileTypeDescription())) {
+                            selectedExporter = exporter;
+                        }
+                    }
+                    //if the user has manually entered the file extension
+                    if(selectedExporter == null) {
+                        for(ChartExporter exporter : currentReportChart.getExporters()) {
+                            if(chooser.getSelectedFile().getName().toLowerCase().endsWith("."+exporter.getDefaultExtension().toLowerCase())) {
+                                selectedExporter = exporter;
+                            }
+                        }
+                    }
+                    //otherwise pick the first one...
+                    if(selectedExporter == null) {
+                        selectedExporter = currentReportChart.getExporters()[0];
+                    }
+                    //append the extension if the user hasn't
+                    if(!selectedFile.getName().contains(".")) {
+                        selectedFile = new File(selectedFile.getParentFile(), selectedFile.getName()+"."+selectedExporter.getDefaultExtension());
+                    }
+                    try {
+                        selectedExporter.export(selectedFile, ProgressListener.EMPTY); //todo
+                    } catch (IOException e1) {
+                        e1.printStackTrace(); //todo
+                    }
+                }
+            }
+        };
+        exportAction.setEnabled(false);
+
         final GeneiousAction calculateAction = new GeneiousAction("Calculate", "Calculate and graph the selected report", IconUtilities.getIcons("graph16.png")) {
             public void actionPerformed(ActionEvent e) {
                 if(reportManager.getReports().size() == 0) {
@@ -158,29 +226,12 @@ public class ReportGenerator {
                         public void run() {
                             try {
                                 try {
+                                    currentReportChart = null;
                                     final Report.ReportChart reportChart = report1.getChart(report1.getOptions(), fimsToLims, progress);
                                     Runnable runnable = new Runnable() {
                                         public void run() {
-                                            if(reportChart == null) {
-                                                setReportPanel(null);
-                                            }
-                                            else if(reportChart.getOptions() == null) {
-                                                setReportPanel(reportChart.getPanel());
-                                            }
-                                            else {
-                                                JPanel splitPane = new GPanel(new BorderLayout());
-                                                splitPane.add(reportChart.getPanel(), BorderLayout.CENTER);
-                                                JPanel optionsPanel = reportChart.getOptions().getPanel();
-                                                optionsPanel.setMaximumSize(optionsPanel.getPreferredSize());
-                                                GPanel holderPanel = new GPanel();
-                                                holderPanel.setLayout(new BoxLayout(holderPanel, BoxLayout.Y_AXIS));
-                                                holderPanel.add(optionsPanel);
-                                                holderPanel.setBorder(new CompoundBorder(new MatteBorder(0,1,0,0,holderPanel.getBackground().darker()), new EmptyBorder(5,5,5,5)));
-                                                splitPane.add(holderPanel, BorderLayout.EAST);
-                                                setReportPanel(splitPane);
-                                            }
+                                            setReportChart(reportChart);
                                             progress.setComplete();
-
                                         }
                                     };
                                     ThreadUtilities.invokeNowOrLater(runnable);
@@ -189,6 +240,7 @@ public class ReportGenerator {
                                         public void run() {
                                             reportCombo.setEnabled(true);
                                             setEnabled(true);
+                                            exportAction.setEnabled(currentReportChart != null && currentReportChart.getExporters().length > 0);
                                         }
                                     };
                                     ThreadUtilities.invokeNowOrLater(runnable);
@@ -289,6 +341,7 @@ public class ReportGenerator {
         toolbar.addSeparator();
         toolbar.add(reportCombo);
         toolbar.add(calculateAction);
+        toolbar.add(exportAction);
 
         toolbar.add(Box.createHorizontalGlue());
         for(Component component : toolbar.getComponents()) {
@@ -334,6 +387,28 @@ public class ReportGenerator {
             }
         }
         return null;
+    }
+
+    private void setReportChart(Report.ReportChart reportChart) {
+        this.currentReportChart = reportChart;
+        if(reportChart == null) {
+            setReportPanel(null);
+        }
+        else if(reportChart.getOptions() == null) {
+            setReportPanel(reportChart.getPanel());
+        }
+        else {
+            JPanel splitPane = new GPanel(new BorderLayout());
+            splitPane.add(reportChart.getPanel(), BorderLayout.CENTER);
+            JPanel optionsPanel = reportChart.getOptions().getPanel();
+            optionsPanel.setMaximumSize(optionsPanel.getPreferredSize());
+            GPanel holderPanel = new GPanel();
+            holderPanel.setLayout(new BoxLayout(holderPanel, BoxLayout.Y_AXIS));
+            holderPanel.add(optionsPanel);
+            holderPanel.setBorder(new CompoundBorder(new MatteBorder(0,1,0,0,holderPanel.getBackground().darker()), new EmptyBorder(5,5,5,5)));
+            splitPane.add(holderPanel, BorderLayout.EAST);
+            setReportPanel(splitPane);
+        }
     }
 
     private void setReportPanel(final JComponent chart) {
@@ -612,7 +687,7 @@ public class ReportGenerator {
         return null;
     }
 
-    public static List<Options.OptionValue> getPossibleFields(String reactionType, boolean includeAll) {
+    public static List<Options.OptionValue> getPossibleFields(String reactionType, boolean includeAllFields, boolean includeAllTerm) {
         List<Options.OptionValue> fields = new ArrayList<Options.OptionValue>();
         List<DocumentField> displayableFields;
         try {
@@ -627,7 +702,7 @@ public class ReportGenerator {
             if(f.equals(Reaction.GEL_IMAGE_DOCUMENT_FIELD)) {
                 continue;
             }
-            if(!includeField(f.getCode(), includeAll)) {
+            if(!includeField(f.getCode(), includeAllFields)) {
                 continue;
             }
             fields.add(new Options.OptionValue(f.getCode(), f.getName()));
@@ -635,7 +710,7 @@ public class ReportGenerator {
         if(fields.size() == 0) {
             fields.add(new Options.OptionValue("none", "None..."));
         }
-        else if(includeAll){
+        else if(includeAllFields && includeAllTerm){
             fields.add(0, new Options.OptionValue("nofield", "All "+reactionType+" reactions"));
         }
         return fields;

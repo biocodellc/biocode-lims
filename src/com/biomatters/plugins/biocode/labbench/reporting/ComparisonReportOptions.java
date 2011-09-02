@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -43,7 +42,7 @@ public class ComparisonReportOptions extends Options{
 
         Options yAxisOptions = new Options(this.getClass());
 
-        yAxisOptions.addMultipleOptions(Y_MULTIPLE_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true), false);
+        yAxisOptions.addMultipleOptions(Y_MULTIPLE_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true, true, true), false);
 
         addChildOptions(Y_CHILD_OPTIONS, "Y Axis (Count)", "", yAxisOptions);
 

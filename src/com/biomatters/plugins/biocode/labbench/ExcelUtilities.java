@@ -4,6 +4,7 @@ import com.biomatters.utilities.ObjectAndColor;
 import jxl.write.*;
 import jxl.write.Label;
 import jxl.format.Colour;
+import jxl.NumberCell;
 
 import javax.swing.table.TableModel;
 
@@ -11,10 +12,13 @@ import jebl.util.ProgressListener;
 import com.biomatters.geneious.publicapi.plugin.Options;
 
 import java.awt.*;
+import java.lang.Number;
+import java.lang.Boolean;
+import java.util.Date;
 
 public class ExcelUtilities {
     @SuppressWarnings({"UnusedDeclaration"})
-    public static void exportTable(WritableSheet sheet, TableModel table, ProgressListener progressListener, Options options) throws WriteException {
+    public static void exportTable(WritableSheet sheet, TableModel table, ProgressListener progressListener) throws WriteException {
         WritableFont defaultFont = new WritableFont(WritableFont.ARIAL);
 
         //write out the column headers
@@ -31,7 +35,8 @@ public class ExcelUtilities {
         for (int i = 0; i < table.getColumnCount(); i++) {
             for (int j = 0; j < table.getRowCount(); j++) {
                 Object tableValue = table.getValueAt(j, i);
-                Label label;
+                WritableCell cell;
+                WritableCellFormat format = null;
                 if (tableValue instanceof ObjectAndColor) {
                     ObjectAndColor objectAndColor = (ObjectAndColor) tableValue;
                     WritableFont font = new WritableFont(defaultFont);
@@ -41,15 +46,30 @@ public class ExcelUtilities {
                     }
                     Colour closestColour = getClosestColour(color);
                     font.setColour(closestColour);
-                    label = new Label(i, j + 1, objectAndColor.getObject().toString(), new WritableCellFormat(font));
+                    format = new WritableCellFormat(font);
                 }
-                else if(tableValue == null) {
-                    label = new Label(i, j + 1, "");
+
+
+                if(tableValue == null) {
+                    cell = new Blank(i, j + 1);
+                }
+                else if(tableValue instanceof Number) {
+                    cell = new jxl.write.Number(i, j + 1, ((Number)tableValue).doubleValue());
+                }
+                else if(tableValue instanceof Boolean) {
+                    cell = new jxl.write.Boolean(i, j + 1, (Boolean)tableValue);
+                }
+                else if(tableValue instanceof Date) {
+                    cell = new DateTime(i, j + 1, (Date)tableValue);
                 }
                 else {
-                    label = new Label(i, j + 1, "" + tableValue);
+                    cell = new Label(i, j + 1, tableValue.toString());
                 }
-                sheet.addCell(label);
+                if(format != null) {
+                    cell.setCellFormat(format);
+                }
+
+                sheet.addCell(cell);
             }
         }
     }

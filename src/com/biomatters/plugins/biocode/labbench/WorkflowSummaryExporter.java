@@ -37,7 +37,8 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
-        return new DocumentSelectionSignature[] {new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[] {new DocumentSelectionSignature.DocumentSelectionSignatureAtom(WorkflowDocument.class, 0, Integer.MAX_VALUE), new DocumentSelectionSignature.DocumentSelectionSignatureAtom(PlateDocument.class, 0, Integer.MAX_VALUE)})};
+        return new DocumentSelectionSignature[] {new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[] {new DocumentSelectionSignature.DocumentSelectionSignatureAtom(WorkflowDocument.class, 1, Integer.MAX_VALUE), new DocumentSelectionSignature.DocumentSelectionSignatureAtom(PlateDocument.class, 0, Integer.MAX_VALUE)}),
+        new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[] {new DocumentSelectionSignature.DocumentSelectionSignatureAtom(WorkflowDocument.class, 0, Integer.MAX_VALUE), new DocumentSelectionSignature.DocumentSelectionSignatureAtom(PlateDocument.class, 1, Integer.MAX_VALUE)})};
     }
 
     @Override
@@ -52,7 +53,7 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
                 if (tableModel != null) {
                     TableModel hidingModel = factory.getColumnHidingTableModel(documents, tableModel);
                     WritableSheet sheet = workbook.createSheet(factory.getName(), count);
-                    ExcelUtilities.exportTable(sheet, hidingModel, progressListener, options);
+                    ExcelUtilities.exportTable(sheet, hidingModel, progressListener);
                     count++;
                 }
             }

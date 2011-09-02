@@ -8,7 +8,6 @@ import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import java.util.List;
-import java.sql.SQLException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -50,7 +49,7 @@ public class SingleFieldOptions extends Options {
         reactionTypeString = reactionType;
         List<OptionValue> optionValues = ReportGenerator.getOptionValues(fields);
         if(reactionType != null) {
-            optionValues.addAll(0, ReportGenerator.getPossibleFields(reactionType, false));
+            optionValues.addAll(0, ReportGenerator.getPossibleFields(reactionType, false, true));
         }
         ((ComboBoxOption)getOption("field")).setPossibleValues(optionValues);
     }
@@ -64,7 +63,7 @@ public class SingleFieldOptions extends Options {
         if(reactionType != null) {
             SimpleListener reactionTypeListener = new SimpleListener() {
                 public void objectChanged() {
-                    fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), true));
+                    fieldOption.setPossibleValues(ReportGenerator.getPossibleFields(reactionType.getValue().getName(), true, true));
                 }
             };
             reactionType.addChangeListener(reactionTypeListener);

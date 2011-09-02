@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import java.sql.SQLException;
 import java.util.Date;
@@ -48,7 +47,7 @@ public class FimsAccumulationOptions extends Options {
         endAlignHorizontally();
         List<DocumentField> documentFields = new ArrayList<DocumentField>();
         documentFields.addAll(fimsToLims.getFimsFields());
-        Options countOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, true);
+        Options countOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, true, true, true);
         addChildOptions(COUNT_OPTIONS, "Series", "", countOptions);
         Options fieldOptions = new Options(this.getClass());
         fieldOptions.addLabel("Your chosen series will be counted across each value of this field in the database");

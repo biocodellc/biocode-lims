@@ -1,11 +1,19 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GTable;
+import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
+import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
+import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -26,24 +34,39 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.io.File;
+import java.io.IOException;
 
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;
 
 import javax.swing.*;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.TableModel;
+
+import jxl.write.WritableWorkbook;
+import jxl.write.WritableSheet;
+import jxl.write.WriteException;
+import jxl.Workbook;
 
 /**
  * @author Steve
  * @version $Id$
  */
 public class ComparisonReport extends Report{
+    boolean table;
+
+    public ComparisonReport(FimsToLims fimsToLims, boolean table) {
+        super(fimsToLims);
+        this.table = table;
+    }
 
     public String getTypeName() {
-        return "Bar Chart (Field Comparison)";
+        return table ? "Table (Field Comparison)" : "Bar Chart (Field Comparison)";
     }
 
     public String getTypeDescription() {
-        return "A comparison of two or more fields in a bar chart";
+        return "A comparison of two or more fields in a "+(table ? "table" : "bar chart");
     }
 
     public ComparisonReport(FimsToLims fimsToLims) {
@@ -57,6 +80,19 @@ public class ComparisonReport extends Report{
     public Options createOptions(FimsToLims fimsToLims) {
         return new ComparisonReportOptions(this.getClass(), fimsToLims);
 
+    }
+
+    @Override
+    public Element toXML() {
+        Element element = super.toXML();
+        element.addContent(new Element("table").setText(""+table));
+        return element;
+    }
+
+    @Override
+    public void fromXML(Element element) throws XMLSerializationException {
+        super.fromXML(element);
+        table = "true".equals(element.getChildText("table"));
     }
 
     public ReportChart getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException{
@@ -164,6 +200,77 @@ public class ComparisonReport extends Report{
         }
 
 
+        return table ? getTable(dataset) : getBarChart(fimsToLims, field, fieldOptionsList, dataset, results);
+
+
+    }
+
+    private ReportChart getTable(final DefaultCategoryDataset dataset) {
+        final AbstractTableModel model = new AbstractTableModel(){
+
+            public int getRowCount() {
+                return dataset.getColumnCount();
+            }
+
+            public int getColumnCount() {
+                return dataset.getRowCount()+1;
+            }
+
+            public Object getValueAt(int rowIndex, int columnIndex) {
+                if(columnIndex == 0) {
+                    return dataset.getColumnKey(rowIndex);
+                }
+                return dataset.getValue(columnIndex-1, rowIndex);
+            }
+
+            @Override
+            public String getColumnName(int column) {
+                if(column == 0) {
+                    return " ";
+                }
+                return ""+dataset.getRowKey(column-1);
+            }
+        };
+
+        final TableDocumentViewerFactory factory = new TableDocumentViewerFactory(){
+            protected TableModel getTableModel(AnnotatedPluginDocument[] docs) {
+                return model;
+            }
+
+            public String getName() {
+                return null;
+            }
+
+            public String getDescription() {
+                return null;
+            }
+
+            public String getHelp() {
+                return null;
+            }
+
+            public DocumentSelectionSignature[] getSelectionSignatures() {
+                return new DocumentSelectionSignature[0];
+            }
+        };
+
+        return new ReportChart(){
+            public JPanel getPanel() {
+                GPanel panel = new GPanel(new BorderLayout());
+                panel.add(factory.createViewer(new AnnotatedPluginDocument[0]).getComponent(), BorderLayout.CENTER);
+                return panel;
+            }
+
+            @Override
+            public ChartExporter[] getExporters() {
+                return new ChartExporter[] {
+                        new ExcelChartExporter(getName(), model)
+                };
+            }
+        };
+    }
+
+    private ReportChart getBarChart(FimsToLims fimsToLims, String field, final List<ReactionFieldOptions> fieldOptionsList, DefaultCategoryDataset dataset, final List<FieldResult> results) {
         final String title = "Comparison";
         final String xLabel = fimsToLims.getFriendlyName(field);
         final String yLabel;
@@ -196,7 +303,6 @@ public class ComparisonReport extends Report{
 
         final CategoryAxis domainAxis = plot.getDomainAxis();
         domainAxis.setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
-
 
 
         final ChartPanel panel = new ChartPanel(barChart, false);
@@ -275,7 +381,7 @@ public class ComparisonReport extends Report{
                             plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.DOWN_45);
                         }
                         else if(labelPosition.getValue().equals(labelPositionValues[4])) {
-                            plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.DOWN_90);         
+                            plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.DOWN_90);
                         }
 
                         barRenderer.setShadowVisible(shadows.getValue());

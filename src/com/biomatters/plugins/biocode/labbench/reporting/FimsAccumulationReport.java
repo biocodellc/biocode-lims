@@ -81,7 +81,7 @@ public class FimsAccumulationReport extends Report{
                 throw new SQLException("You cannot compute a report where the start date and end date are the same");
             }
             List<Integer> counts = new ArrayList<Integer>();
-            XYSeries series = new XYSeries(seriesName);
+            XYSeries series = new XYSeries(""+seriesName);
             for (long time = startDate.getTime(); time <= endDate.getTime(); time += (endDate.getTime() - startDate.getTime()) / 40) {
                 composite.setProgress(((double) time - startDate.getTime()) / (endDate.getTime() - startDate.getTime()));
                 if (progress.isCanceled()) {

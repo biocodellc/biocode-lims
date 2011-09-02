@@ -47,7 +47,7 @@ public class CherryPickingTableExporter extends DocumentFileExporter {
             if (tableModel != null) {
                 TableModel hidingModel = factory.getColumnHidingTableModel(documents, tableModel);
                 WritableSheet sheet = workbook.createSheet(factory.getName(), count);
-                ExcelUtilities.exportTable(sheet, hidingModel, progressListener, options);
+                ExcelUtilities.exportTable(sheet, hidingModel, progressListener);
                 count++;
             }
 

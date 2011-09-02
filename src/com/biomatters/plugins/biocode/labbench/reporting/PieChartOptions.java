@@ -11,10 +11,8 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
-import javax.swing.*;
 import java.util.List;
 import java.util.ArrayList;
-import java.sql.SQLException;
 
 /**
  * @author Steve
@@ -51,7 +49,7 @@ public class PieChartOptions extends Options {
     }
 
     private void init(final FimsToLims fimsToLims) {
-        final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false);
+        final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, true, true);
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
         final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaciton or FIMS field", false);
         fimsField.setEnabled(fimsToLims.limsHasFimsValues());
