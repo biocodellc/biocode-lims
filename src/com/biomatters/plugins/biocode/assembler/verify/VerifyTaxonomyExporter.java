@@ -43,7 +43,7 @@ public class VerifyTaxonomyExporter extends DocumentFileExporter {
 
             VerifyTaxonomyTableModel tableModel = new VerifyTaxonomyTableModel(documents[0], null, false);
             WritableSheet sheet = workbook.createSheet("Verify Taxonomy Results", 0);
-            ExcelUtilities.exportTable(sheet, tableModel, progressListener, options);
+            ExcelUtilities.exportTable(sheet, tableModel, progressListener);
 
             workbook.write();
         } catch (WriteException e) {
