@@ -271,7 +271,7 @@ public class ComparisonReport extends Report{
     }
 
     private ReportChart getBarChart(FimsToLims fimsToLims, String field, final List<ReactionFieldOptions> fieldOptionsList, DefaultCategoryDataset dataset, final List<FieldResult> results) {
-        final String title = "Comparison";
+        final String title = getName();
         final String xLabel = fimsToLims.getFriendlyName(field);
         final String yLabel;
         if(fieldOptionsList.size() == 1) {
@@ -318,10 +318,25 @@ public class ComparisonReport extends Report{
             @Override
             public Options getOptions() {
                 final Options options = new Options(this.getClass());
+                options.setHorizontallyCompact(true);
                 options.addDivider("Labels");
                 final Options.StringOption titleOption = options.addStringOption("title", "Title: ", title);
                 final Options.StringOption xLabelOption = options.addStringOption("xlabel", "X-label: ", xLabel);
                 final Options.StringOption yLabelOption = options.addStringOption("ylabel", "Y-label: ", yLabel);
+
+
+                //ensure text option components don't get too large
+                titleOption.setValue("test");
+                titleOption.getComponent();
+                titleOption.setValue(title);
+
+                xLabelOption.setValue("test");
+                xLabelOption.getComponent();
+                xLabelOption.setValue(xLabel);
+
+                yLabelOption.setValue("test");
+                yLabelOption.getComponent();
+                yLabelOption.setValue(yLabel);
 
                 options.addDivider("Display");
 

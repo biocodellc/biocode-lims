@@ -103,10 +103,13 @@ public class PieChartReport extends Report{
                 final Options options = new Options(this.getClass());
                 options.addDivider("Labels");
                 if(chart.getTitle() == null) {
-                    chart.setTitle(new TextTitle(""));
+                    chart.setTitle(new TextTitle(getName()));
                 }
-                final Options.StringOption titleOption = options.addStringOption("title", "Title: ", chart.getTitle().getText());
+                final Options.StringOption titleOption = options.addStringOption("title", "Title: ", "test");
                 final Options.BooleanOption showLabelsOption = options.addBooleanOption("showLabels", "Show Labels", true);
+
+                titleOption.getComponent();
+                titleOption.setValue(chart.getTitle().getText());
 
 
 

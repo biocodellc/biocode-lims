@@ -100,7 +100,7 @@ public class AccumulationReport extends Report{
         return createAccumulationChart(dataset);
     }
 
-    public static ReportChart createAccumulationChart(final XYSeriesCollection dataset) {
+    public ReportChart createAccumulationChart(final XYSeriesCollection dataset) {
         final String title = "Accumulation";
         final String yAxis = "Count";
         final JFreeChart chart = ChartFactory.createXYLineChart(
@@ -141,8 +141,17 @@ public class AccumulationReport extends Report{
             public Options getOptions() {
                 final Options options = new Options(this.getClass());
                 options.addDivider("Labels");
-                final Options.StringOption titleOption = options.addStringOption("title", "Title: ", title);
+                final Options.StringOption titleOption = options.addStringOption("title", "Title: ", getName());
                 final Options.StringOption yLabelOption = options.addStringOption("ylabel", "Y-label: ", yAxis);
+
+                titleOption.setValue("test");
+                titleOption.getComponent();
+                titleOption.setValue(getName());
+
+                yLabelOption.setValue("test");
+                yLabelOption.getComponent();
+                yLabelOption.setValue(yAxis);
+
 
                 for (int i = 0; i < dataset.getSeries().size(); i++) {
                     Object o = dataset.getSeries().get(i);

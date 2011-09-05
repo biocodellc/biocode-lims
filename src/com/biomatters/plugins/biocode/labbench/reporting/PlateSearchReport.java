@@ -88,7 +88,7 @@ public class PlateSearchReport extends Report{
 
         for (Iterator<ReactionFieldOptions> it = fieldOptions.iterator(); it.hasNext();) {
             ReactionFieldOptions fieldOption = it.next();
-            sql += ReportGenerator.getTableFieldName(fieldOption.getTable(), fieldOption.getField()) + " " + fieldOption.getComparator() + " " + "?";
+            sql += fieldOption.getTable()+"."+ReportGenerator.getTableFieldName(fieldOption.getTable(), fieldOption.getField()) + " " + fieldOption.getComparator() + " " + "?";
             if(it.hasNext()) {
                 sql += options.getComparator();
             }
