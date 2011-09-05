@@ -167,6 +167,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public void setPlateName(String plateName) {
+        if(plateName == null) {
+            throw new IllegalArgumentException("Plate names cannot be null");
+        }
         this.plateName = plateName;
     }
 
