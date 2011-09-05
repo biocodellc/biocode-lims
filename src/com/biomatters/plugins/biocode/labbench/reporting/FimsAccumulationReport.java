@@ -25,7 +25,7 @@ import org.jfree.data.xy.XYSeries;
  */
 
 
-public class FimsAccumulationReport extends Report{
+public class FimsAccumulationReport extends AccumulationReport{
 
 
     public FimsAccumulationReport(FimsToLims fimsToLims) {
@@ -101,6 +101,6 @@ public class FimsAccumulationReport extends Report{
         }
 
 
-        return AccumulationReport.createAccumulationChart(dataset);
+        return createAccumulationChart(dataset);
     }
 }
