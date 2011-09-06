@@ -371,7 +371,7 @@ public class ReactionFieldOptions extends Options {
 
     public boolean isExactMatch() {
         ComboBoxOption condition = (ComboBoxOption)getOption(CONDITION_FIELD);
-        if(condition != null && condition.isEnabled()) {
+        if(condition != null && condition.isEnabled() && condition.isVisible()) {
             return !condition.getValue().toString().equals("contains");
         }
         return true;
