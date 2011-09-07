@@ -46,7 +46,7 @@ import java.util.prefs.Preferences;
 public class PlateBulkEditor {
     private Plate plate;
     private boolean newPlate;
-    private GeneiousAction swapAction;
+    private SwapAction swapAction;
     private GeneiousAction archivePlateAction;
     private GeneiousAction importBarcodes;
     private GeneiousAction getExtractionsFromBarcodes;
@@ -54,7 +54,6 @@ public class PlateBulkEditor {
     private GeneiousAction autoGenerateIds;
     private GeneiousAction autodetectAction;
 
-    private Direction direction = Direction.ACROSS_AND_DOWN;
 
     private List<DocumentField> defaultFields;
     List<DocumentField> autoFillFields = getAutofillFields();
@@ -125,10 +124,10 @@ public class PlateBulkEditor {
                         }
                     }
                 });
-                editor.set(new DocumentFieldEditor(field, plate, direction, setAllButton));
+                editor.set(new DocumentFieldEditor(field, plate, Direction.ACROSS_AND_DOWN, setAllButton));
             }
             else {
-                editor.set(new DocumentFieldEditor(field, plate, direction, null));
+                editor.set(new DocumentFieldEditor(field, plate, Direction.ACROSS_AND_DOWN, null));
             }
             editor.get().addScrollListener(listener);
             editors.add(editor.get());
@@ -140,21 +139,7 @@ public class PlateBulkEditor {
         final DocumentField lociField = getLociField(plate);
 
         GeneiousActionToolbar toolbar = new GeneiousActionToolbar(Preferences.userNodeForPackage(PlateBulkEditor.class), false, true);
-        swapAction = new GeneiousAction("Swap Direction", "Swap the direction the wells are read from (between 'across then down', or 'down then across')", BiocodePlugin.getIcons("swapDirection_16.png")) {
-            public void actionPerformed(ActionEvent e) {
-                switch (direction) {
-                    case ACROSS_AND_DOWN:
-                        direction = Direction.DOWN_AND_ACROSS;
-                        break;
-                    case DOWN_AND_ACROSS:
-                        direction = Direction.ACROSS_AND_DOWN;
-                        break;
-                }
-                for (DocumentFieldEditor editor : editors) {
-                    editor.setDirection(direction);
-                }
-            }
-        };
+        swapAction = new SwapAction(editors);
         toolbar.addAction(swapAction);
         List<GeneiousAction> toolsActions = new ArrayList<GeneiousAction>();
         if(plate.getReactionType() == Reaction.Type.Extraction && (plate.getPlateSize() != null) && BiocodeService.getInstance().getActiveFIMSConnection().canGetTissueIdsFromFimsTissuePlate()) {
@@ -289,50 +274,8 @@ public class PlateBulkEditor {
                         }
                     }
 
-                    Runnable runnable = new Runnable() {
-                        public void run() {
-                            try {
-                                Map<String, ExtractionReaction> extractions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
-                                DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
-                                DocumentField parentExtractionField = new DocumentField("Parent Extraction", "", "parentExtraction", String.class, false, false);
-                                DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
-                                DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
-                                DocumentFieldEditor extractionIdEditor = getEditorForField(editors, extractionField);
-                                DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, parentExtractionField);
-                                for(int i=0; i < plate.getRows(); i++) {
-                                    for(int j=0; j < plate.getCols(); j++) {
-                                        Object barcode = barcodeEditor.getValue(i,j);
 
-                                        //get the extraction
-                                        ExtractionReaction reaction = null;
-                                        if(barcode != null) {
-                                            reaction = extractions.get(barcode.toString());
-                                        }
-
-                                        //fill in the values
-                                        if(reaction != null) {
-                                            extractionIdEditor.setValue(i,j,reaction.getExtractionId());
-                                            parentExtractionEditor.setValue(i,j,""+reaction.getFieldValue("parentExtraction"));
-                                            tissueEditor.setValue(i,j,reaction.getTissueId());
-                                            //todo: original plate
-                                        }
-                                        else {
-                                            extractionIdEditor.setValue(i,j,"");
-                                            parentExtractionEditor.setValue(i,j,"");
-                                            tissueEditor.setValue(i,j,"");
-                                        }
-
-                                    }
-                                    extractionIdEditor.textViewFromValues();
-                                    parentExtractionEditor.textViewFromValues();
-                                    tissueEditor.textViewFromValues();
-                                }
-                            } catch (SQLException e1) {
-                                Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
-                                return;
-                            }
-                        }
-                    };
+                    Runnable runnable = new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
                     BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable);
                 }
             };
@@ -424,6 +367,51 @@ public class PlateBulkEditor {
                 }
             };
             toolsActions.add(autoGenerateIds);
+        }
+        else {
+            getExtractionsFromBarcodes = new GeneiousAction("Fetch extractions from barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
+                public void actionPerformed(ActionEvent e) {
+                    DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+                    final DocumentFieldEditor barcodeEditor =new DocumentFieldEditor(extractionBarcodeField, plate, swapAction.getDirection(), null);
+                    final AtomicBoolean response = new AtomicBoolean(false);
+                    Runnable barcodeEnterRunnable = new Runnable() {
+                        public void run() {
+                            GPanel panel = new GPanel(new BorderLayout());
+                            JToolBar innerToolbar = new JToolBar();
+                            innerToolbar.setFloatable(false);
+                            innerToolbar.add(new SwapAction(Arrays.asList(barcodeEditor)));
+                            for(Component component : innerToolbar.getComponents()) {
+                                if(component instanceof JButton) {
+                                    ((JButton)component).putClientProperty("hideActionText", Boolean.FALSE);
+                                    ((JButton)component).setHorizontalTextPosition(JButton.RIGHT);
+                                }
+                            }
+                            panel.add(innerToolbar, BorderLayout.NORTH);
+                            panel.add(barcodeEditor, BorderLayout.CENTER);
+                            response.set(Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Enter your extraction Barcodes", editors.get(0)), panel).equals(Dialogs.OK));
+                        }
+                    };
+                    ThreadUtilities.invokeNowOrWait(barcodeEnterRunnable);
+                    if(!response.get()) {
+                        return;
+                    }
+                    barcodeEditor.valuesFromTextView();
+                    final List<String> barcodes = new ArrayList<String>();
+                    for(int i=0; i < plate.getRows(); i++) {
+                        for(int j=0; j < plate.getCols(); j++) {
+                            final Object value = barcodeEditor.getValue(i, j);
+                            if(value != null) {
+                                barcodes.add(value.toString());
+                            }
+                        }
+                    }
+
+                    Runnable runnable = new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
+
+                    BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable);
+                }
+            };
+            toolsActions.add(getExtractionsFromBarcodes);
         }
         if(toolsActions.size() > 0) {
             GeneiousAction.SubMenu toolsAction = new GeneiousAction.SubMenu(new GeneiousActionOptions("Tools", "", IconUtilities.getIcons("tools16.png")), toolsActions);
@@ -814,6 +802,7 @@ public class PlateBulkEditor {
         }
 
         public void textViewFromValues() {
+            final int scrollPosition = scroller.getVerticalScrollBar().getValue();
             final StringBuilder valuesBuilder = new StringBuilder();
             final StringBuilder lineNumbersBuilder = new StringBuilder();
             if(direction == Direction.DOWN_AND_ACROSS) {
@@ -841,6 +830,7 @@ public class PlateBulkEditor {
                 public void run() {
                     valueArea.setText(valuesBuilder.toString());
                     lineNumbers.setText(lineNumbersBuilder.toString());
+                    scroller.getVerticalScrollBar().setValue(scrollPosition);
                 }
             };
             ThreadUtilities.invokeNowOrLater(runnable);
@@ -935,4 +925,105 @@ public class PlateBulkEditor {
             scroller.getVerticalScrollBar().addAdjustmentListener(al);
         }
     }
+
+
+    private static class SwapAction extends GeneiousAction{
+        private List<DocumentFieldEditor> editors;
+        private Direction direction = Direction.ACROSS_AND_DOWN;
+
+        public SwapAction(final List<DocumentFieldEditor> editors) {
+            super("Swap Direction", "Swap the direction the wells are read from (between 'across then down', or 'down then across')", BiocodePlugin.getIcons("swapDirection_16.png"));
+
+            this.editors = editors;
+        }
+
+        public void actionPerformed(ActionEvent e) {
+            switch (direction) {
+                case ACROSS_AND_DOWN:
+                    direction = Direction.DOWN_AND_ACROSS;
+                    break;
+                case DOWN_AND_ACROSS:
+                    direction = Direction.ACROSS_AND_DOWN;
+                    break;
+            }
+            for (DocumentFieldEditor editor : editors) {
+                editor.setDirection(direction);
+            }
+        }
+
+        public Direction getDirection() {
+            return direction;
+        }
+    }
+
+    private static class ExtractionFetcherRunnable implements Runnable{
+        private List<String> barcodes;
+        private List<DocumentFieldEditor> editors;
+        private Plate plate;
+        private DocumentFieldEditor barcodeEditor;
+
+        private ExtractionFetcherRunnable(List<String> barcodes, List<DocumentFieldEditor> editors, Plate plate, DocumentFieldEditor barcodeEditor) {
+            this.barcodes = barcodes;
+            this.editors = editors;
+            this.plate = plate;
+            this.barcodeEditor = barcodeEditor;
+        }
+
+        public void run() {
+            DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
+            DocumentField parentExtractionField = new DocumentField("Parent Extraction", "", "parentExtraction", String.class, false, false);
+            DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+            DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+            DocumentFieldEditor extractionIdEditor = getEditorForField(editors, extractionField);
+            DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, parentExtractionField);
+
+            try {
+                Map<String, ExtractionReaction> extractions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
+                for(int i=0; i < plate.getRows(); i++) {
+                    for(int j=0; j < plate.getCols(); j++) {
+                        Object barcode = barcodeEditor.getValue(i,j);
+
+                        //get the extraction
+                        ExtractionReaction reaction = null;
+                        if(barcode != null) {
+                            reaction = extractions.get(barcode.toString());
+                        }
+
+                        //fill in the values
+                        if(reaction != null) {
+                            if(extractionIdEditor != null)
+                                extractionIdEditor.setValue(i,j,reaction.getExtractionId());
+                            if(parentExtractionEditor != null)
+                                parentExtractionEditor.setValue(i,j,""+reaction.getFieldValue("parentExtraction"));
+                            if(tissueEditor != null)
+                                tissueEditor.setValue(i,j,reaction.getTissueId());
+                            //todo: original plate
+                        }
+                        else {
+                            if(extractionIdEditor != null)
+                                extractionIdEditor.setValue(i,j,"");
+                            if(parentExtractionEditor != null)
+                                parentExtractionEditor.setValue(i,j,"");
+                            if(tissueEditor != null)
+                                tissueEditor.setValue(i,j,"");
+                        }
+
+                    }
+                    if(extractionIdEditor != null)
+                        extractionIdEditor.textViewFromValues();
+                    if(parentExtractionEditor != null)
+                        parentExtractionEditor.textViewFromValues();
+                    if(tissueEditor != null)
+                        tissueEditor.textViewFromValues();
+                }
+            } catch (SQLException e1) {
+                Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
+                return;
+            }
+        }
+
+
+    }
 }
+
+

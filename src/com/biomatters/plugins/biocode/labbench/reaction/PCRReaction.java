@@ -7,6 +7,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -76,7 +77,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         setPosition(r.getInt("pcr.location"));
         String workflowString = r.getString("workflow.locus");
         if(workflowString != null) {
-            options.setValue("locus", workflowString);
+            options.setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), workflowString);
         }
         options.setValue("cocktail", r.getString("pcr.cocktail"));
         options.setValue("cleanupPerformed", r.getBoolean("pcr.cleanupPerformed"));
@@ -122,7 +123,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
     }
 
     public String getLocus() {
-        return getOptions().getValueAsString("locus");
+        return getOptions().getValueAsString(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode());
     }
 
     public Type getType() {

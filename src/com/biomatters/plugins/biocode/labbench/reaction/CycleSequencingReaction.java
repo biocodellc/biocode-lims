@@ -12,6 +12,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -93,7 +94,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         if(s != null) {
             options.setValue("workflowId", s);
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
-            options.setValue("locus", r.getString("workflow.locus"));
+            options.setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), r.getString("workflow.locus"));
         }
 
 
@@ -178,7 +179,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     public String getLocus() {
-        return getOptions().getValueAsString("locus");
+        return getOptions().getValueAsString(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode());
     }
 
     public Cocktail getCocktail() {
