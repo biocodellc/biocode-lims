@@ -1,33 +1,31 @@
 package com.biomatters.plugins.biocode;
 
-import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
-import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOperation;
 import com.biomatters.plugins.biocode.assembler.download.DownloadChromatogramsFromLimsOperation;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.assembler.lims.MarkSequencesAsSubmittedInLimsOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyDocumentViewerFactory;
-import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
-import com.biomatters.plugins.biocode.assembler.verify.FillInTaxonomyOperation;
+import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMS;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import org.jdom.Document;
+import org.jdom.JDOMException;
+import org.jdom.input.SAXBuilder;
 
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.prefs.Preferences;
-
-import org.jdom.input.SAXBuilder;
-import org.jdom.JDOMException;
-import org.jdom.Document;
 
 /**
  * @version $Id: BiocodePlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -139,7 +137,7 @@ public class BiocodePlugin extends GeneiousPlugin {
      * @return 0 if the two versions are equal, or a negative number if version1 < version2
      * or a positive number of version1 > version2.
      */
-    private static int compareVersions(String version1, String version2) {
+    public static int compareVersions(String version1, String version2) {
         String[]ver1 = version1.split("\\.");
         String[]ver2 = version2.split("\\.");
 
