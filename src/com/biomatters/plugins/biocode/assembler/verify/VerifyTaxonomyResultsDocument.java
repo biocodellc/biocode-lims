@@ -3,6 +3,8 @@ package com.biomatters.plugins.biocode.assembler.verify;
 import com.biomatters.geneious.publicapi.documents.AbstractPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.Geneious;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import org.jdom.Element;
 
 import java.util.ArrayList;
@@ -27,7 +29,12 @@ public class VerifyTaxonomyResultsDocument extends AbstractPluginDocument {
 
     public VerifyTaxonomyResultsDocument(List<VerifyResult> results, String keywords) {
         this.results = results;
-        setFieldValue("name", DocumentUtilities.getUniqueNameForDocument("Verify Taxonomy Results"));
+        String nameForDocument = "Verify Taxonomy Results";
+        if (BiocodePlugin.compareVersions(Geneious.getApiVersion(), "4.51") < 0) {
+            // from 5.5.1 onwards the document name will be uniqued by core
+           nameForDocument = DocumentUtilities.getUniqueNameForDocument("Verify Taxonomy Results");
+        }
+        setFieldValue("name", nameForDocument);
         setFieldValue("keywords", keywords);
     }
 
