@@ -37,7 +37,7 @@ public class PlateSearchReportOptions extends Options {
     }
 
     public List<ReactionFieldOptions> getFieldOptions() {
-        MultipleOptions multipleOptions = getMultipleOptions().get("reactionOptions");
+        MultipleOptions multipleOptions = getMultipleOptions("reactionOptions");
         List<ReactionFieldOptions> fieldOptions = new ArrayList<ReactionFieldOptions>();
         for(Options o : multipleOptions.getValues()) {
             fieldOptions.add((ReactionFieldOptions)o);
