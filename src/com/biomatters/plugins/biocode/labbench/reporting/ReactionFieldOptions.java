@@ -61,6 +61,7 @@ public class ReactionFieldOptions extends Options {
 
     public ReactionFieldOptions(Element element) throws XMLSerializationException {
         super(element);
+        allowAll = "true".equals(element.getChildText("allowAll"));
         initListeners();
     }
 
@@ -71,16 +72,11 @@ public class ReactionFieldOptions extends Options {
         return element;
     }
 
-    @Override
-    public void fromXML(Element element) throws XMLSerializationException {
-        super.fromXML(element);
-        allowAll = "true".equals(element.getChildText("allowAll"));
-    }
 
     private void init(boolean includeValue, boolean includeLocus) {
         beginAlignHorizontally("", false);
         ComboBoxOption<OptionValue> reactionType = addComboBoxOption(REACTION_TYPE, "Reaction type ", reactionTypes, reactionTypes[0]);
-        List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), includeValue, true);
+        List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), includeValue, allowAll);
         addComboBoxOption(FIELDS, "Field to compare", fieldValue, fieldValue.get(0));
         if(includeValue) {
             Options.OptionValue[] values = new OptionValue[] {new OptionValue("None", "None")};

@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
-    private List<Reaction> reactions;
     private List<ReactionPart> parts;
     Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>() {
             public int compare(ReactionPart o1, ReactionPart o2) {
@@ -63,7 +62,6 @@ public class WorkflowDocument extends MuitiPartDocument {
             throw new IllegalArgumentException("You cannot create a workflow document with a null workflow");
         }
         this.workflow = workflow;
-        this.reactions = new ArrayList<Reaction>(reactions);
         parts = new ArrayList<ReactionPart>();
         for(Reaction r : reactions) {
             parts.add(new ReactionPart(r));
@@ -72,23 +70,22 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public void sortReactions() {
-        Comparator comp = new Comparator<Reaction>(){
-            public int compare(Reaction o1, Reaction o2) {
-                if(o1 instanceof ExtractionReaction && !(o2 instanceof ExtractionReaction)) {
+        Comparator comp = new Comparator<ReactionPart>(){
+            public int compare(ReactionPart o1, ReactionPart o2) {
+                if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
                     return -Integer.MAX_VALUE;
                 }
-                return (int)(o1.getDate().getTime()-o2.getDate().getTime());
+                return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
             }
         };
-        Collections.sort(reactions, comp);
+        Collections.sort(parts, comp);
     }
 
     public WorkflowDocument(ResultSet resultSet) throws SQLException{
         int workflowId = resultSet.getInt("workflow.id");
         String workflowName = resultSet.getString("workflow.name");
         String extraction = resultSet.getString("extraction.extractionId");
-        java.sql.Date lastModified = resultSet.getDate("workflow.date");      
-        this.reactions = new ArrayList<Reaction>();
+        java.sql.Date lastModified = resultSet.getDate("workflow.date");
         workflow = new Workflow(workflowId, workflowName, extraction, resultSet.getString("workflow.locus"), lastModified);
         this.parts = new ArrayList<ReactionPart>();
         addRow(resultSet);
@@ -154,9 +151,9 @@ public class WorkflowDocument extends MuitiPartDocument {
         if(workflow != null) {
             element.addContent(workflow.toXML());
         }
-        if(reactions != null) {
-            for(Reaction r : reactions) {
-                element.addContent(XMLSerializer.classToXML("reaction", r));
+        if(parts != null) {
+            for(ReactionPart part : parts) {
+                element.addContent(XMLSerializer.classToXML("reaction", part.getReaction()));
             }
         }
         
@@ -165,12 +162,9 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public void fromXML(Element element) throws XMLSerializationException {
         workflow = new Workflow(element.getChild("workflow"));
-        reactions = new ArrayList<Reaction>();
         parts = new ArrayList<ReactionPart>();
         for(Element e : element.getChildren("reaction")) {
-            reactions.add(XMLSerializer.classFromXML(e, Reaction.class));
-        }
-        for(Reaction r : reactions) {
+            Reaction r = XMLSerializer.classFromXML(e, Reaction.class);
             if(r.getFimsSample() != null) {
                 workflow.setFimsSample(r.getFimsSample());
             }
@@ -200,7 +194,8 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public Reaction getMostRecentReaction(Reaction.Type type) {
         Reaction r = null;
-        for (Reaction reaction : reactions) {
+        for (ReactionPart part : parts) {
+            Reaction reaction = part.getReaction();
             if (reaction.getType() == type) {
                 r = reaction;
             }
@@ -210,7 +205,8 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public Reaction getMostRecentSequencingReaction(boolean forward) {
         Reaction r = null;
-        for (Reaction reaction : reactions) {
+        for (ReactionPart part : parts) {
+            Reaction reaction = part.getReaction();
             if (reaction.getType() == Reaction.Type.CycleSequencing && CycleSequencingOptions.FORWARD_VALUE.equals(reaction.getOptions().getValueAsString(CycleSequencingOptions.DIRECTION)) == forward) {
                 r = reaction;
             }
@@ -219,14 +215,18 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public List<Reaction> getReactions() {
-        return new ArrayList<Reaction> (reactions);
+        ArrayList<Reaction> reactions = new ArrayList<Reaction>();
+        for(ReactionPart part : parts) {
+            reactions.add(part.getReaction());
+        }
+        return reactions;
     }
 
     public List<Reaction> getReactions(Reaction.Type type) {
         List<Reaction> reactionsList = new ArrayList<Reaction>();
-        for (Reaction reaction : reactions) {
-            if (reaction.getType() == type) {
-                reactionsList.add(reaction);
+        for (ReactionPart part : parts) {
+            if (part.getReaction().getType() == type) {
+                reactionsList.add(part.getReaction());
             }
         }
         return reactionsList;
@@ -246,7 +246,8 @@ public class WorkflowDocument extends MuitiPartDocument {
                 int reactionId = resultSet.getInt("extraction.id");
                 //check we don't already have it
                 boolean alreadyThere = false;
-                for(Reaction r : reactions) {
+                for(ReactionPart part : parts) {
+                    Reaction r = part.getReaction();
                     if(r.getType() == Reaction.Type.Extraction && r.getId() == reactionId) {
                         alreadyThere = true;
                     }
@@ -260,7 +261,8 @@ public class WorkflowDocument extends MuitiPartDocument {
             reactionId = resultSet.getInt("pcr.id");
             //check we don't already have it
             alreadyThere = false;
-            for(Reaction r : reactions) {
+            for(ReactionPart part : parts) {
+                Reaction r = part.getReaction();
                 if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
                     alreadyThere = true;
                 }
@@ -274,7 +276,8 @@ public class WorkflowDocument extends MuitiPartDocument {
             reactionId = resultSet.getInt("cyclesequencing.id");
             //check we don't already have it
             alreadyThere = false;
-            for(Reaction r : reactions) {
+            for(ReactionPart part : parts) {
+                Reaction r = part.getReaction();
                 if(r.getType() == Reaction.Type.CycleSequencing && r.getId() == reactionId) {
                     alreadyThere = true;
                 }
@@ -294,7 +297,6 @@ public class WorkflowDocument extends MuitiPartDocument {
         if(r == null) {
             return;
         }
-        reactions.add(r);
         parts.add(new ReactionPart(r));
         if(r.getFimsSample() != null) {
             workflow.setFimsSample(r.getFimsSample());

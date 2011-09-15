@@ -122,7 +122,13 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 if (!reaction.isEmpty() && reaction.getWorkflow() != null) {
                     reactions.add((CycleSequencingReaction) reaction);
                     BiocodeUtilities.Well well = Plate.getWell(reaction.getPosition(), plate.getPlateSize());
-                    fimsDataForReactions.put((CycleSequencingReaction) reaction, new FimsData(findWorkflow(workflows, reaction.getWorkflow().getId()), plate.getName(), well));
+                    WorkflowDocument workflow = findWorkflow(workflows, reaction.getWorkflow().getId());
+                    if(workflow != null) {
+                        fimsDataForReactions.put((CycleSequencingReaction) reaction, new FimsData(workflow, plate.getName(), well));
+                    }
+                    else {
+                        fimsDataForReactions.put((CycleSequencingReaction)reaction, new FimsData(reaction.getFimsSample(), plate.getName(), well));
+                    }
 
                 }
             }

@@ -710,7 +710,7 @@ public class ReportGenerator {
         if(fields.size() == 0) {
             fields.add(new Options.OptionValue("none", "None..."));
         }
-        else if(includeAllFields && includeAllTerm){
+        else if(includeAllTerm){
             fields.add(0, new Options.OptionValue("nofield", "All "+reactionType+" reactions"));
         }
         return fields;
