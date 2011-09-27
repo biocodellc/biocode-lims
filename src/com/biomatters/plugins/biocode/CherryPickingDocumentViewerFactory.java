@@ -3,10 +3,10 @@ package com.biomatters.plugins.biocode;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.CherryPickingDocument;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
@@ -42,7 +42,7 @@ public class CherryPickingDocumentViewerFactory extends TableDocumentViewerFacto
     }
 
     @Override
-    public TableModel getTableModel(AnnotatedPluginDocument[] docs) {
+    public TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options) {
         final List<Reaction> allReactions = new ArrayList<Reaction>();
         Set<DocumentField> fimsFields = new LinkedHashSet<DocumentField>();
         for(AnnotatedPluginDocument doc : docs) {

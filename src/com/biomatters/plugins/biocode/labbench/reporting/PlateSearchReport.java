@@ -2,14 +2,11 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
-import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
-import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
 import jebl.util.ProgressListener;
 
 import java.sql.SQLException;
@@ -18,19 +15,12 @@ import java.sql.ResultSet;
 import java.util.*;
 import java.util.List;
 import java.awt.*;
-import java.io.File;
-import java.io.IOException;
 
 import org.jdom.Element;
 
 import javax.swing.table.TableModel;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.*;
-
-import jxl.write.WritableWorkbook;
-import jxl.write.WritableSheet;
-import jxl.write.WriteException;
-import jxl.Workbook;
 
 /**
  * @author Steve
@@ -88,7 +78,7 @@ public class PlateSearchReport extends Report{
 
         for (Iterator<ReactionFieldOptions> it = fieldOptions.iterator(); it.hasNext();) {
             ReactionFieldOptions fieldOption = it.next();
-            sql += fieldOption.getTable()+"."+ReportGenerator.getTableFieldName(fieldOption.getTable(), fieldOption.getField()) + " " + fieldOption.getComparator() + " " + "?";
+            sql += ReportGenerator.getTableFieldName(fieldOption.getTable(), fieldOption.getField()) + " " + fieldOption.getComparator() + " " + "?";
             if(it.hasNext()) {
                 sql += options.getComparator();
             }
@@ -130,7 +120,7 @@ public class PlateSearchReport extends Report{
         };
 
         final TableDocumentViewerFactory factory = new TableDocumentViewerFactory(){
-            protected TableModel getTableModel(AnnotatedPluginDocument[] docs) {
+            protected TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options) {
                 return model;
             }
 

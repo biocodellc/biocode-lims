@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -49,7 +50,7 @@ public class PieChartOptions extends Options {
     }
 
     private void init(final FimsToLims fimsToLims) {
-        final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, true, true);
+        final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, false, true);
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
         final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaciton or FIMS field", false);
         fimsField.setEnabled(fimsToLims.limsHasFimsValues());
@@ -93,9 +94,9 @@ public class PieChartOptions extends Options {
                 MultipleOptions multipleOptions = fimsMultiOptions.getMultipleOptions("fims");
                 for (Options options : multipleOptions.getValues()) {
                     SingleFieldOptions fieldOptions = (SingleFieldOptions) options;
-                    fieldOptions.setFields(getFieldValues(fimsToLims), reactionFieldOptions.getReactionType());
+                    fieldOptions.setFields(ReportGenerator.getFieldValues(fimsToLims), reactionFieldOptions.getReactionType());
                 }
-                ((SingleFieldOptions)multipleOptions.getMasterOptions()).setFields(getFieldValues(fimsToLims), reactionFieldOptions.getReactionType());
+                ((SingleFieldOptions)multipleOptions.getMasterOptions()).setFields(ReportGenerator.getFieldValues(fimsToLims), reactionFieldOptions.getReactionType());
             }
         };
         reactionFieldOptions.addChangeListener(fimsFieldListener);
@@ -103,16 +104,7 @@ public class PieChartOptions extends Options {
 
     }
 
-    private List<DocumentField> getFieldValues(FimsToLims fimsToLims) {
-        List<DocumentField> fields = new ArrayList<DocumentField>();
-        List<DocumentField> limsSearchFields = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
-        limsSearchFields.remove(LIMSConnection.PLATE_TYPE_FIELD);
-        limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);
-        limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
-        fields.addAll(limsSearchFields);
-        fields.addAll(fimsToLims.getFimsFields());
-        return fields;
-    }
+
 
     public String getReactionTable() {
         ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);
@@ -122,7 +114,7 @@ public class PieChartOptions extends Options {
 
     String getLimsSql() {
         ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);
-        return reactionFields.getSql((Boolean)getValue(FIMS_FIELD) ? FimsToLims.FIMS_VALUES_TABLE+" f" : null, null);
+        return reactionFields.getSql((Boolean)getValue(FIMS_FIELD) ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE+" f") : null, null);
     }
 
     private boolean isFimsField(String fieldName) {

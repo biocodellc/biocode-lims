@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ public class FimsAccumulationOptions extends Options {
     public String getSql(FimsToLims fimsToLims) {
         ReactionFieldOptions fieldOptions = (ReactionFieldOptions)getChildOptions().get(COUNT_OPTIONS);
 
-        String sql = fieldOptions.getSql(FimsToLims.FIMS_VALUES_TABLE, FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
+        String sql = fieldOptions.getSql(Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), FimsToLims.FIMS_VALUES_TABLE + "." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
 
         sql += " AND "+FimsToLims.FIMS_VALUES_TABLE+"."+getFimsField()+"=?";
 

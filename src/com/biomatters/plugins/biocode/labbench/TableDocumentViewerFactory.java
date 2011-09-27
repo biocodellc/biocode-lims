@@ -1,17 +1,16 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.GTable;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.plugin.ActionProvider;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewer;
-import com.biomatters.geneious.publicapi.plugin.DocumentViewerFactory;
-import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.utilities.ObjectAndColor;
 import com.biomatters.plugins.biocode.labbench.reaction.SplitPaneListSelector;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.swing.event.TableModelListener;
@@ -37,7 +36,7 @@ import java.util.prefs.Preferences;
  */
 public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
-    protected abstract TableModel getTableModel(AnnotatedPluginDocument[] docs);
+    protected abstract TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options);
     private Preferences prefs = Preferences.userNodeForPackage(getClass());
 
     /**
@@ -65,6 +64,10 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
         return true;
     }
 
+    public Options getOptions() {
+        return null;
+    }
+
     /**
      * override this for an action provider
      *
@@ -80,7 +83,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
         return getClass().getName();
     }
 
-    private String getPreferencesPrefix(AnnotatedPluginDocument[] selectedDocuments) {
+    public String getPreferencesPrefix(AnnotatedPluginDocument[] selectedDocuments) {
         Map<String, Integer> classes = new TreeMap<String, Integer>();
         for(AnnotatedPluginDocument doc : selectedDocuments) {
             String docClassName = doc.getDocumentClass().getCanonicalName();
@@ -211,18 +214,46 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     }
 
     public DocumentViewer createViewer(final AnnotatedPluginDocument[] annotatedDocuments) {
-        final TableModel internalModel = getTableModel(annotatedDocuments);
-        if(internalModel == null) {
-            return null;
-        }
         final String preferencesPrefix = getPreferencesPrefix(annotatedDocuments);
-        final ColumnHidingTableModel model = getColumnHidingTableModel(annotatedDocuments, internalModel);
-        if(model == null) {
+        final Options options = getOptions();
+        if(options != null) {
+            options.restorePreferences(preferencesPrefix, true);
+        }
+        if(getTableModel(annotatedDocuments, options) == null) {
             return null;
         }
         return new DocumentViewer(){
             JTable table;
+
+            GPanel panel = new GPanel(new BorderLayout());
+            TableModel internalModel = getTableModel(annotatedDocuments, options);
+
+            SimpleListener changeListener = new SimpleListener(){
+                public void objectChanged() {
+                    internalModel = getTableModel(annotatedDocuments, options);
+                    JComponent component = createComponent(internalModel);
+                    panel.removeAll();
+                    JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                    topPanel.add(options.getPanel());
+                    panel.add(topPanel, BorderLayout.NORTH);
+                    panel.add(component, BorderLayout.CENTER);
+                    options.savePreferences(preferencesPrefix);
+
+                }
+            };
+
+            @Override
             public JComponent getComponent() {
+                if(options != null) {
+                    changeListener.objectChanged();
+                    options.addChangeListener(changeListener);
+                    return panel;
+                }
+                return createComponent(internalModel);
+            }
+
+            public JComponent createComponent(TableModel internalModel) {
+                final ColumnHidingTableModel model = getColumnHidingTableModel(annotatedDocuments, internalModel);
 
                 TableSorter sorter = new TableSorter(model);
                 final AtomicReference<JScrollPane> scroller = new AtomicReference<JScrollPane>();
@@ -235,7 +266,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
                 };
                 sorter.setTableHeader(table.getTableHeader());
-                                
+
                 table.getTableHeader().addMouseListener(new MouseAdapter(){
                     @Override
                     public void mousePressed(MouseEvent e) {
@@ -295,7 +326,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 });
                 scroller.set(new JScrollPane(table));
 
-                table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);                
+                table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
                 table.setGridColor(Color.lightGray);
                 table.setDefaultRenderer(ObjectAndColor.class, new DefaultTableCellRenderer(){
                     @Override

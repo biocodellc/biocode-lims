@@ -54,8 +54,8 @@ public class FimsToLims {
 
     void updateEverything() throws SQLException {
         populateLoci();
-        populateFimsFields();
         populateFriendlyNameMap();
+        populateFimsFields();
         populateDateLastCopied();
     }
 

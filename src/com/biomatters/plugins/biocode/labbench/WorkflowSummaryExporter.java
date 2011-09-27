@@ -49,7 +49,11 @@ public class WorkflowSummaryExporter extends DocumentFileExporter{
 
             int count = 0;
             for (TableDocumentViewerFactory factory : factoriesToExport) {
-                TableModel tableModel = factory.getTableModel(documents);
+                Options factoryOptions = factory.getOptions();
+                if(factoryOptions != null) {
+                    factoryOptions.restorePreferences(factory.getPreferencesPrefix(documents), false);
+                }
+                TableModel tableModel = factory.getTableModel(documents, factoryOptions);
                 if (tableModel != null) {
                     TableModel hidingModel = factory.getColumnHidingTableModel(documents, tableModel);
                     WritableSheet sheet = workbook.createSheet(factory.getName(), count);

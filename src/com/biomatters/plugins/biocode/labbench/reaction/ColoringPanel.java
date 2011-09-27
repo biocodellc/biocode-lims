@@ -3,15 +3,13 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.components.GComboBox;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import java.awt.event.*;
 import java.util.*;
 import java.util.List;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.ItemEvent;
 
 /**
  * @author Steve
@@ -25,6 +23,7 @@ public class ColoringPanel extends JPanel {
     private Reaction.BackgroundColorer originalColorer;
     private static final int MAX_PREFERRED_HEIGHT = 220;
     GComboBox fieldToColor;
+    private List<SimpleListener> changeListeners = new ArrayList<SimpleListener>();
 
     public ColoringPanel(Vector<DocumentField> availableFieldsVector, List<Reaction> reactions1) {
         super(new BorderLayout());
@@ -64,6 +63,11 @@ public class ColoringPanel extends JPanel {
                         color = defaultColorer.getColor(o);
                     }
                     ColorPanel cp = new ColorPanel(o, color, true);
+                    cp.addChangeListener(new SimpleListener() {
+                        public void objectChanged() {
+                            fireChangeListeners();
+                        }
+                    });
                     cp.setOpaque(false);
                     valuesPanel.add(cp);
                     colorPanels.add(cp);
@@ -90,6 +94,7 @@ public class ColoringPanel extends JPanel {
                     add(scrollPane, BorderLayout.CENTER);
                 }
                 revalidate();
+                fireChangeListeners();
             }
         };
         fieldToColor.addItemListener(comboBoxListener);
@@ -102,6 +107,20 @@ public class ColoringPanel extends JPanel {
         }
         comboBoxListener.itemStateChanged(null);
 
+    }
+
+    public void addChangeListener(SimpleListener changeListener) {
+        changeListeners.add(changeListener);
+    }
+
+    public void removeChangeListener(SimpleListener changeListener) {
+        changeListeners.remove(changeListener);
+    }
+
+    private void fireChangeListeners() {
+        for(SimpleListener listener : changeListeners) {
+            listener.objectChanged();
+        }
     }
 
     private Vector<ReactionUtilities.DocumentFieldWrapper> getDocumentFields() {
@@ -190,6 +209,7 @@ public class ColoringPanel extends JPanel {
     public static class ColorPanel extends JPanel {
         private Object value;
         private Color color;
+        private List<SimpleListener> changeListeners = new ArrayList<SimpleListener>();
 
         public ColorPanel(Object value1, Color color1, boolean editable) {
             this.value = value1;
@@ -224,6 +244,7 @@ public class ColoringPanel extends JPanel {
                         if(selectedColor != null) {
                             color = selectedColor;
                             colorPanel.repaint();
+                            fireChangeListeners();
                         }
                     }
                 });
@@ -232,6 +253,20 @@ public class ColoringPanel extends JPanel {
 
             add(label, BorderLayout.CENTER);
             add(colorPanel, BorderLayout.EAST);
+        }
+
+        public void addChangeListener(SimpleListener listener) {
+            changeListeners.add(listener);
+        }
+
+        public void removeChangeListener(SimpleListener listener) {
+            changeListeners.remove(listener);
+        }
+
+        private void fireChangeListeners() {
+            for(SimpleListener listener : changeListeners) {
+                listener.objectChanged();
+            }
         }
 
         public Object getValue() {

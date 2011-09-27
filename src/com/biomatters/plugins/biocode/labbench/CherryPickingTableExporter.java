@@ -43,7 +43,11 @@ public class CherryPickingTableExporter extends DocumentFileExporter {
 
             int count = 0;
             TableDocumentViewerFactory factory = new CherryPickingDocumentViewerFactory();
-            TableModel tableModel = factory.getTableModel(documents);
+            Options factoryOptions = factory.getOptions();
+            if(factoryOptions != null) {
+                factoryOptions.restorePreferences(factory.getPreferencesPrefix(documents), true);
+            }
+            TableModel tableModel = factory.getTableModel(documents, factoryOptions);
             if (tableModel != null) {
                 TableModel hidingModel = factory.getColumnHidingTableModel(documents, tableModel);
                 WritableSheet sheet = workbook.createSheet(factory.getName(), count);

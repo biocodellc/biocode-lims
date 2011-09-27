@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.utilities.ObjectAndColor;
@@ -44,7 +45,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
         return columnIndex > fimsFields.size()+1;
     }
 
-    public TableModel getTableModel(final AnnotatedPluginDocument[] docs) {
+    public TableModel getTableModel(final AnnotatedPluginDocument[] docs, Options options) {
         final List<WorkflowDocument> workflowDocuments = BiocodeUtilities.getWorkflowDocuments(docs);
         final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflowDocuments);
         if(workflowDocuments.size() == 0) {

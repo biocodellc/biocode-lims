@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.assembler.verify;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.ActionProvider;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
 import com.biomatters.plugins.biocode.labbench.TableSorter;
 
@@ -29,7 +30,7 @@ public class VerifyTaxonomyDocumentViewerFactory extends TableDocumentViewerFact
         this.overrideBinningOptions = overrideBinningOptions;
     }
 
-    public TableModel getTableModel(AnnotatedPluginDocument[] docs) {
+    public TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options) {
         return new VerifyTaxonomyTableModel(docs[0], overrideBinningOptions, true);
     }
 

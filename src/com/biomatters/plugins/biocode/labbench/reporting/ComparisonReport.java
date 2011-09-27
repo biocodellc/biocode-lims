@@ -1,19 +1,14 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.GTable;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
-import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
-import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -33,9 +28,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.io.File;
-import java.io.IOException;
 
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;
@@ -43,11 +35,6 @@ import jebl.util.CompositeProgressListener;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
-
-import jxl.write.WritableWorkbook;
-import jxl.write.WritableSheet;
-import jxl.write.WriteException;
-import jxl.Workbook;
 
 /**
  * @author Steve
@@ -156,18 +143,23 @@ public class ComparisonReport extends Report{
             String yTable = fieldOptions.getTable();
 
             if(fims) {
-                sql1 = fieldOptions.getSql(FimsToLims.FIMS_VALUES_TABLE, FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
+                sql1 = fieldOptions.getSql(Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
                 //sql1 = fieldOptions.getSql(fims);
             }
             else {
                 if(xTable.equals(yTable) || xTable.equals("workflow")) {
-                    sql1 = fieldOptions.getSql(null, null);
+                    sql1 = fieldOptions.getSql(options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, null);
                 }
                 else {
-                    sql1 = fieldOptions.getSql(xTable, xTable+".workflow = workflow.id");
+                    sql1 = fieldOptions.getSql(options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE, xTable) : Arrays.asList(xTable), xTable+".workflow = workflow.id");
                 }
             }
             sql1  = sql1 + " AND "+xTable+"."+field+" like ?";
+            if(options.isFimsRestricted()) {
+                sql1 = sql1 + " AND (";
+                sql1 = sql1 + StringUtilities.join(options.getFimsComparator(), options.getFimsFieldsForSql());
+                sql1 = sql1 + ")";
+            }
             System.out.println(sql1);
 
             PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql1);
@@ -178,12 +170,19 @@ public class ComparisonReport extends Report{
                 if(progress.isCanceled()) {
                     return null;
                 }
+                int count = 0;
                 if(fieldOptions.getValue() != null) {
                     statement.setObject(1, fieldOptions.getValue());
                     statement.setString(2, value);
+                    count = 3;
                 }
                 else {
                     statement.setString(1, value);
+                    count = 2;
+                }
+                List<String> fimsValues = options.getFimsValues();
+                for(int i=0; i < fimsValues.size(); i++) {
+                    statement.setString(count+i, "%"+fimsValues.get(i)+"%");
                 }
                 long time = System.currentTimeMillis();
                 ResultSet set = statement.executeQuery();
@@ -200,12 +199,12 @@ public class ComparisonReport extends Report{
         }
 
 
-        return table ? getTable(dataset) : getBarChart(fimsToLims, field, fieldOptionsList, dataset, results);
+        return table ? getTable(dataset, field) : getBarChart(fimsToLims, field, fieldOptionsList, dataset, results);
 
 
     }
 
-    private ReportChart getTable(final DefaultCategoryDataset dataset) {
+    private ReportChart getTable(final DefaultCategoryDataset dataset, final String field) {
         final AbstractTableModel model = new AbstractTableModel(){
 
             public int getRowCount() {
@@ -226,14 +225,14 @@ public class ComparisonReport extends Report{
             @Override
             public String getColumnName(int column) {
                 if(column == 0) {
-                    return " ";
+                    return field;
                 }
                 return ""+dataset.getRowKey(column-1);
             }
         };
 
         final TableDocumentViewerFactory factory = new TableDocumentViewerFactory(){
-            protected TableModel getTableModel(AnnotatedPluginDocument[] docs) {
+            protected TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options) {
                 return model;
             }
 

@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.google.gdata.util.common.base.StringUtil;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -293,12 +294,13 @@ public class ReactionFieldOptions extends Options {
 //        return getSql(extraTable, false, null);
 //    }
 
-    public String getSql(String extraTable, String extraWhere) {
+    public String getSql(List<String> extraTables, String extraWhere) {
         String fieldName = getField();
         boolean hasWorkflow = getLocus() != null;
+        String extraTableString = extraTables != null && extraTables.size() > 0 ? StringUtilities.join(", ", extraTables) : null;
         String reactionType = ((OptionValue)getValue(REACTION_TYPE)).getName();
         if(reactionType.equals("Extraction")) {
-            String start = "SELECT COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTable != null ? ", " + extraTable : "")+" WHERE ";
+            String start = "SELECT COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTables != null ? ", " + extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             if(hasWorkflow) {
                 terms.add("workflow.extractionId = extracion.id");
@@ -312,7 +314,7 @@ public class ReactionFieldOptions extends Options {
             return getSql(start, terms);
         }
         else if(reactionType.equals("PCR")) {
-            String start = "SELECT COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE ";
+            String start = "SELECT COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             terms.add("pcr.workflow = workflow.id AND extraction.id = workflow.extractionId");
             if(extraWhere != null) {
@@ -327,7 +329,7 @@ public class ReactionFieldOptions extends Options {
             return getSql(start, terms);
         }
         else if(reactionType.equals("CycleSequencing")) {
-            String start = "SELECT COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE ";
+            String start = "SELECT COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             terms.add("cyclesequencing.workflow = workflow.id AND extraction.id = workflow.extractionId");
             if(extraWhere != null) {
@@ -342,7 +344,7 @@ public class ReactionFieldOptions extends Options {
             return getSql(start, terms);
         }
         else if(reactionType.equals("assembly")) {
-            String start = "SELECT COUNT(assembly.id) from assembly, extraction, workflow "+(extraTable != null ? ", "+extraTable : "")+" WHERE ";
+            String start = "SELECT COUNT(assembly.id) from assembly, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             terms.add("assembly.workflow = workflow.id AND workflow.extractionId = extraction.id");
             if(extraWhere != null) {

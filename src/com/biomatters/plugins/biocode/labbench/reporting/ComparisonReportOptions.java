@@ -6,10 +6,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.LinkedHashSet;
+import java.util.*;
 
 /**
  * @author Steve
@@ -17,6 +14,8 @@ import java.util.LinkedHashSet;
  */
 public class ComparisonReportOptions extends Options{
 
+    private static final String FIMS_OPTIONS = "fimsOptions";
+    private static final String FIMS_FIELD = "fimsField";
     private String X_CHILD_OPTIONS = "xAxis";
     private String FIELD_OPTION = "field";
     private String Y_CHILD_OPTIONS = "yAxis";
@@ -51,6 +50,15 @@ public class ComparisonReportOptions extends Options{
         List<OptionValue> optionValues = ReportGenerator.getOptionValues(documentFields);
         fieldOptions.addComboBoxOption(FIELD_OPTION, "Field", optionValues, optionValues.get(0));
         addChildOptions(X_CHILD_OPTIONS, "X Axis", "", fieldOptions);
+
+        FimsMultiOptions fimsMultiOptions = new FimsMultiOptions(this.getClass(), fimsToLims);
+        addChildOptions(FIMS_OPTIONS, "FIMS fields", "", fimsMultiOptions);
+        BooleanOption fimsFieldOption = addBooleanOption(FIMS_FIELD, "Restrict by FIMS field", false);
+        fimsFieldOption.setDisabledValue(false);
+        fimsFieldOption.addChildOptionsDependent(fimsMultiOptions, true, true);
+        if(!fimsToLims.limsHasFimsValues()) {
+            fimsFieldOption.setEnabled(false);
+        }
     }
 
     public OptionValue getXField() {
@@ -64,5 +72,38 @@ public class ComparisonReportOptions extends Options{
             fieldOptions.add((ReactionFieldOptions)o);
         }
         return fieldOptions;
+    }
+
+    public List<String> getFimsFieldsForSql() {
+        if(!(Boolean)getValue(FIMS_FIELD)) {
+            return Collections.EMPTY_LIST;
+        }
+        FimsMultiOptions multiOptions = (FimsMultiOptions)getChildOptions().get(FIMS_OPTIONS);
+        List<String> results = new ArrayList<String>();
+        for(SingleFieldOptions options : multiOptions.getFimsOptions()) {
+            results.add(FimsToLims.getSqlColName(options.getFieldName())+" LIKE ?");
+        }
+        return results;
+    }
+
+    public List<String> getFimsValues() {
+        if(!(Boolean)getValue(FIMS_FIELD)) {
+            return Collections.EMPTY_LIST;
+        }
+        FimsMultiOptions multiOptions = (FimsMultiOptions)getChildOptions().get(FIMS_OPTIONS);
+        List<String> results = new ArrayList<String>();
+        for(SingleFieldOptions options : multiOptions.getFimsOptions()) {
+            results.add(""+options.getValue());
+        }
+        return results;
+    }
+
+    public boolean isFimsRestricted() {
+        return (Boolean)getValue(FIMS_FIELD);
+    }
+
+    public String getFimsComparator() {
+        FimsMultiOptions multiOptions = (FimsMultiOptions)getChildOptions().get(FIMS_OPTIONS);
+        return multiOptions.isOr() ? " OR " : " AND ";
     }
 }

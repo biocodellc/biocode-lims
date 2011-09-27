@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
@@ -37,7 +38,7 @@ public class TabularPlateDocumentViewerFactory extends TableDocumentViewerFactor
         };
     }
 
-    protected TableModel getTableModel(AnnotatedPluginDocument[] docs) {
+    protected TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options) {
         Set<DocumentField> validFieldSet = new LinkedHashSet<DocumentField>();
         final List<Reaction> reactions = new ArrayList<Reaction>();
         if(BiocodeService.getInstance().isLoggedIn()) {

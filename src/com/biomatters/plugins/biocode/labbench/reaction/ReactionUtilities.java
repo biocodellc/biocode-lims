@@ -509,6 +509,13 @@ public class ReactionUtilities {
             }
         };
         templateSelectorPanel.addChangeListener(templateChangeListener);
+        SimpleListener resetTemplateListener = new SimpleListener() {
+            public void objectChanged() {
+                templateSelectorPanel.clearSelectedTemplate();
+            }
+        };
+        colorPanel.addChangeListener(resetTemplateListener);
+        listSelector.addChangeListener(resetTemplateListener);
         //templateChangeListener.stateChanged(new ChangeEvent(BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(reactions.get(0).getType())));
 
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -925,12 +932,14 @@ public class ReactionUtilities {
     }
 
     private static class TemplateSelector extends JPanel {
+        private DisplayFieldsTemplate selectedTemplate;
+        GeneiousAction.SubMenu templateSelectorDropdown;
 
         public TemplateSelector(final SplitPaneListSelector listSelector, final ColoringPanel colorer, final Reaction.Type type) {
             changeListeners = new ArrayList<ChangeListener>();
             final List<DisplayFieldsTemplate> templateList = BiocodeService.getInstance().getDisplayedFieldTemplates(type);
             setOpaque(false);
-            final GeneiousAction.SubMenu templateSelectorDropdown = new GeneiousAction.SubMenu(new GeneiousActionOptions("Select a template"), Collections.EMPTY_LIST);
+            templateSelectorDropdown = new GeneiousAction.SubMenu(new GeneiousActionOptions("Select a template"), Collections.EMPTY_LIST);
             add(new GLabel("Template: "));
             final JButton button = new JButton(templateSelectorDropdown);
             button.setIcon(IconUtilities.getIcons("dropdownArrow.png").getOriginalIcon());
@@ -950,7 +959,13 @@ public class ReactionUtilities {
 
             setDefaultTemplateButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    DisplayFieldsTemplate newTemplate = createNewTemplate(listSelector, colorer, type, "You must save your settings as a template before making them the defaults", false);
+                    DisplayFieldsTemplate newTemplate;
+                    if(selectedTemplate == null) {
+                        newTemplate = createNewTemplate(listSelector, colorer, type, "You must save your settings as a template before making them the defaults", false);
+                    }
+                    else {
+                        newTemplate = selectedTemplate;
+                    }
                     if (newTemplate != null) {
                         BiocodeService.getInstance().setDefaultDisplayedFieldsTemplate(newTemplate);
                         templateSelectorDropdown.setSubMenuActions(getTemplateActions(BiocodeService.getInstance().getDisplayedFieldTemplates(type), listSelector, newTemplateRunnable, type));
@@ -962,13 +977,23 @@ public class ReactionUtilities {
             templateSelectorDropdown.setSubMenuActions(templateActions);
         }
 
+        public void clearSelectedTemplate() {
+            selectedTemplate = null;
+            templateSelectorDropdown.setName("Select a Template");
+        }
+
         private List<GeneiousAction> getTemplateActions(final List<DisplayFieldsTemplate> templateList, final SplitPaneListSelector<DocumentField> listSelector, final Runnable newTemplateRunnable, final Reaction.Type type) {
             List<GeneiousAction> templateActions = new ArrayList<GeneiousAction>();
             DisplayFieldsTemplate defaultTemplate = BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(type);
+            if(defaultTemplate != null) {
+                templateSelectorDropdown.setName(defaultTemplate.getName());
+            }
             for(final DisplayFieldsTemplate template : templateList) {
                 String name = (defaultTemplate != null && template.getName().equals(defaultTemplate.getName())) ? "<html><b>"+template.getName()+"</b></html>" : template.getName();
                 templateActions.add(new GeneiousAction(new GeneiousActionOptions(name)){
                     public void actionPerformed(ActionEvent e) {
+                        selectedTemplate = template;
+                        templateSelectorDropdown.setName(template.getName());
                         for(ChangeListener listener : changeListeners) {
                             listener.stateChanged(new ChangeEvent(template));
                         }

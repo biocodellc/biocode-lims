@@ -123,6 +123,17 @@ public class ReportGenerator {
         return panel;
     }
 
+    public static List<DocumentField> getFieldValues(FimsToLims fimsToLims) {
+        List<DocumentField> fields = new ArrayList<DocumentField>();
+        List<DocumentField> limsSearchFields = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
+        limsSearchFields.remove(LIMSConnection.PLATE_TYPE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);
+        limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
+        fields.addAll(limsSearchFields);
+        fields.addAll(fimsToLims.getFimsFields());
+        return fields;
+    }
+
     public List<Report> getNewReports() {
         return Arrays.asList(
                 new PlateSearchReport(fimsToLims),

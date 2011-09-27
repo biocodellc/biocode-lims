@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
@@ -31,6 +32,7 @@ public class SplitPaneListSelector<T> extends JPanel {
     private Vector<T> selectedFieldsVector;
     private JList availableListBox;
     private JList selectedListBox;
+    private List<SimpleListener> changeListeners = new ArrayList<SimpleListener>();
 
     public SplitPaneListSelector(final Vector<T> allFields, final int[] selectedIndicies, ListCellRenderer renderer) {
         this(allFields,  selectedIndicies, renderer, true);
@@ -105,6 +107,7 @@ public class SplitPaneListSelector<T> extends JPanel {
                 availableListBox.clearSelection();
                 selectedListBox.clearSelection();
                 updateListComponents();
+                fireChangeListeners();
             }
         };
 
@@ -121,6 +124,7 @@ public class SplitPaneListSelector<T> extends JPanel {
                 selectedListBox.clearSelection();
                 availableListBox.clearSelection();
                 updateListComponents();
+                fireChangeListeners();
             }
         };
 
@@ -148,6 +152,7 @@ public class SplitPaneListSelector<T> extends JPanel {
                     listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
                 }
                 selectedListBox.revalidate();
+                fireChangeListeners();
                 int[] indices = selectedListBox.getSelectedIndices();
                 boolean contiguousFirstBlock = true;
                 for(int i=0; i < indices.length; i++) {
@@ -188,6 +193,7 @@ public class SplitPaneListSelector<T> extends JPanel {
                     listener.contentsChanged(new ListDataEvent(selectedListBox.getModel(), ListDataEvent.CONTENTS_CHANGED, 0, selectedFieldsVector.size() - 1));
                 }
                 selectedListBox.revalidate();
+                fireChangeListeners();
                 int[] indices = selectedListBox.getSelectedIndices();
                 boolean contiguousFirstBlock = true;
                 for(int i=0; i < indices.length; i++) {
@@ -288,6 +294,20 @@ public class SplitPaneListSelector<T> extends JPanel {
             }
         });
         fieldsSplit.setResizeWeight(0.5);
+    }
+
+    public void addChangeListener(SimpleListener listener) {
+        changeListeners.add(listener);
+    }
+
+    public void removeChangeListener(SimpleListener listener) {
+        changeListeners.remove(listener);
+    }
+
+    private void fireChangeListeners() {
+        for(SimpleListener listener : changeListeners) {
+            listener.objectChanged();
+        }
     }
 
     private void updateListComponents() {

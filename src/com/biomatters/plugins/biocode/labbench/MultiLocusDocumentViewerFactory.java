@@ -24,7 +24,7 @@ public class MultiLocusDocumentViewerFactory extends TableDocumentViewerFactory{
 
 
 
-    protected TableModel getTableModel(AnnotatedPluginDocument[] docs) {
+    protected TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options) {
         final List<WorkflowDocument> workflows = BiocodeUtilities.getWorkflowDocuments(docs);
         final List<ExtractionAndWorkflow> extractionAndWorkflows = getExtractionAndWorkflows(workflows);
         final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflows);
