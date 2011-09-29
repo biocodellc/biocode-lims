@@ -142,7 +142,7 @@ public class BiocodePlugin extends GeneiousPlugin {
         String[]ver2 = version2.split("\\.");
 
         for(int i=0; i < Math.max(ver1.length,ver2.length); i++){
-            if(ver1.length > i && ver1.length > i){
+            if(ver1.length > i && ver2.length > i){
                 if(Integer.parseInt(ver1[i]) > Integer.parseInt(ver2[i])){
                     return 1;
                 }
