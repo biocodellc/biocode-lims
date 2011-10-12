@@ -228,6 +228,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     void getChromats() {
+        tracesStrongReference = new ArrayList<Trace>();
+        traces = new WeakReference<List<Trace>>(tracesStrongReference);
+
         if(getId() < 0) {
             return;
         }
@@ -245,8 +248,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 result.add(new Trace(new ReactionUtilities.MemoryFile(set.getString("name"), set.getBytes("data")), set.getInt("id")));
             }
             statement.close();
-            tracesStrongReference = new ArrayList<Trace>();
-            traces = new WeakReference<List<Trace>>(tracesStrongReference);
+
             addTraces(result);
         } catch (SQLException e1) {
             Dialogs.showMessageDialog("Could not get the sequences: "+e1.getMessage());

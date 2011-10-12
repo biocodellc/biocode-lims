@@ -115,7 +115,7 @@ public class PlateSearchReport extends Report{
 
             @Override
             public String getColumnName(int column) {
-                return "Table Name";
+                return "Plate Name";
             }
         };
 

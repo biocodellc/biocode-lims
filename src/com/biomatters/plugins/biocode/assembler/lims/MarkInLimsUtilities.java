@@ -18,7 +18,7 @@ import java.util.ArrayList;
  * @version $Id$
  */
 public class MarkInLimsUtilities {
-    static Map<AnnotatedPluginDocument, SequenceDocument> getDocsToMark(AnnotatedPluginDocument[] annotatedDocuments, SequenceSelection selection) throws DocumentOperationException {
+    public static Map<AnnotatedPluginDocument, SequenceDocument> getDocsToMark(AnnotatedPluginDocument[] annotatedDocuments, SequenceSelection selection) throws DocumentOperationException {
         Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = new HashMap<AnnotatedPluginDocument, SequenceDocument>();
         int sequenceCount = -1;
         for (AnnotatedPluginDocument document : annotatedDocuments) {

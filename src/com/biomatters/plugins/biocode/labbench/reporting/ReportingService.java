@@ -99,7 +99,11 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
                 fillPanel();
             } catch (SQLException e) {
                 e.printStackTrace();
-                Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
+                String message = e.getMessage();
+                if(message.contains("Communications link failure due to underlying exception")) {
+                    message = "Could not connect to server.  Please check your network connection, and reconnect.";
+                }
+                Dialogs.showMessageDialog(message);  //todo: add the stacktrace
             }
         }
         return panel;

@@ -749,6 +749,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=?, technician=?, gelimage=? WHERE id=?";
                 insertStatement = connection.prepareStatement(insertSQL);
                 updateStatement = connection.prepareStatement(updateSQL);
+                int saveCount = 0;
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
@@ -834,14 +835,17 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setInt(9, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
                         statement.setString(10, options.getValueAsString("cleanupMethod"));
                         statement.setString(11, reaction.getExtractionId());
+                        System.out.println(reaction.getExtractionId());
                         statement.setString(12, options.getValueAsString("notes"));
                         GelImage image = reaction.getGelImage();
                         statement.setBytes(17, image != null ? image.getImageBytes() : null);
                         statement.execute();
+                        saveCount++;
                     }
                 }
                 insertStatement.close();
                 updateStatement.close();
+                System.out.println(saveCount+" reactions saved...");
                 break;
             case CycleSequencing:
                 if(LIMSConnection.EXPECTED_SERVER_VERSION == 6) {

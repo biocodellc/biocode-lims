@@ -812,7 +812,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(!isLoggedIn) {
             throw new SQLException("You need to be logged in");
         }
-        if(limsConnection.isLocal()) {
+        if(limsConnection.isLocal() || limsConnection.getUsername().toLowerCase().equals("root")) {
             return true;
         }
 

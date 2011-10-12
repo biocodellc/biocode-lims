@@ -129,6 +129,9 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
 
     private static FimsSample getFimsSample(List<FimsSample> fimsSamples, DocumentField searchField, AnnotatedPluginDocument document, AnnotateFimsDataOptions options) {
         String searchValue = getFieldValue(document, options);
+        if(searchValue == null) {
+            return null;
+        }
         for(FimsSample sample : fimsSamples) {
             Object resultValue = sample.getFimsAttributeValue(searchField.getCode());
             if(resultValue != null && searchValue.equalsIgnoreCase(resultValue.toString())) {

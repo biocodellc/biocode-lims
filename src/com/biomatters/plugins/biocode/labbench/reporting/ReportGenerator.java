@@ -137,6 +137,7 @@ public class ReportGenerator {
     public List<Report> getNewReports() {
         return Arrays.asList(
                 new PlateSearchReport(fimsToLims),
+                new PlateStatusReport(fimsToLims),
                 new ComparisonReport(fimsToLims, true),
                 new ComparisonReport(fimsToLims, false),
                 new PieChartReport(fimsToLims),
@@ -242,7 +243,7 @@ public class ReportGenerator {
                                     Runnable runnable = new Runnable() {
                                         public void run() {
                                             setReportChart(reportChart);
-                                            progress.setComplete();
+                                            //progress.setComplete();
                                         }
                                     };
                                     ThreadUtilities.invokeNowOrLater(runnable);
@@ -260,8 +261,13 @@ public class ReportGenerator {
                                 e1.printStackTrace();
                                 BiocodeUtilities.displayExceptionDialog(e1);
                                 setReportPanel(null);
-                            } finally {
                                 progress.setComplete();
+                            } catch(RuntimeException e1) {
+                                progress.setComplete();
+                                throw e1;
+                            }
+                            finally {
+                                //progress.setComplete();
                             }
                         }
                     };

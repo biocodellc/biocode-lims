@@ -230,7 +230,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     }
 
-    static void copyPlateOfSameSize(Plate srcPlate, Plate destPlate, Boolean passedOrFailed) throws DocumentOperationException{
+    public static void copyPlateOfSameSize(Plate srcPlate, Plate destPlate, Boolean passedOrFailed) throws DocumentOperationException{
         if(srcPlate.getPlateSize() != destPlate.getPlateSize()) {
             throw new IllegalArgumentException("Plates were of different sizes");
         }
@@ -241,12 +241,18 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
         Reaction[] srcReactions = srcPlate.getReactions();
         Reaction[] destReactions = destPlate.getReactions();
+        int count = 0;
         for(int i=0; i < srcReactions.length; i++) {
             boolean copy = passedOrFailed == null ? true : passedOrFailed == ReactionOptions.PASSED_VALUE.getName().equals(srcReactions[i].getFieldValue(ReactionOptions.RUN_STATUS));
             if(copy) {
+                count++;
                 ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
             }
+            else {
+                System.out.println("didn't copy!");
+            }
         }
+        System.out.println(count+" reactions copied");
         if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
             autodetectWorkflows(destPlate);
         }

@@ -4,7 +4,6 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.google.gdata.util.common.base.StringUtil;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -89,7 +88,7 @@ public class ReactionFieldOptions extends Options {
                         
         }
         if(includeLocus) {
-            List<OptionValue> loci = fimsToLims.getLoci();
+            List<OptionValue> loci = fimsToLims.getLociOptionValues();
             ComboBoxOption<OptionValue> locusOption = addComboBoxOption(LOCUS, "Locus", loci, loci.get(0));
             locusOption.setDisabledValue(loci.get(0));
         }

@@ -25,8 +25,6 @@ import java.util.Date;
 
 import org.virion.jam.util.SimpleListener;
 
-import javax.management.monitor.StringMonitor;
-
 /**
  * @author Steve
  * @version $Id$
@@ -38,7 +36,8 @@ public class FimsToLims {
     public static final String FIMS_DEFINITION_TABLE = "fims_definition";
     public static final String FIMS_VALUES_TABLE = "fims_values";
     public static final String FIMS_DATE_TABLE = "fims_date";
-    private List<Options.OptionValue> loci;
+    private List<Options.OptionValue> lociOptionValues;
+    private List<String> loci;
     private List<SimpleListener> fimsTableChangedListeners = new ArrayList<SimpleListener>();
     private Map<String, String> friendlyNameMap = new HashMap<String, String>();
     private boolean limsHasFimsValues;
@@ -72,13 +71,15 @@ public class FimsToLims {
     }
 
     private void populateLoci() throws SQLException {
-        loci = new ArrayList<Options.OptionValue>();
-        loci.add(new Options.OptionValue("all", "All..."));       
+        lociOptionValues = new ArrayList<Options.OptionValue>();
+        loci = new ArrayList<String>();
+        lociOptionValues.add(new Options.OptionValue("all", "All..."));
         String sql = "SELECT DISTINCT(locus) FROM workflow";
         Statement statement = lims.getConnection().createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         while(resultSet.next()) {
-            loci.add(new Options.OptionValue(resultSet.getString(1), resultSet.getString(1)));
+            lociOptionValues.add(new Options.OptionValue(resultSet.getString(1), resultSet.getString(1)));
+            loci.add(resultSet.getString(1));
         }
     }
 
@@ -132,7 +133,15 @@ public class FimsToLims {
         dateLastCopied = new Date(0);
     }
 
-    public List<Options.OptionValue> getLoci() {
+    /**
+     * Note: this list includes all loci in {@link #getLoci()}, but also includes an entry for "All" loci...
+     * @return
+     */
+    public List<Options.OptionValue> getLociOptionValues() {
+        return lociOptionValues;
+    }
+
+    public List<String> getLoci() {
         return loci;
     }
 
@@ -445,5 +454,9 @@ public class FimsToLims {
             return fimsField;
         }
         return getLimsField(name);
+    }
+
+    public FIMSConnection getFimsConnection() {
+        return fims;
     }
 }

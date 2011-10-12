@@ -85,10 +85,10 @@ public class WorkflowReport extends Report{
             String value = fieldValues.get(i);
             composite.beginSubtask("Processing "+value);
             //progress.setProgress(((double)i)/fieldValues.size());
-            WorkflowEntry[] entries = new WorkflowEntry[fimsToLims.getLoci().size()];
-            for (int i1 = 0; i1 < fimsToLims.getLoci().size(); i1++) {
-                composite.setProgress(((double)i1)/fimsToLims.getLoci().size());
-                Options.OptionValue locus = fimsToLims.getLoci().get(i1);
+            WorkflowEntry[] entries = new WorkflowEntry[fimsToLims.getLociOptionValues().size()];
+            for (int i1 = 0; i1 < fimsToLims.getLociOptionValues().size(); i1++) {
+                composite.setProgress(((double)i1)/fimsToLims.getLociOptionValues().size());
+                Options.OptionValue locus = fimsToLims.getLociOptionValues().get(i1);
                 pcrStatement.setObject(1, locus.getName());
                 pcrStatement.setObject(2, value);
                 composite.setMessage("PCR "+locus);
@@ -127,7 +127,7 @@ public class WorkflowReport extends Report{
                 if(column == 0) {
                     return optionValue.getLabel();
                 }
-                return fimsToLims.getLoci().get(column-1).getLabel();
+                return fimsToLims.getLociOptionValues().get(column-1).getLabel();
             }
 
             public int getRowCount() {

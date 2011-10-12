@@ -246,7 +246,7 @@ public class Plate implements XMLSerializable {
                         reaction.setThermocycle(getThermocycle());
                     }
                 };
-                ThreadUtilities.invokeNowOrLater(runnable);
+                ThreadUtilities.invokeNowOrWait(runnable);
 
                 reactions[index] = reaction;
             }
@@ -264,7 +264,9 @@ public class Plate implements XMLSerializable {
     public Reaction getReaction(BiocodeUtilities.Well well) {
         int index = cols * well.row() + well.col();
         if(index < reactions.length) {
-            return reactions[index];
+            Reaction reaction = reactions[index];
+            reaction.setPosition(index);
+            return reaction;
         }
         else {
             System.out.println("Well out of index! "+well);
