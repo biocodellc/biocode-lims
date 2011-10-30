@@ -642,6 +642,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(query instanceof CompoundSearchQuery) {
             CompoundSearchQuery masterQuery = (CompoundSearchQuery) query;
             for(Query childQuery : masterQuery.getChildren()) {
+                if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                    return;
+                }
                 if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
                     fimsQueries.add(childQuery);//todo: distinguish between queries from multiple FIMS connections
                 }
@@ -659,6 +662,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 try {
                     callback.setMessage("Downloading Tissues");
+                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                        return;
+                    }
                     tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
                 } catch (ConnectionException e) {
                     throw new DatabaseServiceException(e.getMessage(), false);
@@ -668,6 +674,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         else if(query instanceof BasicSearchQuery){
             try {
                 callback.setMessage("Downloading Tissues");
+                if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                    return;
+                }
                 tissueSamples = activeFIMSConnection.getMatchingSamples(query);
             } catch (ConnectionException e) {
                 throw new DatabaseServiceException(e, e.getMessage(), false);
@@ -675,6 +684,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             fimsQueries.add(query);
             limsQueries.add(query);
         } else if(query instanceof AdvancedSearchQueryTerm){
+            if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                return;
+            }
             if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
                 fimsQueries.add(query);
                 try {
@@ -852,6 +864,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void removeCocktails(List<? extends Cocktail> deletedCocktails) throws TransactionException{
+        if(deletedCocktails == null || deletedCocktails.size() == 0) {
+            return;
+        }
         try {
             if(!BiocodeService.getInstance().deleteAllowed("cocktail")) {
                 throw new TransactionException("It appears that you do not have permission to delete cocktails.  Please contact your System Administrator for assistance");
@@ -2072,6 +2087,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         //step 3 - get the fims samples from the fims database
         try {
+            if(activeFIMSConnection == null) {
+                return Collections.emptyMap();
+            }
             List<FimsSample> list = activeFIMSConnection.getMatchingSamples(samplesToGet);
             Map<BiocodeUtilities.Well, FimsSample> result = new HashMap<BiocodeUtilities.Well, FimsSample>();
             for(FimsSample sample : list) {
