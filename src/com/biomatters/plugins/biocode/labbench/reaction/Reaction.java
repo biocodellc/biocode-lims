@@ -163,7 +163,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public String getPlateName() {
-        return plateName;
+        return plateName != null ? plateName : "";
     }
 
     public void setPlateName(String plateName) {
@@ -174,7 +174,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public String getLocationString() {
-        return locationString;
+        return locationString != null ? locationString : "";
     }
 
     private static final int LINE_SPACING = 5;
