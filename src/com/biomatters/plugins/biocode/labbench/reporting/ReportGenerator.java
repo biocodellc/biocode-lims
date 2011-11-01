@@ -136,14 +136,15 @@ public class ReportGenerator {
 
     public List<Report> getNewReports() {
         return Arrays.asList(
-                new PlateSearchReport(fimsToLims),
-                new PlateStatusReport(fimsToLims),
                 new ComparisonReport(fimsToLims, true),
                 new ComparisonReport(fimsToLims, false),
-                new PieChartReport(fimsToLims),
                 new AccumulationReport(fimsToLims),
-                new FimsAccumulationReport(fimsToLims)/*,
-                new WorkflowReport(fimsToLims)*/);
+                new FimsAccumulationReport(fimsToLims),
+                new PieChartReport(fimsToLims),
+                new PlateSearchReport(fimsToLims),
+                new PlateStatusReport(fimsToLims),
+                new PrimerPerformanceReport(fimsToLims)
+                /*,new WorkflowReport(fimsToLims)*/);
     }
 
     public JPanel getReportingPanel() throws SQLException{
@@ -520,7 +521,7 @@ public class ReportGenerator {
         (field.getEnumerationValues()[0].toLowerCase().equals("true") && field.getEnumerationValues()[1].toLowerCase().equals("false")));
     }
 
-    public static List<String> getDistinctValues(FimsToLims fimsToLims, String field, String table, Collection<String> loci, ProgressListener progress) throws SQLException {
+    public static List<String> getDistinctValues(FimsToLims fimsToLims, String field, String table, Collection<String> loci, boolean warnIfManyValues, ProgressListener progress) throws SQLException {
         String sql;
 
         sql = "SELECT DISTINCT ("+field+") FROM "+table;
@@ -548,7 +549,7 @@ public class ReportGenerator {
             }
             values.add(resultSet.getString(1));
         }
-        if(values.size() > 20) {
+        if(values.size() > 20 && warnIfManyValues) {
             final AtomicBoolean cont = new AtomicBoolean();
             final int valueSize = values.size();
             Runnable r = new Runnable() {

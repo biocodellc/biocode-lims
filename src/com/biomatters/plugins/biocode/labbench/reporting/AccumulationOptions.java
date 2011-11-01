@@ -61,7 +61,7 @@ public class AccumulationOptions extends Options {
 
     public String getSql(ReactionFieldOptions countOptions) {
         boolean hasFims = (Boolean)getValue(FIMS_FIELD);
-        String sql = countOptions.getSql(hasFims ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, hasFims ? FimsToLims.FIMS_VALUES_TABLE+".tissueId=extraction.sampleId" : null);
+        String sql = countOptions.getSql(null, hasFims ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, hasFims ? FimsToLims.FIMS_VALUES_TABLE+".tissueId=extraction.sampleId" : null);
         FimsMultiOptions fimsMultiOptions = (FimsMultiOptions)getChildOptions().get(FIMS_OPTIONS);
         if(hasFims) {
             sql += " AND (";

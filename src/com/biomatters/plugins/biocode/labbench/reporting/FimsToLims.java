@@ -42,6 +42,8 @@ public class FimsToLims {
     private Map<String, String> friendlyNameMap = new HashMap<String, String>();
     private boolean limsHasFimsValues;
     private Date dateLastCopied;
+    private List<String> primerNames;
+    private List<String> revPrimerNames;
 
     public FimsToLims(BiocodeService service) throws SQLException{
         this.fims = service.getActiveFIMSConnection();
@@ -56,6 +58,12 @@ public class FimsToLims {
         populateFriendlyNameMap();
         populateFimsFields();
         populateDateLastCopied();
+        populatePrimerNames();
+    }
+
+    private void populatePrimerNames() throws SQLException{
+        primerNames = getAllPrimers(true);
+        revPrimerNames = getAllPrimers(false);
     }
 
     public String getTissueColumnId() {
@@ -458,5 +466,25 @@ public class FimsToLims {
 
     public FIMSConnection getFimsConnection() {
         return fims;
+    }
+
+    private List<String> getAllPrimers(boolean forward) throws SQLException{
+        String primerFieldName = (forward ? "p" : "revP") + "rName";
+        String sql = "SELECT distinct (" + primerFieldName + ") FROM pcr";
+        PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql);
+        ResultSet resultSet = statement.executeQuery();
+        List<String> primerNames = new ArrayList<String>();
+        while(resultSet.next()) {
+            primerNames.add(resultSet.getString(primerFieldName).trim());
+        }
+        return primerNames;
+    }
+
+    public List<String> getForwardPrimerNames() {
+        return new ArrayList<String>(primerNames);
+    }
+
+    public List<String> getReversePrimerNames() {
+        return new ArrayList<String>(revPrimerNames);
     }
 }

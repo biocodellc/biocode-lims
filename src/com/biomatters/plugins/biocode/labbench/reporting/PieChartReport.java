@@ -196,14 +196,14 @@ public class PieChartReport extends Report{
         else {
             loci = null;
         }
-        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), loci, progress);
+        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), loci, true, progress);
         if(enumerationObjects == null) {
             return null;
         }
         progress.setMessage("Calculating...");
 
         for (int i1 = 0; i1 < enumerationObjects.size(); i1++) {
-            progress.setProgress(((double)i1)/enumerationObjects.size());
+            progress.setProgress(((double)i1+1)/enumerationObjects.size());
             if(progress.isCanceled()) {
                 return null;
             }

@@ -83,7 +83,6 @@ public class ComparisonReport extends Report{
     }
 
     public ReportChart getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException{
-
         ComparisonReportOptions options = (ComparisonReportOptions)optionsa;
         Options.OptionValue optionValueToCompare = options.getXField();
         DocumentField fieldToCompare = null;
@@ -126,7 +125,7 @@ public class ComparisonReport extends Report{
             }
         }
 
-        List<String> values = ReportGenerator.getDistinctValues(fimsToLims, field, xTable, fims ? null : loci, progress);
+        List<String> values = ReportGenerator.getDistinctValues(fimsToLims, field, xTable, fims ? null : loci, !table, progress);
 
         if(values == null) {
             return null;
@@ -134,72 +133,66 @@ public class ComparisonReport extends Report{
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
+        progress.setIndeterminateProgress();
         CompositeProgressListener composite = new CompositeProgressListener(progress, fieldOptionsList.size());
         final List<FieldResult> results = new ArrayList<FieldResult>();
         for(ReactionFieldOptions fieldOptions : fieldOptionsList) {
-            composite.beginSubtask();
+            composite.beginSubtask("Calculating count for "+fieldOptions.getNiceName());
 
             String sql1;
             String yTable = fieldOptions.getTable();
 
             if(fims) {
-                sql1 = fieldOptions.getSql(Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
-                //sql1 = fieldOptions.getSql(fims);
+                sql1 = fieldOptions.getSql(xTable+"."+field, Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
             }
             else {
                 if(xTable.equals(yTable) || xTable.equals("workflow")) {
-                    sql1 = fieldOptions.getSql(options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, null);
+                    sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, null);
                 }
                 else {
-                    sql1 = fieldOptions.getSql(options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE, xTable) : Arrays.asList(xTable), xTable+".workflow = workflow.id");
+                    sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE, xTable) : Arrays.asList(xTable), xTable+".workflow = workflow.id");
                 }
             }
-            sql1  = sql1 + " AND "+xTable+"."+field+" like ?";
             if(options.isFimsRestricted()) {
                 sql1 = sql1 + " AND (";
                 sql1 = sql1 + StringUtilities.join(options.getFimsComparator(), options.getFimsFieldsForSql());
                 sql1 = sql1 + ")";
             }
+            sql1 = sql1 + "GROUP BY "+xTable+"."+field;
             System.out.println(sql1);
 
             PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql1);
 
-            for (int i1 = 0; i1 < values.size(); i1++) {
-                String value = values.get(i1);
-                composite.setProgress(((double)i1)/values.size());
-                if(progress.isCanceled()) {
-                    return null;
-                }
-                int count = 0;
-                if(fieldOptions.getValue() != null) {
-                    statement.setObject(1, fieldOptions.getValue());
-                    statement.setString(2, value);
-                    count = 3;
-                }
-                else {
-                    statement.setString(1, value);
-                    count = 2;
-                }
-                List<String> fimsValues = options.getFimsValues();
-                for(int i=0; i < fimsValues.size(); i++) {
-                    statement.setString(count+i, "%"+fimsValues.get(i)+"%");
-                }
-                long time = System.currentTimeMillis();
-                ResultSet set = statement.executeQuery();
-                System.out.println(System.currentTimeMillis() - time + " millis for " + value);
-                while (set.next()) {
-                    int result = set.getInt(1);
-                    System.out.println(result);
-                    results.add(new FieldResult(fieldOptions.getNiceName(), value != null && value.length() > 0 ? value : "None", result));
-                }
+            if(progress.isCanceled()) {
+                return null;
             }
+            int count;
+            if(fieldOptions.getValue() != null) {
+                statement.setObject(1, fieldOptions.getValue());
+                count = 2;
+            }
+            else {
+                count = 1;
+            }
+            List<String> fimsValues = options.getFimsValues();
+            for(int i=0; i < fimsValues.size(); i++) {
+                statement.setString(count+i, "%"+fimsValues.get(i)+"%");
+            }
+            ResultSet set = statement.executeQuery();
+            while (set.next()) {
+                int result = set.getInt(2);
+                String value = set.getString(1);
+                System.out.println(result);
+                results.add(new FieldResult(fieldOptions.getNiceName(), value != null && value.length() > 0 ? value : "None", result));
+            }
+            composite.setProgress(1.0);
         }
         for(FieldResult result : results) {
             dataset.addValue(result.getResult(), result.getSeries(), result.getField());
         }
 
 
-        return table ? getTable(dataset, field) : getBarChart(fimsToLims, field, fieldOptionsList, dataset, results);
+        return table ? getTable(dataset, fieldToCompare.getName()) : getBarChart(fimsToLims, fieldToCompare.getName(), fieldOptionsList, dataset, results);
 
 
     }
@@ -271,7 +264,7 @@ public class ComparisonReport extends Report{
 
     private ReportChart getBarChart(FimsToLims fimsToLims, String field, final List<ReactionFieldOptions> fieldOptionsList, DefaultCategoryDataset dataset, final List<FieldResult> results) {
         final String title = getName();
-        final String xLabel = fimsToLims.getFriendlyName(field);
+        final String xLabel = field;
         final String yLabel;
         if(fieldOptionsList.size() == 1) {
             ReactionFieldOptions fieldOptions = fieldOptionsList.get(0);

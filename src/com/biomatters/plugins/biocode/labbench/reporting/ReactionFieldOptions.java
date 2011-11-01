@@ -293,13 +293,13 @@ public class ReactionFieldOptions extends Options {
 //        return getSql(extraTable, false, null);
 //    }
 
-    public String getSql(List<String> extraTables, String extraWhere) {
+    public String getSql(String extraSelect, List<String> extraTables, String extraWhere) {
         String fieldName = getField();
         boolean hasWorkflow = getLocus() != null;
         String extraTableString = extraTables != null && extraTables.size() > 0 ? StringUtilities.join(", ", extraTables) : null;
         String reactionType = ((OptionValue)getValue(REACTION_TYPE)).getName();
         if(reactionType.equals("Extraction")) {
-            String start = "SELECT COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTables != null ? ", " + extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTables != null ? ", " + extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             if(hasWorkflow) {
                 terms.add("workflow.extractionId = extracion.id");
@@ -313,7 +313,7 @@ public class ReactionFieldOptions extends Options {
             return getSql(start, terms);
         }
         else if(reactionType.equals("PCR")) {
-            String start = "SELECT COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             terms.add("pcr.workflow = workflow.id AND extraction.id = workflow.extractionId");
             if(extraWhere != null) {
@@ -328,7 +328,7 @@ public class ReactionFieldOptions extends Options {
             return getSql(start, terms);
         }
         else if(reactionType.equals("CycleSequencing")) {
-            String start = "SELECT COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             terms.add("cyclesequencing.workflow = workflow.id AND extraction.id = workflow.extractionId");
             if(extraWhere != null) {
@@ -343,7 +343,7 @@ public class ReactionFieldOptions extends Options {
             return getSql(start, terms);
         }
         else if(reactionType.equals("assembly")) {
-            String start = "SELECT COUNT(assembly.id) from assembly, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(assembly.id) from assembly, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
             List<String> terms = new ArrayList<String>();
             terms.add("assembly.workflow = workflow.id AND workflow.extractionId = extraction.id");
             if(extraWhere != null) {
