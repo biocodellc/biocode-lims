@@ -21,6 +21,8 @@ public class PrimerPerformanceOptions extends Options {
     private String FORWARD_PRIMER = "primers";
     private String REVERSE_PRIMER = "revPrimers";
     private String FIMS_FIELDS = "fimsFields";
+    private List<PrimerSet> reversePrimers;
+    private List<PrimerSet> forwardPrimers;
 
     public PrimerPerformanceOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -32,10 +34,12 @@ public class PrimerPerformanceOptions extends Options {
     }
 
     private void init(FimsToLims fimsToLims) {
-        List<OptionValue> forwardPrimers = getPrimerOptionValues(fimsToLims.getForwardPrimerNames());
+        this.forwardPrimers = fimsToLims.getForwardPrimers();
+        List<OptionValue> forwardPrimers = getPrimerOptionValues(this.forwardPrimers);
         addComboBoxOption(FORWARD_PRIMER, "Forward Primer Name", forwardPrimers, forwardPrimers.get(0));
 
-        List<OptionValue> reversePrimers = getPrimerOptionValues(fimsToLims.getReversePrimerNames());
+        this.reversePrimers = fimsToLims.getReversePrimers();
+        List<OptionValue> reversePrimers = getPrimerOptionValues(this.reversePrimers);
         addComboBoxOption(REVERSE_PRIMER, "Reverse Primer Name", reversePrimers, reversePrimers.get(0));
 
         List<OptionValue> optionValues = ReportGenerator.getOptionValues(fimsToLims.getFimsFields());
@@ -43,10 +47,11 @@ public class PrimerPerformanceOptions extends Options {
     }
 
 
-    private List<OptionValue> getPrimerOptionValues(List<String> primers) {
+    private List<OptionValue> getPrimerOptionValues(List<PrimerSet> primers) {
         List<OptionValue> optionValues = new ArrayList<OptionValue>();
-        for(String s : primers) {
-            optionValues.add(new OptionValue(s,s));
+        for (int i = 0; i < primers.size(); i++) {
+            PrimerSet primer = primers.get(i);
+            optionValues.add(new OptionValue(primer.getPrimers().get(0).getName(), primer.toString()));
         }
         if(optionValues.size() == 0) {
             optionValues.add(NO_PRIMERS);
@@ -54,12 +59,24 @@ public class PrimerPerformanceOptions extends Options {
         return optionValues;
     }
 
-    public String getForwardPrimerName() {
-        return getValueAsString(FORWARD_PRIMER);
+    private PrimerSet getPrimerSet(List<PrimerSet> primers, String id) {
+        for(PrimerSet primerSet : primers) {
+            for(PrimerSet.Primer primer : primerSet.getPrimers()) {
+                if(primer.getName().equals(id)) {
+                    return primerSet;
+                }
+            }
+        }
+        assert false;
+        return null;
     }
 
-    public String getReversePrimerName() {
-        return getValueAsString(REVERSE_PRIMER);
+    public PrimerSet getForwardPrimer() {
+        return getPrimerSet(forwardPrimers, getValueAsString(FORWARD_PRIMER));
+    }
+
+    public PrimerSet getReversePrimer() {
+        return getPrimerSet(reversePrimers, getValueAsString(REVERSE_PRIMER));
     }
 
     public String getFimsField() {

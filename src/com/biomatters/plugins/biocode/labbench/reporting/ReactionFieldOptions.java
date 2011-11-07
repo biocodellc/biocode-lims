@@ -293,66 +293,66 @@ public class ReactionFieldOptions extends Options {
 //        return getSql(extraTable, false, null);
 //    }
 
-    public String getSql(String extraSelect, List<String> extraTables, String extraWhere) {
+    public String getSql(String extraSelect, List<String> extraTables, boolean includeWhere, String extraWhere) {
         String fieldName = getField();
         boolean hasWorkflow = getLocus() != null;
         String extraTableString = extraTables != null && extraTables.size() > 0 ? StringUtilities.join(", ", extraTables) : null;
         String reactionType = ((OptionValue)getValue(REACTION_TYPE)).getName();
         if(reactionType.equals("Extraction")) {
-            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTables != null ? ", " + extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTables != null ? ", " + extraTableString : "");
             List<String> terms = new ArrayList<String>();
             if(hasWorkflow) {
-                terms.add("workflow.extractionId = extracion.id");
+                terms.add("workflow.extractionId = extracion.id ");
             }
             if(extraWhere != null) {
                 terms.add(extraWhere);
             }
-            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+            if((getOption(VALUE_FIELD) == null || getValue() != null) && includeWhere) {
                 terms.add(ReportGenerator.getTableFieldName("extraction", fieldName)+" "+getComparator()+" "+"?");
             }
             return getSql(start, terms);
         }
         else if(reactionType.equals("PCR")) {
-            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(pcr.id) FROM pcr, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "");
             List<String> terms = new ArrayList<String>();
-            terms.add("pcr.workflow = workflow.id AND extraction.id = workflow.extractionId");
+            terms.add("pcr.workflow = workflow.id AND extraction.id = workflow.extractionId ");
             if(extraWhere != null) {
                 terms.add(extraWhere);
             }
             if(hasWorkflow && getLocus() != null) {
                 terms.add("workflow.locus='"+getLocus()+"'");
             }
-            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+            if((getOption(VALUE_FIELD) == null || getValue() != null) && includeWhere) {
                 terms.add(ReportGenerator.getTableFieldName("pcr", fieldName)+" "+getComparator()+" "+"?");
             }
             return getSql(start, terms);
         }
         else if(reactionType.equals("CycleSequencing")) {
-            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(cyclesequencing.id) FROM cyclesequencing, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "");
             List<String> terms = new ArrayList<String>();
-            terms.add("cyclesequencing.workflow = workflow.id AND extraction.id = workflow.extractionId");
+            terms.add("cyclesequencing.workflow = workflow.id AND extraction.id = workflow.extractionId ");
             if(extraWhere != null) {
                 terms.add(extraWhere);
             }
             if(hasWorkflow && getLocus() != null) {
                 terms.add("workflow.locus='"+getLocus()+"'");
             }
-            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+            if((getOption(VALUE_FIELD) == null || getValue() != null) && includeWhere) {
                 terms.add(ReportGenerator.getTableFieldName("cyclesequencing", fieldName)+" "+getComparator()+" "+"?");
             }
             return getSql(start, terms);
         }
         else if(reactionType.equals("assembly")) {
-            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(assembly.id) from assembly, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "")+" WHERE ";
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(assembly.id) from assembly, extraction, workflow "+(extraTableString != null ? ", "+extraTableString : "");
             List<String> terms = new ArrayList<String>();
-            terms.add("assembly.workflow = workflow.id AND workflow.extractionId = extraction.id");
+            terms.add("assembly.workflow = workflow.id AND workflow.extractionId = extraction.id ");
             if(extraWhere != null) {
                 terms.add(extraWhere);
             }
             if(hasWorkflow && getLocus() != null) {
                 terms.add("workflow.locus='"+getLocus()+"'");
             }
-            if(getOption(VALUE_FIELD) == null || getValue() != null) {
+            if((getOption(VALUE_FIELD) == null || getValue() != null) && includeWhere) {
                 terms.add(ReportGenerator.getTableFieldName("assembly", fieldName)+" "+getComparator()+" "+"?");
             }
             return getSql(start, terms);
@@ -363,7 +363,7 @@ public class ReactionFieldOptions extends Options {
     }
 
     private String getSql(String start, List<String> terms) {
-        return start + " " + StringUtilities.join(" AND ", terms);
+        return start + (terms.size() > 0 ? " WHERE " : " ") + StringUtilities.join(" AND ", terms);
     }
 
     public boolean isExactMatch() {

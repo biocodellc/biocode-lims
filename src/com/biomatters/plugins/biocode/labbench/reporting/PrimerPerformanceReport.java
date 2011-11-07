@@ -67,7 +67,7 @@ public class PrimerPerformanceReport extends Report{
             return null;
         }
 
-        String sql = "SELECT "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn+", count(pcr.id) from pcr, workflow, extraction, fims_values WHERE pcr.workflow=workflow.id AND workflow.extractionId = extraction.id AND extraction.sampleId = fims_values.tissueId AND (pcr.prName=? AND pcr.revPrName=? AND pcr.progress=?) group by "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn;
+        String sql = "SELECT "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn+", count(pcr.id) from pcr, workflow, extraction, fims_values WHERE pcr.workflow=workflow.id AND workflow.extractionId = extraction.id AND extraction.sampleId = fims_values.tissueId AND (pcr.prSequence=? AND pcr.revPrSequence=? AND pcr.progress=?) group by "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn;
 
         System.out.println(sql);
 
@@ -83,8 +83,8 @@ public class PrimerPerformanceReport extends Report{
             if(composite.isCanceled()) {
                 return null;
             }
-            statement.setString(1, options.getForwardPrimerName());
-            statement.setString(2, options.getReversePrimerName());
+            statement.setString(1, options.getForwardPrimer().getPrimers().get(0).getSequence());
+            statement.setString(2, options.getReversePrimer().getPrimers().get(0).getSequence());
             statement.setString(3, value);
 
             ResultSet resultSet = statement.executeQuery();

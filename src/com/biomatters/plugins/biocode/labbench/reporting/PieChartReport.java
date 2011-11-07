@@ -182,9 +182,7 @@ public class PieChartReport extends Report{
         DocumentField enumeratedField = ReportGenerator.getField(reactionType, fieldName);
 
         String sql = limsSql;
-        if(fimsSql != null) {
-            sql += "AND extraction.sampleId=f."+fimsToLims.getTissueColumnId()+" AND "+fimsSql;
-        }
+        sql += " GROUP BY "+options.getTableAndField();
         System.out.println(sql);
         PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
         progress.setMessage("Getting all possible values for your selected field");
@@ -196,43 +194,38 @@ public class PieChartReport extends Report{
         else {
             loci = null;
         }
-        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), loci, true, progress);
-        if(enumerationObjects == null) {
-            return null;
-        }
+//        java.util.List<String> enumerationObjects = ReportGenerator.getDistinctValues(fimsToLims, ReportGenerator.getTableFieldName(reactionType.toLowerCase(), enumeratedField.getCode()), reactionType.toLowerCase(), loci, true, progress);
+//        if(enumerationObjects == null) {
+//            return null;
+//        }
         progress.setMessage("Calculating...");
 
-        for (int i1 = 0; i1 < enumerationObjects.size(); i1++) {
-            progress.setProgress(((double)i1+1)/enumerationObjects.size());
-            if(progress.isCanceled()) {
-                return null;
-            }
-            Object value = enumerationObjects.get(i1);
-            statement.setObject(1, value);
-            if (fimsSql != null) {
-                for (int i = 0; i < options.getExtraValues().size(); i++) {
-                    Object o = options.getExtraValues().get(i);
-                    statement.setObject(2 + i, o);
-                }
-            }
-            String valueString = value.toString();
-
-            if(enumeratedField.getName().toLowerCase().contains("cocktail")) {
-                try {
-                    int valueInt = Integer.parseInt(valueString);
-                    valueString = fimsToLims.getCocktailName(reactionType.toLowerCase(), valueInt);
-                }
-                catch(NumberFormatException ex) {} //do nothing - keep the old value
-            }
-
-            ResultSet resultSet = statement.executeQuery();
-            if (resultSet.next()) {
-                dataset.setValue(valueString, resultSet.getInt(1));
-            } else {
-                throw new RuntimeException("No result for " + value);
-            }
-
+        if(progress.isCanceled()) {
+            return null;
         }
+        if (fimsSql != null) {
+            for (int i = 0; i < options.getExtraValues().size(); i++) {
+                Object o = options.getExtraValues().get(i);
+                statement.setObject(1 + i, o);
+            }
+        }
+//        String valueString = value.toString();
+//
+//        if(enumeratedField.getName().toLowerCase().contains("cocktail")) {
+//            try {
+//                int valueInt = Integer.parseInt(valueString);
+//                valueString = fimsToLims.getCocktailName(reactionType.toLowerCase(), valueInt);
+//            }
+//            catch(NumberFormatException ex) {} //do nothing - keep the old value
+//        }
+
+        ResultSet resultSet = statement.executeQuery();
+        while (resultSet.next()) {
+            String label = resultSet.getString(1).trim();
+            dataset.setValue(label.length() == 0 ? "None" : label, resultSet.getInt(2));
+        }
+        progress.setProgress(1.0);
+
 
         return dataset;
     }

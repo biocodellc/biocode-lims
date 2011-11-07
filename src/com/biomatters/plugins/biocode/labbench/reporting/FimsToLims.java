@@ -42,8 +42,8 @@ public class FimsToLims {
     private Map<String, String> friendlyNameMap = new HashMap<String, String>();
     private boolean limsHasFimsValues;
     private Date dateLastCopied;
-    private List<String> primerNames;
-    private List<String> revPrimerNames;
+    private List<PrimerSet> primers;
+    private List<PrimerSet> revPrimers;
 
     public FimsToLims(BiocodeService service) throws SQLException{
         this.fims = service.getActiveFIMSConnection();
@@ -62,8 +62,8 @@ public class FimsToLims {
     }
 
     private void populatePrimerNames() throws SQLException{
-        primerNames = getAllPrimers(true);
-        revPrimerNames = getAllPrimers(false);
+        primers = getAllPrimers(true);
+        revPrimers = getAllPrimers(false);
     }
 
     public String getTissueColumnId() {
@@ -468,23 +468,35 @@ public class FimsToLims {
         return fims;
     }
 
-    private List<String> getAllPrimers(boolean forward) throws SQLException{
+    private List<PrimerSet> getAllPrimers(boolean forward) throws SQLException{
         String primerFieldName = (forward ? "p" : "revP") + "rName";
-        String sql = "SELECT distinct (" + primerFieldName + ") FROM pcr";
+        String primerSequenceName = (forward ? "p" : "revP") + "rSequence";
+        String sql = "SELECT "+primerFieldName+", "+primerSequenceName+" FROM pcr GROUP BY "+primerFieldName;
         PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql);
         ResultSet resultSet = statement.executeQuery();
-        List<String> primerNames = new ArrayList<String>();
+        List<PrimerSet> primers = new ArrayList<PrimerSet>();
         while(resultSet.next()) {
-            primerNames.add(resultSet.getString(primerFieldName).trim());
+            PrimerSet.Primer primer = new PrimerSet.Primer(resultSet.getString(primerFieldName).trim(), resultSet.getString(primerSequenceName).trim());
+            boolean found = false;
+            for(PrimerSet set : primers) {
+                if(set.contains(primer)) {
+                    set.addPrimer(primer);
+                    found = true;
+                    break;
+                }
+            }
+            if(!found) {
+                primers.add(new PrimerSet(primer));
+            }
         }
-        return primerNames;
+        return primers;
     }
 
-    public List<String> getForwardPrimerNames() {
-        return new ArrayList<String>(primerNames);
+    public List<PrimerSet> getForwardPrimers() {
+        return new ArrayList<PrimerSet>(primers);
     }
 
-    public List<String> getReversePrimerNames() {
-        return new ArrayList<String>(revPrimerNames);
+    public List<PrimerSet> getReversePrimers() {
+        return new ArrayList<PrimerSet>(revPrimers);
     }
 }

@@ -114,7 +114,12 @@ public class PieChartOptions extends Options {
 
     String getLimsSql() {
         ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);
-        return reactionFields.getSql(null, (Boolean)getValue(FIMS_FIELD) ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE+" f") : null, null);
+        return reactionFields.getSql(getTableAndField(), (Boolean)getValue(FIMS_FIELD) ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE+" f") : null, false, getExtraSql());
+    }
+
+    String getTableAndField() {
+        ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);
+        return ReportGenerator.getTableFieldName(reactionFields.getTable(), reactionFields.getField());
     }
 
     private boolean isFimsField(String fieldName) {
@@ -135,7 +140,7 @@ public class PieChartOptions extends Options {
                         ReportGenerator.getTableFieldName(getReactionTable(), fimsFieldOptions.getFieldName());
                 fimsTerms.add(table+" "+fimsFieldOptions.getComparitor()+" ?");
             }
-            return "("+StringUtilities.join("any".equals(fimsOptions.getValueAsString("allOrAny")) ? " OR " : " AND ", fimsTerms)+")";
+            return "f.tissueId = extraction.sampleId AND ("+StringUtilities.join("any".equals(fimsOptions.getValueAsString("allOrAny")) ? " OR " : " AND ", fimsTerms)+")";
         }
         return null;
     }

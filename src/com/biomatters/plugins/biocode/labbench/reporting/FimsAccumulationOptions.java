@@ -64,7 +64,7 @@ public class FimsAccumulationOptions extends Options {
     public String getSql(FimsToLims fimsToLims) {
         ReactionFieldOptions fieldOptions = (ReactionFieldOptions)getChildOptions().get(COUNT_OPTIONS);
 
-        String sql = fieldOptions.getSql(null, Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), FimsToLims.FIMS_VALUES_TABLE + "." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
+        String sql = fieldOptions.getSql(null, Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), true, FimsToLims.FIMS_VALUES_TABLE + "." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
 
         sql += " AND "+FimsToLims.FIMS_VALUES_TABLE+"."+getFimsField()+"=?";
 

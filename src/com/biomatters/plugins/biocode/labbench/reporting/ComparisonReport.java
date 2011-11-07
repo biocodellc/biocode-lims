@@ -143,14 +143,14 @@ public class ComparisonReport extends Report{
             String yTable = fieldOptions.getTable();
 
             if(fims) {
-                sql1 = fieldOptions.getSql(xTable+"."+field, Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
+                sql1 = fieldOptions.getSql(xTable+"."+field, Arrays.asList(FimsToLims.FIMS_VALUES_TABLE), true, FimsToLims.FIMS_VALUES_TABLE+"." + fimsToLims.getTissueColumnId() + "=extraction.sampleId");
             }
             else {
                 if(xTable.equals(yTable) || xTable.equals("workflow")) {
-                    sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, null);
+                    sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, true, null);
                 }
                 else {
-                    sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE, xTable) : Arrays.asList(xTable), xTable+".workflow = workflow.id");
+                    sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE, xTable) : Arrays.asList(xTable), true, xTable+".workflow = workflow.id");
                 }
             }
             if(options.isFimsRestricted()) {
