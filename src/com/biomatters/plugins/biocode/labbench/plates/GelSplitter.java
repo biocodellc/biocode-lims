@@ -3,11 +3,11 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.plugins.biocode.labbench.ImagePanel;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.ZoomPanel;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GLabel;
+import com.biomatters.geneious.publicapi.components.ZoomPanel;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import com.sun.image.codec.jpeg.JPEGCodec;
@@ -40,7 +40,7 @@ public class GelSplitter {
         JScrollPane scroller = new JScrollPane(imagePanel);
 
         final JPanel zoomPanel = new GPanel(new BorderLayout());
-        final ZoomPanel zoomer = new ZoomPanel(true, true, null, 5);
+        final ZoomPanel zoomer = new ZoomPanel(true, true, false, 5);
         zoomer.setMinimumAndMaximumAndCurrentZoomLevels(0.1,1.0,1.0, true);
         final JSlider rotationSlider = new JSlider(0,100,50);
         ChangeListener zoomAndRotationListener = new ChangeListener() {

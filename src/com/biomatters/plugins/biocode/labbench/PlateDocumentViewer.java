@@ -1,9 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.GLabel;
-import com.biomatters.geneious.publicapi.components.GPanel;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.*;
