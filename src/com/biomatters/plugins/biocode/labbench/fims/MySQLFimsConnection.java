@@ -85,7 +85,7 @@ public class MySQLFimsConnection extends TableFimsConnection{
             List<DocumentField> results = new ArrayList<DocumentField>();
 
             while(resultSet.next()) {
-                DocumentField field = SqlUtilities.getDocumentField(resultSet);
+                DocumentField field = SqlUtilities.getDocumentField(resultSet, false);
                 if(field != null) {
                     results.add(field);
                 }

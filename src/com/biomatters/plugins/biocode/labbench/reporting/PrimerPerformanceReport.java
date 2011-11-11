@@ -67,7 +67,7 @@ public class PrimerPerformanceReport extends Report{
             return null;
         }
 
-        String sql = "SELECT "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn+", count(pcr.id) from pcr, workflow, extraction, fims_values WHERE pcr.workflow=workflow.id AND workflow.extractionId = extraction.id AND extraction.sampleId = fims_values.tissueId AND (pcr.prSequence=? AND pcr.revPrSequence=? AND pcr.progress=?) group by "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn;
+        String sql = "SELECT "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn+", count(pcr.id) from pcr, workflow, extraction, fims_values WHERE pcr.workflow=workflow.id AND workflow.extractionId = extraction.id AND extraction.sampleId = fims_values."+fimsToLims.getTissueColumnId()+" AND (pcr.prSequence=? AND pcr.revPrSequence=? AND pcr.progress=?) group by "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn;
 
         System.out.println(sql);
 

@@ -1025,6 +1025,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             colors.put("not run", Color.white);
             colors.put("run", Color.white);
             colors.put("passed", Color.green.darker());
+            colors.put("suspect", Color.orange.darker());
             colors.put("failed", Color.red.darker());
             switch(type) {
                 case Extraction: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.Extraction, ExtractionReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.<String, Color>emptyMap())));

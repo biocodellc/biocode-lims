@@ -15,6 +15,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import jebl.util.ProgressListener;
@@ -100,7 +101,7 @@ public class FimsToLims {
         Statement statement = lims.getConnection().createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         while(resultSet.next()) {
-            friendlyNameMap.put(resultSet.getString("field"), resultSet.getString("name"));
+            friendlyNameMap.put(resultSet.getString("field").toLowerCase(), resultSet.getString("name"));
         }
     }
 
@@ -154,7 +155,7 @@ public class FimsToLims {
     }
 
     public String getFriendlyName(String fieldCode) {
-        String value = friendlyNameMap.get(fieldCode);
+        String value = friendlyNameMap.get(fieldCode.toLowerCase());
         if(value != null) {
             return value;
         }
@@ -171,18 +172,30 @@ public class FimsToLims {
     }
 
     private void populateFimsFields() throws SQLException {
-        String sql = "DESCRIBE "+FIMS_VALUES_TABLE;
-        List<DocumentField> results = new ArrayList<DocumentField>();
         if(!limsHasFimsValues) {
             return;
         }
-        ResultSet resultsSet = lims.getConnection().createStatement().executeQuery(sql);
+        String sql = "DESCRIBE "+FIMS_VALUES_TABLE;
+        List<DocumentField> results = new ArrayList<DocumentField>();
+        ResultSet resultsSet;
+        if(lims.isLocal()) {
+            resultsSet = lims.getConnection().getMetaData().getColumns(null, null, null, null);
+        }
+        else {
+            resultsSet = lims.getConnection().createStatement().executeQuery(sql);
+        }
         while(resultsSet.next()) {
-        DocumentField field = SqlUtilities.getDocumentField(resultsSet);
+            if(lims.isLocal() && !resultsSet.getString(3).equalsIgnoreCase(FIMS_VALUES_TABLE)) {
+                continue;
+            }
+            DocumentField field = SqlUtilities.getDocumentField(resultsSet, lims.isLocal());
             if(field != null) {
                 field = new DocumentField(getFriendlyName(field.getName()), field.getDescription(), field.getCode(), field.getValueType(), field.isDefaultVisible(), field.isEditable());
                 results.add(field);
             }
+        }
+        if(results.size() == 0) {
+            throw new SQLException("Could not get information about the FIMS data stored in the LIMS");
         }
         fimsFields = results;
     }
@@ -347,7 +360,7 @@ public class FimsToLims {
 
             String createDefinitionTable;
             if(lims.isLocal()) {
-                createDefinitionTable = "CREATE TABLE " + FIMS_DEFINITION_TABLE + "(field VARCHAR(255) PRIMARY KEY IDENTITY,\n" +
+                createDefinitionTable = "CREATE TABLE " + FIMS_DEFINITION_TABLE + "(field VARCHAR(255) PRIMARY KEY,\n" +
                         "  name  LONGVARCHAR)";
             }
             else {
@@ -380,12 +393,14 @@ public class FimsToLims {
                 tableListener.objectChanged();
             }
             updateEverything();
-            listener.setProgress(1.0);
 
         }
         catch(SQLException ex ){
             ex.printStackTrace();
-            //todo: exception handling
+            Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+ex.getMessage());
+
+        } finally {
+            listener.setProgress(1.0);
         }
 
     }
@@ -469,27 +484,60 @@ public class FimsToLims {
     }
 
     private List<PrimerSet> getAllPrimers(boolean forward) throws SQLException{
+        return lims.isLocal() ? getAllPrimersLocal(forward) : getAllPrimersRemote(forward);
+    }
+
+    private List<PrimerSet> getAllPrimersLocal(boolean forward) throws SQLException{
+        String primerFieldName = (forward ? "p" : "revP") + "rName";
+        String primerSequenceName = (forward ? "P" : "revP") + "rSequence";
+        String sql1 = "SELECT DISTINCT("+primerFieldName+") FROM pcr";
+        PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql1);
+        ResultSet resultSet = statement.executeQuery();
+        List<PrimerSet> primers = new ArrayList<PrimerSet>();
+        while(resultSet.next()) {
+            String primerName = resultSet.getString(1);
+            String sql2 = "SELECT "+primerSequenceName+" FROM pcr WHERE "+primerFieldName+"=?";
+            System.out.println(sql2.replace("?", "'"+primerName+"'"));
+            PreparedStatement statement2 = getLimsConnection().getConnection().prepareStatement(sql2);
+            statement2.setString(1, primerName);
+            ResultSet resultSet2 = statement2.executeQuery();
+            String primerSequence = "";
+            if(resultSet2.next()) {
+                primerSequence = resultSet2.getString(1);
+                PrimerSet.Primer primer = new PrimerSet.Primer(primerName, primerSequence.trim());
+                addPrimerToSet(primers, primer);
+            }
+        }
+        return primers;
+    }
+
+    private List<PrimerSet> getAllPrimersRemote(boolean forward) throws SQLException {
         String primerFieldName = (forward ? "p" : "revP") + "rName";
         String primerSequenceName = (forward ? "p" : "revP") + "rSequence";
         String sql = "SELECT "+primerFieldName+", "+primerSequenceName+" FROM pcr GROUP BY "+primerFieldName;
+        System.out.println(sql);
         PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql);
         ResultSet resultSet = statement.executeQuery();
         List<PrimerSet> primers = new ArrayList<PrimerSet>();
         while(resultSet.next()) {
             PrimerSet.Primer primer = new PrimerSet.Primer(resultSet.getString(primerFieldName).trim(), resultSet.getString(primerSequenceName).trim());
-            boolean found = false;
-            for(PrimerSet set : primers) {
-                if(set.contains(primer)) {
-                    set.addPrimer(primer);
-                    found = true;
-                    break;
-                }
-            }
-            if(!found) {
-                primers.add(new PrimerSet(primer));
-            }
+            addPrimerToSet(primers, primer);
         }
         return primers;
+    }
+
+    private void addPrimerToSet(List<PrimerSet> primers, PrimerSet.Primer primer) {
+        boolean found = false;
+        for(PrimerSet set : primers) {
+            if(set.contains(primer)) {
+                set.addPrimer(primer);
+                found = true;
+                break;
+            }
+        }
+        if(!found) {
+            primers.add(new PrimerSet(primer));
+        }
     }
 
     public List<PrimerSet> getForwardPrimers() {

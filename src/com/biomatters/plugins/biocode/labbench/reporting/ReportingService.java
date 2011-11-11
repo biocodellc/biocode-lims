@@ -49,8 +49,7 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
                 fillPanel();
             } catch (SQLException e) {
                 e.printStackTrace();
-                e.printStackTrace();
-                Dialogs.showMessageDialog(e.getMessage());  //todo: add the stacktrace
+                Dialogs.showMessageDialog("Error connecting the reporting module: "+e.getMessage());  //todo: add the stacktrace
             }
             panel.revalidate();
         }
