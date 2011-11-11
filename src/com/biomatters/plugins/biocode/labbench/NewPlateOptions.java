@@ -96,7 +96,7 @@ public class NewPlateOptions extends Options{
 
 
         final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, 26);
-        final Options.IntegerOption stripNumber = addIntegerOption("stripNumber", "", 1, 1, 26);
+        final Options.IntegerOption stripNumber = addIntegerOption("stripNumber", "", 1, 1, 6);
         plateOption.addDependent(plateValues[0], reactionNumber, true);
         plateOption.addDependent(plateValues[0], addLabel(" individual reactions"), true);
         plateOption.addDependent(plateValues[1], stripNumber, true);
