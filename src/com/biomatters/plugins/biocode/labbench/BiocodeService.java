@@ -70,6 +70,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private ConnectionManager connectionManager;
     private boolean loggingIn;
     ReportingService reportingService;
+    private Thread disconnectCheckingThread;
 
     private BiocodeService() {
     }
@@ -520,6 +521,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(block) {
                 block("Connecting to the LIMS", null);
             }
+
+            if(disconnectCheckingThread != null) {
+                disconnectCheckingThread.interrupt();
+            }
+
             limsConnection.connect(connection.getLimsOptions());
             if(block) {
                 block("Building Caches", null);
@@ -530,6 +536,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(reportingService != null) {
                 reportingService.notifyLoginStatusChanged();
             }
+            disconnectCheckingThread = getDisconnectCheckingThread();
+            disconnectCheckingThread.start();
         } catch (ConnectionException e1) {
             if(block) {
                 unBlock();
@@ -609,17 +617,36 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void updateStatus() {
-        for(final DatabaseServiceListener listener : getDatabaseServiceListeners()) {
-            Runnable runnable = new Runnable() {
-                public void run() {
+        Runnable runnable = new Runnable() {
+            public void run() {
+                for(final DatabaseServiceListener listener : getDatabaseServiceListeners()) {
                     listener.searchableStatusChanged(isLoggedIn, isLoggedIn ? "Logged in" : loggedOutMessage);
                     listener.extendedSearchOptionsChanged();
                     listener.fieldsChanged();
                     listener.actionsChanged();
                 }
-            };
-            ThreadUtilities.invokeNowOrWait(runnable);
-        }
+                getGeneiousServiceListener().iconsChanged();
+            }
+        };
+        ThreadUtilities.invokeNowOrWait(runnable);
+    }
+
+    public Thread getDisconnectCheckingThread() {
+        return new Thread("Checking for the LIMS connection being closed") {
+            @Override
+            public void run() {
+                while(isLoggedIn() && limsConnection != null) {
+                    try {
+                        limsConnection.getConnection().createStatement().execute("SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
+                    } catch (SQLException e) {
+                        if(isLoggedIn()) {
+                            logOut();
+                        }
+                    }
+                    ThreadUtilities.sleep(10000);
+                }
+            }
+        };
     }
 
     @Override
@@ -808,7 +835,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Icons getIcons() {
-        return BiocodePlugin.getIcons("biocode24.png");
+        return isLoggedIn() ? BiocodePlugin.getIcons("biocode16_connected.png") : BiocodePlugin.getIcons("biocode16_disconnected.png");
     }
 
     public void addNewCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{
