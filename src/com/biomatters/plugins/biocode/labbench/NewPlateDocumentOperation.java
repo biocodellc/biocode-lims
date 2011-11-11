@@ -68,7 +68,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         final boolean copyOnlyFailed = options.copyOnlyFailedReactions();
         final boolean copyOnlyPassed = options.copyOnlyPassedReactions();
         final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
-        final int numberOfReactionsFromOptions = (Integer)options.getOption("reactionNumber").getValue();
+        final int numberOfReactionsFromOptions = options.getNumberOfReactions();
         int reactionCount = 0;
         if(fromExisting) {
             for(AnnotatedPluginDocument doc : documents) {
@@ -99,7 +99,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                     plateViewer.set(new PlateViewer(sizeFromOptions, typeFromOptions));
                 }
                 else {
-                    if(options.getOption("reactionNumber").isEnabled()) {
+                    if(options.getOption("reactionNumber").isEnabled() || options.getOption("stripNumber").isEnabled()) {
                         plateViewer.set(new PlateViewer(numberOfReactionsFromOptions, typeFromOptions));
                     }
                     else {

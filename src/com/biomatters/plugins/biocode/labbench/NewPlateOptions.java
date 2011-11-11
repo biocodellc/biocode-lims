@@ -54,6 +54,7 @@ public class NewPlateOptions extends Options{
 
         final Options.OptionValue[] plateValues = new Options.OptionValue[] {
                 new Options.OptionValue("individualReactions", ""),
+                new Options.OptionValue("strips", ""),
                 new Options.OptionValue("48Plate", "48 well plate"),
                 new Options.OptionValue("96Plate", "96 well plate"),
                 new Options.OptionValue("384Plate", "384 well plate")
@@ -95,8 +96,11 @@ public class NewPlateOptions extends Options{
 
 
         final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, 26);
+        final Options.IntegerOption stripNumber = addIntegerOption("stripNumber", "", 1, 1, 26);
         plateOption.addDependent(plateValues[0], reactionNumber, true);
         plateOption.addDependent(plateValues[0], addLabel(" individual reactions"), true);
+        plateOption.addDependent(plateValues[1], stripNumber, true);
+        plateOption.addDependent(plateValues[1], addLabel(" 8-reaction strips"), true);
         plateOption.setDependentPosition(RadioOption.DependentPosition.RIGHT);
         if(plateSize == null) {
             reactionNumber.setValue(numberOfReactions);
@@ -263,6 +267,13 @@ public class NewPlateOptions extends Options{
         }
 
         return result;
+    }
+
+    public int getNumberOfReactions() {
+        if(getValueAsString("plateType").equals("strips")) {
+            return (Integer)getOption("stripNumber").getValue()*8;   
+        }
+        return (Integer)getOption("reactionNumber").getValue();
     }
 
     static class ComboBoxListener implements SimpleListener{
