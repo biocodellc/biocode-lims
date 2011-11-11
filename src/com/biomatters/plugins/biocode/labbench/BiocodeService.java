@@ -641,7 +641,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             public void run() {
                 while(isLoggedIn() && limsConnection != null) {
                     try {
-                        limsConnection.getConnection().createStatement().execute("SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
+                        limsConnection.getConnection().createStatement().execute(limsConnection.isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
                     } catch (SQLException e) {
                         if(isLoggedIn()) {
                             logOut();
