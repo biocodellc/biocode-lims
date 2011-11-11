@@ -63,6 +63,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
     private final Preferences preferences = Preferences.userNodeForPackage(BiocodeService.class);
+    private ConnectionManager.Connection activeConnection;
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
     public static final DateFormat XMLDateFormat = new SimpleDateFormat("yyyy MMM dd hh:mm:ss");
@@ -400,6 +401,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private void logOut() {
         isLoggedIn = false;
         loggingIn = false;
+        activeConnection = null;
         if(activeFIMSConnection != null) {
             activeFIMSConnection.disconnect();
             activeFIMSConnection = null;
@@ -448,6 +450,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private void connect(ConnectionManager.Connection connection, boolean block) {
         loggingIn = true;
+        activeConnection = connection;
         //load the connection driver -------------------------------------------------------------------
         String driverFileName = connectionManager.getSqlLocationOptions();
         try {
@@ -620,6 +623,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         Runnable runnable = new Runnable() {
             public void run() {
                 for(final DatabaseServiceListener listener : getDatabaseServiceListeners()) {
+                    boolean isLoggedIn = isLoggedIn();
                     listener.searchableStatusChanged(isLoggedIn, isLoggedIn ? "Logged in" : loggedOutMessage);
                     listener.extendedSearchOptionsChanged();
                     listener.fieldsChanged();
@@ -827,7 +831,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public String getDescription() {
-        return "Search records form a Biocode database";
+        return isLoggedIn() ? "Connected to "+activeConnection.getName() : "Not connected";
     }
 
     public String getHelp() {
@@ -1777,6 +1781,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         listener.childServiceAdded(reportingService);
         reportingService.updateReportGenerator();
 
+        logOut();
 
         if(connectionManager.connectOnStartup()) {
             //make sure the main frame is showing
