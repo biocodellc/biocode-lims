@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import org.jdom.Element;
+import org.virion.jam.util.SimpleListener;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -18,11 +19,14 @@ import java.util.ArrayList;
 public class PrimerPerformanceOptions extends Options {
 
     private static final OptionValue NO_PRIMERS = new OptionValue("noPrimer", "No Primers");
-    private String FORWARD_PRIMER = "primers";
-    private String REVERSE_PRIMER = "revPrimers";
-    private String FIMS_FIELDS = "fimsFields";
+    private static final String REACTION_TYPE = "reactionType";
+    private static final String FORWARD_PRIMER = "primers";
+    private static final String REVERSE_PRIMER = "revPrimers";
+    private static final String FIMS_FIELDS = "fimsFields";
     private List<PrimerSet> reversePrimers;
     private List<PrimerSet> forwardPrimers;
+    private final String PCR = "pcr";
+    private final String SEQUENCING = "cyclesequencing";
 
     public PrimerPerformanceOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -33,14 +37,35 @@ public class PrimerPerformanceOptions extends Options {
         super(element);
     }
 
-    private void init(FimsToLims fimsToLims) {
-        this.forwardPrimers = fimsToLims.getForwardPrimers();
-        List<OptionValue> forwardPrimers = getPrimerOptionValues(this.forwardPrimers);
-        addComboBoxOption(FORWARD_PRIMER, "Forward Primer Name", forwardPrimers, forwardPrimers.get(0));
+    private void init(final FimsToLims fimsToLims) {
+        final OptionValue[] reactionTypes = new OptionValue[] {new OptionValue(PCR, "PCR"),
+                new OptionValue(SEQUENCING, "Sequencing")};
 
-        this.reversePrimers = fimsToLims.getReversePrimers();
+        final RadioOption<OptionValue> reactionTypeOption = addRadioOption(REACTION_TYPE, "Reaction Type", reactionTypes, reactionTypes[0], Alignment.HORIZONTAL_ALIGN);
+
+        this.forwardPrimers = fimsToLims.getForwardPcrPrimers();
+        List<OptionValue> forwardPrimers = getPrimerOptionValues(this.forwardPrimers);
+        final ComboBoxOption<OptionValue> forwardPrimersOption = addComboBoxOption(FORWARD_PRIMER, "Forward Primer Name", forwardPrimers, forwardPrimers.get(0));
+
+        this.reversePrimers = fimsToLims.getReversePcrPrimers();
         List<OptionValue> reversePrimers = getPrimerOptionValues(this.reversePrimers);
-        addComboBoxOption(REVERSE_PRIMER, "Reverse Primer Name", reversePrimers, reversePrimers.get(0));
+        final ComboBoxOption<OptionValue> reversePrimersOption = addComboBoxOption(REVERSE_PRIMER, "Reverse Primer Name", reversePrimers, reversePrimers.get(0));
+
+        reactionTypeOption.addChangeListener(new SimpleListener(){
+            public void objectChanged() {
+                boolean pcr = reactionTypeOption.getValue().equals(reactionTypes[0]);
+                if(pcr) {
+                    PrimerPerformanceOptions.this.forwardPrimers = fimsToLims.getForwardPcrPrimers();
+                    PrimerPerformanceOptions.this.reversePrimers = fimsToLims.getReversePcrPrimers();
+                }
+                else {
+                    PrimerPerformanceOptions.this.forwardPrimers = fimsToLims.getForwardSequencingPrimers();
+                    PrimerPerformanceOptions.this.reversePrimers = fimsToLims.getReverseSequencingPrimers();    
+                }
+                forwardPrimersOption.setPossibleValues(getPrimerOptionValues(PrimerPerformanceOptions.this.forwardPrimers));
+                reversePrimersOption.setPossibleValues(getPrimerOptionValues(PrimerPerformanceOptions.this.reversePrimers));
+            }
+        });
 
         List<OptionValue> optionValues = ReportGenerator.getOptionValues(fimsToLims.getFimsFields());
         addComboBoxOption(FIMS_FIELDS, "Compare primer performance across this field in the FIMS database", optionValues, optionValues.get(0));
@@ -67,7 +92,6 @@ public class PrimerPerformanceOptions extends Options {
                 }
             }
         }
-        assert false;
         return null;
     }
 
@@ -85,5 +109,9 @@ public class PrimerPerformanceOptions extends Options {
 
     public String getFimsFieldName() {
         return ((OptionValue)getValue(FIMS_FIELDS)).getLabel();
+    }
+
+    public boolean isPcr() {
+        return PCR.equals(getValueAsString(REACTION_TYPE));
     }
 }

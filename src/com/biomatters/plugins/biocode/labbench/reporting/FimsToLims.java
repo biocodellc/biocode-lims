@@ -43,8 +43,10 @@ public class FimsToLims {
     private Map<String, String> friendlyNameMap = new HashMap<String, String>();
     private boolean limsHasFimsValues;
     private Date dateLastCopied;
-    private List<PrimerSet> primers;
-    private List<PrimerSet> revPrimers;
+    private List<PrimerSet> pcrPrimers;
+    private List<PrimerSet> pcrRevPrimers;
+    private List<PrimerSet> sequencingPrimers;
+    private List<PrimerSet> sequencingRevPrimers;
 
     public FimsToLims(BiocodeService service) throws SQLException{
         this.fims = service.getActiveFIMSConnection();
@@ -59,12 +61,14 @@ public class FimsToLims {
         populateFriendlyNameMap();
         populateFimsFields();
         populateDateLastCopied();
-        populatePrimerNames();
+        populatePrimers();
     }
 
-    private void populatePrimerNames() throws SQLException{
-        primers = getAllPrimers(true);
-        revPrimers = getAllPrimers(false);
+    private void populatePrimers() throws SQLException{
+        pcrPrimers = getAllPrimers(Reaction.Type.PCR, true);
+        pcrRevPrimers = getAllPrimers(Reaction.Type.PCR, false);
+        sequencingPrimers = getAllPrimers(Reaction.Type.CycleSequencing, true);
+        sequencingRevPrimers = getAllPrimers(Reaction.Type.CycleSequencing, false);
     }
 
     public String getTissueColumnId() {
@@ -483,20 +487,45 @@ public class FimsToLims {
         return fims;
     }
 
-    private List<PrimerSet> getAllPrimers(boolean forward) throws SQLException{
-        return lims.isLocal() ? getAllPrimersLocal(forward) : getAllPrimersRemote(forward);
+    private List<PrimerSet> getAllPrimers(Reaction.Type reactionType, boolean forward) throws SQLException{
+        return lims.isLocal() ? getAllPrimersLocal(reactionType, forward) : getAllPrimersRemote(reactionType, forward);
     }
 
-    private List<PrimerSet> getAllPrimersLocal(boolean forward) throws SQLException{
-        String primerFieldName = (forward ? "p" : "revP") + "rName";
-        String primerSequenceName = (forward ? "P" : "revP") + "rSequence";
-        String sql1 = "SELECT DISTINCT("+primerFieldName+") FROM pcr";
+    private List<PrimerSet> getAllPrimersLocal(Reaction.Type reactionType, boolean forward) throws SQLException{
+        boolean pcr;
+        if(reactionType == Reaction.Type.PCR) {
+            pcr = true;
+        }
+        else if(reactionType == Reaction.Type.CycleSequencing) {
+            pcr = false;
+        }
+        else {
+            throw new IllegalArgumentException("You may only call this method with PCR or CycleSequencing reactions");
+        }
+
+        String primerFieldName;
+        String primerSequenceName;
+        String tableName;
+        String extraWhere;
+        if(pcr) {
+            primerFieldName = (forward ? "p" : "revP") + "rName";
+            primerSequenceName = (forward ? "P" : "revP") + "rSequence";
+            tableName = "pcr";
+            extraWhere = "";
+        }
+        else {
+            primerFieldName = "primerName";
+            primerSequenceName = "primerSequence";
+            tableName = "cyclesequencing";
+            extraWhere = " WHERE direction="+(forward ? "'forward'" : "'reverse'");
+        }
+        String sql1 = "SELECT DISTINCT("+primerFieldName+") FROM "+tableName+extraWhere;
         PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql1);
         ResultSet resultSet = statement.executeQuery();
         List<PrimerSet> primers = new ArrayList<PrimerSet>();
         while(resultSet.next()) {
             String primerName = resultSet.getString(1);
-            String sql2 = "SELECT "+primerSequenceName+" FROM pcr WHERE "+primerFieldName+"=?";
+            String sql2 = "SELECT "+primerSequenceName+" FROM "+tableName+" WHERE "+primerFieldName+"=?";
             System.out.println(sql2.replace("?", "'"+primerName+"'"));
             PreparedStatement statement2 = getLimsConnection().getConnection().prepareStatement(sql2);
             statement2.setString(1, primerName);
@@ -511,10 +540,36 @@ public class FimsToLims {
         return primers;
     }
 
-    private List<PrimerSet> getAllPrimersRemote(boolean forward) throws SQLException {
-        String primerFieldName = (forward ? "p" : "revP") + "rName";
-        String primerSequenceName = (forward ? "p" : "revP") + "rSequence";
-        String sql = "SELECT "+primerFieldName+", "+primerSequenceName+" FROM pcr GROUP BY "+primerFieldName;
+    private List<PrimerSet> getAllPrimersRemote(Reaction.Type reactionType, boolean forward) throws SQLException {
+        boolean pcr;
+        if(reactionType == Reaction.Type.PCR) {
+            pcr = true;
+        }
+        else if(reactionType == Reaction.Type.CycleSequencing) {
+            pcr = false;
+        }
+        else {
+            throw new IllegalArgumentException("You may only call this method with PCR or CycleSequencing reactions");
+        }
+
+        String primerFieldName;
+        String primerSequenceName;
+        String tableName;
+        String extraWhere;
+        if(pcr) {
+            primerFieldName = (forward ? "p" : "revP") + "rName";
+            primerSequenceName = (forward ? "P" : "revP") + "rSequence";
+            tableName = "pcr";
+            extraWhere = "";
+        }
+        else {
+            primerFieldName = "primerName";
+            primerSequenceName = "primerSequence";
+            tableName = "cyclesequencing";
+            extraWhere = " WHERE direction="+(forward ? "'forward'" : "'reverse'");
+        }
+
+        String sql = "SELECT "+primerFieldName+", "+primerSequenceName+" FROM "+tableName+extraWhere+" GROUP BY "+primerFieldName;
         System.out.println(sql);
         PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql);
         ResultSet resultSet = statement.executeQuery();
@@ -540,11 +595,19 @@ public class FimsToLims {
         }
     }
 
-    public List<PrimerSet> getForwardPrimers() {
-        return new ArrayList<PrimerSet>(primers);
+    public List<PrimerSet> getForwardPcrPrimers() {
+        return new ArrayList<PrimerSet>(pcrPrimers);
     }
 
-    public List<PrimerSet> getReversePrimers() {
-        return new ArrayList<PrimerSet>(revPrimers);
+    public List<PrimerSet> getReversePcrPrimers() {
+        return new ArrayList<PrimerSet>(pcrRevPrimers);
+    }
+
+    public List<PrimerSet> getForwardSequencingPrimers() {
+        return new ArrayList<PrimerSet>(sequencingPrimers);
+    }
+
+    public List<PrimerSet> getReverseSequencingPrimers() {
+        return new ArrayList<PrimerSet>(sequencingRevPrimers);
     }
 }

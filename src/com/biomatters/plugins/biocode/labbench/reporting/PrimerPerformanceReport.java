@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.implementations.Percentage;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
+import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;
 
@@ -58,6 +59,7 @@ public class PrimerPerformanceReport extends Report{
     public ReportChart getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
         final PrimerPerformanceOptions options = (PrimerPerformanceOptions)optionsa;
         String fimsColumn = FimsToLims.getSqlColName(options.getFimsField());
+        boolean pcr = options.isPcr();
 
         final List<String> progressValues = ReportGenerator.getDistinctValues(fimsToLims, "progress", "pcr", null, true, progress);
 
@@ -67,8 +69,13 @@ public class PrimerPerformanceReport extends Report{
             return null;
         }
 
-        String sql = "SELECT "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn+", count(pcr.id) from pcr, workflow, extraction, fims_values WHERE pcr.workflow=workflow.id AND workflow.extractionId = extraction.id AND extraction.sampleId = fims_values."+fimsToLims.getTissueColumnId()+" AND (pcr.prSequence=? AND pcr.revPrSequence=? AND pcr.progress=?) group by "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn;
-
+        String sql;
+        if(pcr) {
+            sql = "SELECT "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn+", count(pcr.id) from pcr, workflow, extraction, fims_values WHERE pcr.workflow=workflow.id AND workflow.extractionId = extraction.id AND extraction.sampleId = fims_values."+fimsToLims.getTissueColumnId()+" AND (pcr.prSequence=? AND pcr.revPrSequence=? AND pcr.progress=?) group by "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn;
+        }
+        else {
+            sql = "SELECT "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn+", count(cyclesequencing.id) from cyclesequencing, workflow, extraction, fims_values WHERE cyclesequencing.workflow=workflow.id AND workflow.extractionId = extraction.id AND extraction.sampleId = fims_values."+fimsToLims.getTissueColumnId()+" AND (((cyclesequencing.primerSequence=? AND cyclesequencing.direction='forward') OR (cyclesequencing.primerSequence=? AND cyclesequencing.direction='reverse')) AND cyclesequencing.progress=?) group by "+FimsToLims.FIMS_VALUES_TABLE+"."+fimsColumn;
+        }
         System.out.println(sql);
 
         PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
@@ -77,6 +84,9 @@ public class PrimerPerformanceReport extends Report{
 
         CompositeProgressListener composite = new CompositeProgressListener(progress, progressValues.size());
 
+        if(options.getForwardPrimer() == null || options.getReversePrimer() == null) { //if the user does not have any primers of the required type
+            return null;    
+        }
 
         for(String value : progressValues) {
             composite.beginSubtask("Counting "+(value != null ? value : "No Value")+" reactions");
@@ -112,10 +122,25 @@ public class PrimerPerformanceReport extends Report{
                     return fimsValues.get(rowIndex);
                 }
                 if(columnIndex == 1) {
-                    Integer passedObject = counts.get(0).get(fimsValues.get(rowIndex));
-                    Integer failedObject = counts.get(1).get(fimsValues.get(rowIndex));
-                    int passed = passedObject != null ? passedObject : 0;
-                    int failed = failedObject != null ? failedObject : 0;
+                    int passed = 0;
+                    int failed = 0;
+
+                    int passedIndex = progressValues.indexOf(ReactionOptions.PASSED_VALUE.getName());
+                    Integer passedObject = passedIndex >= 0 ? counts.get(passedIndex).get(fimsValues.get(rowIndex)) : null;
+                    if(passedObject != null) {
+                        passed += passedObject;
+                    }
+                    int failedIndex = progressValues.indexOf(ReactionOptions.FAILED_VALUE.getName());
+                    Integer failedObject = failedIndex >= 0 ? counts.get(failedIndex).get(fimsValues.get(rowIndex)) : null;
+                    if(failedObject != null) {
+                        failed += failedObject;
+                    }
+                    int suspectIndex = progressValues.indexOf(ReactionOptions.SUSPECT_VALUE.getName());
+                    Integer suspectObject = suspectIndex >= 0 ? counts.get(suspectIndex).get(fimsValues.get(rowIndex)) : null;
+                    if(suspectObject != null) {
+                        failed += suspectObject;
+                    }
+
                     if(passed == 0 && failed == 0) {
                         return null;
                     }
