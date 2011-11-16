@@ -196,6 +196,7 @@ public class WorkflowBuilder extends DocumentOperation {
         };
 
         for(String plateName : plateNames) {
+            plateComposite.beginSubtask();
             final CompositeProgressListener composite = new CompositeProgressListener(plateComposite, 5);
             //===================EXTRACTION PLATE=======================================================================
             composite.beginSubtask("Creating extraction plate");
@@ -237,14 +238,19 @@ public class WorkflowBuilder extends DocumentOperation {
 
             NewPlateDocumentOperation.copyPlateOfSameSize(extractionPlate, pcrPlate, null);
 
-            //todo: set PCR options
             for(Reaction r : pcrPlate.getReactions()) {
-                if(r.getExtractionId() != null && r.getExtractionId().length() > 0)
-                r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "COI");
+                if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()){
+                    r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "COI");
+                    r.getOptions().setValue("cocktail", ""+getCocktail(BiocodeService.getInstance().getPCRCocktails(),"Sylvain").getId());
+                    r.getOptions().setValue(ReactionOptions.RUN_STATUS, ReactionOptions.RUN_VALUE);
+                    r.getOptions().setValue(PCROptions.PRIMER_OPTION_ID, "urn:local:.:1321407996459.10");
+                    r.getOptions().setValue(PCROptions.PRIMER_REVERSE_OPTION_ID, "urn:local:.:1321408024304.13");
+                    r.getOptions().setValue("technician", "Sylvain Charlat");
+                }
             }
             String pcrPlateName = plateName + "_PCR01_COI";
             pcrPlate.setName(pcrPlateName);
-            pcrPlate.setThermocycle(BiocodeService.getInstance().getPCRThermocycles().get(0));
+            pcrPlate.setThermocycle(getThermocycle(BiocodeService.getInstance().getPCRThermocycles(), "Sylvain"));
 
             emptyCount = 0;
             for (Reaction r : pcrPlate.getReactions()) {
@@ -279,13 +285,16 @@ public class WorkflowBuilder extends DocumentOperation {
 
             //todo: set CS options
             for(Reaction r : csForwardPlate.getReactions()) {
-                if(r.getExtractionId() != null && r.getExtractionId().length() > 0) {
+                if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()) {
                     r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "COI");
                     r.getOptions().setValue(ReactionOptions.RUN_STATUS, "failed");
+                    r.getOptions().setValue("cocktail", ""+getCocktail(BiocodeService.getInstance().getCycleSequencingCocktails(),"Sylvain").getId());
+                    r.getOptions().setValue(PCROptions.PRIMER_OPTION_ID, "urn:local:.:1321407996459.10");
+                    r.getOptions().setValue("technician", "Sylvain Charlat");
                 }
             }
             csForwardPlate.setName(plateName+"_CYC01_LCO");
-            csForwardPlate.setThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles().get(0));
+            csForwardPlate.setThermocycle(getThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles(), "LAB_STANDARD_CS"));
 
             BiocodeService.getInstance().saveReactions(messagePassingProgress, csForwardPlate);
 
@@ -303,17 +312,22 @@ public class WorkflowBuilder extends DocumentOperation {
             }
 
             for(Reaction r : csReversePlate.getReactions()) {
-                if(r.getExtractionId() != null && r.getExtractionId().length() > 0) {
+                if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()) {
                     r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "COI");
                     r.getOptions().setValue(ReactionOptions.RUN_STATUS, "failed");
+                    r.getOptions().setValue(CycleSequencingOptions.DIRECTION, "reverse");
+                    r.getOptions().setValue("cocktail", ""+getCocktail(BiocodeService.getInstance().getCycleSequencingCocktails(),"Sylvain").getId());
+                    r.getOptions().setValue(PCROptions.PRIMER_OPTION_ID, "urn:local:.:1321408024304.13");
+                    r.getOptions().setValue("technician", "Sylvain Charlat");
                 }
             }
 
             //todo: set CS options
             csReversePlate.setName(plateName+"_CYC01_HCO");
-            csReversePlate.setThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles().get(0));
+            csReversePlate.setThermocycle(getThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles(), "LAB_STANDARD_CS"));
 
             BiocodeService.getInstance().saveReactions(messagePassingProgress, csReversePlate);
+
 
 
             //================ASSEMBLIES================================================================================
@@ -322,6 +336,9 @@ public class WorkflowBuilder extends DocumentOperation {
             Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = MarkInLimsUtilities.getDocsToMark(folderContents, null);
             for(Map.Entry<AnnotatedPluginDocument, SequenceDocument> entry : docsToMark.entrySet()) {
                 AnnotatedPluginDocument assemblyDoc = entry.getKey();
+                if(!SequenceAlignmentDocument.class.isAssignableFrom(assemblyDoc.getDocumentClass())) {
+                    continue;
+                }
                 SequenceAlignmentDocument assembly = (SequenceAlignmentDocument)assemblyDoc.getDocument();
                 if(!assemblyDoc.getName().contains(plateName))  {
                     continue;
@@ -351,12 +368,31 @@ public class WorkflowBuilder extends DocumentOperation {
                 operationOptions.setValue("consensus.thresholdPercent", true);
                 operationOptions.setValue("consensus.thresholdPercent", "weighted_60");
 
-                markAsPassedOperation.performOperation(new AnnotatedPluginDocument[] {assemblyDoc}, progressListener, operationOptions);
+                markAsPassedOperation.performOperation(new AnnotatedPluginDocument[] {assemblyDoc}, composite, operationOptions);
             }
 
 
         }
 
+    }
+
+
+    private static Thermocycle getThermocycle(List<Thermocycle> thermocycles, String name) throws DocumentOperationException{
+        for(Thermocycle cycle : thermocycles) {
+            if(cycle.getName().equals(name)) {
+                return cycle;
+            }
+        }
+        throw new DocumentOperationException("Could not find the thermocycle "+name);
+    }
+
+    private static Cocktail getCocktail(List<? extends Cocktail> cocktails, String name) throws DocumentOperationException{
+        for(Cocktail cocktail : cocktails) {
+            if(cocktail.getName().equals(name)) {
+                return cocktail;
+            }
+        }
+        throw new DocumentOperationException("Could not find the cocktail "+name);
     }
 
     public static int getBlankReactionCount(Collection<Reaction> reactions) {
