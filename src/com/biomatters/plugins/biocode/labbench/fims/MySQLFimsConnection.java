@@ -167,7 +167,7 @@ public class MySQLFimsConnection extends TableFimsConnection{
                         assert false : "Unrecognised field type: "+f.toString();
                     }
                 }
-                TableFimsSample sample = new TableFimsSample(fields, taxonomyFields, data, tissueCol, specimenCol);
+                TableFimsSample sample = new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), data, getTissueSampleDocumentField(), getSpecimenDocumentField());
                 if(callback != null) {
                     callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
                 }

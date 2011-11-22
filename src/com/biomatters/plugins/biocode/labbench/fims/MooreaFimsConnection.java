@@ -267,7 +267,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         }
     }
 
-    public boolean canGetTissueIdsFromFimsTissuePlate() {
+    public boolean storesPlateAndWellInformation() {
         return true;
     }
 

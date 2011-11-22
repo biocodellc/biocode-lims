@@ -214,7 +214,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return new DocumentField("Well", "", "http://biocode.berkeley.edu/schema/well", String.class, false, false);
     }
 
-    public boolean canGetTissueIdsFromFimsTissuePlate() {
+    public boolean storesPlateAndWellInformation() {
         return true;
     }
 

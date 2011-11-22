@@ -72,6 +72,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean loggingIn;
     ReportingService reportingService;
     private Thread disconnectCheckingThread;
+    private boolean searching = false;
 
     private BiocodeService() {
     }
@@ -640,11 +641,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             @Override
             public void run() {
                 while(isLoggedIn() && limsConnection != null) {
-                    try {
-                        limsConnection.getConnection().createStatement().execute(limsConnection.isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
-                    } catch (SQLException e) {
-                        if(isLoggedIn()) {
-                            logOut();
+                    if(!searching) {
+                        try {
+                            limsConnection.getConnection().createStatement().execute(limsConnection.isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                            if(isLoggedIn()) {
+                                logOut();
+                            }
                         }
                     }
                     ThreadUtilities.sleep(10000);
@@ -664,160 +668,165 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     private void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
-        List<FimsSample> tissueSamples = null;
-        List<Query> fimsQueries = new ArrayList<Query>();
-        List<Query> limsQueries = new ArrayList<Query>();
-        callback.setIndeterminateProgress();
+        try {
+            searching = true;
+            List<FimsSample> tissueSamples = null;
+            List<Query> fimsQueries = new ArrayList<Query>();
+            List<Query> limsQueries = new ArrayList<Query>();
+            callback.setIndeterminateProgress();
 
 
-        if(query instanceof CompoundSearchQuery) {
-            CompoundSearchQuery masterQuery = (CompoundSearchQuery) query;
-            for(Query childQuery : masterQuery.getChildren()) {
-                if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
-                    return;
+            if(query instanceof CompoundSearchQuery) {
+                CompoundSearchQuery masterQuery = (CompoundSearchQuery) query;
+                for(Query childQuery : masterQuery.getChildren()) {
+                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                        return;
+                    }
+                    if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
+                        fimsQueries.add(childQuery);//todo: distinguish between queries from multiple FIMS connections
+                    }
+                    else {
+                        limsQueries.add(childQuery);
+                    }
                 }
-                if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
-                    fimsQueries.add(childQuery);//todo: distinguish between queries from multiple FIMS connections
-                }
-                else {
-                    limsQueries.add(childQuery);
+                if(fimsQueries.size() > 0) {
+                    Query compoundQuery;
+                    if(masterQuery.getOperator() == CompoundSearchQuery.Operator.AND) {
+                        compoundQuery = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
+                    }
+                    else {
+                        compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
+                    }
+                    try {
+                        callback.setMessage("Downloading Tissues");
+                        if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                            return;
+                        }
+                        tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
+                    } catch (ConnectionException e) {
+                        throw new DatabaseServiceException(e.getMessage(), false);
+                    }
                 }
             }
-            if(fimsQueries.size() > 0) {
-                Query compoundQuery;
-                if(masterQuery.getOperator() == CompoundSearchQuery.Operator.AND) {
-                    compoundQuery = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
-                }
-                else {
-                    compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
-                }
+            else if(query instanceof BasicSearchQuery){
                 try {
                     callback.setMessage("Downloading Tissues");
                     if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                         return;
                     }
-                    tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
+                    tissueSamples = activeFIMSConnection.getMatchingSamples(query);
                 } catch (ConnectionException e) {
-                    throw new DatabaseServiceException(e.getMessage(), false);
+                    throw new DatabaseServiceException(e, e.getMessage(), false);
                 }
-            }
-        }
-        else if(query instanceof BasicSearchQuery){
-            try {
-                callback.setMessage("Downloading Tissues");
+                fimsQueries.add(query);
+                limsQueries.add(query);
+            } else if(query instanceof AdvancedSearchQueryTerm){
                 if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                     return;
                 }
-                tissueSamples = activeFIMSConnection.getMatchingSamples(query);
-            } catch (ConnectionException e) {
-                throw new DatabaseServiceException(e, e.getMessage(), false);
-            }
-            fimsQueries.add(query);
-            limsQueries.add(query);
-        } else if(query instanceof AdvancedSearchQueryTerm){
-            if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
-                return;
-            }
-            if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
-                fimsQueries.add(query);
-                try {
-                    callback.setMessage("Downloading Tissues");
-                    tissueSamples = activeFIMSConnection.getMatchingSamples(query);
-                } catch (ConnectionException e) {
-                    throw new DatabaseServiceException(e.getMessage(), false);
+                if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
+                    fimsQueries.add(query);
+                    try {
+                        callback.setMessage("Downloading Tissues");
+                        tissueSamples = activeFIMSConnection.getMatchingSamples(query);
+                    } catch (ConnectionException e) {
+                        throw new DatabaseServiceException(e.getMessage(), false);
+                    }
+                }
+                else {
+                    limsQueries.add(query);
                 }
             }
-            else {
-                limsQueries.add(query);
-            }
-        }
-        if(callback.isCanceled()) {
-            return;
-        }
-
-        if(tissueSamples != null && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
-            for(FimsSample sample : tissueSamples) {
-                TissueDocument doc = new TissueDocument(sample);
-                callback.add(doc, Collections.<String, Object>emptyMap());
-            }
-        }
-        if(callback.isCanceled()) {
-            return;
-        }
-        try {
-            List<WorkflowDocument> workflowList = Collections.emptyList();
-            boolean isAnd = true;
-            if(query instanceof CompoundSearchQuery) {
-                isAnd = ((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND;
-            }
-            Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap()) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap());
-
-            if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
-                callback.setMessage("Downloading Workflows");
-                workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null, callback);
-            }
             if(callback.isCanceled()) {
                 return;
             }
 
-            Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
-            //workflowsToSearch.addAll(workflowList);
-//            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
-//                for(PluginDocument doc : workflowList) {
-//                    callback.add(doc, Collections.<String, Object>emptyMap());
-//                }
-//            }
+            if(tissueSamples != null && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
+                for(FimsSample sample : tissueSamples) {
+                    TissueDocument doc = new TissueDocument(sample);
+                    callback.add(doc, Collections.<String, Object>emptyMap());
+                }
+            }
             if(callback.isCanceled()) {
                 return;
             }
-            if((Boolean)query.getExtendedOptionValue("plateDocuments") || ((Boolean)query.getExtendedOptionValue("sequenceDocuments") && limsQueries.size() > 0)) {
-                callback.setMessage("Downloading Plates");
-                List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
+            try {
+                List<WorkflowDocument> workflowList = Collections.emptyList();
+                boolean isAnd = true;
+                if(query instanceof CompoundSearchQuery) {
+                    isAnd = ((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND;
+                }
+                Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap()) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap());
+
+                if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
+                    callback.setMessage("Downloading Workflows");
+                    workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null, callback);
+                }
                 if(callback.isCanceled()) {
                     return;
                 }
-                for(PlateDocument plate : plateList) {
-                    for(Reaction r : plate.getPlate().getReactions()) {
-                        if(r.getWorkflow() != null) {
-                            workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
+
+                Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
+                //workflowsToSearch.addAll(workflowList);
+    //            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
+    //                for(PluginDocument doc : workflowList) {
+    //                    callback.add(doc, Collections.<String, Object>emptyMap());
+    //                }
+    //            }
+                if(callback.isCanceled()) {
+                    return;
+                }
+                if((Boolean)query.getExtendedOptionValue("plateDocuments") || ((Boolean)query.getExtendedOptionValue("sequenceDocuments") && limsQueries.size() > 0)) {
+                    callback.setMessage("Downloading Plates");
+                    List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
+                    if(callback.isCanceled()) {
+                        return;
+                    }
+                    for(PlateDocument plate : plateList) {
+                        for(Reaction r : plate.getPlate().getReactions()) {
+                            if(r.getWorkflow() != null) {
+                                workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
+                            }
                         }
                     }
                 }
-            }
-            if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
-                callback.setMessage("Downloading Sequences");
-                if((tissueSamples != null && tissueSamples.size() > 0) && (workflowList == null || workflowList.size() == 0)) {
-                    limsConnection.getMatchingAssemblyDocumentsForTissues(limsQuery, tissueSamples, callback, urnsToNotRetrieve, callback);    
-                }
-                else {
-                    limsConnection.getMatchingAssemblyDocuments(limsQuery, workflowsToSearch, callback, urnsToNotRetrieve, callback);
-                }
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            String message = e.getMessage();
-            boolean isNetwork = true;
-            if(message != null && message.contains("Streaming result") && message.contains("is still active")) {
-                if(!hasAlreadyTriedReconnect) {
-                    try {
-                        System.out.println("attempting a reconnect...");
-                        limsConnection.reconnect();
-                    } catch (ConnectionException e1) {
-                        throw new DatabaseServiceException(e1, "Your previous search did not cancel properly, and Geneious was unable to correct the problem.  Try logging out, and logging in again.\n\n"+message, false);
+                if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
+                    callback.setMessage("Downloading Sequences");
+                    if((tissueSamples != null && tissueSamples.size() > 0) && (workflowList == null || workflowList.size() == 0)) {
+                        limsConnection.getMatchingAssemblyDocumentsForTissues(limsQuery, tissueSamples, callback, urnsToNotRetrieve, callback);
                     }
-                    retrieve(query, callback, urnsToNotRetrieve, true);
-                    return;
+                    else {
+                        limsConnection.getMatchingAssemblyDocuments(limsQuery, workflowsToSearch, callback, urnsToNotRetrieve, callback);
+                    }
                 }
-                else {
-                    message = "Your previous search did not cancel properly.  Try logging out, and logging in again.\n\n"+message;
-                    isNetwork = false;
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                String message = e.getMessage();
+                boolean isNetwork = true;
+                if(message != null && message.contains("Streaming result") && message.contains("is still active")) {
+                    if(!hasAlreadyTriedReconnect) {
+                        try {
+                            System.out.println("attempting a reconnect...");
+                            limsConnection.reconnect();
+                        } catch (ConnectionException e1) {
+                            throw new DatabaseServiceException(e1, "Your previous search did not cancel properly, and Geneious was unable to correct the problem.  Try logging out, and logging in again.\n\n"+message, false);
+                        }
+                        retrieve(query, callback, urnsToNotRetrieve, true);
+                        return;
+                    }
+                    else {
+                        message = "Your previous search did not cancel properly.  Try logging out, and logging in again.\n\n"+message;
+                        isNetwork = false;
+                    }
                 }
+                throw new DatabaseServiceException(e, message, isNetwork);
             }
-            throw new DatabaseServiceException(e, message, isNetwork);
+
         }
-
-
+        finally {
+            searching = false;
+        }
     }
 
     static final String UNIQUE_ID = "BiocodeService";

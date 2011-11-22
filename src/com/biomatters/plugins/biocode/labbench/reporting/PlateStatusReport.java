@@ -56,7 +56,7 @@ public class PlateStatusReport extends Report {
 
     @Override
     public ReportChart getChart(Options options, final FimsToLims fimsToLims, final ProgressListener progress) throws SQLException {
-        if(!fimsToLims.getFimsConnection().canGetTissueIdsFromFimsTissuePlate()) {
+        if(!fimsToLims.getFimsConnection().storesPlateAndWellInformation()) {
             return new ReportChart(){
                 @Override
                 public JPanel getPanel() {

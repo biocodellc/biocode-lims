@@ -236,11 +236,6 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
     }
 
 
-
-    public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
-        return null;  //todo:
-    }
-
     public Condition[] getFieldConditions(Class fieldClass) {
         if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
             return new Condition[] {
@@ -331,7 +326,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                     }
                 }
                 if(!firstTime) {
-                    results.add(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, tissueCol, specimenCol));
+                    results.add(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField(), getSpecimenDocumentField()));
                 }
                 values = new LinkedHashMap<String, Object>();
                 firstTime = false;
@@ -349,20 +344,25 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
     }
 
     private Object convertValue(String columnName, String value) {
+        if(!isConnected()) {
+            return null;
+        }
         if(value == null) {
             return null;
         }
-        for(DocumentField field : columns) {
-            if(field.getName().equals(columnName)) {
-                if(Double.class.isAssignableFrom(field.getValueType())) {
+
+        List<DocumentField> columns = getSearchAttributes();
+        for (int i = 0; i < columns.size(); i++) {
+            DocumentField field = columns.get(i);
+            if (field.getName().equals(columnName)) {
+                if (Double.class.isAssignableFrom(field.getValueType())) {
                     try {
                         return Double.parseDouble(value);
                     } catch (NumberFormatException e) {
-                        System.out.println("Not a number: "+field.getName()+", "+value);
+                        System.out.println("Not a number: " + field.getName() + ", " + value);
                         return null;
                     }
-                }
-                else if(Date.class.isAssignableFrom(field.getValueType())) {
+                } else if (Date.class.isAssignableFrom(field.getValueType())) {
                     try {
                         return DateFormat.getDateInstance().parse(value);
                     } catch (ParseException e) {
@@ -371,16 +371,14 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                         } catch (ParseException e1) {
                             e.printStackTrace();
                             //assert false : e.getMessage();
-                            System.out.println("Not a date: "+columnName+", "+value);
+                            System.out.println("Not a date: " + columnName + ", " + value);
                             return null;
                         }
                     }
-                }
-                else if(String.class.isAssignableFrom(field.getValueType())) {
+                } else if (String.class.isAssignableFrom(field.getValueType())) {
                     return value;
-                }
-                else {
-                    throw new RuntimeException("Unexpected value type: "+value.getClass().getName());
+                } else {
+                    throw new RuntimeException("Unexpected value type: " + value.getClass().getName());
                 }
             }
         }
@@ -422,6 +420,9 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             System.out.println(url);
             GDataRequest request = service.getRequestFactory().getRequest(RequestType.QUERY, url, ContentType.TEXT_PLAIN);
             request.execute();
+
+            DocumentField tissueCol = getTissueSampleDocumentField();
+            DocumentField specimenCol = getSpecimenDocumentField();                  
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(request.getResponseStream()));
             Map<String, Object> values = new LinkedHashMap<String, Object>();
@@ -480,14 +481,6 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             }
         }
         return tokens.toArray(new String[tokens.size()]);
-    }
-
-    public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException {
-        return Collections.emptyMap();
-    }
-
-    public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException {
-        return null;
     }
 
     public boolean requiresMySql() {

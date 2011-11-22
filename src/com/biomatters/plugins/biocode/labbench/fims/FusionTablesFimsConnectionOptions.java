@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -74,6 +75,9 @@ public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOption
     }
 
     static List<DocumentField> getTableColumnFields(String tableId, GoogleService service) throws IOException {
+        if(tableId.length() == 0) {
+            return Collections.emptyList();
+        }
         String query = "DESCRIBE "+tableId+"";
         URL url = new URL(FusionTablesFimsConnection.SERVICE_URL + "?sql=" + URLEncoder.encode(query, "UTF-8"));
         Service.GDataRequest request = null;

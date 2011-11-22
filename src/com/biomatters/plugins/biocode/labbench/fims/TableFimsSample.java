@@ -22,12 +22,12 @@ public class TableFimsSample implements FimsSample {
     private List<DocumentField> taxFields;
     private String tissueCol, specimenCol;
 
-    public TableFimsSample(Sheet sheet, int row, ExcelFimsConnection fimsConnection) {
+    public TableFimsSample(Sheet sheet, int row, TableFimsConnection fimsConnection) {
         values = new HashMap<String, Object>();
         fields = fimsConnection.getCollectionAttributes();
         taxFields = fimsConnection.getTaxonomyAttributes();
-        tissueCol = ""+fimsConnection.tissueCol;
-        specimenCol = ""+fimsConnection.specimenCol;
+        tissueCol = ""+fimsConnection.getTissueSampleDocumentField().getCode();
+        specimenCol = ""+fimsConnection.getSpecimenDocumentField().getCode();
 
         for(DocumentField field : fields) {
             String value = sheet.getCell(Integer.parseInt(field.getCode()), row).getContents();
@@ -39,12 +39,12 @@ public class TableFimsSample implements FimsSample {
         }
     }
 
-    public TableFimsSample(List<DocumentField> fimsAttributes, List<DocumentField> taxonomyAttributes, Map<String, Object> fieldValues, String tissueIdCol, String specimenIdCol) {
+    public TableFimsSample(List<DocumentField> fimsAttributes, List<DocumentField> taxonomyAttributes, Map<String, Object> fieldValues, DocumentField tissueIdCol, DocumentField specimenIdCol) {
         this.values = fieldValues;
         this.fields = fimsAttributes;
         this.taxFields = taxonomyAttributes;
-        this.tissueCol = tissueIdCol;
-        this.specimenCol = specimenIdCol;
+        this.tissueCol = tissueIdCol.getCode();
+        this.specimenCol = specimenIdCol.getCode();
     }
 
     public TableFimsSample(Element e) throws XMLSerializationException {

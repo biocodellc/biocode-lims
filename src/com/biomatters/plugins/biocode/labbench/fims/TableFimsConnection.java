@@ -31,15 +31,16 @@ import org.jdom.output.Format;
  */
 public abstract class TableFimsConnection extends FIMSConnection{
 
-    protected String tissueCol;
-    protected String specimenCol;
-    protected boolean storePlates;
-    protected boolean linkPhotos;
-    protected String plateCol;
-    protected String wellCol;
-    protected List<DocumentField> fields;
-    protected List<DocumentField> taxonomyFields;
-    protected List<DocumentField> columns;
+    private String tissueCol;
+    private String specimenCol;
+    private boolean storePlates;
+    private boolean linkPhotos;
+    private String plateCol;
+    private String wellCol;
+    private List<DocumentField> fields;
+    private List<DocumentField> taxonomyFields;
+    private List<DocumentField> columns;
+    private boolean connected = false;
 
     public final PasswordOptions getConnectionOptions() {
         return _getConnectionOptions();
@@ -99,6 +100,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
         if(getTissueSampleDocumentField() == null) {
             throw new ConnectionException("You have not set a tissue column");
         }
+        connected = true;
     }
 
     public abstract List<DocumentField> getTableColumns() throws IOException;
@@ -115,6 +117,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     public abstract void _connect(TableFimsConnectionOptions options) throws ConnectionException;
 
     public final void disconnect() {
+        connected = false;
         tissueCol = specimenCol = null;
         fields = null;
         taxonomyFields = null;
@@ -122,36 +125,47 @@ public abstract class TableFimsConnection extends FIMSConnection{
         _disconnect();
     }
 
+    public boolean isConnected() {
+        return connected;
+    }
+
     public abstract void _disconnect();
 
-    public DocumentField getTissueSampleDocumentField() {
+    public final DocumentField getTissueSampleDocumentField() {
         return getTableCol(fields, tissueCol);
     }
 
-    public List<DocumentField> getCollectionAttributes() {
+    public final DocumentField getSpecimenDocumentField() {
+        return getTableCol(fields, specimenCol);
+    }
+
+    public final List<DocumentField> getCollectionAttributes() {
         return new ArrayList<DocumentField>(fields);
     }
 
-    public List<DocumentField> getTaxonomyAttributes() {
-        return new ArrayList<DocumentField>(taxonomyFields);
+    public final List<DocumentField> getTaxonomyAttributes() {
+        return isConnected() ? new ArrayList<DocumentField>(taxonomyFields) : Collections.<DocumentField>emptyList();
     }
 
-    public List<DocumentField> getSearchAttributes() {
-        ArrayList<DocumentField> fields = new ArrayList<DocumentField>(this.fields);
-        fields.addAll(taxonomyFields);
+    public final List<DocumentField> getSearchAttributes() {
+        ArrayList<DocumentField> fields = new ArrayList<DocumentField>();
+        if(isConnected()) {
+            fields.addAll(this.fields);
+            fields.addAll(taxonomyFields);
+        }
         return fields;
     }
 
-    public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
+    public final BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
         return null;  //todo
     }
 
-    public boolean canGetTissueIdsFromFimsTissuePlate() {
+    public boolean storesPlateAndWellInformation() {
         return storePlates;
     }
 
     @Override
-    public DocumentField getPlateDocumentField() {
+    public final DocumentField getPlateDocumentField() {
         if(!storePlates) {
             return null;
         }
@@ -159,7 +173,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public DocumentField getWellDocumentField() {
+    public final DocumentField getWellDocumentField() {
         if(!storePlates) {
             return null;
         }
@@ -179,7 +193,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public List<String> getImageUrls(FimsSample fimsSample) throws IOException {
+    public final List<String> getImageUrls(FimsSample fimsSample) throws IOException {
         URL xmlUrl = new URL("http://www.flickr.com/services/rest/?method=flickr.photos.search&format=rest&machine_tags=bioValidator:specimen="+ URLEncoder.encode("\""+fimsSample.getSpecimenId()+"\"", "UTF-8")+"&api_key=724c92d972c3822bdb9c8ff501fb3d6a");
         System.out.println(xmlUrl);
         final HttpURLConnection urlConnection = (HttpURLConnection)xmlUrl.openConnection();

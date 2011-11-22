@@ -17,7 +17,7 @@ public class PlateStatusOptions extends Options {
             addLabel("You must copy your FIMS values into the LIMS before using this report.");
             return;
         }
-        if(!fimsToLims.getFimsConnection().canGetTissueIdsFromFimsTissuePlate()) {
+        if(!fimsToLims.getFimsConnection().storesPlateAndWellInformation()) {
             addLabel("You must specify plate and well in your FIMS connection before you can use this report.  Please see the connection dialog.");
             return;
         }

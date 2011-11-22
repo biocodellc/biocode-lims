@@ -60,7 +60,7 @@ public abstract class FIMSConnection {
             throw new ConnectionException("You must have at least one taxonomy field.  Please check your FIMS connection options");
         }
 
-        if(canGetTissueIdsFromFimsTissuePlate()) {
+        if(storesPlateAndWellInformation()) {
             if(getPlateDocumentField() == null) {
                 throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a plate field.  Please check your FIMS connection options");
             }
@@ -200,10 +200,10 @@ public abstract class FIMSConnection {
 
     public abstract DocumentField getWellDocumentField();
 
-    public abstract boolean canGetTissueIdsFromFimsTissuePlate();
+    public abstract boolean storesPlateAndWellInformation();
 
     public Map<String, String> getTissueIdsFromFimsTissuePlate(String plateId) throws ConnectionException{
-        if(canGetTissueIdsFromFimsTissuePlate()) {
+        if(storesPlateAndWellInformation()) {
             DocumentField plateField = getPlateDocumentField();
             DocumentField wellField = getWellDocumentField();
 

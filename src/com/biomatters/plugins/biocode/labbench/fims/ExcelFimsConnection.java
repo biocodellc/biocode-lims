@@ -90,8 +90,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
         if(!excelFile.exists()) {
             throw new ConnectionException("Cannot find the file "+ excelFile.getAbsolutePath());
         }
-        fields = new ArrayList<DocumentField>();
-        taxonomyFields = new ArrayList<DocumentField>();
 
         columnNames = new ArrayList<String>();
         //noinspection CatchGenericClass
@@ -140,25 +138,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
             workbook.close();
             workbook = null;
         }
-    }
-
-    public List<DocumentField> getSearchAttributes() {
-        List<DocumentField> searchAttributes = new ArrayList<DocumentField>();
-        searchAttributes.addAll(fields);
-        searchAttributes.addAll(taxonomyFields);
-        return searchAttributes;
-    }
-
-    public DocumentField getTissueSampleDocumentField() {
-        return getTableCol(fields, tissueCol);
-    }
-
-    public List<DocumentField> getCollectionAttributes() {
-        return fields;
-    }
-
-    public List<DocumentField> getTaxonomyAttributes() {
-        return taxonomyFields;
     }
 
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
@@ -262,27 +241,4 @@ public class ExcelFimsConnection extends TableFimsConnection{
         return Collections.emptyMap();
     }
 
-    public boolean canGetTissueIdsFromFimsTissuePlate() {
-        return storePlates;
-    }
-
-    @Override
-    public DocumentField getPlateDocumentField() {
-        if(!storePlates) {
-            return null;
-        }
-        return getTableCol(fields, plateCol);
-    }
-
-    @Override
-    public DocumentField getWellDocumentField() {
-        if(!storePlates) {
-            return null;
-        }
-        return getTableCol(fields, wellCol);
-    }
-
-    public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
-        return null;
-    }
 }

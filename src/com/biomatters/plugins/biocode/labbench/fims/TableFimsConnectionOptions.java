@@ -46,7 +46,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     public TableFimsConnectionOptions() {
         super(FusionTablesFimsConnectionOptions.class);
 
-        Options connectionOptions = getConnectionOptions();
+        final PasswordOptions connectionOptions = getConnectionOptions();
         addChildOptions(CONNECTION_OPTIONS_KEY, "", "", connectionOptions);
         if(updateAutomatically()) {
             connectionOptions.addChangeListener(new SimpleListener() {
@@ -65,6 +65,9 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
                 public void actionPerformed(ActionEvent ev) {
                     try {
                         update();
+                        if(connectionOptions != null) {
+                            connectionOptions.update();
+                        }
                     } catch (ConnectionException e) {
                         Dialogs.showMessageDialog(e.getMessage());
                     }
