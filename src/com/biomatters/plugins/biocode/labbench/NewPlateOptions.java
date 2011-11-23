@@ -21,6 +21,11 @@ import java.util.List;
 public class NewPlateOptions extends Options{
 
     private AnnotatedPluginDocument[] documents;
+    private final OptionValue INDIVIDUAL_REACTIONS = new OptionValue("individualReactions", "");
+    private final OptionValue STRIPS = new OptionValue("strips", "");
+    private final OptionValue PLATE_48 = new OptionValue("48Plate", "48 well plate");
+    private final OptionValue PLATE_96 = new OptionValue("96Plate", "96 well plate");
+    private final OptionValue PLATE_384 = new OptionValue("384Plate", "384 well plate");
 
     public NewPlateOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
@@ -53,11 +58,11 @@ public class NewPlateOptions extends Options{
         }
 
         final Options.OptionValue[] plateValues = new Options.OptionValue[] {
-                new Options.OptionValue("individualReactions", ""),
-                new Options.OptionValue("strips", ""),
-                new Options.OptionValue("48Plate", "48 well plate"),
-                new Options.OptionValue("96Plate", "96 well plate"),
-                new Options.OptionValue("384Plate", "384 well plate")
+                INDIVIDUAL_REACTIONS,
+                STRIPS,
+                PLATE_48,
+                PLATE_96,
+                PLATE_384
         };
 
         final Options.OptionValue[] typeValues = new Options.OptionValue[] {
@@ -92,15 +97,15 @@ public class NewPlateOptions extends Options{
         }
 
         addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
-        final Options.RadioOption<Options.OptionValue> plateOption = addRadioOption("plateType", "", plateValues, plateValues[2], Options.Alignment.VERTICAL_ALIGN);
+        final Options.RadioOption<Options.OptionValue> plateOption = addRadioOption("plateType", "", plateValues, PLATE_96, Options.Alignment.VERTICAL_ALIGN);
 
 
         final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, 26);
         final Options.IntegerOption stripNumber = addIntegerOption("stripNumber", "", 1, 1, 6);
-        plateOption.addDependent(plateValues[0], reactionNumber, true);
-        plateOption.addDependent(plateValues[0], addLabel(" individual reactions"), true);
-        plateOption.addDependent(plateValues[1], stripNumber, true);
-        plateOption.addDependent(plateValues[1], addLabel(" 8-reaction strips"), true);
+        plateOption.addDependent(INDIVIDUAL_REACTIONS, reactionNumber, true);
+        plateOption.addDependent(INDIVIDUAL_REACTIONS, addLabel(" individual reactions"), true);
+        plateOption.addDependent(STRIPS, stripNumber, true);
+        plateOption.addDependent(STRIPS, addLabel(" 8-reaction strips"), true);
         plateOption.setDependentPosition(RadioOption.DependentPosition.RIGHT);
         if(plateSize == null) {
             reactionNumber.setValue(numberOfReactions);
@@ -137,8 +142,8 @@ public class NewPlateOptions extends Options{
             final Options.BooleanOption fromExistingOption1 = fromExistingOption;
             SimpleListener fromExistingListener = new SimpleListener() {
                 public void objectChanged() {
-                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(plateValues[2]));
-                    docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(plateValues[3]));
+                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
+                    docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(PLATE_384));
                     reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
                 }
             };
