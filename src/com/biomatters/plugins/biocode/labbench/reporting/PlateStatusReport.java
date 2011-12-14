@@ -165,7 +165,12 @@ public class PlateStatusReport extends Report {
 
                         }
                         plateStatus.add(status);
-                        model.fireTableDataChanged();
+                        Runnable runnable = new Runnable() {
+                            public void run() {
+                                model.fireTableDataChanged();
+                            }
+                        };
+                        ThreadUtilities.invokeNowOrLater(runnable);
                     }
                 } catch (SQLException e) {
                     error.set(e);
