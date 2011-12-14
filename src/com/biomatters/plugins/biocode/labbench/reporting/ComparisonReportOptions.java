@@ -32,7 +32,9 @@ public class ComparisonReportOptions extends Options{
 
     private void init(final FimsToLims fimsToLims) {
         Set<DocumentField> documentFields = new LinkedHashSet<DocumentField>();
-        documentFields.addAll(fimsToLims.getFimsFields());
+        if(fimsToLims.limsHasFimsValues()) {
+            documentFields.addAll(fimsToLims.getFimsFields());
+        }
         List<DocumentField> limsSearchFields = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
         limsSearchFields.remove(LIMSConnection.PLATE_TYPE_FIELD);
         limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);

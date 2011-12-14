@@ -55,6 +55,11 @@ public class PlateStatusReport extends Report {
     }
 
     @Override
+    public boolean requiresFimsValues() {
+        return true;
+    }
+
+    @Override
     public ReportChart getChart(Options options, final FimsToLims fimsToLims, final ProgressListener progress) throws SQLException {
         if(!fimsToLims.getFimsConnection().storesPlateAndWellInformation()) {
             return new ReportChart(){

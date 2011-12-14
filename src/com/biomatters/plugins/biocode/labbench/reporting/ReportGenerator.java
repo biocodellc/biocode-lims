@@ -130,7 +130,9 @@ public class ReportGenerator {
         limsSearchFields.remove(LIMSConnection.PLATE_DATE_FIELD);
         limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
         fields.addAll(limsSearchFields);
-        fields.addAll(fimsToLims.getFimsFields());
+        if(fimsToLims.limsHasFimsValues()) {
+            fields.addAll(fimsToLims.getFimsFields());
+        }
         return fields;
     }
 
@@ -233,6 +235,10 @@ public class ReportGenerator {
                 if(chartable != null) {
                     final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report", 1000, false);
                     final Report report1 = report;
+                    if(!fimsToLims.limsHasFimsValues() && report.requiresFimsValues()) {
+                        setReportChart(new NoFimsInLimsReportChart("You must copy your FIMS data into the LIMS before using this report.  <br><br>Click the <i>Copy Now</i> Button above."));
+                        return;
+                    }
                     reportCombo.setEnabled(false);
                     setEnabled(false);
                     Runnable runnable = new Runnable() {
@@ -321,15 +327,6 @@ public class ReportGenerator {
 
         final Action addAction = new GeneiousAction("Add", "Add a new report", IconUtilities.getIcons("add24.png")) {
             public void actionPerformed(ActionEvent e) {
-                Options reportOptions = new Options(ReportGenerator.class);
-                reportOptions.addStringOption("name", "Report Name", "");
-                for(Report report : getNewReports()) {
-                    reportOptions.addChildOptions(report.getTypeName(), report.getTypeName(), report.getTypeDescription(),report.getOptions());
-                }
-                reportOptions.addChildOptionsPageChooser("reportType", "ReportType", Collections.EMPTY_LIST, Options.PageChooserType.COMBO_BOX, false);
-
-                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Create Report", toolbar);
-                dialogOptions.setMaxWidth(Integer.MAX_VALUE);
                 Report newReport = getReport("", null, null, toolbar);
                 if(newReport != null) {
                     editAction.setEnabled(true);
@@ -379,7 +376,14 @@ public class ReportGenerator {
         Options reportOptions = new Options(ReportGenerator.class);
         reportOptions.addStringOption("name", "Report Name", initialName);
         for(Report report : getNewReports()) {
-            Options options = report.getOptions();
+            Options options;
+            if(fimsToLims.limsHasFimsValues() || !report.requiresFimsValues()) {
+                options = report.getOptions();
+            }
+            else {
+                options = new Options(this.getClass());
+                options.addLabel("You must copy your FIMS data into the LIMS before using this report.");
+            }
             String typeName = report.getTypeName();
             if(typeName.equals(initialType)) {
                 options.valuesFromXML(initialOptions.valuesToXML("options"));

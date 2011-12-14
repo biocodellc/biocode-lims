@@ -108,7 +108,8 @@ public class PrimerPerformanceOptions extends Options {
     }
 
     public String getFimsFieldName() {
-        return ((OptionValue)getValue(FIMS_FIELDS)).getLabel();
+        OptionValue value = (OptionValue) getValue(FIMS_FIELDS);
+        return value != null ? value.getLabel() : null;
     }
 
     public boolean isPcr() {

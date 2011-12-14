@@ -13,10 +13,6 @@ public class PlateStatusOptions extends Options {
     static final String PLATE_NAME = "plateName";
 
     public PlateStatusOptions(FimsToLims fimsToLims) {
-        if(!fimsToLims.limsHasFimsValues()) {
-            addLabel("You must copy your FIMS values into the LIMS before using this report.");
-            return;
-        }
         if(!fimsToLims.getFimsConnection().storesPlateAndWellInformation()) {
             addLabel("You must specify plate and well in your FIMS connection before you can use this report.  Please see the connection dialog.");
             return;

@@ -56,6 +56,11 @@ public class PrimerPerformanceReport extends Report{
         return new PrimerPerformanceOptions(this.getClass(), fimsToLims);
     }
 
+    @Override
+    public boolean requiresFimsValues() {
+        return true;
+    }
+
     public ReportChart getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
         final PrimerPerformanceOptions options = (PrimerPerformanceOptions)optionsa;
         String fimsColumn = FimsToLims.getSqlColName(options.getFimsField());

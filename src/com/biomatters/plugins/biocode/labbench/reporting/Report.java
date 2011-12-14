@@ -69,6 +69,10 @@ public abstract class Report implements XMLSerializable {
         this.options = options;
     }
 
+    public boolean requiresFimsValues() {
+        return false;
+    }
+
     public abstract String getTypeName();
 
     public abstract String getTypeDescription();

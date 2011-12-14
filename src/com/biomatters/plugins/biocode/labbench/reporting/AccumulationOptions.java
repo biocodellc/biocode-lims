@@ -43,7 +43,9 @@ public class AccumulationOptions extends Options {
         addDateOption(END_DATE, "     End Date", new Date());
         endAlignHorizontally();
         List<DocumentField> documentFields = new ArrayList<DocumentField>();
-        documentFields.addAll(fimsToLims.getFimsFields());
+        if(fimsToLims.limsHasFimsValues()) {
+            documentFields.addAll(fimsToLims.getFimsFields());
+        }
         documentFields.addAll(LIMSConnection.getSearchAttributes());
         Options countOptions = new Options(this.getClass());
         countOptions.addMultipleOptions(COUNT_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true, true, true), false);
@@ -51,6 +53,8 @@ public class AccumulationOptions extends Options {
         FimsMultiOptions fimsMultiOptions = new FimsMultiOptions(this.getClass(), fimsToLims);
         addChildOptions(FIMS_OPTIONS, "FIMS fields", "", fimsMultiOptions);
         BooleanOption fimsFieldOption = addBooleanOption(FIMS_FIELD, "Restrict by FIMS field", false);
+        fimsFieldOption.setDisabledValue(false);
+        fimsFieldOption.setEnabled(fimsToLims.limsHasFimsValues());
         fimsFieldOption.addChildOptionsDependent(fimsMultiOptions, true, true);
     }
 

@@ -53,6 +53,7 @@ public class PieChartOptions extends Options {
         final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, false, true);
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
         final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaciton or FIMS field", false);
+        fimsField.setDefaultValue(false);
         fimsField.setEnabled(fimsToLims.limsHasFimsValues());
         if(!fimsToLims.limsHasFimsValues()) {
             fimsToLims.addFimsTableChangedListener(new SimpleListener(){
@@ -73,7 +74,9 @@ public class PieChartOptions extends Options {
         limsSearchFields.remove(LIMSConnection.PLATE_NAME_FIELD);
         limsSearchFields.add(new DocumentField("Primer", "PCR Primer", "pcr."+PCROptions.PRIMER_OPTION_ID, String.class, false, false));
         fields.addAll(limsSearchFields);
-        fields.addAll(fimsToLims.getFimsFields());
+        if(fimsToLims.limsHasFimsValues()) {
+            fields.addAll(fimsToLims.getFimsFields());
+        }
         SingleFieldOptions fimsOptions = new SingleFieldOptions(fields);
         final Options fimsMultiOptions = new Options(this.getClass());
         fimsMultiOptions.beginAlignHorizontally("", false);

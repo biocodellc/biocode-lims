@@ -48,6 +48,11 @@ public class FimsAccumulationReport extends AccumulationReport{
         return new FimsAccumulationOptions(this.getClass(), fimsToLims);
     }
 
+    @Override
+    public boolean requiresFimsValues() {
+        return true;
+    }
+
     public ReportChart getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
 
         DateFormat dateFormat = DateFormat.getDateInstance();
