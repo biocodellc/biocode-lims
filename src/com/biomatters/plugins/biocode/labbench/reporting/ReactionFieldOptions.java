@@ -88,7 +88,7 @@ public class ReactionFieldOptions extends Options {
                         
         }
         if(includeLocus) {
-            List<OptionValue> loci = fimsToLims.getLociOptionValues();
+            List<OptionValue> loci = fimsToLims.getLociOptionValues(true);
             ComboBoxOption<OptionValue> locusOption = addComboBoxOption(LOCUS, "Locus", loci, loci.get(0));
             locusOption.setDisabledValue(loci.get(0));
         }

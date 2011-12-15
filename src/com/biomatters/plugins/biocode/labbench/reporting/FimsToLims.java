@@ -86,7 +86,6 @@ public class FimsToLims {
     private void populateLoci() throws SQLException {
         lociOptionValues = new ArrayList<Options.OptionValue>();
         loci = new ArrayList<String>();
-        lociOptionValues.add(new Options.OptionValue("all", "All..."));
         String sql = "SELECT DISTINCT(locus) FROM workflow";
         Statement statement = lims.getConnection().createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
@@ -147,11 +146,16 @@ public class FimsToLims {
     }
 
     /**
-     * Note: this list includes all loci in {@link #getLoci()}, but also includes an entry for "All" loci...
+     * Note: this list includes all loci in {@link #getLoci()}, but may also include an entry for "All" loci...
      * @return
+     * @param includeAll
      */
-    public List<Options.OptionValue> getLociOptionValues() {
-        return lociOptionValues;
+    public List<Options.OptionValue> getLociOptionValues(boolean includeAll) {
+        ArrayList<Options.OptionValue> lociValues = new ArrayList<Options.OptionValue>(lociOptionValues);
+        if(includeAll) {
+            lociValues.add(0, new Options.OptionValue("all", "All..."));
+        }
+        return lociValues;
     }
 
     public List<String> getLoci() {

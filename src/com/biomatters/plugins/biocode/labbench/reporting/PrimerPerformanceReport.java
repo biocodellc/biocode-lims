@@ -210,7 +210,8 @@ public class PrimerPerformanceReport extends Report{
             @Override
             public ChartExporter[] getExporters() {
                 return new ChartExporter[] {
-                        new ExcelChartExporter(getName(), model)
+                        new ExcelChartExporter(getName(), model),
+                        new HTMLChartExporter(getName(), model)
                 };
             }
         };

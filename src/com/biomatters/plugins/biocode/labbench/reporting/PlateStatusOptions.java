@@ -2,6 +2,9 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Created by IntelliJ IDEA.
  * User: Steve
@@ -11,6 +14,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
  */
 public class PlateStatusOptions extends Options {
     static final String PLATE_NAME = "plateName";
+    private String LOCI = "loci";
 
     public PlateStatusOptions(FimsToLims fimsToLims) {
         if(!fimsToLims.getFimsConnection().storesPlateAndWellInformation()) {
@@ -19,7 +23,9 @@ public class PlateStatusOptions extends Options {
         }
 
         addStringOption(PLATE_NAME, "Plate name contains", "", "Leave blank to list all plates");
-
+        List<OptionValue> lociOptionValues = fimsToLims.getLociOptionValues(false);
+        ListOption listOption = new ListOption(LOCI, "Loci", lociOptionValues, lociOptionValues);
+        addCustomOption(listOption);
     }
 
 

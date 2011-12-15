@@ -96,7 +96,10 @@ public class PlateStatusReport extends Report {
 
 
         final List<PlateStatus> plateStatus = new ArrayList<PlateStatus>();
-        final List<String> loci = fimsToLims.getLoci();
+        final List<String> loci = new ArrayList<String>();
+        for(Options.OptionValue value : (List<Options.OptionValue>)options.getValue("loci")) {
+            loci.add(value.getName());
+        }
 
 
         final AbstractTableModel model = new AbstractTableModel(){
@@ -172,6 +175,7 @@ public class PlateStatusReport extends Report {
                         };
                         ThreadUtilities.invokeNowOrLater(runnable);
                     }
+                    progress.setProgress(1.0);
                 } catch (SQLException e) {
                     error.set(e);
                 }
@@ -251,7 +255,7 @@ public class PlateStatusReport extends Report {
             @Override
             public ChartExporter[] getExporters() {
                 return new ChartExporter[] {
-                        new ExcelChartExporter(getName(), model)
+                        new HTMLChartExporter(getName(), model)
                 };
             }
         };

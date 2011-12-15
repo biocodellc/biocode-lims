@@ -191,6 +191,10 @@ public class ReportGenerator {
                 }
                 chooser.showDialog(toolbar, "Export");
                 if(chooser.getSelectedFile() != null) {
+                    if(chooser.getSelectedFile().exists() && !Dialogs.showYesNoDialog("The file "+chooser.getSelectedFile().getName()+" exists.  Do you want to overwrite it?", "File Exists", toolbar, Dialogs.DialogIcon.QUESTION)) {
+                        return;
+                    }
+                    PREFS.put("reportExportPath", chooser.getSelectedFile().getParent());
                     File selectedFile = chooser.getSelectedFile();
                     FileFilter fileFilter = chooser.getFileFilter();
                     ChartExporter selectedExporter = null;
