@@ -136,8 +136,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
             addStringOption("value2", "contains", "");
 
-            final PrimerOption valueOption3 = new PrimerOption("value3", "is");
-            addCustomOption(valueOption3);
+            addPrimerSelectionOption("value3", "is", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
 
 
             endAlignHorizontally();
@@ -171,11 +170,11 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         }
 
 
-        public boolean reactionMatches(Reaction r) {
+        public boolean reactionMatches(Reaction r) throws DocumentOperationException{
             Option conditionOption = getOption("condition");
             String value1 = getValueAsString("value");
             String value2 = getValueAsString("value2");
-            OptionValue value3 = (OptionValue)getValue("value3");
+            DocumentSelectionOption option3 = (DocumentSelectionOption)getOption("value3");
             if(conditionOption.getValue().equals(cherryPickingConditions[0])) { //reaction state
                 return value1.equals(r.getFieldValue(ReactionOptions.RUN_STATUS));
             }
@@ -193,19 +192,43 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             }
             else if(conditionOption.getValue().equals(cherryPickingConditions[2])) { //primer
                 if(r.getType() == Reaction.Type.PCR) { //two primers
-                    OptionValue primer1 = (OptionValue)r.getOptions().getValue(PCROptions.PRIMER_OPTION_ID);
-                    OptionValue primer2 = (OptionValue)r.getOptions().getValue(PCROptions.PRIMER_REVERSE_OPTION_ID);
+                    List<AnnotatedPluginDocument> primer1 = ((DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_OPTION_ID)).getDocuments();
+                    List<AnnotatedPluginDocument> primer2 = ((DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_REVERSE_OPTION_ID)).getDocuments();
 
-                    return primer1.equals(value3) || primer2.equals(value3);
+
+                    for(AnnotatedPluginDocument doc2 : option3.getDocuments()){
+                        for(AnnotatedPluginDocument doc : primer1) {
+                            if(primersAreEqual(doc, doc2)) {
+                                return true;
+                            }
+                        }
+                        for(AnnotatedPluginDocument doc : primer2) {
+                            if(primersAreEqual(doc, doc2)) {
+                                return true;
+                            }
+                        }
+                    }
                 }
                 else if(r.getType() == Reaction.Type.CycleSequencing) {
-                    OptionValue primer = (OptionValue)r.getOptions().getValue(CycleSequencingOptions.PRIMER_OPTION_ID);
+                    List<AnnotatedPluginDocument> primer = ((DocumentSelectionOption)r.getOptions().getOption(CycleSequencingOptions.PRIMER_OPTION_ID)).getDocuments();
 
-                    return primer.equals(value3);
+                    for(AnnotatedPluginDocument doc2 : option3.getDocuments()){
+                        for(AnnotatedPluginDocument doc : primer) {
+                            if(primersAreEqual(doc, doc2)) {
+                                return true;
+                            }
+                        }
+                    }
                 }
                 return false;
             }
             return false;
+        }
+
+        private boolean primersAreEqual(AnnotatedPluginDocument doc1, AnnotatedPluginDocument doc2) throws DocumentOperationException {
+            SequenceDocument seq1 = (SequenceDocument)doc1.getDocument();
+            SequenceDocument seq2 = (SequenceDocument)doc2.getDocument();
+            return seq1.getSequenceString().equalsIgnoreCase(seq2.getSequenceString());
         }
 
 
@@ -377,7 +400,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         }
     }
 
-    List<Reaction> getMatchingReactionsFromPlates(List<PlateDocument> plates, Options options) {
+    List<Reaction> getMatchingReactionsFromPlates(List<PlateDocument> plates, Options options) throws DocumentOperationException {
         List<Reaction> reactions = new ArrayList<Reaction>();
         for(PlateDocument doc : plates) {
             Plate plate = doc.getPlate();
