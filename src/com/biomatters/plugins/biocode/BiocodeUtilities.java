@@ -482,9 +482,11 @@ public class BiocodeUtilities {
         SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)alignmentDoc.getDocument();
         for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
             if (i == alignment.getContigReferenceSequenceIndex()) continue;
-            return !(alignment.getSequence(i) instanceof NucleotideGraphSequenceDocument);
+            if(!(alignment.getSequence(i) instanceof NucleotideGraphSequenceDocument)) {
+                return false;
+            }
         }
-        return false;
+        return true;
     }
 
     public static class CancelListeningThread extends Thread{

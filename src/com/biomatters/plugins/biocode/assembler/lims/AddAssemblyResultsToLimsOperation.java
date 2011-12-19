@@ -85,13 +85,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        boolean isAssembly = false;
-        for(AnnotatedPluginDocument doc : documents) {
-            if(SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-                isAssembly = true;
-                break;
-            }
-        }
         return new AddAssemblyResultsToLimsOptions(documents, isPass);
     }
 
@@ -185,7 +178,13 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         if(SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass())) {
             SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
             for(int i=0; i < alignment.getNumberOfSequences(); i++) {
-                markDocumentPassedOrFailed(isPass, alignment.getReferencedDocument(i));
+                if(alignment.getContigReferenceSequenceIndex() == i) {
+                    continue;
+                }
+                AnnotatedPluginDocument reference = alignment.getReferencedDocument(i);
+                if(reference != null) {
+                    markDocumentPassedOrFailed(isPass, reference);
+                }
             }
             if (alignment.isContig()) {
                 updateReactionStatusField(isPass, document);
