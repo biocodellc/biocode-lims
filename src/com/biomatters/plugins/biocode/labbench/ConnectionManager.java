@@ -466,7 +466,12 @@ public class ConnectionManager implements XMLSerializable{
             if(e == null) {
                 throw new XMLSerializationException("You cannot create a new connection with a null element");
             }
-            fromXML(e);
+            loginOptionsValues = e.getChild(CONNECTION_OPTIONS_ELEMENT_NAME);
+            if(loginOptionsValues == null) {
+                throw new XMLSerializationException("The child element "+CONNECTION_OPTIONS_ELEMENT_NAME+" does not exist");
+            }
+            correctElementForBackwardsCompatibility(loginOptionsValues);
+            name = e.getChildText("Name");
         }
 
         public Connection(String name, Element connectionOptions) {
@@ -475,6 +480,9 @@ public class ConnectionManager implements XMLSerializable{
             loginOptions = new LoginOptions(ConnectionManager.class);
             loginOptions.valuesFromXML(connectionOptions);
             this.loginOptionsValues = connectionOptions;
+            if(loginOptionsValues == null) {
+                throw new IllegalArgumentException("Connection options are null");
+            }
         }
 
         public void correctElementForBackwardsCompatibility(Element e) {   //backwards compatibility - we moved some things to child options...
@@ -711,13 +719,7 @@ public class ConnectionManager implements XMLSerializable{
         }
 
         public void fromXML(Element element) throws XMLSerializationException {
-            loginOptions = null;
-            loginOptionsValues = element.getChild(CONNECTION_OPTIONS_ELEMENT_NAME);
-            if(loginOptionsValues == null) {
-                throw new XMLSerializationException("The child element "+CONNECTION_OPTIONS_ELEMENT_NAME+" does not exist");
-            }
-            correctElementForBackwardsCompatibility(loginOptionsValues);
-            name = element.getChildText("Name");
+            throw new UnsupportedOperationException("Call the constructor");
         }
 
 
@@ -776,7 +778,9 @@ public class ConnectionManager implements XMLSerializable{
 
         public void updateNowThatWeHaveAPassword() throws ConnectionException{
             loginOptions.updateOptions();
-            loginOptions.valuesFromXML(loginOptionsValues);
+            if(loginOptionsValues != null) {
+                loginOptions.valuesFromXML(loginOptionsValues);
+            }
         }
     }
 
