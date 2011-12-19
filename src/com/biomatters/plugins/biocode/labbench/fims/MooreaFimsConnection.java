@@ -159,6 +159,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false));
         fields.add(new DocumentField("Taxa Team", "", "biocode_collecting_event.TaxTeam", String.class, true, false));
         fields.add(new DocumentField("Collector", "", "biocode_collecting_event.Collector", String.class, true, false));
+        fields.add(new DocumentField("Collector List", "", "biocode_collecting_event.Collector_List", String.class, true, false));
         fields.add(new DocumentField("Collection time", "", "biocode_collecting_event.CollectionTime", Date.class, true, false));
         fields.add(new DocumentField("Identified By", "", "biocode.IdentifiedBy", String.class, true, false));
 
@@ -174,6 +175,14 @@ public class MooreaFimsConnection extends FIMSConnection{
         //fields.add(new DocumentField("Taxon Notes", "", "biocode_collecting_event.TaxonNotes", String.class, false, false));
 
         fields.add(new DocumentField("Country", "", "biocode_collecting_event.Country", String.class, false, false));
+        fields.add(new DocumentField("Island", "", "biocode_collecting_event.Island", String.class, false, false));
+        fields.add(new DocumentField("Island Group", "", "biocode_collecting_event.IslandGroup", String.class, false, false));
+        fields.add(new DocumentField("State/Province", "", "biocode_collecting_event.StateProvince", String.class, true, false));
+        fields.add(new DocumentField("County", "", "biocode_collecting_event.County", String.class, true, false));
+        fields.add(new DocumentField("Locality", "", "biocode_collecting_event.Locality", String.class, true, false));
+        fields.add(new DocumentField("Habitat", "", "biocode_collecting_event.Habitat", String.class, true, false));
+        fields.add(new DocumentField("Micro Habitat", "", "biocode_collecting_event.MicroHabitat", String.class, true, false));
+
 
         fields.add(LONGITUDE_FIELD);
         fields.add(LATITUDE_FIELD);
