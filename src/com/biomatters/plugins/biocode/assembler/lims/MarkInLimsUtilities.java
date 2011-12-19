@@ -40,8 +40,8 @@ public class MarkInLimsUtilities {
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
                         if(alignment.getReferencedDocument(i) == null) {
                             throw new DocumentOperationException("The document "+document.getName()+" contains at least " +
-                                    "one sequence that is missing a link to its referenced sequence, and cannot be marked " +
-                                    "as passed or failed.  <br><br>Links to referenced sequences are typically lost by " +
+                                    "one sequence that is missing a link to its original sequence, and cannot be marked " +
+                                    "as passed or failed.  <br><br>Links to original sequences are typically lost by " +
                                     "making changes (for example inserting a base), and then choosing not to apply the " +
                                     "changes to the original sequences when saving the alignment or contig.");
                         }
