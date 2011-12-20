@@ -22,6 +22,7 @@ public class AccumulationOptions extends Options {
     private static final String FIMS_FIELD = "fimsField";
     private static final String START_DATE = "startDate";
     private static final String END_DATE = "endDate";
+    //private static final String TODAY = "today";
 
     public AccumulationOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -40,7 +41,9 @@ public class AccumulationOptions extends Options {
     private void init(FimsToLims fimsToLims) {
         beginAlignHorizontally("", false);
         addDateOption(START_DATE, "Start Date", new Date());
-        addDateOption(END_DATE, "     End Date", new Date());
+        DateOption endDateOption = addDateOption(END_DATE, "     End Date", new Date());
+        BooleanOption todayOption = addBooleanOption("today", "Today", false);
+        todayOption.addDependent(endDateOption, false);
         endAlignHorizontally();
         List<DocumentField> documentFields = new ArrayList<DocumentField>();
         if(fimsToLims.limsHasFimsValues()) {
@@ -89,6 +92,9 @@ public class AccumulationOptions extends Options {
     }
 
     public Date getEndDate() {
+        if((Boolean)getValue("today")) {
+            return new Date();
+        }
         return (Date)getValue(END_DATE);
     }
 

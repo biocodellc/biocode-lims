@@ -182,7 +182,6 @@ public class ComparisonReport extends Report{
             while (set.next()) {
                 int result = set.getInt(2);
                 String value = set.getString(1);
-                System.out.println(result);
                 results.add(new FieldResult(fieldOptions.getNiceName(), value != null && value.length() > 0 ? value : "None", result));
             }
             composite.setProgress(1.0);

@@ -98,7 +98,6 @@ public class FimsAccumulationReport extends AccumulationReport{
                 ResultSet resultSet = statement.executeQuery();
                 resultSet.next();
                 int count = resultSet.getInt(1);
-                System.out.println(date + ": " + count);
                 counts.add(count);
                 series.add(new DateDataItem(date, count));
             }

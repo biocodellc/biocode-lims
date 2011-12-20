@@ -83,7 +83,6 @@ public class SingleFieldOptions extends Options {
                 else {
                     field = BiocodeService.getInstance().getReportingService().getReportGenerator().fimsToLims.getFimsOrLimsField(fieldOption.getValue().getName());
                 }
-                System.out.println("singleFieldOptions "+(System.currentTimeMillis()-time));
                 if (field != null && field.isEnumeratedField()) {
                     containsValueOption.setVisible(false);
                     isValueOption.setVisible(true);

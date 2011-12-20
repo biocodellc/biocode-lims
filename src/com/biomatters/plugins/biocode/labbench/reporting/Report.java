@@ -81,6 +81,10 @@ public abstract class Report implements XMLSerializable {
 
     public abstract ReportChart getChart(Options options, FimsToLims fimsToLims, ProgressListener progress)  throws SQLException;
 
+    public boolean returnsResultsAsynchronously() {
+        return false;
+    }
+
 
     public static abstract class ReportChart {
         public Options getOptions() {

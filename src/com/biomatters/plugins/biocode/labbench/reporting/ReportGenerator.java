@@ -100,7 +100,7 @@ public class ReportGenerator {
                         }
                     }
                 };
-                new Thread(runnable).start();
+                new Thread(runnable, "Copying FIMS data into the LIMS").start();
             }
         };
         if(fimsToLims.limsHasFimsValues()) {
@@ -251,6 +251,9 @@ public class ReportGenerator {
                                 try {
                                     currentReportChart = null;
                                     final Report.ReportChart reportChart = report1.getChart(report1.getOptions(), fimsToLims, progress);
+                                    if(!report.returnsResultsAsynchronously()) {
+                                        progress.setProgress(1.0);
+                                    }
                                     Runnable runnable = new Runnable() {
                                         public void run() {
                                             setReportChart(reportChart);
@@ -603,7 +606,6 @@ public class ReportGenerator {
             ResultSet resultSet = statement.executeQuery();
             resultSet.next();
             int result = resultSet.getInt(1);
-            System.out.println(result);
             return result;
         } catch (SQLException e) {
             e.printStackTrace();

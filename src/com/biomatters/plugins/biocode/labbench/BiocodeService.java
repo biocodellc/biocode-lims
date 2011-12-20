@@ -300,7 +300,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return limsConnection;
     }
 
-    public boolean isLoggedIn() {
+    public synchronized boolean isLoggedIn() {
         return isLoggedIn;
     }
 
@@ -400,8 +400,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     private void logOut() {
-        isLoggedIn = false;
-        loggingIn = false;
+        synchronized (this) {
+            isLoggedIn = false;
+            loggingIn = false;
+        }
         activeConnection = null;
         if(activeFIMSConnection != null) {
             activeFIMSConnection.disconnect();
@@ -450,14 +452,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     private void connect(ConnectionManager.Connection connection, boolean block) {
-        loggingIn = true;
+        synchronized (this) {
+            loggingIn = true;
+        }
         activeConnection = connection;
         //load the connection driver -------------------------------------------------------------------
         String driverFileName = connectionManager.getSqlLocationOptions();
         try {
             new XMLOutputter().output(connection.getXml(true), System.out);
         } catch (IOException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            e.printStackTrace();
         }
 
         String error = null;
@@ -535,8 +539,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 block("Building Caches", null);
             }
             buildCaches();
-            loggingIn = false;
-            isLoggedIn = true;
+            synchronized (this) {
+                isLoggedIn = true;
+                loggingIn = false;
+            }
             if(reportingService != null) {
                 reportingService.notifyLoginStatusChanged();
             }

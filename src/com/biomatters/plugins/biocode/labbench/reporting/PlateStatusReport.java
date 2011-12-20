@@ -60,7 +60,15 @@ public class PlateStatusReport extends Report {
     }
 
     @Override
+    public boolean returnsResultsAsynchronously() {
+        return true;
+    }
+
+    @Override
     public ReportChart getChart(Options options, final FimsToLims fimsToLims, final ProgressListener progress) throws SQLException {
+        if(!fimsToLims.getFimsConnection().storesPlateAndWellInformation()) {
+            throw new SQLException("You must specify plate and well in your FIMS connection before you can use this report.  Please see the connection dialog.");
+        }
         if(!fimsToLims.getFimsConnection().storesPlateAndWellInformation()) {
             return new ReportChart(){
                 @Override
@@ -117,6 +125,14 @@ public class PlateStatusReport extends Report {
                     return plateStatus.get(rowIndex).getPlateName();
                 }
                 return plateStatus.get(rowIndex).getLocusStatus(loci.get(columnIndex-1));
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if(columnIndex == 0) {
+                    return String.class;
+                }
+                return LocusStatus.class;
             }
 
             @Override
@@ -364,7 +380,7 @@ public class PlateStatusReport extends Report {
         }
     }
 
-    private static class LocusStatus {
+    private static class LocusStatus implements Comparable{
         private ReactionStatus pcrStatus;
         private ReactionStatus cyclesequencingStatus;
         private int numberOfTraces;
@@ -400,11 +416,30 @@ public class PlateStatusReport extends Report {
                     "<font color=\""+getColor(numberOfSequences)+"\"><b>"+numberOfSequences+" Sequences</b></font></html>";
         }
 
+        public int compareTo(Object o) {
+            if(!(o instanceof LocusStatus)) {
+                return -1;
+            }
+            LocusStatus status = (LocusStatus)o;
+            int pcrComparison = pcrStatus.compareTo(status.pcrStatus);
+            if(pcrComparison != 0) {
+                return pcrComparison;
+            }
+            int sequencingComparison = cyclesequencingStatus.compareTo(status.cyclesequencingStatus);
+            if(sequencingComparison != 0) {
+                return sequencingComparison;
+            }
+            int tracesComparison = numberOfTraces - status.numberOfTraces;
+            if(tracesComparison != 0) {
+                return tracesComparison;
+            }
+            return numberOfSequences - status.numberOfSequences;
+        }
     }
 
 
 
-    private static class ReactionStatus {
+    private static class ReactionStatus implements Comparable{
         private int performed = 0;
         private int scored = 0;
         private int passed = 0;
@@ -431,6 +466,22 @@ public class PlateStatusReport extends Report {
 
         public int getPassed() {
             return passed;
+        }
+
+        public int compareTo(Object o) {
+            if(!(o instanceof ReactionStatus)) {
+                return -1;
+            }
+            ReactionStatus status = (ReactionStatus)o;
+            int passedComparison = passed-status.passed;
+            if(passedComparison != 0) {
+                return passedComparison;
+            }
+            int scoredComparison = scored-status.scored;
+            if(scoredComparison != 0) {
+                return scoredComparison;
+            }
+            return performed-status.performed;
         }
     }
 }

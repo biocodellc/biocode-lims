@@ -65,7 +65,7 @@ public class AccumulationReport extends Report{
             fieldOptions.setFimsToLims(fimsToLims);
             final String seriesName = fieldOptions.getNiceName();
             composite.beginSubtask("Calculating series "+(i1+1)+" of "+options.getSeriesOptions().size()+" ("+seriesName+")");
-                    System.out.println(options.getSql(fieldOptions));
+            System.out.println(options.getSql(fieldOptions));
             String sql = options.getSql(fieldOptions);
             PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
             List<Object> objects = options.getObjectsForPreparedStatement(fieldOptions);
@@ -74,6 +74,9 @@ public class AccumulationReport extends Report{
             }
             Date startDate = options.getStartDate();
             Date endDate = options.getEndDate();
+            if(startDate.getTime() > endDate.getTime()) {
+                throw new SQLException("You cannot compute a report where the start date is greater than the end date");    
+            }
             if(startDate.equals(endDate)) {
                 throw new SQLException("You cannot compute a report where the start date and end date are the same");
             }
@@ -90,7 +93,6 @@ public class AccumulationReport extends Report{
                 ResultSet resultSet = statement.executeQuery();
                 resultSet.next();
                 int count = resultSet.getInt(1);
-                System.out.println(date + ": " + count);
                 counts.add(count);
                 series.add(new DateDataItem(date, count));
             }
