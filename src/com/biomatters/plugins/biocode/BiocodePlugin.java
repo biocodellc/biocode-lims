@@ -74,7 +74,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "2.2.5";
+        return "2.3.0";
     }
 
     public int getMaximumApiVersion() {
