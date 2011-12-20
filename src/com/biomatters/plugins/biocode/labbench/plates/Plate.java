@@ -77,6 +77,9 @@ public class Plate implements XMLSerializable {
             init(plateSize, type, false);
         }
         else {
+            if(size % 8 == 0) {
+                init(8, size/8, type, true);
+            }
             init(1, size, type, false);
         }
         int thermocycleId = resultSet.getInt("plate.thermocycle");
