@@ -397,11 +397,13 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         progress.beginSubtask("Saving to LIMS");
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
-        Connection connection = limsConnection.getConnection();
-        progress = new CompositeProgressListener(progress, assemblyResults.size());
-        if(connection == null) {
-            throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        Connection connection;
+        try {
+            connection = limsConnection.getConnection();
+        } catch (SQLException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
         }
+        progress = new CompositeProgressListener(progress, assemblyResults.size());
 //        if (progress.getRootProgressListener() instanceof ProgressFrame) {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
 //        }

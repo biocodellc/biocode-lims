@@ -229,9 +229,6 @@ public class LIMSConnection {
 
     public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
         Connection connection = getConnection();
-        if(connection == null) {
-            throw new SQLException("You are not logged in");
-        }
         if(!BiocodeService.getInstance().deleteAllowed(tableName)) {
             throw new SQLException("It appears that you do not have permission to delete from "+tableName+".  Please contact your System Administrator for assistance");
         }
@@ -267,11 +264,11 @@ public class LIMSConnection {
     }
 
     public ResultSet executeQuery(String sql) throws TransactionException{
-        Connection connection = getConnection();
-        if(connection == null) {
-            throw new TransactionException("You are not logged in");
-        }
         try {
+            Connection connection = getConnection();
+            if(connection == null) {
+                throw new TransactionException("You are not logged in");
+            }
             PreparedStatement statement = connection.prepareStatement(sql);
             return statement.executeQuery();
         }
@@ -281,11 +278,11 @@ public class LIMSConnection {
     }
 
     public void executeUpdate(String sql) throws TransactionException {
-        Connection connection = getConnection();
-        if(connection == null) {
-            return;
-        }
         try {
+            Connection connection = getConnection();
+            if(connection == null) {
+                return;
+            }
             connection.setAutoCommit(false);
             for(String s : sql.split("\n")) {
                 PreparedStatement statement = connection.prepareStatement(s);
@@ -304,7 +301,10 @@ public class LIMSConnection {
         }
     }
 
-    public Connection getConnection() {
+    public Connection getConnection() throws SQLException{
+        if(connection == null) {
+            throw new SQLException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
+        }
         return connection;
     }
 

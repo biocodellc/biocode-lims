@@ -38,9 +38,10 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                 final BiocodeService.BlockingDialog dialog = BiocodeService.BlockingDialog.getDialog("Saving Reactions", panel);
                 Runnable runnable = new Runnable() {
                     public void run() {
-                        Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
                         Savepoint savepoint = null;
+                        Connection connection = null;
                         try {
+                            connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
                             connection.setAutoCommit(false);
                             savepoint = connection.setSavepoint("saveReactions");
                             for(int i=0; i < doc.getNumberOfParts(); i++) {
@@ -53,7 +54,7 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                             connection.commit();
                         }
                         catch(SQLException ex) {
-                            if(savepoint != null) {
+                            if(savepoint != null && connection != null) {
                                 try {
                                     if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
                                         connection.rollback(savepoint);
@@ -63,7 +64,9 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                             Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
                         } finally {
                             try {
-                                connection.setAutoCommit(true);
+                                if(connection != null) {
+                                    connection.setAutoCommit(true);
+                                }
                             } catch (SQLException e1) {
                                 e1.printStackTrace();  //don't need to catch this
                             }
