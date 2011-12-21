@@ -70,7 +70,7 @@ public class PrimerPerformanceReport extends Report{
 
         final List<String> fimsValues = ReportGenerator.getDistinctValues(fimsToLims, fimsColumn, FimsToLims.FIMS_VALUES_TABLE, null, false, progress);
 
-        if(progressValues == null) {
+        if(progressValues == null || fimsValues == null) {
             return null;
         }
 

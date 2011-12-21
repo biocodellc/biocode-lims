@@ -22,6 +22,7 @@ public class AccumulationOptions extends Options {
     private static final String FIMS_FIELD = "fimsField";
     private static final String START_DATE = "startDate";
     private static final String END_DATE = "endDate";
+    private static final String TODAY = "today";
     //private static final String TODAY = "today";
     private boolean isLocalLims;
 
@@ -44,7 +45,7 @@ public class AccumulationOptions extends Options {
         beginAlignHorizontally("", false);
         addDateOption(START_DATE, "Start Date", new Date());
         DateOption endDateOption = addDateOption(END_DATE, "     End Date", new Date());
-        BooleanOption todayOption = addBooleanOption("today", "Today", false);
+        BooleanOption todayOption = addBooleanOption(TODAY, "Today", false);
         todayOption.addDependent(endDateOption, false);
         endAlignHorizontally();
         List<DocumentField> documentFields = new ArrayList<DocumentField>();
@@ -100,7 +101,7 @@ public class AccumulationOptions extends Options {
     }
 
     public Date getEndDate() {
-        if((Boolean)getValue("today")) {
+        if((Boolean)getValue(TODAY)) {
             return new Date();
         }
         return (Date)getValue(END_DATE);

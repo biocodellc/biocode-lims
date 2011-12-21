@@ -299,7 +299,7 @@ public class ReactionFieldOptions extends Options {
         String extraTableString = extraTables != null && extraTables.size() > 0 ? StringUtilities.join(", ", extraTables) : null;
         String reactionType = ((OptionValue)getValue(REACTION_TYPE)).getName();
         if(reactionType.equals("Extraction")) {
-            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTables != null ? ", " + extraTableString : "");
+            String start = "SELECT "+(extraSelect != null ? extraSelect+", " : "")+"COUNT(extraction.id) FROM extraction " + (hasWorkflow ? ", workflow" : "") + (extraTableString != null ? ", " + extraTableString : "");
             List<String> terms = new ArrayList<String>();
             if(hasWorkflow) {
                 terms.add("workflow.extractionId = extracion.id ");

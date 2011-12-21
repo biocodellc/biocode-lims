@@ -275,12 +275,15 @@ public class ReportGenerator {
                                 }
                             } catch (SQLException e1) {
                                 e1.printStackTrace();
-                                BiocodeUtilities.displayExceptionDialog(e1);
+                                BiocodeUtilities.displayExceptionDialog("Error creating Chart", "<html>There has been an " +
+                                        "error creating your report:<br><br>"+e1.getMessage()+"<br><br><b>If you believe " +
+                                        "that this is a bug, please click <i>Show Details</i> below, and send the text along " +
+                                        "with a screenshot of your report options to biocode.lims@gmail.com.</b></html>", e1, reportCombo);
                                 setReportPanel(null);
                                 progress.setComplete();
-                            } catch(RuntimeException e1) {
+                            } catch(Throwable e1) {
                                 progress.setComplete();
-                                throw e1;
+                                throw new RuntimeException(e1);
                             }
                             finally {
                                 //progress.setComplete();

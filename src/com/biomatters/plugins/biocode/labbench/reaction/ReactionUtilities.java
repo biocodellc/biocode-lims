@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
@@ -832,9 +833,9 @@ public class ReactionUtilities {
 
     public static void copyReaction(Reaction srcReaction, Reaction destReaction) {
         destReaction.setExtractionId(srcReaction.getExtractionId());
-        Object locus = srcReaction.getFieldValue("locus");
+        Object locus = srcReaction.getFieldValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode());
         if(srcReaction.getType() != Reaction.Type.Extraction && locus != null) {
-            destReaction.getOptions().setValue("locus", locus);
+            destReaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
         }
         destReaction.setFimsSample(srcReaction.getFimsSample());
         destReaction.setWorkflow(srcReaction.getWorkflow());

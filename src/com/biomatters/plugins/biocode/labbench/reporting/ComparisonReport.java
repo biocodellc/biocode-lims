@@ -148,13 +148,17 @@ public class ComparisonReport extends Report{
             else {
                 if(xTable.equals(yTable) || xTable.equals("workflow")) {
                     List<String> extraTables = new ArrayList<String>();
+                    String extraWhere = null;
                     if(options.isFimsRestricted()) {
                         extraTables.add(FimsToLims.FIMS_VALUES_TABLE);
                     }
-                    if(yTable.equals("extraction")) {
+                    if(yTable.equals("extraction") && xTable.equals("workflow")) {
                         extraTables.add("workflow");
+                        extraWhere = "extraction.id = workflow.extractionId";
                     }
-                    sql1 = fieldOptions.getSql(xTable+"."+field, extraTables, true, null);
+
+
+                    sql1 = fieldOptions.getSql(xTable+"."+field, extraTables, true, extraWhere);
                 }
                 else {
                     sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE, xTable) : Arrays.asList(xTable), true, xTable+".workflow = workflow.id");

@@ -122,6 +122,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         static final OptionValue[] valueValues = new OptionValue[] {
                 ReactionOptions.NOT_RUN_VALUE,
                 ReactionOptions.PASSED_VALUE,
+                ReactionOptions.SUSPECT_VALUE,
                 ReactionOptions.FAILED_VALUE
         };
 

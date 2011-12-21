@@ -343,7 +343,7 @@ public class PlateStatusReport extends Report {
                 scored++;
                 passed++;
             }
-            else if(pcrProgress.equals("failed")) {
+            else if(pcrProgress.equals("failed") || pcrProgress.equals("suspect")) {
                 scored++;
             }
         }

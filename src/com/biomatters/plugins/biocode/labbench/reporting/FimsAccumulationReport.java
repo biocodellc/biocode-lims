@@ -63,6 +63,9 @@ public class FimsAccumulationReport extends AccumulationReport{
         progress.setMessage("Getting all possible values for "+options.getFimsField());
         progress.setIndeterminateProgress();
         List<String> fimsValues = ReportGenerator.getDistinctValues(fimsToLims, options.getFimsField(), FimsToLims.FIMS_VALUES_TABLE, null, true, progress);
+        if(fimsValues == null) {
+            return null;
+        }
         ReactionFieldOptions fieldOptions = options.getFieldOptions();
 
         String sql = options.getSql(fimsToLims);
