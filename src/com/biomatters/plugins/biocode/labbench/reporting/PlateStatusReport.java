@@ -78,13 +78,14 @@ public class PlateStatusReport extends Report {
             };
         }
 
-        final String plateColName = FimsToLims.getSqlColName(fimsToLims.getFimsConnection().getPlateDocumentField().getCode());
+        final String plateColName = FimsToLims.getSqlColName(fimsToLims.getFimsConnection().getPlateDocumentField().getCode(), fimsToLims.getLimsConnection().isLocal());
         String plateSql = "SELECT distinct("+ plateColName +") FROM "+FimsToLims.FIMS_VALUES_TABLE;
 
         String plateWhere = options.getValueAsString(PlateStatusOptions.PLATE_NAME);
         if(plateWhere.trim().length() > 0){
             plateSql += " WHERE "+plateColName+" LIKE ?";
         }
+        System.out.println(plateSql);
         PreparedStatement plateNameStatement = fimsToLims.getLimsConnection().getConnection().prepareStatement(plateSql);
 
         if(plateWhere.trim().length() > 0){

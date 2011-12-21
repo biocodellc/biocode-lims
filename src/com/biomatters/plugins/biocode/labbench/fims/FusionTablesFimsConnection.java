@@ -386,7 +386,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
     }
 
     public int getTotalNumberOfSamples() throws ConnectionException {
-        String sql = "SELECT count(*) FROM "+tableId;
+        String sql = "SELECT ROWID FROM "+tableId;
         System.out.println(sql);
         try {
             URL url = new URL(SERVICE_URL + "?sql=" + URLEncoder.encode(sql, "UTF-8"));
@@ -394,13 +394,13 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             GDataRequest request = service.getRequestFactory().getRequest(RequestType.QUERY, url, ContentType.TEXT_PLAIN);
             request.execute();
             BufferedReader reader = new BufferedReader(new InputStreamReader(request.getResponseStream()));
-            Map<String, Object> values = new LinkedHashMap<String, Object>();
-            List<String> colHeaders = new ArrayList<String>();
-            boolean firstTime = true;
             String line = null;
+            int count = -1;
             while ((line = reader.readLine()) != null) {
                 System.out.println(line);
+                count++;
             }
+            return count;
         } catch (IOException e) {
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
@@ -408,7 +408,6 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
         }
-        return -1;
     }
 
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {

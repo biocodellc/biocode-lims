@@ -72,7 +72,7 @@ public class FimsToLims {
     }
 
     public String getTissueColumnId() {
-        return getSqlColName(fims.getTissueSampleDocumentField().getCode());
+        return getSqlColName(fims.getTissueSampleDocumentField().getCode(), getLimsConnection().isLocal());
     }
 
     public LIMSConnection getLimsConnection() {
@@ -303,11 +303,11 @@ public class FimsToLims {
             final List<String> fieldsAndTypes = new ArrayList<String>();
             final List<String> fields = new ArrayList<String>();
             for(DocumentField f : fims.getSearchAttributes()) {
-                String colName = getSqlColName(f.getCode());
+                String colName = getSqlColName(f.getCode(), getLimsConnection().isLocal());
                 fieldsAndTypes.add(colName +" "+getColumnDefinition(f.getName().toLowerCase().contains("notes") ? null : f.getValueType()));
                 fields.add(colName);
             }
-            fieldsAndTypes.add("PRIMARY KEY ("+getSqlColName(fims.getTissueSampleDocumentField().getCode())+")");
+            fieldsAndTypes.add("PRIMARY KEY ("+getSqlColName(fims.getTissueSampleDocumentField().getCode(), getLimsConnection().isLocal())+")");
 
             String createValuesTable = "CREATE TABLE "+FIMS_VALUES_TABLE+"("+ StringUtilities.join(", ", fieldsAndTypes)+")";
             System.out.println(createValuesTable);
@@ -360,7 +360,13 @@ public class FimsToLims {
                 fimsSamples.clear();
             } catch (SQLException e) {
                 System.out.println("error at end: "+e.getMessage());
-                //todo: exception handling
+                for(FimsSample sample : fimsSamples) { //try copy them one by one to find the error...
+                    try {
+                        copyFimsSet(Arrays.asList(sample), limsConnection, fields);
+                    } catch (SQLException e1) {
+                        throw new ConnectionException("There was an error copying your FIMS values into the LIMS: "+e.getMessage(), e);
+                    }
+                }
             }
             if(listener.isCanceled()) {
                 return;
@@ -378,7 +384,7 @@ public class FimsToLims {
             String fillDefinitionTable = "INSERT INTO " + FIMS_DEFINITION_TABLE + " (field, name) VALUES (?, ?)";
             PreparedStatement fillStatement = limsConnection.prepareStatement(fillDefinitionTable);
             for(DocumentField f : fims.getSearchAttributes()) {
-                fillStatement.setString(1, getSqlColName(f.getCode()));
+                fillStatement.setString(1, getSqlColName(f.getCode(), getLimsConnection().isLocal()));
                 fillStatement.setString(2, f.getName());
                 fillStatement.executeUpdate();
             }
@@ -413,6 +419,13 @@ public class FimsToLims {
 
     }
 
+    public static String quoteSqlColumn(String colName, boolean isLocal) {
+        if(!isLocal) {
+            return colName;
+        }
+        return "\""+colName+"\"";
+    }
+
     public void copyFimsSet(List<FimsSample> fimsSamples, Connection limsConnection, List<String> fields) throws SQLException {
         StringBuilder sql = new StringBuilder("INSERT INTO "+FIMS_VALUES_TABLE+"("+StringUtilities.join(", ", fields)+") VALUES ");
         for(int i=0; i < fimsSamples.size(); i++) {
@@ -438,16 +451,21 @@ public class FimsToLims {
         statement.executeUpdate();
     }
 
-    public static String getSqlColName(String code) {
+    public static String getSqlColName(String code, boolean isLocal) {
+        if(code.length() == 0) {
+            return "a";
+        }
         if(code.contains(":")) {
             code = code.substring(code.indexOf(":")+1);
         }
         String value = code.replace('.', '_');
+        value = value.replace('\'', '_');
+        value = value.replaceAll("\\s", "_");
         try {
             Integer.parseInt(""+value.charAt(0));
             value = "a"+value;
         } catch (NumberFormatException e) {} //do nothing
-        return value;
+        return quoteSqlColumn(value, isLocal);
     }
 
     private List<DocumentField> fimsFields;

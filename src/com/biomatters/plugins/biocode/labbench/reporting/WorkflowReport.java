@@ -62,7 +62,7 @@ public class WorkflowReport extends Report{
 
     public ReportChart getChart(Options options, final FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
         final Options.OptionValue optionValue = (Options.OptionValue)options.getValue("field");
-        String field = FimsToLims.getSqlColName(optionValue.getName());
+        String field = FimsToLims.getSqlColName(optionValue.getName(), fimsToLims.getLimsConnection().isLocal());
         String sql  = "SELECT DISTINCT("+field+") FROM "+FimsToLims.FIMS_VALUES_TABLE;
         Statement statement = fimsToLims.getLimsConnection().getConnection().createStatement();
         ResultSet resultSet = statement.executeQuery(sql);

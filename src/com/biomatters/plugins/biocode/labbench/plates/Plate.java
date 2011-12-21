@@ -77,10 +77,7 @@ public class Plate implements XMLSerializable {
             init(plateSize, type, false);
         }
         else {
-            if(size % 8 == 0) {
-                init(8, size/8, type, true);
-            }
-            init(1, size, type, false);
+            init(size, type, false);
         }
         int thermocycleId = resultSet.getInt("plate.thermocycle");
         setThermocycleFromId(thermocycleId);
@@ -117,11 +114,15 @@ public class Plate implements XMLSerializable {
     }
 
     public Plate(int numberOfWells, Reaction.Type type) {
+        init(numberOfWells, type, true);
+    }
+
+    private void init(int numberOfWells, Reaction.Type type, boolean initializeReactions) {
         if(numberOfWells % 8 == 0) {
-            init(8, numberOfWells/8, type, true);
+            init(8, numberOfWells/8, type, initializeReactions);
         }
         else {
-            init(1, numberOfWells, type, true);
+            init(1, numberOfWells, type, initializeReactions);
         }
     }
 
@@ -445,7 +446,7 @@ public class Plate implements XMLSerializable {
             init(sizeEnum, type, false);
         }
         else {
-            init(1, size, type, false);
+            init(size, type, false);
         }
         for(Element e : element.getChildren("reaction")) {
             Reaction r = XMLSerializer.classFromXML(e, Reaction.class);

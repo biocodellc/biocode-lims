@@ -26,6 +26,7 @@ public class FimsAccumulationOptions extends Options {
     private static final String FIMS_FIELD = "fimsField";
     private static final String START_DATE = "startDate";
     private static final String END_DATE = "endDate";
+    private boolean isLocalLims;
 
     public FimsAccumulationOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -42,6 +43,7 @@ public class FimsAccumulationOptions extends Options {
     }
 
     private void init(FimsToLims fimsToLims) {
+        isLocalLims = fimsToLims.getLimsConnection().isLocal();
         beginAlignHorizontally("", false);
         addDateOption(START_DATE, "Start Date", new Date());
         addDateOption(END_DATE, "     End Date", new Date());
@@ -68,7 +70,7 @@ public class FimsAccumulationOptions extends Options {
 
         sql += " AND "+FimsToLims.FIMS_VALUES_TABLE+"."+getFimsField()+"=?";
 
-        sql += " AND "+getFieldOptions().getTable()+".date < ?";
+        sql += " AND "+getFieldOptions().getTable()+".date <= ?";
 
         return sql;
     }
@@ -82,6 +84,6 @@ public class FimsAccumulationOptions extends Options {
     }
 
     public String getFimsField() {
-        return FimsToLims.getSqlColName(((Options.OptionValue)getChildOptions().get(FIMS_OPTIONS).getValue(FIMS_FIELD)).getName());
+        return FimsToLims.getSqlColName(((Options.OptionValue)getChildOptions().get(FIMS_OPTIONS).getValue(FIMS_FIELD)).getName(), isLocalLims);
     }
 }

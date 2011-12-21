@@ -63,7 +63,7 @@ public class PrimerPerformanceReport extends Report{
 
     public ReportChart getChart(Options optionsa, FimsToLims fimsToLims, ProgressListener progress) throws SQLException {
         final PrimerPerformanceOptions options = (PrimerPerformanceOptions)optionsa;
-        String fimsColumn = FimsToLims.getSqlColName(options.getFimsField());
+        String fimsColumn = FimsToLims.getSqlColName(options.getFimsField(), fimsToLims.getLimsConnection().isLocal());
         boolean pcr = options.isPcr();
 
         final List<String> progressValues = ReportGenerator.getDistinctValues(fimsToLims, "progress", "pcr", null, true, progress);

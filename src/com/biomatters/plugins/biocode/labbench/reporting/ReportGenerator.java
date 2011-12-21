@@ -80,6 +80,13 @@ public class ReportGenerator {
             return panel;
         }
 
+        final GLabel label = new GLabel(getFimsCopyLabel());
+        final JButton button = new GButton("Copy Now");
+
+
+        panel.add(label);
+        panel.add(button);
+
         ActionListener updateFimsCopy = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 final ProgressFrame frame = new ProgressFrame("Copying FIMS", "Copying FIMS records into your LIMS database", 1000, true, GuiUtilities.getMainFrame());
@@ -87,40 +94,35 @@ public class ReportGenerator {
                     public void run() {
                         try {
                             fimsToLims.createFimsTable(frame);
-                            Runnable runnable = new Runnable() {
-                                public void run() {
-                                    panel.removeAll();
-                                    panel.add(getFimsPanel());
-                                }
-                            };
-                            ThreadUtilities.invokeNowOrLater(runnable);
                         } catch (ConnectionException e1) {
                             frame.cancel();
                             Dialogs.showMessageDialog(e1.getMessage());
+                        } finally {
+                            Runnable runnable = new Runnable() {
+                                public void run() {
+                                    label.setText(getFimsCopyLabel());
+                                    panel.revalidate();
+                                }
+                            };
+                            ThreadUtilities.invokeNowOrLater(runnable);
                         }
                     }
                 };
                 new Thread(runnable, "Copying FIMS data into the LIMS").start();
             }
         };
+        button.addActionListener(updateFimsCopy);
+        return panel;
+    }
+
+    private String getFimsCopyLabel() {
         if(fimsToLims.limsHasFimsValues()) {
             Date date = fimsToLims.getDateLastCopied();
-            GLabel label = new GLabel("You last updated the copy of FIMS in your LIMS on "+ DateFormat.getDateInstance().format(date));
-            JButton button = new GButton("Copy Now");
-
-            button.addActionListener(updateFimsCopy);
-            panel.add(label);
-            panel.add(button);
+            return "You last updated the copy of FIMS in your LIMS on "+ DateFormat.getDateInstance().format(date);
         }
         else {
-            JLabel label = new GLabel("You need to copy your FIMS data to the LIMS database in order to make reports based on FIMS fields");
-            JButton button = new GButton("Copy Now");
-
-            button.addActionListener(updateFimsCopy);
-            panel.add(label);
-            panel.add(button);
+            return "You need to copy your FIMS data to the LIMS database in order to make reports based on FIMS fields";
         }
-        return panel;
     }
 
     public static List<DocumentField> getFieldValues(FimsToLims fimsToLims) {

@@ -25,6 +25,7 @@ public class PieChartOptions extends Options {
 
     protected String tissueColumnId;
     static String REACTION_FIELDS = "reactionFields";
+    private boolean isLocalLims;
 
     public PieChartOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -50,6 +51,7 @@ public class PieChartOptions extends Options {
     }
 
     private void init(final FimsToLims fimsToLims) {
+        isLocalLims = fimsToLims.getLimsConnection().isLocal();
         final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, false, true);
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
         final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaciton or FIMS field", false);
@@ -138,7 +140,7 @@ public class PieChartOptions extends Options {
                 SingleFieldOptions fimsFieldOptions = (SingleFieldOptions)fimsOption;
 
                 String table = isFimsField(fimsFieldOptions.getFieldName()) ?
-                        "f."+FimsToLims.getSqlColName(fimsFieldOptions.getFieldName())
+                        "f."+FimsToLims.getSqlColName(fimsFieldOptions.getFieldName(), isLocalLims)
                         :
                         ReportGenerator.getTableFieldName(getReactionTable(), fimsFieldOptions.getFieldName());
                 fimsTerms.add(table+" "+fimsFieldOptions.getComparitor()+" ?");

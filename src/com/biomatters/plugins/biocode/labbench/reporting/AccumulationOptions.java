@@ -23,6 +23,7 @@ public class AccumulationOptions extends Options {
     private static final String START_DATE = "startDate";
     private static final String END_DATE = "endDate";
     //private static final String TODAY = "today";
+    private boolean isLocalLims;
 
     public AccumulationOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -39,6 +40,7 @@ public class AccumulationOptions extends Options {
     }
 
     private void init(FimsToLims fimsToLims) {
+        isLocalLims = fimsToLims.getLimsConnection().isLocal();
         beginAlignHorizontally("", false);
         addDateOption(START_DATE, "Start Date", new Date());
         DateOption endDateOption = addDateOption(END_DATE, "     End Date", new Date());
@@ -76,14 +78,20 @@ public class AccumulationOptions extends Options {
             String join = fimsMultiOptions.isOr() ? " OR " : " AND ";
             for (int i = 0; i < fimsOptions.size(); i++) {
                 SingleFieldOptions option = fimsMultiOptions.getFimsOptions().get(i);
-                sql += FimsToLims.FIMS_VALUES_TABLE+"." + FimsToLims.getSqlColName(option.getFieldName()) + " " + option.getComparitor() + " " + "?";
+                sql += FimsToLims.FIMS_VALUES_TABLE+"." + FimsToLims.getSqlColName(option.getFieldName(), isLocalLims) + " " + option.getComparitor() + " " + "?";
                 if(i < fimsOptions.size()-1) {
                     sql += join;
                 }
             }
             sql += ")";
         }
-        sql += (sql.trim().endsWith("WHERE") ? "" : " AND ")+countOptions.getTable()+".date < ?";
+        if(sql.contains("WHERE")) {
+            sql += (sql.trim().endsWith("WHERE") ? "" : " AND ");
+        }
+        else {
+            sql += " WHERE ";
+        }
+        sql += countOptions.getTable()+".date <= ?";
         return sql;
     }
 

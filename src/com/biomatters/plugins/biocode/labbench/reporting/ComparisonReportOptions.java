@@ -20,6 +20,7 @@ public class ComparisonReportOptions extends Options{
     private String FIELD_OPTION = "field";
     private String Y_CHILD_OPTIONS = "yAxis";
     private String Y_MULTIPLE_OPTIONS = "reactionFieldOptions";
+    private boolean isLocalLims;
 
     public ComparisonReportOptions(Class cl, FimsToLims fimsToLims) {
         super(cl);
@@ -31,6 +32,7 @@ public class ComparisonReportOptions extends Options{
     }
 
     private void init(final FimsToLims fimsToLims) {
+        isLocalLims = fimsToLims.getLimsConnection().isLocal();
         Set<DocumentField> documentFields = new LinkedHashSet<DocumentField>();
         if(fimsToLims.limsHasFimsValues()) {
             documentFields.addAll(fimsToLims.getFimsFields());
@@ -83,7 +85,7 @@ public class ComparisonReportOptions extends Options{
         FimsMultiOptions multiOptions = (FimsMultiOptions)getChildOptions().get(FIMS_OPTIONS);
         List<String> results = new ArrayList<String>();
         for(SingleFieldOptions options : multiOptions.getFimsOptions()) {
-            results.add(FimsToLims.getSqlColName(options.getFieldName())+" LIKE ?");
+            results.add(FimsToLims.getSqlColName(options.getFieldName(), isLocalLims)+" LIKE ?");
         }
         return results;
     }

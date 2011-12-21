@@ -114,7 +114,7 @@ public class ComparisonReport extends Report{
             field = field.substring(field.indexOf(".")+1);
         }
         if(fims) {
-            field = FimsToLims.getSqlColName(field);
+            field = FimsToLims.getSqlColName(field, fimsToLims.getLimsConnection().isLocal());
         }
         final List<ReactionFieldOptions> fieldOptionsList = options.getYAxisOptions();
         Set<String> loci = new LinkedHashSet<String>();
@@ -147,7 +147,14 @@ public class ComparisonReport extends Report{
             }
             else {
                 if(xTable.equals(yTable) || xTable.equals("workflow")) {
-                    sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE) : null, true, null);
+                    List<String> extraTables = new ArrayList<String>();
+                    if(options.isFimsRestricted()) {
+                        extraTables.add(FimsToLims.FIMS_VALUES_TABLE);
+                    }
+                    if(yTable.equals("extraction")) {
+                        extraTables.add("workflow");
+                    }
+                    sql1 = fieldOptions.getSql(xTable+"."+field, extraTables, true, null);
                 }
                 else {
                     sql1 = fieldOptions.getSql(xTable+"."+field, options.isFimsRestricted() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE, xTable) : Arrays.asList(xTable), true, xTable+".workflow = workflow.id");
@@ -158,7 +165,7 @@ public class ComparisonReport extends Report{
                 sql1 = sql1 + StringUtilities.join(options.getFimsComparator(), options.getFimsFieldsForSql());
                 sql1 = sql1 + ")";
             }
-            sql1 = sql1 + "GROUP BY "+xTable+"."+field;
+            sql1 = sql1 + " GROUP BY "+xTable+"."+field;
             System.out.println(sql1);
 
             PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql1);
