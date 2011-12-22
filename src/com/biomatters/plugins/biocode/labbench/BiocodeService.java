@@ -1821,11 +1821,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             SAXBuilder builder = new SAXBuilder();
             try {
                 connectionManager = new ConnectionManager(builder.build(file).detachRootElement());
-                String sqlLocation = connectionManager.getSqlLocationOptions();
-                String error = loadMySqlDriver(true, sqlLocation);
-                if(error != null) {
-                    Dialogs.showMessageDialog("Could not load MySQL driver file "+sqlLocation+" \n\n"+error);
-                }
             } catch (XMLSerializationException e) {
                 e.printStackTrace();
                 connectionManager = new ConnectionManager();
