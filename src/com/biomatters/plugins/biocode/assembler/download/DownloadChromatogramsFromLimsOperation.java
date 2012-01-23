@@ -17,6 +17,7 @@ import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
+import com.biomatters.plugins.biocode.labbench.BiocodeCallback;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
@@ -71,130 +72,137 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.2, 0.5, 0.2);
-        progress.setIndeterminateProgress();
-        progress.beginSubtask("Getting reactions");
-        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
-        List<String> plateNames = ((DownloadChromatogramsFromLimsOptions)options).getPlateNames();
-        List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
-        final Map<CycleSequencingReaction, FimsData> fimsDataForReactions = new HashMap<CycleSequencingReaction, FimsData>();
-        CompositeProgressListener reactionsProgress = new CompositeProgressListener(progress, plateNames.size());
-        for (String plateName : plateNames) {
-            reactionsProgress.beginSubtask(plateName);
-            if (reactionsProgress.isCanceled()) return null;
-            Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);
-            List<PlateDocument> plateDocuments;
+        BiocodeCallback callback = new BiocodeCallback(progressListener);
+        BiocodeService.getInstance().registerCallback(callback);
+        try {
+            CompositeProgressListener progress = new CompositeProgressListener(callback, 0.2, 0.5, 0.2);
+            progress.setIndeterminateProgress();
+            progress.beginSubtask("Getting reactions");
+            LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+            List<String> plateNames = ((DownloadChromatogramsFromLimsOptions)options).getPlateNames();
+            List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
+            final Map<CycleSequencingReaction, FimsData> fimsDataForReactions = new HashMap<CycleSequencingReaction, FimsData>();
+            CompositeProgressListener reactionsProgress = new CompositeProgressListener(progress, plateNames.size());
+            for (String plateName : plateNames) {
+                reactionsProgress.beginSubtask(plateName);
+                if (reactionsProgress.isCanceled()) return null;
+                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);
+                List<PlateDocument> plateDocuments;
 
+                try {
+                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                }
+                if (plateDocuments.isEmpty()) {
+                    throw new DocumentOperationException("No plate found with name \"" + plateName + "\"");
+                }
+                if (plateDocuments.size() != 1) {
+                    throw new DocumentOperationException("Multiple plates found matching name \"" + plateName + "\"");
+                }
+                Plate plate = plateDocuments.get(0).getPlate();
+                if (plate.getReactionType() != Reaction.Type.CycleSequencing) {
+                    throw new DocumentOperationException("Plate \"" + plateName + "\" is not a sequencing plate");
+                }
+
+                List<Query> workflowNames = new ArrayList<Query>();
+                for (Reaction reaction : plate.getReactions()) {
+                    if(!reaction.isEmpty() && reaction.getWorkflow() != null) {
+                        workflowNames.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, reaction.getWorkflow().getName()));
+                    }
+                }
+
+                Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.EMPTY_MAP);
+                List<WorkflowDocument> workflows;
+                try {
+                    workflows = limsConnection.getMatchingWorkflowDocuments(workflowQuery, Collections.EMPTY_LIST, null);
+                } catch (SQLException e) {
+                    throw new DocumentOperationException(e.getMessage(), e);
+                }
+
+                for (Reaction reaction : plate.getReactions()) {
+                    if (reactionsProgress.isCanceled()) return null;
+                    if (!reaction.isEmpty() && reaction.getWorkflow() != null) {
+                        reactions.add((CycleSequencingReaction) reaction);
+                        BiocodeUtilities.Well well = Plate.getWell(reaction.getPosition(), plate.getPlateSize());
+                        WorkflowDocument workflow = findWorkflow(workflows, reaction.getWorkflow().getId());
+                        if(workflow != null) {
+                            fimsDataForReactions.put((CycleSequencingReaction) reaction, new FimsData(workflow, plate.getName(), well));
+                        }
+                        else {
+                            fimsDataForReactions.put((CycleSequencingReaction)reaction, new FimsData(reaction.getFimsSample(), plate.getName(), well));
+                        }
+
+                    }
+                }
+            }
+            progress.beginSubtask("Downloading Traces");
             try {
-                plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
+                BiocodeUtilities.downloadTracesForReactions(reactions, progress);
             } catch (SQLException e) {
                 e.printStackTrace();
-                throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
+            } catch (DocumentImportException e) {
+                e.printStackTrace();
+                throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
             }
-            if (plateDocuments.isEmpty()) {
-                throw new DocumentOperationException("No plate found with name \"" + plateName + "\"");
-            }
-            if (plateDocuments.size() != 1) {
-                throw new DocumentOperationException("Multiple plates found matching name \"" + plateName + "\"");
-            }
-            Plate plate = plateDocuments.get(0).getPlate();
-            if (plate.getReactionType() != Reaction.Type.CycleSequencing) {
-                throw new DocumentOperationException("Plate \"" + plateName + "\" is not a sequencing plate");
-            }
-
-            List<Query> workflowNames = new ArrayList<Query>();
-            for (Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty() && reaction.getWorkflow() != null) {
-                    workflowNames.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, reaction.getWorkflow().getName()));
-                }
-            }
-
-            Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.EMPTY_MAP);
-            List<WorkflowDocument> workflows;
-            try {
-                workflows = limsConnection.getMatchingWorkflowDocuments(workflowQuery, Collections.EMPTY_LIST, null);
-            } catch (SQLException e) {
-                throw new DocumentOperationException(e.getMessage(), e);
-            }
-
-            for (Reaction reaction : plate.getReactions()) {
-                if (reactionsProgress.isCanceled()) return null;
-                if (!reaction.isEmpty() && reaction.getWorkflow() != null) {
-                    reactions.add((CycleSequencingReaction) reaction);
-                    BiocodeUtilities.Well well = Plate.getWell(reaction.getPosition(), plate.getPlateSize());
-                    WorkflowDocument workflow = findWorkflow(workflows, reaction.getWorkflow().getId());
-                    if(workflow != null) {
-                        fimsDataForReactions.put((CycleSequencingReaction) reaction, new FimsData(workflow, plate.getName(), well));
-                    }
-                    else {
-                        fimsDataForReactions.put((CycleSequencingReaction)reaction, new FimsData(reaction.getFimsSample(), plate.getName(), well));
-                    }
-
-                }
-            }
-        }
-        progress.beginSubtask("Downloading Traces");
-        try {
-            BiocodeUtilities.downloadTracesForReactions(reactions, progress);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
-        } catch (DocumentImportException e) {
-            e.printStackTrace();
-            throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
-        }
-        progress.beginSubtask("Creating Documents...");
-        final Map<AnnotatedPluginDocument, FimsData> fimsData = new HashMap<AnnotatedPluginDocument, FimsData>();
-        List<AnnotatedPluginDocument> chromatogramDocuments = new ArrayList<AnnotatedPluginDocument>();
-        CompositeProgressListener tracesProgress = new CompositeProgressListener(progress, reactions.size());
-        for (CycleSequencingReaction reaction : reactions) {
-            tracesProgress.beginSubtask();
-            if (tracesProgress.isCanceled()) return null;
-            CycleSequencingOptions sequencingOptions = (CycleSequencingOptions) reaction.getOptions();
-            boolean isForward = sequencingOptions.getValueAsString(CycleSequencingOptions.DIRECTION).equals(CycleSequencingOptions.FORWARD_VALUE);
-            List<Trace> traces = reaction.getTraces();
-            if (traces == null) continue;
-            for(Trace trace : traces) {
-                List<NucleotideSequenceDocument> traceSequences = trace.getSequences();
-                if(traceSequences == null) {
-                    continue;
-                }
-                for (NucleotideSequenceDocument traceSequence : traceSequences) {
-                    if(traceSequence == null) {
+            progress.beginSubtask("Creating Documents...");
+            final Map<AnnotatedPluginDocument, FimsData> fimsData = new HashMap<AnnotatedPluginDocument, FimsData>();
+            List<AnnotatedPluginDocument> chromatogramDocuments = new ArrayList<AnnotatedPluginDocument>();
+            CompositeProgressListener tracesProgress = new CompositeProgressListener(progress, reactions.size());
+            for (CycleSequencingReaction reaction : reactions) {
+                tracesProgress.beginSubtask();
+                if (tracesProgress.isCanceled()) return null;
+                CycleSequencingOptions sequencingOptions = (CycleSequencingOptions) reaction.getOptions();
+                boolean isForward = sequencingOptions.getValueAsString(CycleSequencingOptions.DIRECTION).equals(CycleSequencingOptions.FORWARD_VALUE);
+                List<Trace> traces = reaction.getTraces();
+                if (traces == null) continue;
+                for(Trace trace : traces) {
+                    List<NucleotideSequenceDocument> traceSequences = trace.getSequences();
+                    if(traceSequences == null) {
                         continue;
                     }
-                    AnnotatedPluginDocument traceDocument = DocumentUtilities.createAnnotatedPluginDocument(traceSequence);
-                    traceDocument.setFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD, isForward);
-                    fimsData.put(traceDocument, fimsDataForReactions.get(reaction));
-                    chromatogramDocuments.add(traceDocument);
+                    for (NucleotideSequenceDocument traceSequence : traceSequences) {
+                        if(traceSequence == null) {
+                            continue;
+                        }
+                        AnnotatedPluginDocument traceDocument = DocumentUtilities.createAnnotatedPluginDocument(traceSequence);
+                        traceDocument.setFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD, isForward);
+                        fimsData.put(traceDocument, fimsDataForReactions.get(reaction));
+                        chromatogramDocuments.add(traceDocument);
+                    }
+                }
+                reaction.purgeChromats();
+            }
+            if (progress.isCanceled()) return null;
+            FimsDataGetter fimsDataGetter = new FimsDataGetter() {
+                public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                    return fimsData.get(document);
+                }
+            };
+            AnnotatedPluginDocument[] array = chromatogramDocuments.toArray(new AnnotatedPluginDocument[chromatogramDocuments.size()]);
+            try {
+                AnnotateUtilities.annotateFimsData(array, ProgressListener.EMPTY, fimsDataGetter);
+            } catch (DocumentOperationException e) {
+                if (!isAutomated) {
+                    String continueButton = "Continue";
+                    Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {continueButton, "Cancel"}, "Some FIMS Data Not Found");
+                    Object choice = Dialogs.showDialog(dialogOptions, e.getMessage());
+                    if (!choice.equals(continueButton)) {
+                        return null;
+                    }
                 }
             }
-            reaction.purgeChromats();
+            if (progress.isCanceled()) return null;
+            return chromatogramDocuments;
         }
-        if (progress.isCanceled()) return null;
-        FimsDataGetter fimsDataGetter = new FimsDataGetter() {
-            public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
-                return fimsData.get(document);
-            }
-        };
-        AnnotatedPluginDocument[] array = chromatogramDocuments.toArray(new AnnotatedPluginDocument[chromatogramDocuments.size()]);
-        try {
-            AnnotateUtilities.annotateFimsData(array, ProgressListener.EMPTY, fimsDataGetter);
-        } catch (DocumentOperationException e) {
-            if (!isAutomated) {
-                String continueButton = "Continue";
-                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {continueButton, "Cancel"}, "Some FIMS Data Not Found");
-                Object choice = Dialogs.showDialog(dialogOptions, e.getMessage());
-                if (!choice.equals(continueButton)) {
-                    return null;
-                }
-            }
+        finally {
+            BiocodeService.getInstance().unregisterCallback(callback);
         }
-        if (progress.isCanceled()) return null;
-        return chromatogramDocuments;
     }
 
     private static WorkflowDocument findWorkflow(List<WorkflowDocument> workflows, int id) {

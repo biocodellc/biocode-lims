@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.BiocodeCallback;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingCocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRCocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
@@ -277,12 +278,14 @@ public class FimsToLims {
     }
 
 
-    public void createFimsTable(final ProgressListener listener) throws ConnectionException {
+    public void createFimsTable(final ProgressListener progress) throws ConnectionException {
         BiocodeService service = BiocodeService.getInstance();
-        if(!service.isLoggedIn() || listener.isCanceled()) {
+        if(!service.isLoggedIn() || progress.isCanceled()) {
             return;
         }
 
+        final BiocodeCallback listener = new BiocodeCallback(progress);
+        BiocodeService.getInstance().registerCallback(listener);
         try {
             listener.setIndeterminateProgress();
 
@@ -415,6 +418,7 @@ public class FimsToLims {
 
         } finally {
             listener.setProgress(1.0);
+            BiocodeService.getInstance().unregisterCallback(listener);
         }
 
     }

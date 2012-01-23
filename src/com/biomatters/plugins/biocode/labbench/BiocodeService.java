@@ -72,7 +72,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean loggingIn;
     ReportingService reportingService;
     private Thread disconnectCheckingThread;
-    private boolean searching = false;
 
     private BiocodeService() {
     }
@@ -404,6 +403,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             isLoggedIn = false;
             loggingIn = false;
         }
+        for(BiocodeCallback callback : activeCallbacks) {
+            callback.cancel();
+        }
+        activeCallbacks.clear();
         activeConnection = null;
         if(activeFIMSConnection != null) {
             activeFIMSConnection.disconnect();
@@ -647,13 +650,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             @Override
             public void run() {
                 while(isLoggedIn() && limsConnection != null) {
-                    if(!searching) {
+                    if(activeCallbacks.isEmpty()) {
                         try {
                             limsConnection.getConnection().createStatement().execute(limsConnection.isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
                         } catch (SQLException e) {
-                            e.printStackTrace();
-                            if(isLoggedIn()) {
-                                logOut();
+                            if(!e.getMessage().contains("Streaming result set")) {  //last ditch attempt to stop the system logging users out incorrectly - we should have caught all cases of this because the operations creating streaming result sets should have registered their callbacks/progress listeners with the service
+                                e.printStackTrace();
+                                if(isLoggedIn()) {
+                                    logOut();
+                                }
                             }
                         }
                     }
@@ -673,9 +678,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         retrieve(query, callback, urnsToNotRetrieve, false);
     }
 
-    private void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
+    private Set<BiocodeCallback> activeCallbacks = new HashSet<BiocodeCallback>();
+
+    private void retrieve(Query query, RetrieveCallback rc, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
+        BiocodeCallback callback = null;
+        if(rc != null) {
+            callback = new BiocodeCallback(rc);
+            activeCallbacks.add(callback);
+        }
         try {
-            searching = true;
             List<FimsSample> tissueSamples = null;
             List<Query> fimsQueries = new ArrayList<Query>();
             List<Query> limsQueries = new ArrayList<Query>();
@@ -831,7 +842,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         }
         finally {
-            searching = false;
+            if(callback != null) {
+                activeCallbacks.remove(callback);
+            }
         }
     }
 
@@ -2229,6 +2242,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         statement.close();
         return result;
+    }
+
+    public void registerCallback(BiocodeCallback callback) {
+        activeCallbacks.add(callback);
+    }
+
+    public void unregisterCallback(BiocodeCallback callback) {
+        activeCallbacks.remove(callback);
     }
 
 //    public Map<String, String> getTissueIdsFromBarcodes(List<String> barcodeIds) throws ConnectionException {
