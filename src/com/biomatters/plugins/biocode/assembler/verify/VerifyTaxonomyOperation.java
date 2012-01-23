@@ -62,19 +62,7 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocs, ProgressListener progressListener, Options o) throws DocumentOperationException {
         VerifyTaxonomyOptions options = (VerifyTaxonomyOptions) o;
-        Map<AnnotatedPluginDocument, String> docMap = new LinkedHashMap<AnnotatedPluginDocument, String>();
-        List<AnnotatedPluginDocument> alignmentDocs = new ArrayList<AnnotatedPluginDocument>(annotatedDocs.length);
-        for(AnnotatedPluginDocument doc : annotatedDocs) {
-            if(NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-                docMap.put(doc, ((NucleotideSequenceDocument)doc.getDocument()).getSequenceString());
-            }
-            else {
-                alignmentDocs.add(doc);
-            }
-        }
-
-        Map<AnnotatedPluginDocument, String> contigMap = BiocodeUtilities.getContigDocuments(alignmentDocs.toArray(new AnnotatedPluginDocument[alignmentDocs.size()]));
-        docMap.putAll(contigMap);
+        Map<AnnotatedPluginDocument, String> docMap = getSequencesToBlast(annotatedDocs);
         List<AnnotatedPluginDocument> queries = options.getQueries(docMap);
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.2, 0.8);
         progress.beginSubtask("Retrieving full taxonomies");
@@ -112,6 +100,23 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         }
         VerifyTaxonomyResultsDocument resultsDocument = callback.getResultsDocument();
         return Collections.singletonList(DocumentUtilities.createAnnotatedPluginDocument(resultsDocument));
+    }
+
+    static Map<AnnotatedPluginDocument, String> getSequencesToBlast(AnnotatedPluginDocument[] annotatedDocs) throws DocumentOperationException {
+        Map<AnnotatedPluginDocument, String> docMap = new LinkedHashMap<AnnotatedPluginDocument, String>();
+        List<AnnotatedPluginDocument> alignmentDocs = new ArrayList<AnnotatedPluginDocument>(annotatedDocs.length);
+        for(AnnotatedPluginDocument doc : annotatedDocs) {
+            if(NucleotideSequenceDocument.class.isAssignableFrom(doc.getDocumentClass())) {
+                docMap.put(doc, ((NucleotideSequenceDocument)doc.getDocument()).getSequenceString());
+            }
+            else {
+                alignmentDocs.add(doc);
+            }
+        }
+
+        Map<AnnotatedPluginDocument, String> contigMap = BiocodeUtilities.getContigDocuments(alignmentDocs.toArray(new AnnotatedPluginDocument[alignmentDocs.size()]));
+        docMap.putAll(contigMap);
+        return docMap;
     }
 
     private static final Map<String, BiocodeTaxon> TAXON_CACHE = new HashMap<String, BiocodeTaxon>();

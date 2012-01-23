@@ -141,14 +141,15 @@ public class VerifyTaxonomyOptions extends Options {
         programOption.addChangeListener(programListener);
         programListener.objectChanged();
 
-        boolean contigSelected = false;
-        for (AnnotatedPluginDocument doc : documents) {
-            if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass()) && !BiocodeUtilities.isAlignmentOfChromatograms(doc)) {
-                contigSelected = true;
+        boolean needConsensus = false;
+        Map<AnnotatedPluginDocument, String> sequencesToBlast = VerifyTaxonomyOperation.getSequencesToBlast(documents);
+        for (Map.Entry<AnnotatedPluginDocument, String> entry : sequencesToBlast.entrySet()) {
+            if (entry.getValue() == null) {
+                needConsensus = true;
                 break;
             }
         }
-        if (contigSelected) {
+        if (needConsensus) {
             Options consensusOptions = BiocodeUtilities.getConsensusOptions(documents);
             if (consensusOptions == null) {
                 throw new DocumentOperationException("The consensus plugin must be installed to be able to add assemblies to LIMS");
