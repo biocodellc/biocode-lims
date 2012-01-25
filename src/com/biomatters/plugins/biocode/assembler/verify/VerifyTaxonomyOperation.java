@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.types.TaxonomyDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
