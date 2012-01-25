@@ -20,6 +20,7 @@ import java.awt.image.BufferedImage;
 import java.awt.event.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Collections;
@@ -84,6 +85,7 @@ public class GelSplitter {
 
         toggleDirection.setSpanningComponent(true);
 
+        final AtomicBoolean changing = new AtomicBoolean(false);
         final SimpleListener updateListener = new SimpleListener() {
             public void objectChanged() {
                 imagePanel.setRows(numberOfRowsOption.getValue());
@@ -91,6 +93,12 @@ public class GelSplitter {
                 imagePanel.setStartLetter(startLetter.getValue());
                 imagePanel.setStartNumber(startNumber.getValue());
                 imagePanel.setDirection(direction.get());
+                if(changing.get()) {
+                    return;
+                }
+                changing.set(true);
+                numberOfRowsOption.setValue(Math.min(numberOfRowsOption.getValue(), 26-imagePanel.getStartRow(startLetter.getValue())));
+                changing.set(false);
             }
         };
         toggleDirection.addActionListener(new ActionListener(){
@@ -287,20 +295,23 @@ public class GelSplitter {
         }
 
         public void setStartLetter(String startLetter) {
-            String tidiedLetter = startLetter.toUpperCase().trim();
-            if(tidiedLetter.length() != 1) {
-                startRow = 0;
-                repaint();
-                return;
-            }
-            int startColTemp = tidiedLetter.charAt(0)-65;
-            if(startColTemp < 0 || startColTemp > plate.getCols()) {
-                startRow = 0;
-                repaint();
-                return;
-            }
-            startRow = startColTemp;
+            startRow = getStartRow(startLetter);
             repaint();
+        }
+
+        public int getStartRow(String startLetter) {
+            String tidiedLetter = startLetter.toUpperCase().trim();
+            int startRowTemp = 0;
+            if(tidiedLetter.length() != 1) {
+                startRowTemp = 0;
+            }
+            else {
+                startRowTemp = tidiedLetter.charAt(0)-65;
+                if(startRowTemp < 0 || startRowTemp > plate.getCols()) {
+                    startRowTemp = 0;
+                }
+            }
+            return startRowTemp;
         }
 
         public void setStartNumber(int startNumber) {
