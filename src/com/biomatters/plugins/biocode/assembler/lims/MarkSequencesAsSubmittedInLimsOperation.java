@@ -84,7 +84,7 @@ public class MarkSequencesAsSubmittedInLimsOperation extends DocumentOperation {
 
 
         try {
-            PreparedStatement statement1 = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().prepareStatement("SELECT COUNT(*) FROM assembly WHERE ("+idOr+") AND progress=?");
+            PreparedStatement statement1 = BiocodeService.getInstance().getActiveLIMSConnection().createStatement("SELECT COUNT(*) FROM assembly WHERE ("+idOr+") AND progress=?");
             for(int i=0; i < ids.size(); i++) {
                 statement1.setInt(i+1, ids.get(i));
             }
@@ -102,7 +102,7 @@ public class MarkSequencesAsSubmittedInLimsOperation extends DocumentOperation {
             if(LIMSConnection.EXPECTED_SERVER_VERSION < 9) {
                 throw new DocumentOperationException("You need to be running against a more recent version of the Biocode LIMS database to mark sequences as submitted");
             }
-            PreparedStatement statement2 = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().prepareStatement("UPDATE assembly SET submitted = ? WHERE "+idOr);
+            PreparedStatement statement2 = BiocodeService.getInstance().getActiveLIMSConnection().createStatement("UPDATE assembly SET submitted = ? WHERE "+idOr);
             statement2.setInt(1, submitted ? 1 : 0);
             for(int i=0; i < ids.size(); i++) {
                 statement2.setInt(i+2, ids.get(i));

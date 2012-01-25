@@ -227,9 +227,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
             if(reactionOrs.size() > 0) {
                 String sql = "SELECT * FROM extraction, plate WHERE plate.id = extraction.plate AND ("+StringUtilities.join(" OR ", reactionOrs)+")";
-                Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
-
-                PreparedStatement statement = connection.prepareStatement(sql);
+                PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(sql);
                 int count=1;
                 for(Reaction r : reactions) {
                     if(r.getId() < 0 && r.getExtractionId().length() > 0) {

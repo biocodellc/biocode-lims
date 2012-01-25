@@ -86,7 +86,7 @@ public class PlateStatusReport extends Report {
             plateSql += " WHERE "+plateColName+" LIKE ?";
         }
         System.out.println(plateSql);
-        PreparedStatement plateNameStatement = fimsToLims.getLimsConnection().getConnection().prepareStatement(plateSql);
+        PreparedStatement plateNameStatement = fimsToLims.getLimsConnection().createStatement(plateSql);
 
         if(plateWhere.trim().length() > 0){
             plateNameStatement.setString(1, "%"+plateWhere.trim()+"%");
@@ -289,7 +289,7 @@ public class PlateStatusReport extends Report {
                         +" WHERE traces.reaction = cyclesequencing.id AND cyclesequencing.workflow=workflow.id AND workflow.locus=? AND workflow.extractionId=extraction.id AND " +
                         "extraction.sampleId="+FimsToLims.FIMS_VALUES_TABLE+"."+tissueCol+" AND "+FimsToLims.FIMS_VALUES_TABLE+"."+plateColName+"=?";
 
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
 
         statement.setString(1, locus);
         statement.setString(2, plateName);
@@ -309,7 +309,7 @@ public class PlateStatusReport extends Report {
                 +" WHERE assembly.workflow=workflow.id AND workflow.locus=? AND workflow.extractionId=extraction.id AND " +
                 "extraction.sampleId="+FimsToLims.FIMS_VALUES_TABLE+"."+tissueCol+" AND "+FimsToLims.FIMS_VALUES_TABLE+"."+plateColName+"=? AND assembly.progress='passed'";
 
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
 
         statement.setString(1, locus);
         statement.setString(2, plateName);
@@ -327,7 +327,7 @@ public class PlateStatusReport extends Report {
         String sql = "SELECT " + tableName + ".progress from " + tableName + ", workflow, extraction, " +FimsToLims.FIMS_VALUES_TABLE
                 +" WHERE " + tableName + ".workflow=workflow.id AND workflow.locus=? AND workflow.extractionId=extraction.id AND " +
                 "extraction.sampleId="+FimsToLims.FIMS_VALUES_TABLE+"."+tissueCol+" AND "+FimsToLims.FIMS_VALUES_TABLE+"."+plateColName+"=?";
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
         statement.setString(1, locus);
         statement.setString(2, plateName);
 

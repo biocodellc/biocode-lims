@@ -64,7 +64,7 @@ public class WorkflowReport extends Report{
         final Options.OptionValue optionValue = (Options.OptionValue)options.getValue("field");
         String field = FimsToLims.getSqlColName(optionValue.getName(), fimsToLims.getLimsConnection().isLocal());
         String sql  = "SELECT DISTINCT("+field+") FROM "+FimsToLims.FIMS_VALUES_TABLE;
-        Statement statement = fimsToLims.getLimsConnection().getConnection().createStatement();
+        Statement statement = fimsToLims.getLimsConnection().createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         final List<String> fieldValues = new ArrayList<String>();
         while(resultSet.next()) {
@@ -75,9 +75,9 @@ public class WorkflowReport extends Report{
 
         String s = getSql(WorkflowProgress.PCR, field, "=");
         System.out.println(s);
-        PreparedStatement pcrStatement = fimsToLims.getLimsConnection().getConnection().prepareStatement(s);
-        PreparedStatement sequencingStatement = fimsToLims.getLimsConnection().getConnection().prepareStatement(getSql(WorkflowProgress.CycleSequencing, field, "="));
-        PreparedStatement assemblyStatement = fimsToLims.getLimsConnection().getConnection().prepareStatement(getSql(WorkflowProgress.SequencePassed, field, "="));
+        PreparedStatement pcrStatement = fimsToLims.getLimsConnection().createStatement(s);
+        PreparedStatement sequencingStatement = fimsToLims.getLimsConnection().createStatement(getSql(WorkflowProgress.CycleSequencing, field, "="));
+        PreparedStatement assemblyStatement = fimsToLims.getLimsConnection().createStatement(getSql(WorkflowProgress.SequencePassed, field, "="));
 
         final List<WorkflowEntry[]> table = new ArrayList<WorkflowEntry[]>();
         CompositeProgressListener composite = new CompositeProgressListener(progress, fieldValues.size());

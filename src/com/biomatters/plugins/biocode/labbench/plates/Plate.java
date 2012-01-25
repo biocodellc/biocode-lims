@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.jdom.Element;
@@ -347,16 +348,16 @@ public class Plate implements XMLSerializable {
         return (well.letter-65)*cols + well.number-1;
     }
 
-    public PreparedStatement toSQL(Connection connection) throws SQLException{
+    public PreparedStatement toSQL(LIMSConnection connection) throws SQLException{
         if(name == null || name.trim().length() == 0) {
             throw new SQLException("Plates cannot have empty names");
         }
         PreparedStatement statement;
         if(getId() < 0) {
-            statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle, date) VALUES (?, ?, ?, ?, ?)");
+            statement = connection.createStatement("INSERT INTO plate (name, size, type, thermocycle, date) VALUES (?, ?, ?, ?, ?)");
         }
         else {
-            statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=? WHERE id=?");
+            statement = connection.createStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=? WHERE id=?");
             statement.setInt(6, getId());
         }
         statement.setString(1, getName());

@@ -124,10 +124,20 @@ public class PlateDocumentViewer extends DocumentViewer{
                                 });
                             } catch (SQLException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());
-                                setEnabled(true);
+                                Runnable runnable = new Runnable() {
+                                    public void run() {
+                                        setEnabled(true);
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrLater(runnable);
                             } catch(BadDataException e2) {
                                 Dialogs.showMessageDialog("You have some errors in your plate:\n\n"+e2.getMessage());
-                                setEnabled(true);
+                                Runnable runnable = new Runnable() {
+                                    public void run() {
+                                        setEnabled(true);
+                                    }
+                                };
+                                ThreadUtilities.invokeNowOrLater(runnable);
                             } finally {
                                 dialog.setVisible(false);
                             }

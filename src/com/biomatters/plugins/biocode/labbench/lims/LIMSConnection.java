@@ -228,7 +228,6 @@ public class LIMSConnection {
     }
 
     public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
-        Connection connection = getConnection();
         if(!BiocodeService.getInstance().deleteAllowed(tableName)) {
             throw new SQLException("It appears that you do not have permission to delete from "+tableName+".  Please contact your System Administrator for assistance");
         }
@@ -248,7 +247,7 @@ public class LIMSConnection {
 
         Set<Integer> plateIds = new HashSet<Integer>();
         if(tableName.equals("extraction") || tableName.equals("pcr") || tableName.equals("cyclesequencing")) {
-            PreparedStatement getPlatesStatement = connection.prepareStatement("SELECT plate FROM "+tableName+" WHERE "+termString);
+            PreparedStatement getPlatesStatement = createStatement("SELECT plate FROM "+tableName+" WHERE "+termString);
             ResultSet resultSet = getPlatesStatement.executeQuery();
             while(resultSet.next()) {
                 plateIds.add(resultSet.getInt("plate"));
@@ -256,7 +255,7 @@ public class LIMSConnection {
             getPlatesStatement.close();
         }
 
-        PreparedStatement deleteStatement = connection.prepareStatement("DELETE FROM "+tableName+" WHERE "+termString);
+        PreparedStatement deleteStatement = createStatement("DELETE FROM "+tableName+" WHERE "+termString);
         deleteStatement.executeUpdate();
         deleteStatement.close();
 
@@ -265,11 +264,7 @@ public class LIMSConnection {
 
     public ResultSet executeQuery(String sql) throws TransactionException{
         try {
-            Connection connection = getConnection();
-            if(connection == null) {
-                throw new TransactionException("You are not logged in");
-            }
-            PreparedStatement statement = connection.prepareStatement(sql);
+            PreparedStatement statement = createStatement(sql);
             return statement.executeQuery();
         }
         catch(SQLException ex) {
@@ -278,8 +273,9 @@ public class LIMSConnection {
     }
 
     public void executeUpdate(String sql) throws TransactionException {
+        Connection connection = null;
         try {
-            Connection connection = getConnection();
+            connection = getConnection();
             if(connection == null) {
                 return;
             }
@@ -296,17 +292,86 @@ public class LIMSConnection {
         }
         finally {
             try {
-                connection.setAutoCommit(true);
+                if(connection != null) {
+                    connection.setAutoCommit(true);
+                }
             } catch (SQLException ignore) {}
         }
     }
 
-    public Connection getConnection() throws SQLException{
+    private Connection getConnection() throws SQLException{
         if(connection == null) {
             throw new SQLException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
         return connection;
     }
+
+    public DatabaseMetaData getMetaData() throws SQLException {
+        Connection connection = getConnection();
+        return connection.getMetaData();
+    }
+
+    public Statement createStatement() throws SQLException{
+        Connection connection = getConnection();
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
+    public PreparedStatement createStatement(String sql) throws SQLException{
+        Connection connection = getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql);
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
+    public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException{
+        Connection connection = getConnection();
+        Statement statement = connection.createStatement(resultSetType, resultSetConcurrency);
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
+    public int getLastInsertId() throws SQLException {
+        int reactionId;
+        ResultSet reactionIdResultSet = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? createStatement().executeQuery("CALL IDENTITY();") : createStatement().executeQuery("SELECT last_insert_id()");
+        reactionIdResultSet.next();
+        reactionId = reactionIdResultSet.getInt(1);
+        return reactionId;
+    }
+
+    private int transactionLevel = 0;
+
+    public void beginTransaction() throws SQLException {
+        if(transactionLevel == 0) {
+            Connection connection = getConnection();
+            connection.setAutoCommit(false);
+        }
+        transactionLevel++;
+    }
+
+    public void rollback() {
+        try {
+            Connection connection = getConnection();
+            connection.rollback();
+            connection.setAutoCommit(true);
+        }
+        catch(SQLException ex){} //if we can't rollback, let's ignore
+        transactionLevel = 0;
+    }
+
+    public void endTransaction() throws SQLException {
+        Connection connection = getConnection();
+        if(transactionLevel == 0) {
+            return;  //we've rolled back our changes by calling rollback() so no commits are necessary
+        }
+        transactionLevel --;
+        if(transactionLevel == 0) {
+            connection.commit();
+            connection.setAutoCommit(true);
+        }
+    }
+
 
     public static List<DocumentField> getSearchAttributes() {
         return Arrays.asList(
@@ -505,11 +570,7 @@ public class LIMSConnection {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyList();
         }
-        Connection connection = getConnection();
-        if(connection == null) {
-            throw new SQLException("You are not logged in");
-        }
-        PreparedStatement statement = connection.prepareStatement(sql);
+        PreparedStatement statement = createStatement(sql);
         fillStatement(sqlValues, statement);
         printSql(sql, sqlValues);
         BiocodeUtilities.CancelListeningThread listeningThread = null;
@@ -702,10 +763,6 @@ public class LIMSConnection {
     }
 
     public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
-        Connection connection = getConnection();
-        if(connection == null) {
-            throw new SQLException("You are not logged in");
-        }
 
         List<? extends Query> refinedQueries;
         CompoundSearchQuery.Operator operator;
@@ -766,7 +823,7 @@ public class LIMSConnection {
 
         //attach the values to the query
         System.out.println(sql.toString());
-        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        PreparedStatement statement = createStatement(sql.toString());
         BiocodeUtilities.CancelListeningThread listeningThread1 = null;
         if(cancelable != null) {
             //todo: listeningThread1 = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
@@ -1244,10 +1301,6 @@ public class LIMSConnection {
         if(sourceReactions == null || sourceReactions.size() == 0) {
             return Collections.emptyMap();
         }
-        Connection connection = getConnection();
-        if(connection == null) {
-            throw new SQLException("You are not logged in");
-        }
         StringBuilder sql = new StringBuilder("SELECT plate.name, plate.size, extraction.* FROM extraction, plate WHERE plate.id = extraction.plate AND (");
         for (int i=0; i < sourceReactions.size(); i++) {
             sql.append("extractionId=?");
@@ -1256,7 +1309,7 @@ public class LIMSConnection {
             }
         }
         sql.append(")");
-        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        PreparedStatement statement = createStatement(sql.toString());
         for (int i=0; i < sourceReactions.size(); i++) {
             statement.setString(i+1, sourceReactions.get(i).getExtractionId());
         }
@@ -1273,10 +1326,6 @@ public class LIMSConnection {
         if(plateIds == null || plateIds.size() == 0) {
             return Collections.emptyMap();
         }
-        Connection connection = getConnection();
-        if(connection == null) {
-            throw new SQLException("You are not logged in");
-        }
         StringBuilder sql = new StringBuilder("SELECT * FROM gelimages WHERE (");
         for (Iterator<Integer> it = plateIds.iterator(); it.hasNext();) {
             Integer i = it.next();
@@ -1288,7 +1337,7 @@ public class LIMSConnection {
         }
         sql.append(")");
         System.out.println(sql);
-        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        PreparedStatement statement = createStatement(sql.toString());
         ResultSet resultSet = statement.executeQuery();
         Map<Integer, List<GelImage>> map = new HashMap<Integer, List<GelImage>>();
         while(resultSet.next()) {
@@ -1360,11 +1409,6 @@ public class LIMSConnection {
     }
 
     public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws SQLException{
-        Connection connection = getConnection();
-        if(connection == null) {
-            throw new SQLException("You are not logged in");
-        }
-        
         List<String> queries = new ArrayList<String>();
         //noinspection UnusedDeclaration
         for(String s : tissueIds) {
@@ -1373,7 +1417,7 @@ public class LIMSConnection {
 
         String sql = "SELECT extractionId FROM extraction WHERE "+StringUtilities.join(" OR ", queries);
 
-        PreparedStatement statement = connection.prepareStatement(sql);
+        PreparedStatement statement = createStatement(sql);
         for (int i = 0; i < tissueIds.size(); i++) {
             statement.setString(i+1, tissueIds.get(i)+"%");
         }
@@ -1394,10 +1438,6 @@ public class LIMSConnection {
             System.out.println("empty!");
             return Collections.emptyMap();
         }
-        Connection connection = getConnection();
-        if(connection == null) {
-            throw new SQLException("You are not logged in");
-        }
          StringBuilder sql = new StringBuilder("SELECT * FROM extraction "+
                 "LEFT JOIN plate ON plate.id = extraction.plate "+
                 "WHERE (");
@@ -1412,7 +1452,7 @@ public class LIMSConnection {
 
         sql.append(")");
 
-        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        PreparedStatement statement = createStatement(sql.toString());
 
         for (int i = 0; i < barcodes.size(); i++) {
             String barcode = barcodes.get(i);

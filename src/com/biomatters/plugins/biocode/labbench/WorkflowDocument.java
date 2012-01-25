@@ -487,7 +487,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             return changes;
         }
 
-        public void saveChangesToDatabase(BiocodeService.BlockingProgress progress, Connection connection) throws SQLException{
+        public void saveChangesToDatabase(BiocodeService.BlockingProgress progress, LIMSConnection connection) throws SQLException{
             reaction.areReactionsValid(Arrays.asList(reaction), null, true);
             Reaction.saveReactions(new Reaction[] {reaction}, reaction.getType(), connection, progress);
             changes = false;

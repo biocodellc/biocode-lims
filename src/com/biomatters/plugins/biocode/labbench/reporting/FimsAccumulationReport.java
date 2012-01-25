@@ -70,7 +70,7 @@ public class FimsAccumulationReport extends AccumulationReport{
 
         String sql = options.getSql(fimsToLims);
         System.out.println(sql);
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
         CompositeProgressListener composite = new CompositeProgressListener(progress, fimsValues.size());
         for (int i1 = 0; i1 < fimsValues.size(); i1++) {
             String fimsValue = fimsValues.get(i1);

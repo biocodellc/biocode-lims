@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import javax.swing.*;
 import java.awt.*;
@@ -39,33 +40,23 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                 Runnable runnable = new Runnable() {
                     public void run() {
                         Savepoint savepoint = null;
-                        Connection connection = null;
+                        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
                         try {
-                            connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
-                            connection.setAutoCommit(false);
-                            savepoint = connection.setSavepoint("saveReactions");
                             for(int i=0; i < doc.getNumberOfParts(); i++) {
                                 MuitiPartDocument.Part p = doc.getPart(i);
                                 dialog.setMessage("Saving "+p.getName());
                                 if(p.hasChanges()) {
-                                    p.saveChangesToDatabase(dialog, connection);
+                                    p.saveChangesToDatabase(dialog, limsConnection);
                                 }
                             }
-                            connection.commit();
                         }
                         catch(SQLException ex) {
-                            if(savepoint != null && connection != null) {
-                                try {
-                                    if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
-                                        connection.rollback(savepoint);
-                                    }
-                                } catch (SQLException ignored) {} //don't need to catch
-                            }
+                            limsConnection.rollback();
                             Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
                         } finally {
                             try {
-                                if(connection != null) {
-                                    connection.setAutoCommit(true);
+                                if(limsConnection != null) {
+                                    limsConnection.endTransaction();
                                 }
                             } catch (SQLException e1) {
                                 e1.printStackTrace();  //don't need to catch this

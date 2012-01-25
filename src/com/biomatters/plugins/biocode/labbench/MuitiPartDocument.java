@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import javax.swing.*;
 import java.sql.Connection;
@@ -45,7 +46,7 @@ public abstract class MuitiPartDocument implements PluginDocument {
 
         public void removeModifiedStateChangedListener(SimpleListener sl){}
 
-        public abstract void saveChangesToDatabase(BiocodeService.BlockingProgress progress, Connection connection) throws SQLException;
+        public abstract void saveChangesToDatabase(BiocodeService.BlockingProgress progress, LIMSConnection connection) throws SQLException;
         
     }
 }

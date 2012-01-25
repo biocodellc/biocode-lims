@@ -87,7 +87,7 @@ public class PlateSearchReport extends Report{
 
         System.out.println(sql);
 
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
 
         for (int i = 0; i < fieldOptions.size(); i++) {
             statement.setObject(i+1, fieldOptions.get(i).getValue());

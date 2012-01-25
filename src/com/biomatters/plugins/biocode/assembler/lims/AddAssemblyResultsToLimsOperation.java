@@ -213,7 +213,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         if(limsConnection == null) {
             throw new DocumentOperationException("You have been disconnected from the LIMS database.  Please reconnect and try again.");
         }
-        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);
+        PreparedStatement statement = limsConnection.createStatement(sql);
         statement.setInt(1, assemblyResult.workflowId);
         statement.setString(2, assemblyResult.extractionId);
         return statement.executeUpdate();
@@ -397,12 +397,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         progress.beginSubtask("Saving to LIMS");
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
-        Connection connection;
-        try {
-            connection = limsConnection.getConnection();
-        } catch (SQLException e) {
-            throw new DocumentOperationException(e.getMessage(), e);
-        }
+
         progress = new CompositeProgressListener(progress, assemblyResults.size());
 //        if (progress.getRootProgressListener() instanceof ProgressFrame) {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
@@ -413,16 +408,16 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         //noinspection ConstantConditions
         try {
             if(LIMSConnection.EXPECTED_SERVER_VERSION >= 9) {
-                statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
                     "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             }
             else {
-                statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
                     "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             }
 
 
-            statement2 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
+            statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
             for (AssemblyResult result : assemblyResults) {
                 progress.beginSubtask();
                 if (progress.isCanceled()) {
@@ -545,7 +540,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
 
                 Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
-                Reaction.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, connection, null);
+                Reaction.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, limsConnection, null);
 
 
 

@@ -172,7 +172,7 @@ public class ComparisonReport extends Report{
             sql1 = sql1 + " GROUP BY "+xTable+"."+field;
             System.out.println(sql1);
 
-            PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql1);
+            PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql1);
 
             if(progress.isCanceled()) {
                 return null;

@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -117,16 +118,16 @@ public class Thermocycle implements XMLSerializable {
      * @return the id of the newly created thermocycle record...
      * @throws SQLException
      */
-    public int toSQL(Connection conn) throws SQLException{
+    public int toSQL(LIMSConnection conn) throws SQLException{
         //create the thermocycle record
-        PreparedStatement statement1 = conn.prepareStatement("INSERT INTO thermocycle (name, notes) VALUES (?, ?);\n");
+        PreparedStatement statement1 = conn.createStatement("INSERT INTO thermocycle (name, notes) VALUES (?, ?);\n");
         statement1.setString(1, getName());
         statement1.setString(2, getNotes());
         statement1.execute();
         statement1.close();
 
         //get the id of the thermocycle record
-        PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");
+        PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.createStatement("CALL IDENTITY();") : conn.createStatement("SELECT last_insert_id()");
         ResultSet resultSet = statement.executeQuery();
         resultSet.next();
         int thermoId = resultSet.getInt(1);
@@ -134,12 +135,12 @@ public class Thermocycle implements XMLSerializable {
 
         for(Cycle cycle : getCycles()) {
             //create a cycle record
-            PreparedStatement statement2 = conn.prepareStatement("INSERT INTO cycle (thermocycleid, repeats) VALUES (" + thermoId + ", " + cycle.getRepeats() + ");\n");
+            PreparedStatement statement2 = conn.createStatement("INSERT INTO cycle (thermocycleid, repeats) VALUES (" + thermoId + ", " + cycle.getRepeats() + ");\n");
             statement2.execute();
             statement2.close();
 
             //get the id of the cycle record
-            statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.prepareStatement("CALL IDENTITY();") : conn.prepareStatement("SELECT last_insert_id()");
+            statement = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? conn.createStatement("CALL IDENTITY();") : conn.createStatement("SELECT last_insert_id()");
             resultSet = statement.executeQuery();
             resultSet.next();
             int cycleId = resultSet.getInt(1);
@@ -147,7 +148,7 @@ public class Thermocycle implements XMLSerializable {
 
             for(State state : cycle.getStates()) {
                 //create the state record
-                PreparedStatement statement3 = conn.prepareStatement("INSERT INTO state (cycleid, temp, length) VALUES (" + cycleId + ", " + state.getTemp() + ", " + state.getTime() + ");\n");
+                PreparedStatement statement3 = conn.createStatement("INSERT INTO state (cycleid, temp, length) VALUES (" + cycleId + ", " + state.getTemp() + ", " + state.getTime() + ");\n");
                 statement3.execute();
                 statement3.close();
             }

@@ -51,6 +51,15 @@ public class MySQLFimsConnection extends TableFimsConnection{
         return new MySqlFimsConnectionOptions();
     }
 
+    private Statement createStatement() throws SQLException {
+        if(connection == null) {
+            throw new SQLException("Not logged into the FIMS");
+        }
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
     public void _connect(TableFimsConnectionOptions optionsa) throws ConnectionException {
         MooreaFimsConnectionOptions connectionOptions = (MooreaFimsConnectionOptions)optionsa.getChildOptions().get(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
 
@@ -71,7 +80,7 @@ public class MySQLFimsConnection extends TableFimsConnection{
             if(connection == null) {
                 throw new SQLException("The driver "+driver.getClass().getName()+" is not the right kind of driver to connect to "+connectionOptions.getValueAsString("serverUrl"));
             }
-            Statement statement = connection.createStatement();
+            Statement statement = createStatement();
             statement.execute("USE "+connectionOptions.getValueAsString("database"));
         } catch (SQLException e1) {
             throw new ConnectionException("Failed to connect to the MySQL database: "+e1.getMessage());
@@ -80,15 +89,18 @@ public class MySQLFimsConnection extends TableFimsConnection{
 
     public List<DocumentField> getTableColumns() throws IOException {
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = createStatement();
             ResultSet resultSet = statement.executeQuery("DESCRIBE "+tableName);
             List<DocumentField> results = new ArrayList<DocumentField>();
 
-            while(resultSet.next()) {
+            while(resultSet.next() && connection != null) {
                 DocumentField field = SqlUtilities.getDocumentField(resultSet, false);
                 if(field != null) {
                     results.add(field);
                 }
+            }
+            if(connection == null) {
+                throw new SQLException("You are not connected to the database");
             }
 
             return results;
@@ -101,14 +113,8 @@ public class MySQLFimsConnection extends TableFimsConnection{
     }
 
     public void _disconnect() {
-        if(connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-                //ignore - garbage collection will deal with this...
-            }
-        }
+        //we used to call connection.close(), but this can cause problems when the user disconnects while we're in the
+        // middle of a search - instead set it to null and let the garbage collector deal with it when the queries have finished
         driver = null;
         connection = null;
     }
@@ -133,15 +139,12 @@ public class MySQLFimsConnection extends TableFimsConnection{
 
     private List<FimsSample> getFimsSamplesFromSql(String queryString, RetrieveCallback callback) throws ConnectionException {
         System.out.println(queryString);
-        if(connection == null) {
-            throw new IllegalStateException("Not connected!");
-        }
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = createStatement();
             ResultSet resultSet = statement.executeQuery(queryString);
             List<FimsSample> samples = new ArrayList<FimsSample>();
             ResultSetMetaData metadata = resultSet.getMetaData();
-            while(resultSet.next()){
+            while(resultSet.next() && connection != null){
                 Map<String, Object> data = new HashMap<String, Object>();
                 for(DocumentField f : getSearchAttributes()) {
                     if(String.class.isAssignableFrom(f.getValueType()) ) {
@@ -176,6 +179,9 @@ public class MySQLFimsConnection extends TableFimsConnection{
                 }
             }
             resultSet.close();
+            if(connection == null) {
+                throw new SQLException("You are not connected to the database");
+            }
             return samples;
         } catch (SQLException e) {
             throw new ConnectionException(e);
@@ -189,7 +195,7 @@ public class MySQLFimsConnection extends TableFimsConnection{
     public int getTotalNumberOfSamples() throws ConnectionException {
         String query = "SELECT count(*) FROM "+tableName;
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = createStatement();
 
             ResultSet resultSet = statement.executeQuery(query);
             resultSet.next();

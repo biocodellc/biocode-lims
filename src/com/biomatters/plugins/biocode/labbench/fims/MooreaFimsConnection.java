@@ -91,6 +91,24 @@ public class MooreaFimsConnection extends FIMSConnection{
         }
     }
 
+    private Statement createStatement() throws SQLException{
+        if(connection == null) {
+            throw new SQLException("You are not connected to the FIMS database");
+        }
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
+    private PreparedStatement prepareStatement(String query) throws SQLException{
+        if(connection == null) {
+            throw new SQLException("You are not connected to the FIMS database");
+        }
+        PreparedStatement statement = connection.prepareStatement(query);
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
     public void disconnect() {
 //        if(connection != null) {
 //            try {
@@ -215,7 +233,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     public int getTotalNumberOfSamples() throws ConnectionException {
         String query = "SELECT count(*) FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID";
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = createStatement();
 
             ResultSet resultSet = statement.executeQuery(query);
             resultSet.next();
@@ -229,7 +247,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException{
         String query = "SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID";
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = createStatement();
 
             statement.setFetchSize(Integer.MIN_VALUE);
 
@@ -259,11 +277,8 @@ public class MooreaFimsConnection extends FIMSConnection{
         String queryString = queryBuilder.toString();
 
         System.out.println(queryString);
-        if(connection == null) {
-            throw new IllegalStateException("Not connected!");
-        }
         try {
-            Statement statement = connection.createStatement();
+            Statement statement = createStatement();
             ResultSet resultSet = statement.executeQuery(queryString);
             List<FimsSample> samples = new ArrayList<FimsSample>();
             while(resultSet.next()){
@@ -302,7 +317,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         String query = "SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_tissue.well_number96 FROM biocode_tissue WHERE biocode_tissue.format_name96='"+plateId+"'";
 
         try {
-            PreparedStatement statement = connection.prepareStatement(query);
+            PreparedStatement statement = prepareStatement(query);
             ResultSet resultSet = statement.executeQuery();
             Map<String, String> result = new HashMap<String, String>();
             while(resultSet.next()) {
@@ -346,7 +361,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         String query = "SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_extract.format_name96, biocode_extract.well_number96, biocode_tissue.well_number96 FROM biocode_extract, biocode_tissue WHERE biocode_extract.from_tissue_seq_num = biocode_tissue.seq_num  AND "+andQuery;
 
         try {
-            PreparedStatement statement = connection.prepareStatement(query);
+            PreparedStatement statement = prepareStatement(query);
             ResultSet resultSet = statement.executeQuery();
             Map<String, String> result = new HashMap<String, String>();
             while(resultSet.next()) {

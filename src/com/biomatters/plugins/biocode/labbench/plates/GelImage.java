@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.sun.media.jai.codec.ByteArraySeekableStream;
 import com.sun.media.jai.codec.ImageCodec;
 import com.sun.media.jai.codec.ImageDecoder;
@@ -101,9 +102,9 @@ public class GelImage implements XMLSerializable {
 
     }
 
-    public PreparedStatement toSql(Connection conn) throws SQLException {
+    public PreparedStatement toSql(LIMSConnection conn) throws SQLException {
         PreparedStatement statement;
-        statement = conn.prepareStatement("INSERT INTO gelimages (plate, imageData, notes, name) VALUES (?, ?, ?, ?)");
+        statement = conn.createStatement("INSERT INTO gelimages (plate, imageData, notes, name) VALUES (?, ?, ?, ?)");
         statement.setInt(1, plate);
         statement.setObject(2, imageBytes);
         statement.setString(3, notes);

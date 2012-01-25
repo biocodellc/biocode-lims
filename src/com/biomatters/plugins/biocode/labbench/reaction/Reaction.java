@@ -677,15 +677,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         return date;
     }
 
-    public static void saveReactions(Reaction[] reactions, Type type, Connection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
+    public static void saveReactions(Reaction[] reactions, Type type, LIMSConnection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
         switch(type) {
             case Extraction:
                 String insertSQL;
                 String updateSQL;
                 insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage, control) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=?, control=? WHERE id=?";
-                PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
-                PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
+                PreparedStatement insertStatement = connection.createStatement(insertSQL);
+                PreparedStatement updateStatement = connection.createStatement(updateSQL);
                 int insertCount = 0;
                 int updateCount = 0;
                 for (int i = 0; i < reactions.length; i++) {
@@ -747,8 +747,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             case PCR:
                 insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=?, technician=?, gelimage=? WHERE id=?";
-                insertStatement = connection.prepareStatement(insertSQL);
-                updateStatement = connection.prepareStatement(updateSQL);
+                insertStatement = connection.createStatement(insertSQL);
+                updateStatement = connection.createStatement(updateSQL);
                 int saveCount = 0;
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
@@ -859,10 +859,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 String clearTracesSQL = "DELETE FROM traces WHERE id=?";
                 String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
 
-                insertStatement = connection.prepareStatement(insertSQL);
-                updateStatement = connection.prepareStatement(updateSQL);
-                PreparedStatement clearTracesStatement = connection.prepareStatement(clearTracesSQL);
-                PreparedStatement insertTracesStatement = connection.prepareStatement(insertTracesSQL);
+                insertStatement = connection.createStatement(insertSQL);
+                updateStatement = connection.createStatement(updateSQL);
+                PreparedStatement clearTracesStatement = connection.createStatement(clearTracesSQL);
+                PreparedStatement insertTracesStatement = connection.createStatement(insertTracesSQL);
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
@@ -961,7 +961,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                             }
                             ((CycleSequencingReaction)reaction).clearTracesToRemoveOnSave();
                             if(reactionId < 0) {
-                                reactionId = getLastInsertId(connection);
+                                reactionId = connection.getLastInsertId();
                             }
 
                             List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
@@ -976,7 +976,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                                         insertTracesStatement.setString(2, file.getName());
                                         insertTracesStatement.setBytes(3, file.getData());
                                         insertTracesStatement.execute();
-                                        trace.setId(getLastInsertId(connection));
+                                        trace.setId(connection.getLastInsertId());
                                     }
                                 }
                             }
@@ -988,14 +988,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 insertTracesStatement.close();
                 break;
         }
-    }
-
-    private static int getLastInsertId(Connection connection) throws SQLException {
-        int reactionId;
-        ResultSet reactionIdResultSet = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? connection.createStatement().executeQuery("CALL IDENTITY();") : connection.createStatement().executeQuery("SELECT last_insert_id()");
-        reactionIdResultSet.next();
-        reactionId = reactionIdResultSet.getInt(1);
-        return reactionId;
     }
 
     public static class BackgroundColorer implements XMLSerializable{

@@ -73,6 +73,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     ReportingService reportingService;
     private Thread disconnectCheckingThread;
     private static boolean driverLoaded;
+    public static final int STATEMENT_QUERY_TIMEOUT = 300;
 
     private BiocodeService() {
     }
@@ -157,7 +158,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             sql.append(")");
             try {
-                PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql.toString());
+                PreparedStatement statement = limsConnection.createStatement(sql.toString());
 
 
                 for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
@@ -258,7 +259,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private void renameWorkflow(int id, String newName) throws SQLException {
         String sql = "UPDATE workflow SET name=? WHERE id=?";
-        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);
+        PreparedStatement statement = limsConnection.createStatement(sql);
 
         statement.setString(1, newName);
         statement.setInt(2, id);
@@ -269,7 +270,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     private void renamePlate(int id, String newName) throws SQLException{
         String sql = "UPDATE plate SET name=? WHERE id=?";
-        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);
+        PreparedStatement statement = limsConnection.createStatement(sql);
 
         statement.setString(1, newName);
         statement.setInt(2, id);
@@ -657,7 +658,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 while(isLoggedIn() && limsConnection != null) {
                     if(activeCallbacks.isEmpty()) {
                         try {
-                            limsConnection.getConnection().createStatement().execute(limsConnection.isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
+                            limsConnection.createStatement().execute(limsConnection.isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
                         } catch (SQLException e) {
                             if(!e.getMessage().contains("Streaming result set")) {  //last ditch attempt to stop the system logging users out incorrectly - we should have caught all cases of this because the operations creating streaming result sets should have registered their callbacks/progress listeners with the service
                                 e.printStackTrace();
@@ -895,7 +896,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         try {
             //check schema privileges
             String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE GRANTEE LIKE ? AND PRIVILEGE_TYPE='DELETE' AND TABLE_SCHEMA=?;";
-            PreparedStatement statement = limsConnection.getConnection().prepareStatement(schemaSql);
+            PreparedStatement statement = limsConnection.createStatement(schemaSql);
             statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
             statement.setString(2, limsConnection.getSchema());
             ResultSet resultSet = statement.executeQuery();
@@ -906,7 +907,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
             //check table privileges
             String tableSql = "select * from information_schema.TABLE_PRIVILEGES WHERE GRANTEE LIKE ? AND PRIVILEGE_TYPE='DELETE' AND TABLE_SCHEMA=? AND TABLE_NAME=?;";
-            statement = limsConnection.getConnection().prepareStatement(tableSql);
+            statement = limsConnection.createStatement(tableSql);
             statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
             statement.setString(2, limsConnection.getSchema());
             statement.setString(3, tableName);
@@ -938,7 +939,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             for(Cocktail cocktail : deletedCocktails) {
 
                 String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
-                PreparedStatement statement = limsConnection.getConnection().prepareStatement(sql);           
+                PreparedStatement statement = limsConnection.createStatement(sql);
                 if(cocktail.getId() >= 0) {
                     if(getPlatesUsingCocktail(cocktail).size() > 0) {
                         throw new TransactionException("The cocktail "+cocktail.getName()+" is in use by reactions in your database.  Only unused cocktails can be removed.");
@@ -973,7 +974,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 throw new RuntimeException(cocktail.getReactionType()+" reactions cannot have a cocktail");
         }
         String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktail.getId();
-        ResultSet resultSet = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement().executeQuery(sql);
+        ResultSet resultSet = BiocodeService.getInstance().getActiveLIMSConnection().createStatement().executeQuery(sql);
 
         Set<String> plateNames = new LinkedHashSet<String>();
         while(resultSet.next()) {
@@ -1353,10 +1354,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 throw new TransactionException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance");
             }
 
-            final PreparedStatement statement = getActiveLIMSConnection().getConnection().prepareStatement(sql);
-            final PreparedStatement statement2 = getActiveLIMSConnection().getConnection().prepareStatement(sql2);
-            final PreparedStatement statement3 = getActiveLIMSConnection().getConnection().prepareStatement(sql3);
-            final PreparedStatement statement4 = getActiveLIMSConnection().getConnection().prepareStatement(sql4);
+            final PreparedStatement statement = getActiveLIMSConnection().createStatement(sql);
+            final PreparedStatement statement2 = getActiveLIMSConnection().createStatement(sql2);
+            final PreparedStatement statement3 = getActiveLIMSConnection().createStatement(sql3);
+            final PreparedStatement statement4 = getActiveLIMSConnection().createStatement(sql4);
             for(Thermocycle thermocycle : cycles) {
                 if(thermocycle.getId() >= 0) {
                     if(getPlatesUsingThermocycle(thermocycle).size() > 0) {
@@ -1388,34 +1389,22 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             throw new TransactionException("You are not logged in");
         }
         try {
-            Connection connection = limsConnection.getConnection();
-            connection.setAutoCommit(false);
-            boolean autoCommit = connection.getAutoCommit();
+            limsConnection.beginTransaction();
             for(Thermocycle tCycle : cycles) {
-                connection.setAutoCommit(false);
-                Savepoint savepoint = connection.setSavepoint();
-                try {
-                    int id = tCycle.toSQL(connection);
-                    PreparedStatement statement = connection.prepareStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+");\n");
-                    statement.execute();
-                    if(!autoCommit)
-                        connection.commit();
-                    statement.close();
-                }
-                catch(SQLException ex) {
-                    try {
-                        if(!limsConnection.isLocal()) {
-                            connection.rollback(savepoint);
-                        }
-                    } catch (SQLException ignored) {}
-                    throw ex;
-                }
-                finally {
-                    connection.setAutoCommit(autoCommit);
-                }
+                int id = tCycle.toSQL(limsConnection);
+                PreparedStatement statement = limsConnection.createStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+");\n");
+                statement.execute();
+                statement.close();
             }
         } catch (SQLException e) {
+            limsConnection.rollback();
             throw new TransactionException("Could not add thermocycle(s): "+e.getMessage(), e);
+        } finally {
+            try {
+                limsConnection.endTransaction();
+            } catch (SQLException e) {
+                throw new TransactionException(e.getMessage(), e);
+            }
         }
         buildCaches();
     }
@@ -1425,7 +1414,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             return Collections.emptyList();
         }
         String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycle.getId();
-        ResultSet resultSet = limsConnection.getConnection().createStatement().executeQuery(sql);
+        ResultSet resultSet = limsConnection.createStatement().executeQuery(sql);
 
         List<String> plateNames = new ArrayList<String>();
         while(resultSet.next()) {
@@ -1550,7 +1539,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(reactions.size() == 0 || !BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyMap();
         }
-        Connection connection = limsConnection.getConnection();
         String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
         String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
         StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
@@ -1570,7 +1558,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(count == 0) {
             return Collections.emptyMap();
         }
-        PreparedStatement statement = connection.prepareStatement(sql.toString());
+        PreparedStatement statement = limsConnection.createStatement(sql.toString());
         int reactionCount = 1;
         for (Reaction reaction : reactions) {
             if (reaction.isEmpty()) {
@@ -1593,14 +1581,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public List<Workflow> createWorkflows(List<Reaction> reactions, BlockingProgress progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
-        Connection connection = limsConnection.getConnection();
-        boolean autoCommit = connection.getAutoCommit();
-        connection.setAutoCommit(false);
-        Savepoint savepoint = connection.setSavepoint();
+        limsConnection.beginTransaction();
         try {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
-            PreparedStatement statement2 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
-            PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = ? WHERE id=?");
+            PreparedStatement statement = limsConnection.createStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
+            PreparedStatement statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
+            PreparedStatement statement3 = limsConnection.createStatement("UPDATE workflow SET name = ? WHERE id=?");
             for(int i=0; i < reactions.size(); i++) {
                 if(progress != null) {
                     progress.setMessage("Creating new workflow "+(i+1)+" of "+reactions.size());
@@ -1617,33 +1602,25 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 statement3.setInt(2, workflowId);
                 statement3.execute();
             }
-            if(!autoCommit)
-                connection.commit();
+
             statement.close();
             statement2.close();
             statement3.close();
             return workflows;
         }
         catch(SQLException ex) {
-            try {
-                if(!limsConnection.isLocal()) {
-                    connection.rollback(savepoint);
-                }
-            } catch (SQLException ignored) {}
+            limsConnection.rollback();
             throw ex;
-        } finally {
-            connection.setAutoCommit(autoCommit);
+        }
+        finally {
+            limsConnection.endTransaction();
         }
     }
 
     public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException{
-
-        Connection connection = limsConnection.getConnection();
-        boolean autoCommit = connection.getAutoCommit();
-        connection.setAutoCommit(false);      
-        Savepoint savepoint = connection.setSavepoint();
+        limsConnection.beginTransaction();
         try {
-            isPlateValid(plate, connection);
+            isPlateValid(plate, limsConnection);
 
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
@@ -1663,20 +1640,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
             createOrUpdatePlate(plate, progress);
 
-            if(!autoCommit)
-                connection.commit();
-            if(!limsConnection.isLocal()) {
-                connection.releaseSavepoint(savepoint);
-            }
-        } catch(BadDataException e) {
-            try {
-                if(!limsConnection.isLocal()) {
-                    connection.rollback(savepoint);
-                }
-            } catch (SQLException ignored) {} //ignore - if this fails, then we are already rolled back.
-            throw e;
         } finally {
-            connection.setAutoCommit(autoCommit);
+            limsConnection.endTransaction();
         }
 
 
@@ -1759,7 +1724,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String getWorkflowSQL = "SELECT id FROM workflow WHERE "+builder.toString();
         System.out.println(getWorkflowSQL);
 
-        Statement statement = limsConnection.getConnection().createStatement();
+        Statement statement = limsConnection.createStatement();
 
 
         ResultSet resultSet = statement.executeQuery(getWorkflowSQL);
@@ -1876,7 +1841,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             sql += " AND ("+termString+")";
         }
 
-        ResultSet resultSet = limsConnection.getConnection().createStatement().executeQuery(sql);
+        ResultSet resultSet = limsConnection.createStatement().executeQuery(sql);
         List<Plate> result = new ArrayList<Plate>();
         while(resultSet.next()) {
             Plate plate = new Plate(resultSet);
@@ -1890,10 +1855,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(progress != null) {
             progress.setMessage("Retrieving existing workflows");
         }
-        Connection connection = limsConnection.getConnection();
-        boolean autoCommit = connection.getAutoCommit();
-        connection.setAutoCommit(false);
-        Savepoint savepoint = connection.setSavepoint();
+
+        limsConnection.beginTransaction();
         int originalPlateId = plate.getId();
         try {
 
@@ -1985,90 +1948,79 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             //we need to create the plate
             createOrUpdatePlate(plate, progress);
-            if(!autoCommit)
-                connection.commit();
-            if(!limsConnection.isLocal()) {
-                connection.releaseSavepoint(savepoint);
-            }
-        } catch(BadDataException e) {
-            plate.setId(originalPlateId);
-            try {
-                if(!limsConnection.isLocal()) {
-                    connection.rollback(savepoint);
-                }
-            } catch (SQLException ignored) {} //ignore - if this fails, then we are already rolled back.
-            catch(NullPointerException ex) {
-                if(!PrivateApiUtilities.isRunningFromADistribution()) {
-                    throw ex;
-                }
-            }
-            throw e;
         } finally {
-            connection.setAutoCommit(autoCommit);
+            limsConnection.endTransaction();
         }
     }
 
     private void createOrUpdatePlate(Plate plate, BlockingProgress progress) throws SQLException, BadDataException{
-        Connection connection = limsConnection.getConnection();
 
         //check the vaidity of the plate.
-        isPlateValid(plate, connection);
+        isPlateValid(plate, limsConnection);
 
-        //update the plate
-        PreparedStatement statement = plate.toSQL(connection);
-        statement.execute();
-        statement.close();
-        if(plate.getId() < 0) {
-            PreparedStatement statement1 = limsConnection.isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
-            ResultSet resultSet = statement1.executeQuery();
-            resultSet.next();
-            int plateId = resultSet.getInt(1);
-            plate.setId(plateId);
-            statement1.close();
-        }
-
-        //replace the images
-        if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
-            if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
-                throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
-            }
-            PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
-            deleteImagesStatement.execute();
-            for(GelImage image : plate.getImages()) {
-                PreparedStatement statement1 = image.toSql(connection);
-                statement1.execute();
+        limsConnection.beginTransaction();
+        try {
+            //update the plate
+            PreparedStatement statement = plate.toSQL(limsConnection);
+            statement.execute();
+            statement.close();
+            if(plate.getId() < 0) {
+                PreparedStatement statement1 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
+                ResultSet resultSet = statement1.executeQuery();
+                resultSet.next();
+                int plateId = resultSet.getInt(1);
+                plate.setId(plateId);
                 statement1.close();
             }
-            deleteImagesStatement.close();
-        }
 
-        Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), connection, progress);
+            //replace the images
+            if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
+                if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
+                    throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
+                }
+                PreparedStatement deleteImagesStatement = limsConnection.createStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
+                deleteImagesStatement.execute();
+                for(GelImage image : plate.getImages()) {
+                    PreparedStatement statement1 = image.toSql(limsConnection);
+                    statement1.execute();
+                    statement1.close();
+                }
+                deleteImagesStatement.close();
+            }
 
-        //update the last-modified on the workflows associated with this plate...
-        String sql;
-        if(plate.getReactionType() == Reaction.Type.Extraction) {
-            sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
+            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), limsConnection, progress);
+
+            //update the last-modified on the workflows associated with this plate...
+            String sql;
+            if(plate.getReactionType() == Reaction.Type.Extraction) {
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
+            }
+            else if(plate.getReactionType() == Reaction.Type.PCR){
+                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
+            }
+            else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
+                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
+            }
+            else {
+                throw new SQLException("There is no reaction type "+plate.getReactionType());
+            }
+            Statement workflowUpdateStatement = limsConnection.createStatement();
+            workflowUpdateStatement.executeUpdate(sql);
+            workflowUpdateStatement.close();
+        } catch(SQLException e) {
+            limsConnection.rollback();
+            throw e;
+        } finally {
+            limsConnection.endTransaction();
         }
-        else if(plate.getReactionType() == Reaction.Type.PCR){
-            sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
-        }
-        else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
-            sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
-        }
-        else {
-            throw new SQLException("There is no reaction type "+plate.getReactionType());
-        }
-        Statement workflowUpdateStatement = connection.createStatement();
-        workflowUpdateStatement.executeUpdate(sql);
-        workflowUpdateStatement.close();
     }
 
-    private void isPlateValid(Plate plate, Connection connection) throws BadDataException, SQLException {
+    private void isPlateValid(Plate plate, LIMSConnection connection) throws BadDataException, SQLException {
         if(plate.getName() == null || plate.getName().length() == 0) {
             throw new BadDataException("Plates cannot have empty names");
         }
         if(plate.getId() < 0) {
-            PreparedStatement plateCheckStatement = connection.prepareStatement("SELECT name FROM plate WHERE name=?");
+            PreparedStatement plateCheckStatement = connection.createStatement("SELECT name FROM plate WHERE name=?");
             plateCheckStatement.setString(1, plate.getName());
             if(plateCheckStatement.executeQuery().next()) {
                 throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
@@ -2117,7 +2069,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public Map<BiocodeUtilities.Well, FimsSample> getFimsSamplesForCycleSequencingPlate(String plateName) throws SQLException{
         //step 1, query the plate record
         String query1 = "SELECT plate.size, plate.id FROM plate WHERE plate.name = ?";
-        PreparedStatement statement1 = limsConnection.getConnection().prepareStatement(query1);
+        PreparedStatement statement1 = limsConnection.createStatement(query1);
         statement1.setString(1, plateName);
         ResultSet resultSet1 = statement1.executeQuery();
         if(!resultSet1.next()) {
@@ -2131,7 +2083,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         //step 2, get the relevant reaction record
         String query2 = "SELECT extraction.sampleId, cyclesequencing.location FROM cyclesequencing, plate, extraction WHERE cyclesequencing.extractionId = extraction.extractionId AND cyclesequencing.plate = ?";
-        PreparedStatement statement2 = limsConnection.getConnection().prepareStatement(query2);
+        PreparedStatement statement2 = limsConnection.createStatement(query2);
         statement2.setInt(1, plateId);
         ResultSet resultSet2 = statement2.executeQuery();
         Set<String> samplesToGet = new HashSet<String>();
@@ -2206,7 +2158,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 break;
         }
         System.out.println(sqlBuilder.toString());
-        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sqlBuilder.toString());
+        PreparedStatement statement = limsConnection.createStatement(sqlBuilder.toString());
         for (int i = 0; i < values.size(); i++) {
             statement.setString(i+1, values.get(i));
         }
@@ -2233,7 +2185,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         }
         sqlBuilder.append(")");
-        PreparedStatement statement = limsConnection.getConnection().prepareStatement(sqlBuilder.toString());
+        PreparedStatement statement = limsConnection.createStatement(sqlBuilder.toString());
         int i=0;
         for (String s : workflowIds) {
             statement.setString(i+1, s);

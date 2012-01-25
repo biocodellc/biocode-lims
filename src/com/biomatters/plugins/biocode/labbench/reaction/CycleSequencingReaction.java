@@ -238,8 +238,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         try {
             String sql = "SELECT * FROM traces WHERE reaction = ?";
 
-            Connection connection = BiocodeService.getInstance().getActiveLIMSConnection().getConnection();
-            PreparedStatement statement = connection.prepareStatement(sql);
+            PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(sql);
             statement.setInt(1, getId());
             ResultSet set = statement.executeQuery();
 

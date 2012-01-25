@@ -557,7 +557,7 @@ public class ReportGenerator {
         }
 
         System.out.println(sql);
-        ResultSet resultSet = fimsToLims.getLimsConnection().getConnection().createStatement().executeQuery(sql);
+        ResultSet resultSet = fimsToLims.getLimsConnection().createStatement().executeQuery(sql);
         List<String> values = new ArrayList<String>();
         while(resultSet.next()) {
             if(progress.isCanceled()) {
@@ -604,7 +604,7 @@ public class ReportGenerator {
             builder.append(" LIKE ?");
         }
         try {
-            PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().prepareStatement(builder.toString());
+            PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(builder.toString());
             System.out.print(builder.toString()+" ");
             System.out.print(value+" ");
             setSqlParam(statement, 1, value);

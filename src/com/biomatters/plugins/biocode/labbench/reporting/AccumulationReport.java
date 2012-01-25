@@ -67,7 +67,7 @@ public class AccumulationReport extends Report{
             composite.beginSubtask("Calculating series "+(i1+1)+" of "+options.getSeriesOptions().size()+" ("+seriesName+")");
             System.out.println(options.getSql(fieldOptions));
             String sql = options.getSql(fieldOptions);
-            PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+            PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
             List<Object> objects = options.getObjectsForPreparedStatement(fieldOptions);
             for (int i = 0; i < objects.size(); i++) {
                 statement.setObject(i + 1, objects.get(i));

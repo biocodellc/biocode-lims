@@ -88,7 +88,7 @@ public class FimsToLims {
         lociOptionValues = new ArrayList<Options.OptionValue>();
         loci = new ArrayList<String>();
         String sql = "SELECT DISTINCT(locus) FROM workflow";
-        Statement statement = lims.getConnection().createStatement();
+        Statement statement = lims.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         while(resultSet.next()) {
             lociOptionValues.add(new Options.OptionValue(resultSet.getString(1), resultSet.getString(1)));
@@ -102,7 +102,7 @@ public class FimsToLims {
             return;
         }
         String sql = "SELECT * FROM "+FIMS_DEFINITION_TABLE;
-        Statement statement = lims.getConnection().createStatement();
+        Statement statement = lims.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         while(resultSet.next()) {
             friendlyNameMap.put(resultSet.getString("field").toLowerCase(), resultSet.getString("name"));
@@ -117,7 +117,7 @@ public class FimsToLims {
         else {
             sql = "SHOW TABLES";
         }
-        Statement statement = lims.getConnection().createStatement();
+        Statement statement = lims.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         while(resultSet.next()) {
             if(FIMS_DATE_TABLE.equals(resultSet.getString(lims.isLocal() ? 3 : 1).toLowerCase())) {
@@ -135,7 +135,7 @@ public class FimsToLims {
             return;
         }
         String sql = "SELECT value FROM "+FIMS_DATE_TABLE;
-        Statement statement = lims.getConnection().createStatement();
+        Statement statement = lims.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         while(resultSet.next()) {
             Date date = resultSet.getDate(1);
@@ -188,10 +188,10 @@ public class FimsToLims {
         List<DocumentField> results = new ArrayList<DocumentField>();
         ResultSet resultsSet;
         if(lims.isLocal()) {
-            resultsSet = lims.getConnection().getMetaData().getColumns(null, null, null, null);
+            resultsSet = lims.getMetaData().getColumns(null, null, null, null);
         }
         else {
-            resultsSet = lims.getConnection().createStatement().executeQuery(sql);
+            resultsSet = lims.createStatement().executeQuery(sql);
         }
         while(resultsSet.next()) {
             if(lims.isLocal() && !resultsSet.getString(3).equalsIgnoreCase(FIMS_VALUES_TABLE)) {
@@ -289,17 +289,16 @@ public class FimsToLims {
         try {
             listener.setIndeterminateProgress();
 
-            final Connection limsConnection = lims.getConnection();
 
             String dropDateTable = "DROP TABLE IF EXISTS " + FIMS_DATE_TABLE;
-            Statement statement = limsConnection.createStatement();
+            Statement statement = lims.createStatement();
             statement.executeUpdate(dropDateTable);
 
             String dropDefinitionTable = "DROP TABLE IF EXISTS " + FIMS_DEFINITION_TABLE;
-            statement = limsConnection.createStatement();
+            statement = lims.createStatement();
             statement.executeUpdate(dropDefinitionTable);
 
-            statement = limsConnection.createStatement();
+            statement = lims.createStatement();
             String dropFimsTable = "DROP TABLE IF EXISTS "+FIMS_VALUES_TABLE;
             statement.executeUpdate(dropFimsTable);
 
@@ -335,12 +334,12 @@ public class FimsToLims {
                         listener.setProgress(((double)count)/total);
                         List<FimsSample> fimsSamplesToUseInCaseOfError = new ArrayList<FimsSample>(fimsSamples);
                         try {
-                            copyFimsSet(fimsSamples, limsConnection, fields);
+                            copyFimsSet(fimsSamples, lims, fields);
                         } catch (SQLException e) {
                             System.out.println("error at "+count+": "+e.getMessage());
                             for(FimsSample sample : fimsSamplesToUseInCaseOfError) { //try copy them one by one to find the error...
                                 try {
-                                    copyFimsSet(Arrays.asList(sample), limsConnection, fields);
+                                    copyFimsSet(Arrays.asList(sample), lims, fields);
                                 } catch (SQLException e1) {
                                     System.out.println("error at "+count+": "+e.getMessage());
                                 }
@@ -359,13 +358,13 @@ public class FimsToLims {
 
             fims.getAllSamples(callback);
             try {
-                copyFimsSet(fimsSamples, limsConnection, fields);
+                copyFimsSet(fimsSamples, lims, fields);
                 fimsSamples.clear();
             } catch (SQLException e) {
                 System.out.println("error at end: "+e.getMessage());
                 for(FimsSample sample : fimsSamples) { //try copy them one by one to find the error...
                     try {
-                        copyFimsSet(Arrays.asList(sample), limsConnection, fields);
+                        copyFimsSet(Arrays.asList(sample), lims, fields);
                     } catch (SQLException e1) {
                         throw new ConnectionException("There was an error copying your FIMS values into the LIMS: "+e.getMessage(), e);
                     }
@@ -385,7 +384,7 @@ public class FimsToLims {
             }
             statement.executeUpdate(createDefinitionTable);
             String fillDefinitionTable = "INSERT INTO " + FIMS_DEFINITION_TABLE + " (field, name) VALUES (?, ?)";
-            PreparedStatement fillStatement = limsConnection.prepareStatement(fillDefinitionTable);
+            PreparedStatement fillStatement = lims.createStatement(fillDefinitionTable);
             for(DocumentField f : fims.getSearchAttributes()) {
                 fillStatement.setString(1, getSqlColName(f.getCode(), getLimsConnection().isLocal()));
                 fillStatement.setString(2, f.getName());
@@ -402,7 +401,7 @@ public class FimsToLims {
             statement.executeUpdate(createDateTable);
 
             String fillDateTable = "INSERT INTO " + FIMS_DATE_TABLE + " (value) VALUES (?)";
-            fillStatement = limsConnection.prepareStatement(fillDateTable);
+            fillStatement = lims.createStatement(fillDateTable);
             fillStatement.setDate(1, new java.sql.Date(new Date().getTime()));
             fillStatement.executeUpdate();
 
@@ -430,7 +429,7 @@ public class FimsToLims {
         return "\""+colName+"\"";
     }
 
-    public void copyFimsSet(List<FimsSample> fimsSamples, Connection limsConnection, List<String> fields) throws SQLException {
+    public void copyFimsSet(List<FimsSample> fimsSamples, LIMSConnection limsConnection, List<String> fields) throws SQLException {
         StringBuilder sql = new StringBuilder("INSERT INTO "+FIMS_VALUES_TABLE+"("+StringUtilities.join(", ", fields)+") VALUES ");
         for(int i=0; i < fimsSamples.size(); i++) {
             sql.append("("+StringUtilities.join(", ", Collections.nCopies(fields.size(), "?"))+")");
@@ -438,7 +437,7 @@ public class FimsToLims {
                 sql.append(", ");
             }
         }
-        PreparedStatement statement = limsConnection.prepareStatement(sql.toString());
+        PreparedStatement statement = limsConnection.createStatement(sql.toString());
         int count = 1;
         for(FimsSample fimsSample : fimsSamples) {
             for(DocumentField f : fims.getSearchAttributes()) {
@@ -546,14 +545,14 @@ public class FimsToLims {
             extraWhere = " WHERE direction="+(forward ? "'forward'" : "'reverse'");
         }
         String sql1 = "SELECT DISTINCT("+primerFieldName+") FROM "+tableName+extraWhere;
-        PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql1);
+        PreparedStatement statement = getLimsConnection().createStatement(sql1);
         ResultSet resultSet = statement.executeQuery();
         List<PrimerSet> primers = new ArrayList<PrimerSet>();
         while(resultSet.next()) {
             String primerName = resultSet.getString(1);
             String sql2 = "SELECT "+primerSequenceName+" FROM "+tableName+" WHERE "+primerFieldName+"=?";
             System.out.println(sql2.replace("?", "'"+primerName+"'"));
-            PreparedStatement statement2 = getLimsConnection().getConnection().prepareStatement(sql2);
+            PreparedStatement statement2 = getLimsConnection().createStatement(sql2);
             statement2.setString(1, primerName);
             ResultSet resultSet2 = statement2.executeQuery();
             String primerSequence = "";
@@ -597,7 +596,7 @@ public class FimsToLims {
 
         String sql = "SELECT "+primerFieldName+", "+primerSequenceName+" FROM "+tableName+extraWhere+" GROUP BY "+primerFieldName;
         System.out.println(sql);
-        PreparedStatement statement = getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = getLimsConnection().createStatement(sql);
         ResultSet resultSet = statement.executeQuery();
         List<PrimerSet> primers = new ArrayList<PrimerSet>();
         while(resultSet.next()) {

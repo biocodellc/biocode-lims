@@ -184,7 +184,7 @@ public class PieChartReport extends Report{
         String sql = limsSql;
         sql += " GROUP BY "+options.getTableAndField();
         System.out.println(sql);
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
         progress.setMessage("Getting all possible values for your selected field");
         progress.setIndeterminateProgress();
         List<String> loci;

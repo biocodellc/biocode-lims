@@ -141,7 +141,7 @@ public class BiocodeUtilities {
             return;
         }
 
-        Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement(java.sql.ResultSet.TYPE_FORWARD_ONLY, java.sql.ResultSet.CONCUR_READ_ONLY);
+        Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(java.sql.ResultSet.TYPE_FORWARD_ONLY, java.sql.ResultSet.CONCUR_READ_ONLY);
         if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
             statement.setFetchSize(Integer.MIN_VALUE);
         }

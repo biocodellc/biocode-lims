@@ -83,7 +83,7 @@ public class PrimerPerformanceReport extends Report{
         }
         System.out.println(sql);
 
-        PreparedStatement statement = fimsToLims.getLimsConnection().getConnection().prepareStatement(sql);
+        PreparedStatement statement = fimsToLims.getLimsConnection().createStatement(sql);
 
         final List<Map<String, Integer>> counts = new ArrayList<Map<String, Integer>>();
 
