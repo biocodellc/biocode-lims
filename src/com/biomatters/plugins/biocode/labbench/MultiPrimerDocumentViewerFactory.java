@@ -142,7 +142,16 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                 }
             }
             else {
-                workflowMap.put(workflow.getReactions(Reaction.Type.Extraction).get(0).getExtractionId(), workflow);
+                String extractionId = null;
+                for(Reaction r : workflow.getReactions()) {
+                    if(r.getExtractionId() != null) {
+                        extractionId = r.getExtractionId();
+                        break;
+                    }
+                }
+                if(extractionId != null) { //if there is no extraction ID, this must be an empty workflow = no reason to display it
+                    workflowMap.put(extractionId, workflow);
+                }
             }
         }
         return new ArrayList<WorkflowDocument>(workflowMap.values());
