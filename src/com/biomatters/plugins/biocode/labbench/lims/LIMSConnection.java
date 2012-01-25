@@ -73,7 +73,7 @@ public class LIMSConnection {
     private final String EXTRACTION_BARCODE = "extraction.extractionBarcode";
     String serverUrn;
 
-    public static PasswordOptions getConnectionOptions() {
+    public static PasswordOptions createConnectionOptions() {
         return new LimsConnectionOptions(LIMSConnection.class);
     }
 
@@ -107,14 +107,14 @@ public class LIMSConnection {
         return schema;
     }
 
-    public void connect(Options LIMSOptions) throws ConnectionException {
-        if(LIMSOptions.getValueAsString("connectionType").equals("remote")) {
-            driver = BiocodeService.getDriver();
-            connectRemote(LIMSOptions.getChildOptions().get("remote"));
-        }
-        else {
+    public void connect(PasswordOptions LIMSOptions) throws ConnectionException {
+        if(isLocal(LIMSOptions)) {
             driver = BiocodeService.getLocalDriver();
             connectLocal(LIMSOptions.getChildOptions().get("local"), false);
+        }
+        else {
+            driver = BiocodeService.getDriver();
+            connectRemote(LIMSOptions.getChildOptions().get("remote"));
         }
     }
 

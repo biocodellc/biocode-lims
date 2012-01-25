@@ -3,8 +3,6 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import org.jdom.Element;
 
 import java.util.Collections;
@@ -36,7 +34,7 @@ public class LoginOptions extends Options {
         }
         Option chooser = fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), PageChooserType.COMBO_BOX, false);
 
-        PasswordOptions limsOptions = BiocodeService.getInstance().getActiveLIMSConnection().getConnectionOptions();
+        PasswordOptions limsOptions = BiocodeService.getInstance().getActiveLIMSConnection().createConnectionOptions();
 
         addChildOptions("fims", null, null, fimsOptions);
         addChildOptions("lims", null, null, limsOptions);

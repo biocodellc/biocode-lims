@@ -13,8 +13,6 @@ import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 import org.jdom.Attribute;
-import org.jdom.output.XMLOutputter;
-import org.jdom.output.Format;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -98,7 +96,7 @@ public class ConnectionManager implements XMLSerializable{
         }
         fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
 
-        Options limsOptions = limsConnection.getConnectionOptions();
+        Options limsOptions = limsConnection.createConnectionOptions();
 
         Options loginOptions = new Options(BiocodeService.class);
         loginOptions.addChildOptions("fims", null, null, fimsOptions);

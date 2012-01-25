@@ -72,6 +72,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean loggingIn;
     ReportingService reportingService;
     private Thread disconnectCheckingThread;
+    private static boolean driverLoaded;
 
     private BiocodeService() {
     }
@@ -328,6 +329,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public static Driver getDriver() {
+        if(driver == null && driverLoaded) {
+            throw new IllegalStateException("A driver load was attempted, but the driver has not been loaded");
+        }
         return driver;
     }
 
@@ -580,6 +584,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     private String loadMySqlDriver(boolean block, String driverFileName) {
+        driverLoaded = true;
         ClassLoader loader = getClass().getClassLoader();
         String error = null;
         try {
