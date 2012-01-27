@@ -342,6 +342,9 @@ public class LIMSConnection {
 
     private int transactionLevel = 0;
 
+    /**
+     * Note that this is not thread safe - it is assumed that only one atomic transaction will access the LIMSConnection at any one time
+     */
     public void beginTransaction() throws SQLException {
         if(transactionLevel == 0) {
             Connection connection = getConnection();
@@ -350,6 +353,9 @@ public class LIMSConnection {
         transactionLevel++;
     }
 
+    /**
+     * Note that this is not thread safe - it is assumed that only one atomic transaction will access the LIMSConnection at any one time
+     */
     public void rollback() {
         try {
             Connection connection = getConnection();
@@ -360,6 +366,9 @@ public class LIMSConnection {
         transactionLevel = 0;
     }
 
+    /**
+     * Note that this is not thread safe - it is assumed that only one atomic transaction will access the LIMSConnection at any one time
+     */
     public void endTransaction() throws SQLException {
         Connection connection = getConnection();
         if(transactionLevel == 0) {
