@@ -356,7 +356,7 @@ public class LIMSConnection {
             connection.rollback();
             connection.setAutoCommit(true);
         }
-        catch(SQLException ex){} //if we can't rollback, let's ignore
+        catch(SQLException ex){/*if we can't rollback, let's ignore*/}
         transactionLevel = 0;
     }
 
