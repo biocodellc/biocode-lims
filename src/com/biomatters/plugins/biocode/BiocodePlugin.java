@@ -280,7 +280,8 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
                 new MarkSequencesAsSubmittedInLimsOperation(),
-                new WorkflowBuilder()
+                new WorkflowBuilder(),
+                new ImportLimsOperation()
 //                new ExportForBarstoolOperation(false)
         };
         return operations;

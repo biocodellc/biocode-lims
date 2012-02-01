@@ -73,6 +73,17 @@ public class LIMSConnection {
     private final String EXTRACTION_BARCODE = "extraction.extractionBarcode";
     String serverUrn;
 
+    public LIMSConnection() {}
+
+    /**
+     * creates a new LIMSConnection connected to the given local LIMS database
+     * @param localDatabaseName
+     * @throws ConnectionException
+     */
+    public LIMSConnection(String localDatabaseName) throws ConnectionException{
+        connectLocal(localDatabaseName, false);
+    }
+
     public static PasswordOptions createConnectionOptions() {
         return new LimsConnectionOptions(LIMSConnection.class);
     }
@@ -110,7 +121,8 @@ public class LIMSConnection {
     public void connect(PasswordOptions LIMSOptions) throws ConnectionException {
         if(isLocal(LIMSOptions)) {
             driver = BiocodeService.getLocalDriver();
-            connectLocal(LIMSOptions.getChildOptions().get("local"), false);
+            this.limsOptions = LIMSOptions;
+            connectLocal(LocalLIMS.getDbNameFromConnectionOptions(LIMSOptions.getChildOptions().get("local")), false);
         }
         else {
             driver = BiocodeService.getDriver();
@@ -118,15 +130,14 @@ public class LIMSConnection {
         }
     }
 
-    private void connectLocal(Options LIMSOptions, boolean alreadyAskedBoundUpgrade) throws ConnectionException {
+    private void connectLocal(String dbName, boolean alreadyAskedAboutUpgrade) throws ConnectionException {
         isLocal = true;
         if(localLIMS == null) {
             localLIMS = new LocalLIMS();
             localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
         }
-        connection = localLIMS.connect(LIMSOptions);
-        serverUrn = "local/"+LIMSOptions.getValueAsString("database");
-        this.limsOptions = LIMSOptions;
+        connection = localLIMS.connect(dbName);
+        serverUrn = "local/"+dbName;
         try {
             ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
             if(!resultSet.next()) {
@@ -136,9 +147,9 @@ public class LIMSConnection {
                 int version = resultSet.getInt("version");
 
                 if(version < EXPECTED_SERVER_VERSION) {
-                    if(alreadyAskedBoundUpgrade || Dialogs.showYesNoDialog("The LIMS database you are connecting to is written for an older version of this plugin.  Would you like to upgrade it?", "Old database", null, Dialogs.DialogIcon.QUESTION)) {
-                        localLIMS.upgradeDatabase(LIMSOptions);
-                        connectLocal(LIMSOptions, true);
+                    if(alreadyAskedAboutUpgrade || Dialogs.showYesNoDialog("The LIMS database you are connecting to is written for an older version of this plugin.  Would you like to upgrade it?", "Old database", null, Dialogs.DialogIcon.QUESTION)) {
+                        localLIMS.upgradeDatabase(dbName);
+                        connectLocal(dbName, true);
                     }
                     else {
                         throw new ConnectionException("You need to upgrade your database, or choose another one to continue");
@@ -220,7 +231,7 @@ public class LIMSConnection {
         boolean isLocal = this.isLocal;
         disconnect();
         if(isLocal) {
-            connectLocal(limsOptions, true);
+            connectLocal(LocalLIMS.getDbNameFromConnectionOptions(limsOptions), true);
         }
         else {
             connectRemote(limsOptions);

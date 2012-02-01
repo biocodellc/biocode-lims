@@ -179,8 +179,16 @@ public class LocalLIMS {
         }
     }
 
+    public static String getDbNameFromConnectionOptions(Options options) {
+        return options.getValueAsString("database");    
+    }
+
     private static String getDbPath(String newDbName) throws IOException {
         return dataDirectory.getCanonicalPath() + File.separator + newDbName + ".db";
+    }
+
+    public static List<Options.OptionValue> getDatabaseOptionValues() {
+        return getDbValues(update());
     }
 
     private static List<Options.OptionValue> getDbValues(List<String> dbNames) {
@@ -195,8 +203,7 @@ public class LocalLIMS {
     }
 
 
-    public Connection connect(Options options) throws ConnectionException{
-        String dbName = options.getValueAsString("database");
+    public Connection connect(String dbName) throws ConnectionException{
         String path;
         try {
             Class.forName("org.hsqldb.jdbc.JDBCDriver");
@@ -219,10 +226,10 @@ public class LocalLIMS {
     }
 
 
-    public void upgradeDatabase(Options options) throws SQLException{
+    public void upgradeDatabase(String dbName) throws SQLException{
         Connection connection;
         try {
-            connection = connect(options);
+            connection = connect(dbName);
         }
         catch(ConnectionException ex) {
             throw new SQLException("Could not connect to the database to upgrade it: "+ex.getMessage());

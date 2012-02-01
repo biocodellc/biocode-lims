@@ -1579,7 +1579,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return results;
     }
 
-    public List<Workflow> createWorkflows(List<Reaction> reactions, BlockingProgress progress) throws SQLException{
+    public static List<Workflow> createWorkflows(List<Reaction> reactions, LIMSConnection limsConnection, BlockingProgress progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
         limsConnection.beginTransaction();
         try {
@@ -1618,6 +1618,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException{
+        saveExtractions(progress, plate, limsConnection);
+    }
+
+    public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate, LIMSConnection limsConnection) throws SQLException, BadDataException{
         limsConnection.beginTransaction();
         try {
             isPlateValid(plate, limsConnection);
@@ -1638,7 +1642,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 throw new BadDataException(error);
             }
 
-            createOrUpdatePlate(plate, progress);
+            createOrUpdatePlate(plate, limsConnection, progress);
 
         } finally {
             limsConnection.endTransaction();
@@ -1852,6 +1856,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void saveReactions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException {
+        saveReactions(progress, limsConnection, plate);
+    }
+
+    public static void saveReactions(BiocodeService.BlockingProgress progress, LIMSConnection limsConnection, Plate plate) throws SQLException, BadDataException {
         if(progress != null) {
             progress.setMessage("Retrieving existing workflows");
         }
@@ -1937,7 +1945,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
             if(reactionsWithoutWorkflows.size() > 0) {
-                List<Workflow> workflowList = createWorkflows(reactionsWithoutWorkflows, progress);
+                List<Workflow> workflowList = createWorkflows(reactionsWithoutWorkflows, limsConnection, progress);
                 for (int i = 0; i < reactionsWithoutWorkflows.size(); i++) {
                     Reaction reaction = reactionsWithoutWorkflows.get(i);
                     reaction.setWorkflow(workflowList.get(i));
@@ -1947,13 +1955,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 progress.setMessage("Creating the plate");
             }
             //we need to create the plate
-            createOrUpdatePlate(plate, progress);
+            createOrUpdatePlate(plate, limsConnection, progress);
         } finally {
             limsConnection.endTransaction();
         }
     }
 
-    private void createOrUpdatePlate(Plate plate, BlockingProgress progress) throws SQLException, BadDataException{
+    private static void createOrUpdatePlate(Plate plate, LIMSConnection limsConnection, BlockingProgress progress) throws SQLException, BadDataException{
 
         //check the vaidity of the plate.
         isPlateValid(plate, limsConnection);
@@ -2015,7 +2023,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    private void isPlateValid(Plate plate, LIMSConnection connection) throws BadDataException, SQLException {
+    private static void isPlateValid(Plate plate, LIMSConnection connection) throws BadDataException, SQLException {
         if(plate.getName() == null || plate.getName().length() == 0) {
             throw new BadDataException("Plates cannot have empty names");
         }
