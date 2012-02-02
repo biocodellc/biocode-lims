@@ -10,7 +10,6 @@ import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMS;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
@@ -23,8 +22,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 import jebl.util.ProgressListener;
-
-import javax.swing.*;
+import jebl.util.CompositeProgressListener;
 
 /**
  * @author Steve
@@ -85,71 +83,52 @@ public class ImportLimsOperation extends DocumentOperation {
 
             LIMSConnection sourceLims = new LIMSConnection(databaseName);
 
-
             checkForDuplicateNames(sourceLims, destinationLims, "plate", "name", "plate(s)");
+            checkForCancelled(progressListener);
 
             checkForDuplicateNames(sourceLims, destinationLims, "thermocycle", "name", "thermocycle(s)");
+            checkForCancelled(progressListener);
 
             checkForDuplicateNames(sourceLims, destinationLims, "pcr_cocktail", "name", "PCR cocktail(s)");
+            checkForCancelled(progressListener);
 
             checkForDuplicateNames(sourceLims, destinationLims, "cyclesequencing_cocktail", "name", "sequencing cocktail(s)");
+            checkForCancelled(progressListener);
 
             destinationLims.beginTransaction();
+            checkForCancelled(progressListener);
 
-            Map<Integer, Integer> pcrCocktailMap = copyCocktails(BiocodeService.getInstance().getPCRCocktails(), destinationLims);
+            Map<Integer, Integer> pcrCocktailMap = copyCocktails(BiocodeService.getPCRCocktailsFromDatabase(sourceLims), destinationLims);
+            checkForCancelled(progressListener);
 
-            Map<Integer, Integer> sequencingCocktailMap = copyCocktails(BiocodeService.getInstance().getCycleSequencingCocktails(), destinationLims);
+            Map<Integer, Integer> sequencingCocktailMap = copyCocktails(BiocodeService.getCycleSequencingCocktailsFromDatabase(sourceLims), destinationLims);
+            checkForCancelled(progressListener);
 
-            Map<Integer, Integer> pcrThermocycleMap = copyThermocycles(BiocodeService.getInstance().getPCRThermocycles(), "pcr_thermocycles", destinationLims);
+            Map<Integer, Integer> pcrThermocycleMap = copyThermocycles(BiocodeService.getThermocyclesFromDatabase("pcr_thermocycle", sourceLims), "pcr_thermocycle", destinationLims);
+            checkForCancelled(progressListener);
 
-            Map<Integer, Integer> sequencingThermocycleMap = copyThermocycles(BiocodeService.getInstance().getCycleSequencingThermocycles(), "cyclesequencing_thermocycles", destinationLims);
+            Map<Integer, Integer> sequencingThermocycleMap = copyThermocycles(BiocodeService.getThermocyclesFromDatabase("cyclesequencing_thermocycle", sourceLims), "cyclesequencing_thermocycle", destinationLims);
+            checkForCancelled(progressListener);
 
-            final AtomicReference<Throwable> callbackException = new AtomicReference<Throwable>();
+            BiocodeService.getInstance().buildCaches();
+            checkForCancelled(progressListener);
 
-            sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, "Extraction"), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
-                private boolean canceled = false;
+            CompositeProgressListener composite = new CompositeProgressListener(progressListener, 3);
+            checkForCancelled(progressListener);
 
-                protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
-                    handleDocument((PlateDocument)document);
-                }
+            composite.beginSubtask("Copying Extraction Plates");
+            copyExtractionPlates(sourceLims, destinationLims, composite);
+            checkForCancelled(progressListener);
 
-                protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
-                    try {
-                        PluginDocument pluginDocument = document.getDocument();
-                        handleDocument((PlateDocument) pluginDocument);
-                    } catch (DocumentOperationException e) {
-                        canceled = true;
-                        callbackException.set(e);
-                    }
-                }
+            composite.beginSubtask("Copying PCR Plates");
+            copyReactionPlates(sourceLims, destinationLims, "PCR", pcrCocktailMap, pcrThermocycleMap, composite);
+            checkForCancelled(progressListener);
 
+            composite.beginSubtask("Copying Sequencing Plates");
+            copyReactionPlates(sourceLims, destinationLims, "CycleSequencing", sequencingCocktailMap, sequencingThermocycleMap, composite);
+            checkForCancelled(progressListener);
 
-
-                private void handleDocument(PlateDocument plate) {
-                    plate.getPlate().setId(-1);
-                    for(Reaction r : plate.getPlate().getReactions()) {
-                        r.setId(-1);
-                    }
-                    try {
-                        BiocodeService.getInstance().saveExtractions(null, plate.getPlate(), destinationLims);
-                    } catch (SQLException e) {
-                        canceled = true;
-                        callbackException.set(e);
-                    } catch (BadDataException e) {
-                        canceled = true;
-                        callbackException.set(e);
-                    }
-                }
-
-                @Override
-                protected boolean _isCanceled() {
-                    return progressListener.isCanceled() && canceled;
-                }
-            });
-
-            if(callbackException.get() != null) {
-                throw callbackException.get();
-            }
+            //todo: copy traces and sequences
 
 
         } catch (ConnectionException e) {
@@ -177,6 +156,154 @@ public class ImportLimsOperation extends DocumentOperation {
         return Collections.emptyList();
     }
 
+    private static void checkForCancelled(ProgressListener progress) throws DocumentOperationException {
+        if(progress.isCanceled()) {
+            throw new DocumentOperationException.Canceled();
+        }
+    }
+
+
+    private static void copyReactionPlates(LIMSConnection sourceLims, final LIMSConnection destinationLims, String reactionType, final Map<Integer, Integer> cocktailMap, final Map<Integer, Integer> thermocycleMap, final ProgressListener progressListener) throws Throwable {
+        final AtomicReference<Throwable> callbackException = new AtomicReference<Throwable>();
+        final Map<String, String> workflowMap = new HashMap<String, String>();
+
+        sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, reactionType), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
+            private boolean canceled = false;
+
+            protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
+                handleDocument((PlateDocument)document);
+            }
+
+            protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
+                try {
+                    PluginDocument pluginDocument = document.getDocument();
+                    handleDocument((PlateDocument) pluginDocument);
+                } catch (DocumentOperationException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                }
+            }
+
+            private void handleDocument(PlateDocument plate) {
+                plate.getPlate().setId(-1);
+                Reaction[] plateReactions = plate.getPlate().getReactions();
+                String[] existingWorkflows = new String[plateReactions.length];
+
+                int oldThermocycleId = plate.getPlate().getThermocycleId();
+                int newThermocycleId = thermocycleMap.get(oldThermocycleId);
+                Thermocycle newThermocycle = new Thermocycle("temp", newThermocycleId);
+                plate.getPlate().setThermocycle(newThermocycle);
+
+                for (int i = 0; i < plateReactions.length; i++) {
+                    Reaction r = plateReactions[i];
+                    r.setId(-1);
+
+                    //set workflows
+                    String existingWorkflowId = r.getOptions().getValueAsString(ReactionOptions.WORKFLOW_ID);
+                    if (existingWorkflowId.length() > 0) {
+                        existingWorkflows[i] = existingWorkflowId;
+                    }
+                    String workflowId = getDestinationWorkflowId(existingWorkflowId, workflowMap);
+                    r.setWorkflow(null);
+                    r.getOptions().setValue(ReactionOptions.WORKFLOW_ID, workflowId);
+                    plateReactions[0].areReactionsValid(Arrays.asList(r), null, false); //call this to set the workflow objects...
+
+                    //set cocktails
+                    int existingCocktailId = Integer.parseInt(r.getOptions().getValueAsString(ReactionOptions.COCKTAIL_OPTION_ID));
+                    r.getOptions().setValue(ReactionOptions.COCKTAIL_OPTION_ID, cocktailMap.get(existingCocktailId));
+                }
+                try {
+                    BiocodeService.getInstance().saveReactions(null, destinationLims, plate.getPlate());
+                } catch (SQLException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                } catch (BadDataException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                }
+                //todo: test that two PCR plates with the same workflows copy across correctly...
+                for (int i = 0; i < plateReactions.length; i++) {
+                    Reaction r = plateReactions[i];
+                    if(r != null && !r.isEmpty()) {
+                        Workflow workflow = r.getWorkflow();
+                        if (workflow != null && existingWorkflows[i] != null) {
+                            workflowMap.put(existingWorkflows[i], workflow.getName());
+                        }
+                    }
+                }
+            }
+
+            @Override
+            protected boolean _isCanceled() {
+                return progressListener.isCanceled() && canceled;
+            }
+        });
+
+        if(callbackException.get() != null) {
+            throw callbackException.get();
+        }
+    }
+
+    private static void copyExtractionPlates(LIMSConnection sourceLims, final LIMSConnection destinationLims, final ProgressListener progressListener) throws Throwable {
+        final AtomicReference<Throwable> callbackException = new AtomicReference<Throwable>();
+
+        sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, "Extraction"), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
+            private boolean canceled = false;
+
+            protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
+                handleDocument((PlateDocument)document);
+            }
+
+            protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
+                try {
+                    PluginDocument pluginDocument = document.getDocument();
+                    handleDocument((PlateDocument) pluginDocument);
+                } catch (DocumentOperationException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                }
+            }
+
+
+
+            private void handleDocument(PlateDocument plate) {
+                plate.getPlate().setId(-1);
+                for(Reaction r : plate.getPlate().getReactions()) {
+                    r.setId(-1);
+                }
+                try {
+                    BiocodeService.getInstance().saveExtractions(null, plate.getPlate(), destinationLims);
+                } catch (SQLException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                } catch (BadDataException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                }
+            }
+
+            @Override
+            protected boolean _isCanceled() {
+                return progressListener.isCanceled() && canceled;
+            }
+        });
+
+        if(callbackException.get() != null) {
+            throw callbackException.get();
+        }
+    }
+
+    private static String getDestinationWorkflowId(String sourceWorkflowId, Map<String, String> workflowMap) {
+        if(sourceWorkflowId.trim().length() == 0) {
+            return "";
+        }
+        String destWorkflowId = workflowMap.get(sourceWorkflowId);
+        if(destWorkflowId == null) {
+            return "";
+        }
+        return destWorkflowId;
+    }
+
     private static Map<Integer, Integer> copyCocktails(List<? extends Cocktail> cocktails, LIMSConnection destinationLims) throws SQLException {
         Map<Integer, Integer> idMap = new HashMap<Integer, Integer>();
         Statement statement = destinationLims.createStatement();
@@ -197,14 +324,14 @@ public class ImportLimsOperation extends DocumentOperation {
     private static Map<Integer, Integer> copyThermocycles(List<Thermocycle> thermocycles, String tableName, LIMSConnection destinationLims) throws SQLException {
         Map<Integer, Integer> idMap = new HashMap<Integer, Integer>();
         for(Thermocycle tCycle : thermocycles) {
+            int oldId = tCycle.getId();
             if(allowedNames.contains(tCycle.getName())) {
+                idMap.put(oldId, oldId);
                 continue;
             }
-            int oldId = tCycle.getId();
             int id = tCycle.toSQL(destinationLims);
+            idMap.put(oldId, id);
             PreparedStatement statement = destinationLims.createStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+")");
-            int newId = destinationLims.getLastInsertId();
-            idMap.put(oldId, newId);
             statement.execute();
             statement.close();
         }

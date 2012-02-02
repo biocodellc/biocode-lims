@@ -34,7 +34,6 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
     public static final String PRIMER_REVERSE_OPTION_ID = "revPrimer";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
     static final String LABEL_OPTION_ID = "label";
-    static final String COCKTAIL_OPTION_ID = "cocktail";
     static final String ADD_PRIMER_TO_LOCAL_ID = "addPrimers";
     private ButtonOption addPrimersButton;
 
@@ -158,7 +157,7 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
     public void init() {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
-        addStringOption("workflowId", "Workflow ID", "");
+        addStringOption(WORKFLOW_ID, "Workflow ID", "");
         String[] sampleLoci = new String[] {"None", "COI", "16s", "18s", "ITS", "ITS1", "ITS2", "28S", "12S", "rbcl", "matK", "trnH-psba"};
         addEditableComboBoxOption(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "Locus", "None", sampleLoci);
         addDateOption("date", "Date", new Date());

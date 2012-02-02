@@ -38,6 +38,7 @@ public class Plate implements XMLSerializable {
     private Thermocycle thermocycle;
     private List<GelImage> images;
     private boolean isDeleted = false;
+    private int thermocycleId = -1;
 
     public enum Size {
         w48("48", 48),
@@ -85,6 +86,7 @@ public class Plate implements XMLSerializable {
     }
 
     private void setThermocycleFromId(int thermocycleId) {
+        this.thermocycleId = thermocycleId;
         if(thermocycleId >= 0) {
             for(Thermocycle tc : BiocodeService.getInstance().getPCRThermocycles()) {
                 if(tc.getId() == thermocycleId) {
@@ -199,8 +201,13 @@ public class Plate implements XMLSerializable {
         return thermocycle;
     }
 
+    public int getThermocycleId() {
+        return thermocycleId;
+    }
+
     public void setThermocycle(Thermocycle thermocycle) {
         this.thermocycle = thermocycle;
+        this.thermocycleId = thermocycle != null ? thermocycle.getId() : -1;
         for(Reaction r : getReactions()) {
             if(r != null) {
                 r.setThermocycle(thermocycle);
@@ -368,7 +375,7 @@ public class Plate implements XMLSerializable {
             statement.setInt(4, tc.getId());
         }
         else {
-            statement.setInt(4, -1);
+            statement.setInt(4, thermocycleId);
         }
         statement.setDate(5, new java.sql.Date(new Date().getTime()));
         return statement;

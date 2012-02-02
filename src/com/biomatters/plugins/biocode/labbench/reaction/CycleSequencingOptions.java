@@ -46,7 +46,6 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
     private com.biomatters.plugins.biocode.labbench.ButtonOption tracesButton;
 
     public static final String PRIMER_OPTION_ID = "primer";
-    static final String COCKTAIL_OPTION_ID = "cocktail";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
     static final String LABEL_OPTION_ID = "label";
     static final String TRACES_BUTTON_ID = "traces";
@@ -70,7 +69,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
     }
 
     public boolean fieldIsFinal(String fieldCode) {
-        return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode) || "locus".equals(fieldCode);
+        return "extractionId".equals(fieldCode) || WORKFLOW_ID.equals(fieldCode) || "locus".equals(fieldCode);
     }
 
     public void refreshValuesFromCaches() {
@@ -210,7 +209,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
     public void init() {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
-        addStringOption("workflowId", "Workflow ID", "");
+        addStringOption(WORKFLOW_ID, "Workflow ID", "");
         String[] sampleLoci = new String[] {"None", "COI", "16s", "18s", "ITS", "ITS1", "ITS2", "28S", "12S", "rbcl", "matK", "trnH-psba"};
         addEditableComboBoxOption(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "Locus", "None", sampleLoci);
         addDateOption("date", "Date", new Date());

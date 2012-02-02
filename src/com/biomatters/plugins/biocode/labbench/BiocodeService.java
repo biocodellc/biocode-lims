@@ -991,7 +991,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private List<DisplayFieldsTemplate> pcrDisplayedFields = null;
     private List<DisplayFieldsTemplate> cycleSequencingDisplayedFields = null;
 
-    private void buildCaches() throws TransactionException {
+    public void buildCaches() throws TransactionException {
         try {
             buildCachesFromDisk();
         } catch (IOException e) {
@@ -1001,10 +1001,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         } catch (XMLSerializationException e) {
             throw new TransactionException("Could not read the caches from disk", e);
         }
-        PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle");
-        cyclesequencingThermocycles = getThermocyclesFromDatabase("cyclesequencing_thermocycle");
-        PCRCocktails = getPCRCocktailsFromDatabase();
-        cyclesequencingCocktails = getCycleSequencingCocktailsFromDatabase();
+        PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle", limsConnection);
+        cyclesequencingThermocycles = getThermocyclesFromDatabase("cyclesequencing_thermocycle", limsConnection);
+        PCRCocktails = getPCRCocktailsFromDatabase(limsConnection);
+        cyclesequencingCocktails = getCycleSequencingCocktailsFromDatabase(limsConnection);
         try {
             saveCachesToDisk();
         } catch (IOException e) {
@@ -1216,7 +1216,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    private List<PCRCocktail> getPCRCocktailsFromDatabase() throws TransactionException{
+    public static List<PCRCocktail> getPCRCocktailsFromDatabase(LIMSConnection limsConnection) throws TransactionException{
         ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM pcr_cocktail");
         List<PCRCocktail> cocktails = new ArrayList<PCRCocktail>();
         try {
@@ -1232,7 +1232,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return cocktails;
     }
 
-    private List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase() throws TransactionException{
+    public static List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase(LIMSConnection limsConnection) throws TransactionException{
         ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM cyclesequencing_cocktail");
         List<CycleSequencingCocktail> cocktails = new ArrayList<CycleSequencingCocktail>();
         try {
@@ -1247,7 +1247,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return cocktails;
     }
 
-    private List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws TransactionException {
+    public static List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable, LIMSConnection limsConnection) throws TransactionException {
         //String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN (thermocycle, cycle, state) ON (thermocycleid = "+thermocycleIdentifierTable+".cycle AND thermocycle.id = cycle.thermocycleId AND cycle.id = state.cycleId);";
         String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON (thermocycle.id = "+thermocycleIdentifierTable+".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
 //        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON thermocycle.id = "+thermocycleIdentifierTable+".cycle LEFT JOIN cycle ON thermocycle.id = cycle.thermocycleId LEFT JOIN state ON cycle.id = state.cycleId;";
