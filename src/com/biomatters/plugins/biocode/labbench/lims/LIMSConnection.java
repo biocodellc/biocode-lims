@@ -549,6 +549,17 @@ public class LIMSConnection {
             return Collections.emptyList();
         }
 
+        List<Query> ultraRefinedQueries = new ArrayList<Query>();
+        for(Query q : refinedQueries) {
+            if(query instanceof AdvancedSearchQueryTerm) {
+                Object[] queryValues = ((AdvancedSearchQueryTerm) q).getValues();
+                if(queryValues.length == 0 || queryValues[0].equals("")) {
+                    continue;
+                }
+                ultraRefinedQueries.add(q);
+            }
+        }
+
         String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
         List<String> terms = new ArrayList<String>();
         List<Object> sqlValues = new ArrayList<Object>();
@@ -560,7 +571,7 @@ public class LIMSConnection {
             sql = sql+"("+StringUtilities.join(" OR ", terms)+")";
         }
 
-        if(refinedQueries.size() > 0)  {
+        if(ultraRefinedQueries.size() > 0)  {
             if(workflows != null && workflows.size() > 0) {
                 String join;
                 switch(operator) {
@@ -572,7 +583,7 @@ public class LIMSConnection {
                 }
                 sql = sql + join;
             }
-            sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
+            sql = sql+"("+queryToSql(ultraRefinedQueries, operator, "assembly", sqlValues)+")";
         }
         printSql(sql, sqlValues);
         return getMatchingAssemblyDocuments(workflows, null, callback, urnsToNotRetrieve, cancelable, sql, sqlValues);

@@ -24,6 +24,8 @@ import java.sql.Statement;
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;
 
+import javax.swing.*;
+
 /**
  * @author Steve
  * @version $Id$
@@ -53,10 +55,31 @@ public class ImportLimsOperation extends DocumentOperation {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        Options options = new Options(this.getClass());
+        Options options = new Options(this.getClass()){
+            @Override
+            public Dialogs.DialogOptions getDialogOptions() {
+                Dialogs.DialogOptions dialogOptions = super.getDialogOptions();
+                if(dialogOptions == null) {
+                    dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Import LIMS", null, Dialogs.DialogIcon.WARNING);    
+                }
+                else {
+
+                }
+                dialogOptions.setCustomIcon(UIManager.getIcon("OptionPane.warningIcon"));
+                return dialogOptions;
+            }
+        };
 
 
-        options.addLabelWithIcon("<html>This operation will import all data from the local LIMS (source database) you select into the current LIMS (destination database).  <br>Please make sure that you are connected to the correct LIMS before running this operation, and make sure that you no users <br>modify the destination LIMS while this operation is in progress.</html>", StandardIcons.warning.getIcons());
+        options.addLabel("<html>This operation will import all data from the local LIMS you select below (the source database)  into the current LIMS (the destination database).  <br>Please make sure that you observe the following:<ul>" +
+                "<li>Make sure that you are connected to the correct LIMS database</li>" +
+                "<li>Both LIMS databases must be connected to the same FIMS database, or at the very least all tissue id's recorded in the source database <br>" +
+                "must be accessable from the destination database</li>" +
+                "<li>The destination database must not contain any cocktails, thermocycles, or plates with the same name as those in the source database</li>" +
+                "<li>This operaiton will not write anything to the destination database unless the entire import is successful.  However, please make sure <br>" +
+                "that you back up your destination LIMS before performing this operation</li>" +
+                "" +
+                "</ul></html>", false, true);
 
         List<Options.OptionValue> databaseValues = LocalLIMS.getDatabaseOptionValues();
 
@@ -113,22 +136,30 @@ public class ImportLimsOperation extends DocumentOperation {
             BiocodeService.getInstance().buildCaches();
             checkForCancelled(progressListener);
 
-            CompositeProgressListener composite = new CompositeProgressListener(progressListener, 3);
+            CompositeProgressListener composite = new CompositeProgressListener(progressListener, 5);
             checkForCancelled(progressListener);
 
             composite.beginSubtask("Copying Extraction Plates");
             copyExtractionPlates(sourceLims, destinationLims, composite);
             checkForCancelled(progressListener);
 
+            Map<String, String> workflowMap = new HashMap<String, String>();
+
             composite.beginSubtask("Copying PCR Plates");
-            copyReactionPlates(sourceLims, destinationLims, "PCR", pcrCocktailMap, pcrThermocycleMap, composite);
+            copyReactionPlates(sourceLims, destinationLims, "PCR", pcrCocktailMap, pcrThermocycleMap, workflowMap, composite);
             checkForCancelled(progressListener);
 
             composite.beginSubtask("Copying Sequencing Plates");
-            copyReactionPlates(sourceLims, destinationLims, "CycleSequencing", sequencingCocktailMap, sequencingThermocycleMap, composite);
+            Map<Integer, Integer> sequencingReactionMap = copyReactionPlates(sourceLims, destinationLims, "CycleSequencing", sequencingCocktailMap, sequencingThermocycleMap, workflowMap, composite);
             checkForCancelled(progressListener);
 
-            //todo: copy traces and sequences
+            composite.beginSubtask("Copying Raw Traces");
+            copyTraces(sourceLims, destinationLims, sequencingReactionMap, progressListener);
+            checkForCancelled(progressListener);
+
+            composite.beginSubtask("Copying Sequences");
+            copyAssemblies(sourceLims, destinationLims, workflowMap, progressListener);
+            checkForCancelled(progressListener);
 
 
         } catch (ConnectionException e) {
@@ -136,6 +167,7 @@ public class ImportLimsOperation extends DocumentOperation {
             throw new DocumentOperationException(e.getMessage(), e);
         } catch (SQLException e) {
             destinationLims.rollback();
+            e.printStackTrace();
             throw new DocumentOperationException(e.getMessage(), e);
         } catch(DocumentOperationException ex) {
             destinationLims.rollback();
@@ -156,6 +188,67 @@ public class ImportLimsOperation extends DocumentOperation {
         return Collections.emptyList();
     }
 
+    private void copyAssemblies(LIMSConnection sourceLims, LIMSConnection destinationLims, Map<String, String> workflowMap, ProgressListener progressListener) throws SQLException{
+        PreparedStatement getAssembliesStatement = sourceLims.createStatement("SELECT workflow.name, assembly.* from assembly, workflow WHERE workflow.id = assembly.workflow");
+        PreparedStatement saveAssembliesStatement = destinationLims.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, params, coverage, " +
+                "disagreements, edits, reference_seq_id, confidence_scores, trim_params_fwd, trim_params_rev, date, notes, technician, bin, ambiguities, submitted, editrecord) " +
+                "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        ResultSet getAssembliesResultSet = getAssembliesStatement.executeQuery();
+
+        while(getAssembliesResultSet.next()) {
+            saveAssembliesStatement.setString(1, getAssembliesResultSet.getString("assembly.extraction_id"));
+            saveAssembliesStatement.setInt(2, getWorkflowId(destinationLims, workflowMap.get(getAssembliesResultSet.getString("workflow.name"))));
+            saveAssembliesStatement.setString(3, getAssembliesResultSet.getString("assembly.progress"));
+            saveAssembliesStatement.setString(4, getAssembliesResultSet.getString("assembly.consensus"));
+            saveAssembliesStatement.setString(5, getAssembliesResultSet.getString("assembly.params"));
+            saveAssembliesStatement.setFloat(6, getAssembliesResultSet.getFloat("assembly.coverage"));
+            saveAssembliesStatement.setString(7, getAssembliesResultSet.getString("assembly.disagreements"));
+            saveAssembliesStatement.setString(8, getAssembliesResultSet.getString("assembly.edits"));
+            saveAssembliesStatement.setInt(9, getAssembliesResultSet.getInt("assembly.reference_seq_id"));
+            saveAssembliesStatement.setString(10, getAssembliesResultSet.getString("assembly.confidence_scores"));
+            saveAssembliesStatement.setString(11, getAssembliesResultSet.getString("assembly.trim_params_fwd"));
+            saveAssembliesStatement.setString(12, getAssembliesResultSet.getString("assembly.trim_params_rev"));
+            saveAssembliesStatement.setDate(13, getAssembliesResultSet.getDate("assembly.date"));
+            saveAssembliesStatement.setString(14, getAssembliesResultSet.getString("assembly.notes"));
+            saveAssembliesStatement.setString(15, getAssembliesResultSet.getString("assembly.technician"));
+            saveAssembliesStatement.setString(16, getAssembliesResultSet.getString("assembly.bin"));
+            saveAssembliesStatement.setInt(17, getAssembliesResultSet.getInt("assembly.ambiguities"));
+            saveAssembliesStatement.setInt(18, getAssembliesResultSet.getInt("assembly.submitted"));
+            saveAssembliesStatement.setString(19, getAssembliesResultSet.getString("assembly.editrecord"));
+            int result = saveAssembliesStatement.executeUpdate();
+            if(result != 1) {
+                throw new SQLException("Failed to save the sequence "+getAssembliesResultSet.getString("extraction_id")+" to the destination database.");
+            }
+        }
+    }
+
+    private int getWorkflowId(LIMSConnection destinationLims, String workflowName) throws SQLException{
+        PreparedStatement statement = destinationLims.createStatement("SELECT id from workflow WHERE name=?");
+        statement.setString(1, workflowName);
+        ResultSet resultSet = statement.executeQuery();
+        while(resultSet.next()) {
+            return resultSet.getInt("id");
+        }
+        throw new SQLException("There is no workflow with the name "+workflowName);
+
+    }
+
+    private static void copyTraces(LIMSConnection sourceLims, LIMSConnection destinationLims, Map<Integer, Integer> sequencingReactionMap, ProgressListener progressListener) throws SQLException{
+        PreparedStatement getTracesStatement = sourceLims.createStatement("SELECT * from traces");
+        PreparedStatement saveTraceStatement = destinationLims.createStatement("INSERT INTO traces (reaction, name, data) values (?, ?, ?)");
+        ResultSet getTracesResult = getTracesStatement.executeQuery();
+
+        while(getTracesResult.next()) {
+            saveTraceStatement.setInt(1, sequencingReactionMap.get(getTracesResult.getInt("reaction")));
+            saveTraceStatement.setString(2, getTracesResult.getString("name"));
+            saveTraceStatement.setBlob(3, getTracesResult.getBlob("data"));
+            int result = saveTraceStatement.executeUpdate();
+            if(result != 1) {
+                throw new SQLException("Failed to save the trace "+getTracesResult.getString("name")+" to the destination database.");
+            }
+        }
+    }
+
     private static void checkForCancelled(ProgressListener progress) throws DocumentOperationException {
         if(progress.isCanceled()) {
             throw new DocumentOperationException.Canceled();
@@ -163,9 +256,9 @@ public class ImportLimsOperation extends DocumentOperation {
     }
 
 
-    private static void copyReactionPlates(LIMSConnection sourceLims, final LIMSConnection destinationLims, String reactionType, final Map<Integer, Integer> cocktailMap, final Map<Integer, Integer> thermocycleMap, final ProgressListener progressListener) throws Throwable {
+    private static Map<Integer, Integer> copyReactionPlates(LIMSConnection sourceLims, final LIMSConnection destinationLims, String reactionType, final Map<Integer, Integer> cocktailMap, final Map<Integer, Integer> thermocycleMap, final Map<String, String> workflowMap,  final ProgressListener progressListener) throws Throwable {
         final AtomicReference<Throwable> callbackException = new AtomicReference<Throwable>();
-        final Map<String, String> workflowMap = new HashMap<String, String>();
+        final Map<Integer, Integer> reactionMap = new LinkedHashMap<Integer, Integer>();
 
         sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, reactionType), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
             private boolean canceled = false;
@@ -187,15 +280,20 @@ public class ImportLimsOperation extends DocumentOperation {
             private void handleDocument(PlateDocument plate) {
                 plate.getPlate().setId(-1);
                 Reaction[] plateReactions = plate.getPlate().getReactions();
+                final int[] reactionIds = new int[plateReactions.length];
                 String[] existingWorkflows = new String[plateReactions.length];
 
                 int oldThermocycleId = plate.getPlate().getThermocycleId();
-                int newThermocycleId = thermocycleMap.get(oldThermocycleId);
+                Integer newThermocycleId = thermocycleMap.get(oldThermocycleId);
+                if(newThermocycleId == null) {
+                    newThermocycleId = oldThermocycleId; //the ignored one (i.e. the default one)
+                }
                 Thermocycle newThermocycle = new Thermocycle("temp", newThermocycleId);
                 plate.getPlate().setThermocycle(newThermocycle);
 
                 for (int i = 0; i < plateReactions.length; i++) {
                     Reaction r = plateReactions[i];
+                    reactionIds[i] = r.getId();
                     r.setId(-1);
 
                     //set workflows
@@ -210,21 +308,43 @@ public class ImportLimsOperation extends DocumentOperation {
 
                     //set cocktails
                     int existingCocktailId = Integer.parseInt(r.getOptions().getValueAsString(ReactionOptions.COCKTAIL_OPTION_ID));
-                    r.getOptions().setValue(ReactionOptions.COCKTAIL_OPTION_ID, cocktailMap.get(existingCocktailId));
+                    Integer newCocktailId = cocktailMap.get(existingCocktailId);
+                    if(newCocktailId == null) {
+                        newCocktailId = existingCocktailId; //the ignored cocktails (i.e. the no cocktail one)
+                    }
+                    r.getOptions().setValue(ReactionOptions.COCKTAIL_OPTION_ID, newCocktailId);
                 }
                 try {
                     BiocodeService.getInstance().saveReactions(null, destinationLims, plate.getPlate());
                 } catch (SQLException e) {
                     canceled = true;
                     callbackException.set(e);
+                    return;
                 } catch (BadDataException e) {
                     canceled = true;
                     callbackException.set(e);
+                    return;
                 }
+
+                List<PlateDocument> savedPlates = null;
+                try {
+                    savedPlates = destinationLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plate.getPlate().getName()), Collections.<WorkflowDocument>emptyList(), null);
+                } catch (SQLException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                    return;
+                }
+                if(savedPlates.size() != 1) {
+                    callbackException.set(new DocumentOperationException("The plate appears not to have been saved to the database - expected 1 plate but got "+savedPlates.size()));
+                    canceled = true;
+                    return;
+                }
+                Reaction[] oldPlateReactions = savedPlates.get(0).getPlate().getReactions();
                 //todo: test that two PCR plates with the same workflows copy across correctly...
-                for (int i = 0; i < plateReactions.length; i++) {
-                    Reaction r = plateReactions[i];
+                for (int i = 0; i < oldPlateReactions.length; i++) {
+                    Reaction r = oldPlateReactions[i];
                     if(r != null && !r.isEmpty()) {
+                        reactionMap.put(reactionIds[i], r.getId());
                         Workflow workflow = r.getWorkflow();
                         if (workflow != null && existingWorkflows[i] != null) {
                             workflowMap.put(existingWorkflows[i], workflow.getName());
@@ -242,6 +362,7 @@ public class ImportLimsOperation extends DocumentOperation {
         if(callbackException.get() != null) {
             throw callbackException.get();
         }
+        return reactionMap;
     }
 
     private static void copyExtractionPlates(LIMSConnection sourceLims, final LIMSConnection destinationLims, final ProgressListener progressListener) throws Throwable {
