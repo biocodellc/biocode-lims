@@ -74,7 +74,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "2.3.1";
+        return "2.3.2";
     }
 
     public int getMaximumApiVersion() {
@@ -280,8 +280,8 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
                 new MarkSequencesAsSubmittedInLimsOperation(),
-                new WorkflowBuilder(),
-                new ImportLimsOperation()
+                new WorkflowBuilder()//,
+                //new ImportLimsOperation()
 //                new ExportForBarstoolOperation(false)
         };
         return operations;
