@@ -32,9 +32,12 @@ import java.util.concurrent.atomic.AtomicReference;
 public class WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
     private List<ReactionPart> parts;
-    Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>() {
+    Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>(){
             public int compare(ReactionPart o1, ReactionPart o2) {
-                return (int) (o1.getReaction().getCreated().getTime() - o2.getReaction().getCreated().getTime());
+                if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
+                    return -Integer.MAX_VALUE;
+                }
+                return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
             }
         };
 
@@ -70,15 +73,7 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public void sortReactions() {
-        Comparator comp = new Comparator<ReactionPart>(){
-            public int compare(ReactionPart o1, ReactionPart o2) {
-                if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
-                    return -Integer.MAX_VALUE;
-                }
-                return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
-            }
-        };
-        Collections.sort(parts, comp);
+        Collections.sort(parts, reactionComparitor);
     }
 
     public WorkflowDocument(ResultSet resultSet) throws SQLException{

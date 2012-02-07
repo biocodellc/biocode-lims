@@ -5,6 +5,8 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import org.jdom.Element;
 
 import java.util.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -35,6 +37,14 @@ public class Workflow implements XMLSerializable {
     @Override
     public int hashCode() {
         return id;
+    }
+
+    public Workflow(ResultSet resultSet) throws SQLException {
+        this.id = resultSet.getInt("id");
+        this.name = resultSet.getString("name");
+        this.extraction = resultSet.getString("extractionid");
+        this.locus = resultSet.getString("locus");
+        this.lastModified = resultSet.getTimestamp("date");
     }
 
     public Workflow(Element e) throws XMLSerializationException{

@@ -256,12 +256,16 @@ public class ImportLimsOperation extends DocumentOperation {
     }
 
 
-    private static Map<Integer, Integer> copyReactionPlates(LIMSConnection sourceLims, final LIMSConnection destinationLims, String reactionType, final Map<Integer, Integer> cocktailMap, final Map<Integer, Integer> thermocycleMap, final Map<String, String> workflowMap,  final ProgressListener progressListener) throws Throwable {
+    private static Map<Integer, Integer> copyReactionPlates(final LIMSConnection sourceLims, final LIMSConnection destinationLims, String reactionType, final Map<Integer, Integer> cocktailMap, final Map<Integer, Integer> thermocycleMap, final Map<String, String> workflowMap,  final ProgressListener progressListener) throws Throwable {
         final AtomicReference<Throwable> callbackException = new AtomicReference<Throwable>();
         final Map<Integer, Integer> reactionMap = new LinkedHashMap<Integer, Integer>();
 
+        final int plateCount = getPlateCount(sourceLims, reactionType);
+
+
         sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, reactionType), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
             private boolean canceled = false;
+            double currentPlate = 0;
 
             protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
                 handleDocument((PlateDocument)document);
@@ -278,6 +282,9 @@ public class ImportLimsOperation extends DocumentOperation {
             }
 
             private void handleDocument(PlateDocument plate) {
+                progressListener.setProgress(currentPlate/ plateCount);
+                currentPlate++;
+                int oldPlateId = plate.getPlate().getId();
                 plate.getPlate().setId(-1);
                 Reaction[] plateReactions = plate.getPlate().getReactions();
                 final int[] reactionIds = new int[plateReactions.length];
@@ -302,9 +309,15 @@ public class ImportLimsOperation extends DocumentOperation {
                         existingWorkflows[i] = existingWorkflowId;
                     }
                     String workflowId = getDestinationWorkflowId(existingWorkflowId, workflowMap);
-                    r.setWorkflow(null);
-                    r.getOptions().setValue(ReactionOptions.WORKFLOW_ID, workflowId);
-                    plateReactions[0].areReactionsValid(Arrays.asList(r), null, false); //call this to set the workflow objects...
+
+                    try {
+                        r.setWorkflow(getWorkflow(workflowId, destinationLims));
+                        r.getOptions().setValue(ReactionOptions.WORKFLOW_ID, workflowId);
+                    } catch (SQLException e) {
+                        canceled = true;
+                        callbackException.set(e);
+                        return;
+                    }
 
                     //set cocktails
                     int existingCocktailId = Integer.parseInt(r.getOptions().getValueAsString(ReactionOptions.COCKTAIL_OPTION_ID));
@@ -316,6 +329,7 @@ public class ImportLimsOperation extends DocumentOperation {
                 }
                 try {
                     BiocodeService.getInstance().saveReactions(null, destinationLims, plate.getPlate());
+                    copyGelImages(sourceLims, destinationLims, oldPlateId, plate.getPlate().getId());
                 } catch (SQLException e) {
                     canceled = true;
                     callbackException.set(e);
@@ -365,11 +379,35 @@ public class ImportLimsOperation extends DocumentOperation {
         return reactionMap;
     }
 
-    private static void copyExtractionPlates(LIMSConnection sourceLims, final LIMSConnection destinationLims, final ProgressListener progressListener) throws Throwable {
+    private static int getPlateCount(LIMSConnection sourceLims, String reactionType) throws SQLException {
+        PreparedStatement plateCountStatement = sourceLims.createStatement("SELECT count(id) from plate where type=?");
+        plateCountStatement.setString(1, reactionType);
+        ResultSet plateCountSet = plateCountStatement.executeQuery();
+        int plateCount = Integer.MAX_VALUE;
+        if(plateCountSet.next()) {
+            plateCount = plateCountSet.getInt(1);
+        }
+        return plateCount;
+    }
+
+    private static Workflow getWorkflow(String workflowId, LIMSConnection lims) throws SQLException{
+        PreparedStatement statement = lims.createStatement("SELECT * from workflow WHERE name=?");
+        statement.setString(1, workflowId);
+        ResultSet resultSet = statement.executeQuery();
+        if(resultSet.next()) {
+            return new Workflow(resultSet);
+        }
+        return null;
+    }
+
+    private static void copyExtractionPlates(final LIMSConnection sourceLims, final LIMSConnection destinationLims, final ProgressListener progressListener) throws Throwable {
         final AtomicReference<Throwable> callbackException = new AtomicReference<Throwable>();
+
+        final int plateCount = getPlateCount(sourceLims, "extraction");
 
         sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, "Extraction"), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
             private boolean canceled = false;
+            double currentPlate = 0;
 
             protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
                 handleDocument((PlateDocument)document);
@@ -388,12 +426,16 @@ public class ImportLimsOperation extends DocumentOperation {
 
 
             private void handleDocument(PlateDocument plate) {
+                progressListener.setProgress(currentPlate/plateCount);
+                currentPlate++;
+                int oldPlateId = plate.getPlate().getId();
                 plate.getPlate().setId(-1);
                 for(Reaction r : plate.getPlate().getReactions()) {
                     r.setId(-1);
                 }
                 try {
                     BiocodeService.getInstance().saveExtractions(null, plate.getPlate(), destinationLims);
+                    copyGelImages(sourceLims, destinationLims, oldPlateId, plate.getPlate().getId());
                 } catch (SQLException e) {
                     canceled = true;
                     callbackException.set(e);
@@ -411,6 +453,24 @@ public class ImportLimsOperation extends DocumentOperation {
 
         if(callbackException.get() != null) {
             throw callbackException.get();
+        }
+    }
+
+    private static void copyGelImages(LIMSConnection sourceLims, LIMSConnection destinationLims, int sourcePlate, int destPlate) throws SQLException{
+        PreparedStatement getImagesStatement = sourceLims.createStatement("SELECT * from gelimages WHERE plate=?");
+        PreparedStatement insertImagesStatement = destinationLims.createStatement("INSERT INTO gelimages(plate, imagedata, notes, name) VALUES (?, ?, ?, ?)");
+        getImagesStatement.setInt(1, sourcePlate);
+        ResultSet resultSet = getImagesStatement.executeQuery();
+
+        while(resultSet.next()) {
+            insertImagesStatement.setInt(1, destPlate);
+            insertImagesStatement.setBlob(2, resultSet.getBlob("imagedata"));
+            insertImagesStatement.setString(3, resultSet.getString("notes"));
+            insertImagesStatement.setString(4, resultSet.getString("name"));
+            int rowCount = insertImagesStatement.executeUpdate();
+            if(rowCount != 1) {
+                throw new SQLException("The gel Image "+resultSet.getString("name")+" seems to have not copied properly.  Expected 1 row updated, got "+rowCount);
+            }
         }
     }
 
