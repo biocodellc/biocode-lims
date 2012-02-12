@@ -1,13 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.XmlUtilities;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.CSVUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.options.PasswordOption;
 import com.google.gdata.client.ClientLoginAccountType;
 import com.google.gdata.client.GoogleService;
@@ -16,10 +13,7 @@ import com.google.gdata.util.ServiceException;
 import com.google.gdata.util.ContentType;
 import com.google.gdata.util.AuthenticationException;
 
-import javax.swing.*;
 import java.util.*;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -102,7 +96,7 @@ public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOption
         List<DocumentField> fields = new ArrayList<DocumentField>();
 
         while((line = reader.readLine()) != null) {
-            String[] tokens = FusionTablesFimsConnection.tokenizeLine(line);
+            String[] tokens = CSVUtilities.tokenizeLine(line);
             if(firstTime) {//they send the col headers for some reason...
                 firstTime = false;
                 continue;

@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.CSVUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMS;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
@@ -20,6 +21,9 @@ import java.sql.SQLException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.io.*;
 
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;
@@ -84,6 +88,18 @@ public class ImportLimsOperation extends DocumentOperation {
         List<Options.OptionValue> databaseValues = LocalLIMS.getDatabaseOptionValues();
 
         options.addComboBoxOption(DATABASE, "Select your source database",databaseValues, databaseValues.get(0));
+        options.beginAlignHorizontally(null, false);
+        Options.BooleanOption mapTissueIds = options.addBooleanOption("mapTissueIds", "Map Tissue Ids", false);
+        Options.FileSelectionOption tissueIdsFile = options.addFileSelectionOption("tissueMapFile", "", "");
+        Options.ButtonOption helpButton = options.addButtonOption("helpButton", "", "", StandardIcons.help.getIcons().getIcon16(), JButton.RIGHT);
+        mapTissueIds.addDependent(tissueIdsFile, true, false);
+        options.endAlignHorizontally();
+        helpButton.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                Dialogs.showMessageDialog("If your destination LIMS uses a new Tissue Id system to your source LIMS, you can specify a file describing the mapping here.  The file should be a CSV (comma separated value) file with the source LIMS ids in the first column, and the destination LIMS ids in the second column.", "Tissue ID Mapping");
+            }
+        });
+
 
         return options;
     }
@@ -98,6 +114,11 @@ public class ImportLimsOperation extends DocumentOperation {
         }
 
         String databaseName = options.getValueAsString(DATABASE);
+        Map<String, String> tissueIdMapping = null;
+        if((Boolean)options.getValue("mapTissueIds")) {
+            tissueIdMapping = mapTissueIds(options.getValueAsString("tissueMapFile"));
+        }
+        
 
         final LIMSConnection destinationLims = BiocodeService.getInstance().getActiveLIMSConnection();
         try {
@@ -140,7 +161,7 @@ public class ImportLimsOperation extends DocumentOperation {
             checkForCancelled(progressListener);
 
             composite.beginSubtask("Copying Extraction Plates");
-            copyExtractionPlates(sourceLims, destinationLims, composite);
+            copyExtractionPlates(sourceLims, destinationLims, tissueIdMapping, composite);
             checkForCancelled(progressListener);
 
             Map<String, String> workflowMap = new HashMap<String, String>();
@@ -186,6 +207,36 @@ public class ImportLimsOperation extends DocumentOperation {
 
 
         return Collections.emptyList();
+    }
+
+    private static Map<String, String> mapTissueIds(String mappingFileLocation) throws DocumentOperationException{
+        Map<String, String> map = new HashMap<String, String>();
+        File mappingFile = new File(mappingFileLocation);
+        if(!mappingFile.exists()) {
+            throw new DocumentOperationException("The mapping file located at \""+mappingFileLocation+"\" does not appear to exist.");
+        }
+
+        if(!mappingFile.isFile()) {
+            throw new DocumentOperationException("The mapping file located at \""+mappingFileLocation+"\" is a folder.");
+        }
+
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(mappingFile));
+            String line;
+            while((line = reader.readLine()) != null) {
+                String[] tokens = CSVUtilities.tokenizeLine(line);
+                if(tokens.length != 2)  {
+                    throw new DocumentOperationException("Your tissue mapping file contains an invalid line: "+line);
+                }
+                if(map.get(tokens[0]) != null) {
+                    throw new DocumentOperationException("Your tissue mapping file contains duplicate entries for \""+tokens[0]+"\"");
+                }
+                map.put(tokens[0], tokens[1]);
+            }
+        } catch (IOException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
+        }
+        return map;
     }
 
     private void copyAssemblies(LIMSConnection sourceLims, LIMSConnection destinationLims, Map<String, String> workflowMap, ProgressListener progressListener) throws SQLException{
@@ -400,7 +451,7 @@ public class ImportLimsOperation extends DocumentOperation {
         return null;
     }
 
-    private static void copyExtractionPlates(final LIMSConnection sourceLims, final LIMSConnection destinationLims, final ProgressListener progressListener) throws Throwable {
+    private static void copyExtractionPlates(final LIMSConnection sourceLims, final LIMSConnection destinationLims, final Map<String, String> tissueIdMapping, final ProgressListener progressListener) throws Throwable {
         final AtomicReference<Throwable> callbackException = new AtomicReference<Throwable>();
 
         final int plateCount = getPlateCount(sourceLims, "extraction");
@@ -431,7 +482,17 @@ public class ImportLimsOperation extends DocumentOperation {
                 int oldPlateId = plate.getPlate().getId();
                 plate.getPlate().setId(-1);
                 for(Reaction r : plate.getPlate().getReactions()) {
-                    r.setId(-1);
+                    ExtractionReaction reaction = (ExtractionReaction)r;
+                    reaction.setId(-1);
+                    String tissueId = reaction.getTissueId();
+                    if(tissueIdMapping != null && tissueId != null && tissueId.length() > 0) {
+                        String newTissueId = tissueIdMapping.get(tissueId);
+                        if(newTissueId == null) {
+                            callbackException.set(new DocumentOperationException("Could not find a mapped value for the tissue id \""+tissueId+"\""));
+                            return;
+                        }
+                        reaction.setTissueId(newTissueId);
+                    }
                 }
                 try {
                     BiocodeService.getInstance().saveExtractions(null, plate.getPlate(), destinationLims);

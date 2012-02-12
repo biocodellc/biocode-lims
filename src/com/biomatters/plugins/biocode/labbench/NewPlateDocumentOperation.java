@@ -12,6 +12,7 @@ import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -264,7 +265,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     static void generateExtractionIds(Plate plate) throws DocumentOperationException{
         List<String> tissueIds = new ArrayList<String>();
         for(Reaction r : plate.getReactions()) {
-            String tissueId = ""+r.getFieldValue("sampleId");
+            String tissueId = ""+r.getFieldValue(ExtractionOptions.TISSUE_ID);
             if(tissueId.length() > 0) {
                 tissueIds.add(tissueId);
             }
@@ -274,7 +275,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
 
             for(Reaction r : plate.getReactions()) {
-                String tissueId = ""+r.getFieldValue("sampleId");
+                String tissueId = ""+r.getFieldValue(ExtractionOptions.TISSUE_ID);
                 if(tissueId.length() > 0) {
                     String extractionId = ReactionUtilities.getNewExtractionId(extractionIds, tissueId);
                     r.setExtractionId(extractionId);

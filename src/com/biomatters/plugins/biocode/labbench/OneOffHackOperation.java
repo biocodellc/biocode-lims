@@ -9,6 +9,7 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -107,7 +108,7 @@ public class OneOffHackOperation extends DocumentOperation{
                         e.printStackTrace();
                         throw new DocumentOperationException(e.getMessage(), e);
                     }
-                    populateWells96(tissueIds, "sampleId", plate);
+                    populateWells96(tissueIds, ExtractionOptions.TISSUE_ID, plate);
                     generateExtractionIds(plate);
 
                     extractionPlate = plate;
@@ -167,7 +168,7 @@ public class OneOffHackOperation extends DocumentOperation{
     }
 
     private void generateExtractionIds(Plate plate) {
-        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
 
         DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
 

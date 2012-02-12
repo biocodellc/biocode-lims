@@ -7,15 +7,12 @@ import com.google.gdata.client.Service.GDataRequest.RequestType;
 import com.google.gdata.util.AuthenticationException;
 import com.google.gdata.util.ContentType;
 import com.google.gdata.util.ServiceException;
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.XmlUtilities;
+import com.biomatters.plugins.biocode.CSVUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.options.PasswordOption;
@@ -25,10 +22,8 @@ import java.util.*;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.net.MalformedURLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
@@ -312,7 +307,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             String line = null;
             while ((line = reader.readLine()) != null) {
                 System.out.println(line);
-                String[] elements = tokenizeLine(line);
+                String[] elements = CSVUtilities.tokenizeLine(line);
                 if(!firstTime) {
                     System.out.println(colHeaders.size()+", "+ elements.length);
                 }
@@ -429,7 +424,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             boolean firstTime = true;
             String line = null;
             while ((line = reader.readLine()) != null) {
-                String[] elements = tokenizeLine(line);
+                String[] elements = CSVUtilities.tokenizeLine(line);
                 for (int i = 0; i < elements.length; i++) {
                     String element = elements[i];
                     String decoded = element == null ? "" : element.replaceAll("\"\"", "\"");
@@ -454,32 +449,6 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             throw new ConnectionException(e.getMessage(), e);
         }
 
-    }
-
-    /**
-     * splits a line into tokens on commas, but keeps text inside quotes together
-     * @param line the line to tokenize
-     * @return the line tokenized as described above
-     */
-     static String[] tokenizeLine(String line) {
-        List<String> tokens = new ArrayList<String>();
-        int previousSplitIndex = 0;
-        boolean inAQuote = false;
-        for(int i=0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if(c == '\"') {
-                inAQuote = !inAQuote;
-            }
-            if(!inAQuote){
-                if(c == ',' || i == line.length()-1) {
-                    int splitIndex = i == line.length() -1 ? i+1 : i;
-                    String token = line.substring(previousSplitIndex, splitIndex);
-                    tokens.add(token.replace("\"", "").trim());
-                    previousSplitIndex = i+1;
-                }
-            }
-        }
-        return tokens.toArray(new String[tokens.size()]);
     }
 
     public boolean requiresMySql() {

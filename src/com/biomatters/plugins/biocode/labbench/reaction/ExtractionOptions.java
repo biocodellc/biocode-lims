@@ -14,12 +14,14 @@ import java.util.Date;
  *          Created on 14/07/2009 7:46:04 PM
  */
 public class ExtractionOptions extends ReactionOptions<ExtractionReaction>{
+    public static final String TISSUE_ID = "sampleId";
+
     public boolean fieldIsFinal(String fieldCode) {
         return false;//"sampleId".equals(fieldCode) || "extractionId".equals(fieldCode);
     }
 
     public ExtractionOptions() {
-        addStringOption("sampleId", "Tissue Sample Id", "");
+        addStringOption(TISSUE_ID, "Tissue Sample Id", "");
         addStringOption("extractionId", "Extraction Id", "");
         addDateOption("date", "Date", new Date());
         OptionValue[] concStoredValues = new OptionValue[] {

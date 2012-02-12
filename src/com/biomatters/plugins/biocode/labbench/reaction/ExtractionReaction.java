@@ -37,7 +37,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     private void init(ResultSet r, Options options) throws SQLException {
         setId(r.getInt("extraction.id"));
         setCreated(r.getTimestamp("extraction.date"));
-        options.setValue("sampleId", r.getString("extraction.sampleId"));
+        options.setValue(ExtractionOptions.TISSUE_ID, r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
         extractionBarcode = r.getString("extraction.extractionBarcode");
         options.setValue("extractionBarcode", extractionBarcode);
@@ -90,7 +90,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         if(fimsConnection != null) {
-            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString("sampleId")));
+            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
         }
     }
 
@@ -107,11 +107,11 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
     public String getTissueId() {
-        return getOptions().getValueAsString("sampleId");
+        return getOptions().getValueAsString(ExtractionOptions.TISSUE_ID);
     }
 
     public void setTissueId(String s) {
-        getOptions().setValue("sampleId", s);
+        getOptions().setValue(ExtractionOptions.TISSUE_ID, s);
     }
     
 
@@ -174,7 +174,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         for(Reaction reaction : reactions) {
             ReactionOptions option = reaction.getOptions();
-            String tissueId = option.getValueAsString("sampleId");
+            String tissueId = option.getValueAsString(ExtractionOptions.TISSUE_ID);
 
             if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
                 continue;
@@ -196,7 +196,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
             for(Reaction reaction : reactions) {
                 ReactionOptions op = reaction.getOptions();
-                String tissueId = op.getValueAsString("sampleId");
+                String tissueId = op.getValueAsString(ExtractionOptions.TISSUE_ID);
                 reaction.isError = false;
 
                 if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {

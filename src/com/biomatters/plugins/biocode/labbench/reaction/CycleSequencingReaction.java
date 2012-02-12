@@ -136,7 +136,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         if(fimsConnection != null) {
-            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString("sampleId")));
+            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
         }
 
 //        String sequenceString = r.getString("cyclesequencing.sequences");

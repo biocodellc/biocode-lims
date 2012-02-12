@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.CSVUtilities;
 import com.biomatters.options.PasswordOption;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
@@ -20,8 +21,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.net.MalformedURLException;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -175,7 +174,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
                     first = false;
                     continue;
                 }
-                String[] parts = FusionTablesFimsConnection.tokenizeLine(line);
+                String[] parts = CSVUtilities.tokenizeLine(line);
                 tables.add(new OptionValue(parts[0], parts[1]));
             }
         }

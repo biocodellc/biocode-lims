@@ -18,6 +18,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -176,7 +177,7 @@ public class PlateBulkEditor {
                         for (JTextField field : jTextFields) {
                             plateIds.add(field.getText());
                         }
-                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
                         final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
 
 
@@ -284,7 +285,7 @@ public class PlateBulkEditor {
             if(BiocodeService.getInstance().getActiveFIMSConnection() instanceof MooreaFimsConnection) {
                 specNumCollector = new GeneiousAction("Map Spec_Num_Collectors", "Convert Spec_Num_Collector values to Mbio numbers") {
                     public void actionPerformed(ActionEvent e) {
-                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
                         final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
                         tissueEditor.valuesFromTextView();
 
@@ -306,7 +307,7 @@ public class PlateBulkEditor {
 
             autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
                 public void actionPerformed(ActionEvent e) {
-                    DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+                    DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
                     final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
                     tissueEditor.valuesFromTextView();
 
@@ -667,7 +668,7 @@ public class PlateBulkEditor {
         switch(p.getReactionType()) {
             case Extraction:
                 return Arrays.asList(
-                    new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false),
+                    new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false),
                     new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
                     new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
                     new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
@@ -972,7 +973,7 @@ public class PlateBulkEditor {
         public void run() {
             DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
             DocumentField parentExtractionField = new DocumentField("Parent Extraction", "", "parentExtraction", String.class, false, false);
-            DocumentField tissueField = new DocumentField("Tissue Sample Id", "", "sampleId", String.class, false, false);
+            DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
             DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
             DocumentFieldEditor extractionIdEditor = getEditorForField(editors, extractionField);
             DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, parentExtractionField);
