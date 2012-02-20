@@ -46,10 +46,10 @@
             <include name="plugin.properties"/>
          </fileset>
       </copy>
-      <echo file="${plugins.proguard}" append="true"
+     <!-- <echo file="${plugins.proguard}" append="true"
             message="-injars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar${line.separator}"/>
       <echo file="${plugins.proguard}" append="true"
-            message="-outjars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}-obfuscated.jar${line.separator}"/>
+            message="-outjars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}-obfuscated.jar${line.separator}"/>-->
 
 
        <!--
