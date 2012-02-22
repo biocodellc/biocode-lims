@@ -28,7 +28,7 @@ public class PlateSearchReportOptions extends Options {
         addLabel(" of the following:");
         endAlignHorizontally();
 
-        ReactionFieldOptions fieldOptions = new ReactionFieldOptions(prefClass, fimsToLims, true, false, false);
+        ReactionFieldOptions fieldOptions = new ReactionFieldOptions(prefClass, fimsToLims, true, false, false, false);
         addMultipleOptions("reactionOptions", fieldOptions, false);
     }
 

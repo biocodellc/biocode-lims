@@ -30,6 +30,11 @@ public class ReactionFieldOptions extends Options {
             new OptionValue("CycleSequencing", "Sequencing reactions"),
             new OptionValue("assembly", "Sequences")
     };
+    protected static final OptionValue[] reactionTypesWithoutAssemblies = new OptionValue[] {
+                new OptionValue("Extraction", "Extraction reactions"),
+                new OptionValue("PCR", "PCR reactions"),
+                new OptionValue("CycleSequencing", "Sequencing reactions")
+        };
 
     protected static final OptionValue[] stringComparators = new OptionValue[] {
             new OptionValue("contains", "contains"),
@@ -46,15 +51,17 @@ public class ReactionFieldOptions extends Options {
     };
     private FimsToLims fimsToLims;
     private boolean allowAll;
+    private boolean includeAssemblies;
 
     public void setFimsToLims(FimsToLims fimsToLims) {
         this.fimsToLims = fimsToLims;
     }
 
-    public ReactionFieldOptions(Class cl, FimsToLims fimsToLims, boolean includeValue, boolean allowAll, boolean includeLocus) {
+    public ReactionFieldOptions(Class cl, FimsToLims fimsToLims, boolean includeValue, boolean allowAll, boolean includeLocus, boolean includeAssemblies) {
         super(cl);
         this.fimsToLims = fimsToLims;
         this.allowAll = allowAll;
+        this.includeAssemblies = includeAssemblies;
         init(includeValue, includeLocus);
         initListeners();
     }
@@ -62,6 +69,7 @@ public class ReactionFieldOptions extends Options {
     public ReactionFieldOptions(Element element) throws XMLSerializationException {
         super(element);
         allowAll = "true".equals(element.getChildText("allowAll"));
+        includeAssemblies = "true".equals(element.getChildText("includeAssemblies"));
         initListeners();
     }
 
@@ -69,13 +77,14 @@ public class ReactionFieldOptions extends Options {
     public Element toXML() {
         Element element = super.toXML();
         element.addContent(new Element("allowAll").setText(""+allowAll));
+        element.addContent(new Element("includeAssemblies").setText(""+includeAssemblies));
         return element;
     }
 
 
     private void init(boolean includeValue, boolean includeLocus) {
         beginAlignHorizontally("", false);
-        ComboBoxOption<OptionValue> reactionType = addComboBoxOption(REACTION_TYPE, "Reaction type ", reactionTypes, reactionTypes[0]);
+        ComboBoxOption<OptionValue> reactionType = addComboBoxOption(REACTION_TYPE, "Reaction type ", includeAssemblies ? reactionTypes : reactionTypesWithoutAssemblies, reactionTypes[0]);
         List<OptionValue> fieldValue = ReportGenerator.getPossibleFields(reactionType.getValue().getName(), includeValue, allowAll);
         addComboBoxOption(FIELDS, "Field to compare", fieldValue, fieldValue.get(0));
         if(includeValue) {

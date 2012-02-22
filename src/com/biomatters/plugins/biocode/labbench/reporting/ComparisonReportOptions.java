@@ -45,7 +45,7 @@ public class ComparisonReportOptions extends Options{
 
         Options yAxisOptions = new Options(this.getClass());
 
-        yAxisOptions.addMultipleOptions(Y_MULTIPLE_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true, true, true), false);
+        yAxisOptions.addMultipleOptions(Y_MULTIPLE_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true, true, true, true), false);
 
         addChildOptions(Y_CHILD_OPTIONS, "Y Axis (Count)", "", yAxisOptions);
 

@@ -54,7 +54,7 @@ public class AccumulationOptions extends Options {
         }
         documentFields.addAll(LIMSConnection.getSearchAttributes());
         Options countOptions = new Options(this.getClass());
-        countOptions.addMultipleOptions(COUNT_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true, true, true), false);
+        countOptions.addMultipleOptions(COUNT_OPTIONS, new ReactionFieldOptions(this.getClass(), fimsToLims, true, true, true, true), false);
         addChildOptions(COUNT_OPTIONS, "Series", "Add or remove series from your graph", countOptions);
         FimsMultiOptions fimsMultiOptions = new FimsMultiOptions(this.getClass(), fimsToLims);
         addChildOptions(FIMS_OPTIONS, "FIMS fields", "", fimsMultiOptions);

@@ -52,7 +52,7 @@ public class PieChartOptions extends Options {
 
     private void init(final FimsToLims fimsToLims) {
         isLocalLims = fimsToLims.getLimsConnection().isLocal();
-        final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, false, true);
+        final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, false, true, true);
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
         final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaciton or FIMS field", false);
         fimsField.setDefaultValue(false);
@@ -119,7 +119,24 @@ public class PieChartOptions extends Options {
 
     String getLimsSql() {
         ReactionFieldOptions reactionFields = (ReactionFieldOptions)getChildOptions().get(REACTION_FIELDS);
-        return reactionFields.getSql(getTableAndField(), (Boolean)getValue(FIMS_FIELD) ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE+" f") : null, false, getExtraSql());
+        return reactionFields.getSql(getTableAndField(), requiresFimsTable() ? Arrays.asList(FimsToLims.FIMS_VALUES_TABLE+" f") : null, false, getExtraSql());
+    }
+
+    private Boolean requiresFimsTable() {
+        Boolean isRestricting = (Boolean) getValue(FIMS_FIELD);
+        if(!isRestricting) {
+            return false;
+        }
+        Options fimsOptions = getChildOptions().get(FIMS_FIELD);
+        MultipleOptions fimsMultipleOptions = fimsOptions.getMultipleOptions("fims");
+        List<String> fimsTerms = new ArrayList<String>();
+        for(Options fimsOption : fimsMultipleOptions.getValues()) {
+            SingleFieldOptions fimsFieldOptions = (SingleFieldOptions)fimsOption;
+            if(isFimsField(fimsFieldOptions.getFieldName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     String getTableAndField() {
@@ -136,16 +153,20 @@ public class PieChartOptions extends Options {
             Options fimsOptions = getChildOptions().get(FIMS_FIELD);
             MultipleOptions fimsMultipleOptions = fimsOptions.getMultipleOptions("fims");
             List<String> fimsTerms = new ArrayList<String>();
+            boolean usesFims = false;
             for(Options fimsOption : fimsMultipleOptions.getValues()) {
                 SingleFieldOptions fimsFieldOptions = (SingleFieldOptions)fimsOption;
 
-                String table = isFimsField(fimsFieldOptions.getFieldName()) ?
+                boolean fimsField = isFimsField(fimsFieldOptions.getFieldName());
+                usesFims |= fimsField;
+                String table = fimsField ?
                         "f."+FimsToLims.getSqlColName(fimsFieldOptions.getFieldName(), isLocalLims)
                         :
                         ReportGenerator.getTableFieldName(getReactionTable(), fimsFieldOptions.getFieldName());
                 fimsTerms.add(table+" "+fimsFieldOptions.getComparitor()+" ?");
             }
-            return "f.tissueId = extraction.sampleId AND ("+StringUtilities.join("any".equals(fimsOptions.getValueAsString("allOrAny")) ? " OR " : " AND ", fimsTerms)+")";
+            String beginning = usesFims ? "f." + tissueColumnId + " = extraction.sampleId AND " : "";
+            return beginning + "(" + StringUtilities.join("any".equals(fimsOptions.getValueAsString("allOrAny")) ? " OR " : " AND ", fimsTerms) + ")";
         }
         return null;
     }
@@ -156,7 +177,7 @@ public class PieChartOptions extends Options {
         List<Object> fimsTerms = new ArrayList<Object>();
         for(Options fimsOption : fimsMultipleOptions.getValues()) {
             SingleFieldOptions fimsFieldOptions = (SingleFieldOptions)fimsOption;
-            fimsTerms.add(fimsFieldOptions.getValue());
+            fimsTerms.add("%"+fimsFieldOptions.getValue()+"%");
         }
         return fimsTerms;
     }

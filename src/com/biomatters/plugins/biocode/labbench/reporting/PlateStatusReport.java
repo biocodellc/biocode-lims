@@ -83,13 +83,13 @@ public class PlateStatusReport extends Report {
 
         String plateWhere = options.getValueAsString(PlateStatusOptions.PLATE_NAME);
         if(plateWhere.trim().length() > 0){
-            plateSql += " WHERE "+plateColName+" LIKE ?";
+            plateSql += " WHERE LOWER("+plateColName+") LIKE ?";
         }
         System.out.println(plateSql);
         PreparedStatement plateNameStatement = fimsToLims.getLimsConnection().createStatement(plateSql);
 
         if(plateWhere.trim().length() > 0){
-            plateNameStatement.setString(1, "%"+plateWhere.trim()+"%");
+            plateNameStatement.setString(1, "%"+plateWhere.trim().toLowerCase()+"%");
         }
 
         progress.setIndeterminateProgress();

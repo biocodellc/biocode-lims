@@ -105,7 +105,11 @@ public class FimsToLims {
         Statement statement = lims.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
         while(resultSet.next()) {
-            friendlyNameMap.put(resultSet.getString("field").toLowerCase(), resultSet.getString("name"));
+            String field = resultSet.getString("field").toLowerCase();
+            if(lims.isLocal() && field.startsWith("\"") && field.endsWith("\"")) {
+                field = field.substring(1, field.indexOf('"', field.length()-1));
+            }
+            friendlyNameMap.put(field, resultSet.getString("name"));
         }
     }
 
