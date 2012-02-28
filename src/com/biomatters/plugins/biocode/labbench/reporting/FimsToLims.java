@@ -52,7 +52,7 @@ public class FimsToLims {
     public FimsToLims(BiocodeService service) throws SQLException{
         this.fims = service.getActiveFIMSConnection();
         this.lims = service.getActiveLIMSConnection();
-        popuplateHasFimsLimsValues();
+        populateHasFimsLimsValues();
         initialiseCocktailMaps(service.getPCRCocktails(), service.getCycleSequencingCocktails());
         updateEverything();
     }
@@ -63,6 +63,8 @@ public class FimsToLims {
         populateFimsFields();
         populateDateLastCopied();
         populatePrimers();
+        populateHasFimsLimsValues();
+        populateDateLastCopied();
     }
 
     private void populatePrimers() throws SQLException{
@@ -113,7 +115,7 @@ public class FimsToLims {
         }
     }
 
-    private void popuplateHasFimsLimsValues() throws SQLException {
+    private void populateHasFimsLimsValues() throws SQLException {
         String sql;
         if(lims.isLocal()) {
             sql = "SELECT * FROM INFORMATION_SCHEMA.SYSTEM_TABLES";
@@ -413,7 +415,6 @@ public class FimsToLims {
                 tableListener.objectChanged();
             }
             updateEverything();
-
         }
         catch(SQLException ex ){
             ex.printStackTrace();
