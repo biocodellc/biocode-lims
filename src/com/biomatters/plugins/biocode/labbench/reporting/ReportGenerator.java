@@ -85,7 +85,8 @@ public class ReportGenerator {
 
         ActionListener updateFimsCopy = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final ProgressFrame frame = new ProgressFrame("Copying FIMS", "Copying FIMS records into your LIMS database", GuiUtilities.getMainFrame());
+                @SuppressWarnings("deprecation") //using deprecated method so that api version doesn't have to be upped
+                final ProgressFrame frame = new ProgressFrame("Copying FIMS", "Copying FIMS records into your LIMS database", 800, true, GuiUtilities.getMainFrame());
                 Runnable runnable = new Runnable() {
                     public void run() {
                         try {
@@ -235,7 +236,8 @@ public class ReportGenerator {
                 }
                 final Report report = reportManager.getReports().get(reportCombo.getSelectedIndex());
                 if(chartable != null) {
-                    final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report");
+                    @SuppressWarnings("deprecation") //using deprecated method so that api version doesn't have to be upped
+                    final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report", 800, true);
                     final Report report1 = report;
                     if(!fimsToLims.limsHasFimsValues() && report.requiresFimsValues()) {
                         setReportChart(new NoFimsInLimsReportChart("You must copy your FIMS data into the LIMS before using this report.  <br><br>Click the <i>Copy Now</i> Button above."));

@@ -57,7 +57,8 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
 
-        final ProgressFrame progressListener = new ProgressFrame("Verifying Reactions", "");
+        @SuppressWarnings("deprecation") //using deprecated method so that api version doesn't have to be upped
+        final ProgressFrame progressListener = new ProgressFrame("Verifying Reactions", "", 800, true);
 
         final NewPlateOptions options = (NewPlateOptions)optionsa;
 

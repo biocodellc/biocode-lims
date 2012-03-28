@@ -53,7 +53,8 @@ public class TracesEditor {
                 if(chooser.showOpenDialog(holder) == JFileChooser.APPROVE_OPTION) {
                     preferences.put("addTraces_defaultFolder", chooser.getSelectedFile().getParent());
                     final File[] sequenceFiles = chooser.getSelectedFiles();
-                    final ProgressFrame progress = new ProgressFrame("Importing", "Importing Documents");
+                    @SuppressWarnings("deprecation") //using deprecated method so that api version doesn't have to be upped
+                    final ProgressFrame progress = new ProgressFrame("Importing", "Importing Documents", 800, true);
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
