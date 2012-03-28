@@ -57,7 +57,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
 
-        final ProgressFrame progressListener = new ProgressFrame("Verifying Reactions", "", 0, false);
+        final ProgressFrame progressListener = new ProgressFrame("Verifying Reactions", "");
 
         final NewPlateOptions options = (NewPlateOptions)optionsa;
 

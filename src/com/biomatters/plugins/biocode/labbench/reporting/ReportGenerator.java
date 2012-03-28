@@ -1,11 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
-import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
 import com.biomatters.geneious.publicapi.components.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -22,7 +19,6 @@ import org.jfree.data.general.PieDataset;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
-import javax.swing.border.LineBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
@@ -89,7 +85,7 @@ public class ReportGenerator {
 
         ActionListener updateFimsCopy = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                final ProgressFrame frame = new ProgressFrame("Copying FIMS", "Copying FIMS records into your LIMS database", 1000, true, GuiUtilities.getMainFrame());
+                final ProgressFrame frame = new ProgressFrame("Copying FIMS", "Copying FIMS records into your LIMS database", GuiUtilities.getMainFrame());
                 Runnable runnable = new Runnable() {
                     public void run() {
                         try {
@@ -239,7 +235,7 @@ public class ReportGenerator {
                 }
                 final Report report = reportManager.getReports().get(reportCombo.getSelectedIndex());
                 if(chartable != null) {
-                    final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report", 1000, false);
+                    final ProgressFrame progress = new ProgressFrame("Generating Report", "Generating Report");
                     final Report report1 = report;
                     if(!fimsToLims.limsHasFimsValues() && report.requiresFimsValues()) {
                         setReportChart(new NoFimsInLimsReportChart("You must copy your FIMS data into the LIMS before using this report.  <br><br>Click the <i>Copy Now</i> Button above."));

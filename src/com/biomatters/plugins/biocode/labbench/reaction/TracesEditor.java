@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
@@ -15,7 +14,6 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import javax.swing.*;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Set;
 import java.util.prefs.Preferences;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -55,7 +53,7 @@ public class TracesEditor {
                 if(chooser.showOpenDialog(holder) == JFileChooser.APPROVE_OPTION) {
                     preferences.put("addTraces_defaultFolder", chooser.getSelectedFile().getParent());
                     final File[] sequenceFiles = chooser.getSelectedFiles();
-                    final ProgressFrame progress = new ProgressFrame("Importing", "Importing Documents", 500, false);
+                    final ProgressFrame progress = new ProgressFrame("Importing", "Importing Documents");
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
