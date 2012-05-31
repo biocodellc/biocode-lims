@@ -209,6 +209,12 @@ public class VerifyTaxonomyOptions extends Options {
         private ProgramOptionValue(String name, String label, Options options) {
             super(name, label);
             this.options = options;
+            if(options != null && options.getOption("getHitAnnos") != null) {
+                Option option = options.getOption("getHitAnnos");
+                option.setEnabled(false);
+                option.setDisabledValue(true);
+                option.setVisible(false);
+            }
         }
     }
 }
