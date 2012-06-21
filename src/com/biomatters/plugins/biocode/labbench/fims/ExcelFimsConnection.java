@@ -100,7 +100,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
                 String cellContents = cell.getContents();
                 if(cellContents.length() > 0) {
                     columnNames.add(cellContents);
-                    if(!columnNamesSet.add(XmlUtilities.encodeXMLChars(cellContents))) {
+                    if(!columnNamesSet.add(XmlUtilities.encodeXMLChars(cellContents).toLowerCase())) {
                         throw new ConnectionException("You have more than one column with the name \""+cellContents+"\" in your spreadsheet.  Please make sure that all columns have unique names");
                     }
                 }
@@ -120,7 +120,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
         for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
             String cellContents = columnNames.get(i);
             String fieldName = XmlUtilities.encodeXMLChars(cellContents);
-            DocumentField field = new DocumentField(fieldName, fieldName, fieldName, String.class, true, false);
+            DocumentField field = new DocumentField(fieldName, fieldName, fieldName.toLowerCase(), String.class, true, false);
             results.add(field);
         }
         return results;
@@ -150,14 +150,14 @@ public class ExcelFimsConnection extends TableFimsConnection{
         String name = documentField.getCode();
         for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
             String cellContents = columnNames.get(i);
-            if(XmlUtilities.encodeXMLChars(cellContents).equals(name)) {
+            if(XmlUtilities.encodeXMLChars(cellContents).equalsIgnoreCase(name)) {
                 return i;
             }
         }
         return -1;
     }
 
-    public List<FimsSample> _getMatchingSamples(Query query) {
+    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
         CompoundSearchQuery.Operator operator;
         List<AdvancedSearchQueryTerm> queries;
 

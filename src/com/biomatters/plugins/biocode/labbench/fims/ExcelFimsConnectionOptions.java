@@ -59,7 +59,8 @@ public class ExcelFimsConnectionOptions extends TableFimsConnectionOptions{
                         Cell cell = sheet.getCell(i,0);
                         String cellContents = cell.getContents();
                         if(cellContents.length() > 0) {
-                            values.add(new Options.OptionValue(""+i, XmlUtilities.encodeXMLChars(cellContents)));
+                            String columnName = XmlUtilities.encodeXMLChars(cellContents);
+                            values.add(new Options.OptionValue(columnName.toLowerCase(), columnName));
                         }
                     }
                 }

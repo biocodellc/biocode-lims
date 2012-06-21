@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -22,21 +23,40 @@ public class TableFimsSample implements FimsSample {
     private List<DocumentField> taxFields;
     private String tissueCol, specimenCol;
 
-    public TableFimsSample(Sheet sheet, int row, TableFimsConnection fimsConnection) {
+    public TableFimsSample(Sheet sheet, int row, TableFimsConnection fimsConnection) throws ConnectionException {
         values = new HashMap<String, Object>();
         fields = fimsConnection.getCollectionAttributes();
         taxFields = fimsConnection.getTaxonomyAttributes();
-        tissueCol = ""+fimsConnection.getTissueSampleDocumentField().getCode();
-        specimenCol = ""+fimsConnection.getSpecimenDocumentField().getCode();
+        tissueCol = fimsConnection.getTissueSampleDocumentField().getCode();
+        specimenCol = fimsConnection.getSpecimenDocumentField().getCode();
 
         for(DocumentField field : fields) {
-            String value = sheet.getCell(Integer.parseInt(field.getCode()), row).getContents();
+            int column = getTableIndex(sheet, field);
+            if(column < 0) {
+                throw new ConnectionException("Could not find the column \""+field.getName()+"\" in the spreadsheet");
+            }
+            String value = sheet.getCell(column, row).getContents();
             values.put(field.getCode(), XmlUtilities.encodeXMLChars(value));
         }
         for(DocumentField field : taxFields) {
-            String value = sheet.getCell(Integer.parseInt(field.getCode()), row).getContents();
+            int column = getTableIndex(sheet, field);
+            if(column < 0) {
+                throw new ConnectionException("Could not find the column \""+field.getName()+"\" in the spreadsheet");
+            }
+            String value = sheet.getCell(column, row).getContents();
             values.put(field.getCode(), XmlUtilities.encodeXMLChars(value));
         }
+    }
+    
+    private int getTableIndex(Sheet sheet, DocumentField documentField) {
+        String name = documentField.getCode();
+        for (int i = 0, cellValuesSize = sheet.getColumns(); i < cellValuesSize; i++) {
+            String cellContents = sheet.getCell(i, 0).getContents();
+            if(XmlUtilities.encodeXMLChars(cellContents).equalsIgnoreCase(name)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public TableFimsSample(List<DocumentField> fimsAttributes, List<DocumentField> taxonomyAttributes, Map<String, Object> fieldValues, DocumentField tissueIdCol, DocumentField specimenIdCol) {
