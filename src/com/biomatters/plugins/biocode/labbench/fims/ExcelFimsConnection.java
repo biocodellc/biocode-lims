@@ -26,10 +26,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author steve
@@ -91,6 +89,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
             throw new ConnectionException("Cannot find the file "+ excelFile.getAbsolutePath());
         }
 
+        Set<String> columnNamesSet = new LinkedHashSet<String>();
         columnNames = new ArrayList<String>();
         //noinspection CatchGenericClass
         try {
@@ -101,6 +100,9 @@ public class ExcelFimsConnection extends TableFimsConnection{
                 String cellContents = cell.getContents();
                 if(cellContents.length() > 0) {
                     columnNames.add(cellContents);
+                    if(!columnNamesSet.add(XmlUtilities.encodeXMLChars(cellContents))) {
+                        throw new ConnectionException("You have more than one column with the name \""+cellContents+"\" in your spreadsheet.  Please make sure that all columns have unique names");
+                    }
                 }
             }
 
@@ -117,19 +119,11 @@ public class ExcelFimsConnection extends TableFimsConnection{
         List<DocumentField> results = new ArrayList<DocumentField>();
         for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
             String cellContents = columnNames.get(i);
-            DocumentField field = new DocumentField(XmlUtilities.encodeXMLChars(cellContents), XmlUtilities.encodeXMLChars(cellContents), "" + i, String.class, true, false);
+            String fieldName = XmlUtilities.encodeXMLChars(cellContents);
+            DocumentField field = new DocumentField(fieldName, fieldName, fieldName, String.class, true, false);
             results.add(field);
         }
         return results;
-    }
-
-    private static DocumentField getTableCol(List<DocumentField> fields, int colIndex) {
-        for(DocumentField field : fields) {
-            if(field.getCode().equals(""+colIndex)) {
-                return field;
-            }
-        }
-        return null;
     }
 
     public void _disconnect() {
@@ -150,6 +144,17 @@ public class ExcelFimsConnection extends TableFimsConnection{
     public int getTotalNumberOfSamples() throws ConnectionException {
         Sheet sheet = workbook.getSheet(0);
         return sheet.getRows();
+    }
+    
+    private int getTableIndex(DocumentField documentField) {
+        String name = documentField.getCode();
+        for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
+            String cellContents = columnNames.get(i);
+            if(XmlUtilities.encodeXMLChars(cellContents).equals(name)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public List<FimsSample> _getMatchingSamples(Query query) {
@@ -188,7 +193,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
                 DocumentField field = term.getField();
                 Condition condition = term.getCondition();
                 String termValue = term.getValues()[0].toString();
-                int col = Integer.parseInt(field.getCode());
+                int col = getTableIndex(field);
                 String value = XmlUtilities.encodeXMLChars(sheet.getCell(col, i).getContents());
                 boolean colMatch;
                 switch (condition) {
