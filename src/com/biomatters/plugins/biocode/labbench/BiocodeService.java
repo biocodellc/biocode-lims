@@ -57,10 +57,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection = new LIMSConnection();
     private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
-    private static Driver driver;
-    private static Driver localDriver;
+    private Driver driver;
+    private Driver localDriver;
     private static BiocodeService instance = null;
-    public static final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
+    public final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
     private final Preferences preferences = Preferences.userNodeForPackage(BiocodeService.class);
     private ConnectionManager.Connection activeConnection;
@@ -72,7 +72,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean loggingIn;
     ReportingService reportingService;
     private Thread disconnectCheckingThread;
-    private static boolean driverLoaded;
+    private boolean driverLoaded;
     public static final int STATEMENT_QUERY_TIMEOUT = 300;
 
     private BiocodeService() {
@@ -325,22 +325,22 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         };
     }
 
-    public static Class getDriverClass() {
+    public Class getDriverClass() {
         return driver != null ? driver.getClass() : null;
     }
 
-    public static Driver getDriver() {
+    public Driver getDriver() {
         if(driver == null && driverLoaded) {
             throw new IllegalStateException("A driver load was attempted, but the driver has not been loaded");
         }
         return driver;
     }
 
-    public static Class getLocalDriverClass() {
-        return localDriver.getClass();
+    public Class getLocalDriverClass() {
+        return localDriver != null ? localDriver.getClass() : null;
     }
 
-    public static Driver getLocalDriver() {
+    public Driver getLocalDriver() {
         return localDriver;
     }
 
@@ -465,7 +465,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         activeConnection = connection;
         //load the connection driver -------------------------------------------------------------------
-        String driverFileName = connectionManager.getSqlLocationOptions();
         try {
             new XMLOutputter().output(connection.getXml(true), System.out);
         } catch (IOException e) {
@@ -475,7 +474,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String error = null;
 
         if(!limsConnection.isLocal(connection.getLimsOptions()) || connection.getFimsConnection().requiresMySql()) {
-            error = loadMySqlDriver(block, driverFileName);
+            error = loadMySqlDriver(block);
         }
 
         try {
@@ -584,9 +583,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         updateStatus();
     }
 
-    private String loadMySqlDriver(boolean block, String driverFileName) {
+    public String loadMySqlDriver(boolean block) {
         driverLoaded = true;
-        ClassLoader loader = getClass().getClassLoader();
+        String driverFileName = connectionManager.getSqlLocationOptions();
+        ClassLoader loader = BiocodeService.class.getClassLoader();
         String error = null;
         try {
             File driverFile = new File(driverFileName);

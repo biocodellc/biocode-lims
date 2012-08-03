@@ -53,8 +53,8 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
 
                 panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
-                if(BiocodeService.imageCache.containsKey(doc.getSpecimenId())) {
-                    Image[] i = BiocodeService.imageCache.get(doc.getSpecimenId());
+                if(BiocodeService.getInstance().imageCache.containsKey(doc.getSpecimenId())) {
+                    Image[] i = BiocodeService.getInstance().imageCache.get(doc.getSpecimenId());
                     if(i != null) {
                         panel.setLayout(new BorderLayout());
                         JScrollPane scroller = new JScrollPane(new ImagePanel(i));
@@ -91,7 +91,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                                         }
                                         catch(InterruptedException ignored){}
 
-                                        BiocodeService.imageCache.put(doc.getSpecimenId(), images);
+                                        BiocodeService.getInstance().imageCache.put(doc.getSpecimenId(), images);
 
                                         ImagePanel imPanel = new ImagePanel(images);
                                         JScrollPane scroller = new JScrollPane(imPanel);
@@ -101,7 +101,7 @@ public class TissueImagesViewerFactory extends DocumentViewerFactory{
                                         panel.revalidate();
                                     }
                                     else {
-                                        BiocodeService.imageCache.put(doc.getSpecimenId(), null);
+                                        BiocodeService.getInstance().imageCache.put(doc.getSpecimenId(), null);
                                         panel.removeAll();
                                         panel.add(new JLabel("This specimen has no photos"));
                                     }

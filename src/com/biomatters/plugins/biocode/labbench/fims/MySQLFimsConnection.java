@@ -23,9 +23,16 @@ public class MySQLFimsConnection extends TableFimsConnection{
 
     static Driver getDriver() throws IOException {
         try {
-            Class driverClass = BiocodeService.getDriverClass();
+            Class driverClass = BiocodeService.getInstance().getDriverClass();
             if(driverClass == null) {
-                throw new IOException("You need to specify the location of your MySQL Driver file");
+                String error = BiocodeService.getInstance().loadMySqlDriver(false);
+                if(error != null) {
+                    throw new IOException(error);
+                }
+                driverClass = BiocodeService.getInstance().getDriverClass();
+                if(driverClass == null) {
+                    throw new IOException("You need to specify the location of your MySQL Driver file");
+                }
             }
             return (Driver) driverClass.newInstance();
         } catch (InstantiationException e) {

@@ -120,12 +120,12 @@ public class LIMSConnection {
 
     public void connect(PasswordOptions LIMSOptions) throws ConnectionException {
         if(isLocal(LIMSOptions)) {
-            driver = BiocodeService.getLocalDriver();
+            driver = BiocodeService.getInstance().getLocalDriver();
             this.limsOptions = LIMSOptions;
             connectLocal(LocalLIMS.getDbNameFromConnectionOptions(LIMSOptions.getChildOptions().get("local")), false);
         }
         else {
-            driver = BiocodeService.getDriver();
+            driver = BiocodeService.getInstance().getDriver();
             connectRemote(LIMSOptions.getChildOptions().get("remote"));
         }
     }
