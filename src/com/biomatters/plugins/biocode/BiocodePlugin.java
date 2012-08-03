@@ -74,7 +74,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "2.3.4";
+        return "2.3.6";
     }
 
     public int getMaximumApiVersion() {
@@ -298,7 +298,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public DocumentFileExporter[] getDocumentFileExporters() {
-        return new DocumentFileExporter[] {new WorkflowSummaryExporter(), new PlateExporter(), new VerifyTaxonomyExporter(), new CherryPickingTableExporter()};
+        return new DocumentFileExporter[] {new WorkflowSummaryExporter(), new PlateExporter(), new VerifyTaxonomyExporter(), new CherryPickingTableExporter(), new CsvAnnotationExporter()};
     }
 
 //    @Override
