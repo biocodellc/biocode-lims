@@ -92,10 +92,20 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
         //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
         if(getTableCol(fields, tissueCol) == null) {
-            throw new ConnectionException(null, "You have listed your tissue sample field as also being a taxonomy field.  This is not allowed.");
+            StringBuilder error = new StringBuilder("You have listed your tissue sample field (" + tissueCol + ") as also being a taxonomy field.  This is not allowed.");
+            error.append("\n\nTaxonomy Fields:\n\n");
+            for(DocumentField field : taxonomyFields) {
+                error.append(field.getCode()+": "+field.getName()+"\n");
+            }
+            error.append("\n\nOther Fields:\n\n");
+            for(DocumentField field : fields) {
+                error.append(field.getCode()+": "+field.getName()+"\n");
+            }
+            
+            throw new ConnectionException(null, error.toString());
         }
         if(getTableCol(fields, specimenCol) == null) {
-            throw new ConnectionException(null, "You have listed your specimen field as also being a taxonomy field.  This is not allowed.");
+            throw new ConnectionException(null, "You have listed your specimen field ("+tissueCol+") as also being a taxonomy field.  This is not allowed.");
         }
         if(getTissueSampleDocumentField() == null) {
             throw new ConnectionException("You have not set a tissue column");
