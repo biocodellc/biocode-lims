@@ -427,7 +427,7 @@ public class LIMSConnection {
                     Condition.EQUAL,
                     Condition.NOT_EQUAL,
                     Condition.NOT_CONTAINS,
-                    Condition.STRING_LENGTH_GREATER_THAN,
+                    Condition.STRING_LENGTH_LESS_THAN,
                     Condition.STRING_LENGTH_GREATER_THAN,
                     Condition.BEGINS_WITH,
                     Condition.ENDS_WITH
