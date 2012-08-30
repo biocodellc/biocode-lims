@@ -1780,6 +1780,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         }
 
+        if(tableName.equals("cyclesequencing")) {
+            limsConnection.deleteRecords("traces", "reaction", terms);
+        }
+
         limsConnection.deleteRecords(tableName, "id", terms);
     }
 
