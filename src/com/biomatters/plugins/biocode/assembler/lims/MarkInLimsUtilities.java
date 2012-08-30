@@ -34,7 +34,7 @@ public class MarkInLimsUtilities {
 
             if (isAlignment) {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
-                if(BiocodeUtilities.isAlignmentOfChromatograms(document) || BiocodeUtilities.isAlignmentOfContigConsensusSequences(document)) {
+                if(BiocodeUtilities.isAlignmentOfContigConsensusSequences(document)) {
                     for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                         sequenceCount++;
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
