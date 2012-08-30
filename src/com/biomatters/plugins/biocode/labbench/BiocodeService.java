@@ -477,17 +477,19 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             error = loadMySqlDriver(block);
         }
 
-        try {
-            Class driverClass = getClass().getClassLoader().loadClass("org.hsqldb.jdbc.JDBCDriver");
-            localDriver = (Driver) driverClass.newInstance();
-        } catch (ClassNotFoundException e1) {
-            error = "Could not find HSQL driver class";
-        } catch (IllegalAccessException e1) {
-            error = "Could not access HSQL driver class";
-        } catch (InstantiationException e1) {
-            error = "Could not instantiate HSQL driver class";
-        } catch (ClassCastException e1) {
-            error = "HSQL Driver class exists, but is not an SQL driver";
+        if(error == null) {
+            try {
+                Class driverClass = getClass().getClassLoader().loadClass("org.hsqldb.jdbc.JDBCDriver");
+                localDriver = (Driver) driverClass.newInstance();
+            } catch (ClassNotFoundException e1) {
+                error = "Could not find HSQL driver class";
+            } catch (IllegalAccessException e1) {
+                error = "Could not access HSQL driver class";
+            } catch (InstantiationException e1) {
+                error = "Could not instantiate HSQL driver class";
+            } catch (ClassCastException e1) {
+                error = "HSQL Driver class exists, but is not an SQL driver";
+            }
         }
 
         if (error != null) {
@@ -589,13 +591,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         ClassLoader loader = BiocodeService.class.getClassLoader();
         String error = null;
         try {
-            File driverFile = new File(driverFileName);
-            if(!driverFile.exists() || driverFile.isDirectory()) {
-               error = "Could not find the file "+driverFileName+".  Please check that this file exists, and is not a directory.";
+            if(driverFileName.trim().length() == 0) {
+                error = "You have not specified the location of your MySQL connector file.  If you do not have a copy, you can download the file from <a href=\"http://www.mysql.com/downloads/connector/j/\">http://www.mysql.com/downloads/connector/j/</a>.";
             }
             else {
-                URL driverUrl = driverFile.toURL();
-                loader = new URLClassLoader(new URL[]{driverUrl}, loader);
+                File driverFile = new File(driverFileName);
+                if(!driverFile.exists() || driverFile.isDirectory()) {
+                   error = "Could not find the MySQL connector file '"+driverFileName+"'.  Please check that this file exists, and is not a directory.";
+                }
+                else {
+                    URL driverUrl = driverFile.toURL();
+                    loader = new URLClassLoader(new URL[]{driverUrl}, loader);
+                }
             }
         } catch (MalformedURLException ex) {
             if(block) {
