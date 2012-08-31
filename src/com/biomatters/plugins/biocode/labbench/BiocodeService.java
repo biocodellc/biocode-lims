@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.geneious.privateApi.PrivateApiUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
@@ -592,7 +591,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String error = null;
         try {
             if(driverFileName.trim().length() == 0) {
-                error = "You have not specified the location of your MySQL connector file.  If you do not have a copy, you can download the file from <a href=\"http://www.mysql.com/downloads/connector/j/\">http://www.mysql.com/downloads/connector/j/</a>.";
+                error = "You have not specified the location of your MySQL driver file.  If you do not have a copy, you can download the file from <a href=\"http://www.mysql.com/downloads/connector/j/\">http://www.mysql.com/downloads/connector/j/</a>.";
             }
             else {
                 File driverFile = new File(driverFileName);

@@ -4,8 +4,8 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GComboBox;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
-import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -16,6 +16,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.Thermocycle;
 import com.biomatters.plugins.biocode.labbench.reaction.ThermocycleEditor;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -28,8 +29,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.prefs.Preferences;
-
-import org.virion.jam.util.SimpleListener;
 
 /**
  * @author steve
@@ -370,14 +369,13 @@ public class PlateViewer extends JPanel {
                                     else {
                                         BiocodeService.getInstance().saveReactions(progress, plate);
                                     }
-                                }
-                                catch(BadDataException ex) {
-                                    Dialogs.showMessageDialog("You have some errors in your plate:\n\n"+ex.getMessage());
+                                } catch(BadDataException ex) {
+                                    Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", progress, Dialogs.DialogIcon.INFORMATION);
                                     progress.setVisible(false);
                                     return;
                                 } catch(SQLException ex){
                                     ex.printStackTrace();
-                                    Dialogs.showMessageDialog("There was an error saving your plate: "+ex.getMessage());
+                                    Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", progress, Dialogs.DialogIcon.INFORMATION);
                                     progress.setVisible(false);
                                     return;
                                 }
