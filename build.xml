@@ -66,7 +66,7 @@
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jfreechart-1.0.13.jar${line.separator}"/>
    </target>
 
-   <target name="compile" depends="build-public-api, prepare">
+   <target name="compile" depends="prepare">
       <javac target="1.5" destdir="${classes}" debug="true">
          <classpath refid="classpath"/>
          <src path="src"/>
