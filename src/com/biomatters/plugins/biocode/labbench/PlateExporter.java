@@ -38,7 +38,7 @@ public class PlateExporter extends DocumentFileExporter{
     }
 
     @Override
-    public Options getOptions(AnnotatedPluginDocument[] documentsToExport) {
+    public Options getOptions() {
         Options options = new Options(this.getClass());
         options.addBooleanOption("includeFIMS", "Include field information", false);
         return options;
