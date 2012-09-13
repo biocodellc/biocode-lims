@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * This will run any of the setup scripts Biomatters has written to setup the server database.
+ * This will run any of the setup scripts Biomatters has written to setup the shared database.
  *
  * @author Matthew Cheung
  * @version $Id: DatabaseScriptRunner.java 18038 2008-03-11 03:20:44Z matthew $
@@ -21,7 +21,7 @@ class DatabaseScriptRunner {
     }
 
     /**
-     * Runs the script for creating the tables required for a server database. The
+     * Runs the script for creating the tables required for a shared Database. The
      * script is loaded from a file and executed command by comand.
      *
      * @param connection The connection to a database to run the script on
