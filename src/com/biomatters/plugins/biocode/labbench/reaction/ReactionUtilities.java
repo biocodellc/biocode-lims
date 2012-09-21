@@ -24,7 +24,8 @@ import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -32,11 +33,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
-import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -46,7 +47,7 @@ import java.sql.SQLException;
  */
 public class ReactionUtilities {
     private static String PRO_VERSION_INFO = "<html><b>All Fields</b></html>";
-    private static String FREE_VERSION_INFO = "Editing in Geneious Pro only";
+    private static String FREE_VERSION_INFO = "Editing requires an active license";
 
     public static final DefaultListCellRenderer DOCUMENT_FIELD_CELL_RENDERER = new DefaultListCellRenderer() {
         @Override

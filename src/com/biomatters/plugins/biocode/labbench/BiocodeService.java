@@ -113,7 +113,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     public void deleteDocuments(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
         if(!License.isProVersion()) {
-            throw new DatabaseServiceException("You need to be a pro user to delete Biocode documents", false);
+            throw new DatabaseServiceException("Deleting Biocode documents requires an active license", false);
         }
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DatabaseServiceException("You are not logged into the Biocode Service - you cannot delete biocode documents.", false);
