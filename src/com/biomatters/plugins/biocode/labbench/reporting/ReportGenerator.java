@@ -680,9 +680,12 @@ public class ReportGenerator {
 
     public static List<Options.OptionValue> getOptionValues(Iterable<DocumentField> documentFields) {
         List<Options.OptionValue> optionValues = new ArrayList<Options.OptionValue> ();
+        Set<String> codes = new LinkedHashSet<String>();
 
         for(DocumentField field : documentFields) {
-            optionValues.add(new Options.OptionValue(field.getCode(), field.getName()));
+            if(codes.add(field.getCode())) {
+                optionValues.add(new Options.OptionValue(field.getCode(), field.getName()));
+            }
         }
         return optionValues;
     }
