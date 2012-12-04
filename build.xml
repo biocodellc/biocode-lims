@@ -75,8 +75,6 @@
 
        <!--FUSION TABLE LIBRARIES-->
        <echo file="${plugins.proguard}" append="true"
-                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/.svn${line.separator}"/>
-       <echo file="${plugins.proguard}" append="true"
                    message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/commons-logging-1.1.1.jar${line.separator}"/>
        <echo file="${plugins.proguard}" append="true"
                    message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-api-client-1.12.0-beta-sources.jar${line.separator}"/>
