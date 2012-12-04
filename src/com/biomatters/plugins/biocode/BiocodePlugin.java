@@ -39,6 +39,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     private static GeneiousActionOptions superBiocodeAction;
+    public static final String PLUGIN_VERSION = "2.3.9";
 
     public static GeneiousActionOptions getSuperBiocodeAction() {
         if (superBiocodeAction == null) {
@@ -74,7 +75,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getVersion() {
-        return "2.3.8";
+        return PLUGIN_VERSION;
     }
 
     public int getMaximumApiVersion() {
@@ -280,8 +281,8 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
                 new MarkSequencesAsSubmittedInLimsOperation(),
-                new WorkflowBuilder(),
-                new ImportLimsOperation()
+                new WorkflowBuilder()//,
+                //new ImportLimsOperation()
 //                new ExportForBarstoolOperation(false)
         };
         return operations;

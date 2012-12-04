@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
@@ -161,7 +162,7 @@ public class ConnectionManager implements XMLSerializable{
                     okButton.get().setEnabled(connections.size() > 0 && selectedConnection >= 0);
                 }
                 else {
-                    okButton.set(getPanelOkButton(connectionsPanel));
+                    okButton.set(BiocodeUtilities.getDialogOkButton(connectionsPanel));
                 }
             }
         });
@@ -268,14 +269,6 @@ public class ConnectionManager implements XMLSerializable{
             if(checkIfWeCanLogIn()) {
                 return selectedConnection >= 0 ? connections.get(selectedConnection) : null;
             }
-        }
-        return null;
-    }
-
-    private JButton getPanelOkButton(JPanel panel) {
-        JRootPane rootPane = panel.getRootPane();
-        if(rootPane != null) {
-            return rootPane.getDefaultButton();
         }
         return null;
     }

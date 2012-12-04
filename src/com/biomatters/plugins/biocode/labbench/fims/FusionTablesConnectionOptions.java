@@ -1,41 +1,35 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.CSVUtilities;
-import com.biomatters.options.PasswordOption;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.google.gdata.client.Service;
-import com.google.gdata.client.GoogleService;
-import com.google.gdata.util.ContentType;
-import com.google.gdata.util.ServiceException;
-import com.google.gdata.util.AuthenticationException;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.AnimatedIcon;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.google.api.services.fusiontables.model.Table;
+import org.jdom.Element;
 
 import javax.swing.*;
-import java.awt.event.ActionListener;
+import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.net.URL;
+import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
-import org.jdom.Element;
-import org.virion.jam.util.SimpleListener;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steve
  * @version $Id$
  */
 public class FusionTablesConnectionOptions extends PasswordOptions {
-    static final String USERNAME = "username";
-    static final String PASSWORD = "password";
-    private final OptionValue NO_TABLE = new OptionValue("%NONE%", "<html><i>None</i></html>");
+    static final OptionValue NO_TABLE = new OptionValue("%NONE%", "<html><i>None</i></html>");
+
+    private JButton dialogOkButton;
 
     public FusionTablesConnectionOptions() {
         init();
@@ -55,131 +49,188 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
         super(element);
     }
 
+    @Override
+    protected JPanel createPanel() {
+        JPanel wrapperPanel = new JPanel(new BorderLayout()){
+            boolean firstPaint = true;
+            @Override
+            protected void paintComponent(Graphics g) {
+                if(firstPaint) {
+                    dialogOkButton = BiocodeUtilities.getDialogOkButton(this);
+                    firstPaint=false;
+                }
+                super.paintComponent(g);
+            }
+        };
+        wrapperPanel.add(super.createPanel());
+        return wrapperPanel;
+    }
+
     private void init() {
-        addLabel("<html>Enter your google username and password.<br>(for example craig.venter@gmail.com)</html>");
-        addStringOption(USERNAME, "Username", "");
-        final PasswordOption password = new PasswordOption(PASSWORD, "Password", true);
-        addCustomOption(password);
+        addLabel("<html>Google requires you to authenticate via a browser.  If no browser has been opened, click the <b>Authorize</b> button below.</html>", false, true);
+
+        beginAlignHorizontally("Current User:", false);
+        LabelOption currentUserLabel = new LabelOption("currentUserLabel", "");
+        addCustomOption(currentUserLabel);
+        endAlignHorizontally();
+
+        beginAlignHorizontally("", false);
+        final ButtonOption authorizeButton = addButtonOption("authorize", "", "Authorize");
+        final ButtonOption changeAccountButton = addButtonOption("changeAccount", "", "Change Account");
+        final LabelOption waitLabel = new LabelOption("waitLabel", "");
+        waitLabel.setIcon(AnimatedIcon.getActivityIcon());
+        waitLabel.setVisible(false);
+        addCustomOption(waitLabel);
+        changeAccountButton.setEnabled(false);
+        endAlignHorizontally();
+
+        authorizeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                authorizeButton.setEnabled(false);
+                waitLabel.setVisible(true);
+                changeAccountButton.setEnabled(false);
+                if(dialogOkButton != null) {
+                    dialogOkButton.setEnabled(false);
+                }
+                Runnable r = new Runnable() {
+                    public void run() {
+
+                        //authencate...
+                        try {
+                            FusionTableUtils.authorize();
+                        } catch (IOException e1) {
+                            Dialogs.showMessageDialog("There was an error authenticating with Google: "+e1.getMessage(), "Error Authenticating");
+                        } finally {
+
+                            //read data from the server...
+                            try {
+                                update();
+                            } catch (ConnectionException ignore) {}
+
+                            //update the UI
+                            Runnable runnable = new Runnable() {
+                                public void run() {
+                                    authorizeButton.setEnabled(true);
+                                    waitLabel.setVisible(false);
+                                    if(dialogOkButton != null) {
+                                        dialogOkButton.setEnabled(true);
+                                    }
+                                }
+                            };
+                            ThreadUtilities.invokeNowOrLater(runnable);
+                        }
+                    }
+                };
+                new Thread(r).start();
+            }
+        });
+
+        changeAccountButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                getOption("currentUserLabel").setValue("");
+                FusionTableUtils.clearCachedAccessTokens();
+                authorizeButton.fireActionListeners();
+            }
+        });
+
         List<OptionValue> tables = null;
-        try {
-            tables = getTables(null);
-        } catch (IOException e) {
-            throw new RuntimeException("NOT POSSIBLE");
+        tables = getTables();
+
+        if(tables.size() == 0) {
+            tables = Collections.singletonList(
+                    FusionTablesConnectionOptions.NO_TABLE
+            );
         }
-        beginAlignHorizontally("Fusion Table ID", false);
-        final StringOption fusionTableIdOption = addStringOption(TableFimsConnectionOptions.TABLE_ID, "", "");
+        addDivider(" ");
+        beginAlignHorizontally("Your Tables:", false);
+        final ComboBoxOption<OptionValue> tablesOption = addComboBoxOption(TableFimsConnectionOptions.TABLE_ID, "", tables, tables.get(0));
         ButtonOption helpButton = addButtonOption("help", "", "", IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
         helpButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                Dialogs.showMessageDialog("To get the ID of a Fusion Table, visit the table in the Google Fusion Tables website and note the number at the end of the URL. For example, in the following URL for the Country Flags table, the table ID is 86424: <code>http://www.google.com/fusiontables/DataSource?dsrcid=86424</code>", "Getting an ID", getPanel(), Dialogs.DialogIcon.INFORMATION);
+                Dialogs.showMessageDialog("As Google no longer supports numeric table id's, we can only access tables stored in your google drive.  To move a table someone shared with you into your drive, just drag it into the red My Drive label on the right hand side of your google drive screen." +
+                        "\n" +
+                        "\n" +
+                        "For more information about creating and using Fusion Tables, please see: " +
+                        "\n" +
+                        "<a href=\"http://software.mooreabiocode.org/index.php?title=Google_Fusion_Tables_FIMS\">The Moorea Biocode Plugin Documentation</a>" +
+                        "", "Getting an ID", getPanel(), Dialogs.DialogIcon.INFORMATION);
             }
         });
         endAlignHorizontally();
-        final ComboBoxOption<OptionValue> tablesOption = addComboBoxOption("tables", "Your Tables:", tables, tables.get(0));     
-        final AtomicBoolean changing = new AtomicBoolean(false);
-        tablesOption.addChangeListener(new SimpleListener(){
-            public void objectChanged() {
-                if(!changing.getAndSet(true)) {
 
-                    if(!tablesOption.getValue().equals(NO_TABLE))
-                        fusionTableIdOption.setValue(tablesOption.getValue().getName());
-
-                    changing.set(false);
-                }
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    update();
+                } catch (ConnectionException ignore) {}
             }
-        });
-        fusionTableIdOption.addChangeListener(new SimpleListener(){
-            public void objectChanged() {
-                if(!changing.getAndSet(true)) {
-
-                    tablesOption.setValue(NO_TABLE);
-
-                    changing.set(false);
-                }
-            }
-        });
+        }.start();
 
     }
 
     @Override
     public Options getEnterPasswordOptions() {
-        PasswordOption passwordOption = (PasswordOption)getOption(PASSWORD);
-        StringOption usernameOption = (StringOption)getOption(USERNAME);
-        StringOption tableOption = (StringOption)getOption(TableFimsConnectionOptions.TABLE_ID);
-        if(passwordOption.getPassword().equals("")) {
-            PasswordOptions options = new PasswordOptions(this.getClass(), "mooreaFIMS");
-            options.addLabel("Table ID: "+tableOption.getValue());
-            options.addStringOption(USERNAME, "Username:", usernameOption.getValue());
-            PasswordOption password = new PasswordOption(PASSWORD, "Password:", false);
-            options.addCustomOption(password);
-            return options;
-        }
+        //the access token is stored in an on-disk cache - nothing to do here
         return null;
     }
 
     @Override
     public void setPasswordsFromOptions(Options enterPasswordOptions) {
-        StringOption usernameOption = (StringOption)getOption(USERNAME);
-        PasswordOption passwordOption = (PasswordOption)getOption(PASSWORD);
-        usernameOption.setValue(enterPasswordOptions.getValueAsString(USERNAME));
-        PasswordOption password = (PasswordOption)enterPasswordOptions.getOption(PASSWORD);
-        passwordOption.setPassword(password.getPassword());
+        //the access token is stored in an on-disk cache - nothing to do here
     }
 
     @Override
     public void update() throws ConnectionException {
         super.update();
-        GoogleService service = new GoogleService("fusiontables", "fusiontables.ApiExample");
+        final AtomicReference<List<OptionValue>> tableValues = new AtomicReference<List<OptionValue>>();
+        final AtomicReference<String> accountName = new AtomicReference<String>();
         try {
-            service.setUserCredentials(getValueAsString(USERNAME), ((PasswordOption)getOption(PASSWORD)).getPassword());
-            ComboBoxOption tables = (ComboBoxOption)getOption("tables");
-            tables.setPossibleValues(getTables(service));
-        } catch (AuthenticationException e) {
-            e.printStackTrace();
+            tableValues.set(getTables());
+            accountName.set(FusionTableUtils.getAccountName());
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        Runnable runnable = new Runnable() {
+            public void run() {
+                ComboBoxOption tables = (ComboBoxOption)getOption(TableFimsConnectionOptions.TABLE_ID);
+                tables.setPossibleValues(tableValues.get());
+                LabelOption label = (LabelOption)getOption("currentUserLabel");
+                Option changeAccountButton = getOption("changeAccount");
+                if(accountName.get() != null) {
+                    label.setValue("<html><b>"+accountName.get()+"</b></html>");
+                    changeAccountButton.setEnabled(true);
+                }
+                else {
+                    label.setValue("<html><i>Not logged in...</i></html>");
+                    changeAccountButton.setEnabled(false);
+                }
+            }
+        };
+        ThreadUtilities.invokeNowOrLater(runnable);
+
     }
 
-    private List<OptionValue> getTables(GoogleService service) throws IOException {
-        List<OptionValue> tables = new ArrayList<OptionValue>();
+    private List<OptionValue> getTables() {
+        try {
+            List<Table> tableJson = FusionTableUtils.listTables();
 
-        tables.add(NO_TABLE);
+            List<OptionValue> tables = new ArrayList<OptionValue>();
 
-        if(service != null) {
-            URL url = new URL(FusionTablesFimsConnection.SERVICE_URL + "?sql=SHOW%20TABLES");
-            Service.GDataRequest request = null;
-            try {
-                request = service.getRequestFactory().getRequest(Service.GDataRequest.RequestType.QUERY, url, ContentType.TEXT_PLAIN);
-                request.execute();
-            } catch (ServiceException e) {
-                IOException ioException = new IOException(e.toString());
-                ioException.setStackTrace(e.getStackTrace());
-                throw ioException;
-            }
-            catch(NullPointerException e) { //why do they throw these?
-                if(e.getMessage().contains("No authentication header information")) {
-                    throw new IOException("Acess denied connecting to Fusion Tables");
-                }
+            for(Table table : tableJson) {
+                tables.add(new OptionValue(table.getTableId(), table.getName()));
             }
 
-
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(request.getResponseStream()));
-            String line;
-            boolean first = true;
-            while((line = reader.readLine()) != null) {
-                if(first) {
-                    first = false;
-                    continue;
-                }
-                String[] parts = CSVUtilities.tokenizeLine(line);
-                tables.add(new OptionValue(parts[0], parts[1]));
+            if(tables.size() == 0) {
+                return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);
             }
+            return tables;
+        } catch (IOException e) {
+            return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);
         }
-
-        return tables;
     }
 
 }

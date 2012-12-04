@@ -1,12 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.google.gdata.client.ClientLoginAccountType;
-import com.google.gdata.client.GoogleService;
-import com.google.gdata.client.Service.GDataRequest;
-import com.google.gdata.client.Service.GDataRequest.RequestType;
-import com.google.gdata.util.AuthenticationException;
-import com.google.gdata.util.ContentType;
-import com.google.gdata.util.ServiceException;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
@@ -15,15 +8,13 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.options.PasswordOption;
+import com.google.api.services.fusiontables.model.Sqlresponse;
 
 import java.util.regex.Pattern;
 import java.util.*;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
@@ -33,11 +24,6 @@ import java.text.ParseException;
  * @version $Id$
  */
 public class FusionTablesFimsConnection extends TableFimsConnection{
-    static final String SERVICE_URL = "https://www.google.com/fusiontables/api/query";
-
-    static final Pattern CSV_VALUE_PATTERN = Pattern.compile("([^,\\r\\n\"]*|\"(([^\"]*\"\")*[^\"]*)\")(,|\\r?\\n)");
-
-    private GoogleService service = new GoogleService("fusiontables", "fusiontables.ApiExample");
 
     private String tableId;
 
@@ -61,33 +47,19 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
     public void _connect(TableFimsConnectionOptions optionsa) throws ConnectionException {
         FusionTablesFimsConnectionOptions options = (FusionTablesFimsConnectionOptions)optionsa;
         Options connectionOptions = options.getChildOptions().get(FusionTablesFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
-        tableId = connectionOptions.getValueAsString("tableId");
-        if(tableId.length() == 0) {
-            throw new ConnectionException("You must specify a Fusiion Table ID");
+        tableId = connectionOptions.getValueAsString(TableFimsConnectionOptions.TABLE_ID);
+        if(tableId.length() == 0 || tableId.equals(FusionTablesConnectionOptions.NO_TABLE.getName())) {
+            throw new ConnectionException("You must specify a Fusion Table ID");
         }
-
-        try {
-            service.setUserCredentials(connectionOptions.getValueAsString("username"), ((PasswordOption)connectionOptions.getOption("password")).getPassword(), ClientLoginAccountType.GOOGLE);
-        } catch (ServiceException e) {
-            throw new ConnectionException(e.getMessage(), e);
-        }
-
     }
 
     public List<DocumentField> getTableColumns() throws IOException {
-        return FusionTablesFimsConnectionOptions.getTableColumnFields(tableId, service);
+        return FusionTableUtils.getTableColumns(tableId);
     }
 
 
     public void _disconnect() {
         tableId = null;
-        if(service != null) {
-            try {
-                service.setUserCredentials("", "");
-            } catch (AuthenticationException e) {
-                //ignore - we expect this to throw an exception...
-            }
-        }
     }
 
     private String getQuerySQLString(Query query) {
@@ -131,18 +103,18 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                     join = "=";
                     break;
                 case APPROXIMATELY_EQUAL:
-                    join = "contains ignoring case";
+                    join = "CONTAINS IGNORING CASE";
                     break;
                 case BEGINS_WITH:
-                    join = "starts with";
+                    join = "STARTS WITH";
                     append="";
                     break;
                 case ENDS_WITH:
-                    join = "ends with";
+                    join = "ENDS WITH";
                     prepend = "";
                     break;
                 case CONTAINS:
-                    join = "contains";
+                    join = "CONTAINS IGNORING CASE";
                     append = "";
                     prepend = "";
                     break;
@@ -159,12 +131,12 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                     join = "<=";
                     break;
                 case NOT_CONTAINS:
-                    join = "does not contain";
+                    join = "DOES NOT CONTAIN";
                     append = "";
                     prepend = "";
                     break;
                 case NOT_EQUAL:
-                    join = "not equal to";
+                    join = "NOT EQUAL TO";
                     break;
             }
 
@@ -182,7 +154,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             for (int i = 0; i < queryValues.length; i++) {
                 Object value = queryValues[i];
                 if(value instanceof Date) {
-                    value = new SimpleDateFormat("yy.mm.dd").format(value);
+                    value = new SimpleDateFormat("yyyy.MM.dd").format(value);
                 }
                 String valueString = value.toString();
                 valueString = prepend+valueString+append;
@@ -295,12 +267,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         System.out.println(sql);
 
         try {
-            URL url = new URL(SERVICE_URL + "?sql=" + URLEncoder.encode(sql, "UTF-8"));
-            System.out.println(url);
-            GDataRequest request = service.getRequestFactory().getRequest(RequestType.QUERY, url, ContentType.TEXT_PLAIN);
-            request.execute();
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(request.getResponseStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(FusionTableUtils.queryTableForCsv(sql)));
             Map<String, Object> values = new LinkedHashMap<String, Object>();
             List<String> colHeaders = new ArrayList<String>();
             boolean firstTime = true;
@@ -328,9 +295,6 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             }
             
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new ConnectionException(e.getMessage(), e);
-        } catch (ServiceException e) {
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
         }
@@ -384,22 +348,9 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         String sql = "SELECT ROWID FROM "+tableId;
         System.out.println(sql);
         try {
-            URL url = new URL(SERVICE_URL + "?sql=" + URLEncoder.encode(sql, "UTF-8"));
-            System.out.println(url);
-            GDataRequest request = service.getRequestFactory().getRequest(RequestType.QUERY, url, ContentType.TEXT_PLAIN);
-            request.execute();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(request.getResponseStream()));
-            String line = null;
-            int count = -1;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-                count++;
-            }
-            return count;
+            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+            return sqlresponse.getRows().size();
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new ConnectionException(e.getMessage(), e);
-        } catch (ServiceException e) {
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
         }
@@ -410,15 +361,10 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         System.out.println(sql);
 
         try {
-            URL url = new URL(SERVICE_URL + "?sql=" + URLEncoder.encode(sql, "UTF-8"));
-            System.out.println(url);
-            GDataRequest request = service.getRequestFactory().getRequest(RequestType.QUERY, url, ContentType.TEXT_PLAIN);
-            request.execute();
-
             DocumentField tissueCol = getTissueSampleDocumentField();
             DocumentField specimenCol = getSpecimenDocumentField();                  
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(request.getResponseStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(FusionTableUtils.queryTableForCsv(sql)));
             Map<String, Object> values = new LinkedHashMap<String, Object>();
             List<String> colHeaders = new ArrayList<String>();
             boolean firstTime = true;
@@ -442,9 +388,6 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new ConnectionException(e.getMessage(), e);
-        } catch (ServiceException e) {
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
         }

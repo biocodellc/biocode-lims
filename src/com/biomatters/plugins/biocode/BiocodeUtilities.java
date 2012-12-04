@@ -23,6 +23,7 @@ import com.biomatters.utilities.ObjectAndColor;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
+import javax.swing.*;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.PrintWriter;
@@ -228,6 +229,19 @@ public class BiocodeUtilities {
             }
         }
         return new ArrayList<DocumentField>(fields);
+    }
+
+    /**
+     *
+     * @param component a component that has been added to the dialog
+     * @return
+     */
+    public static JButton getDialogOkButton(JComponent component) {
+        JRootPane rootPane = component.getRootPane();
+        if(rootPane != null) {
+            return rootPane.getDefaultButton();
+        }
+        return null;
     }
 
     public enum ReadDirection {
