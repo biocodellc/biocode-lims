@@ -33,15 +33,15 @@
       <move file="${build.externalPlugins}/${plugin-name}/${plugin-name}" todir="${build.plugins}"/>
    </target>
 
-   <target name="build" depends="compile">
+   <target name="build">
       <jar jarfile="${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar">
          <fileset dir="${classes}"/>
          <fileset dir="${resources}">
             <exclude name="plugin.properties"/>
          </fileset>
       </jar>
-      <copy todir="${build.externalPlugins}/${plugin-name}/${plugin-name}">
-         <fileset dir="${lib}"/>
+      <copy todir="${build.externalPlugins}/${plugin-name}/${plugin-name}" flatten="true">
+         <fileset dir="${lib}" excludes="fusiotables/*-sources.jar fusiotables/*-javadoc.jar" />
          <fileset dir="">
             <include name="plugin.properties"/>
          </fileset>
@@ -56,14 +56,78 @@
        <echo file="${plugins.proguard}" append="true"
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}(!${short-plugin-name}.jar,*.jar)${line.separator}" />
        -->
+       <!--<echo file="${plugins.proguard}" append="true"-->
+            <!--message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/gdata-core-1.0.jar${line.separator}"/>-->
+       <!--<echo file="${plugins.proguard}" append="true"-->
+            <!--message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-collect-1.0.jar${line.separator}"/>-->
        <echo file="${plugins.proguard}" append="true"
-            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/gdata-core-1.0.jar${line.separator}"/>
-       <echo file="${plugins.proguard}" append="true"
-            message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-collect-1.0.jar${line.separator}"/>
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/hsqldb.jar${line.separator}"/>
        <echo file="${plugins.proguard}" append="true"
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jai_core.jar${line.separator}"/>
        <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jai_codec.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jcommon-1.0.16.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
             message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jfreechart-1.0.13.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jxl.jar${line.separator}"/>
+
+       <!--FUSION TABLE LIBRARIES-->
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/.svn${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/commons-logging-1.1.1.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-api-client-1.12.0-beta-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-api-client-1.12.0-beta.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-api-client-java6-1.12.0-beta-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-api-services-fusiontables-v1-rev12-1.12.0-beta-javadoc.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-api-services-fusiontables-v1-rev12-1.12.0-beta-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-api-services-fusiontables-v1-rev12-1.12.0-beta.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-http-client-1.12.0-beta-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-http-client-1.12.0-beta.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-http-client-gson-1.12.0-beta.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-oauth-client-1.12.0-beta-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-oauth-client-1.12.0-beta.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-oauth-client-java6-1.12.0-beta-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-oauth-client-java6-1.12.0-beta.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-oauth-client-jetty-1.12.0-beta-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/google-oauth-client-jetty-1.12.0-beta.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/gson-2.1.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/guava-jdk5-13.0.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/httpclient-4.0.3.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/httpcore-4.0.1.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/javaee.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jetty-6.1.26.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jetty-util-6.1.26.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/jsr305-1.3.9.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/xpp3-1.1.4c-sources.jar${line.separator}"/>
+       <echo file="${plugins.proguard}" append="true"
+                   message="-libraryjars   ${build.externalPlugins}/${plugin-name}/${plugin-name}/xpp3-1.1.4c.jar${line.separator}"/>
    </target>
 
    <target name="compile" depends="prepare">
