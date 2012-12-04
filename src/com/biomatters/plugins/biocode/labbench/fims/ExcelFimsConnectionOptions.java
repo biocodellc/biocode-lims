@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 
 import javax.swing.*;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.io.File;
 import java.io.StringWriter;
 import java.io.PrintWriter;
 import java.awt.*;
+import java.util.Set;
 
 import jxl.Workbook;
 import jxl.Sheet;
@@ -51,6 +53,7 @@ public class ExcelFimsConnectionOptions extends TableFimsConnectionOptions{
             //noinspection CatchGenericClass
             try {
                 Workbook workbook = Workbook.getWorkbook(excelFile);
+                Set<String> columnIds = new HashSet<String>();
 
                 if(workbook.getNumberOfSheets() > 0) {
                     Sheet sheet = workbook.getSheet(0);
@@ -60,7 +63,9 @@ public class ExcelFimsConnectionOptions extends TableFimsConnectionOptions{
                         String cellContents = cell.getContents();
                         if(cellContents.length() > 0) {
                             String columnName = XmlUtilities.encodeXMLChars(cellContents);
-                            values.add(new Options.OptionValue(columnName.toLowerCase(), columnName));
+                            if(columnIds.add(columnName)) {
+                                values.add(new Options.OptionValue(columnName.toLowerCase(), columnName));
+                            }
                         }
                     }
                 }
