@@ -67,29 +67,28 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
     }
 
     private void init() {
-        addLabel("<html>Google requires you to authenticate via a browser.  If no browser has been opened, click the <b>Authorize</b> button below.</html>", false, true);
+        addLabel("<html>The Moorea Biocode Plugin reads fusion tables stored in your Google Drive.  Sign in to your google account below.</html>", false, true);
 
         beginAlignHorizontally("Current User:", false);
-        LabelOption currentUserLabel = new LabelOption("currentUserLabel", "");
+        final LabelOption currentUserLabel = new LabelOption("currentUserLabel", "");
         addCustomOption(currentUserLabel);
         endAlignHorizontally();
 
         beginAlignHorizontally("", false);
-        final ButtonOption authorizeButton = addButtonOption("authorize", "", "Authorize");
-        final ButtonOption changeAccountButton = addButtonOption("changeAccount", "", "Change Account");
+        final ButtonOption authorizeButton = addButtonOption("authorize", "", "Sign In");
         final LabelOption waitLabel = new LabelOption("waitLabel", "");
         waitLabel.setIcon(AnimatedIcon.getActivityIcon());
         waitLabel.setVisible(false);
         addCustomOption(waitLabel);
-        changeAccountButton.setEnabled(false);
         endAlignHorizontally();
 
         authorizeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 authorizeButton.setEnabled(false);
+                currentUserLabel.setValue("");
+                FusionTableUtils.clearCachedAccessTokens();
                 waitLabel.setVisible(true);
-                changeAccountButton.setEnabled(false);
                 if(dialogOkButton != null) {
                     dialogOkButton.setEnabled(false);
                 }
@@ -126,15 +125,6 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
             }
         });
 
-        changeAccountButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                getOption("currentUserLabel").setValue("");
-                FusionTableUtils.clearCachedAccessTokens();
-                authorizeButton.fireActionListeners();
-            }
-        });
-
         List<OptionValue> tables = null;
         tables = getTables();
 
@@ -145,7 +135,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
         }
         addDivider(" ");
         beginAlignHorizontally("Your Tables:", false);
-        final ComboBoxOption<OptionValue> tablesOption = addComboBoxOption(TableFimsConnectionOptions.TABLE_ID, "", tables, tables.get(0));
+        addComboBoxOption(TableFimsConnectionOptions.TABLE_ID, "", tables, tables.get(0));
         ButtonOption helpButton = addButtonOption("help", "", "", IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
         helpButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
@@ -199,14 +189,14 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
                 ComboBoxOption tables = (ComboBoxOption)getOption(TableFimsConnectionOptions.TABLE_ID);
                 tables.setPossibleValues(tableValues.get());
                 LabelOption label = (LabelOption)getOption("currentUserLabel");
-                Option changeAccountButton = getOption("changeAccount");
+                Option changeAccountButton = getOption("authorize");
                 if(accountName.get() != null) {
                     label.setValue("<html><b>"+accountName.get()+"</b></html>");
-                    changeAccountButton.setEnabled(true);
+                    changeAccountButton.setValue("Sign in as another user");
                 }
                 else {
                     label.setValue("<html><i>Not logged in...</i></html>");
-                    changeAccountButton.setEnabled(false);
+                    changeAccountButton.setValue("Sign In");
                 }
             }
         };
