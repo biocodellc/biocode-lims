@@ -49,7 +49,21 @@ public class SingleFieldOptions extends Options {
         reactionTypeString = reactionType;
         List<OptionValue> optionValues = ReportGenerator.getOptionValues(fields);
         if(reactionType != null) {
-            optionValues.addAll(0, ReportGenerator.getPossibleFields(reactionType, false, false));
+            List<OptionValue> possibleFields = ReportGenerator.getPossibleFields(reactionType, false, false);
+            int count = 0;
+            for(OptionValue possibleField : possibleFields) {
+                boolean has = false;
+                for(OptionValue optionValue : optionValues) {
+                    if(optionValue.getName().equals(possibleField.getName())) {
+                        has = true;
+                        break;
+                    }
+                }
+                if(!has) {
+                    optionValues.add(count, possibleField);
+                    count++;
+                }
+            }
         }
         ((ComboBoxOption)getOption("field")).setPossibleValues(optionValues);
     }
