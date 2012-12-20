@@ -165,6 +165,9 @@ public class AnnotateUtilities {
         String species = null;
         for (DocumentField documentField : fimsData.fimsSample.getTaxonomyAttributes()) {
             Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
+            if(taxon != null && !(taxon instanceof String)) {
+                throw new DocumentOperationException("The tissue record "+fimsData.fimsSample.getId()+" has an invalid taxon value ("+taxon+") for the taxon field "+documentField.getName());
+            }
             annotatedDocument.setFieldValue(new DocumentField(documentField.getName(), documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
             if (documentField.getName().equalsIgnoreCase("genus")) {
                 genus = (String) taxon;
