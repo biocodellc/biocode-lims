@@ -917,7 +917,10 @@ public class LIMSConnection {
     private void fillStatement(List<Object> sqlValues, PreparedStatement statement) throws SQLException {
         for (int i = 0; i < sqlValues.size(); i++) {
             Object o = sqlValues.get(i);
-            if(Integer.class.isAssignableFrom(o.getClass())) {
+            if(o == null) {
+                statement.setNull(i+1, Types.JAVA_OBJECT);
+            }
+            else if(Integer.class.isAssignableFrom(o.getClass())) {
                 statement.setInt(i+1, (Integer)o);
             }
             else if(Double.class.isAssignableFrom(o.getClass())) {
