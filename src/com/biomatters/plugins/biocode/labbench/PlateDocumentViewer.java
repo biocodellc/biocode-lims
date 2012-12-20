@@ -1034,7 +1034,12 @@ public class PlateDocumentViewer extends DocumentViewer{
             cocktailPanel.print(g);
             g.translate(-cocktailWidth+widthIncriment, -(dimensions.height - availableHeight + cocktailHeight));
         }
-        ((Container)((JScrollPane)cocktailPanel.getComponent(0)).getViewport().getView()).getComponent(0).setVisible(true);
+        if(cocktailPanel.getComponentCount() > 0) {
+            Container view = (Container) ((JScrollPane) cocktailPanel.getComponent(0)).getViewport().getView();
+            if(view.getComponentCount() > 0) {
+                view.getComponent(0).setVisible(true);
+            }
+        }
         return new LayoutData(g, dimensions, pageIndex, page, availableHeight, cocktailHeight, cocktailWidth, maxRowHeight, cocktailPanel);
     }
 
