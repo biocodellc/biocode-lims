@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
@@ -278,7 +279,9 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                 if(!firstTime) {
                     System.out.println(colHeaders.size()+", "+ elements.length);
                 }
-                for (int i = 0; i < elements.length; i++) {
+                assert elements.length == colHeaders.size() : "Please contact Steve if you see this error: getMatchingSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
+                int numberOfCols = Math.min(elements.length, colHeaders.size());
+                for (int i = 0; i < numberOfCols; i++) {
                     String element = elements[i];
                     String decoded = (element == null || element.length() == 0) ? null : element.replaceAll("\"\"", "\"").trim();
                     if (firstTime) {
@@ -371,7 +374,9 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             String line = null;
             while ((line = reader.readLine()) != null) {
                 String[] elements = CSVUtilities.tokenizeLine(line);
-                for (int i = 0; i < elements.length; i++) {
+                assert elements.length == colHeaders.size() : "Please contact Steve if you see this error: getAllSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
+                int numberOfCols = Math.min(elements.length, colHeaders.size());
+                for (int i = 0; i < numberOfCols; i++) {
                     String element = elements[i];
                     String decoded = element == null ? "" : element.replaceAll("\"\"", "\"");
                     if (firstTime) {
