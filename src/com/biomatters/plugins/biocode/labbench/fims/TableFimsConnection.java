@@ -78,7 +78,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
             for(DocumentField column : columns) {
                 if(code.equals(column.getCode())) {
                     if(!String.class.isAssignableFrom(column.getValueType())) {
-                        throw new ConnectionException("The taxonomy column '"+column.getName()+"' is an "+column.getValueType().getSimpleName()+" column.  All taxonomy columns must be string columns");
+                        throw new ConnectionException("The taxonomy column '"+column.getName()+"' has an incorrect type ('"+column.getValueType().getSimpleName()+"').  All taxonomy columns must be string columns.");
                     }
                     taxonomyFields.add(column);
                 }
