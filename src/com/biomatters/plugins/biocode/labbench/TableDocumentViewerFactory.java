@@ -1,31 +1,31 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.GTable;
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.utilities.ObjectAndColor;
-import com.biomatters.plugins.biocode.labbench.reaction.SplitPaneListSelector;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.SplitPaneListSelector;
+import com.biomatters.utilities.ObjectAndColor;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import javax.swing.event.TableModelListener;
 import javax.swing.event.TableModelEvent;
-import javax.swing.text.View;
+import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableModel;
+import javax.swing.text.View;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.awt.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 
 /**
@@ -37,7 +37,9 @@ import java.util.prefs.Preferences;
 public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
 
     protected abstract TableModel getTableModel(AnnotatedPluginDocument[] docs, Options options);
-    private Preferences prefs = Preferences.userNodeForPackage(getClass());
+    private static Preferences getPrefs() {
+        return Preferences.userNodeForPackage(TableDocumentViewerFactory.class);
+    }
 
     /**
      * Override this to make changes to the table before Geneious gets hold of it
@@ -186,7 +188,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                 public void actionPerformed(ActionEvent e) {
                     model.setColumnVisible(i1, item.isSelected());
                     int[] visibleCols = model.getVisibleColumns();
-                    prefs.put(preferencesPrefix, columIndiciesToString(visibleCols, model.getInternalModel(), selectedDocuments));
+                    getPrefs().put(preferencesPrefix, columIndiciesToString(visibleCols, model.getInternalModel(), selectedDocuments));
                     for(int i=0; i < visibleCols.length; i++) {
                         int preferredWidth = getColumnWidth(model.getInternalModel(), visibleCols[i]);
                         table.getColumnModel().getColumn(i).setPreferredWidth(preferredWidth);    
@@ -208,7 +210,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
     }
 
     public ColumnHidingTableModel getColumnHidingTableModel(AnnotatedPluginDocument[] annotatedDocuments, TableModel model) {
-        String initialColumnState = prefs.get(getPreferencesPrefix(annotatedDocuments), columIndiciesToString(getDefaultIndices(model, annotatedDocuments), model, annotatedDocuments));
+        String initialColumnState = getPrefs().get(getPreferencesPrefix(annotatedDocuments), columIndiciesToString(getDefaultIndices(model, annotatedDocuments), model, annotatedDocuments));
         int[] initialIndices = stringToColumnIndices(initialColumnState, model, annotatedDocuments);
         return new ColumnHidingTableModel(model, initialIndices);
     }
@@ -307,7 +309,7 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                                                 }
                                             }
                                             model.setVisibleColumns(selectedFields);
-                                            prefs.put(preferencesPrefix, columIndiciesToString(selectedFields, model.getInternalModel(), annotatedDocuments));
+                                            getPrefs().put(preferencesPrefix, columIndiciesToString(selectedFields, model.getInternalModel(), annotatedDocuments));
                                         }
                                     }
                                 }
