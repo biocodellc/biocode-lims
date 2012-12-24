@@ -2,8 +2,8 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
@@ -15,16 +15,16 @@ import org.jdom.Element;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.image.ImageObserver;
 import java.awt.color.ColorSpace;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
-import java.sql.*;
+import java.awt.image.ImageObserver;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
-import java.util.Date;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -57,7 +57,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
     };
 
-    private static final Preferences preferences = Preferences.userNodeForPackage(Reaction.class);
+    private static Preferences getPreferences() {
+        return Preferences.userNodeForPackage(Reaction.class);
+    }
 
     private FontRenderContext fontRenderContext = new FontRenderContext(new AffineTransform(), false, false); //used for calculating the preferred size
 
@@ -292,15 +294,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public DisplayFieldsTemplate getDefaultDisplayedFieldsTemplate() {
-        final String templateName = preferences.get(getType() + "_fields", null);
+        final String templateName = getPreferences().get(getType() + "_fields", null);
         if(templateName == null) {
             return BiocodeService.getInstance().getDisplayedFieldTemplate(getType(), templateName);
         }
         return null;
-    }
-
-    public void setDefaultDisplayedFieldsTemplate(DisplayFieldsTemplate template) {
-        preferences.put(getType() + "_fields", template.getName());
     }
 
     public void setFieldsToDisplay(List<DocumentField> fields) {

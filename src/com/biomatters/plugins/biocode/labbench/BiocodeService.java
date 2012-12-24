@@ -61,7 +61,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private static BiocodeService instance = null;
     public final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
-    private final Preferences preferences = Preferences.userNodeForPackage(BiocodeService.class);
+    private static Preferences getPreferencesForService() {
+        return Preferences.userNodeForPackage(BiocodeService.class);
+    }
     private ConnectionManager.Connection activeConnection;
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
@@ -1309,7 +1311,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public DisplayFieldsTemplate getDefaultDisplayedFieldsTemplate(Reaction.Type type) {
-        String name = preferences.get(type+"_defaultFieldsTemplate", null);
+        String name = getPreferencesForService().get(type+"_defaultFieldsTemplate", null);
         List<DisplayFieldsTemplate> templates = getDisplayedFieldTemplates(type);
         if(name != null) {
             for(DisplayFieldsTemplate template : templates) {
@@ -1322,7 +1324,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void setDefaultDisplayedFieldsTemplate(DisplayFieldsTemplate template) {
-        preferences.put(template.getReactionType()+"_defaultFieldsTemplate", template.getName());
+        getPreferencesForService().put(template.getReactionType()+"_defaultFieldsTemplate", template.getName());
     }
 
     public List<Thermocycle> getPCRThermocycles() {
