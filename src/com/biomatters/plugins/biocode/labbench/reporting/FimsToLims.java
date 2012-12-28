@@ -58,12 +58,12 @@ public class FimsToLims {
     }
 
     void updateEverything() throws SQLException {
+        populateHasFimsLimsValues();
         populateLoci();
         populateFriendlyNameMap();
         populateFimsFields();
         populateDateLastCopied();
         populatePrimers();
-        populateHasFimsLimsValues();
         populateDateLastCopied();
     }
 
@@ -210,6 +210,7 @@ public class FimsToLims {
             }
         }
         if(results.size() == 0) {
+            limsHasFimsValues = false;
             throw new SQLException("Could not get information about the FIMS data stored in the LIMS");
         }
         fimsFields = results;
