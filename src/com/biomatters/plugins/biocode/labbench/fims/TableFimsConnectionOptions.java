@@ -48,32 +48,6 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
 
         final PasswordOptions connectionOptions = getConnectionOptions();
         addChildOptions(CONNECTION_OPTIONS_KEY, "", "", connectionOptions);
-        if(updateAutomatically()) {
-            connectionOptions.addChangeListener(new SimpleListener() {
-                public void objectChanged() {
-                    try {
-                        update();
-                    } catch (ConnectionException e) {
-                        Dialogs.showMessageDialog(e.getMessage());
-                    }
-                }
-            });
-        }
-        else {
-            ButtonOption updateButton = addButtonOption("update", "", "Update Columns");
-            updateButton.addActionListener(new ActionListener(){
-                public void actionPerformed(ActionEvent ev) {
-                    try {
-                        update();
-                        if(connectionOptions != null) {
-                            connectionOptions.update();
-                        }
-                    } catch (ConnectionException e) {
-                        Dialogs.showMessageDialog(e.getMessage());
-                    }
-                }
-            });
-        }
         restorePreferences(); //to make sure that the field chooser boxes start out with the right values
         List<OptionValue> cols = NO_FIELDS;
 
@@ -112,6 +86,34 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         taxonomyOptions.endAlignHorizontally();
 
         final MultipleOptions taxOptions = addMultipleOptions(TAX_FIELDS, taxonomyOptions, false);
+
+        //make sure the listeners are set up after all the options are added - it seems that the listener can fire immediately in some cases
+        if(updateAutomatically()) {
+            connectionOptions.addChangeListener(new SimpleListener() {
+                public void objectChanged() {
+                    try {
+                        update();
+                    } catch (ConnectionException e) {
+                        Dialogs.showMessageDialog(e.getMessage());
+                    }
+                }
+            });
+        }
+        else {
+            ButtonOption updateButton = addButtonOption("update", "", "Update Columns");
+            updateButton.addActionListener(new ActionListener(){
+                public void actionPerformed(ActionEvent ev) {
+                    try {
+                        update();
+                        if(connectionOptions != null) {
+                            connectionOptions.update();
+                        }
+                    } catch (ConnectionException e) {
+                        Dialogs.showMessageDialog(e.getMessage());
+                    }
+                }
+            });
+        }
 
         autodetectTaxonomyButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
