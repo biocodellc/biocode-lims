@@ -374,8 +374,8 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             String line = null;
             while ((line = reader.readLine()) != null) {
                 String[] elements = CSVUtilities.tokenizeLine(line);
-                assert elements.length == colHeaders.size() : "Please contact Steve if you see this error: getAllSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
-                int numberOfCols = Math.min(elements.length, colHeaders.size());
+                assert firstTime || elements.length == colHeaders.size() : "Please contact Steve if you see this error: getAllSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
+                int numberOfCols = firstTime ? elements.length : Math.min(elements.length, colHeaders.size());
                 for (int i = 0; i < numberOfCols; i++) {
                     String element = elements[i];
                     String decoded = element == null ? "" : element.replaceAll("\"\"", "\"");
