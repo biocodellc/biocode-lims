@@ -107,7 +107,9 @@ public class BiocodePlugin extends GeneiousPlugin {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 String url = document.getRootElement().getChildText("LatestVersionURL");
-                                Dialogs.showDialogWithDontShowAgain(new Dialogs.DialogOptions(new String[] {"OK"}, "New Biocode Plugin Available"), "<html>There is a new version of the Biocode plugin available ("+latestVersion+").  You are using "+getVersion()+".  If you would like to upgrade, please visit <a href=\""+ url +"\">"+url+"</a></html>", "BiocodeUpgrade_"+latestVersion, "Don't remind me again");
+                                if (!TestGeneious.isRunningTest()) {
+                                    Dialogs.showDialogWithDontShowAgain(new Dialogs.DialogOptions(new String[] {"OK"}, "New Biocode Plugin Available"), "<html>There is a new version of the Biocode plugin available ("+latestVersion+").  You are using "+getVersion()+".  If you would like to upgrade, please visit <a href=\""+ url +"\">"+url+"</a></html>", "BiocodeUpgrade_"+latestVersion, "Don't remind me again");
+                                }
                             }
                         };
                         ThreadUtilities.invokeNowOrLater(runnable);
