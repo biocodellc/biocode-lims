@@ -46,8 +46,8 @@ public class SqlUtilities {
         else if(query instanceof AdvancedSearchQueryTerm) {
             AdvancedSearchQueryTerm aquery = (AdvancedSearchQueryTerm)query;
             String fieldCode = aquery.getField().getCode();
-            if(prefixToRemoveFromFields != null && prefixToRemoveFromFields.length() > 0 && fieldCode.length() > prefixToRemoveFromFields.length()) {
-                fieldCode = fieldCode.substring(prefixToRemoveFromFields.length());
+            if(prefixToRemoveFromFields != null && prefixToRemoveFromFields.length() > 0 && fieldCode.indexOf(prefixToRemoveFromFields) >= 0) {
+                fieldCode = fieldCode.substring(fieldCode.indexOf(prefixToRemoveFromFields)+prefixToRemoveFromFields.length());
             }
 
             if(aquery.getCondition() == Condition.STRING_LENGTH_GREATER_THAN) {
@@ -215,21 +215,21 @@ public class SqlUtilities {
             return null; //we don't support blobs...
         }
         if(type.startsWith("BOOL") || type.equals("TINYINT(1)") || type.equals("BIT") || type.equals("BIT(1)")) {
-            return DocumentField.createBooleanField(fieldName, fieldName, MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
+            return DocumentField.createBooleanField(fieldName, fieldName, "BOOL_" + MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
         }
         else if(type.startsWith("BIT") || type.startsWith("SMALLINT") || type.startsWith("MEDIUMINT)") || type.startsWith("BIGINT") || type.startsWith("SERIAL") || type.startsWith("INT")) {
-            return DocumentField.createIntegerField(fieldName, fieldName, MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
+            return DocumentField.createIntegerField(fieldName, fieldName, "INT_" + MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
         }
         else if(type.startsWith("FLOAT") || type.startsWith("DOUBLE") || type.startsWith("DEC")) {
-            return DocumentField.createDoubleField(fieldName, fieldName, MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
+            return DocumentField.createDoubleField(fieldName, fieldName, "DOUBLE_" + MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
         }
         else if(type.startsWith("DATE") || type.startsWith("TIME") || type.startsWith("YEAR")) {
-            return DocumentField.createDateField(fieldName, fieldName, MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
+            return DocumentField.createDateField(fieldName, fieldName, "DATE_" + MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
         }
         else if(type.startsWith("BINARY") || type.startsWith("VARBINARY") || type.startsWith("TINYTEXT") || type.startsWith("TINYTEXT") || type.startsWith("TEXT") || type.startsWith("MEDIUMTEXT") || type.startsWith("LONGTEXT") || type.startsWith("VARCHAR")) {
-            return DocumentField.createStringField(fieldName, fieldName, MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
+            return DocumentField.createStringField(fieldName, fieldName, "STRING_" + MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
         }
         assert false : "unrecognized column type: "+type;
-        return DocumentField.createStringField(fieldName, fieldName, MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
+        return DocumentField.createStringField(fieldName, fieldName, "STRING_" + MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
     }
 }
