@@ -37,11 +37,15 @@ public class PlateExporter extends DocumentFileExporter{
         return "Plate backup (Excel)";
     }
 
-    @Override
     public Options getOptions() {
         Options options = new Options(this.getClass());
         options.addBooleanOption("includeFIMS", "Include field information", false);
         return options;
+    }
+
+    @Override
+    public Options getOptions(AnnotatedPluginDocument[] documentsToExport){
+        return getOptions();
     }
 
     public DocumentSelectionSignature[] getSelectionSignatures() {

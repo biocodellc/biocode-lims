@@ -83,7 +83,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
         endAlignHorizontally();
 
         authorizeButton.addActionListener(new ActionListener() {
-            @Override
+
             public void actionPerformed(ActionEvent e) {
                 authorizeButton.setEnabled(false);
                 currentUserLabel.setValue("");
