@@ -1,12 +1,12 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.HierarchyListener;
 import java.awt.event.HierarchyEvent;
+import java.awt.event.HierarchyListener;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -76,7 +76,7 @@ public class AnimatedIcon implements Icon {
         if(threadIsRunning.getAndSet(true))
             return;
 
-        Thread animationThread = new Thread("AnimatedIcon repaint thread") {
+        Thread animationThread = new Thread("AnimatedIcon repaint thread in Moorea Plugin") {
             public void run() {
                 final AtomicBoolean isDisplayable = new AtomicBoolean(true);
                 while (isDisplayable.get()) { //isDisplayable should be false once this icon's parent is disposed
