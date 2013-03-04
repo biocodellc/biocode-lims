@@ -65,7 +65,7 @@ public class TapirFimsSample implements FimsSample {
         if(o2 != null) {
             return o2.toString();
         }
-        return "Untitled";
+        return null;
     }
 
     public String getSpecimenId() {

@@ -168,7 +168,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             return "You are not logged in to the database";
         }
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
-        DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
         Set<String> samplesToGet = new HashSet<String>();
 
@@ -187,12 +186,23 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
 
         String error = "";
+        boolean emptyFimsRecord = false;
 
         try {
             List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
             Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
             for(FimsSample sample : docList) {
-                docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
+                if(sample == null) {  //don't know how this could happen but it is a possible cause of MBP-269
+                    assert false;
+                    continue;
+                }
+                if(sample.getId() == null) {
+                    emptyFimsRecord = true;
+                    error += "Encountered a tissue record for the specimen "+sample.getSpecimenId()+" that has no tissue id\n";
+                }
+                else {
+                    docMap.put(sample.getId(), sample);
+                }
             }
             for(Reaction reaction : reactions) {
                 ReactionOptions op = reaction.getOptions();
@@ -207,6 +217,9 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     //we used to report an error here, but since we want to allow extractions to be created 'headless' and then linked to tissue samples as they are entered into the FIMS later, we're just setting the FIMS sample and not complaining
 //                    error += "The tissue sample "+tissueId+" does not exist in the database.\n";
 //                    reaction.isError = true;
+                    if(emptyFimsRecord) { //however if we've found an empty FIMS record (as in MBP-269), we should flag reactions such as this as errored so the user knows where to look.
+                        reaction.isError = true;
+                    }
                 }
                 else {
                     reaction.setFimsSample(currentFimsSample);
