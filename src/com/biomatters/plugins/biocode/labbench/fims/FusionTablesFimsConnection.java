@@ -1,5 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -259,7 +261,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
             }
             return new ArrayList<FimsSample>(results);
         }
-        List<FimsSample> results = new ArrayList<FimsSample>();
+        final List<FimsSample> results = new ArrayList<FimsSample>();
         String querySQLString = getQuerySQLString(query);
         if(querySQLString == null) {
             return Collections.emptyList();
@@ -268,34 +270,21 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         System.out.println(sql);
 
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(FusionTableUtils.queryTableForCsv(sql)));
-            Map<String, Object> values = new LinkedHashMap<String, Object>();
-            List<String> colHeaders = new ArrayList<String>();
-            boolean firstTime = true;
-            String line = null;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
-                String[] elements = CSVUtilities.tokenizeLine(line);
-                if(!firstTime) {
-                    System.out.println(colHeaders.size()+", "+ elements.length);
-                }
-                assert elements.length == colHeaders.size() : "Please contact Steve if you see this error: getMatchingSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
-                int numberOfCols = Math.min(elements.length, colHeaders.size());
-                for (int i = 0; i < numberOfCols; i++) {
-                    String element = elements[i];
-                    String decoded = (element == null || element.length() == 0) ? null : element.replaceAll("\"\"", "\"").trim();
-                    if (firstTime) {
-                        colHeaders.add(decoded);
-                    } else {
-                        values.put(colHeaders.get(i), convertValue(colHeaders.get(i), decoded));
+            RetrieveCallback callback = new RetrieveCallback() {
+                @Override
+                protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
+                    if(!TissueDocument.class.isAssignableFrom(document.getClass())) {
+                        throw new RuntimeException("Should only call this with a TissueDocument");
                     }
+                    results.add((TissueDocument)document);
                 }
-                if(!firstTime) {
-                    results.add(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField(), getSpecimenDocumentField()));
+
+                @Override
+                protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
+                    throw new RuntimeException("Should not call this with an AnnotatedPluginDocument");
                 }
-                values = new LinkedHashMap<String, Object>();
-                firstTime = false;
-            }
+            };
+            getFimsSamples(sql, callback);
             
         } catch (IOException e) {
             e.printStackTrace();
@@ -364,39 +353,37 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         System.out.println(sql);
 
         try {
-            DocumentField tissueCol = getTissueSampleDocumentField();
-            DocumentField specimenCol = getSpecimenDocumentField();                  
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(FusionTableUtils.queryTableForCsv(sql)));
-            Map<String, Object> values = new LinkedHashMap<String, Object>();
-            List<String> colHeaders = new ArrayList<String>();
-            boolean firstTime = true;
-            String line = null;
-            while ((line = reader.readLine()) != null) {
-                String[] elements = CSVUtilities.tokenizeLine(line);
-                assert firstTime || elements.length == colHeaders.size() : "Please contact Steve if you see this error: getAllSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
-                int numberOfCols = firstTime ? elements.length : Math.min(elements.length, colHeaders.size());
-                for (int i = 0; i < numberOfCols; i++) {
-                    String element = elements[i];
-                    String decoded = element == null ? "" : element.replaceAll("\"\"", "\"");
-                    if (firstTime) {
-                        colHeaders.add(decoded);
-                    } else {
-                        values.put(colHeaders.get(i), convertValue(colHeaders.get(i), decoded));
-                    }
-                }
-                if(!firstTime) {
-                    callback.add(new TissueDocument(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, tissueCol, specimenCol)), Collections.<String, Object>emptyMap());
-                }
-                values = new LinkedHashMap<String, Object>();
-                firstTime = false;
-            }
-
+            getFimsSamples(sql, callback);
         } catch (IOException e) {
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
         }
 
+    }
+
+    private void getFimsSamples(String sql, RetrieveCallback callback) throws IOException {
+        DocumentField tissueCol = getTissueSampleDocumentField();
+        DocumentField specimenCol = getSpecimenDocumentField();
+
+        Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+
+        List<String> colHeaders = sqlresponse.getColumns();
+        String line = null;
+        List<List<Object>> rows = sqlresponse.getRows();
+        if(rows == null) {
+            return;
+        }
+        for(List<Object> row : rows) {
+            Map<String, Object> values = new LinkedHashMap<String, Object>();
+            assert row.size() == colHeaders.size() : "Please contact Steve if you see this error: getAllSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
+            int numberOfCols = Math.min(row.size(), colHeaders.size());
+            for (int i = 0; i < numberOfCols; i++) {
+                Object element = row.get(i);
+                String decoded = element == null ? "" : element.toString().replaceAll("\"\"", "\"");
+                values.put(colHeaders.get(i), convertValue(colHeaders.get(i), decoded));
+            }
+            callback.add(new TissueDocument(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, tissueCol, specimenCol)), Collections.<String, Object>emptyMap());
+        }
     }
 
     public boolean requiresMySql() {
