@@ -145,7 +145,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
                     Dialogs.showMessageDialog("These options are not linked to a reaction, so you cannot view the traces.", "Cannot view traces", tracesButton.getComponent(), Dialogs.DialogIcon.INFORMATION);
                     return;
                 }
-                if(reaction.getId() > 0) {
+                if(reaction.getId() >= 0) {
                     if(reaction.getTraces() == null) {
 //                        if(!Dialogs.showYesNoDialog("You have not downloaded the sequences for this reaction from the database yet.  Would you like to do so now?", "Download sequences", tracesButton.getComponent(), Dialogs.DialogIcon.QUESTION)) {
 //                            return;
