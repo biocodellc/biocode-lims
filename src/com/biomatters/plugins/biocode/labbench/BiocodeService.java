@@ -54,7 +54,7 @@ import java.util.prefs.Preferences;
 public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
-    private LIMSConnection limsConnection = new LIMSConnection();
+    private LIMSConnection limsConnection;
     private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     private Driver driver;
     private Driver localDriver;
@@ -81,6 +81,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public void setDataDirectory(File dataDirectory) {
         this.dataDirectory = dataDirectory;
+
+        if(!dataDirectory.exists()) {
+            if(!dataDirectory.mkdirs()) {
+                //todo:handle
+            }
+        }
+
         try {
             buildCachesFromDisk();
         } catch (IOException e) {
@@ -418,7 +425,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             activeFIMSConnection.disconnect();
             activeFIMSConnection = null;
         }
-        limsConnection.disconnect();
+        if(limsConnection != null) {
+            limsConnection.disconnect();
+        }
+        limsConnection = null;
         if(reportingService != null) {
             reportingService.notifyLoginStatusChanged();
         }
@@ -474,7 +484,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         String error = null;
 
-        if(!limsConnection.isLocal(connection.getLimsOptions()) || connection.getFimsConnection().requiresMySql()) {
+        try {
+            limsConnection = LIMSConnection.getLIMSConnection(connection.getLimsOptions());
+        } catch (ConnectionException e) {
+            error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: "+e.getMessage();
+        }
+
+        if(error == null && (!limsConnection.requiresMySql() || connection.getFimsConnection().requiresMySql())) {
             error = loadMySqlDriver(block);
         }
 

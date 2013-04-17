@@ -38,14 +38,13 @@ import java.util.Date;
  * @version $Id: 27/05/2009 6:28:38 AM steve $
  */
 @SuppressWarnings({"ConstantConditions"})
-public class LIMSConnection {
+public abstract class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
     public static final int EXPECTED_SERVER_VERSION = 9;
     Driver driver;
     Connection connection;
     Connection connection2;
-    private LocalLIMS localLIMS;
-    private Options limsOptions;
+    private PasswordOptions limsOptions;
     private String username;
     private String schema;
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
@@ -62,7 +61,6 @@ public class LIMSConnection {
     public static final DocumentField SEQUENCE_ID = DocumentField.createIntegerField("LIMS Sequence ID", "The Unique ID of this sequence in LIMS", "LimsSequenceId", false, false);
     public static final DocumentField EDIT_RECORD = DocumentField.createStringField("Edit Record", "A record of edits made to this sequence", "assembly.editRecord", false, false);
     public static final DocumentField ASSEMBLY_TECHNICIAN = DocumentField.createStringField("Assembly Technician", "", "assembly.technician", false, false);
-    private boolean isLocal;
     private String PLATE_NAME = "plate.name";
     private final String PLATE_TYPE = "plate.type";
     private final String PLATE_DATE = "plate.date";
@@ -73,28 +71,55 @@ public class LIMSConnection {
     private final String EXTRACTION_BARCODE = "extraction.extractionBarcode";
     String serverUrn;
 
-    public LIMSConnection() {}
+    public static enum AvailableLimsTypes {
+        local(LocalLIMSConnection.class, "Built-in MySQL Database", "Create and connect to LIMS databases on your local computer (stored with your Geneious data)"),
+        remote(MysqlLIMSConnection.class, "Remote MySQL Database", "Connect to a LIMS database on a remote MySQL server");
+        private final Class limsClass;
+        private final String label;
+        private final String description;
 
-    /**
-     * creates a new LIMSConnection connected to the given local LIMS database
-     * @param localDatabaseName
-     * @throws ConnectionException
-     */
-    public LIMSConnection(String localDatabaseName) throws ConnectionException{
-        connectLocal(localDatabaseName, false);
+        AvailableLimsTypes(Class limsClass, String label, String description) {
+            this.limsClass = limsClass;
+            this.label = label;
+            this.description = description;
+        }
+
+        public Class getLimsClass() {
+            return limsClass;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getDescription() {
+            return description;
+        }
     }
+
+    public LIMSConnection() {}
 
     public static PasswordOptions createConnectionOptions() {
         return new LimsConnectionOptions(LIMSConnection.class);
     }
 
-    static Options getLocalOptions() {
-        return LocalLIMS.getConnectionOptions();
+    public static LIMSConnection getLIMSConnection(PasswordOptions connectionOptions) throws ConnectionException{
+        LimsConnectionOptions limsOptions = (LimsConnectionOptions) connectionOptions;
+
+        try {
+            return (LIMSConnection)limsOptions.getSelectedLIMSType().getLimsClass().newInstance();
+        } catch (InstantiationException e) {
+            throw new ConnectionException(e);
+        } catch (IllegalAccessException e) {
+            throw new ConnectionException(e);
+        }
     }
 
-    public boolean isLocal() {
-        return isLocal;
-    }
+    public abstract boolean requiresMySql();
+
+    public abstract PasswordOptions getConnectionOptions();
+
+    public abstract boolean isLocal();
 
     public String getUrn() {
         return serverUrn;
@@ -118,108 +143,25 @@ public class LIMSConnection {
         return schema;
     }
 
-    public void connect(PasswordOptions LIMSOptions) throws ConnectionException {
-        if(isLocal(LIMSOptions)) {
-            driver = BiocodeService.getInstance().getLocalDriver();
-            this.limsOptions = LIMSOptions;
-            connectLocal(LocalLIMS.getDbNameFromConnectionOptions(LIMSOptions.getChildOptions().get("local")), false);
-        }
-        else {
-            driver = BiocodeService.getInstance().getDriver();
-            connectRemote(LIMSOptions.getChildOptions().get("remote"));
-        }
+    public void connect(PasswordOptions options) throws ConnectionException {
+        driver = getDriver();
+        LimsConnectionOptions allLimsOptions = (LimsConnectionOptions)options;
+        PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
+        this.limsOptions = allLimsOptions;
+        connectToDb(selectedLimsOptions);
     }
 
-    private void connectLocal(String dbName, boolean alreadyAskedAboutUpgrade) throws ConnectionException {
-        isLocal = true;
-        if(localLIMS == null) {
-            localLIMS = new LocalLIMS();
-            localLIMS.initialize(BiocodeService.getInstance().getDataDirectory());
-        }
-        connection = localLIMS.connect(dbName);
-        serverUrn = "local/"+dbName;
-        try {
-            ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
-            if(!resultSet.next()) {
-                throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
-            }
-            else {
-                int version = resultSet.getInt("version");
+    public abstract Driver getDriver();
 
-                if(version < EXPECTED_SERVER_VERSION) {
-                    if(alreadyAskedAboutUpgrade || Dialogs.showYesNoDialog("The LIMS database you are connecting to is written for an older version of this plugin.  Would you like to upgrade it?", "Old database", null, Dialogs.DialogIcon.QUESTION)) {
-                        localLIMS.upgradeDatabase(dbName);
-                        connectLocal(dbName, true);
-                    }
-                    else {
-                        throw new ConnectionException("You need to upgrade your database, or choose another one to continue");
-                    }
-                }
-                else if(version > EXPECTED_SERVER_VERSION) {
-                    throw new ConnectionException("This database was written for a newer version of the LIMS plugin, and cannot be accessed");
-                }
-            }
-        }
-        catch(SQLException ex) {
-            throw new ConnectionException(ex.getMessage(), ex);
-        }
-    }
+    abstract void connectToDb(Options connectionOptions) throws ConnectionException;
 
-    private void connectRemote(Options LIMSOptions) throws ConnectionException {
-        isLocal = false;
-        //connect to the LIMS
-        this.limsOptions = LIMSOptions;
-        Properties properties = new Properties();
-        username = LIMSOptions.getValueAsString("username");
-        properties.put("user", username);
-        properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
-        try {
-            DriverManager.setLoginTimeout(20);
-            serverUrn = LIMSOptions.getValueAsString("server") + ":" + LIMSOptions.getValueAsString("port");
-            connection = driver.connect("jdbc:mysql://" + serverUrn, properties);
-            connection2 = driver.connect("jdbc:mysql://"+ serverUrn, properties);
-            Statement statement = connection.createStatement();
-            schema = LIMSOptions.getValueAsString("database");
-            connection.createStatement().execute("USE "+ schema);
-            connection2.createStatement().execute("USE "+ schema);
-            ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
-            serverUrn += "/"+ schema;
-            if(!resultSet.next()) {
-                throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
-            }
-            else {
-                int version = resultSet.getInt("version");
-                if(version != EXPECTED_SERVER_VERSION) {
-                    throw new ConnectionException("The server you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
-                }
-            }
-            resultSet.close();
-        } catch (SQLException e1) {
-            throw new ConnectionException(e1);
-        }
-    }
 
     public void disconnect() {
-//        if(connection != null) {
-//            Thread t = new Thread() {
-//                public void run() {
-//                    try {
-//                        connection.close();
-//                        requiresMySql = false;
-//                    } catch (SQLException e) {
-//                        System.out.println(e);
-//                        e.printStackTrace();
-//                    }
-//                }
-//            };
-//            t.start();
-//        }
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
         connection = null;
         connection2 = null;
         limsOptions = null;
-        isLocal = false;
         serverUrn = null;
     }
 
@@ -227,15 +169,9 @@ public class LIMSConnection {
         if(this.limsOptions == null) {
             return;
         }
-        Options limsOptions = this.limsOptions;
-        boolean isLocal = this.isLocal;
+        PasswordOptions limsOptions = this.limsOptions;
         disconnect();
-        if(isLocal) {
-            connectLocal(LocalLIMS.getDbNameFromConnectionOptions(limsOptions), true);
-        }
-        else {
-            connectRemote(limsOptions);
-        }
+        connect(limsOptions);
     }
 
     public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws SQLException{
@@ -1060,7 +996,7 @@ public class LIMSConnection {
     @SuppressWarnings({"MismatchedQueryAndUpdateOfCollection"})
     public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
         Connection connection = getConnection();
-        Connection connection2 = isLocal ? connection : this.connection2;
+        Connection connection2 = isLocal() ? connection : this.connection2;
         if(connection == null || connection2 == null) {
             throw new SQLException("You are not logged in");
         }

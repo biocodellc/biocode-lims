@@ -35,7 +35,6 @@ import java.util.prefs.Preferences;
  * @version $Id$
  */
 public class ConnectionManager implements XMLSerializable{
-    private static LIMSConnection limsConnection = new LIMSConnection();
 
     private List<Connection> connections;
     private List<ListDataListener> listeners = new ArrayList<ListDataListener>();
@@ -97,7 +96,7 @@ public class ConnectionManager implements XMLSerializable{
         }
         fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), Options.PageChooserType.COMBO_BOX, false);
 
-        Options limsOptions = limsConnection.createConnectionOptions();
+        Options limsOptions = LIMSConnection.createConnectionOptions();
 
         Options loginOptions = new Options(BiocodeService.class);
         loginOptions.addChildOptions("fims", null, null, fimsOptions);

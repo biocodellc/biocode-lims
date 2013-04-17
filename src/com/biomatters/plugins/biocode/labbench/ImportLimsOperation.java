@@ -11,8 +11,9 @@ import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.CSVUtilities;
-import com.biomatters.plugins.biocode.labbench.lims.LocalLIMS;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import java.util.*;
@@ -86,7 +87,7 @@ public class ImportLimsOperation extends DocumentOperation {
                 "" +
                 "</ul></html>", false, true);
 
-        List<Options.OptionValue> databaseValues = LocalLIMS.getDatabaseOptionValues();
+        List<Options.OptionValue> databaseValues = LocalLIMSConnectionOptions.getDatabaseOptionValues();
 
         options.addComboBoxOption(DATABASE, "Select your source database",databaseValues, databaseValues.get(0));
         options.beginAlignHorizontally(null, false);
@@ -126,7 +127,7 @@ public class ImportLimsOperation extends DocumentOperation {
             progressListener.setIndeterminateProgress();
             progressListener.setMessage("Checking for plates, cocktails, and thermocycles with the same name");
 
-            LIMSConnection sourceLims = new LIMSConnection(databaseName);
+            LIMSConnection sourceLims = new LocalLIMSConnection(databaseName);
 
             checkForDuplicateNames(sourceLims, destinationLims, "plate", "name", "plate(s)");
             checkForCancelled(progressListener);
@@ -352,10 +353,16 @@ public class ImportLimsOperation extends DocumentOperation {
             double currentPlate = 0;
 
             protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
+                if(canceled) {
+                    return;
+                }
                 handleDocument((PlateDocument)document);
             }
 
             protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
+                if(canceled) {
+                    return;
+                }
                 try {
                     PluginDocument pluginDocument = document.getDocument();
                     handleDocument((PlateDocument) pluginDocument);
@@ -457,7 +464,7 @@ public class ImportLimsOperation extends DocumentOperation {
 
             @Override
             protected boolean _isCanceled() {
-                return progressListener.isCanceled() && canceled;
+                return progressListener.isCanceled() || canceled;
             }
         });
 
@@ -499,10 +506,16 @@ public class ImportLimsOperation extends DocumentOperation {
             double currentPlate = 0;
 
             protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
+                if(canceled) {
+                    return;
+                }
                 handleDocument((PlateDocument)document);
             }
 
             protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
+                if(canceled) {
+                    return;
+                }
                 try {
                     PluginDocument pluginDocument = document.getDocument();
                     handleDocument((PlateDocument) pluginDocument);
@@ -575,7 +588,7 @@ public class ImportLimsOperation extends DocumentOperation {
 
             @Override
             protected boolean _isCanceled() {
-                return progressListener.isCanceled() && canceled;
+                return progressListener.isCanceled() || canceled;
             }
         });
 

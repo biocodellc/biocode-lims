@@ -13,7 +13,6 @@ import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyDocumentVie
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.lims.LocalLIMS;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.jdom.Document;
 import org.jdom.JDOMException;
@@ -89,7 +88,6 @@ public class BiocodePlugin extends GeneiousPlugin {
     @Override
     public void initialize(File pluginUserDirectory, File pluginDirectory) {
         this.pluginUserDirectory = pluginUserDirectory;
-        LocalLIMS.initialize(pluginUserDirectory);
         Runnable r = new Runnable(){
             public void run() {
                 initialiseIcons();
