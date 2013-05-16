@@ -13,6 +13,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
 import com.biomatters.geneious.publicapi.utilities.Base64Coder;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
@@ -29,6 +30,10 @@ import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
@@ -41,6 +46,24 @@ import java.lang.ref.WeakReference;
  *          Created on 24/06/2009 7:35:20 PM
  */
 public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReaction> {
+    public static void main(String[] args) {
+        try{
+          String url="http://genesetdb.auckland.ac.nz/HyperTestRemote.php?genelist=foxl1,foxl2&id=symbol&db=All&fdr=0.05";
+          URL myURL=new URL(url);
+          ReadableByteChannel rbc= Channels.newChannel(myURL.openStream());
+            File tempFile = File.createTempFile("geneset", ".txt");
+            FileOutputStream fos=new FileOutputStream(tempFile);
+          fos.getChannel().transferFrom(rbc, 0, 1 << 24);
+          fos.flush();
+            fos.close();
+            System.out.println(FileUtilities.getTextFromFile(tempFile));
+        } catch (MalformedURLException e) {
+          e.printStackTrace();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+    }
+
     private ButtonOption cocktailButton;
     private Option<String, ? extends JComponent> labelOption;
     private com.biomatters.plugins.biocode.labbench.ButtonOption tracesButton;
