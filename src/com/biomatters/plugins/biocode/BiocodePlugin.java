@@ -264,7 +264,7 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new CherryPickingDocumentViewerFactory(),
                 new MultiLocusDocumentViewerFactory(),
                 new TabularPlateDocumentViewerFactory(),
-                new MetagenomicsDocumentViewer()
+//                new MetagenomicsDocumentViewer()
         };
     }
 
@@ -283,7 +283,7 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(false, false),
                 new MarkSequencesAsSubmittedInLimsOperation(),
                 new WorkflowBuilder(),
-                new MetagenomicsDocumentOperation()
+//                new MetagenomicsDocumentOperation()
                 //new ImportLimsOperation()
 //                new ExportForBarstoolOperation(false)
         };
