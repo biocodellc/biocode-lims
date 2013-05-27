@@ -14,6 +14,8 @@ import java.util.*;
  * @version $Id: 20/08/2009 2:34:58 PM steve $
  */
 public class TapirFimsSample implements FimsSample {
+    String specimenIdField;
+
     private List<DocumentField> searchFields;
     private List<DocumentField> taxonomyFields;
     private Map<String, Object> values;
@@ -22,8 +24,9 @@ public class TapirFimsSample implements FimsSample {
         fromXML(e);
     }
 
-    public TapirFimsSample(Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
-       TAPIRClient.clearNamespace(tapirHit);
+    public TapirFimsSample(String specimenIdField, Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
+        this.specimenIdField = specimenIdField;
+        TAPIRClient.clearNamespace(tapirHit);
         this.searchFields = new ArrayList<DocumentField>(searchFields);
         this.taxonomyFields = taxonomyFields;
         init(tapirHit);
@@ -69,7 +72,7 @@ public class TapirFimsSample implements FimsSample {
     }
 
     public String getSpecimenId() {
-        return ""+getFimsAttributeValue("http://rs.tdwg.org/dwc/dwcore/CatalogNumber");
+        return ""+getFimsAttributeValue(specimenIdField);
     }
 
     public List<DocumentField> getFimsAttributes() {

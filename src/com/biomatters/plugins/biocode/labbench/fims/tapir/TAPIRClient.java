@@ -25,23 +25,17 @@ import java.util.List;
  * @version $Id: 19/08/2009 12:01:40 PM steve $
  */
 public class TAPIRClient {
+    private TapirSchema schema;
     private URL accessPoint;
 
-    public TAPIRClient(String accessPoint) {
+    public TAPIRClient(TapirSchema schema, String accessPoint) {
+        this.schema = schema;
         try {
             this.accessPoint = new URL(accessPoint);
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException("You must enter a valid URL", e);
         }
     }
-
-     public List<DocumentField> getSearchAttributes2() {
-         return Arrays.asList(
-                 //new DocumentField("@catnum", "", "http://rs.tdwg.org/dwc/dwcore/CatalogNumber", String.class, true, true)  //,
-                 new DocumentField("Collector", "", "http://rs.tdwg.org/dwc/dwcore/Collector", String.class, true, true)
-         );
-
-     }
 
 
     public List<DocumentField> getSearchAttributes() throws JDOMException, IOException {
@@ -226,7 +220,7 @@ public class TAPIRClient {
         Element mappingElement = new Element("mapping");
 
         Element catNumElement = new Element("node").setAttribute("path", "/records/record/@catnum");
-        catNumElement.addContent(new Element("concept").setAttribute("id", "http://rs.tdwg.org/dwc/dwcore/CatalogNumber"));
+        catNumElement.addContent(new Element("concept").setAttribute("id", schema.getSpecimenIdField()));
         mappingElement.addContent(catNumElement);
 
         for(DocumentField field : fieldsToSearch) {

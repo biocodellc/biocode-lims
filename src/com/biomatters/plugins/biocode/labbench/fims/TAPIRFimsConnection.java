@@ -10,6 +10,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.tapir.TAPIRClient;
+import com.biomatters.plugins.biocode.labbench.fims.tapir.TapirSchema;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.Namespace;
@@ -24,6 +25,8 @@ import java.util.*;
  * @version $Id: 27/05/2009 6:15:23 AM steve $
  */
 public class TAPIRFimsConnection extends FIMSConnection{
+    private TapirSchema schema;
+
     private List<DocumentField> searchAttributes;
     private List<DocumentField> taxonomyAttributes;
     private TAPIRClient client;
@@ -44,14 +47,36 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return false;
     }
 
+    private enum DataStandard {
+        DARWIN_CORE("DarwinCore", TapirSchema.DarwinCore);
+
+        String label;
+        TapirSchema schema;
+
+        private DataStandard(String label, TapirSchema schema) {
+            this.schema = schema;
+            this.label = label;
+        }
+    }
+
+
+    private static final String SCHEMA_OP_KEY = "schema";
     public PasswordOptions getConnectionOptions() {
         PasswordOptions connectionOptions = new PasswordOptions(this.getClass());
         connectionOptions.addStringOption("accessPoint", "Access Point:", "http://tapirlink.berkeley.edu/tapir.php/biocode");
+        List<Options.OptionValue> optionValues = new ArrayList<Options.OptionValue>();
+        for (DataStandard dataStandard : DataStandard.values()) {
+            optionValues.add(new Options.OptionValue(dataStandard.name(), dataStandard.label));
+        }
+        connectionOptions.addComboBoxOption(SCHEMA_OP_KEY, "Data Sharing Standard:", optionValues, optionValues.get(0));
         return connectionOptions;
     }
 
     public void _connect(Options options) throws ConnectionException {
-        client = new TAPIRClient(options.getValueAsString("accessPoint"));
+        String schemaName = options.getValueAsString(SCHEMA_OP_KEY);
+        DataStandard dataStandard = DataStandard.valueOf(schemaName);
+        schema = dataStandard.schema;
+        client = new TAPIRClient(schema, options.getValueAsString("accessPoint"));
         try {
             searchAttributes = getMatchingFields(client.getSearchAttributes(), false);
             taxonomyAttributes = getMatchingFields(client.getSearchAttributes(), true);
@@ -81,7 +106,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return null;
     }
 
-    private static List<DocumentField> getMatchingFields(List<DocumentField> searchAttributes, boolean taxonomy) {
+    private List<DocumentField> getMatchingFields(List<DocumentField> searchAttributes, boolean taxonomy) {
         List<DocumentField> result = new ArrayList<DocumentField>();
         for(DocumentField field : searchAttributes) {
             if(isTaxonomyAttribute(field.getCode()) == taxonomy) {
@@ -91,17 +116,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return result;
     }
 
-    private static boolean isTaxonomyAttribute(String code) {
-        String[] taxonomyCodes = new String[] {
-                "http://rs.tdwg.org/dwc/dwcore/Kingdom",
-                "http://rs.tdwg.org/dwc/dwcore/Phylum",
-                "http://rs.tdwg.org/dwc/dwcore/Class",
-                "http://rs.tdwg.org/dwc/dwcore/Order",
-                "http://rs.tdwg.org/dwc/dwcore/Family",
-                "http://rs.tdwg.org/dwc/dwcore/Genus",
-                "http://rs.tdwg.org/dwc/dwcore/SpecificEpithet"
-        };
-        for (String taxonomyCode : taxonomyCodes) {
+    private boolean isTaxonomyAttribute(String code) {
+        for (String taxonomyCode : schema.getTaxonomyCodes()) {
             if (taxonomyCode.equals(code)) {
                 return true;
             }
@@ -180,7 +196,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
                 if(recordsElement != null) {
                     List<Element> recordList = new ArrayList<Element>(recordsElement.getChildren("record", namespace));
                     for (Element e : recordList) {
-                        samples.add(new TapirFimsSample((Element)e.clone(), searchAttributes, taxonomyAttributes));
+                        samples.add(new TapirFimsSample(schema.getSpecimenIdField(), (Element)e.clone(), searchAttributes, taxonomyAttributes));
                     }
                     return samples;
                 }
