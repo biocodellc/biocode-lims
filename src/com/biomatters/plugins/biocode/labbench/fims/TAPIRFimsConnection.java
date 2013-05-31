@@ -26,6 +26,9 @@ import java.util.*;
  */
 public class TAPIRFimsConnection extends FIMSConnection{
     private TapirSchema schema;
+    // todo Figure out why ZFMK server can't handle our queries
+    // todo Allow the user to specify specimen ID even if Schema is set.  UnitID is just a number in ZFMK's database
+    // todo Work out how to get the Taxonomy working
 
     private List<DocumentField> searchAttributes;
     private List<DocumentField> taxonomyAttributes;
@@ -47,8 +50,10 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return false;
     }
 
+    @SuppressWarnings({"UnusedDeclaration"})
     private enum DataStandard {
-        DARWIN_CORE("DarwinCore", TapirSchema.DarwinCore);
+        DARWIN_CORE("DarwinCore", TapirSchema.DarwinCore),
+        ABCD("ABCD", TapirSchema.ABCD);
 
         String label;
         TapirSchema schema;
@@ -118,7 +123,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
 
     private boolean isTaxonomyAttribute(String code) {
         for (String taxonomyCode : schema.getTaxonomyCodes()) {
-            if (taxonomyCode.equals(code)) {
+            if (taxonomyCode.equals(code) || "http://biocode.berkeley.edu/schema/lowesttaxon".equals(code)) {
                 return true;
             }
         }

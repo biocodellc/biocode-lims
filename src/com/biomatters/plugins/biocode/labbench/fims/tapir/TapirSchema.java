@@ -39,4 +39,24 @@ public abstract class TapirSchema {
             return new String[0];
         }
     };
+
+    public static TapirSchema ABCD = new TapirSchema() {
+        @Override
+        public String getSpecimenIdField() {
+            return "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/UnitID";
+        }
+
+        @Override
+        public String[] getTaxonomyCodes() {
+            return new String[] {
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/Result/TaxonIdentified/HigherTaxa/HigherTaxon/HigherTaxonName"
+
+            };
+        }
+
+        @Override
+        public String[] getFields() {
+            return new String[0];
+        }
+    };
 }

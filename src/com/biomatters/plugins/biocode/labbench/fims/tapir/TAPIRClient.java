@@ -207,7 +207,7 @@ public class TAPIRClient {
 
     public Element generateSearchXML(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) {
         Element searchElement = new Element("search");
-        searchElement.setAttribute("count", "true").setAttribute("start", "0").setAttribute("limit", "65536").setAttribute("envelope", "true");
+        searchElement.setAttribute("count", "true").setAttribute("start", "0").setAttribute("envelope", "true");
 
         Element outputModel = new Element("outputModel");
         searchElement.addContent(outputModel);
@@ -235,9 +235,14 @@ public class TAPIRClient {
         //filterElement.addContent(filterParent);
         if(queries.size() > 1) {
             for(AdvancedSearchQueryTerm q : queries) {
+                if(q.getValues().length == 1 && q.getValues()[0].toString().trim().length() == 0) {
+                    continue;
+                }
                 filterParent.addContent(getQueryXml(q));
             }
-            filterElement.addContent(filterParent);
+            if(!filterParent.getChildren().isEmpty()) {
+                filterElement.addContent(filterParent);
+            }
         }
         else {
             filterElement.addContent(getQueryXml(queries.get(0)));
