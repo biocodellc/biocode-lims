@@ -52,22 +52,55 @@ public class TAPIRClient {
                 out.output(fieldElement,  System.out);
                 System.out.println();
                 String code = fieldElement.getAttributeValue("id");
-                String name;
-                if(code.indexOf("/") >= 0) {
-                    name = code.substring(code.lastIndexOf("/")+1);
+                if(this.schema == TapirSchema.ABCD && currentlyDoesntWorkWithAbcd(code)) {
+                    continue;
                 }
-                else {
-                    name = code;
-                }
-                fields.add(new DocumentField(name, "", code, getFieldClass(fieldElement), true, false));
+                String name = getFieldName(code);
+                fields.add(new DocumentField(name, code, code, getFieldClass(fieldElement), true, false));
             }
         }
         return fields;
     }
 
+    /**
+     * This method can be removed once we figure out why this isn't working with ZFMK's database.  Any queries
+     * involving these two fields make the tapirlink server return empty results.  I suspect the problem is on their
+     * side.
+     *
+     * @param conceptId id of the concept
+     * @return true if we don't support working with the field, false otherwise.
+     */
+    private boolean currentlyDoesntWorkWithAbcd(String conceptId) {
+        return conceptId.equals("http://biocode.berkeley.edu/schema/datelastmodified") ||
+                conceptId.equals("http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Metadata/RevisionData/DateModified");
+    }
+
+    private String getFieldName(String code) {
+        String name;
+        if(code.contains("/")) {
+            name = code.substring(code.lastIndexOf("/")+1);
+        }
+        else {
+            name = code;
+        }
+
+        // Name is not specific enough especially since there are normally multiple.  So take the 2nd to last part.
+        if(schema == TapirSchema.ABCD && (name.equals("Name") || name.equals("Notes"))) {
+            String[] nameParts = code.split("/");
+            if(nameParts.length > 2) {
+                name = nameParts[nameParts.length-2];
+                if(code.endsWith("Notes")) {
+                    name += " Notes";
+                }
+            }
+        }
+
+        return name.replace("@", "");
+    }
+
     private Class getFieldClass(Element field) {
         String attribute = field.getAttributeValue("datatype");
-        if(attribute.endsWith("date")) {
+        if(attribute.contains("date")) {
             return Date.class;
         }
         else if(attribute.endsWith("decimal")) {
@@ -181,7 +214,7 @@ public class TAPIRClient {
         else if(Integer.class.equals(dataType)) {
             return "xs:int";
         }
-        else if(Date.class.equals(dataType)) {
+        else if(Date.class.equals(dataType)) {  // todo support xs:dateTime?
             return "xs:date";
         }
         return "xs:string";

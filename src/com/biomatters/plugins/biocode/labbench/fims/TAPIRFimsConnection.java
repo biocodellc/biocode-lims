@@ -26,9 +26,8 @@ import java.util.*;
  */
 public class TAPIRFimsConnection extends FIMSConnection{
     private TapirSchema schema;
-    // todo Figure out why ZFMK server can't handle our queries
-    // todo Allow the user to specify specimen ID even if Schema is set.  UnitID is just a number in ZFMK's database
     // todo Work out how to get the Taxonomy working
+    // todo name when tissue id isn't mapped?
 
     private List<DocumentField> searchAttributes;
     private List<DocumentField> taxonomyAttributes;
