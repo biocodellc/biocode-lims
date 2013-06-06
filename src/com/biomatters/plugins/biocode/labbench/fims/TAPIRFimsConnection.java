@@ -212,7 +212,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
             }
 
         }
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
