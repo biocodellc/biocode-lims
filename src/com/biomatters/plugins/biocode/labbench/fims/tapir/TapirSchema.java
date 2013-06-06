@@ -30,7 +30,9 @@ public abstract class TapirSchema {
                 "http://rs.tdwg.org/dwc/dwcore/Order",
                 "http://rs.tdwg.org/dwc/dwcore/Family",
                 "http://rs.tdwg.org/dwc/dwcore/Genus",
-                "http://rs.tdwg.org/dwc/dwcore/SpecificEpithet"
+                "http://rs.tdwg.org/dwc/dwcore/Species",
+                "http://rs.tdwg.org/dwc/dwcore/SpecificEpithet",
+                "http://rs.tdwg.org/dwc/dwcore/Subspecies"
             };
         }
 
@@ -49,8 +51,17 @@ public abstract class TapirSchema {
         @Override
         public String[] getTaxonomyCodes() {
             return new String[] {
-                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/Result/TaxonIdentified/HigherTaxa/HigherTaxon/HigherTaxonName"
-
+                    // Can be either Kingdom, Phylum, CLass, Order or Family depending on the value of HigherTaxonRank
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/Result/TaxonIdentified/HigherTaxa/HigherTaxon/HigherTaxonName",
+                    // Genus
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/TaxonIdentified/ScientificName/NameAtomised/Botanical/Genus",
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/TaxonIdentified/ScientificName/NameAtomised/Bacterial/GenusOrMonomial",
+                    // Species
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/TaxonIdentified/ScientificName/NameAtomised/Bacterial/SpeciesEpithet",
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/TaxonIdentified/ScientificName/NameAtomised/Botanical/FirstE",
+                    // Subspecies
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/TaxonIdentified/ScientificName/NameAtomised/Bacterial/SubspeciesEpithet",
+                    "http://www.tdwg.org/schemas/abcd/2.06/DataSets/DataSet/Units/Unit/Identifications/Identification/TaxonIdentified/ScientificName/NameAtomised/Botanical/Sec"
             };
         }
 

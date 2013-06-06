@@ -26,7 +26,6 @@ import java.util.*;
  */
 public class TAPIRFimsConnection extends FIMSConnection{
     private TapirSchema schema;
-    // todo Work out how to get the Taxonomy working
     // todo name when tissue id isn't mapped?
 
     private List<DocumentField> searchAttributes;
