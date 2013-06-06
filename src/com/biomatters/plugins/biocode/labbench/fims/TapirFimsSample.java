@@ -68,7 +68,7 @@ public class TapirFimsSample implements FimsSample {
         if(o2 != null) {
             return o2.toString();
         }
-        return null;
+        return getSpecimenId();  // If tissue ID is not available use specimen ID, better than null
     }
 
     public String getSpecimenId() {

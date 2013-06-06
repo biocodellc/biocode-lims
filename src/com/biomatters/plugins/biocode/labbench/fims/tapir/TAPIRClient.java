@@ -90,7 +90,7 @@ public class TAPIRClient {
             if(nameParts.length > 2) {
                 name = nameParts[nameParts.length-2];
                 if(code.endsWith("Notes")) {
-                    name += " Notes";
+                    name += "Notes";
                 }
             }
         }
