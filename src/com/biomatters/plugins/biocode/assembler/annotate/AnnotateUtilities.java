@@ -10,6 +10,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -37,17 +38,20 @@ public class AnnotateUtilities {
     }
 
     public static void annotateFimsData(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, FimsDataGetter fimsDataGetter) throws DocumentOperationException {
-        progressListener.setIndeterminateProgress();
-        progressListener.setMessage("Accessing FIMS...");
+        CompositeProgressListener realProgress = new CompositeProgressListener(progressListener, annotatedDocuments.length);
+        realProgress.setMessage("Accessing FIMS...");
         List<String> failBlog = new ArrayList<String>();
         Set<String> noReferencesList = new LinkedHashSet<String>();
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-            if (progressListener.isCanceled() || !BiocodeService.getInstance().isLoggedIn()) {
+            if (realProgress.isCanceled() || !BiocodeService.getInstance().isLoggedIn()) {
                 break;
             }
+            realProgress.beginSubtask("Annotating " + annotatedDocument.getName());
             if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument) annotatedDocument.getDocument();
+                CompositeProgressListener progressForAlignment = new CompositeProgressListener(realProgress, alignment.getNumberOfSequences());
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++)  {
+                    progressForAlignment.beginSubtask();
                     AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
                     if (referencedDocument != null) {
                         annotateDocument(fimsDataGetter, failBlog, referencedDocument);
