@@ -43,7 +43,7 @@ public class LocalLIMSConnection extends LIMSConnection {
     }
 
     @Override
-    public Driver getDriver() {
+    public Driver getDriver() throws ConnectionException {
         return BiocodeService.getInstance().getLocalDriver();
     }
 

@@ -337,10 +337,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return driver != null ? driver.getClass() : null;
     }
 
-    public Driver getDriver() {
+    public Driver getDriver() throws ConnectionException {
+        if(!driverLoaded) {
+            String error = loadMySqlDriver(true);
+            if(error != null) {
+                throw new ConnectionException(error);
+            }
+        }
+
         if(driver == null && driverLoaded) {
             throw new IllegalStateException("A driver load was attempted, but the driver has not been loaded");
         }
+
         return driver;
     }
 

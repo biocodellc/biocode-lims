@@ -13,7 +13,6 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
-import com.biomatters.options.PasswordOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
@@ -151,7 +150,7 @@ public abstract class LIMSConnection {
         connectToDb(selectedLimsOptions);
     }
 
-    public abstract Driver getDriver();
+    public abstract Driver getDriver() throws ConnectionException;
 
     abstract void connectToDb(Options connectionOptions) throws ConnectionException;
 

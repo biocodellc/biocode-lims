@@ -20,7 +20,7 @@ import java.util.Properties;
 public class MysqlLIMSConnection extends LIMSConnection {
 
     @Override
-    public Driver getDriver() {
+    public Driver getDriver() throws ConnectionException {
         return BiocodeService.getInstance().getDriver();
     }
 
