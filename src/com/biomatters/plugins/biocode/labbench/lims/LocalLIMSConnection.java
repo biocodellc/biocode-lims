@@ -147,4 +147,14 @@ public class LocalLIMSConnection extends LIMSConnection {
     public boolean isLocal() {
         return true;
     }
+
+    @Override
+    public String getUsername() {
+        throw new IllegalStateException("Username does not apply to local connections");
+    }
+
+    @Override
+    public String getSchema() {
+        throw new IllegalStateException("Schema does not apply to local connections");
+    }
 }

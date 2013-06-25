@@ -44,8 +44,7 @@ public abstract class LIMSConnection {
     Connection connection;
     Connection connection2;
     private PasswordOptions limsOptions;
-    private String username;
-    private String schema;
+
     public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[] {"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
@@ -60,14 +59,15 @@ public abstract class LIMSConnection {
     public static final DocumentField SEQUENCE_ID = DocumentField.createIntegerField("LIMS Sequence ID", "The Unique ID of this sequence in LIMS", "LimsSequenceId", false, false);
     public static final DocumentField EDIT_RECORD = DocumentField.createStringField("Edit Record", "A record of edits made to this sequence", "assembly.editRecord", false, false);
     public static final DocumentField ASSEMBLY_TECHNICIAN = DocumentField.createStringField("Assembly Technician", "", "assembly.technician", false, false);
-    private String PLATE_NAME = "plate.name";
-    private final String PLATE_TYPE = "plate.type";
-    private final String PLATE_DATE = "plate.date";
-    private final String WORKFLOW_NAME = "workflow.name";
-    private final String WORKFLOW_DATE = "workflow.date";
-    private final String LOCUS = "locus";
-    private final String EXTRACTION_ID = "extraction.extractionId";
-    private final String EXTRACTION_BARCODE = "extraction.extractionBarcode";
+
+    private static final String PLATE_NAME = "plate.name";
+    private static final String PLATE_TYPE = "plate.type";
+    private static final String PLATE_DATE = "plate.date";
+    private static final String WORKFLOW_NAME = "workflow.name";
+    private static final String WORKFLOW_DATE = "workflow.date";
+    private static final String LOCUS = "locus";
+    private static final String EXTRACTION_ID = "extraction.extractionId";
+    private static final String EXTRACTION_BARCODE = "extraction.extractionBarcode";
     String serverUrn;
 
     public static enum AvailableLimsTypes {
@@ -128,19 +128,9 @@ public abstract class LIMSConnection {
         return !connectionOptions.getValueAsString("connectionType").equals("remote");    
     }
 
-    public String getUsername() {
-        if(isLocal()) {
-            throw new IllegalStateException("Username does not apply to local connections");
-        }
-        return username;
-    }
+    public abstract String getUsername();
 
-    public String getSchema() {
-        if(isLocal()) {
-            throw new IllegalStateException("Schema does not apply to local connections");
-        }
-        return schema;
-    }
+    public abstract String getSchema();
 
     public void connect(PasswordOptions options) throws ConnectionException {
         driver = getDriver();

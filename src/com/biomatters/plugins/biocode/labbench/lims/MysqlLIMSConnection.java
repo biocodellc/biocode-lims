@@ -19,6 +19,9 @@ import java.util.Properties;
 
 public class MysqlLIMSConnection extends LIMSConnection {
 
+    private String username;
+    private String schema;
+
     @Override
     public Driver getDriver() throws ConnectionException {
         return BiocodeService.getInstance().getDriver();
@@ -38,7 +41,7 @@ public class MysqlLIMSConnection extends LIMSConnection {
     public void connectToDb(Options LIMSOptions) throws ConnectionException {
         //connect to the LIMS
         Properties properties = new Properties();
-        String username = LIMSOptions.getValueAsString("username");
+        username = LIMSOptions.getValueAsString("username");
         properties.put("user", username);
         properties.put("password", ((PasswordOption)LIMSOptions.getOption("password")).getPassword());
         try {
@@ -47,7 +50,7 @@ public class MysqlLIMSConnection extends LIMSConnection {
             connection = driver.connect("jdbc:mysql://" + serverUrn, properties);
             connection2 = driver.connect("jdbc:mysql://"+ serverUrn, properties);
             Statement statement = connection.createStatement();
-            String schema = LIMSOptions.getValueAsString("database");
+            schema = LIMSOptions.getValueAsString("database");
             connection.createStatement().execute("USE "+ schema);
             connection2.createStatement().execute("USE "+ schema);
             ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
@@ -70,5 +73,15 @@ public class MysqlLIMSConnection extends LIMSConnection {
     @Override
     public boolean isLocal() {
         return false;
+    }
+
+    @Override
+    public String getUsername() {
+        return username;
+    }
+
+    @Override
+    public String getSchema() {
+        return schema;
     }
 }
