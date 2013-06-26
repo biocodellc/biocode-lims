@@ -58,6 +58,10 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         return new VerifyTaxonomyOptions(documents);
     }
 
+    public Options getGeneralOptions() throws DocumentOperationException {
+        return new VerifyTaxonomyOptions(new AnnotatedPluginDocument[0]);
+    }
+
     @Override
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocs, ProgressListener progressListener, Options o) throws DocumentOperationException {
         VerifyTaxonomyOptions options = (VerifyTaxonomyOptions) o;

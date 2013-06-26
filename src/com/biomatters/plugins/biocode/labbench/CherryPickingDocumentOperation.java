@@ -112,6 +112,10 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         return options;
     }
 
+    public Options getGeneralOptions() throws DocumentOperationException {
+        return getOptions();
+    }
+
     public static class CherryPickingOptions extends Options {
         static final Options.OptionValue[] cherryPickingConditions = new Options.OptionValue[] {
                 new Options.OptionValue("reactionState", "Reaction State"),
