@@ -232,7 +232,7 @@ public class FimsToLims {
             return lims.isLocal() ? "LONGVARCHAR" : "LONGTEXT";
         }
         if(String.class.isAssignableFrom(fieldClass)) {
-            return lims.isLocal() ? "LONGVARCHAR" : "VARCHAR(128)";
+            return lims.isLocal() ? "LONGVARCHAR" : "LONGTEXT";
         }
         if(Integer.class.isAssignableFrom(fieldClass)) {
             return "INTEGER";
