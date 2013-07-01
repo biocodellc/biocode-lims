@@ -83,12 +83,12 @@ public class MySQLFimsConnection extends TableFimsConnection{
         properties.put("password", ((PasswordOption)connectionOptions.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
-            connection = driver.connect("jdbc:mysql://"+connectionOptions.getValueAsString("serverUrl")+":"+connectionOptions.getValueAsString("serverPort"), properties);
+            String connectionStringring = "jdbc:mysql://" + connectionOptions.getValueAsString("serverUrl") + ":" +
+                    connectionOptions.getValueAsString("serverPort") + "/" + connectionOptions.getValueAsString("database");
+            connection = driver.connect(connectionStringring, properties);
             if(connection == null) {
                 throw new SQLException("The driver "+driver.getClass().getName()+" is not the right kind of driver to connect to "+connectionOptions.getValueAsString("serverUrl"));
             }
-            Statement statement = createStatement();
-            statement.execute("USE "+connectionOptions.getValueAsString("database"));
         } catch (SQLException e1) {
             throw new ConnectionException("Failed to connect to the MySQL database: "+e1.getMessage());
         }

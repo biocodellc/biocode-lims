@@ -47,12 +47,10 @@ public class MysqlLIMSConnection extends LIMSConnection {
         try {
             DriverManager.setLoginTimeout(20);
             serverUrn = LIMSOptions.getValueAsString("server") + ":" + LIMSOptions.getValueAsString("port");
-            connection = driver.connect("jdbc:mysql://" + serverUrn, properties);
-            connection2 = driver.connect("jdbc:mysql://"+ serverUrn, properties);
-            Statement statement = connection.createStatement();
             schema = LIMSOptions.getValueAsString("database");
-            connection.createStatement().execute("USE "+ schema);
-            connection2.createStatement().execute("USE "+ schema);
+            connection = driver.connect("jdbc:mysql://" + serverUrn + "/" + schema, properties);
+            connection2 = driver.connect("jdbc:mysql://"+ serverUrn + "/" + schema, properties);
+            Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
             serverUrn += "/"+ schema;
             if(!resultSet.next()) {
