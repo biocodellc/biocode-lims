@@ -155,23 +155,23 @@ public class MySQLFimsConnection extends TableFimsConnection{
                 Map<String, Object> data = new HashMap<String, Object>();
                 for(DocumentField f : getSearchAttributes()) {
                     if(String.class.isAssignableFrom(f.getValueType()) ) {
-                        data.put(f.getCode(), resultSet.getString(f.getCode().substring(f.getCode().indexOf(FIELD_PREFIX)+FIELD_PREFIX.length())));
+                        data.put(f.getCode(), resultSet.getString(f.getCode().substring(FIELD_PREFIX.length())));
                     }
                     else if(Integer.class.isAssignableFrom(f.getValueType()) ) {
-                        data.put(f.getCode(), resultSet.getInt(f.getCode().substring(f.getCode().indexOf(FIELD_PREFIX)+FIELD_PREFIX.length())));
+                        data.put(f.getCode(), resultSet.getInt(f.getCode().substring(FIELD_PREFIX.length())));
                     }
                     else if(Double.class.isAssignableFrom(f.getValueType()) ) {
-                        data.put(f.getCode(), resultSet.getDouble(f.getCode().substring(f.getCode().indexOf(FIELD_PREFIX)+FIELD_PREFIX.length())));
+                        data.put(f.getCode(), resultSet.getDouble(f.getCode().substring(FIELD_PREFIX.length())));
                     }
                     else if(Date.class.isAssignableFrom(f.getValueType()) ) {
-                        java.util.Date date = resultSet.getDate(f.getCode().substring(f.getCode().indexOf(FIELD_PREFIX)+FIELD_PREFIX.length()));
+                        java.util.Date date = resultSet.getDate(f.getCode().substring(FIELD_PREFIX.length()));
                         if(date != null) {
                             date = new Date(date.getTime());
                         }
                         data.put(f.getCode(), date);
                     }
                     else if(Boolean.class.isAssignableFrom(f.getValueType())) {
-                        data.put(f.getCode(), resultSet.getBoolean(f.getCode().substring(f.getCode().indexOf(FIELD_PREFIX)+FIELD_PREFIX.length())));
+                        data.put(f.getCode(), resultSet.getBoolean(f.getCode().substring(FIELD_PREFIX.length())));
                     }
                     else {
                         assert false : "Unrecognised field type: "+f.toString();
