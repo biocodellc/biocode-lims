@@ -1,3 +1,8 @@
+==Biocode Plugin 2.4.1 - 21 January 2013==
+* Fixed a crash that could occur when connecting to a FIMS
+* Fixed a crash that could happen when copying FIMS to LIMS
+* Fixed a crash that could occur if users chose a numerical column for a taxonomy field
+
 ==Biocode Plugin 2.4.0 - 19 December 2012==
 * Added support for new Fusion Tables API
 * Improved handling of excel files
