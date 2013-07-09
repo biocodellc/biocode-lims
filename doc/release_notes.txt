@@ -1,0 +1,55 @@
+==Biocode Plugin 2.4.0 - 19 December 2012==
+* Added support for new Fusion Tables API
+* Improved handling of excel files
+* Numerous small fixes and improvements
+
+==Biocode Plugin 2.3.2 - 8 February 2012==
+* Fixed a crash bug in verify taxonomy
+* Fixed an issue where the plugin could log users out under certain conditions
+* Improved support for non standard well names in bulk loading operations
+* Numerous small fixes and improvements
+
+==Biocode Plugin 2.3 - 22 December 2011==
+* Added a reporting and charting module
+* Added support for strip reactions
+* Made improvements to the login interface
+* Added support for specimen photos stored on flickr
+* Added a tabular view and printout for plate documents
+* Numerous small fixes and improvements
+
+
+==Biocode Plugin 2.2 - 16 August 2011==
+This is a maintenance release, bringing many small usability tweaks and bug fixes, as well as improving performance.
+
+* Improved cherry picking documents - they now display all FIMS fields (e.g. taxonomy) associated with each reaction
+* Adding traces to reactions no longer requires delete permissions on remote LIMS databases
+* Added the ability to delete cocktails and thermocycles
+* Improved options for bulk adding traces
+* Improved performance creating plates
+* More informative error messages if the user does not have delete permissions
+
+''Numerous other fixes and usability improvements''
+
+
+==Biocode Plugin 2.1 - 13 May 2011==
+'''Interoperability''' We have improved the ability for LIMS users to collaborate.  If you are a medium sized lab with no existing field management system, you can upload your specimen data to Google Fusion Tables, and access your data directly in the plugin.  If you have an existing system based on MySql, then you can connect the plugin directly to your database.  We have also added the ability to save sequence and assembly binning parameters as profiles in Genieous, and share them with your colleagues.
+
+'''Workflow Streamlining''' We've made a lot of small tweaks to the assembly workflow to make it easier (and faster) to bulk process sequences.  You can assemble to a curated reference sequence database (which removes the need to trim before the assembly step, and the need to verify taxonomy after), and the addition of the "number of ambiguities in consensus" binning parameter makes processing assembly binning much faster (Geneious makes obvious calls on disagreements itself, and leaves just the ambiguous ones up to the technician).
+
+===Detailed list of changes:===
+
+* Added a connection manager - save and choose multiple accounts, connect automatically on startup
+* Added support for FIMS databases stored in Google Fusion Tables
+* Added support for FIMS databases stored in MySQL
+* Summary table views of workflows now contain taxonomy fields - right click on the table headers to choose them
+* Added a tabular view for plates - select a plate and click "Tabular plate view"
+* You are now required to specify a locus when creating workflows
+* Added a button to export primers in the LIMS to your local database - edit a reaction on a plate to see it
+* Added the ability to zoom in plate views
+* You can now mark as pass/failed in LIMS from consensus alignments - select the sequences you want to mark within the alignment
+* Added a new "Run" reaction state to PCR and sequencing reactions
+* New sample loci for reactions
+* It is now easier to change the locus of existing plates using the bulk editor
+* Added a 'mark as submitted' action to sequences
+
+''Numerous other fixes and usability improvements''
