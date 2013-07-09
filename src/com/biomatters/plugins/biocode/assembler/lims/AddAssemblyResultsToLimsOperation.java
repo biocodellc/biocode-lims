@@ -19,15 +19,9 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
 import java.sql.*;
 import java.util.*;
 
@@ -559,15 +553,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     statement.close();
                 if(statement2 != null)
                     statement2.close();
-            } catch (SQLException e) {}
-        }
-        return null;
-    }
-
-    private Options getAssemblyOptions(AnnotatedPluginDocument document) throws DocumentOperationException {
-        String optionsValues = getAssemblyOptionsValues(document);
-        if(optionsValues != null) {
-            return getOptions(optionsValues, "com.biomatters.plugins.alignment.AssemblyOperation", document);
+            } catch (SQLException e) {
+                // If we failed to close statements, we'll have to let the garbage collector handle it
+            }
         }
         return null;
     }
@@ -602,34 +590,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
         }
         return null;
-    }
-
-    /*
-    copied from DOcumentHistoryEntryPanel (and edited slightly to change the way exceptions are handled)
-     */
-    private static Options getOptions(String optionsFieldValue, String operationUniqueIdFieldValue, AnnotatedPluginDocument document) throws DocumentOperationException{
-        Element optionsElement;
-        SAXBuilder saxBuilder = new SAXBuilder();
-        Reader stringReader = new StringReader(optionsFieldValue);
-        try {
-            final Document xmlDocument = saxBuilder.build(stringReader);
-            optionsElement = xmlDocument.getRootElement();
-        }
-        catch (JDOMException ex) {
-            throw new DocumentOperationException("Information about the options used to assemble your sequences has been corrupted", ex);
-        }
-        catch (IOException ex) {
-            throw new DocumentOperationException("Could not read the history of your documents: "+ex.getMessage(), ex);
-        }
-
-        DocumentOperation operation = PluginUtilities.getDocumentOperation(operationUniqueIdFieldValue);
-        Options options = null;
-        if(operation != null) {
-            options = operation.getOptions(document);
-
-            options.valuesFromXML(optionsElement);
-        }
-        return options;
     }
 
 
