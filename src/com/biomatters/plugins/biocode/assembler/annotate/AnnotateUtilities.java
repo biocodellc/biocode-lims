@@ -59,8 +59,7 @@ public class AnnotateUtilities {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
-                copyMatchingFieldsToContig(annotatedDocument);
-                annotatedDocument.saveDocument();
+                copyMatchingFieldsToContigAndSave(annotatedDocument);
             } else {
                 annotateDocument(fimsDataGetter, failBlog, annotatedDocument);
             }
@@ -92,7 +91,7 @@ public class AnnotateUtilities {
      * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      *
      */
-    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
+    private static void copyMatchingFieldsToContigAndSave(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
         SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
         Map<DocumentField, Object> displayableFieldsToCopy = null;
         for (int i = 0; i < contig.getNumberOfSequences(); i++) {
@@ -236,7 +235,6 @@ public class AnnotateUtilities {
                 note.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
             }
             notes.setNote(note);
-            notes.saveNotes();
         }
 
         annotatedDocument.save();
