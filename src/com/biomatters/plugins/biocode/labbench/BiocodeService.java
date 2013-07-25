@@ -719,6 +719,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private Set<BiocodeCallback> activeCallbacks = new HashSet<BiocodeCallback>();
 
     private void retrieve(Query query, RetrieveCallback rc, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
+        // todo FIMS results don't take ANDing results from the LIMS.  Should we leave it like this? or change it
         BiocodeCallback callback = null;
         if(rc != null) {
             callback = new BiocodeCallback(rc);
@@ -729,7 +730,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             List<Query> fimsQueries = new ArrayList<Query>();
             List<Query> limsQueries = new ArrayList<Query>();
             callback.setIndeterminateProgress();
-
 
             if(query instanceof CompoundSearchQuery) {
                 CompoundSearchQuery masterQuery = (CompoundSearchQuery) query;
@@ -813,15 +813,24 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap()) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap());
 
+                Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
                 if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
-                    callback.setMessage("Downloading Workflows");
-                    workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null, callback);
+                    callback.setMessage("Downloading Workflows & Plates");
+                    LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query, tissueSamples, callback);
+                    workflowList = limsResult.getWorkflows();
+                    for(PlateDocument plate : limsResult.getPlates()) {
+                        for(Reaction r : plate.getPlate().getReactions()) {
+                            if(r.getWorkflow() != null) {
+                                workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
+                            }
+                        }
+                    }
+//                    workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null, callback);
                 }
                 if(callback.isCanceled()) {
                     return;
                 }
 
-                Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
                 //workflowsToSearch.addAll(workflowList);
     //            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
     //                for(PluginDocument doc : workflowList) {
@@ -831,20 +840,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 if(callback.isCanceled()) {
                     return;
                 }
-                if((Boolean)query.getExtendedOptionValue("plateDocuments") || ((Boolean)query.getExtendedOptionValue("sequenceDocuments") && limsQueries.size() > 0)) {
-                    callback.setMessage("Downloading Plates");
-                    List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
-                    if(callback.isCanceled()) {
-                        return;
-                    }
-                    for(PlateDocument plate : plateList) {
-                        for(Reaction r : plate.getPlate().getReactions()) {
-                            if(r.getWorkflow() != null) {
-                                workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
-                            }
-                        }
-                    }
-                }
+//                if((Boolean)query.getExtendedOptionValue("plateDocuments") || ((Boolean)query.getExtendedOptionValue("sequenceDocuments") && limsQueries.size() > 0)) {
+//                    callback.setMessage("Downloading Plates");
+//                    List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
+//                    if(callback.isCanceled()) {
+//                        return;
+//                    }
+//                    for(PlateDocument plate : plateList) {
+//                        for(Reaction r : plate.getPlate().getReactions()) {
+//                            if(r.getWorkflow() != null) {
+//                                workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
+//                            }
+//                        }
+//                    }
+//                }
                 if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                     callback.setMessage("Downloading Sequences");
                     if((tissueSamples != null && tissueSamples.size() > 0) && (workflowList == null || workflowList.size() == 0)) {

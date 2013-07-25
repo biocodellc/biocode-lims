@@ -158,7 +158,7 @@ public class AnnotateUtilities {
             annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
         }
         if (fimsData.extractionId != null) {
-            annotatedDocument.setFieldValue(LIMSConnection.EXTRACTION_NAME_FIELD, fimsData.extractionId);
+            annotatedDocument.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId);
         }
         if(fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0) {
             annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);

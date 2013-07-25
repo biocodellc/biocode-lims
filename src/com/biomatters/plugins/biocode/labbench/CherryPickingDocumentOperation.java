@@ -251,7 +251,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
     private void validateSequenceDocuments(AnnotatedPluginDocument... documents) throws DocumentOperationException{
         for(AnnotatedPluginDocument doc : documents) {
-            if(doc.getFieldValue(LIMSConnection.EXTRACTION_NAME_FIELD) == null) {
+            if(doc.getFieldValue(LIMSConnection.EXTRACTION_ID_FIELD) == null) {
                 throw new DocumentOperationException("At least one of your documents ("+doc.getName()+") appears not to be an sequence document from LIMS.  You can only cherry pick assembly documents returned from a LIMS search");
             }
         }
@@ -390,7 +390,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         List<Reaction> reactions = new ArrayList<Reaction>();
         for(AnnotatedPluginDocument doc : annotatedDocuments) {
             ExtractionReaction reaction = new ExtractionReaction();
-            reaction.getOptions().setValue("extractionId", doc.getFieldValue(LIMSConnection.EXTRACTION_NAME_FIELD));
+            reaction.getOptions().setValue("extractionId", doc.getFieldValue(LIMSConnection.EXTRACTION_ID_FIELD));
             Object extractionBarcode = doc.getFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD);
             if(extractionBarcode != null) {
                 reaction.getOptions().setValue("extractionBarcode", extractionBarcode);
