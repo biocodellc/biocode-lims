@@ -1608,11 +1608,7 @@ public abstract class LIMSConnection {
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
             Map<Integer, Plate> extraPlates = createPlateDocuments(callback, callback, remainingPlatesSet);
             for (Plate plate : extraPlates.values()) {
-                PlateDocument plateDoc = new PlateDocument(plate);
-                if(callback != null) {
-                    callback.add(plateDoc, Collections.<String, Object>emptyMap());
-                }
-                result.plates.add(plateDoc);
+                result.plates.add(new PlateDocument(plate));
             }
         }
     }
