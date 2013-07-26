@@ -1111,13 +1111,32 @@ public abstract class LIMSConnection {
 
     }
 
+    private class WorkflowsAndPlatesQueryResult {
+        Map<Integer, Plate> plates;
+        Map<Integer, WorkflowDocument> workflows;
+
+        private WorkflowsAndPlatesQueryResult(Map<Integer, Plate> plates, Map<Integer, WorkflowDocument> workflows) {
+            this.plates = plates;
+            this.workflows = workflows;
+        }
+    }
+
     private Map<Integer, Plate> createPlateDocuments(RetrieveCallback callback, Cancelable cancelable, ResultSet resultSet) throws SQLException {
+        Map<Integer, Plate> plates = createPlateAndWorkflowsFromResultSet(cancelable, resultSet).plates;
+        if(callback != null) {
+            for (Plate plate : plates.values()) {
+                System.out.println("Adding "+plate.getName());
+                callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
+            }
+        }
+        return plates;
+    }
+
+    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet) throws SQLException {
         final StringBuilder totalErrors = new StringBuilder("");
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
-        List<ExtractionReaction> extractionReactions = new ArrayList<ExtractionReaction>();
-        List<PCRReaction> pcrReactions = new ArrayList<PCRReaction>();
-        List<CycleSequencingReaction> cyclesequencingReactions = new ArrayList<CycleSequencingReaction>();
-        List<Integer> returnedPlateIds = new ArrayList<Integer>();
+        Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
+
         System.out.println("Creating Reactions...");
         int previousId = -1;
         while(resultSet.next()) {
@@ -1126,7 +1145,16 @@ public abstract class LIMSConnection {
                 throw new SQLException("Search cancelled due to lack of free memory");
             }
             if(cancelable != null && cancelable.isCanceled()) {
-                return Collections.emptyMap();
+                return new WorkflowsAndPlatesQueryResult(Collections.<Integer, Plate>emptyMap(), Collections.<Integer, WorkflowDocument>emptyMap());
+            }
+
+            int workflowId = resultSet.getInt("workflow.id");
+            WorkflowDocument existingWorkflow = workflowDocs.get(workflowId);
+            if(existingWorkflow != null) {
+                existingWorkflow.addRow(resultSet);
+            } else {
+                WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
+                workflowDocs.put(workflowId, newWorkflow);
             }
 
             Plate plate;
@@ -1149,17 +1177,12 @@ public abstract class LIMSConnection {
                         //noinspection StringConcatenationInsideStringBufferAppend
                         totalErrors.append(error+"\n");
                     }
-                    System.out.println("Adding "+prevPlate.getName());
-                    if(callback != null) {
-                        callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
-                    }
                     plateMap.put(previousId, prevPlate);
                 }
             }
             previousId = plateId;
 
             if(plateMap.get(plateId) == null) {
-                returnedPlateIds.add(plateId);
                 plate = new Plate(resultSet);
                 plateMap.put(plate.getId(), plate);
             }
@@ -1169,15 +1192,6 @@ public abstract class LIMSConnection {
             Reaction reaction = plate.addReaction(resultSet);
             if(reaction == null) {
                 //do nothing
-            }
-            else if(reaction instanceof ExtractionReaction) {
-                extractionReactions.add((ExtractionReaction)reaction);
-            }
-            else if(reaction instanceof PCRReaction) {
-                pcrReactions.add((PCRReaction)reaction);
-            }
-            else if(reaction instanceof CycleSequencingReaction) {
-                cyclesequencingReactions.add((CycleSequencingReaction)reaction);
             }
         }
 
@@ -1190,37 +1204,12 @@ public abstract class LIMSConnection {
                     //noinspection StringConcatenationInsideStringBufferAppend
                     totalErrors.append(error+"\n");
                 }
-                System.out.println("Adding "+prevPlate.getName());
-                if (callback != null) {
-                    callback.add(new PlateDocument(prevPlate), Collections.<String, Object>emptyMap());
-                }
 
                 plateMap.put(previousId, prevPlate);
 
             }
         }
 
-//        if(extractionReactions.size() > 0) {
-//            System.out.println("Checking extractions");
-//            String extractionErrors = extractionReactions.get(0).areReactionsValid(extractionReactions, null, true);
-//            if(extractionErrors != null) {
-//                totalErrors.append(extractionErrors+"\n");
-//            }
-//        }
-//        if(pcrReactions.size() > 0) {
-//            System.out.println("Checking PCR's");
-//            String pcrErrors = pcrReactions.get(0).areReactionsValid(pcrReactions, null, true);
-//            if(pcrErrors != null) {
-//                totalErrors.append(pcrErrors+"\n");
-//            }
-//        }
-//        if(cyclesequencingReactions.size() > 0) {
-//            System.out.println("Checking Cycle Sequencing's...");
-//            String cyclesequencingErrors = cyclesequencingReactions.get(0).areReactionsValid(cyclesequencingReactions, null, true);
-//            if(cyclesequencingErrors != null) {
-//                totalErrors.append(cyclesequencingErrors+"\n");
-//            }
-//        }
         if(totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
@@ -1234,7 +1223,7 @@ public abstract class LIMSConnection {
             };
             ThreadUtilities.invokeNowOrLater(runnable);
         }
-        return plateMap;
+        return new WorkflowsAndPlatesQueryResult(plateMap, workflowDocs);
     }
 
     private Query generateAdvancedQueryFromBasicQuery(Query query) {
@@ -1576,18 +1565,18 @@ public abstract class LIMSConnection {
         ResultSet resultSet = preparedStatement.executeQuery();
         System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
+        WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, resultSet);
         if(downloadWorkflows) {
-            Map<Integer, WorkflowDocument> workflowDocumentMap = getWorkflowsFromResultSet(resultSet, callback, callback);
-            result.workflows.addAll(workflowDocumentMap.values());
+            if(callback != null) {
+                for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
+                    callback.add(document, Collections.<String, Object>emptyMap());
+                }
+            }
+            result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
         }
 
         if(downloadPlates) {
-            if(downloadWorkflows) {
-                // todo can we just go through the result set once maybe?
-                resultSet.first();
-            }
-            Map<Integer, Plate> plates = createPlateDocuments(callback, callback, resultSet);
-            for (Plate plate : plates.values()) {
+            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
                 result.plates.add(new PlateDocument(plate));
             }
             addAnyPlatesThatDoNotHaveWorkflows(callback, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
