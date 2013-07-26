@@ -1159,8 +1159,8 @@ public abstract class LIMSConnection {
 
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
-            if(plateId == 0) {
-                continue;  // 0 means a plate that has been deleted.  NULL value causes getInt() to return 0.
+            if(plateId == 0 && resultSet.getString("plate.name") == null) {
+                continue;  // Plate was deleted
             }
 
             if(previousId >= 0 && previousId != plateId) {
@@ -1577,6 +1577,9 @@ public abstract class LIMSConnection {
 
         if(downloadPlates) {
             for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+                if(callback != null) {
+                    callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
+                }
                 result.plates.add(new PlateDocument(plate));
             }
             addAnyPlatesThatDoNotHaveWorkflows(callback, result, operator, workflowPart, extractionPart, platePart, assemblyPart);

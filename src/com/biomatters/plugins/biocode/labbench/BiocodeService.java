@@ -816,7 +816,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
                 if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
                     callback.setMessage("Downloading Workflows & Plates");
-                    LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query, tissueSamples, callback);
+
+                    LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
+                            areBrowseQueries(fimsQueries) ? null : tissueSamples, callback);
                     workflowList = limsResult.getWorkflows();
                     for(PlateDocument plate : limsResult.getPlates()) {
                         for(Reaction r : plate.getPlate().getReactions()) {
@@ -893,6 +895,35 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 activeCallbacks.remove(callback);
             }
         }
+    }
+
+    private boolean areBrowseQueries(List<? extends Query> queries) {
+        for (Query query : queries) {
+            if(query instanceof CompoundSearchQuery) {
+                if(!areBrowseQueries(((CompoundSearchQuery) query).getChildren())) {
+                    return false;
+                }
+            } else if (query instanceof AdvancedSearchQueryTerm) {
+                AdvancedSearchQueryTerm fieldQuery = (AdvancedSearchQueryTerm) query;
+                if(fieldQuery.getCondition() != Condition.CONTAINS) {
+                    return false;
+                }
+                for (Object value : fieldQuery.getValues()) {
+                    if(!(value instanceof String) || ((String)value).trim().length() > 0) {
+                        return false;
+                    }
+                }
+            } else if(query instanceof BasicSearchQuery) {
+                if(((BasicSearchQuery) query).getSearchText().trim().length() > 0) {
+                    return false;
+                }
+            } else {
+                if(!query.isBrowse()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     static final String UNIQUE_ID = "BiocodeService";
