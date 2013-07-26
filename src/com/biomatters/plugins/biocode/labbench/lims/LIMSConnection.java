@@ -1604,8 +1604,12 @@ public abstract class LIMSConnection {
         if(getPlatesWithNoWorkflows != null) {
             PreparedStatement getRemainingPlates = connection.prepareStatement(getPlatesWithNoWorkflows);
             List<Object> parameters = new ArrayList<Object>();
-            parameters.addAll(extractionPart.parameters);
-            parameters.addAll(platePart.parameters);
+            if(extractionPart != null) {
+                parameters.addAll(extractionPart.parameters);
+            }
+            if(platePart != null) {
+                parameters.addAll(platePart.parameters);
+            }
             fillStatement(parameters, getRemainingPlates);
             System.out.println("Running LIMS (non-workflow plates) query:");
             System.out.print("\t");
