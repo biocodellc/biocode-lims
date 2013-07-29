@@ -1382,8 +1382,9 @@ public abstract class LIMSConnection {
 
         LimsSearchResult result = new LimsSearchResult();
 
-        Boolean downloadWorkflows = Boolean.TRUE.equals(query.getExtendedOptionValue("workflowDocuments"));
-        Boolean downloadPlates = Boolean.TRUE.equals(query.getExtendedOptionValue("plateDocuments"));
+        // We test against false so that the default is to download
+        Boolean downloadWorkflows = !Boolean.FALSE.equals(query.getExtendedOptionValue("workflowDocuments"));
+        Boolean downloadPlates = !Boolean.FALSE.equals(query.getExtendedOptionValue("plateDocuments"));
 
         if(query instanceof BasicSearchQuery) {
             query = generateAdvancedQueryFromBasicQuery(query);
@@ -1452,23 +1453,25 @@ public abstract class LIMSConnection {
         System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
         WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, resultSet);
+
         if(downloadWorkflows) {
             if(callback != null) {
                 for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
                     callback.add(document, Collections.<String, Object>emptyMap());
                 }
             }
+            result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
         }
-        result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
 
-
-        for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
-            if(downloadPlates && callback != null) {
-                callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
+        if(downloadPlates) {
+            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+                if(callback != null) {
+                    callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
+                }
+                result.plates.add(new PlateDocument(plate));
             }
-            result.plates.add(new PlateDocument(plate));
+            addAnyPlatesThatDoNotHaveWorkflows(callback, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
         }
-        addAnyPlatesThatDoNotHaveWorkflows(callback, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
 
         return result;
     }
