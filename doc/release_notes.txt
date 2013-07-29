@@ -1,5 +1,6 @@
 ==Biocode Plugin 2.4.2 - (TBD)==
 * Support for ABCD schema when using a Tapir FIMS connection
+* Much faster searching
 * Fixed crashes related to use of new Google Fusion Tables API
 * Fixed a crash that could occur when copying FIMS values to LIMS if they exceeded 128 characters.
 * Fixed a crash that would happen when connecting to a MySQL LIMS with a Tapir FIMS
