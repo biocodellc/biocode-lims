@@ -1371,7 +1371,7 @@ public abstract class LIMSConnection {
 
     /**
      *
-     * @param query The query.  Should include boolean values for "workflowDocuments" and "plateDocuments" if documents need to be added to the callback
+     * @param query The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
      * @param samples A list of FIMS samples to match.
      * @param callback To add results to as they are found.  Can be null.
      * @return {@link LimsSearchResult} with workflows and plates found.
