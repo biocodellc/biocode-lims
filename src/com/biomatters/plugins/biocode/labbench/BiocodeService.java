@@ -2134,7 +2134,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 workflowNameQueries.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, r.getWorkflow().getName()));
             }
         }
-        List<WorkflowDocument> docs = limsConnection.getMatchingWorkflowDocuments(Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]), Collections.<String, Object>emptyMap()), null, null);
+        List<WorkflowDocument> docs = limsConnection.getMatchingDocumentsFromLims(
+                Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]),
+                        Collections.<String, Object>emptyMap()), null, null).getWorkflows();
 
         Map<BiocodeUtilities.Well, WorkflowDocument> workflows = new HashMap<BiocodeUtilities.Well, WorkflowDocument>();
         for(Reaction r : plate.getReactions()) {

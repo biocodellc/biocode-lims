@@ -730,128 +730,6 @@ public abstract class LIMSConnection {
         }
         return result;
     }
-    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException{
-        return getMatchingWorkflowDocuments(query, samples, callback, callback);
-    }
-
-    public List<WorkflowDocument> getMatchingWorkflowDocuments(Query query, Collection<FimsSample> samples, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
-
-        List<? extends Query> refinedQueries;
-        CompoundSearchQuery.Operator operator;
-
-        if(query instanceof BasicSearchQuery) {
-            query = generateAdvancedQueryFromBasicQuery(query);
-        }
-
-        List<String> codesOfFieldToNotSearch = Arrays.asList(PLATE_NAME_FIELD.getCode(), PLATE_TYPE_FIELD.getCode(), PLATE_DATE_FIELD.getCode(), SEQUENCE_PROGRESS.getCode(), SEQUENCE_SUBMISSION_PROGRESS.getCode(), ASSEMBLY_TECHNICIAN.getCode());
-        if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), codesOfFieldToNotSearch);
-            operator = ((CompoundSearchQuery)query).getOperator();
-        }
-        else {
-            refinedQueries = removeFields(Arrays.asList(query), codesOfFieldToNotSearch);
-            operator = CompoundSearchQuery.Operator.AND;
-        }
-        if((samples == null || samples.size() == 0) && refinedQueries.size() == 0) {
-            return Collections.emptyList();
-        }
-
-        StringBuilder sql = new StringBuilder("SELECT * FROM workflow LEFT JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id " +
-                "LEFT JOIN pcr ON pcr.workflow = workflow.id " +
-                "LEFT JOIN extraction ON workflow.extractionId = extraction.id " +
-                "LEFT JOIN plate ON (plate.id = extraction.plate OR plate.id = pcr.plate OR plate.id = cyclesequencing.plate) "+
-                "WHERE ");
-
-        boolean somethingToSearch = false;
-        ArrayList<Object> sqlValues = new ArrayList<Object>();
-                        
-        if(samples != null && samples.size() > 0) {
-            somethingToSearch = true;
-            sql.append("(");
-            FimsSample[] samplesArray = samples.toArray(new FimsSample[samples.size()]);
-            for(int i=0; i < samplesArray.length; i++) {
-                sql.append(" LOWER(extraction.sampleId)=?");
-                sqlValues.add(samplesArray[i].getId());
-                if(i != samples.size()-1) {
-                    sql.append(" OR");
-                }
-            }
-            sql.append(")");
-            if(refinedQueries.size() > 0) {
-                sql.append(operator == CompoundSearchQuery.Operator.OR ? " OR " : " AND ");
-            }
-        }
-        if(refinedQueries.size() > 0) {
-            somethingToSearch = true;
-            if(refinedQueries.size() > 0) {
-                somethingToSearch = true;
-                sql.append("(");
-                sql.append(queryToSql(refinedQueries, operator, "workflow", sqlValues));
-                sql.append(")");
-            }
-        }
-        if(!somethingToSearch) {
-            return Collections.emptyList();
-        }
-
-        //attach the values to the query
-        System.out.println(sql.toString());
-        PreparedStatement statement = createStatement(sql.toString());
-        BiocodeUtilities.CancelListeningThread listeningThread1 = null;
-        if(cancelable != null) {
-            //todo: listeningThread1 = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
-        }
-        if(!isLocal()) {
-            statement.setFetchSize(Integer.MIN_VALUE);
-        }
-        int position = 1;
-        if(samples != null && samples.size() > 0) {
-            for(FimsSample sample : samples) {
-                statement.setString(position, sample.getId());
-                position++;
-            }
-        }
-        fillStatement(sqlValues, statement);
-        ResultSet resultSet = statement.executeQuery();
-
-        Map<Integer, WorkflowDocument> workflowDocs = getWorkflowsFromResultSet(resultSet, callback, cancelable);
-        if(listeningThread1 != null) {
-            listeningThread1.finish();
-        }
-        statement.close();
-        if(cancelable != null && cancelable.isCanceled()) {
-            return Collections.emptyList();
-        }
-        return new ArrayList<WorkflowDocument>(workflowDocs.values());
-    }
-
-    private Map<Integer, WorkflowDocument> getWorkflowsFromResultSet(ResultSet resultSet, RetrieveCallback callback, Cancelable cancelable) throws SQLException {
-        Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
-        while(resultSet.next()) {
-            if(SystemUtilities.isAvailableMemoryLessThan(50)) {
-                resultSet.close();
-                throw new SQLException("Search cancelled due to lack of free memory");
-            }
-            if(cancelable != null && cancelable.isCanceled()) {
-                break;
-            }
-            int workflowId = resultSet.getInt("workflow.id");
-            WorkflowDocument existingWorkflow = workflowDocs.get(workflowId);
-            if(existingWorkflow != null) {
-                existingWorkflow.addRow(resultSet);
-            } else {
-                WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
-                workflowDocs.put(workflowId, newWorkflow);
-            }
-        }
-        if(callback != null) {
-            for (WorkflowDocument workflowDocument : workflowDocs.values()) {
-                workflowDocument.sortReactions();
-                callback.add(workflowDocument, Collections.<String, Object>emptyMap());
-            }
-        }
-        return workflowDocs;
-    }
 
     private void fillStatement(List<Object> sqlValues, PreparedStatement statement) throws SQLException {
         for (int i = 0; i < sqlValues.size(); i++) {
@@ -1491,13 +1369,21 @@ public abstract class LIMSConnection {
         }
     }
 
+    /**
+     *
+     * @param query The query.  Should include boolean values for "workflowDocuments" and "plateDocuments" if documents need to be added to the callback
+     * @param samples A list of FIMS samples to match.
+     * @param callback To add results to as they are found.  Can be null.
+     * @return {@link LimsSearchResult} with workflows and plates found.
+     *
+     * @throws SQLException if there is a problem with the database
+     */
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException {
 
         LimsSearchResult result = new LimsSearchResult();
 
-        Boolean downloadWorkflows = (Boolean)query.getExtendedOptionValue("workflowDocuments");
-        Boolean downloadPlates = (Boolean)query.getExtendedOptionValue("plateDocuments");
-        Boolean downloadSequences = (Boolean)query.getExtendedOptionValue("sequenceDocuments");
+        Boolean downloadWorkflows = Boolean.TRUE.equals(query.getExtendedOptionValue("workflowDocuments"));
+        Boolean downloadPlates = Boolean.TRUE.equals(query.getExtendedOptionValue("plateDocuments"));
 
         if(query instanceof BasicSearchQuery) {
             query = generateAdvancedQueryFromBasicQuery(query);
@@ -1572,18 +1458,17 @@ public abstract class LIMSConnection {
                     callback.add(document, Collections.<String, Object>emptyMap());
                 }
             }
-            result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
         }
+        result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
 
-        if(downloadPlates) {
-            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
-                if(callback != null) {
-                    callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
-                }
-                result.plates.add(new PlateDocument(plate));
+
+        for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+            if(downloadPlates && callback != null) {
+                callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
             }
-            addAnyPlatesThatDoNotHaveWorkflows(callback, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
+            result.plates.add(new PlateDocument(plate));
         }
+        addAnyPlatesThatDoNotHaveWorkflows(callback, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
 
         return result;
     }
@@ -1620,6 +1505,10 @@ public abstract class LIMSConnection {
                                                  QueryPart extractionQueryConditions, QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         if(operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || assemblyQueryConditions != null)) {
             // No point doing a query.  Both workflows and assemblies require workflow links which are non-existent
+            return null;
+        }
+        if(workflowQueryConditions != null && extractionQueryConditions == null && plateQueryConditions == null && assemblyQueryConditions == null) {
+            // If workflows are the only thing that are being queried then return nothing.
             return null;
         }
         StringBuilder queryBuilder = new StringBuilder("SELECT * FROM plate");

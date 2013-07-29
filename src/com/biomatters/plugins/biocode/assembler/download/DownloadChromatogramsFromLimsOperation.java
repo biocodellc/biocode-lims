@@ -14,10 +14,7 @@ import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
-import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
-import com.biomatters.plugins.biocode.labbench.BiocodeCallback;
+import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
@@ -113,10 +110,11 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                     }
                 }
 
-                Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.EMPTY_MAP);
+                Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.<String, Object>emptyMap());
                 List<WorkflowDocument> workflows;
                 try {
-                    workflows = limsConnection.getMatchingWorkflowDocuments(workflowQuery, Collections.EMPTY_LIST, null);
+                    workflows = limsConnection.getMatchingDocumentsFromLims(
+                            workflowQuery, Collections.<FimsSample>emptyList(), null).getWorkflows();
                 } catch (SQLException e) {
                     throw new DocumentOperationException(e.getMessage(), e);
                 }
