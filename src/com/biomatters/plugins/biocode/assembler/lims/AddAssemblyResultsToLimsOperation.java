@@ -60,10 +60,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return new DocumentSelectionSignature[] {
                 new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[] {
                         new DocumentSelectionSignature.DocumentSelectionSignatureAtom(SequenceAlignmentDocument.class, 1, Integer.MAX_VALUE),
-                        new DocumentSelectionSignature.DocumentSelectionSignatureAtom(NucleotideSequenceDocument.class, 0, Integer.MAX_VALUE)
                 }),
                 new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[] {
-                        new DocumentSelectionSignature.DocumentSelectionSignatureAtom(SequenceAlignmentDocument.class, 0, Integer.MAX_VALUE),
                         new DocumentSelectionSignature.DocumentSelectionSignatureAtom(NucleotideSequenceDocument.class, 1, Integer.MAX_VALUE)
                 })
         };
@@ -107,7 +105,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
             AssemblyResult assemblyResult = new AssemblyResult();
 
-            String errorString = getChromatogramProperties(sequencingPlateCache, limsConnection, annotatedDocument, assemblyResult);
+            String errorString = getChromatogramProperties(options.getInputType(), sequencingPlateCache, limsConnection, annotatedDocument, assemblyResult);
             if (errorString != null) {
                 issueTracker.setIssue(annotatedDocument, errorString);
                 continue;
@@ -163,7 +161,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
     /**
-     * This should handle consensus alignments, contigs, and individual sequences (marking only the traces)
+     * Saves the reaction status to a field on the document. This should handle consensus alignments, contigs, and
+     * individual sequences (marking only the traces)
+     *
      * @param isPass pass or fail
      * @param document the document to mark
      * @throws DocumentOperationException
@@ -213,7 +213,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return statement.executeUpdate();
     }
 
-    private String getChromatogramProperties(Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
+
+    private String getChromatogramProperties(MarkInLimsUtilities.InputType inputType, Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
                                              AnnotatedPluginDocument annotatedDocument, AssemblyResult assemblyResult) throws DocumentOperationException {
         List<AnnotatedPluginDocument> chromatograms = new ArrayList<AnnotatedPluginDocument>();
         if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
@@ -229,12 +230,15 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
                 chromatograms.add(referencedDocument);
             }
-        } else {
+        } else if(inputType == MarkInLimsUtilities.InputType.TRACES) {
             chromatograms.add(annotatedDocument);
         }
 
-        for (AnnotatedPluginDocument chromatogram : chromatograms) {
-            String plateName = (String)chromatogram.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
+        boolean haveSourceChromatograms = !chromatograms.isEmpty();
+        List<AnnotatedPluginDocument> toGetReactionsFrom = haveSourceChromatograms ? chromatograms : Collections.singletonList(annotatedDocument);
+
+        for (AnnotatedPluginDocument doc : toGetReactionsFrom) {
+            String plateName = (String)doc.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
             if (plateName == null) {
                 return "FIMS data not annotated on referenced sequence (plate name)";
             }
@@ -271,7 +275,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 return "Cannot find sequencing plate \"" + plateName + "\"";
             }
 
-            String wellName = (String) chromatogram.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD);
+            String wellName = (String) doc.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD);
             if (wellName == null) {
                 return "FIMS data not annotated on referenced sequence (well name)";
             }
@@ -305,7 +309,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             assemblyResult.extractionId = reaction.getExtractionId();
 
-            assemblyResult.addReaction((CycleSequencingReaction) reaction, Collections.singletonList(chromatogram));
+            assemblyResult.addReaction((CycleSequencingReaction) reaction,
+                    haveSourceChromatograms ? Collections.singletonList(doc) : Collections.<AnnotatedPluginDocument>emptyList());
         }
         return null;
     }

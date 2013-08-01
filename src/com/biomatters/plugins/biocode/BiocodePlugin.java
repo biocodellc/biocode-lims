@@ -82,7 +82,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getMinimumApiVersion() {
-        return "4.42";
+        return "4.60";  // We require APD.getParentOperationRecord()
     }
 
     @Override

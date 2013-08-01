@@ -1,24 +1,43 @@
 package com.biomatters.plugins.biocode.assembler.lims;
 
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.*;
+import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
 import com.biomatters.geneious.publicapi.plugin.SequenceSelection;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 /**
  * @author Steve
  * @version $Id$
  */
 public class MarkInLimsUtilities {
+
+    /**
+     * Gets a mapping of contigs -> consensus sequences from the input documents.
+     *
+     * <br>Possible input / output:
+     * <ol>
+     *     <li>Contigs  / Contig -> null (consensus needs to be generated)</li>
+     *     <li>Alignments of contig consensus sequences. / referenced contig -> consensus sequence from alignment</li>
+     *     <li>Alignments of consensus sequences. / referenced consensus -> consensus sequence from alignment</li>
+     *     <li>Standalone consensus sequence / Parent Assembly or consensus sequence if not possible -> consensus sequence</li>
+     *     <li>Standalone traces / Trace -> Trace</li>
+     * </ol>
+     * <strong>Note</strong>: This method respects selection within an alignment.
+     *
+     * @param annotatedDocuments The input documents
+     * @param selection The current selection
+     * @return A map from the AnnotatedPluginDocument to the consensus SequenceDocument
+     * @throws DocumentOperationException
+     */
     public static Map<AnnotatedPluginDocument, SequenceDocument> getDocsToMark(AnnotatedPluginDocument[] annotatedDocuments, SequenceSelection selection) throws DocumentOperationException {
+        InputType inputType = determineInputType(annotatedDocuments);
+
         Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = new HashMap<AnnotatedPluginDocument, SequenceDocument>();
         int sequenceCount = -1;
         for (AnnotatedPluginDocument document : annotatedDocuments) {
@@ -34,7 +53,10 @@ public class MarkInLimsUtilities {
 
             if (isAlignment) {
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)document.getDocument();
-                if(BiocodeUtilities.isAlignmentOfContigConsensusSequences(document)) {
+                if(inputType == InputType.CONTIGS) {
+                    sequenceCount+=alignment.getNumberOfSequences();
+                    docsToMark.put(document, null);
+                } else {
                     for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                         sequenceCount++;
                         if (i == alignment.getContigReferenceSequenceIndex()) continue;
@@ -68,14 +90,28 @@ public class MarkInLimsUtilities {
 
                         SequenceExtractionUtilities.ExtractionOptions extractionOptions = new SequenceExtractionUtilities.ExtractionOptions(0, sequenceToExtract.getSequenceLength());
                         SequenceDocument extractedSequence = SequenceExtractionUtilities.extract(sequenceToExtract, extractionOptions);
-                        docsToMark.put(alignment.getReferencedDocument(i), extractedSequence);
+                        // referenced doc will either be a contig or a consensus sequence
+                        AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
+                        if(!SequenceAlignmentDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
+                            // Was a consensus.  Try to find the real assembly if we can.
+                            AnnotatedPluginDocument realAssembly = getAssemblyFromConsensus(referencedDocument);
+                            if(realAssembly != null) {
+                                referencedDocument = realAssembly;
+                            }
+                        }
+                        docsToMark.put(referencedDocument, extractedSequence);
                     }
                 }
-                else {
-                    sequenceCount+=alignment.getNumberOfSequences();
-                    docsToMark.put(document, null);
+            } else if(inputType == InputType.CONSENSUS_SEQS) {
+                sequenceCount++;
+                AnnotatedPluginDocument assembly = getAssemblyFromConsensus(document);
+                if(assembly != null) {
+                    docsToMark.put(assembly, ((NucleotideSequenceDocument)document.getDocument()));
+                } else {
+                    docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()));
                 }
             } else {
+                // Standalone traces
                 sequenceCount++;
                 docsToMark.put(document, ((NucleotideSequenceDocument)document.getDocument()));
             }
@@ -198,5 +234,120 @@ public class MarkInLimsUtilities {
         int minimum = interval.getMinimumIndex() - 1;
         int maximum = interval.getMaximumIndex();
         return sequence.subSequence(minimum, maximum);
+    }
+
+    static InputType determineInputType(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
+        boolean contigSelected = false;
+        boolean alignmentOfConsensus = false;
+        boolean tracesSelected = false;
+        boolean nonTraceSequenceSelected = false;
+        for (AnnotatedPluginDocument doc : documents) {
+            Class<? extends PluginDocument> docClass = doc.getDocumentClass();
+            if (SequenceAlignmentDocument.class.isAssignableFrom(docClass)) {
+                if(((SequenceAlignmentDocument)doc.getDocument()).isContig()) {
+                    contigSelected = true;
+                } else {
+                    alignmentOfConsensus = true;
+                }
+            } else if(NucleotideGraph.class.isAssignableFrom(docClass)){
+                NucleotideGraph graph = (NucleotideGraph) doc.getDocument();
+                if(graph.getChromatogramLength() > 0) {
+                    tracesSelected = true;
+                } else {
+                    nonTraceSequenceSelected = true;
+                }
+            } else {
+                nonTraceSequenceSelected = true;
+            }
+        }
+        if(contigSelected && alignmentOfConsensus) {
+            return InputType.MIXED;
+        } else if(contigSelected) {
+            return InputType.CONTIGS;
+        } else if(alignmentOfConsensus) {
+            return InputType.ALIGNMENT_OF_CONSENSUS;
+        }
+
+        // If we get here then we must have standalone sequences because the selection signature only allows one type
+        if(nonTraceSequenceSelected && tracesSelected) {
+            return InputType.MIXED;
+        } else if(tracesSelected) {
+            return InputType.TRACES;
+        } else {
+            return InputType.CONSENSUS_SEQS;
+        }
+    }
+
+    public static enum InputType {
+        CONTIGS("Consensus sequence", "Consensus sequence with source chromatograms"),
+        ALIGNMENT_OF_CONSENSUS("Consensus sequences", "Consensus sequences with source traces"),
+        CONSENSUS_SEQS("Consensus sequence", "Consensus sequence with source traces"),
+        TRACES("Trace as final sequence", "Trace as both final sequence and source trace"),
+        MIXED(null, null);
+
+        private String uploadDescription;
+        private String withTracesDescription;
+
+        private InputType(String uploadDescription, String withTracesDescription) {
+            this.uploadDescription = uploadDescription;
+            this.withTracesDescription = withTracesDescription;
+        }
+
+        public String getUploadDescription() {
+            return uploadDescription;
+        }
+
+        public String getWithTracesDescription() {
+            return withTracesDescription;
+        }
+    }
+
+    /**
+     * Tries to use operation records to find the original traces a consensus was made from.  Matches based on workflow
+     * name and well.
+     *
+     * @param consensusDoc
+     * @return a list of trace documents
+     */
+    public static AnnotatedPluginDocument getAssemblyFromConsensus(AnnotatedPluginDocument consensusDoc) throws DocumentOperationException {
+        String workflow = String.valueOf(consensusDoc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD));
+        String well = String.valueOf(consensusDoc.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD));
+        if(workflow == null || well == null) {
+            return null;
+        }
+
+        URN parentRecordUrn = consensusDoc.getParentOperationRecord();
+        if(parentRecordUrn == null) {
+            return null;
+        }
+        AnnotatedPluginDocument parentRecordDoc = DocumentUtilities.getDocumentByURN(parentRecordUrn);
+        if(parentRecordDoc == null) {
+            return null;
+        }
+        OperationRecordDocument parentRecord = (OperationRecordDocument) parentRecordDoc.getDocument();
+        if(!"Generate_Consensus".equals(parentRecord.getOperationId())) {
+            return null;  // Wasn't generated with the consensus operation
+        }
+
+        AnnotatedPluginDocument assembly = null;
+        List<URN> inputUrns = parentRecord.getInputDocuments();
+        for (URN inputUrn : inputUrns) {
+            AnnotatedPluginDocument inputDoc = DocumentUtilities.getDocumentByURN(inputUrn);
+            String inputWorkflow = String.valueOf(inputDoc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD));
+            String inputWell = String.valueOf(inputDoc.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD));
+            if(workflow.equals(inputWorkflow) && well.equals(inputWell)) {
+                assembly = inputDoc;
+            }
+        }
+        if(assembly == null || !(SequenceAlignmentDocument.class.isAssignableFrom(assembly.getDocumentClass()))) {
+            return null;
+        } else {
+            SequenceAlignmentDocument contig = (SequenceAlignmentDocument) assembly.getDocument();
+            if(!contig.isContig()) {
+                return null;
+            } else {
+                return assembly;
+            }
+        }
     }
 }

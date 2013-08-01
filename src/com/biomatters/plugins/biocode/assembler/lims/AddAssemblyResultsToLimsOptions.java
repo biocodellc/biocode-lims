@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.assembler.lims;
 
 import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
@@ -15,32 +14,34 @@ import javax.swing.*;
  * @version $Id$
  */
 public class AddAssemblyResultsToLimsOptions extends Options {
-    private BooleanOption addChromatogramsOption;
+    private ComboBoxOption<OptionValue> uploadOption;
     private Option<String, ? extends JComponent> warningLabel;
     private Option<String,? extends JComponent> downloadLabel;
     private BooleanOption removePrevious;
+    private MarkInLimsUtilities.InputType inputType;
 
     public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents, boolean passed) throws DocumentOperationException {
-//        boolean isAlignmentSelected = SequenceAlignmentDocument.class.isAssignableFrom(documents[0].getDocumentClass());
-        boolean contigSelected = false;
-        for (AnnotatedPluginDocument doc : documents) {
-            if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass()) && !BiocodeUtilities.isAlignmentOfContigConsensusSequences(doc)) {
-                contigSelected = true;
-                break;
-            }
+        inputType = MarkInLimsUtilities.determineInputType(documents);
+        if(inputType == MarkInLimsUtilities.InputType.MIXED) {
+            throw new DocumentOperationException("This operation only works on documents of the same type.  " +
+                    "Either select assemblies or consensus sequences.");
         }
 
+        boolean contigSelected = inputType == MarkInLimsUtilities.InputType.CONTIGS;
+
         if(passed) {
-            warningLabel = addLabel(
-                    "<html>This operation will also save "+(contigSelected ? "the consensus sequence of your assembly" : "a copy of your sequence")+" to the LIMS.  This "+(contigSelected ? "consensus" : "will consist of the trimmed sequence with quality, and")+" should be <br>" +
-                    "the sequence that you submit to public sequence databases. <br>" +
-                    "You should make sure that it is of sufficient quality, and that you " +
-                    "have completed all edits etc. before marking as passed.</html>", false, true);
+            OptionValue justSequence = new OptionValue("sequenceOnly", inputType.getUploadDescription(),
+                    "Useful if traces were imported from LIMS plates");
+            OptionValue withTraces = new OptionValue(WITH_TRACES, inputType.getWithTracesDescription(),
+                    "Useful if traces imported from files and need attaching to LIMS plates");
+
+            warningLabel = addLabel("<html>The sequence(s) being uploaded should be ready for submission to public databases." +
+                    "<br>(Of sufficient quality, have had all edits completed etc)</html>");
+            uploadOption = addComboBoxOption("upload", "Upload to LIMS:", new OptionValue[]{justSequence, withTraces}, justSequence);
+
+            downloadLabel = addLabel("<html><strong>Note</strong>: If you downloaded your traces (chromatograms) from the LIMS, you do not need to upload them again.<br><br></html>");
         }
-        addChromatogramsOption = addBooleanOption("attachChromatograms", "Also add raw traces (chromatograms) to LIMS", false);
-        downloadLabel = addLabel("If you downloaded your chromatograms from the LIMS, you do not need to add them again.");
-        addChromatogramsOption.setDescription("<html>If assemblies are selected and they reference original chromatograms then the<br>" +
-                                                    "chromatograms will be attached to the appropriate cycle sequencing entry in the LIMS</html>");
+
         addStringOption("technician", "Your name", "");
         addMultipleLineStringOption("notes", "Notes", "", 5, true);
         removePrevious = addBooleanOption("removePrevious", "Remove previous entries for " + (documents.length > 1 || contigSelected ? "these workflows." : "this workflow."), false);
@@ -54,6 +55,10 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         }
     }
 
+    public MarkInLimsUtilities.InputType getInputType() {
+        return inputType;
+    }
+
     Options getConsensusOptions() {
         return getChildOptions().get("consensus");
     }
@@ -63,8 +68,9 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         return null;
     }
 
+    private static final String WITH_TRACES = "uploadTracesToo";
     public boolean isAddChromatograms() {
-        return addChromatogramsOption.getValue();
+        return uploadOption != null && WITH_TRACES.equals(uploadOption.getValueAsString());
     }
 
     public boolean removePreviousSequences() {
@@ -82,9 +88,9 @@ public class AddAssemblyResultsToLimsOptions extends Options {
                 ((JLabel) component).setIcon(IconUtilities.getIcons("warning16.png").getIcon16());
             }
         }
-        if(downloadLabel.getComponent() instanceof GLabel) {
+        if(downloadLabel != null && downloadLabel.getComponent() instanceof GLabel) {
             ((GLabel)downloadLabel.getComponent()).setSmall(true);
         }
         return super.createPanel();
     }
-}
+    }
