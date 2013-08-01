@@ -1565,7 +1565,7 @@ public abstract class LIMSConnection {
             if(operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
             }
-            conditionBuilder.append(" (sampleId IN ");
+            conditionBuilder.append(" (LOWER(sampleId) IN ");
             appendSetOfQuestionMarks(conditionBuilder, samples.size());
         }
         if(workflowQueryConditions != null) {
