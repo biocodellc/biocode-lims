@@ -861,7 +861,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     if((tissueSamples != null && tissueSamples.size() > 0) && (workflowList == null || workflowList.size() == 0)) {
                         limsConnection.getMatchingAssemblyDocumentsForTissues(limsQuery, tissueSamples, callback, urnsToNotRetrieve, callback);
                     }
-                    else {
+                    else if(!workflowsToSearch.isEmpty()) {
                         limsConnection.getMatchingAssemblyDocuments(limsQuery, workflowsToSearch, callback, urnsToNotRetrieve, callback);
                     }
                 }
