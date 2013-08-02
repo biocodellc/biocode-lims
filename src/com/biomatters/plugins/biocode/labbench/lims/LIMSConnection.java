@@ -1598,7 +1598,7 @@ public abstract class LIMSConnection {
 
         queryBuilder.append(" LEFT OUTER JOIN traces ON traces.reaction = cyclesequencing.id");
 
-        queryBuilder.append(operator == CompoundSearchQuery.Operator.AND ? " INNER JOIN " : " LEFT OUTER JOIN ").
+        queryBuilder.append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
                 append("assembly ON assembly.workflow = workflow.id");
         if(assemblyQueryConditions != null) {
             conditionBuilder.append(operatorString);
