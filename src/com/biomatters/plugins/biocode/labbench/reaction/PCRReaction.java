@@ -60,7 +60,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         DocumentSelectionOption primerOption = (DocumentSelectionOption)options.getOption(PCROptions.PRIMER_OPTION_ID);
         String primerName = r.getString("pcr.prName");
         String primerSequence = r.getString("pcr.prSequence");
-        if(primerSequence.length() > 0) {
+        if(primerSequence != null && primerSequence.length() > 0) {
             primerOption.setValue(new DocumentSelectionOption.FolderOrDocuments(BiocodeUtilities.createPrimerDocument(primerName, primerSequence)));
         }
         //options.setValue("prAmount", r.getInt("pcr.prAmount"));
