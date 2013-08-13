@@ -472,11 +472,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
                 statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
 
-                statement.setString(15, options.getValueAsString("notes")); //notes
+                statement.setString(15, options.getNotes()); //notes
 
 
                 //technician, date, bin, ambiguities
-                statement.setString(16, options.getValueAsString("technician"));
+                statement.setString(16, options.getTechnician());
 
                 if(result.bin != null) {
                     statement.setString(17, result.bin);

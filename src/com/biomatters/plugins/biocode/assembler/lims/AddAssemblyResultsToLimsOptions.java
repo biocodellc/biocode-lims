@@ -39,20 +39,31 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         }
 
         if(passed) {
-            warningLabel = addLabel(
-                    "<html>This operation will also save "+(contigSelected ? "the consensus sequence of your assembly" : "a copy of your sequence")+" to the LIMS.  This "+(contigSelected ? "consensus" : "will consist of the trimmed sequence with quality, and")+" should be <br>" +
-                    "the sequence that you submit to public sequence databases. <br>" +
-                    "You should make sure that it is of sufficient quality, and that you " +
-                    "have completed all edits etc. before marking as passed.</html>", false, true);
+            String sequenceOrSequences = documents.length > 1 ||
+                    inputType == MarkInLimsUtilities.InputType.ALIGNMENT_OF_CONSENSUS ? "sequences" : "sequence";
+            StringBuilder message = new StringBuilder("The ");
+            message.append(inputType == MarkInLimsUtilities.InputType.CONTIGS ? "generated consensus " : "selected ");
+            message.append(sequenceOrSequences);
+            message.append(" will be uploaded to the LIMS as the final sequencing result.");
+            addLabel(message.toString());
+            warningLabel = addLabel("<html>The " + sequenceOrSequences + " being uploaded should be ready for submission to public databases." +
+                    "<br>(Of sufficient quality, have had all edits completed etc)</html>");
         }
-        addChromatogramsOption = addBooleanOption("attachChromatograms", "Also add raw traces (chromatograms) to LIMS", false);
-        downloadLabel = addLabel("If you downloaded your chromatograms from the LIMS, you do not need to add them again.");
-        addChromatogramsOption.setDescription("<html>If assemblies are selected and they reference original chromatograms then the<br>" +
-                                                    "chromatograms will be attached to the appropriate cycle sequencing entry in the LIMS</html>");
-        addStringOption("technician", "Your name", "");
-        addMultipleLineStringOption("notes", "Notes", "", 5, true);
-        removePrevious = addBooleanOption("removePrevious", "Remove previous entries for " + (documents.length > 1 || contigSelected ? "these workflows." : "this workflow."), false);
+        removePrevious = addBooleanOption("removePrevious", "Remove previous final sequencing results", false);
         removePrevious.setDescription("<html>Normally marking as pass or failed always creates a new sequence entry.  <br>Use this option if you are correcting a previous entry, and wish to erase it from the database.</html>");
+
+        Options traceOptions = new Options(AddAssemblyResultsToLimsOptions.class);
+        addChromatogramsOption = traceOptions.addBooleanOption("attachChromatograms", "Also attach raw traces to sequencing reaction in LIMS", false);
+        addChromatogramsOption.setDescription("<html>If assemblies are selected and they reference original chromatograms then the<br>" +
+                "chromatograms will be attached to the appropriate cycle sequencing entry in the LIMS</html>");
+        downloadLabel = traceOptions.addLabel("<html><u>Note</u>: If you downloaded your chromatograms from the LIMS, you do not need to add them again.</html>");
+        addChildOptions("trace", "Traces", null, traceOptions, true);
+
+        Options details = new Options(AddAssemblyResultsToLimsOptions.class);
+        details.addStringOption("technician", "Your name", "");
+        details.addMultipleLineStringOption("notes", "Notes", "", 5, true);
+        addChildOptions("details", "Details", null, details, true);
+
         if (contigSelected) {
             Options consensusOptions = BiocodeUtilities.getConsensusOptions(documents);
             if (consensusOptions == null) {
@@ -60,6 +71,14 @@ public class AddAssemblyResultsToLimsOptions extends Options {
             }
             addChildOptions("consensus", "Consensus", null, consensusOptions);
         }
+    }
+
+    public String getTechnician() {
+        return getValueAsString("details.technician");
+    }
+
+    public String getNotes() {
+        return getValueAsString("details.notes");
     }
 
     public MarkInLimsUtilities.InputType getInputType() {
