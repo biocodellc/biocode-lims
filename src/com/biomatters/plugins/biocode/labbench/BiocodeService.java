@@ -806,7 +806,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 return;
             }
             try {
-                List<WorkflowDocument> workflowList = Collections.emptyList();
                 boolean isAnd = true;
                 if(query instanceof CompoundSearchQuery) {
                     isAnd = ((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND;
@@ -816,18 +815,19 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
                 if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
                     callback.setMessage("Downloading Workflows & Plates");
+                } else {
+                    callback.setMessage("Searching");
+                }
 
-                    LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
-                            areBrowseQueries(fimsQueries) ? null : tissueSamples, callback);
-                    workflowList = limsResult.getWorkflows();
-                    for(PlateDocument plate : limsResult.getPlates()) {
-                        for(Reaction r : plate.getPlate().getReactions()) {
-                            if(r.getWorkflow() != null) {
-                                workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
-                            }
+                LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
+                        areBrowseQueries(fimsQueries) ? null : tissueSamples, callback);
+                List<WorkflowDocument> workflowList = limsResult.getWorkflows();
+                for(PlateDocument plate : limsResult.getPlates()) {
+                    for(Reaction r : plate.getPlate().getReactions()) {
+                        if(r.getWorkflow() != null) {
+                            workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
                         }
                     }
-//                    workflowList = limsConnection.getMatchingWorkflowDocuments(limsQuery, tissueSamples, (Boolean)query.getExtendedOptionValue("workflowDocuments") ? callback : null, callback);
                 }
                 if(callback.isCanceled()) {
                     return;

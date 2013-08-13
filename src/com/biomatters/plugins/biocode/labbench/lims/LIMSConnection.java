@@ -1454,24 +1454,22 @@ public abstract class LIMSConnection {
 
         WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, resultSet);
 
-        if(downloadWorkflows) {
-            if(callback != null) {
-                for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
-                    callback.add(document, Collections.<String, Object>emptyMap());
-                }
+        if(downloadWorkflows && callback != null) {
+            for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
+                callback.add(document, Collections.<String, Object>emptyMap());
             }
-            result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
         }
+        result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
 
-        if(downloadPlates) {
-            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
-                if(callback != null) {
-                    callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
-                }
-                result.plates.add(new PlateDocument(plate));
+
+        for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+            PlateDocument plateDocument = new PlateDocument(plate);
+            if(downloadPlates && callback != null) {
+                callback.add(plateDocument, Collections.<String, Object>emptyMap());
             }
-            addAnyPlatesThatDoNotHaveWorkflows(callback, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
+            result.plates.add(plateDocument);
         }
+        addAnyPlatesThatDoNotHaveWorkflows(downloadPlates ? callback : null, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
 
         return result;
     }
@@ -1497,9 +1495,13 @@ public abstract class LIMSConnection {
             long start = System.currentTimeMillis();
             ResultSet remainingPlatesSet = getRemainingPlates.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
-            Map<Integer, Plate> extraPlates = createPlateDocuments(callback, callback, remainingPlatesSet);
+            Map<Integer, Plate> extraPlates = createPlateAndWorkflowsFromResultSet(callback, remainingPlatesSet).plates;
             for (Plate plate : extraPlates.values()) {
-                result.plates.add(new PlateDocument(plate));
+                PlateDocument plateDocument = new PlateDocument(plate);
+                result.plates.add(plateDocument);
+                if(callback != null) {
+                    callback.add(plateDocument, Collections.<String, Object>emptyMap());
+                }
             }
         }
     }
