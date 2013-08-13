@@ -58,7 +58,7 @@ public class TracesEditor {
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                List<AnnotatedPluginDocument> pluginDocuments = ReactionUtilities.importDocuments(sequenceFiles, progress);
+                                ReactionUtilities.importDocuments(sequenceFiles, progress);
                                 for(File f : sequenceFiles) {
                                     traces.add(new Trace(ReactionUtilities.loadFileIntoMemory(f)));
                                 }
@@ -70,6 +70,7 @@ public class TracesEditor {
                             } catch (DocumentImportException e1) {
                                 showMessageDialog("Could not import your documents: " + e1.getMessage());
                             }
+                            progress.setComplete();
                         }
                     };
                     new Thread(runnable).start();
