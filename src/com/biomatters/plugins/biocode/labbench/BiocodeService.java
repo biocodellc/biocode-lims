@@ -812,7 +812,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap()) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap());
 
-                Set<WorkflowDocument> workflowsToSearch = new LinkedHashSet<WorkflowDocument>();
                 if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
                     callback.setMessage("Downloading Workflows & Plates");
                 } else {
@@ -822,47 +821,29 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
                         areBrowseQueries(fimsQueries) ? null : tissueSamples, callback);
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
-                for(PlateDocument plate : limsResult.getPlates()) {
-                    for(Reaction r : plate.getPlate().getReactions()) {
-                        if(r.getWorkflow() != null) {
-                            workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
-                        }
-                    }
-                }
+
                 if(callback.isCanceled()) {
                     return;
                 }
 
-                //workflowsToSearch.addAll(workflowList);
-    //            if((Boolean)query.getExtendedOptionValue("workflowDocuments")) {
-    //                for(PluginDocument doc : workflowList) {
-    //                    callback.add(doc, Collections.<String, Object>emptyMap());
-    //                }
-    //            }
+                // Now add tissues that match the LIMS query
+                if(!workflowList.isEmpty() && tissueSamples == null || tissueSamples.isEmpty() && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
+                    for (WorkflowDocument workflowDocument : workflowList) {
+                        callback.add(new TissueDocument(workflowDocument.getFimsSample()), Collections.<String, Object>emptyMap());
+                    }
+                }
+
                 if(callback.isCanceled()) {
                     return;
                 }
-//                if((Boolean)query.getExtendedOptionValue("plateDocuments") || ((Boolean)query.getExtendedOptionValue("sequenceDocuments") && limsQueries.size() > 0)) {
-//                    callback.setMessage("Downloading Plates");
-//                    List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(limsQuery, workflowList, (Boolean)query.getExtendedOptionValue("plateDocuments") ? callback : null, callback);
-//                    if(callback.isCanceled()) {
-//                        return;
-//                    }
-//                    for(PlateDocument plate : plateList) {
-//                        for(Reaction r : plate.getPlate().getReactions()) {
-//                            if(r.getWorkflow() != null) {
-//                                workflowsToSearch.add(new WorkflowDocument(r.getWorkflow(), Collections.<Reaction>emptyList()));
-//                            }
-//                        }
-//                    }
-//                }
+
                 if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
                     callback.setMessage("Downloading Sequences");
                     if((tissueSamples != null && tissueSamples.size() > 0) && (workflowList == null || workflowList.size() == 0)) {
                         limsConnection.getMatchingAssemblyDocumentsForTissues(limsQuery, tissueSamples, callback, urnsToNotRetrieve, callback);
                     }
-                    else if(!workflowsToSearch.isEmpty()) {
-                        limsConnection.getMatchingAssemblyDocuments(limsQuery, workflowsToSearch, callback, urnsToNotRetrieve, callback);
+                    else if(!workflowList.isEmpty()) {
+                        limsConnection.getMatchingAssemblyDocuments(limsQuery, workflowList, callback, urnsToNotRetrieve, callback);
                     }
                 }
 

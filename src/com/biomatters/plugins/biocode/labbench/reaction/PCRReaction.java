@@ -240,7 +240,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
             if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
                 if(reaction.getWorkflow() != null){
                     String extractionId = reaction.getExtractionId();
-                    if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                    if(reaction.getWorkflow().getExtractionId() != null && !reaction.getWorkflow().getExtractionId().equals(extractionId)) {
                         reaction.setHasError(true);
                         error += "The workflow "+workflowId+" does not match the extraction "+extractionId;
                     }

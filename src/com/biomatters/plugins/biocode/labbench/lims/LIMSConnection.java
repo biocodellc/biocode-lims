@@ -1461,13 +1461,29 @@ public abstract class LIMSConnection {
         }
         result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
 
-
-        for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
-            PlateDocument plateDocument = new PlateDocument(plate);
-            if(downloadPlates && callback != null) {
-                callback.add(plateDocument, Collections.<String, Object>emptyMap());
+        // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
+        // the plate will not be complete.  So we have to do another query to get the complete plate
+        if(workflowPart != null || extractionPart != null || assemblyPart != null) {
+            Query[] subqueries = new Query[plateAndWorkflowsFromResultSet.plates.size()];
+            int i=0;
+            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+                subqueries[i++] = Query.Factory.createFieldQuery(PLATE_NAME_FIELD, Condition.EQUAL, plate.getName());
             }
-            result.plates.add(plateDocument);
+            Map<String, Object> options = new HashMap<String, Object>();
+            options.put("plateDocuments", Boolean.TRUE);
+            options.put("workflowDocuments", Boolean.FALSE);
+            options.put("sequences", Boolean.FALSE);
+            result.plates.addAll(getMatchingDocumentsFromLims(
+                    Query.Factory.createOrQuery(subqueries, options),
+                    null, callback).getPlates());
+        } else {
+            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+                PlateDocument plateDocument = new PlateDocument(plate);
+                if(downloadPlates && callback != null) {
+                    callback.add(plateDocument, Collections.<String, Object>emptyMap());
+                }
+                result.plates.add(plateDocument);
+            }
         }
         addAnyPlatesThatDoNotHaveWorkflows(downloadPlates ? callback : null, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
 
@@ -1594,7 +1610,9 @@ public abstract class LIMSConnection {
         // INNER JOIN here because there should always be a plate for a reaction.  We have already joined the 3 reaction tables
         queryBuilder.append(" INNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
         if(plateQueryConditions != null) {
-            conditionBuilder.append(operatorString);
+            if(extractionQueryConditions != null || workflowQueryConditions != null) {
+                conditionBuilder.append(operatorString);
+            }
             conditionBuilder.append("(").append(plateQueryConditions).append(")");
         }
 
