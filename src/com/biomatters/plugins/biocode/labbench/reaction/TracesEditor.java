@@ -1,27 +1,26 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
-import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
-import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseService;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseService;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
+import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import jebl.util.ProgressListener;
+import org.jdom.Element;
 
 import javax.swing.*;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.prefs.Preferences;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
-
-import jebl.util.ProgressListener;
-import org.jdom.Element;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.prefs.Preferences;
 
 /**
  * @author Steven Stones-Havas
@@ -69,8 +68,9 @@ public class TracesEditor {
                                 showMessageDialog("Could not import your documents: " + e1.getMessage());
                             } catch (DocumentImportException e1) {
                                 showMessageDialog("Could not import your documents: " + e1.getMessage());
+                            } finally {
+                                progress.setComplete();
                             }
-                            progress.setComplete();
                         }
                     };
                     new Thread(runnable).start();
