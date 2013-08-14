@@ -1464,17 +1464,17 @@ public abstract class LIMSConnection {
         // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
         // the plate will not be complete.  So we have to do another query to get the complete plate
         if(workflowPart != null || extractionPart != null || assemblyPart != null) {
-            Query[] subqueries = new Query[plateAndWorkflowsFromResultSet.plates.size()];
-            int i=0;
-            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
-                subqueries[i++] = Query.Factory.createFieldQuery(PLATE_NAME_FIELD, Condition.EQUAL, plate.getName());
-            }
             Map<String, Object> options = new HashMap<String, Object>();
             options.put("plateDocuments", Boolean.TRUE);
             options.put("workflowDocuments", Boolean.FALSE);
             options.put("sequences", Boolean.FALSE);
+
+            List<Object> plateNames = new ArrayList<Object>();
+            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+                plateNames.add(plate.getName());
+            }
             result.plates.addAll(getMatchingDocumentsFromLims(
-                    Query.Factory.createOrQuery(subqueries, options),
+                    Query.Factory.createFieldQuery(PLATE_NAME_FIELD, Condition.EQUAL, plateNames.toArray(new Object[plateNames.size()]), options),
                     null, callback).getPlates());
         } else {
             for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
@@ -1534,9 +1534,6 @@ public abstract class LIMSConnection {
         }
         StringBuilder queryBuilder = new StringBuilder("SELECT * FROM plate");
         queryBuilder.append(" LEFT OUTER JOIN extraction ON plate.id = extraction.plate");
-        if(extractionQueryConditions != null) {
-            queryBuilder.append(" ").append(operator.toString()).append(" ").append(extractionQueryConditions);
-        }
         queryBuilder.append(" LEFT OUTER JOIN pcr ON plate.id = pcr.plate");
         queryBuilder.append(" LEFT OUTER JOIN cyclesequencing ON plate.id = cyclesequencing.plate");
         queryBuilder.append(" LEFT OUTER JOIN workflow ON pcr.workflow = workflow.id");  // This is only ceremony, there won't be any
@@ -1547,9 +1544,17 @@ public abstract class LIMSConnection {
             "AND NOT EXISTS (SELECT id FROM workflow WHERE extractionId in (SELECT id from extraction WHERE plate = plate.id))"
         );
 
+        List<String> conditions = new ArrayList<String>();
         if(plateQueryConditions != null) {
-            queryBuilder.append(" AND (").append(plateQueryConditions).append(")");
+            conditions.add("(" + plateQueryConditions + ")");
         }
+        if(extractionQueryConditions != null) {
+            conditions.add("(" + extractionQueryConditions + ")");
+        }
+        if(!conditions.isEmpty()) {
+            queryBuilder.append(" AND (").append(StringUtilities.join(operator.toString(), conditions)).append(")");
+        }
+
         queryBuilder.append(" ORDER BY plate.id");
         return queryBuilder.toString();
     }
