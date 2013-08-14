@@ -325,7 +325,7 @@ public class MarkInLimsUtilities {
             return null;
         }
         OperationRecordDocument parentRecord = (OperationRecordDocument) parentRecordDoc.getDocument();
-        if(!"Generate_Consensus".equals(parentRecord.getOperationId())) {
+        if(!"Generate_Consensus".equals(parentRecord.getOperationId()) && !"extraction".equals(parentRecord.getOperationId())) {
             return null;  // Wasn't generated with the consensus operation
         }
 
