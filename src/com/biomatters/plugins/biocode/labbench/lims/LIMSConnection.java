@@ -1469,12 +1469,13 @@ public abstract class LIMSConnection {
             options.put("workflowDocuments", Boolean.FALSE);
             options.put("sequences", Boolean.FALSE);
 
-            List<Object> plateNames = new ArrayList<Object>();
+            Query[] subqueries = new Query[plateAndWorkflowsFromResultSet.plates.size()];
+            int i=0;
             for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
-                plateNames.add(plate.getName());
+                subqueries[i++] = Query.Factory.createFieldQuery(PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plate.getName()}, options);
             }
             result.plates.addAll(getMatchingDocumentsFromLims(
-                    Query.Factory.createFieldQuery(PLATE_NAME_FIELD, Condition.EQUAL, plateNames.toArray(new Object[plateNames.size()]), options),
+                    Query.Factory.createOrQuery(subqueries, options),
                     null, callback).getPlates());
         } else {
             for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
