@@ -1548,7 +1548,7 @@ public abstract class LIMSConnection {
         );
 
         if(plateQueryConditions != null) {
-            queryBuilder.append(" AND ").append(plateQueryConditions);
+            queryBuilder.append(" AND (").append(plateQueryConditions).append(")");
         }
         queryBuilder.append(" ORDER BY plate.id");
         return queryBuilder.toString();
@@ -1610,7 +1610,7 @@ public abstract class LIMSConnection {
         // INNER JOIN here because there should always be a plate for a reaction.  We have already joined the 3 reaction tables
         queryBuilder.append(" INNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
         if(plateQueryConditions != null) {
-            if(extractionQueryConditions != null || workflowQueryConditions != null) {
+            if(operator == CompoundSearchQuery.Operator.AND || extractionQueryConditions != null || workflowQueryConditions != null) {
                 conditionBuilder.append(operatorString);
             }
             conditionBuilder.append("(").append(plateQueryConditions).append(")");

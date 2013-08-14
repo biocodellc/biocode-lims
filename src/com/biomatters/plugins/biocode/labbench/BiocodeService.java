@@ -829,7 +829,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 // Now add tissues that match the LIMS query
                 if(!workflowList.isEmpty() && tissueSamples == null || tissueSamples.isEmpty() && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
                     for (WorkflowDocument workflowDocument : workflowList) {
-                        callback.add(new TissueDocument(workflowDocument.getFimsSample()), Collections.<String, Object>emptyMap());
+                        FimsSample sample = workflowDocument.getFimsSample();
+                        if(sample != null) {
+                            callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
+                        }
                     }
                 }
 
