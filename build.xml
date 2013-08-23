@@ -45,6 +45,9 @@
          <fileset dir="">
             <include name="plugin.properties"/>
          </fileset>
+         <fileset dir="doc">
+             <include name="readme.html"/>
+         </fileset>
       </copy>
       <echo file="${plugins.proguard}" append="true"
             message="-injars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar${line.separator}"/>
