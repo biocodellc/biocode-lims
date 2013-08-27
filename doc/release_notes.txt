@@ -1,4 +1,4 @@
-==Biocode Plugin 2.4.2 - (TBD)==
+==Biocode Plugin 2.4.2 - 27 August 2013==
 * Much faster searching
 * Support for ABCD schema when using a Tapir FIMS connection
 * Support for working with consensus sequences when marking as pass/fail
