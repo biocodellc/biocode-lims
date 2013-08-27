@@ -99,7 +99,7 @@ public class BiocodePlugin extends GeneiousPlugin {
             public void run() {
                 SAXBuilder builder = new SAXBuilder();
                 try {
-                    final Document document = builder.build(new URL("http://desktop-links.biomatters.com/assets/plugins/biocode/PluginVersions.xml?Version="+getVersion())+"&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" + System.getProperty("os.version", "").replace(" ", "_") + "&OSArch=" + System.getProperty("os.arch").replace(" ", "_"));
+                    final Document document = builder.build(new URL("http://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?Version="+getVersion())+"&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" + System.getProperty("os.version", "").replace(" ", "_") + "&OSArch=" + System.getProperty("os.arch").replace(" ", "_"));
                     final String latestVersion = document.getRootElement().getChildText("LatestVersion");
                     if(latestVersion != null && compareVersions(getVersion(), latestVersion) < 0) {
                         Runnable runnable = new Runnable() {
