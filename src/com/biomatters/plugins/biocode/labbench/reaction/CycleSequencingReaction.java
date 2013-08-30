@@ -1,11 +1,9 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
-import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -22,7 +20,6 @@ import java.awt.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.PreparedStatement;
-import java.sql.Connection;
 import java.util.*;
 import java.util.List;
 import java.io.IOException;
@@ -38,11 +35,15 @@ import org.jdom.Element;
  *          Created on 24/06/2009 6:02:38 PM
  */
 public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
+    public static final DocumentField NUM_TRACES_FIELD = DocumentField.createIntegerField("# Traces", "Number of traces attached to reaction", "numTraces");
+
     private CycleSequencingOptions options;
     private Set<Integer> tracesToRemoveOnSave = new LinkedHashSet<Integer>();
 
     private WeakReference<List<Trace>> traces;
     private List<Trace> tracesStrongReference;
+
+    private int cacheNumTraces;
 
     public CycleSequencingReaction() {
 
@@ -54,6 +55,8 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 //        System.out.println(getWorkflow());
     }
 
+    private static final String NUM_TRACES_ATTRIBUTE = "cachedNumTraces";
+
     @Override
     public Element toXML() {
         Element element = super.toXML();
@@ -62,12 +65,15 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 element.addContent(XMLSerializer.classToXML("trace", trace));
             }
         }
+        element.setAttribute(NUM_TRACES_ATTRIBUTE, "" + cacheNumTraces);
         return element;
     }
 
     @Override
     public void fromXML(Element element) throws XMLSerializationException {
         super.fromXML(element);
+        String numTracesString = element.getAttributeValue(NUM_TRACES_ATTRIBUTE);
+        cacheNumTraces = numTracesString == null ? 0 : Integer.parseInt(numTracesString);
         List<Element> traceElements = element.getChildren("trace");
         if(traceElements.size() > 0) {
             List<Trace> traces = new ArrayList<Trace>();
@@ -157,6 +163,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 //                throw new SQLException("Couldn't deserialize the sequences: "+e.getMessage());
 //            }
 //        }
+    }
+
+    public void setCacheNumTraces(int cacheNumTraces) {
+        this.cacheNumTraces = cacheNumTraces;
     }
 
     public Type getType() {
@@ -462,4 +472,24 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 //        }
 //    }
 
+    @Override
+    public List<DocumentField> getDisplayableFields() {
+        List<DocumentField> fields = super.getDisplayableFields();
+        fields.add(NUM_TRACES_FIELD);
+        return fields;
+    }
+
+    @Override
+    public String getDisplayableValue(DocumentField field) {
+        if(NUM_TRACES_FIELD.getCode().equals(field.getCode())) {
+            List<Trace> cachedTracesList = getTraces();
+            if(cachedTracesList == null) {
+                return ""+ cacheNumTraces;
+            } else {
+                return "" + cachedTracesList.size();
+            }
+        } else {
+            return super.getDisplayableValue(field);
+        }
+    }
 }
