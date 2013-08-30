@@ -28,6 +28,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author steve
@@ -1088,6 +1089,8 @@ public abstract class LIMSConnection {
             }
         }
 
+        setInitialTraceCountsForPlates(plateMap);
+
         if(totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
@@ -1491,6 +1494,40 @@ public abstract class LIMSConnection {
         return result;
     }
 
+    private void setInitialTraceCountsForPlates(Map<Integer, Plate> plateMap) throws SQLException {
+        if(plateMap.isEmpty()) {
+            return;
+        }
+        List<Object> plateIds = new ArrayList<Object>(plateMap.keySet());
+        Map<Integer, CycleSequencingReaction> mapping = new HashMap<Integer, CycleSequencingReaction>();
+        for (Plate plate : plateMap.values()) {
+            for (Reaction reaction : plate.getReactions()) {
+                if(reaction instanceof CycleSequencingReaction) {
+                    mapping.put(reaction.getId(), (CycleSequencingReaction)reaction);
+                }
+            }
+        }
+
+        StringBuilder countingQuery = new StringBuilder("SELECT cyclesequencing.id, COUNT(traces.id) as traceCount FROM " +
+                "cyclesequencing LEFT JOIN traces ON cyclesequencing.id = traces.reaction WHERE cyclesequencing.plate IN ");
+        appendSetOfQuestionMarks(countingQuery, plateMap.size());
+        countingQuery.append(" GROUP BY cyclesequencing.id");
+        PreparedStatement getCount = connection.prepareStatement(countingQuery.toString());
+        fillStatement(plateIds, getCount);
+        printSql(countingQuery.toString(), plateIds);
+        System.out.println("Running trace counting query:");
+        System.out.print("\t");
+        long start = System.currentTimeMillis();
+        ResultSet countSet = getCount.executeQuery();
+        System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do trace counting query");
+        while(countSet.next()) {
+            int reactionId = countSet.getInt("cyclesequencing.id");
+            int count = countSet.getInt("traceCount");
+            CycleSequencingReaction reaction = mapping.get(reactionId);
+            reaction.setCacheNumTraces(count);
+        }
+    }
+
     private void addAnyPlatesThatDoNotHaveWorkflows(RetrieveCallback callback, LimsSearchResult result, CompoundSearchQuery.Operator operator, QueryPart workflowPart, QueryPart extractionPart, QueryPart platePart, QueryPart assemblyPart) throws SQLException {
         // Now we have to get the plates that don't have any workflows, these aren't caught by the above query
         // because it is workflow focused.  (This is because MySQL doesn't have FULL OUTER JOIN)
@@ -1580,7 +1617,7 @@ public abstract class LIMSConnection {
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, plate.*, traces.id, traces.name, assembly.id, assembly.progress");
+                "SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
         // Can safely do INNER JOIN here because extractionId is non-null column in workflow
@@ -1621,8 +1658,6 @@ public abstract class LIMSConnection {
             }
             conditionBuilder.append("(").append(plateQueryConditions).append(")");
         }
-
-        queryBuilder.append(" LEFT OUTER JOIN traces ON traces.reaction = cyclesequencing.id");
 
         queryBuilder.append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
                 append("assembly ON assembly.workflow = workflow.id");
