@@ -2,7 +2,7 @@
 * Added # Traces field to the display options in the plate view.
 * Bulk adding traces now displays problems found after completing the batch rather than stopping immediately.
 
-==Biocode Plugin 2.4.2 - 27 August 2013==
+==Biocode Plugin 2.4.3 - 2 September 2013==
 * Much faster searching
 * Support for ABCD schema when using a Tapir FIMS connection
 * Support for working with consensus sequences when marking as pass/fail
@@ -10,6 +10,12 @@
 * Fixed a crash that could occur when copying FIMS values to LIMS if they exceeded 128 characters.
 * Fixed a crash that would happen when connecting to a MySQL LIMS with a Tapir FIMS
 * Numerous small fixes and improvements
+
+==Biocode Plugin 2.4.2 - 27 August 2013==
+'''This release consisted of the wrong build and therefore included the following partial developments.'''
+* Support for ABCD schema when using a Tapir FIMS connection
+* Fixed crashes related to use of new Google Fusion Tables API
+* Fixed a crash that could occur when copying FIMS values to LIMS if they exceeded 128 characters.
 
 ==Biocode Plugin 2.4.1 - 21 January 2013==
 * Fixed a crash that could occur when connecting to a FIMS
