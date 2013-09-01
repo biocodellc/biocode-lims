@@ -1,5 +1,6 @@
 ==Biocode Plugin 2.5.0 - TBD==
-* Added # Traces field to the display options in the plate view
+* Added # Traces field to the display options in the plate view.
+* Bulk adding traces now displays problems found after completing the batch rather than stopping immediately.
 
 ==Biocode Plugin 2.4.2 - 27 August 2013==
 * Much faster searching

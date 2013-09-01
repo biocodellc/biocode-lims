@@ -160,11 +160,16 @@ public class ReactionUtilities {
         final DocumentField finalField = field;
         Runnable runnable = new Runnable() {
             public void run() {
-                final int count = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
+                final ImportTracesResult result = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
                 Runnable runnable = new Runnable() {
                     public void run() {
                         ThreadUtilities.sleep(100);
-                        Dialogs.showMessageDialog("Imported "+count+" traces", "Imported traces", owner, Dialogs.DialogIcon.INFORMATION);
+                        String message = "<html>Imported <strong>" + result.getSuccessfullyImported() + "</strong> traces";
+                        if(result.getAnyProblems() != null) {
+                            message += "\n\n<strong>Problems</strong>: " + result.getAnyProblems();
+                        }
+                        message += "</html>";
+                        Dialogs.showMessageDialog(message, "Imported traces", owner, Dialogs.DialogIcon.INFORMATION);
                     }
                 };
                 ThreadUtilities.invokeNowOrLater(runnable);
@@ -201,6 +206,24 @@ public class ReactionUtilities {
         return null;
     }
 
+    static class ImportTracesResult {
+        private int successfullyImported;
+        private String anyProblems;
+
+        ImportTracesResult(int successfullyImported, String anyProblems) {
+            this.successfullyImported = successfullyImported;
+            this.anyProblems = anyProblems;
+        }
+
+        public int getSuccessfullyImported() {
+            return successfullyImported;
+        }
+
+        public String getAnyProblems() {
+            return anyProblems;
+        }
+    }
+
     /**
      *
      * @param reactions
@@ -214,25 +237,22 @@ public class ReactionUtilities {
      * @param flipPlate
      * @param checkNames
      */
-    private static int importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames) {
+    private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (SQLException e) {
             e.printStackTrace();
-            Dialogs.showMessageDialog("Error reading existing sequences from database: "+e.getMessage());
-            return -1;
+            return new ImportTracesResult(0, "Error reading existing sequences from database: "+e.getMessage());
         } catch (IOException e) {
             e.printStackTrace();
-            Dialogs.showMessageDialog("Error writing temporary sequences to disk: "+e.getMessage());
-            return -1;
+            return new ImportTracesResult(0, "Error writing temporary sequences to disk: "+e.getMessage());
         } catch (DocumentImportException e) {
             e.printStackTrace();
-            Dialogs.showMessageDialog("Error importing existing sequences: "+e.getMessage());
-            return -1;
+            return new ImportTracesResult(0, "Error importing existing sequences: "+e.getMessage());
         }
 
         int count = 0;
-
+        Map<File, String> failed = new HashMap<File, String>();
         for(File f : folder.listFiles()) {
             if(f.isHidden()) {
                 continue;
@@ -249,7 +269,7 @@ public class ReactionUtilities {
                     String fieldValue = nameParts[partToMatch];
 
                     for(CycleSequencingReaction reaction : reactions) {
-                        if(fieldValue.toString().equals(""+reaction.getDisplayableValue(fieldToCheck))) {
+                        if(fieldValue.equals(""+reaction.getDisplayableValue(fieldToCheck))) {
                             r = reaction;
                             newWell = new BiocodeUtilities.Well(r.getLocationString());
                             break;
@@ -277,15 +297,15 @@ public class ReactionUtilities {
                         break;
                     }
                 }
-                List<AnnotatedPluginDocument> annotatedDocuments;
                 try {
-                    annotatedDocuments = importDocuments(new File[]{f}, ProgressListener.EMPTY);
+                    importDocuments(new File[]{f}, ProgressListener.EMPTY);
                 } catch (IOException e) {
+                    // If we can't read from a file we're probably not going to be able to read from any, so stop here
                     Dialogs.showMessageDialog("Error reading sequences: "+e.getMessage());
                     break;
                 } catch (DocumentImportException e) {
-                    Dialogs.showMessageDialog("Error importing sequences: "+e.getMessage());
-                    break;
+                    failed.put(f, e.getMessage());
+                    continue;
                 }
 
                 List<Trace> traces = new ArrayList<Trace>();
@@ -313,7 +333,14 @@ public class ReactionUtilities {
 
             }
         }
-        return count;
+        StringBuilder errorString = new StringBuilder();
+        if(!failed.isEmpty()) {
+            errorString.append("Failed to import <strong>").append(failed.size()).append("</strong> traces.<br>");
+            for (Map.Entry<File, String> entry : failed.entrySet()) {
+                errorString.append(entry.getKey().getName()).append(": ").append(entry.getValue()).append("<br>");
+            }
+        }
+        return new ImportTracesResult(count, errorString.length() == 0 ? null : errorString.toString());
     }
 
     public static MemoryFile loadFileIntoMemory(File f) throws IOException{
