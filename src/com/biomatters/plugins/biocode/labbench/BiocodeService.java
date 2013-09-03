@@ -573,6 +573,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 block("Building Caches", null);
             }
             buildCaches();
+
+            if(block) {
+                block("Performing Further Initialization", null);
+            }
+            limsConnection.doAnyExtraInitialziation();
+
             synchronized (this) {
                 isLoggedIn = true;
                 loggingIn = false;

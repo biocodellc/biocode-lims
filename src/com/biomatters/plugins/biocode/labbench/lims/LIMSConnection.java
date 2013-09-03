@@ -36,7 +36,7 @@ import java.util.List;
 @SuppressWarnings({"ConstantConditions"})
 public abstract class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
-    public static final int EXPECTED_SERVER_VERSION = 9;
+    public static final int EXPECTED_SERVER_VERSION = 10;
     Driver driver;
     Connection connection;
     Connection connection2;
@@ -148,6 +148,54 @@ public abstract class LIMSConnection {
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
         this.limsOptions = allLimsOptions;
         connectToDb(selectedLimsOptions);
+    }
+
+    private static final String POPULATE_ASSEMBLIES = "populatedCycleSequencingAssemblyField";
+    public void doAnyExtraInitialziation() throws TransactionException {
+        try {
+            boolean hasPopulatedAssemblies = Boolean.TRUE.toString().equals(getProperty(POPULATE_ASSEMBLIES));
+            if(!hasPopulatedAssemblies) {
+                System.out.println("Populating cyclesequencing -> assembly relationship...");
+                PreparedStatement getReactionsWithOnePossibleAssembly = null;
+                PreparedStatement updateReaction = null;
+                try {
+                    getReactionsWithOnePossibleAssembly = connection.prepareStatement(
+                            "SELECT assembly.id as assembly, cyclesequencing.id as reaction FROM " +
+                                    "(SELECT workflow.id, COUNT(cyclesequencing.id) FROM workflow INNER JOIN " +
+                                    "cyclesequencing ON workflow.id = cyclesequencing.workflow AND cyclesequencing.direction = 'forward' " +
+                                    "GROUP BY workflow.id  HAVING COUNT(cyclesequencing.id) = 1) withOneSeqSet " +
+                                    "INNER JOIN cyclesequencing ON cyclesequencing.workflow = withOneSeqSet.id " +
+                                    "INNER JOIN assembly ON assembly.workflow = withOneSeqSet.id;"
+                    );
+                    updateReaction = connection.prepareStatement("UPDATE cyclesequencing SET assembly = ? WHERE id = ?");
+                    ResultSet resultSet = getReactionsWithOnePossibleAssembly.executeQuery();
+                    int count = 0;
+                    while(resultSet.next()) {
+                        count++;
+                        updateReaction.setObject(1, resultSet.getInt("assembly"));
+                        updateReaction.setObject(2, resultSet.getInt("reaction"));
+                        updateReaction.addBatch();
+                    }
+                    System.out.println("\tFound " + count + " workflows with a single assembly and sequencing plate.");
+                    if(count > 0) {
+                        long start = System.currentTimeMillis();
+                        int[] updateResults = updateReaction.executeBatch();
+                        int updated = 0;
+                        for (int result : updateResults) {
+                            if(result >= 0) {
+                                updated += result;
+                            }
+                        }
+                        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
+                    }
+                } finally {
+                    cleanUpStatements(getReactionsWithOnePossibleAssembly, updateReaction);
+                }
+                setProperty(POPULATE_ASSEMBLIES, Boolean.TRUE.toString());
+            }
+        } catch (SQLException e) {
+            throw new TransactionException("Failed to initialize database: " + e.getMessage(), e);
+        }
     }
 
     public abstract Driver getDriver() throws ConnectionException;
@@ -951,37 +999,42 @@ public abstract class LIMSConnection {
             sql.append(")");
         }
         System.out.println(sql.toString());
-        PreparedStatement statement = connection2.prepareStatement(sql.toString());
+
+        List<PlateDocument> docs = new ArrayList<PlateDocument>();
         BiocodeUtilities.CancelListeningThread listeningThread = null;
         if(cancelable != null) {
             //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
         }
-        if(!isLocal()) {
-            statement.setFetchSize(Integer.MIN_VALUE);
+        PreparedStatement statement = null;
+        try {
+            statement = connection2.prepareStatement(sql.toString());
+            if(!isLocal()) {
+                statement.setFetchSize(Integer.MIN_VALUE);
+            }
+
+            fillStatement(sqlValues, statement);
+            System.out.println("EXECUTING PLATE QUERY");
+
+            ResultSet resultSet = statement.executeQuery();
+
+
+            Map<Integer, Plate> plateMap = createPlateDocuments(callback, cancelable, resultSet);
+
+            if(cancelable != null && cancelable.isCanceled()) {
+                return Collections.emptyList();
+            }
+
+            System.out.println("Creating plate documents");
+    //        System.out.println("Getting GEL images");
+            //getGelImagesForPlates(plateMap.values());   //we are only downloading these when the user wants to view them now...
+            for(Plate plate : plateMap.values()) {
+                docs.add(new PlateDocument(plate));
+            }
+            int time = (int)(System.currentTimeMillis()-startTime)/1000;
+            System.out.println("done in "+time+" seconds!");
+        } finally {
+            cleanUpStatements(statement);
         }
-
-        fillStatement(sqlValues, statement);
-        System.out.println("EXECUTING PLATE QUERY");
-
-        ResultSet resultSet = statement.executeQuery();
-
-
-        Map<Integer, Plate> plateMap = createPlateDocuments(callback, cancelable, resultSet);
-
-        if(cancelable != null && cancelable.isCanceled()) {
-            return Collections.emptyList();
-        }
-
-        System.out.println("Creating plate documents");
-        List<PlateDocument> docs = new ArrayList<PlateDocument>();
-//        System.out.println("Getting GEL images");
-        //getGelImagesForPlates(plateMap.values());   //we are only downloading these when the user wants to view them now...
-        for(Plate plate : plateMap.values()) {
-            docs.add(new PlateDocument(plate));
-        }
-        int time = (int)(System.currentTimeMillis()-startTime)/1000;
-        System.out.println("done in "+time+" seconds!");
-        statement.close();
         if(listeningThread != null) {
             listeningThread.finish();
         }
@@ -1444,17 +1497,23 @@ public abstract class LIMSConnection {
         StringBuilder queryBuilder = constructWorkflowQueryString(samples, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
-        PreparedStatement preparedStatement = connection.prepareStatement(queryBuilder.toString());
-        fillStatement(sqlValues, preparedStatement);
+        WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet;
+        PreparedStatement preparedStatement = null;
+        try {
+            preparedStatement = connection.prepareStatement(queryBuilder.toString());
+            fillStatement(sqlValues, preparedStatement);
 
-        System.out.println("Running LIMS (workflows&plates) query:");
-        System.out.print("\t");
-        printSql(queryBuilder.toString(), sqlValues);
-        long start = System.currentTimeMillis();
-        ResultSet resultSet = preparedStatement.executeQuery();
-        System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
+            System.out.println("Running LIMS (workflows&plates) query:");
+            System.out.print("\t");
+            printSql(queryBuilder.toString(), sqlValues);
+            long start = System.currentTimeMillis();
+            ResultSet resultSet = preparedStatement.executeQuery();
+            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
-        WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, resultSet);
+            plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, resultSet);
+        } finally {
+            cleanUpStatements(preparedStatement);
+        }
 
         if(downloadWorkflows && callback != null) {
             for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
@@ -1511,19 +1570,26 @@ public abstract class LIMSConnection {
                 "cyclesequencing LEFT JOIN traces ON cyclesequencing.id = traces.reaction WHERE cyclesequencing.plate IN ");
         appendSetOfQuestionMarks(countingQuery, plateMap.size());
         countingQuery.append(" GROUP BY cyclesequencing.id");
-        PreparedStatement getCount = connection.prepareStatement(countingQuery.toString());
-        fillStatement(plateIds, getCount);
-        printSql(countingQuery.toString(), plateIds);
-        System.out.println("Running trace counting query:");
-        System.out.print("\t");
-        long start = System.currentTimeMillis();
-        ResultSet countSet = getCount.executeQuery();
-        System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do trace counting query");
-        while(countSet.next()) {
-            int reactionId = countSet.getInt("cyclesequencing.id");
-            int count = countSet.getInt("traceCount");
-            CycleSequencingReaction reaction = mapping.get(reactionId);
-            reaction.setCacheNumTraces(count);
+        PreparedStatement getCount = null;
+        try {
+            getCount = connection.prepareStatement(countingQuery.toString());
+            fillStatement(plateIds, getCount);
+            printSql(countingQuery.toString(), plateIds);
+            System.out.println("Running trace counting query:");
+            System.out.print("\t");
+            long start = System.currentTimeMillis();
+            ResultSet countSet = getCount.executeQuery();
+            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do trace counting query");
+            while(countSet.next()) {
+                int reactionId = countSet.getInt("cyclesequencing.id");
+                int count = countSet.getInt("traceCount");
+                CycleSequencingReaction reaction = mapping.get(reactionId);
+                if(reaction != null) {  // todo
+                    reaction.setCacheNumTraces(count);
+                }
+            }
+        } finally {
+            cleanUpStatements(getCount);
         }
     }
 
@@ -1532,23 +1598,29 @@ public abstract class LIMSConnection {
         // because it is workflow focused.  (This is because MySQL doesn't have FULL OUTER JOIN)
         String getPlatesWithNoWorkflows = getPlatesWithNoWorkflowsQuery(operator, workflowPart,
                 extractionPart, platePart, assemblyPart);
+        Map<Integer, Plate> extraPlates;
         if(getPlatesWithNoWorkflows != null) {
-            PreparedStatement getRemainingPlates = connection.prepareStatement(getPlatesWithNoWorkflows);
-            List<Object> parameters = new ArrayList<Object>();
-            if(extractionPart != null) {
-                parameters.addAll(extractionPart.parameters);
+            PreparedStatement getRemainingPlates = null;
+            try {
+                getRemainingPlates = connection.prepareStatement(getPlatesWithNoWorkflows);
+                List<Object> parameters = new ArrayList<Object>();
+                if(extractionPart != null) {
+                    parameters.addAll(extractionPart.parameters);
+                }
+                if(platePart != null) {
+                    parameters.addAll(platePart.parameters);
+                }
+                fillStatement(parameters, getRemainingPlates);
+                System.out.println("Running LIMS (non-workflow plates) query:");
+                System.out.print("\t");
+                printSql(getPlatesWithNoWorkflows, parameters);
+                long start = System.currentTimeMillis();
+                ResultSet remainingPlatesSet = getRemainingPlates.executeQuery();
+                System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
+                extraPlates = createPlateAndWorkflowsFromResultSet(callback, remainingPlatesSet).plates;
+            } finally {
+                cleanUpStatements(getRemainingPlates);
             }
-            if(platePart != null) {
-                parameters.addAll(platePart.parameters);
-            }
-            fillStatement(parameters, getRemainingPlates);
-            System.out.println("Running LIMS (non-workflow plates) query:");
-            System.out.print("\t");
-            printSql(getPlatesWithNoWorkflows, parameters);
-            long start = System.currentTimeMillis();
-            ResultSet remainingPlatesSet = getRemainingPlates.executeQuery();
-            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
-            Map<Integer, Plate> extraPlates = createPlateAndWorkflowsFromResultSet(callback, remainingPlatesSet).plates;
             for (Plate plate : extraPlates.values()) {
                 PlateDocument plateDocument = new PlateDocument(plate);
                 result.plates.add(plateDocument);
@@ -1743,5 +1815,75 @@ public abstract class LIMSConnection {
             }
         }
         return result;
+    }
+
+    /**
+     * Sets a database wide property.  Can be retrieved by calling {@link #getProperty(String)}
+     *
+     * @param key The name of the property
+     * @param value The value to set for the property
+     *
+     * @throws SQLException if something goes wrong communicating with the database.
+     */
+    void setProperty(String key, String value) throws SQLException {
+        PreparedStatement update = null;
+        PreparedStatement insert = null;
+
+        try {
+            update = connection.prepareStatement("UPDATE properties SET value = ? WHERE name = ?");
+
+            update.setObject(1, value);
+            update.setObject(2, key);
+            int changed = update.executeUpdate();
+            if(changed == 0) {
+                insert = connection.prepareStatement("INSERT INTO properties(value, name) VALUES (?,?)");
+                insert.setObject(1, value);
+                insert.setObject(2, key);
+                insert.executeUpdate();
+            }
+        } finally {
+            cleanUpStatements(update, insert);
+        }
+    }
+
+    /**
+     * Retrieves a property from the database previously set by calling {@link #setProperty(String, String)}
+     *
+     * @param key The name of the property to retrieve
+     * @return value of the property or null if it does not exist
+     *
+     * @throws SQLException if something goes wrong communicating with the database.
+     */
+    String getProperty(String key) throws SQLException {
+        PreparedStatement get = null;
+        try {
+            get = connection.prepareStatement("SELECT value FROM properties WHERE name = ?");
+            get.setObject(1, key);
+            ResultSet resultSet = get.executeQuery();
+            if(resultSet.next()) {
+                return resultSet.getString("value");
+            } else {
+                return null;
+            }
+        } finally {
+            cleanUpStatements(get);
+        }
+    }
+
+    /**
+     * Closes a collection of {@link PreparedStatement}s, ignoring any SQLExceptions that are thrown as a result.
+     *
+     * @param statements The statements to close
+     */
+    private void cleanUpStatements(PreparedStatement... statements) {
+        for (PreparedStatement statement : statements) {
+            if(statement != null) {
+                try {
+                    statement.close();
+                } catch (SQLException e) {
+                    // Ignore
+                }
+            }
+        }
     }
 }

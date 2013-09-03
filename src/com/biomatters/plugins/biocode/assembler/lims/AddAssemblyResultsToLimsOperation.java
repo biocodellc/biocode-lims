@@ -404,10 +404,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         PreparedStatement statement = null;
         PreparedStatement statement2 = null;
+        PreparedStatement updateReaction;
         //noinspection ConstantConditions
         try {
             statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
                 "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            updateReaction = limsConnection.createStatement("UPDATE cyclesequencing SET assembly = ? WHERE id = ?");
 
             statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
             for (AssemblyResult result : assemblyResults) {
@@ -490,8 +492,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
                 int sequenceId = resultSet.getInt(1);
-                for(List<AnnotatedPluginDocument> docSets : result.getReactions().values()) {
-                    for(AnnotatedPluginDocument doc : docSets) {
+                updateReaction.setObject(1,sequenceId);
+                for(Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
+                    updateReaction.setObject(2, entry.getKey().getId());
+                    updateReaction.executeUpdate();
+                    for(AnnotatedPluginDocument doc : entry.getValue()) {
                         doc.setFieldValue(LIMSConnection.SEQUENCE_ID, sequenceId);
                         doc.save();
                     }

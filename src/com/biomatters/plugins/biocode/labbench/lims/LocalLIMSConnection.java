@@ -130,12 +130,14 @@ public class LocalLIMSConnection extends LIMSConnection {
             int version = resultSet.getInt("version");
             resultSet.close();
 
-            String upgradeName = "upgrade_" + version + "_sqlite.sql";
-            InputStream scriptStream = getClass().getResourceAsStream(upgradeName);
-            if(scriptStream == null) {
-                throw new FileNotFoundException("Could not find resource "+getClass().getPackage().getName()+"."+upgradeName);
+            while(version < EXPECTED_SERVER_VERSION) {  // Keep applying upgrade scripts til version is expected
+                String upgradeName = "upgrade_" + version++ + "_sqlite.sql";
+                InputStream scriptStream = getClass().getResourceAsStream(upgradeName);
+                if(scriptStream == null) {
+                    throw new FileNotFoundException("Could not find resource "+getClass().getPackage().getName()+"."+upgradeName);
+                }
+                DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
             }
-            DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
             connection.close();
         }
         catch(IOException ex) {
