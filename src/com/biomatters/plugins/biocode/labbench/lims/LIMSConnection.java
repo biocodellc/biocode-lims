@@ -1524,7 +1524,7 @@ public abstract class LIMSConnection {
 
         // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
         // the plate will not be complete.  So we have to do another query to get the complete plate
-        if(workflowPart != null || extractionPart != null || assemblyPart != null) {
+        if(downloadPlates && (workflowPart != null || extractionPart != null || assemblyPart != null)) {
             Map<String, Object> options = new HashMap<String, Object>();
             options.put("plateDocuments", Boolean.TRUE);
             options.put("workflowDocuments", Boolean.FALSE);
@@ -1584,7 +1584,7 @@ public abstract class LIMSConnection {
                 int reactionId = countSet.getInt("cyclesequencing.id");
                 int count = countSet.getInt("traceCount");
                 CycleSequencingReaction reaction = mapping.get(reactionId);
-                if(reaction != null) {  // todo
+                if(reaction != null) {  // Might be null if we haven't downloaded the full plate
                     reaction.setCacheNumTraces(count);
                 }
             }
