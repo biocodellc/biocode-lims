@@ -25,10 +25,7 @@ import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
@@ -1133,7 +1130,11 @@ public class PlateDocumentViewer extends DocumentViewer{
         scroller.getVerticalScrollBar().setUnitIncrement(20);
         scroller.getHorizontalScrollBar().setUnitIncrement(20);
         panel.add(scroller, BorderLayout.CENTER);
-
+        ThreadUtilities.invokeLater(new Runnable() {
+            public void run() {
+                mainPanel.scrollRectToVisible(new Rectangle(1,1,1,1));
+            }
+        });
         return panel;
     }
 
