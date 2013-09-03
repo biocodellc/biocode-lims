@@ -96,12 +96,7 @@ public class MarkSequencesAsSubmittedInLimsOperation extends DocumentOperation {
             if(count < ids.size()) {
                 throw new DocumentOperationException("Some of the sequences you are marking are either not present in the database, or are marked as failed.  Please make sure that the sequences are present, and are passed before marking as submitted.");
             }
-            
 
-
-            if(LIMSConnection.EXPECTED_SERVER_VERSION < 9) {
-                throw new DocumentOperationException("You need to be running against a more recent version of the Biocode LIMS database to mark sequences as submitted");
-            }
             PreparedStatement statement2 = BiocodeService.getInstance().getActiveLIMSConnection().createStatement("UPDATE assembly SET submitted = ? WHERE "+idOr);
             statement2.setInt(1, submitted ? 1 : 0);
             for(int i=0; i < ids.size(); i++) {

@@ -406,15 +406,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         PreparedStatement statement2 = null;
         //noinspection ConstantConditions
         try {
-            if(LIMSConnection.EXPECTED_SERVER_VERSION >= 9) {
-                statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                    "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            }
-            else {
-                statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                    "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            }
-
+            statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
             for (AssemblyResult result : assemblyResults) {
@@ -490,9 +483,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 else {
                     statement.setNull(18, Types.INTEGER);
                 }
-                if(LIMSConnection.EXPECTED_SERVER_VERSION >= 9) {
-                    statement.setString(19, MarkInLimsUtilities.getEditRecords(result.assembly, result.consensusDoc));
-                }
+                statement.setString(19, MarkInLimsUtilities.getEditRecords(result.assembly, result.consensusDoc));
 
                 statement.execute();
 
