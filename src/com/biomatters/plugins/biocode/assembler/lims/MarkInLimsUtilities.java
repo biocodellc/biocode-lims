@@ -333,6 +333,9 @@ public class MarkInLimsUtilities {
         List<URN> inputUrns = parentRecord.getInputDocuments();
         for (URN inputUrn : inputUrns) {
             AnnotatedPluginDocument inputDoc = DocumentUtilities.getDocumentByURN(inputUrn);
+            if(inputDoc == null) {
+                continue;
+            }
             String inputWorkflow = String.valueOf(inputDoc.getFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD));
             String inputWell = String.valueOf(inputDoc.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD));
             if(workflow.equals(inputWorkflow) && well.equals(inputWell)) {
