@@ -1524,7 +1524,7 @@ public abstract class LIMSConnection {
 
         // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
         // the plate will not be complete.  So we have to do another query to get the complete plate
-        if(downloadPlates && (workflowPart != null || extractionPart != null || assemblyPart != null)) {
+        if(downloadPlates && !plateAndWorkflowsFromResultSet.plates.isEmpty() && (workflowPart != null || extractionPart != null || assemblyPart != null)) {
             Map<String, Object> options = new HashMap<String, Object>();
             options.put("plateDocuments", Boolean.TRUE);
             options.put("workflowDocuments", Boolean.FALSE);
