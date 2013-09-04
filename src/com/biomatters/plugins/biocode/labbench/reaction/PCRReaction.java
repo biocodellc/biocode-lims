@@ -68,7 +68,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         DocumentSelectionOption reversePrimerOption = (DocumentSelectionOption)options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
         String reversePrimerName = r.getString("pcr.revPrName");
         String reversePrimerSequence = r.getString("pcr.revPrSequence");
-        if(reversePrimerSequence.length() > 0) {
+        if(reversePrimerSequence != null && reversePrimerSequence.length() > 0) {
             reversePrimerOption.setValue(new DocumentSelectionOption.FolderOrDocuments(BiocodeUtilities.createPrimerDocument(reversePrimerName, reversePrimerSequence)));
         }
         //options.setValue("revPrAmount", r.getInt("pcr.revPrAmount"));

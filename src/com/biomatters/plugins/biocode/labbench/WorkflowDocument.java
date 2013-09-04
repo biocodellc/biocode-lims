@@ -36,6 +36,8 @@ public class WorkflowDocument extends MuitiPartDocument {
             public int compare(ReactionPart o1, ReactionPart o2) {
                 if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
                     return -Integer.MAX_VALUE;
+                } else if(o2.getReaction() instanceof ExtractionReaction && !(o1.getReaction() instanceof ExtractionReaction)) {
+                    return Integer.MAX_VALUE;
                 }
                 return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
             }
@@ -239,6 +241,9 @@ public class WorkflowDocument extends MuitiPartDocument {
         switch(rowType) {
             case Extraction :
                 int reactionId = resultSet.getInt("extraction.id");
+                if(reactionId == 0) {
+                return;  // Plate has no reactions
+            }
                 //check we don't already have it
                 boolean alreadyThere = false;
                 for(ReactionPart part : parts) {
@@ -254,6 +259,9 @@ public class WorkflowDocument extends MuitiPartDocument {
             break;
         case PCR :
             reactionId = resultSet.getInt("pcr.id");
+            if(reactionId == 0) {
+                return;  // Plate has no reactions
+            }
             //check we don't already have it
             alreadyThere = false;
             for(ReactionPart part : parts) {
@@ -269,6 +277,9 @@ public class WorkflowDocument extends MuitiPartDocument {
             break;
         case CycleSequencing :
             reactionId = resultSet.getInt("cyclesequencing.id");
+            if(reactionId == 0) {
+                return;  // Plate has no reactions
+            }
             //check we don't already have it
             alreadyThere = false;
             for(ReactionPart part : parts) {
