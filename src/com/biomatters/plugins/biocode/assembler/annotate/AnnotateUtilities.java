@@ -1,11 +1,13 @@
 package com.biomatters.plugins.biocode.assembler.annotate;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
@@ -14,6 +16,7 @@ import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class AnnotateUtilities {
     public static final List<String> FIELDS_TO_NOT_COPY = Arrays.asList(DocumentField.AMBIGUITIES.getCode(),
@@ -37,7 +40,22 @@ public class AnnotateUtilities {
     private AnnotateUtilities() {
     }
 
-    public static void annotateFimsData(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, FimsDataGetter fimsDataGetter) throws DocumentOperationException {
+    /**
+     * Annotates documents using a supplied {@link FimsDataGetter}.  In the case of a MySQL FIMS will also offer to
+     * remove old FIMS fields.
+     *
+     * @param annotatedDocuments The documents to annotate
+     * @param progressListener To report progress to
+     * @param fimsDataGetter Used to retrieve FIMS data
+     * @param askAboutOldFields True if we should ask the user if they want to remove old FIMS fields.  False to leave old fields
+     *
+     * @throws DocumentOperationException if we are unable to annotate for some reason
+     */
+    public static void annotateFimsData(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, FimsDataGetter fimsDataGetter, boolean askAboutOldFields) throws DocumentOperationException {
+        Set<DocumentField> oldFields = new HashSet<DocumentField>();
+        Set<DocumentField> newFields = new HashSet<DocumentField>();
+        Set<AnnotatedPluginDocument> docsAnnotated = new HashSet<AnnotatedPluginDocument>();
+
         CompositeProgressListener realProgress = new CompositeProgressListener(progressListener, annotatedDocuments.length);
         realProgress.setMessage("Accessing FIMS...");
         List<String> failBlog = new ArrayList<String>();
@@ -54,16 +72,73 @@ public class AnnotateUtilities {
                     progressForAlignment.beginSubtask();
                     AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
                     if (referencedDocument != null) {
-                        annotateDocument(fimsDataGetter, failBlog, referencedDocument);
+                        docsAnnotated.add(referencedDocument);
+                        newFields.addAll(annotateDocument(fimsDataGetter, failBlog, referencedDocument));
                     } else {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
                 copyMatchingFieldsToContigAndSave(annotatedDocument);
             } else {
-                annotateDocument(fimsDataGetter, failBlog, annotatedDocument);
+                newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument));
+            }
+            docsAnnotated.add(annotatedDocument);
+        }
+
+        for (AnnotatedPluginDocument annotatedDocument : docsAnnotated) {
+            for (DocumentField field : annotatedDocument.getDisplayableFields()) {
+                if(field.getCode().startsWith(MySQLFimsConnection.FIELD_PREFIX) || Pattern.matches("\\d+", field.getCode())) {
+                    if(annotatedDocument.getFieldValue(field) != null) {
+                        oldFields.add(field);
+                    }
+                }
             }
         }
+
+        oldFields.removeAll(newFields);
+        if(askAboutOldFields && !newFields.isEmpty() && !oldFields.isEmpty()) {
+            Set<String> newNames = new HashSet<String>();
+            for (DocumentField newField : newFields) {
+                newNames.add(newField.getName());
+            }
+            Set<String> duplicateNames = new HashSet<String>();
+            for (DocumentField oldField : oldFields) {
+                if(newNames.contains(oldField.getName())) {
+                    duplicateNames.add(oldField.getName());
+                }
+            }
+
+            String remove = "Remove Fields";
+            Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[]{remove, "Keep Fields"},
+                    "Old FIMS Fields Detected", null, Dialogs.DialogIcon.QUESTION);
+            StringBuilder message = new StringBuilder("<html>Geneious has detected <strong>" + oldFields.size() +
+                    "</strong> previously annotated FIMS fields that are not in your current FIMS. ");
+            if(!duplicateNames.isEmpty()) {
+                message.append("<strong>").append(duplicateNames.size()).append(
+                        "</strong> of these have duplicate names with current FIMS fields. ");
+            }
+
+            message.append("Do you want to remove these fields?\n\n<strong>Fields</strong>:\n");
+            for (DocumentField oldField : oldFields) {
+                message.append(oldField.getName());
+                if(duplicateNames.contains(oldField.getName())) {
+                    message.append(" (duplicate)");
+                }
+                message.append("\n");
+            }
+            message.append("</html>");
+            Object choice = Dialogs.showDialog(dialogOptions, message.toString());
+            if(remove.equals(choice)) {
+                for (AnnotatedPluginDocument annotatedDocument : docsAnnotated) {
+                    for (DocumentField oldField : oldFields) {
+                        // The API doesn't let us remove the field from the document, but we can set the value to null.
+                        annotatedDocument.setFieldValue(oldField, null);
+                    }
+                    annotatedDocument.save();  // Means we end up saving the same doc twice.  However this should be an infrequent operation.
+                }
+            }
+        }
+
         if (!failBlog.isEmpty()) {
             StringBuilder b = new StringBuilder("<html>");
             b.append("Tissue records could not be found for the following sequences (the wells may have been empty):<br><br>");
@@ -133,13 +208,25 @@ public class AnnotateUtilities {
         annotatedContig.save();
     }
 
-    public static void annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
+    /**
+     * Annotates a document with data from a {@link FimsDataGetter}
+     *
+     * @param fimsDataGetter Used to get the FIMS fields and values
+     * @param failBlog To add failure messages to, for example when there are no FIMs fields associated with the document
+     * @param annotatedDocument
+     * @return The set of FIMS {@link DocumentField}s that were annotated onto the document
+     * @throws DocumentOperationException
+     */
+    public static Set<DocumentField> annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         FimsData fimsData;
         fimsData = fimsDataGetter.getFimsData(annotatedDocument);
         if (fimsData == null || fimsData.fimsSample == null) {
             failBlog.add(annotatedDocument.getName());
-            return;
+            return Collections.emptySet();
         }
+        HashSet<DocumentField> fields = new HashSet<DocumentField>();
+        fields.addAll(fimsData.fimsSample.getFimsAttributes());
+        fields.addAll(fimsData.fimsSample.getTaxonomyAttributes());
 
         for (DocumentField documentField : fimsData.fimsSample.getFimsAttributes()) {
             annotatedDocument.setFieldValue(documentField, fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
@@ -238,5 +325,6 @@ public class AnnotateUtilities {
         }
 
         annotatedDocument.save();
+        return fields;
     }
 }

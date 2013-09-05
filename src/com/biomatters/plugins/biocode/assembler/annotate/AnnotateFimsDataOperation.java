@@ -95,7 +95,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
                 }
             }
         };
-        AnnotateUtilities.annotateFimsData(annotatedDocuments, progressListener, fimsDataGetter);
+        AnnotateUtilities.annotateFimsData(annotatedDocuments, progressListener, fimsDataGetter, true);
         return null;
     }
 

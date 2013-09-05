@@ -19,7 +19,7 @@ public class MySQLFimsConnection extends TableFimsConnection{
     private Connection connection;
     private Driver driver;
     private String tableName;
-    static final String FIELD_PREFIX = "MYSQLFIMS:";
+    public static final String FIELD_PREFIX = "MYSQLFIMS:";
 
     static Driver getDriver() throws IOException {
         try {

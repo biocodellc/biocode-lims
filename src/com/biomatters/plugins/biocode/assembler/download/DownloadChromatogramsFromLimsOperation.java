@@ -184,7 +184,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             };
             AnnotatedPluginDocument[] array = chromatogramDocuments.toArray(new AnnotatedPluginDocument[chromatogramDocuments.size()]);
             try {
-                AnnotateUtilities.annotateFimsData(array, ProgressListener.EMPTY, fimsDataGetter);
+                AnnotateUtilities.annotateFimsData(array, ProgressListener.EMPTY, fimsDataGetter, false);
             } catch (DocumentOperationException e) {
                 if (!isAutomated) {
                     String continueButton = "Continue";

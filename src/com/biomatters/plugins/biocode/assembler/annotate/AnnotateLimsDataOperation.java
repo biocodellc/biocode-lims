@@ -59,7 +59,7 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
                 return options.getFimsData(document);
             }
         };
-        AnnotateUtilities.annotateFimsData(annotatedDocuments, progressListener, fimsDataGetter);
+        AnnotateUtilities.annotateFimsData(annotatedDocuments, progressListener, fimsDataGetter, true);
         return null;
     }
 
