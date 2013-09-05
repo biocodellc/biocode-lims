@@ -241,9 +241,9 @@ public class WorkflowDocument extends MuitiPartDocument {
         switch(rowType) {
             case Extraction :
                 int reactionId = resultSet.getInt("extraction.id");
-                if(reactionId == 0) {
-                return;  // Plate has no reactions
-            }
+                if(resultSet.wasNull()) {
+                    return;  // Plate has no reactions
+                }
                 //check we don't already have it
                 boolean alreadyThere = false;
                 for(ReactionPart part : parts) {
@@ -259,7 +259,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             break;
         case PCR :
             reactionId = resultSet.getInt("pcr.id");
-            if(reactionId == 0) {
+            if(resultSet.wasNull()) {
                 return;  // Plate has no reactions
             }
             //check we don't already have it
@@ -277,7 +277,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             break;
         case CycleSequencing :
             reactionId = resultSet.getInt("cyclesequencing.id");
-            if(reactionId == 0) {
+            if(resultSet.wasNull()) {
                 return;  // Plate has no reactions
             }
             //check we don't already have it
