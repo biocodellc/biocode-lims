@@ -67,6 +67,17 @@ CREATE TABLE  workflow  (
 );
 
 --
+-- Definition of table  failure_reason
+--
+
+DROP TABLE IF EXISTS failure_reason;
+CREATE TABLE failure_reason (
+    id      INT IDENTITY PRIMARY KEY,
+    name	varchar(80),
+    description	varchar(255)
+);
+
+--
 -- Definition of table  assembly
 --
 
@@ -94,7 +105,9 @@ CREATE TABLE assembly (
   technician VARCHAR(255),
   bin VARCHAR(255),
   ambiguities INTEGER,
-  FOREIGN KEY (workflow) REFERENCES workflow(id)
+  failure_reason INTEGER,
+  FOREIGN KEY (workflow) REFERENCES workflow(id),
+  FOREIGN KEY (failure_reason) REFERENCES failure_reason(id)
 );
 
 

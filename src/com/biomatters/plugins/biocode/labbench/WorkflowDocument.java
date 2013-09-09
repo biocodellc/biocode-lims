@@ -285,6 +285,9 @@ public class WorkflowDocument extends MuitiPartDocument {
             for(ReactionPart part : parts) {
                 Reaction r = part.getReaction();
                 if(r.getType() == Reaction.Type.CycleSequencing && r.getId() == reactionId) {
+                    // Note: This happens because we can have multiple pass/fail entries per reaction.  Since we order
+                    // by date descending we'll always be taking the most recent entry from the database.  In the future
+                    // we may want to display more than just the most recent entry.
                     alreadyThere = true;
                 }
             }

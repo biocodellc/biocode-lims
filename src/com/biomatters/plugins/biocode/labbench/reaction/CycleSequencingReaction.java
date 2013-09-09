@@ -56,6 +56,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     private static final String NUM_TRACES_ATTRIBUTE = "cachedNumTraces";
+    private static final String FAILURE_REASON = "ReasonForStatus";
 
     @Override
     public Element toXML() {
@@ -66,6 +67,12 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
         }
         element.setAttribute(NUM_TRACES_ATTRIBUTE, "" + cacheNumTraces);
+        if(options != null) {
+            FailureReason reason = FailureReason.getReasonFromOptions(options);
+            if(reason != null) {
+                element.addContent(new Element(FAILURE_REASON).setText(""+ reason.getId()));
+            }
+        }
         return element;
     }
 
@@ -81,6 +88,14 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 traces.add(XMLSerializer.classFromXML(traceElement, Trace.class));
             }
             this.traces = new WeakReference<List<Trace>>(traces);
+        }
+        String reasonId = element.getChildText(FAILURE_REASON);
+        if(reasonId != null) {
+            try {
+                FailureReason.setFailureReasonOnOptions(getOptions(), Integer.parseInt(reasonId));
+            } catch (NumberFormatException e) {
+                // Bad number stored in XML, ignore.
+            }
         }
     }
 
@@ -103,9 +118,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             options.setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), r.getString("workflow.locus"));
         }
 
-
-
         options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("cyclesequencing.progress"));
+        int reasonId = r.getInt("assembly.failure_reason");
+        if(!r.wasNull()) {
+            FailureReason.setFailureReasonOnOptions(options, reasonId);
+        }
 
         DocumentSelectionOption primerOption = (DocumentSelectionOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
         String primerName = r.getString("cyclesequencing.primerName");

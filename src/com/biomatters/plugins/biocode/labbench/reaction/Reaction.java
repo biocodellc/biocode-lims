@@ -21,10 +21,10 @@ import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.ImageObserver;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.text.ParseException;
 import java.util.*;
+import java.util.Date;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -972,6 +972,18 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                                     }
                                 }
                             }
+                        }
+                        FailureReason reason = FailureReason.getReasonFromOptions(options);
+                        if(reason != null) {
+                            // Requires schema 10.  This won't work for reactions that don't have an assembly.
+                            PreparedStatement update = connection.createStatement(
+                                    "UPDATE assembly SET failure_reason = ? WHERE id IN (" +
+                                        "SELECT assembly FROM cyclesequencing WHERE id = ?" +
+                                    ")");
+                            update.setInt(1, reason.getId());
+                            update.setInt(2, reaction.getId());
+                            update.executeUpdate();
+                            update.close();
                         }
                     }
                 }

@@ -19,6 +19,7 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.Cancelable;
 
@@ -79,6 +80,11 @@ public abstract class LIMSConnection {
     private static final String LOCUS = "locus";
 
     String serverUrn;
+
+    private List<FailureReason> failureReasons = Collections.emptyList();
+    public List<FailureReason> getPossibleFailureReasons() {
+        return failureReasons;
+    }
 
     public static enum AvailableLimsTypes {
         local(LocalLIMSConnection.class, "Built-in MySQL Database", "Create and connect to LIMS databases on your local computer (stored with your Geneious data)"),
@@ -153,6 +159,16 @@ public abstract class LIMSConnection {
     private static final String POPULATE_ASSEMBLIES = "populatedCycleSequencingAssemblyField";
     public void doAnyExtraInitialziation() throws TransactionException {
         try {
+            PreparedStatement getFailureReasons = null;
+            try {
+                getFailureReasons = connection.prepareStatement("SELECT * FROM failure_reason");
+                ResultSet resultSet = getFailureReasons.executeQuery();
+                failureReasons = new ArrayList<FailureReason>(FailureReason.getPossibleListFromResultSet(resultSet));
+            } finally {
+                cleanUpStatements(getFailureReasons);
+            }
+
+
             boolean hasPopulatedAssemblies = Boolean.TRUE.toString().equals(getProperty(POPULATE_ASSEMBLIES));
             if(!hasPopulatedAssemblies) {
                 System.out.println("Populating cyclesequencing -> assembly relationship...");
@@ -1688,7 +1704,7 @@ public abstract class LIMSConnection {
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress");
+                "SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress, assembly.failure_reason");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
         // Can safely do INNER JOIN here because extractionId is non-null column in workflow
@@ -1742,7 +1758,7 @@ public abstract class LIMSConnection {
             queryBuilder.append(whereConditionForOrQuery);
         }
 
-        queryBuilder.append(" ORDER BY plate.id");
+        queryBuilder.append(" ORDER BY plate.id, assembly.date desc");
         return queryBuilder;
     }
 

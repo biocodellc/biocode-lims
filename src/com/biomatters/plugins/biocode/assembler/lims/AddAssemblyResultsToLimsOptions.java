@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 
 import javax.swing.*;
 
@@ -19,6 +20,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
     private Option<String, ? extends JComponent> warningLabel;
     private Option<String,? extends JComponent> downloadLabel;
     private BooleanOption removePrevious;
+    private ComboBoxOption<OptionValue> reasonOption;
 
     private MarkInLimsUtilities.InputType inputType;
 
@@ -61,6 +63,9 @@ public class AddAssemblyResultsToLimsOptions extends Options {
 
         Options details = new Options(AddAssemblyResultsToLimsOptions.class);
         details.addStringOption("technician", "Your name", "");
+        if(!passed) {
+            reasonOption = FailureReason.addToOptions(details);
+        }
         details.addMultipleLineStringOption("notes", "Notes", "", 5, true);
         addChildOptions("details", "Details", null, details, true);
 
@@ -101,6 +106,15 @@ public class AddAssemblyResultsToLimsOptions extends Options {
     public boolean removePreviousSequences() {
         return removePrevious.getValue();
     }
+
+    public FailureReason getFailureReason() {
+        if(reasonOption == null) {
+            return null;
+        } else {
+            return FailureReason.getReasonFromOption(reasonOption);
+        }
+    }
+
 
     @Override
     protected JPanel createPanel() {

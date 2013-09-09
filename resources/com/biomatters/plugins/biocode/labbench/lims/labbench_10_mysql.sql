@@ -22,6 +22,17 @@ CREATE DATABASE IF NOT EXISTS labbench;
 USE labbench;
 
 --
+-- Definition of table `failure_reason`
+--
+
+DROP TABLE IF EXISTS `failure_reason`;
+CREATE TABLE failure_reason (
+    id      INT AUTO_INCREMENT PRIMARY KEY,
+    name	varchar(80),
+    description	varchar(255)
+) ENGINE=INNODB;
+
+--
 -- Definition of table `assembly`
 --
 
@@ -49,9 +60,12 @@ CREATE TABLE `assembly` (
   `technician` varchar(255),
   `bin` varchar(255),
   `ambiguities` int(10),
+  `failure_reason` int,
   PRIMARY KEY  (`id`),
   KEY `FK_assembly_1` (`workflow`),
-  CONSTRAINT `FK_assembly_1` FOREIGN KEY (`workflow`) REFERENCES `workflow` (`id`)
+  CONSTRAINT `FK_assembly_1` FOREIGN KEY (`workflow`) REFERENCES `workflow` (`id`),
+  KEY `FK_assembly_2` (`failure_reason`),
+  CONSTRAINT `FK_assembly_2` FOREIGN KEY (`failure_reason`) REFERENCES `failure_reason` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
