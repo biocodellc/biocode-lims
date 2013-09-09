@@ -25,6 +25,10 @@ import java.io.IOException;
  */
 public abstract class FIMSConnection {
 
+    // We would add this prefix to all codes except Steve originally defined them without it and we don't want to mess
+    // up users databases with extra fields.
+    static final String CODE_PREFIX = "EXCELFIMS:";
+
     /**
      *
      * @return a user-friendly name for this connection

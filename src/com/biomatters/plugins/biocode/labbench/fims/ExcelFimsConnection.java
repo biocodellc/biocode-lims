@@ -13,6 +13,10 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
@@ -116,14 +120,35 @@ public class ExcelFimsConnection extends TableFimsConnection{
     }
 
     public List<DocumentField> getTableColumns() throws IOException {
+        Set<String> protectedCodes = getSystemCodes();
         List<DocumentField> results = new ArrayList<DocumentField>();
         for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
             String cellContents = columnNames.get(i);
             String fieldName = XmlUtilities.encodeXMLChars(cellContents);
-            DocumentField field = new DocumentField(fieldName, fieldName, fieldName.toLowerCase(), String.class, true, false);
+            String name = fieldName;
+            String code = fieldName.toLowerCase();
+            if(protectedCodes.contains(code)) {
+                code = CODE_PREFIX + code;
+                name = name + " (FIMS)";
+            }
+            DocumentField field = new DocumentField(name, fieldName, code, String.class, true, false);
             results.add(field);
         }
         return results;
+    }
+
+    private static Set<String> getSystemCodes() {
+        Set<String> codes = new HashSet<String>();
+        List<Reaction<? extends Reaction>> reactions = new ArrayList<Reaction<? extends Reaction>>();
+        reactions.add(new ExtractionReaction());
+        reactions.add(new PCRReaction());
+        reactions.add(new CycleSequencingReaction());
+        for (Reaction<? extends Reaction> reaction : reactions) {
+            for (DocumentField documentField : reaction.getDisplayableFields()) {
+                codes.add(documentField.getCode());
+            }
+        }
+        return codes;
     }
 
     public void _disconnect() {
