@@ -697,7 +697,7 @@ public class ReactionUtilities {
                 }
                 else {
                     final JCheckBox checkbox = new JCheckBox(option.getLabel(), haveAllSameValues.get(option.getName()));
-                    if(!License.isProVersion()) {
+                    if(!License.isProVersion() || !option.isEnabled()) {
                         checkbox.setEnabled(false);
                         checkbox.setSelected(false);
                     }

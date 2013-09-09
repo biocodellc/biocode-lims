@@ -61,7 +61,6 @@ public class FailureReason {
         }
 
         Options.ComboBoxOption<Options.OptionValue> option = toAddTo.addComboBoxOption(OPTION_NAME, "Reason: ", possibleValues, defaultValue);
-        option.setDisabledValue(defaultValue);
         if(possibleValues.size() == 1) {
             option.setEnabled(false);
             option.setDescription("Possible values for this option need to be set up in the database. " +
