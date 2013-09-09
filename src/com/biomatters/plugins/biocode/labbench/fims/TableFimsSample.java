@@ -50,7 +50,7 @@ public class TableFimsSample implements FimsSample {
     
     private int getTableIndex(Sheet sheet, DocumentField documentField) {
         String name = documentField.getCode();
-        name = name.replace(FIMSConnection.CODE_PREFIX, "");
+        name = name.replace(TableFimsConnection.CODE_PREFIX, "");
         for (int i = 0, cellValuesSize = sheet.getColumns(); i < cellValuesSize; i++) {
             String cellContents = sheet.getCell(i, 0).getContents();
             if(XmlUtilities.encodeXMLChars(cellContents).equalsIgnoreCase(name)) {

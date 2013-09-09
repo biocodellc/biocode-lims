@@ -173,6 +173,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
     
     private int getTableIndex(DocumentField documentField) {
         String name = documentField.getCode();
+        name = name.replace(TableFimsConnection.CODE_PREFIX, "");
         for (int i = 0, cellValuesSize = columnNames.size(); i < cellValuesSize; i++) {
             String cellContents = columnNames.get(i);
             if(XmlUtilities.encodeXMLChars(cellContents).equalsIgnoreCase(name)) {
