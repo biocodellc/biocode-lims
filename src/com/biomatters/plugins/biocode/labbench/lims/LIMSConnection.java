@@ -1531,12 +1531,32 @@ public abstract class LIMSConnection {
             cleanUpStatements(preparedStatement);
         }
 
-        if(downloadWorkflows && callback != null) {
-            for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
-                callback.add(document, Collections.<String, Object>emptyMap());
+        // If we searched on something that wasn't a workflow attribute then we might be missing reactions.  ie If we
+        // searched for a Cycle Sequencing Plate 'A001'.  We would only have the sequencing reactions.  So in this case
+        // we need to perform an additional step to download all the reactions in the workflow.
+        if(downloadWorkflows && !plateAndWorkflowsFromResultSet.workflows.isEmpty() && (platePart != null || assemblyPart != null)) {
+            Map<String, Object> options = new HashMap<String, Object>();
+            options.put("plateDocuments", Boolean.FALSE);
+            options.put("workflowDocuments", Boolean.TRUE);
+            options.put("sequences", Boolean.FALSE);
+
+            Query[] subqueries = new Query[plateAndWorkflowsFromResultSet.workflows.size()];
+            int i=0;
+            for (WorkflowDocument workflowDocument : plateAndWorkflowsFromResultSet.workflows.values()) {
+                subqueries[i++] = Query.Factory.createFieldQuery(WORKFLOW_NAME_FIELD, Condition.EQUAL, new Object[]{workflowDocument.getName()}, options);
             }
+            result.workflows.addAll(getMatchingDocumentsFromLims(
+                    Query.Factory.createOrQuery(subqueries, options),
+                    null, callback).getWorkflows());
+        } else {
+            if(downloadWorkflows && callback != null) {
+                for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
+                    callback.add(document, Collections.<String, Object>emptyMap());
+                }
+            }
+            result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
         }
-        result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
+
 
         // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
         // the plate will not be complete.  So we have to do another query to get the complete plate
