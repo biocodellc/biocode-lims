@@ -1677,12 +1677,10 @@ public abstract class LIMSConnection {
             // If workflows are the only thing that are being queried then return nothing.
             return null;
         }
-        StringBuilder queryBuilder = new StringBuilder("SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, " +
-                "plate.*, assembly.id, assembly.progress, assembly.failure_reason  FROM plate");
+        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM plate");
         queryBuilder.append(" LEFT OUTER JOIN extraction ON plate.id = extraction.plate");
         queryBuilder.append(" LEFT OUTER JOIN pcr ON plate.id = pcr.plate");
         queryBuilder.append(" LEFT OUTER JOIN cyclesequencing ON plate.id = cyclesequencing.plate");
-        queryBuilder.append(" LEFT OUTER JOIN assembly ON cyclesequencing.assembly = assembly.id");
         queryBuilder.append(" LEFT OUTER JOIN workflow ON pcr.workflow = workflow.id");  // This is only ceremony, there won't be any
 
         queryBuilder.append(
