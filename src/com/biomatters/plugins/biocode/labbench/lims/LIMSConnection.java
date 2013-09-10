@@ -974,10 +974,13 @@ public abstract class LIMSConnection {
         if((workflowDocuments == null || workflowDocuments.size() == 0) && refinedQueries.size() == 0) {
             return Collections.emptyList();
         }
-        StringBuilder sql = new StringBuilder("SELECT * FROM plate LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
+        StringBuilder sql = new StringBuilder("SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, " +
+                "plate.*, assembly.id, assembly.progress, assembly.failure_reason FROM plate " +
+                "LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN workflow ON (workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
-                "LEFT JOIN extraction ON (extraction.plate = plate.id OR extraction.id = workflow.extractionId) " +            
+                "LEFT JOIN extraction ON (extraction.plate = plate.id OR extraction.id = workflow.extractionId) " +
+                "LEFT OUTER JOIN assembly ON cyclesequencing.assembly = assembly.id " +
                 "WHERE");
         ArrayList<Object> sqlValues = new ArrayList<Object>();
 
@@ -1677,10 +1680,12 @@ public abstract class LIMSConnection {
             // If workflows are the only thing that are being queried then return nothing.
             return null;
         }
-        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM plate");
+        StringBuilder queryBuilder = new StringBuilder("SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, " +
+                "plate.*, assembly.id, assembly.progress, assembly.failure_reason  FROM plate");
         queryBuilder.append(" LEFT OUTER JOIN extraction ON plate.id = extraction.plate");
         queryBuilder.append(" LEFT OUTER JOIN pcr ON plate.id = pcr.plate");
         queryBuilder.append(" LEFT OUTER JOIN cyclesequencing ON plate.id = cyclesequencing.plate");
+        queryBuilder.append(" LEFT OUTER JOIN assembly ON cyclesequencing.assembly = assembly.id");
         queryBuilder.append(" LEFT OUTER JOIN workflow ON pcr.workflow = workflow.id");  // This is only ceremony, there won't be any
 
         queryBuilder.append(
