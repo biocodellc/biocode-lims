@@ -2,6 +2,13 @@
 * Added # Traces field to the display options in the plate view.
 * Bulk adding traces now displays problems found after completing the batch rather than stopping immediately.
 
+==Biocode Plugin 2.4.4 - TBD==
+* Bulk adding traces now reports errors at the end rather than stopping on the first problem it encounters.
+* Fix crash when search results contain plates with no reactions.
+* Fix crash when there are no search results.
+* Fix workflow documents missing reactions when searching by plate field.
+* Other minor bug fixes.
+
 ==Biocode Plugin 2.4.3 - 2 September 2013==
 * Much faster searching
 * Support for ABCD schema when using a Tapir FIMS connection
