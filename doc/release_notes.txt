@@ -1,5 +1,6 @@
 ==Biocode Plugin 2.5.0 - TBD==
 * Added # Traces field to the display options in the plate view.
+* Added 2 new failure reason fields for marking sequencing results as fail.
 
 ==Biocode Plugin 2.4.4 - TBD==
 * Bulk adding traces now displays problems found after completing the batch rather than stopping immediately.
