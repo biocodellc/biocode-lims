@@ -409,7 +409,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         try {
             statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
                 "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)");
-            updateReaction = limsConnection.createStatement("UPDATE cyclesequencing SET assembly = ? WHERE id = ?");
+            updateReaction = limsConnection.createStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
 
             statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
             for (AssemblyResult result : assemblyResults) {

@@ -125,17 +125,14 @@ CREATE TABLE `cyclesequencing` (
   `cleanupMethod` varchar(99) NOT NULL,
   `direction` varchar(32) NOT NULL,
   `gelimage` longblob,
-  `assembly` INT(10) UNSIGNED NULL,
   PRIMARY KEY  (`id`),
   KEY `cycle_thermocycle` (`thermocycle`),
   KEY `FK_cyclesequencing_plate` (`plate`),
   KEY `FK_cyclesequencing_workflow` (`workflow`),
   KEY `FK_cyclesequencing_cocktail` (`cocktail`),
-  KEY `FK_cyclesequencing_assembly` (`assembly`),
   CONSTRAINT `FK_cyclesequencing_cocktail` FOREIGN KEY (`cocktail`) REFERENCES `cyclesequencing_cocktail` (`id`),
   CONSTRAINT `FK_cyclesequencing_plate` FOREIGN KEY (`plate`) REFERENCES `plate` (`id`),
-  CONSTRAINT `FK_cyclesequencing_workflow` FOREIGN KEY (`workflow`) REFERENCES `workflow` (`id`),
-  CONSTRAINT `FK_cyclesequencing_assembly` FOREIGN KEY (`assembly`) REFERENCES `assembly` (`id`) ON DELETE SET NULL
+  CONSTRAINT `FK_cyclesequencing_workflow` FOREIGN KEY (`workflow`) REFERENCES `workflow` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 --

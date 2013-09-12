@@ -156,7 +156,7 @@ public abstract class LIMSConnection {
         connectToDb(selectedLimsOptions);
     }
 
-    private static final String POPULATE_ASSEMBLIES = "populatedCycleSequencingAssemblyField";
+    private static final String POPULATE_ASSEMBLIES = "populatedAssemblyReactionField";
     public void doAnyExtraInitialziation() throws TransactionException {
         try {
             PreparedStatement getFailureReasons = null;
@@ -168,23 +168,19 @@ public abstract class LIMSConnection {
                 cleanUpStatements(getFailureReasons);
             }
 
-
             boolean hasPopulatedAssemblies = Boolean.TRUE.toString().equals(getProperty(POPULATE_ASSEMBLIES));
             if(!hasPopulatedAssemblies) {
-                System.out.println("Populating cyclesequencing -> assembly relationship...");
-                PreparedStatement getReactionsWithOnePossibleAssembly = null;
+                System.out.println("Populating sequencing_result table...");
+                PreparedStatement getReactionsAndResults = null;
                 PreparedStatement updateReaction = null;
                 try {
-                    getReactionsWithOnePossibleAssembly = connection.prepareStatement(
-                            "SELECT assembly.id as assembly, cyclesequencing.id as reaction FROM " +
-                                    "(SELECT workflow.id, COUNT(cyclesequencing.id) FROM workflow INNER JOIN " +
-                                    "cyclesequencing ON workflow.id = cyclesequencing.workflow AND cyclesequencing.direction = 'forward' " +
-                                    "GROUP BY workflow.id  HAVING COUNT(cyclesequencing.id) = 1) withOneSeqSet " +
-                                    "INNER JOIN cyclesequencing ON cyclesequencing.workflow = withOneSeqSet.id " +
-                                    "INNER JOIN assembly ON assembly.workflow = withOneSeqSet.id;"
+                    getReactionsAndResults = connection.prepareStatement(
+                            "SELECT assembly.id as assembly, cyclesequencing.id as reaction FROM workflow " +
+                            "INNER JOIN cyclesequencing ON workflow.id = cyclesequencing.workflow " +
+                            "INNER JOIN assembly ON assembly.workflow = cyclesequencing.workflow;"
                     );
-                    updateReaction = connection.prepareStatement("UPDATE cyclesequencing SET assembly = ? WHERE id = ?");
-                    ResultSet resultSet = getReactionsWithOnePossibleAssembly.executeQuery();
+                    updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
+                    ResultSet resultSet = getReactionsAndResults.executeQuery();
                     int count = 0;
                     while(resultSet.next()) {
                         count++;
@@ -192,7 +188,7 @@ public abstract class LIMSConnection {
                         updateReaction.setObject(2, resultSet.getInt("reaction"));
                         updateReaction.addBatch();
                     }
-                    System.out.println("\tFound " + count + " workflows with a single assembly and sequencing plate.");
+
                     if(count > 0) {
                         long start = System.currentTimeMillis();
                         int[] updateResults = updateReaction.executeBatch();
@@ -205,7 +201,7 @@ public abstract class LIMSConnection {
                         System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
                     }
                 } finally {
-                    cleanUpStatements(getReactionsWithOnePossibleAssembly, updateReaction);
+                    cleanUpStatements(getReactionsAndResults, updateReaction);
                 }
                 setProperty(POPULATE_ASSEMBLIES, Boolean.TRUE.toString());
             }
@@ -980,7 +976,8 @@ public abstract class LIMSConnection {
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN workflow ON (workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
                 "LEFT JOIN extraction ON (extraction.plate = plate.id OR extraction.id = workflow.extractionId) " +
-                "LEFT OUTER JOIN assembly ON cyclesequencing.assembly = assembly.id " +
+                "LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction " +
+                "LEFT OUTER JOIN assembly ON sequencing_result.assembly = assembly.id " +
                 "WHERE");
         ArrayList<Object> sqlValues = new ArrayList<Object>();
 
@@ -1685,7 +1682,8 @@ public abstract class LIMSConnection {
         queryBuilder.append(" LEFT OUTER JOIN extraction ON plate.id = extraction.plate");
         queryBuilder.append(" LEFT OUTER JOIN pcr ON plate.id = pcr.plate");
         queryBuilder.append(" LEFT OUTER JOIN cyclesequencing ON plate.id = cyclesequencing.plate");
-        queryBuilder.append(" LEFT OUTER JOIN assembly ON cyclesequencing.assembly = assembly.id");
+        queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction");
+        queryBuilder.append(" LEFT OUTER JOIN assembly ON sequencing_result.assembly = assembly.id");
         queryBuilder.append(" LEFT OUTER JOIN workflow ON pcr.workflow = workflow.id");  // This is only ceremony, there won't be any
 
         queryBuilder.append(
@@ -1770,9 +1768,10 @@ public abstract class LIMSConnection {
             }
             conditionBuilder.append("(").append(plateQueryConditions).append(")");
         }
-
+        queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
         queryBuilder.append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
-                append("assembly ON assembly.workflow = workflow.id");
+                append("assembly ON assembly.id = sequencing_result.assembly");
+
         if(assemblyQueryConditions != null) {
             conditionBuilder.append(operatorString);
             conditionBuilder.append("(").append(assemblyQueryConditions).append(")");

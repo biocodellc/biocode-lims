@@ -1,3 +1,11 @@
+CREATE TABLE sequencing_result (
+    reaction  INTEGER,
+    assembly  INTEGER,
+    PRIMARY KEY (reaction, assembly),
+    FOREIGN KEY(reaction) REFERENCES cyclesequencing(id) ON DELETE CASCADE,
+    FOREIGN KEY(assembly) REFERENCES assembly(id) ON DELETE CASCADE
+);
+
 CREATE TABLE failure_reason (
     id      INT IDENTITY PRIMARY KEY,
     name	varchar(80),
@@ -6,9 +14,6 @@ CREATE TABLE failure_reason (
 
 ALTER TABLE assembly ADD COLUMN failure_reason INT NULL;
 ALTER TABLE assembly ADD FOREIGN KEY(failure_reason) REFERENCES failure_reason(id) ON DELETE SET NULL;
-
-ALTER TABLE cyclesequencing ADD COLUMN assembly INTEGER NULL;
-ALTER TABLE cyclesequencing ADD FOREIGN KEY(assembly) REFERENCES assembly(id) ON DELETE SET NULL;
 
 CREATE TABLE properties (
     name     VARCHAR(255)     PRIMARY KEY,

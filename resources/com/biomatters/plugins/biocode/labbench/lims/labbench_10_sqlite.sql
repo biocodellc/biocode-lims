@@ -246,12 +246,10 @@ CREATE TABLE cyclesequencing (
   cleanupMethod varchar(99) NOT NULL,
   direction varchar(32) NOT NULL,
   gelimage LONGVARBINARY,
-  assembly INTEGER NULL,
   --PRIMARY KEY  ( id ),
   FOREIGN KEY (plate) REFERENCES plate(id),
   FOREIGN KEY (workflow) REFERENCES workflow(id),
-  FOREIGN KEY (cocktail) REFERENCES cyclesequencing_cocktail(id),
-  FOREIGN KEY (assembly) REFERENCES assembly(id) ON DELETE SET NULL
+  FOREIGN KEY (cocktail) REFERENCES cyclesequencing_cocktail(id)
 );
 
 

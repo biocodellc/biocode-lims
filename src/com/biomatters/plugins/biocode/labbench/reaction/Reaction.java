@@ -978,7 +978,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                             // Requires schema 10.  This won't work for reactions that don't have an assembly.
                             PreparedStatement update = connection.createStatement(
                                     "UPDATE assembly SET failure_reason = ? WHERE id IN (" +
-                                        "SELECT assembly FROM cyclesequencing WHERE id = ?" +
+                                        "SELECT assembly FROM sequencing_result WHERE reaction = ?" +
                                     ")");
                             update.setInt(1, reason.getId());
                             update.setInt(2, reaction.getId());
