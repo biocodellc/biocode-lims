@@ -446,142 +446,29 @@ public abstract class LIMSConnection {
         }
     }
 
+
     /**
-     * This splits up the query because running large queries with lots of OR statements was freezing up the server - better to have the search take a bit longer than crash out and not run at all
-     * @param tissueSamples
-     * @param callback
-     * @param urnsToNotRetrieve
-     * @param cancelable
-     * @return
-     * @throws SQLException
+     *
+     * @param workflows Used to retrieve FIMS data if not null
+     * @param samples Used to retrieve FIMS data if not null
+     * @param sequenceIds The sequences to retrieve
+     * @param callback To add documents to
+     * @return A list of the documents found/added
+     * @throws SQLException if anything goes wrong
      */
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissues(Query query, List<FimsSample> tissueSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
-        if(tissueSamples == null || tissueSamples.size() == 0) {
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(
+            Collection<WorkflowDocument> workflows, List<FimsSample> samples,
+            List<Integer> sequenceIds, RetrieveCallback callback) throws SQLException {
+        if(sequenceIds.isEmpty()) {
             return Collections.emptyList();
         }
+        StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
+        sql.append("FROM workflow INNER JOIN assembly ON assembly.id IN ");
+        appendSetOfQuestionMarks(sql, sequenceIds.size());
+        sql.append(" AND workflow.id = assembly.workflow INNER JOIN extraction ON workflow.extractionId = extraction.id");
 
-        List<AnnotatedPluginDocument> assemblyDocuments = new ArrayList<AnnotatedPluginDocument>();
-        for(FimsSample sample : tissueSamples) {
-            if(cancelable != null && cancelable.isCanceled()) {
-                return Collections.emptyList();
-            }
-            GeneralUtilities.println("Searching "+sample.getId());
-            long currentTime = System.currentTimeMillis();
-            assemblyDocuments.addAll(getMatchingAssemblyDocumentsForTissue(query, sample, callback,  urnsToNotRetrieve, cancelable));
-            GeneralUtilities.println("Searching "+sample.getId()+" took "+(System.currentTimeMillis()-currentTime)/1000+" seconds");
-        }
-        return assemblyDocuments;
-    }
-
-
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForTissue(Query query, FimsSample tissue, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
-        List<? extends Query> refinedQueries;
-        CompoundSearchQuery.Operator operator;
-
-        if(query instanceof BasicSearchQuery) {
-            refinedQueries = Collections.emptyList();
-            operator = CompoundSearchQuery.Operator.OR;
-        }
-        else if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList(PLATE_NAME_FIELD.getCode(), PLATE_TYPE_FIELD.getCode(), PLATE_DATE_FIELD.getCode()));
-            operator = ((CompoundSearchQuery)query).getOperator();
-        }
-        else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList(PLATE_NAME_FIELD.getCode(), PLATE_TYPE_FIELD.getCode(), PLATE_DATE_FIELD.getCode()));
-            operator = CompoundSearchQuery.Operator.AND;
-        }
-
-        if(refinedQueries.size() == 0 && tissue == null) {
-            return Collections.emptyList();
-        }
-
-        String join;
-        switch(operator) {
-            case AND:
-                join = " AND ";
-                break;
-            default:
-                join = " OR ";
-        }
-
-        String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
-        List<String> terms = new ArrayList<String>();
-        List<Object> sqlValues = new ArrayList<Object>();
-        if(tissue != null) {
-            terms.add("extraction.sampleId=?");
-            sqlValues.add(tissue.getId());
-            sql = sql+"("+StringUtilities.join(" OR ", terms)+")";
-            if(refinedQueries.size() > 0) {
-                sql = sql + join;
-            }
-        }
-
-        if(refinedQueries.size() > 0)  {
-            sql = sql+"("+queryToSql(refinedQueries, operator, "assembly", sqlValues)+")";
-        }
-
-        return getMatchingAssemblyDocuments(null, Arrays.asList(tissue), callback, urnsToNotRetrieve, cancelable, sql, sqlValues);
-    }
-
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(Query query, final Collection<WorkflowDocument> workflows, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable) throws SQLException{
-        List<? extends Query> refinedQueries;
-        CompoundSearchQuery.Operator operator;
-
-        if(query instanceof BasicSearchQuery) {
-            query = generateAdvancedQueryFromBasicQuery(query);
-        }
-
-        if(query instanceof CompoundSearchQuery) {
-            refinedQueries = removeFields(((CompoundSearchQuery)query).getChildren(), Arrays.asList(PLATE_NAME_FIELD.getCode(), PLATE_TYPE_FIELD.getCode(), PLATE_DATE_FIELD.getCode()));
-            operator = ((CompoundSearchQuery)query).getOperator();
-        }
-        else {
-            refinedQueries = removeFields(Arrays.asList(query), Arrays.asList(PLATE_NAME_FIELD.getCode(), PLATE_TYPE_FIELD.getCode(), PLATE_DATE_FIELD.getCode()));
-            operator = CompoundSearchQuery.Operator.AND;
-        }
-
-        if(refinedQueries.size() == 0 && (workflows == null || workflows.size() == 0)) {
-            return Collections.emptyList();
-        }
-
-        List<Query> ultraRefinedQueries = new ArrayList<Query>();
-        for(Query q : refinedQueries) {
-            if(query instanceof AdvancedSearchQueryTerm) {
-                Object[] queryValues = ((AdvancedSearchQueryTerm) q).getValues();
-                if(queryValues.length == 0 || queryValues[0].equals("")) {
-                    continue;
-                }
-                ultraRefinedQueries.add(q);
-            }
-        }
-
-        String sql = "SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode FROM workflow, assembly, extraction WHERE workflow.id = assembly.workflow AND workflow.extractionId = extraction.id AND ";
-        List<String> terms = new ArrayList<String>();
-        List<Object> sqlValues = new ArrayList<Object>();
-        if(workflows != null && workflows.size() > 0) {
-            for(WorkflowDocument workflow : workflows) {
-                terms.add("workflow=?");
-                sqlValues.add(workflow.getId());
-            }
-            sql = sql+"("+StringUtilities.join(" OR ", terms)+")";
-        }
-
-        if(ultraRefinedQueries.size() > 0)  {
-            if(workflows != null && workflows.size() > 0) {
-                String join;
-                switch(operator) {
-                    case AND:
-                        join = " AND ";
-                        break;
-                    default:
-                        join = " OR ";
-                }
-                sql = sql + join;
-            }
-            sql = sql+"("+queryToSql(ultraRefinedQueries, operator, "assembly", sqlValues)+")";
-        }
-        printSql(sql, sqlValues);
-        return getMatchingAssemblyDocuments(workflows, null, callback, urnsToNotRetrieve, cancelable, sql, sqlValues);
+        return getMatchingAssemblyDocumentsForSQL(workflows, samples,
+                callback, new URN[0], callback, sql.toString(), new ArrayList<Object>(sequenceIds));
     }
 
     private static void printSql(String sql, List sqlValues){
@@ -598,7 +485,7 @@ public abstract class LIMSConnection {
         System.out.println(sql);
     }
 
-    private List<AnnotatedPluginDocument> getMatchingAssemblyDocuments(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws SQLException {
+    private List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForSQL(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws SQLException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyList();
         }
@@ -1061,10 +948,13 @@ public abstract class LIMSConnection {
     private class WorkflowsAndPlatesQueryResult {
         Map<Integer, Plate> plates;
         Map<Integer, WorkflowDocument> workflows;
+        List<Integer> sequenceIds;
 
-        private WorkflowsAndPlatesQueryResult(Map<Integer, Plate> plates, Map<Integer, WorkflowDocument> workflows) {
+        private WorkflowsAndPlatesQueryResult(Map<Integer, Plate> plates, Map<Integer, WorkflowDocument> workflows,
+                                              List<Integer> sequenceIds) {
             this.plates = plates;
             this.workflows = workflows;
+            this.sequenceIds = sequenceIds;
         }
     }
 
@@ -1083,6 +973,7 @@ public abstract class LIMSConnection {
         final StringBuilder totalErrors = new StringBuilder("");
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
+        List<Integer> sequenceIds = new ArrayList<Integer>();
 
         System.out.println("Creating Reactions...");
         int previousId = -1;
@@ -1092,7 +983,13 @@ public abstract class LIMSConnection {
                 throw new SQLException("Search cancelled due to lack of free memory");
             }
             if(cancelable != null && cancelable.isCanceled()) {
-                return new WorkflowsAndPlatesQueryResult(Collections.<Integer, Plate>emptyMap(), Collections.<Integer, WorkflowDocument>emptyMap());
+                return new WorkflowsAndPlatesQueryResult(Collections.<Integer, Plate>emptyMap(), Collections.<Integer, WorkflowDocument>emptyMap(),
+                        Collections.<Integer>emptyList());
+            }
+
+            int sequenceId = resultSet.getInt("assembly.id");
+            if(!resultSet.wasNull()) {
+                sequenceIds.add(sequenceId);
             }
 
             int workflowId = resultSet.getInt("workflow.id");
@@ -1172,7 +1069,7 @@ public abstract class LIMSConnection {
             };
             ThreadUtilities.invokeNowOrLater(runnable);
         }
-        return new WorkflowsAndPlatesQueryResult(plateMap, workflowDocs);
+        return new WorkflowsAndPlatesQueryResult(plateMap, workflowDocs, sequenceIds);
     }
 
     private Query generateAdvancedQueryFromBasicQuery(Query query) {
@@ -1426,6 +1323,7 @@ public abstract class LIMSConnection {
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
         List<PlateDocument> plates = new ArrayList<PlateDocument>();
         List<AnnotatedPluginDocument> traces = new ArrayList<AnnotatedPluginDocument>();
+        List<Integer> sequenceIds = new ArrayList<Integer>();
 
         public List<WorkflowDocument> getWorkflows() {
             return Collections.unmodifiableList(workflows);
@@ -1437,6 +1335,10 @@ public abstract class LIMSConnection {
 
         public List<AnnotatedPluginDocument> getTraces() {
             return Collections.unmodifiableList(traces);
+        }
+
+        public List<Integer> getSequenceIds() {
+            return Collections.unmodifiableList(sequenceIds);
         }
     }
 
@@ -1527,6 +1429,7 @@ public abstract class LIMSConnection {
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
             plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, resultSet);
+            result.sequenceIds.addAll(plateAndWorkflowsFromResultSet.sequenceIds);
         } finally {
             cleanUpStatements(preparedStatement);
         }
@@ -1653,7 +1556,9 @@ public abstract class LIMSConnection {
                 long start = System.currentTimeMillis();
                 ResultSet remainingPlatesSet = getRemainingPlates.executeQuery();
                 System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
-                extraPlates = createPlateAndWorkflowsFromResultSet(callback, remainingPlatesSet).plates;
+                WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, remainingPlatesSet);
+                extraPlates = plateAndWorkflowsFromResultSet.plates;
+                result.sequenceIds.addAll(plateAndWorkflowsFromResultSet.sequenceIds);
             } finally {
                 cleanUpStatements(getRemainingPlates);
             }
