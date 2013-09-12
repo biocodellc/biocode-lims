@@ -971,7 +971,7 @@ public abstract class LIMSConnection {
             return Collections.emptyList();
         }
         StringBuilder sql = new StringBuilder("SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, " +
-                "plate.*, assembly.id, assembly.progress, assembly.failure_reason FROM plate " +
+                "plate.*, assembly.id, assembly.progress, assembly.failure_reason, assembly.failure_notes FROM plate " +
                 "LEFT JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
                 "LEFT JOIN pcr ON pcr.plate = plate.id " +
                 "LEFT JOIN workflow ON (workflow.id = pcr.workflow OR workflow.id = cyclesequencing.workflow) " +
@@ -1678,7 +1678,7 @@ public abstract class LIMSConnection {
             return null;
         }
         StringBuilder queryBuilder = new StringBuilder("SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, " +
-                "plate.*, assembly.id, assembly.progress, assembly.failure_reason  FROM plate");
+                "plate.*, assembly.id, assembly.progress, assembly.failure_reason, assembly.failure_notes FROM plate");
         queryBuilder.append(" LEFT OUTER JOIN extraction ON plate.id = extraction.plate");
         queryBuilder.append(" LEFT OUTER JOIN pcr ON plate.id = pcr.plate");
         queryBuilder.append(" LEFT OUTER JOIN cyclesequencing ON plate.id = cyclesequencing.plate");
@@ -1727,7 +1727,7 @@ public abstract class LIMSConnection {
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress, assembly.failure_reason");
+                "SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress, assembly.failure_reason, assembly.failure_notes");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
         // Can safely do INNER JOIN here because extractionId is non-null column in workflow

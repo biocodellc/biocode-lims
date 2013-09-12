@@ -14,6 +14,7 @@ CREATE TABLE failure_reason (
 ) ENGINE=INNODB;
 
 ALTER TABLE assembly ADD COLUMN failure_reason INT NULL;
+ALTER TABLE assembly ADD COLUMN failure_notes LONGTEXT;
 ALTER TABLE assembly ADD FOREIGN KEY(failure_reason) REFERENCES failure_reason(id) ON DELETE SET NULL;
 
 CREATE TABLE properties (

@@ -60,7 +60,7 @@ public class FailureReason {
             possibleValues.add(new Options.OptionValue("" + reason.getId(), reason.getName(), reason.getDescription()));
         }
 
-        Options.ComboBoxOption<Options.OptionValue> option = toAddTo.addComboBoxOption(OPTION_NAME, "Reason: ", possibleValues, defaultValue);
+        Options.ComboBoxOption<Options.OptionValue> option = toAddTo.addComboBoxOption(OPTION_NAME, "Reason", possibleValues, defaultValue);
         if(possibleValues.size() == 1) {
             option.setEnabled(false);
             option.setDescription("Possible values for this option need to be set up in the database. " +

@@ -57,6 +57,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
     private static final String NUM_TRACES_ATTRIBUTE = "cachedNumTraces";
     private static final String FAILURE_REASON = "ReasonForStatus";
+    private static final String FAILURE_NOTES = "StatusNotes";
 
     @Override
     public Element toXML() {
@@ -122,6 +123,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         int reasonId = r.getInt("assembly.failure_reason");
         if(!r.wasNull()) {
             FailureReason.setFailureReasonOnOptions(options, reasonId);
+        }
+
+        String failureNotes = r.getString("assembly.failure_notes");
+        if(failureNotes != null) {
+            options.setValue("reasonDetails", failureNotes);
         }
 
         DocumentSelectionOption primerOption = (DocumentSelectionOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);

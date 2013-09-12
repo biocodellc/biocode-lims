@@ -408,7 +408,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         //noinspection ConstantConditions
         try {
             statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)");
+                "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
             updateReaction = limsConnection.createStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
 
             statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
@@ -491,6 +491,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     statement.setObject(20, null);
                 } else {
                     statement.setInt(20, reason.getId());
+                }
+                String failNotes = options.getFailureNotes();
+                if(failNotes == null) {
+                    statement.setObject(21, null);
+                } else {
+                    statement.setString(21, failNotes);
                 }
 
                 statement.execute();

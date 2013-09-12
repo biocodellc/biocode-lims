@@ -106,6 +106,7 @@ CREATE TABLE assembly (
   bin VARCHAR(255),
   ambiguities INTEGER,
   failure_reason INTEGER,
+  failure_notes LONGVARCHAR,
   FOREIGN KEY (workflow) REFERENCES workflow(id),
   FOREIGN KEY (failure_reason) REFERENCES failure_reason(id)
 );

@@ -65,6 +65,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         details.addStringOption("technician", "Your name", "");
         if(!passed) {
             reasonOption = FailureReason.addToOptions(details);
+            details.addMultipleLineStringOption("reasonDetails", "Reason Details", "", 4, true);
         }
         details.addMultipleLineStringOption("notes", "Notes", "", 5, true);
         addChildOptions("details", "Details", null, details, true);
@@ -113,6 +114,10 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         } else {
             return FailureReason.getReasonFromOption(reasonOption);
         }
+    }
+
+    public String getFailureNotes() {
+        return getValueAsString("details.reasonDetails");
     }
 
 

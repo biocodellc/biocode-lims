@@ -61,6 +61,7 @@ CREATE TABLE `assembly` (
   `bin` varchar(255),
   `ambiguities` int(10),
   `failure_reason` int,
+  `failure_notes` longtext,
   PRIMARY KEY  (`id`),
   KEY `FK_assembly_1` (`workflow`),
   CONSTRAINT `FK_assembly_1` FOREIGN KEY (`workflow`) REFERENCES `workflow` (`id`),

@@ -241,9 +241,16 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, RUN_VALUE, PASSED_VALUE, SUSPECT_VALUE, FAILED_VALUE };
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
 
+
+        String reasonFailDetailsNotEditable = "This value is not editable.  It is set when marking a sequencing result as fail.";
         ComboBoxOption<OptionValue> failureReasonOption = FailureReason.addToOptions(this);
         failureReasonOption.setEnabled(false);
-        failureReasonOption.setDescription("This value is not editable.  It is set when marking a sequencing result as fail.");
+        failureReasonOption.setDescription(reasonFailDetailsNotEditable);
+
+        MultipleLineStringOption failureNotesOption = addMultipleLineStringOption("reasonDetails", "Reason Details", "", 4, true);
+        failureNotesOption.setEnabled(false);
+        failureNotesOption.setDescription(reasonFailDetailsNotEditable);
+
 
         addLabel("");
         addPrimerSelectionOption(PRIMER_OPTION_ID, "Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());//new PrimerOption(PRIMER_OPTION_ID, "Primer");
