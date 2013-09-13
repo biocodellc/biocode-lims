@@ -3,7 +3,7 @@
 * Added 2 new failure reason fields for marking sequencing results as fail.
 * Sequencing results now belong to a specific reaction rather than a workflow.
 
-==Biocode Plugin 2.4.4 - TBD==
+==Biocode Plugin 2.4.4 - 13 September 2013==
 * Bulk adding traces now displays problems found after completing the batch rather than stopping immediately.
 * Fix crash when search results contain plates with no reactions.
 * Fix crash when there are no search results.
