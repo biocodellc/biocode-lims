@@ -722,20 +722,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         GelImage image = reaction.getGelImage();
                         statement.setBytes(17, image != null ? image.getImageBytes() : null);
                         statement.setString(18, options.getValueAsString("control"));
-                        statement.addBatch();
-                        //statement.execute();
-                    }
-                    try {
+
                         if(insertCount > 0) {
-                            insertStatement.executeBatch();
+                            insertStatement.executeUpdate();
                         }
                         if(updateCount > 0) {
-                            updateStatement.executeBatch();
-                        }
-                    }
-                    catch(SQLException e) {
-                        if(!e.getMessage().toLowerCase().contains("not in batch")) { //suppress if the SQL driver doesn't support batch mode...
-                            throw e;
+                            updateStatement.executeUpdate();
                         }
                     }
                 }
