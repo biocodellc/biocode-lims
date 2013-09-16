@@ -504,6 +504,18 @@ CREATE TABLE properties (
 ) ENGINE=INNODB;
 
 
+--
+-- Definition of table `properties`
+--
+CREATE TABLE sequencing_result (
+    reaction  INT(11) NULL,
+    assembly  INT(10) UNSIGNED NULL,
+    PRIMARY KEY (reaction, assembly),
+    FOREIGN KEY(reaction) REFERENCES cyclesequencing(id) ON DELETE CASCADE,
+    FOREIGN KEY(assembly) REFERENCES assembly(id) ON DELETE CASCADE
+) ENGINE=INNODB;
+
+
 
 /*!40000 ALTER TABLE `traces` DISABLE KEYS */;
 /*!40000 ALTER TABLE `traces` ENABLE KEYS */;

@@ -415,6 +415,17 @@ CREATE TABLE properties (
     value    VARCHAR(255)
 );
 
+--
+-- Definition of table `sequencing_result`
+--
+CREATE TABLE sequencing_result (
+    reaction  INTEGER,
+    assembly  INTEGER,
+    PRIMARY KEY (reaction, assembly),
+    FOREIGN KEY(reaction) REFERENCES cyclesequencing(id) ON DELETE CASCADE,
+    FOREIGN KEY(assembly) REFERENCES assembly(id) ON DELETE CASCADE
+);
+
 
 
 
