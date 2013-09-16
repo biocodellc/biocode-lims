@@ -2,6 +2,7 @@
 * Added # Traces field to the display options in the plate view.
 * Added 2 new failure reason fields for marking sequencing results as fail.
 * Sequencing results now belong to a specific reaction rather than a workflow.
+* Fixed compatibility with Geneious R7.  The minimum version of Geneious is still version 5.6.0.
 
 ==Biocode Plugin 2.4.4 - 13 September 2013==
 * Bulk adding traces now displays problems found after completing the batch rather than stopping immediately.

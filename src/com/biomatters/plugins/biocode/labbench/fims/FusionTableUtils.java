@@ -23,10 +23,7 @@ import com.google.api.services.fusiontables.model.Sqlresponse;
 import com.google.api.services.fusiontables.model.Table;
 import com.google.api.services.fusiontables.model.TableList;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -56,7 +53,7 @@ public class FusionTableUtils {
     public static Credential authorize() throws IOException {
         // load client secrets
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
-                JSON_FACTORY, FusionTableUtils.class.getResourceAsStream("/client_secrets.json"));
+                JSON_FACTORY, new InputStreamReader(FusionTableUtils.class.getResourceAsStream("/client_secrets.json")));
         if (clientSecrets.getDetails().getClientId().startsWith("Enter")
                 || clientSecrets.getDetails().getClientSecret().startsWith("Enter ")) {
             throw new RuntimeException("Google API client id's are missing");
