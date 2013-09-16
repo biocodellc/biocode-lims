@@ -676,12 +676,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     public static void saveReactions(Reaction[] reactions, Type type, LIMSConnection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
+        PreparedStatement getLastId = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ?
+                connection.createStatement("CALL IDENTITY();") : connection.createStatement("SELECT last_insert_id()");
         switch(type) {
             case Extraction:
                 String insertSQL;
                 String updateSQL;
                 insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage, control) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=?, control=? WHERE id=?";
+
                 PreparedStatement insertStatement = connection.createStatement(insertSQL);
                 PreparedStatement updateStatement = connection.createStatement(updateSQL);
                 int insertCount = 0;
@@ -725,6 +728,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
                         if(insertCount > 0) {
                             insertStatement.executeUpdate();
+                            ResultSet resultSet = getLastId.executeQuery();
+                            if(resultSet.next()) {
+                                reaction.setId(resultSet.getInt(1));
+                            }
+                            resultSet.close();
                         }
                         if(updateCount > 0) {
                             updateStatement.executeUpdate();
@@ -830,6 +838,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         GelImage image = reaction.getGelImage();
                         statement.setBytes(17, image != null ? image.getImageBytes() : null);
                         statement.execute();
+
+                        if(reaction.getId() < 0) {
+                            ResultSet resultSet = getLastId.executeQuery();
+                            if(resultSet.next()) {
+                                reaction.setId(resultSet.getInt(1));
+                            }
+                            resultSet.close();
+                        }
+
                         saveCount++;
                     }
                 }
@@ -934,6 +951,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 //
 //                        statement.setString(14, sequenceString);
                         statement.execute();
+                        if(reaction.getId() < 0) {
+                            ResultSet resultSet = getLastId.executeQuery();
+                            if(resultSet.next()) {
+                                reaction.setId(resultSet.getInt(1));
+                            }
+                            resultSet.close();
+                        }
+
                         if(((CycleSequencingReaction)reaction).getTraces() != null) {
                             int reactionId = reaction.getId();
                             for(Integer traceId : ((CycleSequencingReaction)reaction).getTracesToRemoveOnSave()) {
