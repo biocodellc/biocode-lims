@@ -449,26 +449,34 @@ public abstract class LIMSConnection {
 
     /**
      *
+     *
      * @param workflows Used to retrieve FIMS data if not null
      * @param samples Used to retrieve FIMS data if not null
      * @param sequenceIds The sequences to retrieve
      * @param callback To add documents to
+     * @param includeFailed true to included empty sequences for failed results
      * @return A list of the documents found/added
      * @throws SQLException if anything goes wrong
      */
     public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(
             Collection<WorkflowDocument> workflows, List<FimsSample> samples,
-            List<Integer> sequenceIds, RetrieveCallback callback) throws SQLException {
+            List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws SQLException {
         if(sequenceIds.isEmpty()) {
             return Collections.emptyList();
         }
+        List<Object> sqlValues = new ArrayList<Object>(sequenceIds);
+
         StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
         sql.append("FROM workflow INNER JOIN assembly ON assembly.id IN ");
         appendSetOfQuestionMarks(sql, sequenceIds.size());
+        if(!includeFailed) {
+            sql.append(" AND assembly.progress = ?");
+            sqlValues.add("passed");
+        }
         sql.append(" AND workflow.id = assembly.workflow INNER JOIN extraction ON workflow.extractionId = extraction.id");
 
         return getMatchingAssemblyDocumentsForSQL(workflows, samples,
-                callback, new URN[0], callback, sql.toString(), new ArrayList<Object>(sequenceIds));
+                callback, new URN[0], callback, sql.toString(), sqlValues);
     }
 
     private static void printSql(String sql, List sqlValues){
