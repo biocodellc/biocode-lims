@@ -121,8 +121,8 @@ public class SequencingResult implements XMLSerializable {
             reason = FailureReason.getReasonFromIdString(""+reasonId);
         }
 
-        return new SequencingResult(Status.fromString(statusString), resultSet.getDate("date"),
-                resultSet.getString("notes"), reason, resultSet.getString("failure_notes"), resultSet.getInt("assembly.id"));
+        return new SequencingResult(Status.fromString(statusString), resultSet.getDate("assembly.date"),
+                resultSet.getString("assembly.notes"), reason, resultSet.getString("failure_notes"), resultSet.getInt("assembly.id"));
     }
 
     private static final String STATUS = "status";
