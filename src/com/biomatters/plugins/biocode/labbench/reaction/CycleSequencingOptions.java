@@ -185,11 +185,10 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
 
                     }
                 }
-                SequencesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"));
+                TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"));
                 if(editor.showDialog(tracesButton.getComponent())) {
-                    reaction.setTraces(editor.getTraces());
-                    List<Trace> deleted = editor.getDeletedTraces();
-                    for(Trace t : deleted) {
+                    reaction.setTraces(editor.getSourceObjects());
+                    for(Trace t : editor.getDeletedObjects()) {
                         reaction.addTraceToRemoveOnSave(t.getId());
                     }
                 }

@@ -32,13 +32,18 @@ public class TracesEditor extends SequencesEditor<Trace> {
         return ReactionUtilities.getAllSequences(traces);
     }
 
+    @Override
+    boolean canEdit() {
+        return true;
+    }
+
     void importSequences() {
         WritableDatabaseService selectedFolder = ServiceUtilities.getUserSelectedFolder(null);
         if(selectedFolder != null){
             int currentIndex = 0;
             try {
                 for(SequenceSelection.SequenceIndex selectedIndex : getCurrentSelection().getSelectedSequenceIndices()) {
-                    for (Trace trace : getTraces()) {
+                    for (Trace trace : getSourceObjects()) {
                         for (NucleotideSequenceDocument doc : trace.getSequences()) {
                             if (currentIndex == selectedIndex.getSequenceIndex()) {
                                 selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(doc), ProgressListener.EMPTY).setUnread(true);
@@ -57,7 +62,7 @@ public class TracesEditor extends SequencesEditor<Trace> {
         List<Trace> removedTraces = new ArrayList<Trace>();
         int currentIndex = 0;
         for(SequenceSelection.SequenceIndex selectedIndex : getCurrentSelection().getSelectedSequenceIndices()) {
-            List<Trace> traces = getTraces();
+            List<Trace> traces = getSourceObjects();
             for (Trace trace : traces) {
                 boolean removed = false;
                 for (NucleotideSequenceDocument doc : trace.getSequences()) {

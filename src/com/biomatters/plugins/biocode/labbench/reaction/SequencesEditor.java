@@ -1,23 +1,17 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.ProgressFrame;
-import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseService;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import jebl.util.ProgressListener;
 import org.jdom.Element;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.Preferences;
@@ -29,8 +23,8 @@ import java.util.prefs.Preferences;
  *          Created on 9/07/2009 10:59:03 PM
  */
 public abstract class SequencesEditor<T> {
-    private List<Trace> traces;
-    private List<Trace> deletedTraces;
+    private List<T> sourceObjects;
+    private List<T> deletedObjects;
     private DocumentViewerFactory factory;
     Preferences preferences = Preferences.userNodeForPackage(getClass());
     private JPanel holder = new JPanel(new BorderLayout());
@@ -41,7 +35,7 @@ public abstract class SequencesEditor<T> {
     private DocumentViewer documentViewer;
     private String name;
 
-    public SequencesEditor(final List<Trace> tracesa, String reactionName) {
+    public SequencesEditor(final List<T> traces, String reactionName) {
         this.name = reactionName;
         sequenceHolder.setPreferredSize(new Dimension(640,480));
         addSequenceAction = new GeneiousAction("Add sequence(s)") {
@@ -53,8 +47,8 @@ public abstract class SequencesEditor<T> {
 
         removeSequencesAction = new GeneiousAction("Remove sequence(s)") {
             public void actionPerformed(ActionEvent e) {
-                List<Trace> removed = removeSequences();
-                traces.removeAll(removed);
+                List<T> removed = removeSequences();
+                SequencesEditor.this.sourceObjects.removeAll(removed);
                 updateViewer();
             }
         };
@@ -79,15 +73,15 @@ public abstract class SequencesEditor<T> {
         };
 
 
-        this.traces = new ArrayList<Trace>(tracesa);
-        this.deletedTraces = new ArrayList<Trace>();
-        if(traces != null && traces.size() > 0) {
+        this.sourceObjects = new ArrayList<T>(traces);
+        this.deletedObjects = new ArrayList<T>();
+        if(this.sourceObjects != null && this.sourceObjects.size() > 0) {
             updateViewer();
         }
     }
 
-    public List<Trace> getDeletedTraces() {
-        return deletedTraces;
+    public List<T> getDeletedObjects() {
+        return deletedObjects;
     }
 
     public static DocumentViewerFactory getViewerFactory(DefaultSequenceListDocument sequenceList) {
@@ -110,14 +104,15 @@ public abstract class SequencesEditor<T> {
     public boolean showDialog(Component owner) {
         holder.add(sequenceHolder, BorderLayout.CENTER);
 
-        JToolBar toolbar = new JToolBar();
-        toolbar.setFloatable(false);
-        holder.add(toolbar, BorderLayout.NORTH);
-        toolbar.add(addSequenceAction);
-        toolbar.add(removeSequencesAction);
-        toolbar.add(importSequencesAction);
-        updateToolbar();
-
+        if(canEdit()) {
+            JToolBar toolbar = new JToolBar();
+            toolbar.setFloatable(false);
+            holder.add(toolbar, BorderLayout.NORTH);
+            toolbar.add(addSequenceAction);
+            toolbar.add(removeSequencesAction);
+            toolbar.add(importSequencesAction);
+            updateToolbar();
+        }
 
         return Dialogs.showOkCancelDialog(holder, "Add Traces", owner, Dialogs.DialogIcon.NO_ICON);
     }
@@ -128,8 +123,13 @@ public abstract class SequencesEditor<T> {
             public void run() {
                 sequenceHolder.removeAll();
                 sequenceSelection = null;
-                if(traces != null && traces.size() > 0) {
-                    List<NucleotideSequenceDocument> sequences = createSequences(traces);
+                if(sourceObjects != null && sourceObjects.size() > 0) {
+                    List<NucleotideSequenceDocument> sequences = createSequences(sourceObjects);
+                    if(sequences.isEmpty()) {
+                        Dialogs.showMessageDialog("No sequences to display");
+                        return;
+                    }
+
                     if(factory == null) {
                         factory = getViewerFactory(DefaultSequenceListDocument.forNucleotideSequences(sequences));
                         if(factory == null) {
@@ -157,13 +157,15 @@ public abstract class SequencesEditor<T> {
     }
 
     private void updateToolbar() {
-        boolean enabled = sequenceSelection != null && sequenceSelection.getSelectedSequenceCount() > 0;
-        removeSequencesAction.setEnabled(enabled);
-        importSequencesAction.setEnabled(enabled);
+        if(canEdit()) {
+            boolean enabled = sequenceSelection != null && sequenceSelection.getSelectedSequenceCount() > 0;
+            removeSequencesAction.setEnabled(enabled);
+            importSequencesAction.setEnabled(enabled);
+        }
     }
 
-    public List<Trace> getTraces() {
-        return traces;
+    public List<T> getSourceObjects() {
+        return sourceObjects;
     }
 
 
@@ -188,13 +190,20 @@ public abstract class SequencesEditor<T> {
         return holder;
     }
 
-    void addTrace(Trace trace) {
-        traces.add(trace);
+    void addTrace(T trace) {
+        sourceObjects.add(trace);
     }
 
-    abstract List<NucleotideSequenceDocument> createSequences(List<Trace> traces);
+    abstract List<NucleotideSequenceDocument> createSequences(List<T> traces);
 
+    /**
+     * The sequences can be added/removed
+     *
+     * @return true if the sequences can be added/removed.  If true then {@link #addSequences()} and {@link #removeSequences()}
+     * must be implemented.
+     */
+    abstract boolean canEdit();
     abstract void importSequences();
     abstract void addSequences();
-    abstract List<Trace> removeSequences();
+    abstract List<T> removeSequences();
 }

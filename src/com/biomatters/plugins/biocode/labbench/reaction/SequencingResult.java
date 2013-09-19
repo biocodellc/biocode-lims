@@ -3,8 +3,12 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.GTable;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -18,8 +22,10 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Represents a revision of the final end product of sequencing.  Can either be {@link Status#PASS} or {@link Status#FAIL}.
@@ -116,7 +122,7 @@ public class SequencingResult implements XMLSerializable {
         }
 
         return new SequencingResult(Status.fromString(statusString), resultSet.getDate("date"),
-                resultSet.getString("notes"), reason, resultSet.getString("failure_notes"), resultSet.getInt("id"));
+                resultSet.getString("notes"), reason, resultSet.getString("failure_notes"), resultSet.getInt("assembly.id"));
     }
 
     private static final String STATUS = "status";
@@ -196,7 +202,7 @@ public class SequencingResult implements XMLSerializable {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 switch (columnIndex) {
-                    case 5: return SequenceLink.class;
+                    case 5: return SequencingResult.class;
                     default: return String.class;
                 }
             }
@@ -220,7 +226,7 @@ public class SequencingResult implements XMLSerializable {
                         FailureReason reason = result.getReason();
                         return reason == null ? null : reason.getName();
                     case 4: return result.getReasonDetails();
-                    case 5: return new SequenceLink(result.getSequenceId());
+                    case 5: return result;
                     default:
                         return null;
                 }
@@ -241,15 +247,16 @@ public class SequencingResult implements XMLSerializable {
 
         GPanel resultsPanel = new GPanel(new BorderLayout());
         final GTable table = new GTable(model);
-        table.setDefaultRenderer(SequenceLink.class, new SequenceLinkRendererEditor());
+        table.setDefaultRenderer(SequencingResult.class, new SequencingResultRendererEditor());
         table.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 Object value = table.getValueAt(table.getSelectedRow(), table.getSelectedColumn());
-                if(value instanceof SequenceLink) {
-                    // todo
-                    int sequenceId = ((SequenceLink) value).id;
-                    Dialogs.showMessageDialog("todo: Display sequence view of assembly #" + sequenceId);
+                if(value instanceof SequencingResult) {
+                    final SequencingResult result = (SequencingResult) value;
+                    if(result.getStatus() == Status.PASS) {
+                        displayTableOfResults(result, table);
+                    }
                 }
             }
 
@@ -277,15 +284,36 @@ public class SequencingResult implements XMLSerializable {
         Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, title), resultsPanel);
     }
 
-    private static class SequenceLink {
-        private int id;
-
-        private SequenceLink(int id) {
-            this.id = id;
+    private static void displayTableOfResults(final SequencingResult result, GTable table) {
+        final AtomicReference<NucleotideSequenceDocument> doc = new AtomicReference<NucleotideSequenceDocument>();
+        final AtomicReference<Exception> error = new AtomicReference<Exception>();
+        Runnable downloadSeqs = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    LIMSConnection connection = BiocodeService.getInstance().getActiveLIMSConnection();
+                    List<AnnotatedPluginDocument> matching = connection.getMatchingAssemblyDocumentsForIds(
+                            null, null, Collections.singletonList(result.getSequenceId()), null, false);
+                    assert(matching.size() <= 1);
+                    for (AnnotatedPluginDocument annotatedPluginDocument : matching) {
+                        doc.set((NucleotideSequenceDocument) annotatedPluginDocument.getDocumentOrNull());
+                    }
+                } catch (SQLException e) {
+                    error.set(e);
+                }
+            }
+        };
+        BiocodeService.block("Downloading Sequences...", null, downloadSeqs);
+        @SuppressWarnings({"ThrowableResultOfMethodCallIgnored"}) Exception exception = error.get();
+        if(exception != null) {
+            Dialogs.showMessageDialog("Failed to download sequences: " + exception.getMessage());
+        } else {
+            SequencingResultEditor editor = new SequencingResultEditor(Collections.singletonList(doc.get()), "");
+            editor.showDialog(table);
         }
     }
 
-    private static class SequenceLinkRendererEditor extends AbstractCellEditor implements TableCellRenderer, TableCellEditor{
+    private static class SequencingResultRendererEditor extends AbstractCellEditor implements TableCellRenderer, TableCellEditor{
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
             return new JButton("View");
@@ -298,7 +326,11 @@ public class SequencingResult implements XMLSerializable {
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            return new JButton("View");
+            if(value instanceof SequencingResult && ((SequencingResult)value).getStatus() == Status.PASS) {
+                return new JButton("View");
+            } else {
+                return table.getDefaultRenderer(String.class).getTableCellRendererComponent(table, null, isSelected, hasFocus, row, column);
+            }
         }
     }
 }
