@@ -120,6 +120,7 @@
           <root url="jar://$MODULE_DIR$/lib/fusiotables/gson-2.1.jar!/" />
           <root url="jar://$MODULE_DIR$/lib/fusiotables/jetty-util-6.1.26.jar!/" />
           <root url="jar://$MODULE_DIR$/lib/fusiotables/google-api-services-fusiontables-v1-rev33-1.17.0-rc.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/fusiotables/javaee.jar!/" />
         </CLASSES>
         <JAVADOC>
           <root url="jar://$MODULE_DIR$/lib/fusiotables/google-api-services-fusiontables-v1-rev33-1.17.0-rc-javadoc.jar!/" />
