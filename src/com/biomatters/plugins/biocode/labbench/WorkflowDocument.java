@@ -289,6 +289,10 @@ public class WorkflowDocument extends MuitiPartDocument {
                     // by date descending we'll always be taking the most recent entry from the database.  In the future
                     // we may want to display more than just the most recent entry.
                     alreadyThere = true;
+                    SequencingResult seqResult = SequencingResult.fromResultSet(resultSet);
+                    if(seqResult != null) {
+                        ((CycleSequencingReaction)r).addSequencingResults(Collections.singletonList(seqResult));
+                    }
                 }
             }
             if(!alreadyThere) {

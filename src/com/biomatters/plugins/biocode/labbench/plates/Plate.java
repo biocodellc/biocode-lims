@@ -406,8 +406,13 @@ public class Plate implements XMLSerializable {
         }
         r.setPlateId(this.id);
         r.setPlateName(getName());
+
         if(reactions[r.getPosition()] == null || reactions[r.getPosition()].isEmpty()) {
             reactions[r.getPosition()] = r;
+        } else if(r instanceof CycleSequencingReaction && !((CycleSequencingReaction)r).getSequencingResults().isEmpty()){
+            if(reactions[r.getPosition()] instanceof CycleSequencingReaction) {
+                ((CycleSequencingReaction)reactions[r.getPosition()]).addSequencingResults(((CycleSequencingReaction) r).getSequencingResults());
+            }
         }
         r.setLocationString(getWell(r.getPosition(), plateSize).toString());
         return r;

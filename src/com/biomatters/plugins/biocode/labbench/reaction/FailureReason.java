@@ -83,6 +83,13 @@ public class FailureReason {
             return null;
         }
 
+        return getReasonFromIdString(reasonId);
+    }
+
+    public static FailureReason getReasonFromIdString(String reasonId) {
+        if(reasonId == null) {
+            return null;
+        }
         for (FailureReason possible : BiocodeService.getInstance().getActiveLIMSConnection().getPossibleFailureReasons()) {
             if(reasonId.equals(""+possible.getId())) {
                 return possible;

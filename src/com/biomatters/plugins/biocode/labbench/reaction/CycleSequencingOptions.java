@@ -2,31 +2,22 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
-import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
-import com.biomatters.geneious.publicapi.utilities.Base64Coder;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 import com.biomatters.plugins.biocode.labbench.TransactionException;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,10 +25,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
-import java.lang.ref.WeakReference;
 
 /**
  * @author Steven Stones-Havas
@@ -68,6 +57,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
     private Option<String, ? extends JComponent> labelOption;
     private com.biomatters.plugins.biocode.labbench.ButtonOption tracesButton;
 
+    static final String SEQ_RESULTS_BUTTON_NAME = "viewSeqResults";
     public static final String PRIMER_OPTION_ID = "primer";
     static final String COCKTAIL_BUTTON_ID = "cocktailEdit";
     static final String LABEL_OPTION_ID = "label";
@@ -122,6 +112,19 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
         addPrimersButton = (ButtonOption)getOption(ADD_PRIMER_TO_LOCAL_ID);
 
+        ButtonOption viewSeqResultsButton = (ButtonOption)getOption(SEQ_RESULTS_BUTTON_NAME);
+        if(viewSeqResultsButton != null) {
+            viewSeqResultsButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if(reaction.getSequencingResults().isEmpty()) {
+                        Dialogs.showMessageDialog("<html>This reaction does not have any sequencing results attached.  Use the <b>Mark as Pass/Fail in LIMS</b> operations to add results.</html>", "No Results");
+                    } else {
+                        SequencingResult.display("Sequencing Result Revisions", reaction.getSequencingResults());
+                    }
+                }
+            });
+        }
 
         ActionListener cocktailButtonListener = new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -240,6 +243,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
 
         OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, RUN_VALUE, PASSED_VALUE, SUSPECT_VALUE, FAILED_VALUE };
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
+        addButtonOption(SEQ_RESULTS_BUTTON_NAME, "", "View " + (reaction != null ? reaction.getSequencingResults().size() : 0) + " Sequencing Results");
 
 
         String reasonFailDetailsNotEditable = "This value is not editable.  It is set when marking a sequencing result as fail.";
@@ -306,4 +310,10 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         return primerList;
     }
 
+    @Override
+    public void setReaction(CycleSequencingReaction r) {
+        super.setReaction(r);
+        setValue(SEQ_RESULTS_BUTTON_NAME, "View " + (reaction != null ? reaction.getSequencingResults().size() : 0) + " Sequencing Results");
+        getOption(SEQ_RESULTS_BUTTON_NAME).setEnabled(reaction != null && !reaction.getSequencingResults().isEmpty());
+    }
 }

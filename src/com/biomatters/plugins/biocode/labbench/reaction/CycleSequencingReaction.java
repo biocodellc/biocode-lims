@@ -43,6 +43,16 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     private WeakReference<List<Trace>> traces;
     private List<Trace> tracesStrongReference;
 
+    public List<SequencingResult> getSequencingResults() {
+        return Collections.unmodifiableList(sequencingResults);
+    }
+
+    public void addSequencingResults(Collection<SequencingResult> results) {
+        sequencingResults.addAll(results);
+    }
+
+    private List<SequencingResult> sequencingResults = new ArrayList<SequencingResult>();
+
     private int cacheNumTraces;
 
     public CycleSequencingReaction() {
@@ -58,6 +68,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     private static final String NUM_TRACES_ATTRIBUTE = "cachedNumTraces";
     private static final String FAILURE_REASON = "ReasonForStatus";
     private static final String FAILURE_NOTES = "StatusNotes";
+    private static final String SEQ_RESULTS = "sequencingResults";
 
     @Override
     public Element toXML() {
@@ -73,6 +84,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             if(reason != null) {
                 element.addContent(new Element(FAILURE_REASON).setText(""+ reason.getId()));
             }
+        }
+        Element resultsElement = new Element(SEQ_RESULTS);
+        element.addContent(resultsElement);
+        for (SequencingResult sequencingResult : sequencingResults) {
+            resultsElement.addContent(sequencingResult.toXML());
         }
         return element;
     }
@@ -96,6 +112,13 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 FailureReason.setFailureReasonOnOptions(getOptions(), Integer.parseInt(reasonId));
             } catch (NumberFormatException e) {
                 // Bad number stored in XML, ignore.
+            }
+        }
+
+        Element resultsElement = element.getChild(SEQ_RESULTS);
+        if(resultsElement != null) {
+            for (Element child : resultsElement.getChildren()) {
+                sequencingResults.add(new SequencingResult(child));
             }
         }
     }
@@ -166,6 +189,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         if(fimsConnection != null) {
             setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
+        }
+
+        SequencingResult result = SequencingResult.fromResultSet(r);
+        if(result != null) {
+            sequencingResults.add(result);
         }
 
 //        String sequenceString = r.getString("cyclesequencing.sequences");
