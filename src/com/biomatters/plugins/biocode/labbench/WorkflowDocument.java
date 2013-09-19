@@ -467,7 +467,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                         if(traces != null && traces.size() > 0) {
                             List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(traces);
                             DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
-                            DocumentViewerFactory factory = TracesEditor.getViewerFactory(sequenceList);
+                            DocumentViewerFactory factory = SequencesEditor.getViewerFactory(sequenceList);
                             DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
                             ExtendedPrintable printable = viewer.getExtendedPrintable();
                             Options op = printable.getOptions(false);
@@ -484,7 +484,7 @@ public class WorkflowDocument extends MuitiPartDocument {
                         List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(((CycleSequencingReaction)reaction).getTraces());
                         if(sequences != null && sequences.size() > 0) {
                             DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
-                            DocumentViewerFactory factory = TracesEditor.getViewerFactory(sequenceList);
+                            DocumentViewerFactory factory = SequencesEditor.getViewerFactory(sequenceList);
                             DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
                             ExtendedPrintable printable = viewer.getExtendedPrintable();
                             Options op = printable.getOptions(false);
