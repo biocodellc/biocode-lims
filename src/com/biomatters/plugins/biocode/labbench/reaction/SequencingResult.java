@@ -252,6 +252,8 @@ public class SequencingResult implements XMLSerializable {
         resultsPanel.setPreferredSize(new Dimension(800, 300));
 
         final GTable table = new GTable(model);
+        table.getTableHeader().setReorderingAllowed(false);
+        table.setColumnSelectionAllowed(false);
         table.setRowHeight(60);
         table.setDefaultRenderer(SequencingResult.class, new SequencingResultRendererEditor(table.getDefaultRenderer(SequencingResult.class)));
         table.setDefaultRenderer(String.class, new SequencingResultRendererEditor(table.getDefaultRenderer(String.class)));
