@@ -245,17 +245,6 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
         addButtonOption(SEQ_RESULTS_BUTTON_NAME, "", "View " + (reaction != null ? reaction.getSequencingResults().size() : 0) + " Sequencing Results");
 
-
-        String reasonFailDetailsNotEditable = "This value is not editable.  It is set when marking a sequencing result as fail.";
-        ComboBoxOption<OptionValue> failureReasonOption = FailureReason.addToOptions(this);
-        failureReasonOption.setEnabled(false);
-        failureReasonOption.setDescription(reasonFailDetailsNotEditable);
-
-        MultipleLineStringOption failureNotesOption = addMultipleLineStringOption("reasonDetails", "Reason Details", "", 4, true);
-        failureNotesOption.setEnabled(false);
-        failureNotesOption.setDescription(reasonFailDetailsNotEditable);
-
-
         addLabel("");
         addPrimerSelectionOption(PRIMER_OPTION_ID, "Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());//new PrimerOption(PRIMER_OPTION_ID, "Primer");
 

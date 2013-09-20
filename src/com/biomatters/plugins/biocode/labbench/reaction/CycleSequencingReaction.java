@@ -66,8 +66,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     private static final String NUM_TRACES_ATTRIBUTE = "cachedNumTraces";
-    private static final String FAILURE_REASON = "ReasonForStatus";
-    private static final String FAILURE_NOTES = "StatusNotes";
     private static final String SEQ_RESULTS = "sequencingResults";
 
     @Override
@@ -79,12 +77,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
         }
         element.setAttribute(NUM_TRACES_ATTRIBUTE, "" + cacheNumTraces);
-        if(options != null) {
-            FailureReason reason = FailureReason.getReasonFromOptions(options);
-            if(reason != null) {
-                element.addContent(new Element(FAILURE_REASON).setText(""+ reason.getId()));
-            }
-        }
         Element resultsElement = new Element(SEQ_RESULTS);
         element.addContent(resultsElement);
         for (SequencingResult sequencingResult : sequencingResults) {
@@ -105,14 +97,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                 traces.add(XMLSerializer.classFromXML(traceElement, Trace.class));
             }
             this.traces = new WeakReference<List<Trace>>(traces);
-        }
-        String reasonId = element.getChildText(FAILURE_REASON);
-        if(reasonId != null) {
-            try {
-                FailureReason.setFailureReasonOnOptions(getOptions(), Integer.parseInt(reasonId));
-            } catch (NumberFormatException e) {
-                // Bad number stored in XML, ignore.
-            }
         }
 
         Element resultsElement = element.getChild(SEQ_RESULTS);
@@ -143,15 +127,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         }
 
         options.getOption(ReactionOptions.RUN_STATUS).setValueFromString(r.getString("cyclesequencing.progress"));
-        int reasonId = r.getInt("assembly.failure_reason");
-        if(!r.wasNull()) {
-            FailureReason.setFailureReasonOnOptions(options, reasonId);
-        }
-
-        String failureNotes = r.getString("assembly.failure_notes");
-        if(failureNotes != null) {
-            options.setValue("reasonDetails", failureNotes);
-        }
 
         DocumentSelectionOption primerOption = (DocumentSelectionOption)options.getOption(CycleSequencingOptions.PRIMER_OPTION_ID);
         String primerName = r.getString("cyclesequencing.primerName");
