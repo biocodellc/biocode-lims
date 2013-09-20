@@ -360,7 +360,7 @@ public class SequencingResult implements XMLSerializable {
             if(value instanceof SequencingResult) {
                 Component nullComp = defaultRenderer.getTableCellRendererComponent(table, null, false, hasFocus, row, column);
                 if(((SequencingResult)value).getStatus() == Status.PASS) {
-                    GPanel panel = new GPanel(new BorderLayout());
+                    JPanel panel = new JPanel(new BorderLayout());
                     Box verticalBox = Box.createVerticalBox();
                     panel.add(verticalBox, BorderLayout.CENTER);
                     verticalBox.add(Box.createVerticalGlue());
