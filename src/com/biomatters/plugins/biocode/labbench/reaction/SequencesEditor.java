@@ -114,7 +114,11 @@ public abstract class SequencesEditor<T> {
             updateToolbar();
         }
 
-        return Dialogs.showOkCancelDialog(holder, "Add Traces", owner, Dialogs.DialogIcon.NO_ICON);
+        return Dialogs.showOkCancelDialog(holder, getDialogName(), owner, Dialogs.DialogIcon.NO_ICON);
+    }
+
+    String getDialogName() {
+        return "Add Traces";
     }
 
     private void updateViewer() {

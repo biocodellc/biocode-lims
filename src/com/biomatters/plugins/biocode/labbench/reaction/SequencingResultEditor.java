@@ -36,4 +36,9 @@ public class SequencingResultEditor extends SequencesEditor<NucleotideSequenceDo
     List<NucleotideSequenceDocument> removeSequences() {
         return null;
     }
+
+    @Override
+    String getDialogName() {
+        return "Sequencing Results";
+    }
 }

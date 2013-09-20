@@ -12,18 +12,21 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -209,7 +212,7 @@ public class SequencingResult implements XMLSerializable {
 
             @Override
             public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return columnIndex == 5;
+                return false;
             }
 
             @Override
@@ -220,7 +223,7 @@ public class SequencingResult implements XMLSerializable {
                 SequencingResult result = sequencingResults.get(rowIndex);
                 switch (columnIndex) {
                     case 0: return result.getStatus().asHtml();
-                    case 1: return result.getDate();
+                    case 1: return DATE_FORMAT.format(result.getDate());
                     case 2: return result.getNotes();
                     case 3:
                         FailureReason reason = result.getReason();
@@ -246,8 +249,32 @@ public class SequencingResult implements XMLSerializable {
         };
 
         GPanel resultsPanel = new GPanel(new BorderLayout());
+        resultsPanel.setPreferredSize(new Dimension(800, 300));
+
         final GTable table = new GTable(model);
-        table.setDefaultRenderer(SequencingResult.class, new SequencingResultRendererEditor());
+        table.setRowHeight(60);
+        table.setDefaultRenderer(SequencingResult.class, new SequencingResultRendererEditor(table.getDefaultRenderer(SequencingResult.class)));
+        table.setDefaultRenderer(String.class, new SequencingResultRendererEditor(table.getDefaultRenderer(String.class)));
+
+        int minWidth = 55;
+        Enumeration<TableColumn> columns = table.getColumnModel().getColumns();
+        while(columns.hasMoreElements()) {
+            columns.nextElement().setMinWidth(minWidth);
+        }
+
+        table.getColumnModel().getColumn(0).setMaxWidth(55);
+        table.getColumnModel().getColumn(0).setPreferredWidth(55);
+        table.getColumnModel().getColumn(1).setPreferredWidth(60);
+        table.getColumnModel().getColumn(3).setPreferredWidth(100);
+        for(int i : new int[]{2,4}) {
+            table.getColumnModel().getColumn(i).setPreferredWidth(200);
+        }
+        table.getColumnModel().getColumn(5).setPreferredWidth(50);
+        table.getColumnModel().getColumn(5).setMaxWidth(50);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        resultsPanel.add(scrollPane, BorderLayout.CENTER);
+
         table.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -261,27 +288,22 @@ public class SequencingResult implements XMLSerializable {
             }
 
             @Override
-            public void mousePressed(MouseEvent e) {
-
-            }
+            public void mousePressed(MouseEvent e) {}
 
             @Override
-            public void mouseReleased(MouseEvent e) {
-            }
+            public void mouseReleased(MouseEvent e) {}
 
             @Override
-            public void mouseEntered(MouseEvent e) {
-            }
+            public void mouseEntered(MouseEvent e) {}
 
             @Override
-            public void mouseExited(MouseEvent e) {
-            }
+            public void mouseExited(MouseEvent e) {}
         });
 
-        resultsPanel.add(new JScrollPane(table), BorderLayout.CENTER);
-        resultsPanel.setBorder(new EmptyBorder(10,2,10,2));
-
-        Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, title), resultsPanel);
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, title);
+        dialogOptions.setMaxWidth(1600);
+        dialogOptions.setMaxHeight(600);
+        Dialogs.showDialog(dialogOptions, resultsPanel);
     }
 
     private static void displayTableOfResults(final SequencingResult result, GTable table) {
@@ -314,9 +336,16 @@ public class SequencingResult implements XMLSerializable {
     }
 
     private static class SequencingResultRendererEditor extends AbstractCellEditor implements TableCellRenderer, TableCellEditor{
+
+        private TableCellRenderer defaultRenderer;
+
+        private SequencingResultRendererEditor(TableCellRenderer defaultRenderer) {
+            this.defaultRenderer = defaultRenderer;
+        }
+
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-            return new JButton("View");
+            return null;
         }
 
         @Override
@@ -326,11 +355,35 @@ public class SequencingResult implements XMLSerializable {
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            if(value instanceof SequencingResult && ((SequencingResult)value).getStatus() == Status.PASS) {
-                return new JButton("View");
+            Component defaultComp = defaultRenderer.getTableCellRendererComponent(table, value, false, false, row, column);
+            Component component;
+            if(value instanceof SequencingResult) {
+                Component nullComp = defaultRenderer.getTableCellRendererComponent(table, null, false, hasFocus, row, column);
+                if(((SequencingResult)value).getStatus() == Status.PASS) {
+                    GPanel panel = new GPanel(new BorderLayout());
+                    Box verticalBox = Box.createVerticalBox();
+                    panel.add(verticalBox, BorderLayout.CENTER);
+                    verticalBox.add(Box.createVerticalGlue());
+                    JButton button = new JButton("View");
+                    verticalBox.add(button);
+                    verticalBox.add(Box.createVerticalGlue());
+                    component = panel;
+                } else {
+                    component = nullComp;
+                }
+            } else if(value instanceof String && (column == 2 || column == 4)) {
+                JTextArea textArea = new JTextArea((String) value, 4, 40);
+                textArea.setLineWrap(true);
+                textArea.setWrapStyleWord(true);
+                component = textArea;
             } else {
-                return table.getDefaultRenderer(String.class).getTableCellRendererComponent(table, null, isSelected, hasFocus, row, column);
+                return defaultComp;
             }
+            component.setForeground(defaultComp.getForeground());
+            component.setBackground(defaultComp.getBackground());
+            return component;
         }
     }
+
+    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("dd MMM yyyy");
 }
