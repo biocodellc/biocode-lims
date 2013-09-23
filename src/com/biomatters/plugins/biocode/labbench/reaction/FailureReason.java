@@ -71,6 +71,9 @@ public class FailureReason {
 
     public static FailureReason getReasonFromOptions(Options options) {
         Options.Option option = options.getOption(OPTION_NAME);
+        if(option == null) {
+            return null;
+        }
         return getReasonFromOption(option);
     }
 
