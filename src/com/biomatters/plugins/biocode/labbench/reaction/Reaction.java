@@ -687,8 +687,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
                 PreparedStatement insertStatement = connection.createStatement(insertSQL);
                 PreparedStatement updateStatement = connection.createStatement(updateSQL);
-                int insertCount = 0;
-                int updateCount = 0;
                 for (int i = 0; i < reactions.length; i++) {
                     Reaction reaction = reactions[i];
                     if(progress != null) {
@@ -696,14 +694,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                     }
                     if (!reaction.isEmpty() && reaction.plateId >= 0) {
                         PreparedStatement statement;
-                        if(reaction.getId() >= 0) { //the reaction is already in the database
+                        boolean isUpdateNotInsert = reaction.getId() >= 0;
+                        if(isUpdateNotInsert) { //the reaction is already in the database
                             statement = updateStatement;
-                            updateCount++;
                             statement.setInt(19, reaction.getId());
                         }
                         else {
                             statement = insertStatement;
-                            insertCount++;
                         }
                         ReactionOptions options = reaction.getOptions();
                         statement.setString(1, options.getValueAsString("extractionMethod"));
@@ -726,16 +723,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                         statement.setBytes(17, image != null ? image.getImageBytes() : null);
                         statement.setString(18, options.getValueAsString("control"));
 
-                        if(insertCount > 0) {
+                        if(isUpdateNotInsert) {
+                            updateStatement.executeUpdate();
+                        } else {
                             insertStatement.executeUpdate();
                             ResultSet resultSet = getLastId.executeQuery();
                             if(resultSet.next()) {
                                 reaction.setId(resultSet.getInt(1));
                             }
                             resultSet.close();
-                        }
-                        if(updateCount > 0) {
-                            updateStatement.executeUpdate();
                         }
                     }
                 }
