@@ -54,7 +54,7 @@ public class PieChartOptions extends Options {
         isLocalLims = fimsToLims.getLimsConnection().isLocal();
         final ReactionFieldOptions reactionFieldOptions = new ReactionFieldOptions(this.getClass(), fimsToLims, false, false, true, true);
         addChildOptions(REACTION_FIELDS, "", "", reactionFieldOptions);
-        final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaciton or FIMS field", false);
+        final Options.BooleanOption fimsField = addBooleanOption(FIMS_FIELD, "Restrict by Reaction or FIMS field", false);
         fimsField.setDefaultValue(false);
         fimsField.setEnabled(fimsToLims.limsHasFimsValues());
         if(!fimsToLims.limsHasFimsValues()) {

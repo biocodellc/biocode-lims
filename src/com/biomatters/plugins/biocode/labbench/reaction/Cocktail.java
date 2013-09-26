@@ -62,7 +62,7 @@ public abstract class Cocktail implements XMLSerializable {
             return BiocodeService.getInstance().getCycleSequencingCocktails();
         }
         else {
-            throw new IllegalArgumentException("Only PCR and Cycle Sequencing reacitons have cocktails");
+            throw new IllegalArgumentException("Only PCR and Cycle Sequencing reactions have cocktails");
         }
     }
 

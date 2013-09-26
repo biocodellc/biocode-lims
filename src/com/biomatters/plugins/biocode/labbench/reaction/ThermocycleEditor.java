@@ -110,7 +110,7 @@ public class ThermocycleEditor extends JPanel {
 
         Options stateOptions = new Options(this.getClass());
         stateOptions.beginAlignHorizontally("", false);
-        stateOptions.addIntegerOption("temp", "Temparature", 20, 0, 200);
+        stateOptions.addIntegerOption("temp", "Temperature", 20, 0, 200);
         Options.IntegerOption timeOption = stateOptions.addIntegerOption("time", "Time", 1, 1, Integer.MAX_VALUE);
         timeOption.setDisabledValue(Integer.MAX_VALUE);
         Options.BooleanOption infinityOption = stateOptions.addBooleanOption("infinity", "Infinite", false);
