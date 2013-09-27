@@ -5,7 +5,9 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.jdom.Element;
 
 /**
@@ -29,13 +31,11 @@ public class PlateDocument implements PluginDocument {
     }
 
     public List<DocumentField> getDisplayableFields() {
-        return Arrays.asList(
-                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", Date.class, true, false)
-        );
+        return Collections.emptyList();
     }
 
     public Object getFieldValue(String fieldCodeName) {
-        if("lastModified".equals(fieldCodeName)) {
+        if(PluginDocument.MODIFIED_DATE_FIELD.getCode().equals(fieldCodeName)) {
             return new Date(plate.lastModified().getTime());
         }
         return null;
@@ -49,8 +49,23 @@ public class PlateDocument implements PluginDocument {
         return null;
     }
 
+    private final AtomicBoolean creationDateInitialized = new AtomicBoolean(false);
+    private Date creationDate = new Date();
     public Date getCreationDate() {
-        return null;
+        initializeCreationDateIfNecessary();
+        return creationDate;
+    }
+
+    private void initializeCreationDateIfNecessary() {
+        synchronized (creationDateInitialized) {
+            if(!creationDateInitialized.getAndSet(true)) {
+                for (Reaction reaction : plate.getReactions()) {
+                    if(reaction.getDate().before(creationDate)) {
+                        creationDate = reaction.getDate();
+                    }
+                }
+            }
+        }
     }
 
     public String getDescription() {

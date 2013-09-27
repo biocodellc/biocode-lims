@@ -95,7 +95,6 @@ public class WorkflowDocument extends MuitiPartDocument {
             fields.addAll(getFimsSample().getTaxonomyAttributes());
         }
         fields.addAll(Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
-                new DocumentField("Last Modified", "The date this document was last modified", "lastModified", java.util.Date.class, true, false),
                 LIMSConnection.WORKFLOW_LOCUS_FIELD));
         return fields;
     }
@@ -107,7 +106,7 @@ public class WorkflowDocument extends MuitiPartDocument {
         if("numberOfParts".equals(fieldCodeName)) {
             return getNumberOfParts();
         }
-        if("lastModified".equals(fieldCodeName)) {
+        if(PluginDocument.MODIFIED_DATE_FIELD.getCode().equals(fieldCodeName)) {
             return new Date(workflow.getLastModified().getTime());
         }
         if(getFimsSample() != null) {
@@ -132,6 +131,15 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public Date getCreationDate() {
+        for (ReactionPart part : parts) {
+            Reaction reaction = part.getReaction();
+            if(reaction != null) {
+                if(reaction.getType() == Reaction.Type.Extraction) {
+                    // Return the date of the first extraction reaction.  Should already be sorted in order.
+                    return reaction.getDate();
+                }
+            }
+        }
         return null;
     }
 
