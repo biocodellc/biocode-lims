@@ -7,6 +7,7 @@
 * Added 2 new failure reason fields for marking sequencing results as fail.
 * Sequencing results now belong to a specific reaction rather than a workflow.
 * Fixed compatibility with Geneious R7.  The minimum version of Geneious is still version 5.6.0.
+* Fixed a problem with advanced searches returning all plates without workflows in addition to search results.
 * Other minor fixes and improvements.
 '''NOTE''': This version includes an update to the LIMS database format.  Built-in MySQL users will be upgraded automatically.
 Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
