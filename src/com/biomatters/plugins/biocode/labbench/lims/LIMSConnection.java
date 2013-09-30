@@ -648,7 +648,9 @@ public abstract class LIMSConnection {
             String sequenceString = resultSet.getString("assembly.consensus");
             sequenceString = sequenceString.replace("-", "");
             NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
-            sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, new Date(resultSet.getDate("date").getTime()), graph, urn);
+            Date dateMarked = new Date(resultSet.getDate("date").getTime());
+            sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for "+name, sequenceString, dateMarked, graph, urn);
+            sequence.setFieldValue(PluginDocument.MODIFIED_DATE_FIELD, dateMarked);
         }
         AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
         //todo: add data as fields and notes...
