@@ -29,10 +29,7 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
@@ -124,9 +121,15 @@ public class ReactionUtilities {
         options.endAlignHorizontally();
 
         options.addLabel(" ");
+        options.beginAlignHorizontally(null, false);
+        final Options.StringOption filterOption = options.addStringOption("filter", "Only match files with names containing:", "", "Text to match");
+        options.endAlignHorizontally();
+
 
         final Options.BooleanOption plateBackwards = options.addBooleanOption("plateBackwards", "Whoops! I sequenced my plate backwards.  Please fix it!", false);
+        plateBackwards.setAdvanced(true);
         final Options.BooleanOption fixNames = options.addBooleanOption("fixNames", "Also try to correct the well number in the trace filenames", false);
+        fixNames.setAdvanced(true);
         fixNames.setDisabledValue(false);
         plateBackwards.addDependent(fixNames, true);
 
@@ -160,7 +163,7 @@ public class ReactionUtilities {
         final DocumentField finalField = field;
         Runnable runnable = new Runnable() {
             public void run() {
-                final ImportTracesResult result = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue());
+                final ImportTracesResult result = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue(), filterOption.getValue());
                 Runnable runnable = new Runnable() {
                     public void run() {
                         ThreadUtilities.sleep(100);
@@ -236,8 +239,9 @@ public class ReactionUtilities {
      * @param plateSize
      * @param flipPlate
      * @param checkNames
+     * @param filterText
      */
-    private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames) {
+    private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames, String filterText) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (SQLException e) {
@@ -258,6 +262,9 @@ public class ReactionUtilities {
                 continue;
             }
             if(f.getName().startsWith(".")) { //stupid macos files
+                continue;
+            }
+            if(filterText != null && !f.getName().contains(filterText)) {
                 continue;
             }
             BiocodeUtilities.Well originalWell = null;

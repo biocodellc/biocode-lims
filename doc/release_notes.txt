@@ -1,3 +1,6 @@
+==Biocode Plugin 2.6.0 - TBD==
+* A text filter can now be used when bulk adding traces to sequencing plates.
+
 ==Biocode Plugin 2.5.0 - TBD==
 * Old FIMS fields from MySQL and older Excel connections are now detected when annotating from FIMS/LIMS and can be removed.
 * Added # Traces field to the display options in the plate view.
