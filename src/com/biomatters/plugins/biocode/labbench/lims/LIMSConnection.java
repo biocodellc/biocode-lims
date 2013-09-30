@@ -564,12 +564,12 @@ public abstract class LIMSConnection {
                 AnnotateUtilities.annotateDocument(getter, failBlog, doc);
                 if(failBlog.size() == 0) {
                     resultDocuments.add(doc);
-                }
-                else {
+                    if(callback != null) {
+                        callback.add(doc, Collections.<String, Object>emptyMap());
+                    }
+                } else {
+                    // Will be added to callback later
                     documentsWithoutFimsData.add(doc);
-                }
-                if(callback != null) {
-                    callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
 
@@ -590,7 +590,10 @@ public abstract class LIMSConnection {
             };
             for(AnnotatedPluginDocument doc : documentsWithoutFimsData) {
                 AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc);
-                callback.add(doc, Collections.<String, Object>emptyMap());
+                resultDocuments.add(doc);
+                if(callback != null) {
+                    callback.add(doc, Collections.<String, Object>emptyMap());
+                }
             }
 
             if(listeningThread != null) {
