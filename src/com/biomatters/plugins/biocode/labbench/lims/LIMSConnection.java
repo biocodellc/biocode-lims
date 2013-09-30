@@ -1443,18 +1443,22 @@ public abstract class LIMSConnection {
             cleanUpStatements(preparedStatement);
         }
 
+        WorkflowsAndPlatesQueryResult withoutWorkflows = getAnyPlatesThatDoNotHaveWorkflows(callback, samples, operator, workflowPart, extractionPart, platePart, assemblyPart);
+        result.sequenceIds.addAll(withoutWorkflows.sequenceIds);
+
+        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(plateAndWorkflowsFromResultSet.workflows.values());
         // If we searched on something that wasn't a workflow attribute then we might be missing reactions.  ie If we
         // searched for a Cycle Sequencing Plate 'A001'.  We would only have the sequencing reactions.  So in this case
         // we need to perform an additional step to download all the reactions in the workflow.
-        if(downloadWorkflows && !plateAndWorkflowsFromResultSet.workflows.isEmpty() && (platePart != null || assemblyPart != null)) {
+        if(downloadWorkflows && !workflows.isEmpty() && (platePart != null || assemblyPart != null)) {
             Map<String, Object> options = new HashMap<String, Object>();
             options.put("plateDocuments", Boolean.FALSE);
             options.put("workflowDocuments", Boolean.TRUE);
             options.put("sequences", Boolean.FALSE);
 
-            Query[] subqueries = new Query[plateAndWorkflowsFromResultSet.workflows.size()];
+            Query[] subqueries = new Query[workflows.size()];
             int i=0;
-            for (WorkflowDocument workflowDocument : plateAndWorkflowsFromResultSet.workflows.values()) {
+            for (WorkflowDocument workflowDocument : workflows) {
                 subqueries[i++] = Query.Factory.createFieldQuery(WORKFLOW_NAME_FIELD, Condition.EQUAL, new Object[]{workflowDocument.getName()}, options);
             }
             result.workflows.addAll(getMatchingDocumentsFromLims(
@@ -1462,32 +1466,35 @@ public abstract class LIMSConnection {
                     null, callback).getWorkflows());
         } else {
             if(downloadWorkflows && callback != null) {
-                for (WorkflowDocument document : plateAndWorkflowsFromResultSet.workflows.values()) {
+                for (WorkflowDocument document : workflows) {
                     callback.add(document, Collections.<String, Object>emptyMap());
                 }
             }
-            result.workflows.addAll(plateAndWorkflowsFromResultSet.workflows.values());
+            result.workflows.addAll(workflows);
         }
 
 
+        List<Plate> plates = new ArrayList<Plate>();
+        plates.addAll(plateAndWorkflowsFromResultSet.plates.values());
+        plates.addAll(withoutWorkflows.plates.values());
         // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
         // the plate will not be complete.  So we have to do another query to get the complete plate
-        if(downloadPlates && !plateAndWorkflowsFromResultSet.plates.isEmpty() && (workflowPart != null || extractionPart != null || assemblyPart != null)) {
+        if(downloadPlates && !plates.isEmpty() && ((samples != null && !samples.isEmpty()) || workflowPart != null || extractionPart != null || assemblyPart != null)) {
             Map<String, Object> options = new HashMap<String, Object>();
             options.put("plateDocuments", Boolean.TRUE);
             options.put("workflowDocuments", Boolean.FALSE);
             options.put("sequences", Boolean.FALSE);
 
-            Query[] subqueries = new Query[plateAndWorkflowsFromResultSet.plates.size()];
+            Query[] subqueries = new Query[plates.size()];
             int i=0;
-            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+            for (Plate plate : plates) {
                 subqueries[i++] = Query.Factory.createFieldQuery(PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plate.getName()}, options);
             }
             result.plates.addAll(getMatchingDocumentsFromLims(
                     Query.Factory.createOrQuery(subqueries, options),
                     null, callback).getPlates());
         } else {
-            for (Plate plate : plateAndWorkflowsFromResultSet.plates.values()) {
+            for (Plate plate : plates) {
                 PlateDocument plateDocument = new PlateDocument(plate);
                 if(downloadPlates && callback != null) {
                     callback.add(plateDocument, Collections.<String, Object>emptyMap());
@@ -1495,8 +1502,6 @@ public abstract class LIMSConnection {
                 result.plates.add(plateDocument);
             }
         }
-        addAnyPlatesThatDoNotHaveWorkflows(downloadPlates ? callback : null, result, operator, workflowPart, extractionPart, platePart, assemblyPart);
-
         return result;
     }
 
@@ -1541,12 +1546,11 @@ public abstract class LIMSConnection {
         }
     }
 
-    private void addAnyPlatesThatDoNotHaveWorkflows(RetrieveCallback callback, LimsSearchResult result, CompoundSearchQuery.Operator operator, QueryPart workflowPart, QueryPart extractionPart, QueryPart platePart, QueryPart assemblyPart) throws SQLException {
+    private WorkflowsAndPlatesQueryResult getAnyPlatesThatDoNotHaveWorkflows(Cancelable cancelable, Collection<FimsSample> samples, CompoundSearchQuery.Operator operator, QueryPart workflowPart, QueryPart extractionPart, QueryPart platePart, QueryPart assemblyPart) throws SQLException {
         // Now we have to get the plates that don't have any workflows, these aren't caught by the above query
         // because it is workflow focused.  (This is because MySQL doesn't have FULL OUTER JOIN)
-        String getPlatesWithNoWorkflows = getPlatesWithNoWorkflowsQuery(operator, workflowPart,
+        String getPlatesWithNoWorkflows = getPlatesWithNoWorkflowsQuery(samples, operator, workflowPart,
                 extractionPart, platePart, assemblyPart);
-        Map<Integer, Plate> extraPlates;
         if(getPlatesWithNoWorkflows != null) {
             PreparedStatement getRemainingPlates = null;
             try {
@@ -1558,6 +1562,11 @@ public abstract class LIMSConnection {
                 if(platePart != null) {
                     parameters.addAll(platePart.parameters);
                 }
+                if(samples != null) {
+                    for (FimsSample sample : samples) {
+                        parameters.add(sample.getId());
+                    }
+                }
                 fillStatement(parameters, getRemainingPlates);
                 System.out.println("Running LIMS (non-workflow plates) query:");
                 System.out.print("\t");
@@ -1565,23 +1574,16 @@ public abstract class LIMSConnection {
                 long start = System.currentTimeMillis();
                 ResultSet remainingPlatesSet = getRemainingPlates.executeQuery();
                 System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
-                WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, remainingPlatesSet);
-                extraPlates = plateAndWorkflowsFromResultSet.plates;
-                result.sequenceIds.addAll(plateAndWorkflowsFromResultSet.sequenceIds);
+                return createPlateAndWorkflowsFromResultSet(cancelable, remainingPlatesSet);
             } finally {
                 cleanUpStatements(getRemainingPlates);
             }
-            for (Plate plate : extraPlates.values()) {
-                PlateDocument plateDocument = new PlateDocument(plate);
-                result.plates.add(plateDocument);
-                if(callback != null) {
-                    callback.add(plateDocument, Collections.<String, Object>emptyMap());
-                }
-            }
+        } else {
+            return new WorkflowsAndPlatesQueryResult(Collections.<Integer, Plate>emptyMap(), Collections.<Integer, WorkflowDocument>emptyMap(), Collections.<Integer>emptyList());
         }
     }
 
-    private String getPlatesWithNoWorkflowsQuery(CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
+    private String getPlatesWithNoWorkflowsQuery(Collection<FimsSample> samples, CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
                                                  QueryPart extractionQueryConditions, QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         if(operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || assemblyQueryConditions != null)) {
             // No point doing a query.  Both workflows and assemblies require workflow links which are non-existent
@@ -1613,6 +1615,12 @@ public abstract class LIMSConnection {
         }
         if(extractionQueryConditions != null) {
             conditions.add("(" + extractionQueryConditions + ")");
+        }
+        if(samples != null && !samples.isEmpty()) {
+            StringBuilder builder = new StringBuilder("(extraction.sampleId IN ");
+            appendSetOfQuestionMarks(builder, samples.size());
+            builder.append(")");
+            conditions.add(builder.toString());
         }
         if(!conditions.isEmpty()) {
             queryBuilder.append(" AND (").append(StringUtilities.join(operator.toString(), conditions)).append(")");
