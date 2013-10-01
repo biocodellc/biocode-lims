@@ -1359,7 +1359,7 @@ public abstract class LIMSConnection {
     /**
      *
      * @param query The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
-     * @param samples A list of FIMS samples to match.
+     * @param samples A list of FIMS samples to match.  Or null to return all results.
      * @param callback To add results to as they are found.  Can be null.
      * @return {@link LimsSearchResult} with workflows and plates found.
      *
@@ -1425,6 +1425,11 @@ public abstract class LIMSConnection {
             sqlValues.addAll(assemblyPart.parameters);
         }
 
+        boolean searchedForSamplesButFoundNone = samples != null && samples.isEmpty();  // samples == null when doing a browse query
+        boolean nothingToSearchForInLims = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
+        if(searchedForSamplesButFoundNone && nothingToSearchForInLims) {
+            return result;
+        }
 
         StringBuilder queryBuilder = constructWorkflowQueryString(samples, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
