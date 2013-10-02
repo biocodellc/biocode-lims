@@ -73,14 +73,14 @@ public class AnnotateUtilities {
                     AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
                     if (referencedDocument != null) {
                         docsAnnotated.add(referencedDocument);
-                        newFields.addAll(annotateDocument(fimsDataGetter, failBlog, referencedDocument));
+                        newFields.addAll(annotateDocument(fimsDataGetter, failBlog, referencedDocument, true));
                     } else {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
                 copyMatchingFieldsToContigAndSave(annotatedDocument);
             } else {
-                newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument));
+                newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument, true));
             }
             docsAnnotated.add(annotatedDocument);
         }
@@ -211,13 +211,15 @@ public class AnnotateUtilities {
     /**
      * Annotates a document with data from a {@link FimsDataGetter}
      *
+     *
      * @param fimsDataGetter Used to get the FIMS fields and values
      * @param failBlog To add failure messages to, for example when there are no FIMs fields associated with the document
-     * @param annotatedDocument
+     * @param annotatedDocument The document to annotate
+     * @param updateModifiedDate true to update the modified date when saving.  False to leave it as is.
      * @return The set of FIMS {@link DocumentField}s that were annotated onto the document
      * @throws DocumentOperationException
      */
-    public static Set<DocumentField> annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
+    public static Set<DocumentField> annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument, boolean updateModifiedDate) throws DocumentOperationException {
         FimsData fimsData;
         fimsData = fimsDataGetter.getFimsData(annotatedDocument);
         if (fimsData == null || fimsData.fimsSample == null) {
@@ -324,7 +326,7 @@ public class AnnotateUtilities {
             notes.setNote(note);
         }
 
-        annotatedDocument.save();
+        annotatedDocument.save(updateModifiedDate);
         return fields;
     }
 }

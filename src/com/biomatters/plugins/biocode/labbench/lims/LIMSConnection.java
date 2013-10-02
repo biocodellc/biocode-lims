@@ -561,7 +561,7 @@ public abstract class LIMSConnection {
                     }
                 };
                 ArrayList<String> failBlog = new ArrayList<String>();
-                AnnotateUtilities.annotateDocument(getter, failBlog, doc);
+                AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
                 if(failBlog.size() == 0) {
                     resultDocuments.add(doc);
                     if(callback != null) {
@@ -589,7 +589,7 @@ public abstract class LIMSConnection {
                 }
             };
             for(AnnotatedPluginDocument doc : documentsWithoutFimsData) {
-                AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc);
+                AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc, false);
                 resultDocuments.add(doc);
                 if(callback != null) {
                     callback.add(doc, Collections.<String, Object>emptyMap());
@@ -1372,6 +1372,7 @@ public abstract class LIMSConnection {
         // We test against false so that the default is to download
         Boolean downloadWorkflows = !Boolean.FALSE.equals(query.getExtendedOptionValue("workflowDocuments"));
         Boolean downloadPlates = !Boolean.FALSE.equals(query.getExtendedOptionValue("plateDocuments"));
+        Boolean downloadSequences = !Boolean.FALSE.equals(query.getExtendedOptionValue("sequenceDocuments"));
 
         if(query instanceof BasicSearchQuery) {
             query = generateAdvancedQueryFromBasicQuery(query);
@@ -1460,7 +1461,7 @@ public abstract class LIMSConnection {
         // If we searched on something that wasn't a workflow attribute then we might be missing reactions.  ie If we
         // searched for a Cycle Sequencing Plate 'A001'.  We would only have the sequencing reactions.  So in this case
         // we need to perform an additional step to download all the reactions in the workflow.
-        if(downloadWorkflows && !workflows.isEmpty() && (platePart != null || assemblyPart != null)) {
+        if((downloadWorkflows || downloadSequences) && !workflows.isEmpty() && (platePart != null || assemblyPart != null)) {
             Map<String, Object> options = new HashMap<String, Object>();
             options.put("plateDocuments", Boolean.FALSE);
             options.put("workflowDocuments", Boolean.TRUE);
@@ -1473,7 +1474,7 @@ public abstract class LIMSConnection {
             }
             result.workflows.addAll(getMatchingDocumentsFromLims(
                     Query.Factory.createOrQuery(subqueries, options),
-                    null, callback).getWorkflows());
+                    null, downloadWorkflows ? callback : null).getWorkflows());
         } else {
             if(downloadWorkflows && callback != null) {
                 for (WorkflowDocument document : workflows) {
