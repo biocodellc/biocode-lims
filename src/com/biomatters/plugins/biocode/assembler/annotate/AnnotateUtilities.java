@@ -130,11 +130,30 @@ public class AnnotateUtilities {
             Object choice = Dialogs.showDialog(dialogOptions, message.toString());
             if(remove.equals(choice)) {
                 for (AnnotatedPluginDocument annotatedDocument : docsAnnotated) {
+                    boolean savePluginDocToo = false;
                     for (DocumentField oldField : oldFields) {
                         // The API doesn't let us remove the field from the document, but we can set the value to null.
                         annotatedDocument.setFieldValue(oldField, null);
+
+                        if(annotatedDocument.getFieldValue(oldField) != null) {
+                            // Due to a problem elsewhere, when generating a consensus, Geneious copies APD fields into
+                            // the new plugin document.  And due to a limitation/bug in core you can't wipe out
+                            // PluginDocument fields by using the APD.  So we have to load the PluginDocument and clear the
+                            // field on it.
+                            PluginDocument pluginDoc = annotatedDocument.getDocumentOrNull();
+                            if(pluginDoc instanceof AbstractPluginDocument) {
+                                savePluginDocToo = true;
+                                ((AbstractPluginDocument) pluginDoc).setFieldValue(oldField, null);
+                            } else {
+                                // We can't load the doc or it isn't of a type we can edit
+                            }
+                        }
                     }
-                    annotatedDocument.save();  // Means we end up saving the same doc twice.  However this should be an infrequent operation.
+                    if(savePluginDocToo) {
+                        annotatedDocument.saveDocument();
+                    } else {
+                        annotatedDocument.save();  // Means we end up saving the same doc twice.  However this should be an infrequent operation.
+                    }
                 }
             }
         }
