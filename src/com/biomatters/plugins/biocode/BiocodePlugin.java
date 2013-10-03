@@ -38,7 +38,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     private static GeneiousActionOptions superBiocodeAction;
-    public static final String PLUGIN_VERSION = "2.6.0";
+    public static final String PLUGIN_VERSION = "2.5.0";
 
     public static GeneiousActionOptions getSuperBiocodeAction() {
         if (superBiocodeAction == null) {
@@ -82,7 +82,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getMinimumApiVersion() {
-        return "4.60";  // We require APD.getParentOperationRecord()
+        return "4.600";  // We require APD.save(boolean updateModifiedDate)
     }
 
     @Override
