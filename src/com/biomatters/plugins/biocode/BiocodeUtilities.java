@@ -1,5 +1,7 @@
 package com.biomatters.plugins.biocode;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
@@ -9,9 +11,9 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDoc
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -24,16 +26,16 @@ import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.List;
-import java.awt.*;
 
 /**
  * @author Richard
@@ -242,6 +244,19 @@ public class BiocodeUtilities {
             return rootPane.getDefaultButton();
         }
         return null;
+    }
+
+    public static ProgressFrame getBlockingProgressFrame(String message, JComponent ownerComponent) {
+        Window owner;
+        if (ownerComponent.getTopLevelAncestor() instanceof Window) {
+            owner = (Window) ownerComponent.getTopLevelAncestor();
+        } else {
+            owner = GuiUtilities.getMainFrame();
+        }
+        ProgressFrame progressFrame = new ProgressFrame(message, "", owner);
+        progressFrame.setCancelable(false);
+        progressFrame.setIndeterminateProgress();
+        return progressFrame;
     }
 
     public enum ReadDirection {

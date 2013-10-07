@@ -82,7 +82,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getMinimumApiVersion() {
-        return "4.600";  // We require APD.save(boolean updateModifiedDate)
+        return "4.611";  // We require ProgressFrame.setCancelable
     }
 
     @Override

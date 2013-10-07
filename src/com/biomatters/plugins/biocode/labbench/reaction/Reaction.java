@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
+import jebl.util.ProgressListener;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -21,10 +22,11 @@ import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.ImageObserver;
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
-import java.util.Date;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -675,7 +677,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         return date;
     }
 
-    public static void saveReactions(Reaction[] reactions, Type type, LIMSConnection connection, BiocodeService.BlockingProgress progress) throws IllegalStateException, SQLException {
+    public static void saveReactions(Reaction[] reactions, Type type, LIMSConnection connection, ProgressListener progress) throws IllegalStateException, SQLException {
         PreparedStatement getLastId = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ?
                 connection.createStatement("CALL IDENTITY();") : connection.createStatement("SELECT last_insert_id()");
         switch(type) {

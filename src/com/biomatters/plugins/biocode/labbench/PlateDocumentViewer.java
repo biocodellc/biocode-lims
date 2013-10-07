@@ -98,15 +98,15 @@ public class PlateDocumentViewer extends DocumentViewer{
                 annotatedDocument.saveDocument();
                 setEnabled(false);
                 if(!isLocal) {
-                    final BiocodeService.BlockingDialog dialog = BiocodeService.BlockingDialog.getDialog("Saving your plate", container);
+                    final ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Saving your plate", container);
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                                    BiocodeService.getInstance().saveExtractions(dialog, plateView.getPlate());
+                                    BiocodeService.getInstance().saveExtractions(progressFrame, plateView.getPlate());
                                 }
                                 else {
-                                    BiocodeService.getInstance().saveReactions(dialog, plateView.getPlate());
+                                    BiocodeService.getInstance().saveReactions(progressFrame, plateView.getPlate());
                                 }
 
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
@@ -136,12 +136,11 @@ public class PlateDocumentViewer extends DocumentViewer{
                                 };
                                 ThreadUtilities.invokeNowOrLater(runnable);
                             } finally {
-                                dialog.setVisible(false);
+                                progressFrame.setComplete();
                             }
                         }
                     };
                     new Thread(runnable).start();
-                    dialog.setVisible(true);
                 }
             }
         };
@@ -496,7 +495,7 @@ public class PlateDocumentViewer extends DocumentViewer{
             if (newThermocycles.size() > 0 || deletedThermocycles.size() > 0) {
                 Runnable runnable = new Runnable() {
                     public void run() {
-                        BiocodeService.block("Saving Thermocycles", container);
+                        ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Saving Thermocycles", container);
                         try {
 
                             String tableName;
@@ -526,7 +525,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                             };
                             ThreadUtilities.invokeNowOrLater(runnable);
                         }
-                        BiocodeService.unBlock();
+                        progressFrame.setComplete();
                         updateToolbar(false);
                     }
                 };

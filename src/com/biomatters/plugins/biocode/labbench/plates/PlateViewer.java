@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.plates;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GComboBox;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
@@ -122,7 +123,7 @@ public class PlateViewer extends JPanel {
                     if (newThermocycles.size() > 0 || deletedThermocycles.size() > 0) {
                         Runnable runnable = new Runnable() {
                             public void run() {
-                                BiocodeService.block("Saving Thermocycles", selfReference);
+                                ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Saving Thermocycles", selfReference);
                                 try {
 
                                     String tableName;
@@ -163,7 +164,7 @@ public class PlateViewer extends JPanel {
                                     }
                                 };
                                 ThreadUtilities.invokeNowOrWait(runnable);
-                                BiocodeService.unBlock();
+                                progressFrame.setComplete();
                             }
                         };
                         new Thread(runnable).start();
@@ -358,7 +359,9 @@ public class PlateViewer extends JPanel {
                     public void actionPerformed(ActionEvent e) {
                         final Plate plate = plateView.getPlate();
 
-                        final BiocodeService.BlockingDialog progress = BiocodeService.BlockingDialog.getDialog("Creating your plate", frame);
+                        final ProgressFrame progress = new ProgressFrame("Creating Plate", "", frame);
+                        progress.setCancelable(false);
+                        progress.setIndeterminateProgress();
 
                         Runnable runnable = new Runnable() {
                             public void run() {
@@ -370,22 +373,22 @@ public class PlateViewer extends JPanel {
                                         BiocodeService.getInstance().saveReactions(progress, plate);
                                     }
                                 } catch(BadDataException ex) {
-                                    Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", progress, Dialogs.DialogIcon.INFORMATION);
-                                    progress.setVisible(false);
+                                    progress.setComplete();
+                                    Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
                                     return;
                                 } catch(SQLException ex){
                                     ex.printStackTrace();
-                                    Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", progress, Dialogs.DialogIcon.INFORMATION);
-                                    progress.setVisible(false);
+                                    progress.setComplete();
+                                    Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
                                     return;
+                                } finally {
+                                    progress.setComplete();
                                 }
-                                progress.setVisible(false);
                                 nameField.getParentOptions().savePreferences();
                                 frame.dispose();
                             }
                         };
                         new Thread(runnable, "Biocode plate creation thread").start();
-                        progress.setVisible(true);
                     }
                 });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);

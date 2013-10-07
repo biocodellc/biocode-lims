@@ -3,12 +3,11 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import jebl.util.ProgressListener;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import java.sql.Connection;
 import java.sql.SQLException;
-
-import org.virion.jam.util.SimpleListener;
 
 /**
  * @author Steven Stones-Havas
@@ -46,7 +45,7 @@ public abstract class MuitiPartDocument implements PluginDocument {
 
         public void removeModifiedStateChangedListener(SimpleListener sl){}
 
-        public abstract void saveChangesToDatabase(BiocodeService.BlockingProgress progress, LIMSConnection connection) throws SQLException;
+        public abstract void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws SQLException;
         
     }
 }

@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
@@ -17,6 +18,7 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
+import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
@@ -25,8 +27,6 @@ import org.jdom.output.XMLOutputter;
 import org.virion.jam.framework.AbstractFrame;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
@@ -41,7 +41,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 
 /**
@@ -209,28 +208,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(platesToDelete.size() == 0) {
             return;
         }
-        final BlockingDialog blockingDialog = BlockingDialog.getDialog("Deleting documents", null);
-        ThreadUtilities.invokeNowOrLater(new Runnable() {
-            public void run() {
-                blockingDialog.setVisible(true);
-            }
-        });
+        ProgressFrame progressFrame = new ProgressFrame("Deleting Documents", "", GuiUtilities.getMainFrame());
+        progressFrame.setCancelable(false);
+        progressFrame.setIndeterminateProgress();
         try {
             for(Plate plate : platesToDelete) {
-                deletePlate(blockingDialog, plate);
+                deletePlate(progressFrame, plate);
             }
         }
         catch (SQLException e) {
             throw new DatabaseServiceException(e.getMessage(), true);
         } finally {
-            while (!blockingDialog.isVisible()) {
-                ThreadUtilities.sleep(50);
-            }
-            ThreadUtilities.invokeNowOrLater(new Runnable() {
-                public void run() {
-                    blockingDialog.dispose();
-                }
-            });
+            progressFrame.setComplete();
         }
     }
 
@@ -482,6 +471,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         synchronized (this) {
             loggingIn = true;
         }
+        ProgressListener progressListener;
+        if (block) {
+            progressListener = new ProgressFrame("Connecting", "", GuiUtilities.getMainFrame());
+            ((ProgressFrame) progressListener).setCancelable(false);
+            progressListener.setIndeterminateProgress();
+        } else {
+            progressListener = ProgressListener.EMPTY;
+        }
         activeConnection = connection;
         //load the connection driver -------------------------------------------------------------------
         try {
@@ -527,22 +524,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         //get the selected fims service.
         activeFIMSConnection = connection.getFimsConnection();
-        if(block) {
-            block("Connecting to the FIMS", null);
-        }
+        progressListener.setMessage("Connecting to the FIMS");
         try {
             activeFIMSConnection.connect(connection.getFimsOptions());
         }
         catch (ConnectionException ex) {
-            if(block) {
-                unBlock();
-            }
-            if(ex != ConnectionException.NO_DIALOG) {
-                String message = ex.getMainMessage() == null ? "There was an error connecting to "+activeFIMSConnection.getLabel() : ex.getMainMessage();
-                if(ex.getMessage() != null) {
-                    Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[] {"OK"},"Error connecting to FIMS"), message, ex.getMessage());
-                }
-                else {
+            progressListener.setProgress(1.0);
+            if (ex != ConnectionException.NO_DIALOG) {
+                String message = ex.getMainMessage() == null ? "There was an error connecting to " + activeFIMSConnection.getLabel() : ex.getMainMessage();
+                if (ex.getMessage() != null) {
+                    Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Error connecting to FIMS"), message, ex.getMessage());
+                } else {
                     Dialogs.showMessageDialog(message, "Error connecting to FIMS");
                 }
             }
@@ -554,29 +546,21 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(!(activeFIMSConnection instanceof MooreaFimsConnection) && connection.getLimsOptions().getValueAsString("server").equalsIgnoreCase("darwin.berkeley.edu")) {
                 Dialogs.showMessageDialog("You cannot connect to the Moorea Lab Bench database using a field database other than the Moorea FIMS");
                 logOut();
-                if(block) {
-                    unBlock();
-                }
+                progressListener.setProgress(1.0);
                 return;
             }
 
-            if(block) {
-                block("Connecting to the LIMS", null);
-            }
+            progressListener.setMessage("Connecting to the LIMS");
 
             if(disconnectCheckingThread != null) {
                 disconnectCheckingThread.interrupt();
             }
 
             limsConnection.connect(connection.getLimsOptions());
-            if(block) {
-                block("Building Caches", null);
-            }
+            progressListener.setMessage("Building Caches");
             buildCaches();
 
-            if(block) {
-                block("Performing Further Initialization", null);
-            }
+            progressListener.setMessage("Performing Further Initialization");
             limsConnection.doAnyExtraInitialziation();
 
             synchronized (this) {
@@ -589,9 +573,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             disconnectCheckingThread = getDisconnectCheckingThread();
             disconnectCheckingThread.start();
         } catch (ConnectionException e1) {
-            if(block) {
-                unBlock();
-            }
+            progressListener.setProgress(1.0);
             logOut();
             if(e1 == ConnectionException.NO_DIALOG) {
                 return;
@@ -602,17 +584,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             return;
         } catch (TransactionException e2) {
             logOut();
-            if(block) {
-                unBlock();
-            }
+            progressListener.setProgress(1.0);
             String title = "Connection Failure";
             String message = "Geneious could not connect to the LIMS database";
             showErrorDialog(e2, title, message);
             return;
         }
-        if(block) {
-            unBlock();
-        }
+        progressListener.setProgress(1.0);
         updateStatus();
     }
 
@@ -1480,75 +1458,27 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return plateNames;
     }
 
-    private static BlockingDialog blockingDialog;
-
-    public static synchronized void block(final String message, final Component parentComponent, final Runnable task){
-        Runnable r = new Runnable(){
+    public static synchronized void block(final String message, final JComponent parentComponent, final Runnable task) {
+        Window owner;
+        if (parentComponent != null && parentComponent.getTopLevelAncestor() instanceof Window) {
+            owner = (Window) parentComponent.getTopLevelAncestor();
+        } else {
+            owner = GuiUtilities.getMainFrame();
+        }
+        final ProgressFrame progressFrame = new ProgressFrame("", message, owner);
+        progressFrame.setCancelable(false);
+        progressFrame.setIndeterminateProgress();
+        Runnable runnable = new Runnable() {
+            @Override
             public void run() {
                 try {
                     task.run();
-                }
-                catch(Exception e) {
-                    throw new RuntimeException("An exception was caught in another thread", e);
-                }
-                finally {
-                    unSynchronizedUnBlock();
+                } finally {
+                    progressFrame.setComplete();
                 }
             }
         };
-        new Thread(r, "Biocode blocking thread").start();
-        block(message, parentComponent);
-    }
-
-    public static synchronized void block(final String message, final Component parentComponent){
-        Runnable runnable = new Runnable() {
-            public void run() {
-                if(blockingDialog == null) {
-                    Component parent = parentComponent;
-                    while(parent != null && !(parent instanceof Frame) && parent.getParent() != null) {
-                        parent = parent.getParent();
-                    }
-                    if(parent instanceof Frame) {
-                        blockingDialog = new BlockingDialog(message, (Frame)parent);
-                        blockingDialog.setLocationRelativeTo(parent);
-                    }
-                    else {
-                        blockingDialog = new BlockingDialog(message, GuiUtilities.getMainFrame());
-                        blockingDialog.setLocationRelativeTo(GuiUtilities.getMainFrame());
-                    }
-                    blockingDialog.setVisible(true);
-                }
-                else {
-                    blockingDialog.setMessage(message);
-                }
-            }
-        };
-        ThreadUtilities.invokeNowOrLater(runnable);
-    }
-
-    public static synchronized void unBlock() {
-        Runnable runnable = new Runnable() {
-            public void run() {
-                if(blockingDialog != null) {
-                    blockingDialog.setVisible(false);
-                    blockingDialog = null;
-                }
-            }
-        };
-        ThreadUtilities.invokeNowOrLater(runnable);
-    }
-
-
-    public static void unSynchronizedUnBlock() {
-        Runnable runnable = new Runnable() {
-            public void run() {
-                if(blockingDialog != null) {
-                    blockingDialog.setVisible(false);
-                    blockingDialog = null;
-                }
-            }
-        };
-        ThreadUtilities.invokeNowOrLater(runnable);
+        new Thread(runnable, "Biocode blocking thread").start();
     }
 
     public List<PCRCocktail> getPCRCocktails() {
@@ -1636,7 +1566,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return results;
     }
 
-    public static List<Workflow> createWorkflows(List<Reaction> reactions, LIMSConnection limsConnection, BlockingProgress progress) throws SQLException{
+    public static List<Workflow> createWorkflows(List<Reaction> reactions, LIMSConnection limsConnection, ProgressListener progress) throws SQLException{
         List<Workflow> workflows = new ArrayList<Workflow>();
         limsConnection.beginTransaction();
         try {
@@ -1674,11 +1604,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException{
+    public void saveExtractions(ProgressListener progress, Plate plate) throws SQLException, BadDataException{
         saveExtractions(progress, plate, limsConnection);
     }
 
-    public void saveExtractions(BiocodeService.BlockingProgress progress, Plate plate, LIMSConnection limsConnection) throws SQLException, BadDataException{
+    public void saveExtractions(ProgressListener progress, Plate plate, LIMSConnection limsConnection) throws SQLException, BadDataException{
         limsConnection.beginTransaction();
         try {
             isPlateValid(plate, limsConnection);
@@ -1708,7 +1638,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     }
 
-    public void deletePlate(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException {
+    public void deletePlate(ProgressListener progress, Plate plate) throws SQLException {
 
         Set<Integer> plateIds = new HashSet<Integer>();
 
@@ -1738,7 +1668,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     //noinspection StringConcatenationInsideStringBufferAppend
                     message.append(emptyPlate.getName()+"\n");
                 }
-                if(Dialogs.showYesNoDialog(message.toString(), "Delete empty plates", progress.getComponentForOwner(), Dialogs.DialogIcon.QUESTION)){
+                if(Dialogs.showYesNoDialog(message.toString(), "Delete empty plates", null, Dialogs.DialogIcon.QUESTION)){
                     for(Plate p : emptyPlates) {
                         deletePlate(progress, p);
                     }
@@ -1752,7 +1682,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     }
 
-    private Set<Integer> deleteWorkflows(BlockingProgress progress, Plate plate) throws SQLException {
+    private Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws SQLException {
         progress.setMessage("deleting workflows");
         if(plate.getReactionType() != Reaction.Type.Extraction) {
             throw new IllegalArgumentException("You may only delete workflows from an extraction plate!");
@@ -1806,7 +1736,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return plates;
     }
 
-    private void deleteReactions(BlockingProgress progress, Plate plate) throws SQLException {
+    private void deleteReactions(ProgressListener progress, Plate plate) throws SQLException {
         progress.setMessage("deleting reactions");
 
         String tableName;
@@ -1916,11 +1846,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return result;
     }
 
-    public void saveReactions(BiocodeService.BlockingProgress progress, Plate plate) throws SQLException, BadDataException {
+    public void saveReactions(ProgressListener progress, Plate plate) throws SQLException, BadDataException {
         saveReactions(progress, limsConnection, plate);
     }
 
-    public static void saveReactions(BiocodeService.BlockingProgress progress, LIMSConnection limsConnection, Plate plate) throws SQLException, BadDataException {
+    public static void saveReactions(ProgressListener progress, LIMSConnection limsConnection, Plate plate) throws SQLException, BadDataException {
         if(progress != null) {
             progress.setMessage("Retrieving existing workflows");
         }
@@ -2022,7 +1952,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    private static void createOrUpdatePlate(Plate plate, LIMSConnection limsConnection, BlockingProgress progress) throws SQLException, BadDataException{
+    private static void createOrUpdatePlate(Plate plate, LIMSConnection limsConnection, ProgressListener progress) throws SQLException, BadDataException{
 
         //check the vaidity of the plate.
         isPlateValid(plate, limsConnection);
@@ -2278,137 +2208,5 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public void unregisterCallback(BiocodeCallback callback) {
         activeCallbacks.remove(callback);
-    }
-
-//    public Map<String, String> getTissueIdsFromBarcodes(List<String> barcodeIds) throws ConnectionException {
-//        if(activeFIMSConnection == null) {
-//            return Collections.emptyMap();
-//        }
-//
-//        DocumentField barcodeField = activeFIMSConnection.getTissueBarcodeDocumentField();
-//        DocumentField tissueField = activeFIMSConnection.getTissueSampleDocumentField();
-//
-//
-//        Query[] queries = new Query[barcodeIds.size()];
-//        for(int i=0; i < barcodeIds.size(); i++) {
-//            queries[i] = Query.Factory.createFieldQuery(barcodeField, Condition.EQUAL, barcodeIds.get(i));
-//        }
-//
-//        Query orQuery = Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap());
-//
-//        List<FimsSample> samples = activeFIMSConnection.getMatchingSamples(orQuery);
-//
-//        Map<String, String> result = new HashMap<String, String>();
-//        for(FimsSample sample : samples) {
-//            result.put(""+sample.getFimsAttributeValue(barcodeField.getCode()), ""+sample.getFimsAttributeValue(tissueField.getCode()));
-//        }
-//
-//        return result;
-//    }
-
-    public static interface BlockingProgress {
-        public void setMessage(String s);
-        public void dispose();
-        public Component getComponentForOwner();
-
-        public static final BlockingProgress EMPTY = new BlockingProgress() {
-            public void setMessage(String s) {}
-
-            public void dispose() {}
-
-            public Component getComponentForOwner() {
-                return null;
-            }
-        };
-    }
-
-    public static class BlockingDialog extends JDialog implements BlockingProgress {
-        private String message;
-        private JLabel label;
-
-        public static BlockingDialog getDialog(final String message, final Component owner) {
-            final AtomicReference<BlockingDialog> dialog = new AtomicReference<BlockingDialog>();
-            ThreadUtilities.invokeNowOrWait(new Runnable() {
-                public void run() {
-                    Window w = getParentFrame(owner);
-                    if(w instanceof JFrame) {
-                        dialog.set(new BlockingDialog(message, (JFrame)w));
-                    }
-                    else if(w instanceof JDialog) {
-                        dialog.set(new BlockingDialog(message, (JDialog)w));
-                    }
-                    else {
-                        dialog.set(new BlockingDialog(message, GuiUtilities.getMainFrame()));
-                    }
-                }
-            });
-            return dialog.get();
-        }
-
-        private static Window getParentFrame(Component component) {
-            if(component == null) {
-                return null;
-            }
-            if(component instanceof Window) {
-                return (Window)component;
-            }
-            if(component.getParent() != null) {
-                return getParentFrame(component.getParent());
-            }
-            return null;
-        }
-
-        private BlockingDialog(String message, Frame owner){
-            super(owner);
-            if(owner != null) {
-                setLocationRelativeTo(owner);
-            }
-            this.message = message;
-            init();
-        }
-
-        private BlockingDialog(String message, Dialog owner){
-            super(owner);
-            if(owner != null) {
-                setLocationRelativeTo(owner);
-            }
-            this.message = message;
-            init();
-        }
-
-        private void init() {
-            setUndecorated(true);
-            setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-            setAlwaysOnTop(true);
-            setModal(true);
-            setTitle("Please Wait...");
-            Container cp = getContentPane();
-            cp.setLayout(new BoxLayout(cp, BoxLayout.Y_AXIS));
-            AnimatedIcon activityIcon = AnimatedIcon.getActivityIcon();
-            activityIcon.startAnimation();
-            label = new JLabel(message, activityIcon, JLabel.LEFT);
-            label.setBorder(new EmptyBorder(25,50,25,50));
-            cp.add(label);
-            if(cp instanceof JComponent) {
-                ((JComponent)cp).setBorder(new LineBorder(Color.black));
-            }
-            pack();
-        }
-
-        public void setMessage(String s) {
-            message = s;
-            Runnable runnable = new Runnable() {
-                public void run() {
-                    label.setText(message);
-                    pack();
-                }
-            };
-            ThreadUtilities.invokeNowOrLater(runnable);
-        }
-
-        public Component getComponentForOwner() {
-            return this;
-        }
-
     }
 }

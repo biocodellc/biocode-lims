@@ -1,22 +1,22 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.print.PrinterException;
 import java.awt.print.Printable;
-import java.sql.Connection;
+import java.awt.print.PrinterException;
 import java.sql.SQLException;
 import java.sql.Savepoint;
-
-import org.virion.jam.util.SimpleListener;
 
 /**
  * @author Steven Stones-Havas
@@ -36,26 +36,25 @@ public class MultiPartDocumentViewer extends DocumentViewer {
         this.isLocal = isLocal;
         saveAction = new GeneiousAction("Save", "", StandardIcons.save.getIcons()){
             public void actionPerformed(ActionEvent e) {
-                final BiocodeService.BlockingDialog dialog = BiocodeService.BlockingDialog.getDialog("Saving Reactions", panel);
+                final ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Saving Reactions", panel);
                 Runnable runnable = new Runnable() {
                     public void run() {
                         Savepoint savepoint = null;
                         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
                         try {
-                            for(int i=0; i < doc.getNumberOfParts(); i++) {
+                            for (int i = 0; i < doc.getNumberOfParts(); i++) {
                                 MuitiPartDocument.Part p = doc.getPart(i);
-                                dialog.setMessage("Saving "+p.getName());
-                                if(p.hasChanges()) {
-                                    p.saveChangesToDatabase(dialog, limsConnection);
+                                progressFrame.setMessage("Saving " + p.getName());
+                                if (p.hasChanges()) {
+                                    p.saveChangesToDatabase(progressFrame, limsConnection);
                                 }
                             }
-                        }
-                        catch(SQLException ex) {
+                        } catch (SQLException ex) {
                             limsConnection.rollback();
-                            Dialogs.showMessageDialog("Error saving your reactions: "+ex.getMessage());
+                            Dialogs.showMessageDialog("Error saving your reactions: " + ex.getMessage());
                         } finally {
                             try {
-                                if(limsConnection != null) {
+                                if (limsConnection != null) {
                                     limsConnection.endTransaction();
                                 }
                             } catch (SQLException e1) {
@@ -63,12 +62,11 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                             }
                             annotatedDocument.saveDocument();
                             updateToolbar();
-                            dialog.setVisible(false);
+                            progressFrame.setComplete();
                         }
                     }
                 };
                 new Thread(null, runnable, "biocodeSavingWorkflow").start();
-                dialog.setVisible(true);
             }
         };
         saveAction.setProOnly(true);

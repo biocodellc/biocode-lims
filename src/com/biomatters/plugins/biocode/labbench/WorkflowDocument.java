@@ -6,8 +6,9 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
+import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -17,10 +18,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
-import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -508,7 +509,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             return changes;
         }
 
-        public void saveChangesToDatabase(BiocodeService.BlockingProgress progress, LIMSConnection connection) throws SQLException{
+        public void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws SQLException{
             reaction.areReactionsValid(Arrays.asList(reaction), null, true);
             Reaction.saveReactions(new Reaction[] {reaction}, reaction.getType(), connection, progress);
             changes = false;

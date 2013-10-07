@@ -13,7 +13,6 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.assembler.lims.MarkInLimsUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
@@ -24,11 +23,11 @@ import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 
-import java.awt.*;
-import java.io.*;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.List;
 
 /**
  * Created by IntelliJ IDEA.
@@ -185,16 +184,6 @@ public class WorkflowBuilder extends DocumentOperation {
 
         final CompositeProgressListener plateComposite = new CompositeProgressListener(progressListener, plateNames.size());
 
-        BiocodeService.BlockingProgress messagePassingProgress = new BiocodeService.BlockingProgress(){
-            public void setMessage(String s) {
-                plateComposite.setMessage(s);
-            }
-
-            public void dispose() {}
-
-            public Component getComponentForOwner() {return null;}
-        };
-
         for(String plateName : plateNames) {
             plateComposite.beginSubtask();
             final CompositeProgressListener composite = new CompositeProgressListener(plateComposite, 5);
@@ -225,7 +214,7 @@ public class WorkflowBuilder extends DocumentOperation {
             }
             System.out.println("empty extractions: "+emptyCount);
 
-            BiocodeService.getInstance().saveExtractions(messagePassingProgress, extractionPlate);
+            BiocodeService.getInstance().saveExtractions(progressListener, extractionPlate);
             List<PlateDocument> plates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, extractionPlateName), Collections.<WorkflowDocument>emptyList(), null);
             if(plates.size() != 1) {
                 throw new DocumentOperationException("Could not find the plate "+extractionPlateName);
@@ -260,7 +249,7 @@ public class WorkflowBuilder extends DocumentOperation {
             }
             System.out.println("empty PCR: "+emptyCount);
 
-            BiocodeService.getInstance().saveReactions(messagePassingProgress, pcrPlate);
+            BiocodeService.getInstance().saveReactions(progressListener, pcrPlate);
 
 //            List<PlateDocument> pcrPlates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, pcrPlateName), Collections.<WorkflowDocument>emptyList(), null);
 //            if(plates.size() != 1) {
@@ -296,7 +285,7 @@ public class WorkflowBuilder extends DocumentOperation {
             csForwardPlate.setName(plateName+"_CYC01_LCO");
             csForwardPlate.setThermocycle(getThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles(), "LAB_STANDARD_CS"));
 
-            BiocodeService.getInstance().saveReactions(messagePassingProgress, csForwardPlate);
+            BiocodeService.getInstance().saveReactions(progressListener, csForwardPlate);
 
             //===================CS REVERSE PLATE=======================================================================
             composite.beginSubtask("Creating Sequencing plate (reverse)");
@@ -326,7 +315,7 @@ public class WorkflowBuilder extends DocumentOperation {
             csReversePlate.setName(plateName+"_CYC01_HCO");
             csReversePlate.setThermocycle(getThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles(), "LAB_STANDARD_CS"));
 
-            BiocodeService.getInstance().saveReactions(messagePassingProgress, csReversePlate);
+            BiocodeService.getInstance().saveReactions(progressListener, csReversePlate);
 
 
 

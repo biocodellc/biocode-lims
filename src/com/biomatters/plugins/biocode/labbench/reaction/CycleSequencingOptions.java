@@ -1,12 +1,14 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
@@ -26,7 +28,6 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.*;
-import java.util.List;
 
 /**
  * @author Steven Stones-Havas
@@ -134,8 +135,10 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
                 }
                 Runnable runnable = new Runnable() {
                     public void run() {
+                        ProgressFrame progressFrame = new ProgressFrame("Adding Cocktails", "", GuiUtilities.getMainFrame());
+                        progressFrame.setCancelable(false);
+                        progressFrame.setIndeterminateProgress();
                         try {
-                            BiocodeService.block("Adding Cocktails", cocktailButton.getComponent());
                             BiocodeService.getInstance().addNewCocktails(editor.getNewCocktails());
                             BiocodeService.getInstance().removeCocktails(editor.getDeletedCocktails());
                             final List<OptionValue> cocktails = getCocktails();
@@ -156,7 +159,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
                             };
                             ThreadUtilities.invokeNowOrLater(runnable);
                         } finally {
-                            BiocodeService.unBlock();
+                            progressFrame.setComplete();
                         }
                     }
                 };

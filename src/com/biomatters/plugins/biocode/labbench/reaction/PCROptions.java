@@ -1,11 +1,13 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 import com.biomatters.plugins.biocode.labbench.TransactionException;
@@ -86,8 +88,8 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
                 }
                 Runnable runnable = new Runnable() {
                     public void run() {
+                        ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Adding Cocktails", cocktailButton.getComponent());
                         try {
-                            BiocodeService.block("Adding Cocktails", cocktailButton.getComponent());
                             BiocodeService.getInstance().addNewCocktails(editor.getNewCocktails());
                             BiocodeService.getInstance().removeCocktails(editor.getDeletedCocktails());
                             final List<OptionValue> cocktails = getCocktails();
@@ -108,7 +110,7 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
                             };
                             ThreadUtilities.invokeNowOrLater(runnable);
                         } finally {
-                            BiocodeService.unBlock();
+                            progressFrame.setComplete();
                         }
                     }
                 };
@@ -153,7 +155,7 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
             }
         });
     }
-    
+
     public void init() {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
