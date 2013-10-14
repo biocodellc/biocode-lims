@@ -82,7 +82,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     public String getMinimumApiVersion() {
-        return "4.611";  // We require ProgressFrame.setCancelable
+        return "4.611";  // We require ProgressFrame.setCancelable.  If we ever make this require 4.700 or later, make VerifyTaxonomyOperation not modify input documents when PluginUtilities.isRunningFromScript() and remove the exclusion for VerifyTaxonomyOperation in WorkflowSupportTest
     }
 
     @Override
