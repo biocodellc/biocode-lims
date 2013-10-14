@@ -388,77 +388,18 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction gelAction = new GeneiousAction("GEL Images", null, BiocodePlugin.getIcons("addImage_16.png")) {
         public void actionPerformed(ActionEvent e) {
-//            String plateName = "Plate_m030";
-//            try {
-//                Map<String, String> archive = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateName);
-//                Map<String, String> extraction = new HashMap<String,String>();
-//                try {
-//                    Statement stat = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().createStatement();
-//                    ResultSet resultSet = stat.executeQuery("Select extraction.* from extraction, plate where extraction.plate = plate.id AND plate.name='M030_X2'");
-//                    while(resultSet.next()) {
-//                        extraction.put(Plate.getWell(resultSet.getInt("extraction.location"), Plate.Size.w96).toPaddedString(), resultSet.getString("extraction.extractionId"));
-//                    }
-//
-//                } catch (SQLException e1) {
-//                    e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-//                }
-//                int notissue = 1000;
-//
-//                PreparedStatement tissueUpdate = null;
-//                try {
-//                    tissueUpdate = BiocodeService.getInstance().getActiveLIMSConnection().getConnection().prepareStatement("UPDATE extraction SET sampleId=? WHERE extractionId=?");
-//                } catch (SQLException e1) {
-//
-//
-//                    e1.printStackTrace();
-//                    return;
-//                }
-//                for(int i=0; i < 96; i++) {
-//                    BiocodeUtilities.Well well = Plate.getWell(i, Plate.Size.w96);
-//                    BiocodeUtilities.Well newWell = Plate.getWell(96-Plate.getWellLocation(well, Plate.Size.w96)-1, Plate.Size.w96);
-//                    String tissueId = archive.get(well.toPaddedString());
-//                    String newTissueId = archive.get(newWell.toPaddedString());
-//                    String extractionId = archive.get(well.toPaddedString());
-//                    String newExtractionId = archive.get(newWell.toPaddedString());
-//
-//                    extractionId = extraction.get(newWell.toPaddedString());
-//                    if(extractionId == null) {
-//                        extractionId = "";
-//                    }
-//
-//
-//                    if(tissueId == null) {
-//                        tissueId = "";
-//                    }
-//                    if(newTissueId != null) {
-//                        newExtractionId = newTissueId+".2";
-//                    }
-//                    else {
-//                        newTissueId = "";
-//                        newExtractionId = "noTissue"+notissue;
-//                        notissue++;
-//                    }
-//                    System.out.println(tissueId+", "+newTissueId);
-//                    //System.out.println(extractionId+", "+newExtractionId);
-//                    try {
-//                        tissueUpdate.setString(1, newTissueId);
-//                        tissueUpdate.setString(2, extractionId);
-//                        System.out.println(tissueUpdate.executeUpdate());
-//                    } catch (SQLException e1) {
-//                        e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-//                        break;
-//                    }
-//
-//                }
-//
-//            } catch (ConnectionException e1) {
-//                e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-//            }
-
             if(!BiocodeService.getInstance().isLoggedIn()) {
                 Dialogs.showMessageDialog("Please log in");
                 return;
             }
+            Runnable updatePanelRunnable = new Runnable() {
+                public void run() {
+                    List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate(), container);
+                    plateView.getPlate().setImages(gelimages);
+                    saveAction.setEnabled(true);
+                    updatePanel();
+                }
+            };
             if(!plateView.getPlate().gelImagesHaveBeenDownloaded()) {
                 BiocodeService.block("Downloading existing GEL images", container, new Runnable() {
                     public void run() {
@@ -468,13 +409,10 @@ public class PlateDocumentViewer extends DocumentViewer{
                             Dialogs.showMessageDialog(e1.getMessage());
                         }
                     }
-                });
+                }, updatePanelRunnable);
+            } else {
+                updatePanelRunnable.run();
             }
-
-            List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate(), container);
-            plateView.getPlate().setImages(gelimages);
-            saveAction.setEnabled(true);
-            updatePanel();
         }
     };
 

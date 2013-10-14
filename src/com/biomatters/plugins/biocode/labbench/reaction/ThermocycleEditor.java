@@ -1,31 +1,29 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
-import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.OptionsPanel;
-import com.biomatters.geneious.publicapi.components.GPanel;
-import com.biomatters.plugins.biocode.labbench.HiddenOptionsPopupButton;
 import com.biomatters.plugins.biocode.labbench.AdvancedAndNormalPanelsSwappedOptions;
-import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.HiddenOptionsPopupButton;
+import com.biomatters.plugins.biocode.labbench.TextAreaOption;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.swing.event.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
-import java.sql.SQLException;
-import java.sql.ResultSet;
 
 /**
  * @author steve
@@ -443,7 +441,7 @@ public class ThermocycleEditor extends JPanel {
                     return;
                 }
                 final AtomicReference<List<String>> platesUsing = new AtomicReference<List<String>>();
-                Runnable runnable = new Runnable() {
+                Runnable backgroundTask = new Runnable() {
                     public void run() {
                         try {
                             platesUsing.set(BiocodeService.getInstance().getPlatesUsingThermocycle((Thermocycle)thermocycleList.getSelectedValue()));
@@ -454,43 +452,47 @@ public class ThermocycleEditor extends JPanel {
                         }
                     }
                 };
-                BiocodeService.block("Getting plates from the database", removeButton, runnable);
-                if(platesUsing.get() == null) {  //if an exception occurred in the above runnable
-                    return;
-                }
-                if(platesUsing.get().size() > 0) {
-                    if(platesUsing.get().size() > 20) {
-                        Dialogs.showMessageDialog("The selected thermocycle is in use by "+platesUsing.get().size()+" plates.  Please remove the plates or change their thermocycle.", "Cannot delete thermocycle", removeButton, Dialogs.DialogIcon.NO_ICON);
-                        return;
-                    }
-                    final StringBuilder message = new StringBuilder("The selected thermocycle is in use on the following plates.  Please remove the plates or change their thermocycle.\n\n");
+                Runnable updateTask = new Runnable() {
+                    public void run() {
+                        if(platesUsing.get() == null) {  //if an exception occurred in the above runnable
+                            return;
+                        }
+                        if(platesUsing.get().size() > 0) {
+                            if(platesUsing.get().size() > 20) {
+                                Dialogs.showMessageDialog("The selected thermocycle is in use by "+platesUsing.get().size()+" plates.  Please remove the plates or change their thermocycle.", "Cannot delete thermocycle", removeButton, Dialogs.DialogIcon.NO_ICON);
+                                return;
+                            }
+                            final StringBuilder message = new StringBuilder("The selected thermocycle is in use on the following plates.  Please remove the plates or change their thermocycle.\n\n");
 
-                    for(String name : platesUsing.get()) {
-                        message.append("<b>");
-                        message.append(name);
-                        message.append("</b>\n");
-                    }
+                            for(String name : platesUsing.get()) {
+                                message.append("<b>");
+                                message.append(name);
+                                message.append("</b>\n");
+                            }
 
-                    Dialogs.showMessageDialog(message.toString(), "Cannot delete thermocycle", removeButton, Dialogs.DialogIcon.NO_ICON);
-                    return;
-                }
+                            Dialogs.showMessageDialog(message.toString(), "Cannot delete thermocycle", removeButton, Dialogs.DialogIcon.NO_ICON);
+                            return;
+                        }
 
-                if(thermocycleList.getSelectedIndex() >= thermocycles.size()) {
-                    newThermocycles.remove(thermocycleList.getSelectedIndex()-thermocycles.size());
-                    for(ListDataListener listener : listModel.getListDataListeners()){
-                        listener.intervalAdded(new ListDataEvent(listModel, ListDataEvent.INTERVAL_ADDED, listModel.getSize(), listModel.getSize()-1));
+                        if(thermocycleList.getSelectedIndex() >= thermocycles.size()) {
+                            newThermocycles.remove(thermocycleList.getSelectedIndex()-thermocycles.size());
+                            for(ListDataListener listener : listModel.getListDataListeners()){
+                                listener.intervalAdded(new ListDataEvent(listModel, ListDataEvent.INTERVAL_ADDED, listModel.getSize(), listModel.getSize()-1));
+                            }
+                        }
+                        else {
+                            deletedThermocycles.add((Thermocycle)thermocycleList.getSelectedValue());
+                            int index = thermocycleList.getSelectedIndex();
+                            thermocycles.remove(thermocycleList.getSelectedValue());
+                            for(ListDataListener listener : listModel.getListDataListeners()){
+                                listener.intervalRemoved(new ListDataEvent(listModel, ListDataEvent.INTERVAL_REMOVED, index, index));
+                            }
+                            thermocycleList.setSelectedIndex(Math.max(0, index-1));
+                        }
                     }
-                }
-                else {
-                    deletedThermocycles.add((Thermocycle)thermocycleList.getSelectedValue());
-                    int index = thermocycleList.getSelectedIndex();
-                    thermocycles.remove(thermocycleList.getSelectedValue());
-                    for(ListDataListener listener : listModel.getListDataListeners()){
-                        listener.intervalRemoved(new ListDataEvent(listModel, ListDataEvent.INTERVAL_REMOVED, index, index));
-                    }
-                    thermocycleList.setSelectedIndex(Math.max(0, index-1));
-                }
-                
+                };
+                BiocodeService.block("Getting plates from the database", removeButton, backgroundTask, updateTask);
+
             }
 
 

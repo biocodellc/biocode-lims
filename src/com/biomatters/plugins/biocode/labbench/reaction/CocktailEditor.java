@@ -4,22 +4,21 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import javax.swing.event.ListDataListener;
 import javax.swing.event.ListDataEvent;
-import javax.swing.event.ListSelectionListener;
+import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
-import java.util.*;
+import javax.swing.event.ListSelectionListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.sql.SQLException;
-import java.sql.ResultSet;
-
-import org.virion.jam.util.SimpleListener;
 
 /**
  * @author Steve
@@ -112,50 +111,53 @@ public class CocktailEditor<T extends Cocktail> {
                     return;
                 }
                 final AtomicReference<Collection<String>> platesUsing = new AtomicReference<Collection<String>>();
-                Runnable runnable = new Runnable() {
+                Runnable backgroundTask = new Runnable() {
                     public void run() {
                         try {
                             platesUsing.set(BiocodeService.getInstance().getPlatesUsingCocktail((T)cocktailList.getSelectedValue()));
                         } catch (SQLException e1) {
                             e1.printStackTrace();
                             Dialogs.showMessageDialog("Could not query database: "+e1.getMessage(), "Could not query database", removeButton, Dialogs.DialogIcon.ERROR);
-                            return;
                         }
                     }
                 };
-                BiocodeService.block("Getting plates from the database", removeButton, runnable);
-                if(platesUsing.get() == null) { //if an exception was thrown in the above runnable
-                    return;
-                }
-                if(platesUsing.get().size() > 0) {
-                    if(platesUsing.get().size() > 20) {
-                        Dialogs.showMessageDialog("The selected cocktail is in use by reactions on "+platesUsing.get().size()+" plates.  Please remove the reactions/plates or change their cocktails.", "Cannot delete cocktail", removeButton, Dialogs.DialogIcon.NO_ICON);
-                        return;
+                Runnable updateTask = new Runnable() {
+                    public void run() {
+                        if(platesUsing.get() == null) { //if an exception was thrown in the above runnable
+                            return;
+                        }
+                        if(platesUsing.get().size() > 0) {
+                            if(platesUsing.get().size() > 20) {
+                                Dialogs.showMessageDialog("The selected cocktail is in use by reactions on "+platesUsing.get().size()+" plates.  Please remove the reactions/plates or change their cocktails.", "Cannot delete cocktail", removeButton, Dialogs.DialogIcon.NO_ICON);
+                                return;
+                            }
+                            final StringBuilder message = new StringBuilder("The selected cocktail is in use by reactions on the following plates.  Please remove the reactions/plates or change their cocktail.\n\n");
+
+                            for(String name : platesUsing.get()) {
+                                message.append("<b>");
+                                message.append(name);
+                                message.append("</b>\n");
+                            }
+
+                            Dialogs.showMessageDialog(message.toString(), "Cannot delete cocktail", removeButton, Dialogs.DialogIcon.NO_ICON);
+                            return;
+                        }
+
+                        if(selectedValue.getId() >= 0) {
+                            deletedCocktails.add(selectedValue);
+                            cocktails.remove(selectedValue);
+                        }
+                        else {
+                            newCocktails.remove(selectedValue);
+                        }
+                        int selectedIndex = cocktailList.getSelectedIndex();
+                        for(ListDataListener listener : listModel.getListDataListeners()){
+                            listener.intervalRemoved(new ListDataEvent(listModel, ListDataEvent.INTERVAL_REMOVED, selectedIndex, selectedIndex));
+                        }
+                        cocktailList.setSelectedIndex(Math.max(0, selectedIndex-1));
                     }
-                    final StringBuilder message = new StringBuilder("The selected cocktail is in use by reactions on the following plates.  Please remove the reactions/plates or change their cocktail.\n\n");
-
-                    for(String name : platesUsing.get()) {
-                        message.append("<b>");
-                        message.append(name);
-                        message.append("</b>\n");
-                    }
-
-                    Dialogs.showMessageDialog(message.toString(), "Cannot delete cocktail", removeButton, Dialogs.DialogIcon.NO_ICON);
-                    return;
-                }
-
-                if(selectedValue.getId() >= 0) {
-                    deletedCocktails.add(selectedValue);
-                    cocktails.remove(selectedValue);                
-                }
-                else {
-                    newCocktails.remove(selectedValue);
-                }
-                int selectedIndex = cocktailList.getSelectedIndex();
-                for(ListDataListener listener : listModel.getListDataListeners()){
-                    listener.intervalRemoved(new ListDataEvent(listModel, ListDataEvent.INTERVAL_REMOVED, selectedIndex, selectedIndex));
-                }
-                cocktailList.setSelectedIndex(Math.max(0, selectedIndex-1));
+                };
+                BiocodeService.block("Getting plates from the database", removeButton, backgroundTask, updateTask);
             }
         });
 

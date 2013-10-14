@@ -1458,7 +1458,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return plateNames;
     }
 
-    public static synchronized void block(final String message, final JComponent parentComponent, final Runnable task) {
+    /**
+     * Displays a modal progress frame to prevent the user from touching anything while <code>runInBackgroundThread</code>
+     * is executed in new thread. DOES NOT WAIT for the task to finish before returning, returns immediately. Can be called safely from the
+     * event dispatch thread.
+     *
+     * @param message user message to display in the progress frame. Not null
+     * @param parentComponent component within the window that should be the owner of the modal progress frame. Can be null to use main window.
+     * @param runInBackgroundThread task to run in a background thread. Not null
+     * @param runInSwingThreadWhenFinished optional task to run in the event dispatch thread when <code>runInBackgroundThread</code> is finished. May be null
+     */
+    public static void block(final String message, final JComponent parentComponent, final Runnable runInBackgroundThread,
+                             final Runnable runInSwingThreadWhenFinished) {
         Window owner;
         if (parentComponent != null && parentComponent.getTopLevelAncestor() instanceof Window) {
             owner = (Window) parentComponent.getTopLevelAncestor();
@@ -1472,13 +1483,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             @Override
             public void run() {
                 try {
-                    task.run();
+                    runInBackgroundThread.run();
                 } finally {
                     progressFrame.setComplete();
+                    if (runInSwingThreadWhenFinished != null) {
+                        ThreadUtilities.invokeNowOrLater(runInSwingThreadWhenFinished);
+                    }
                 }
             }
         };
-        new Thread(runnable, "Biocode blocking thread").start();
+        new Thread(runnable, "Biocode blocking thread - " +message).start();
     }
 
     public List<PCRCocktail> getPCRCocktails() {

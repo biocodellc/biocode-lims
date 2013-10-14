@@ -15,10 +15,10 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -208,7 +208,7 @@ public class PlateBulkEditor {
                                 }
                             }
                         };
-                        BiocodeService.block("Fetching tissue ID's from the FIMS database", tissueEditor, runnable);
+                        BiocodeService.block("Fetching tissue ID's from the FIMS database", tissueEditor, runnable, null);
                     }
                 }
             };
@@ -277,7 +277,7 @@ public class PlateBulkEditor {
 
 
                     Runnable runnable = new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
-                    BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable);
+                    BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable, null);
                 }
             };
             toolsActions.add(getExtractionsFromBarcodes);
@@ -409,7 +409,7 @@ public class PlateBulkEditor {
 
                     Runnable runnable = new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
 
-                    BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable);
+                    BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable, null);
                 }
             };
             toolsActions.add(getExtractionsFromBarcodes);
@@ -476,7 +476,7 @@ public class PlateBulkEditor {
                             }
                         }
                     };
-                    BiocodeService.block("Fetching workflow ID's from the database", editorToCheck, runnable);
+                    BiocodeService.block("Fetching workflow ID's from the database", editorToCheck, runnable, null);
 
                 }
             };

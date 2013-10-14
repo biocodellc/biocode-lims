@@ -176,6 +176,12 @@ public class PlateViewer extends JPanel {
         }
         final GeneiousAction gelAction = new GeneiousAction("Attach GEL Image", "Attach GEL images to this plate", BiocodePlugin.getIcons("addImage_16.png")) {
             public void actionPerformed(ActionEvent e) {
+                Runnable updateTask = new Runnable() {
+                    public void run() {
+                        List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate(), selfReference);
+                        plateView.getPlate().setImages(gelimages);
+                    }
+                };
                 if(!plateView.getPlate().gelImagesHaveBeenDownloaded()) {
                     BiocodeService.block("Downloading existing GEL images", selfReference, new Runnable() {
                         public void run() {
@@ -185,10 +191,10 @@ public class PlateViewer extends JPanel {
                                 Dialogs.showMessageDialog(e1.getMessage());
                             }
                         }
-                    });
+                    }, updateTask);
+                } else {
+                    updateTask.run();
                 }
-                List<GelImage> gelimages = GelEditor.editGels(plateView.getPlate(), selfReference);
-                plateView.getPlate().setImages(gelimages);
             }
         };
         toolbar.addAction(gelAction);
@@ -207,7 +213,7 @@ public class PlateViewer extends JPanel {
                 PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
                 if(editor.editPlate(selfReference)) {
                     nameField.setValue(plateView.getPlate().getName());
-                    Runnable runnable = new Runnable() {
+                    Runnable backgroundTask = new Runnable() {
                         public void run() {
                             String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
                             if(error != null && error.length() > 0) {
@@ -215,10 +221,14 @@ public class PlateViewer extends JPanel {
                             }
                         }
                     };
-                    BiocodeService.block("Checking reactions", selfReference, runnable);
-                    plateView.invalidate();
-                    scroller.getViewport().validate();
-                    plateView.repaint();
+                    Runnable updateTask = new Runnable() {
+                        public void run() {
+                            plateView.invalidate();
+                            scroller.getViewport().validate();
+                            plateView.repaint();
+                        }
+                    };
+                    BiocodeService.block("Checking reactions", selfReference, backgroundTask, updateTask);
                 }
             }
         };

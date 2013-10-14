@@ -29,7 +29,10 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
@@ -178,7 +181,7 @@ public class ReactionUtilities {
                 ThreadUtilities.invokeNowOrLater(runnable);
             }
         };
-        BiocodeService.block("Importing traces", owner, runnable);
+        BiocodeService.block("Importing traces", owner, runnable, null);
         return null;
     }
 

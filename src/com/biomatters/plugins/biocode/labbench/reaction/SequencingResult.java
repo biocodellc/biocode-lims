@@ -308,7 +308,7 @@ public class SequencingResult implements XMLSerializable {
         Dialogs.showDialog(dialogOptions, resultsPanel);
     }
 
-    private static void displayTableOfResults(final SequencingResult result, GTable table) {
+    private static void displayTableOfResults(final SequencingResult result, final GTable table) {
         final AtomicReference<NucleotideSequenceDocument> doc = new AtomicReference<NucleotideSequenceDocument>();
         final AtomicReference<Exception> error = new AtomicReference<Exception>();
         Runnable downloadSeqs = new Runnable() {
@@ -327,14 +327,18 @@ public class SequencingResult implements XMLSerializable {
                 }
             }
         };
-        BiocodeService.block("Downloading Sequences...", null, downloadSeqs);
-        @SuppressWarnings({"ThrowableResultOfMethodCallIgnored"}) Exception exception = error.get();
-        if(exception != null) {
-            Dialogs.showMessageDialog("Failed to download sequences: " + exception.getMessage());
-        } else {
-            SequencingResultEditor editor = new SequencingResultEditor(Collections.singletonList(doc.get()), "");
-            editor.showDialog(table);
-        }
+        @SuppressWarnings({"ThrowableResultOfMethodCallIgnored"}) final Exception exception = error.get();
+        Runnable showEditor = new Runnable() {
+            public void run() {
+                if(exception != null) {
+                    Dialogs.showMessageDialog("Failed to download sequences: " + exception.getMessage());
+                } else {
+                    SequencingResultEditor editor = new SequencingResultEditor(Collections.singletonList(doc.get()), "");
+                    editor.showDialog(table);
+                }
+            }
+        };
+        BiocodeService.block("Downloading Sequences...", null, downloadSeqs, showEditor);
     }
 
     private static class SequencingResultRendererEditor extends AbstractCellEditor implements TableCellRenderer, TableCellEditor{

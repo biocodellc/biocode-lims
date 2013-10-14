@@ -82,7 +82,7 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
                         }
                     }
                     final AtomicReference<Exception> exception = new AtomicReference<Exception>();
-                    Runnable runnable = new Runnable() {
+                    Runnable backgroundTask = new Runnable() {
                         public void run() {
                             try {
                                 createDatabase(newDbName);
@@ -91,14 +91,17 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
                             }
                         }
                     };
-                    BiocodeService.block("Creating Database", getPanel(), runnable);
-                    if (exception.get() != null) {
-                        Dialogs.showMessageDialog("Could not create database: " + exception.get().getMessage(), "Could not create database", getPanel(), Dialogs.DialogIcon.WARNING);
-                    }
-                    dbNames = updateDatabaseList();
-                    databaseOption.setPossibleValues(getDbValues(dbNames));
-                    databaseOption.setValueFromString(newDbName);
-
+                    Runnable updateTask = new Runnable() {
+                        public void run() {
+                            if (exception.get() != null) {
+                                Dialogs.showMessageDialog("Could not create database: " + exception.get().getMessage(), "Could not create database", getPanel(), Dialogs.DialogIcon.WARNING);
+                            }
+                            List<String> dbNames = updateDatabaseList();
+                            databaseOption.setPossibleValues(getDbValues(dbNames));
+                            databaseOption.setValueFromString(newDbName);
+                        }
+                    };
+                    BiocodeService.block("Creating Database", getPanel(), backgroundTask, updateTask);
                 }
             }
         });

@@ -1,32 +1,32 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
-import com.biomatters.geneious.publicapi.components.GPanel;
-import com.biomatters.plugins.biocode.labbench.ImagePanel;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GLabel;
+import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.ZoomPanel;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ImagePanel;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import com.sun.image.codec.jpeg.JPEGCodec;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.awt.event.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Map;
-import java.util.HashMap;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Collections;
-import java.io.*;
-
-import org.virion.jam.util.SimpleListener;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Steve
@@ -36,7 +36,7 @@ import org.virion.jam.util.SimpleListener;
  */
 
 public class GelSplitter {
-    public static void splitGel(Plate plate, GelImage image, Component owner) {
+    public static void splitGel(final Plate plate, GelImage image, Component owner) {
         final SplitGelImagePanel imagePanel = new SplitGelImagePanel(image.getImage(), plate);
         JScrollPane scroller = new JScrollPane(imagePanel);
 
@@ -55,7 +55,7 @@ public class GelSplitter {
         zoomPanel.add(zoomer, BorderLayout.NORTH);
         zoomPanel.add(rotationSlider, BorderLayout.CENTER);
 
-        Options options = new Options(GelSplitter.class);
+        final Options options = new Options(GelSplitter.class);
         options.setHorizontallyCompact(true);
         int numberOfReactions = Math.max(plate.getReactions().length, plate.getRows()*plate.getCols());
         final Options.IntegerOption numberOfRowsOption = options.addIntegerOption("numberOfRows", "Number of Rows", plate.getRows(), 1, numberOfReactions);
@@ -136,36 +136,41 @@ public class GelSplitter {
         }
         options.savePreferences();
         final AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>> imageMap = new AtomicReference<Map<BiocodeUtilities.Well, BufferedImage>>();
-        BiocodeService.block("Splitting your GEL", null, new Runnable() {
+        Runnable backgroundTask = new Runnable() {
             public void run() {
                 imageMap.set(imagePanel.splitImage());
             }
-        });
-        if(imageMap.get() == null) {
-            return;
-        }
-        System.out.println(slider.getValue());
-        for(Map.Entry<BiocodeUtilities.Well, BufferedImage> entry : imageMap.get().entrySet()) {
-            BufferedImage entryImage = entry.getValue();
-            try {
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                com.sun.image.codec.jpeg.JPEGImageEncoder jpegImageEncoder = JPEGCodec.createJPEGEncoder(out);
-                jpegImageEncoder.encode(entryImage);
-                out.close();
-                GelImage gelImage = new GelImage(out.toByteArray(), entry.getKey().toString());
-                Reaction reaction = plate.getReaction(entry.getKey());
-                if(reaction != null) {
-                    reaction.setGelImage(gelImage);
-                    if((Boolean)options.getValue("scorePlate")) {
-                        System.out.print(reaction.getLocationString()+" ");
-                        reaction.getOptions().setValue(ReactionOptions.RUN_STATUS, GelScorer.wellPasses(entryImage,slider.getValue()) ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+        };
+        Runnable updateTask = new Runnable() {
+            public void run() {
+                if(imageMap.get() == null) {
+                    return;
+                }
+                System.out.println(slider.getValue());
+                for(Map.Entry<BiocodeUtilities.Well, BufferedImage> entry : imageMap.get().entrySet()) {
+                    BufferedImage entryImage = entry.getValue();
+                    try {
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        com.sun.image.codec.jpeg.JPEGImageEncoder jpegImageEncoder = JPEGCodec.createJPEGEncoder(out);
+                        jpegImageEncoder.encode(entryImage);
+                        out.close();
+                        GelImage gelImage = new GelImage(out.toByteArray(), entry.getKey().toString());
+                        Reaction reaction = plate.getReaction(entry.getKey());
+                        if(reaction != null) {
+                            reaction.setGelImage(gelImage);
+                            if((Boolean)options.getValue("scorePlate")) {
+                                System.out.print(reaction.getLocationString()+" ");
+                                reaction.getOptions().setValue(ReactionOptions.RUN_STATUS, GelScorer.wellPasses(entryImage,slider.getValue()) ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+                            }
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        //todo: error handling
                     }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-                //todo: error handling
             }
-        }
+        };
+        BiocodeService.block("Splitting your GEL", null, backgroundTask, updateTask);
     }
 
 

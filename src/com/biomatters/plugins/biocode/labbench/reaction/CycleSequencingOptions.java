@@ -174,28 +174,27 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
                     Dialogs.showMessageDialog("These options are not linked to a reaction, so you cannot view the traces.", "Cannot view traces", tracesButton.getComponent(), Dialogs.DialogIcon.INFORMATION);
                     return;
                 }
-                if(reaction.getId() >= 0) {
-                    if(reaction.getTraces() == null) {
-//                        if(!Dialogs.showYesNoDialog("You have not downloaded the sequences for this reaction from the database yet.  Would you like to do so now?", "Download sequences", tracesButton.getComponent(), Dialogs.DialogIcon.QUESTION)) {
-//                            return;
-//                        }
-                        Runnable r = new Runnable() {
-                            public void run() {
-                                reaction.getChromats();
+                Runnable showEditor = new Runnable() {
+                    public void run() {
+                        TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"));
+                        if(editor.showDialog(tracesButton.getComponent())) {
+                            reaction.setTraces(editor.getSourceObjects());
+                            for(Trace t : editor.getDeletedObjects()) {
+                                reaction.addTraceToRemoveOnSave(t.getId());
                             }
-                        };
-                        BiocodeService.block("Downloading sequences", tracesButton.getComponent(), r);
-
+                        }
                     }
+                };
+                if(reaction.getId() >= 0 && reaction.getTraces() == null) {
+                    Runnable backgroundTask = new Runnable() {
+                        public void run() {
+                            reaction.getChromats();
+                        }
+                    };
+                    BiocodeService.block("Downloading sequences", tracesButton.getComponent(), backgroundTask, showEditor);
+                } else {
+                    showEditor.run();
                 }
-                TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"));
-                if(editor.showDialog(tracesButton.getComponent())) {
-                    reaction.setTraces(editor.getSourceObjects());
-                    for(Trace t : editor.getDeletedObjects()) {
-                        reaction.addTraceToRemoveOnSave(t.getId());
-                    }
-                }
-
             }
         });
 
