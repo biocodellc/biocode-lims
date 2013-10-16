@@ -338,7 +338,7 @@ public class SequencingResult implements XMLSerializable {
                 }
             }
         };
-        BiocodeService.block("Downloading Sequences...", null, downloadSeqs, showEditor);
+        BiocodeService.block("Downloading Sequences...", table, downloadSeqs, showEditor);
     }
 
     private static class SequencingResultRendererEditor extends AbstractCellEditor implements TableCellRenderer, TableCellEditor{
