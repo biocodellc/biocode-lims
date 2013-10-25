@@ -519,6 +519,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 Dialogs.showMessageDialog(error);
             }
             logOut();
+            progressListener.setProgress(1.0);
             return;
         }
 
@@ -539,6 +540,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
             logOut();
+            progressListener.setProgress(1.0);
             return;
         }
 
@@ -589,8 +591,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             String message = "Geneious could not connect to the LIMS database";
             showErrorDialog(e2, title, message);
             return;
+        } finally {
+            progressListener.setProgress(1.0);
         }
-        progressListener.setProgress(1.0);
         updateStatus();
     }
 
