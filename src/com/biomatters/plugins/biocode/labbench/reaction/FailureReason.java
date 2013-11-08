@@ -50,6 +50,11 @@ public class FailureReason {
     }
 
     private static final String OPTION_NAME = "reason";
+
+    public static String getOptionName() {
+        return OPTION_NAME;
+    }
+
     private static final String NO_REASON = "Unspecified";
     public static Options.ComboBoxOption<Options.OptionValue> addToOptions(Options toAddTo) {
         List<FailureReason> possibleFailureReasons = BiocodeService.getInstance().getActiveLIMSConnection().getPossibleFailureReasons();

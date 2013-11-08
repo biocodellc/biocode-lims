@@ -117,13 +117,18 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
     }
 
     public static class CherryPickingOptions extends Options {
+        private static final String STATE = "reactionState";
+        private static final String TAXON = "taxonomy";
+        private static final String PRIMER = "primer";
+
         static final Options.OptionValue[] cherryPickingConditions = new Options.OptionValue[] {
-                new Options.OptionValue("reactionState", "Reaction State"),
-                new Options.OptionValue("taxonomy", "Taxonomy"),
-                new Options.OptionValue("primer", "Primer")
+                new Options.OptionValue(STATE, "Reaction State"),
+                new Options.OptionValue(TAXON, "Taxonomy"),
+                new Options.OptionValue(PRIMER, "Primer"),
+                new OptionValue(FailureReason.getOptionName(), "Failure Reason")
         };
 
-        static final OptionValue[] valueValues = new OptionValue[] {
+        static final OptionValue[] statusValues = new OptionValue[] {
                 ReactionOptions.NOT_RUN_VALUE,
                 ReactionOptions.PASSED_VALUE,
                 ReactionOptions.SUSPECT_VALUE,
@@ -136,13 +141,10 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
             addComboBoxOption("condition", "", cherryPickingConditions, cherryPickingConditions[0]);
 
-
-            addComboBoxOption("value", "is", valueValues, valueValues[0]);
-
-            addStringOption("value2", "contains", "");
-
-            addPrimerSelectionOption("value3", "is", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
-
+            addComboBoxOption(STATE, "is", statusValues, statusValues[0]);
+            addStringOption(TAXON, "contains", "");
+            addPrimerSelectionOption(PRIMER, "is", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
+            FailureReason.addToOptions(this);
 
             endAlignHorizontally();
             initListener();
@@ -158,16 +160,11 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             final Option conditionOption = getOption("condition");
             SimpleListener listener = new SimpleListener() {
                 public void objectChanged() {
-                    boolean value1Visible = conditionOption.getValue().equals(cherryPickingConditions[0]);
-                    boolean value2Visible = conditionOption.getValue().equals(cherryPickingConditions[1]);
-
-                    Option valueOption = getOption("value");
-                    Option valueOption2 = getOption("value2");
-                    Option valueOption3 = getOption("value3");
-
-                    valueOption.setVisible(value1Visible);
-                    valueOption2.setVisible(value2Visible);
-                    valueOption3.setVisible(!value1Visible && !value2Visible);
+                    String chosenCondition = conditionOption.getValueAsString();
+                    for(String optionName : new String[] {STATE, TAXON, PRIMER, FailureReason.getOptionName()}) {
+                        Option option = getOption(optionName);
+                        option.setVisible(chosenCondition.equals(optionName));
+                    }
                 }
             };
             listener.objectChanged();
@@ -177,13 +174,24 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         public boolean reactionMatches(Reaction r) throws DocumentOperationException{
             Option conditionOption = getOption("condition");
-            String value1 = getValueAsString("value");
-            String value2 = getValueAsString("value2");
-            DocumentSelectionOption option3 = (DocumentSelectionOption)getOption("value3");
-            if(conditionOption.getValue().equals(cherryPickingConditions[0])) { //reaction state
+            String value1 = getValueAsString(STATE);
+            String value2 = getValueAsString(TAXON);
+            DocumentSelectionOption option3 = (DocumentSelectionOption)getOption(PRIMER);
+
+            if(conditionOption.getValue().equals(cherryPickingConditions[3])) {
+                if(r instanceof CycleSequencingReaction) {
+                    FailureReason chosenReason = FailureReason.getReasonFromOptions(this);
+                    CycleSequencingReaction cycleSequencingReaction = (CycleSequencingReaction) r;
+                    List<SequencingResult> results = cycleSequencingReaction.getSequencingResults();
+                    // todo Latest or all?
+                    if(!results.isEmpty() && chosenReason == results.get(0).getReason()) {
+                        return true;
+                    }
+                }
+                return false;
+            } else if(conditionOption.getValue().equals(cherryPickingConditions[0])) { //reaction state
                 return value1.equals(r.getFieldValue(ReactionOptions.RUN_STATUS));
-            }
-            else if(conditionOption.getValue().equals(cherryPickingConditions[1])) { //taxonomy
+            } else if(conditionOption.getValue().equals(cherryPickingConditions[1])) { //taxonomy
                 FimsSample fimsSample = r.getFimsSample();
                 if(fimsSample != null) {
                     for(DocumentField field : fimsSample.getTaxonomyAttributes()) {
@@ -194,8 +202,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                     }
                 }
                 return false;
-            }
-            else if(conditionOption.getValue().equals(cherryPickingConditions[2])) { //primer
+            } else if(conditionOption.getValue().equals(cherryPickingConditions[2])) { //primer
                 if(r.getType() == Reaction.Type.PCR) { //two primers
                     List<AnnotatedPluginDocument> primer1 = ((DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_OPTION_ID)).getDocuments();
                     List<AnnotatedPluginDocument> primer2 = ((DocumentSelectionOption)r.getOptions().getOption(PCROptions.PRIMER_REVERSE_OPTION_ID)).getDocuments();
