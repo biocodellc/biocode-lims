@@ -183,7 +183,6 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                     FailureReason chosenReason = FailureReason.getReasonFromOptions(this);
                     CycleSequencingReaction cycleSequencingReaction = (CycleSequencingReaction) r;
                     List<SequencingResult> results = cycleSequencingReaction.getSequencingResults();
-                    // todo Latest or all?
                     if(!results.isEmpty() && chosenReason == results.get(0).getReason()) {
                         return true;
                     }
