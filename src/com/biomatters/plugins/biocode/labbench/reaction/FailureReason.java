@@ -1,7 +1,9 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -56,8 +58,12 @@ public class FailureReason {
     }
 
     private static final String NO_REASON = "Unspecified";
-    public static Options.ComboBoxOption<Options.OptionValue> addToOptions(Options toAddTo) {
-        List<FailureReason> possibleFailureReasons = BiocodeService.getInstance().getActiveLIMSConnection().getPossibleFailureReasons();
+    public static Options.ComboBoxOption<Options.OptionValue> addToOptions(Options toAddTo) throws DocumentOperationException {
+        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+        if(limsConnection == null) {
+            throw new DocumentOperationException("You must be logged into the Biocode service") ;
+        }
+        List<FailureReason> possibleFailureReasons = limsConnection.getPossibleFailureReasons();
         List<Options.OptionValue> possibleValues = new ArrayList<Options.OptionValue>();
         Options.OptionValue defaultValue = new Options.OptionValue(NO_REASON, NO_REASON);
         possibleValues.add(defaultValue);

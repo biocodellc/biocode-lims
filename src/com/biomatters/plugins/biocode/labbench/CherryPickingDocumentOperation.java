@@ -135,7 +135,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 ReactionOptions.FAILED_VALUE
         };
 
-        public CherryPickingOptions(Class sourceClass) {
+        public CherryPickingOptions(Class sourceClass) throws DocumentOperationException {
             super(sourceClass);
             beginAlignHorizontally("", false);
 
