@@ -1082,10 +1082,10 @@ public abstract class LIMSConnection {
                 List<FimsSample> samples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(workflowToSampleId.values());
                 for (Map.Entry<Integer, String> entry : workflowToSampleId.entrySet()) {
                     WorkflowDocument workflowDocument = workflowDocs.get(entry.getKey());
-                    Reaction reactino = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
+                    Reaction reaction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
                     FimsSample sample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(entry.getValue());
-                    if(reactino.getFimsSample() == null) {
-                        reactino.setFimsSample(sample);
+                    if(reaction != null && reaction.getFimsSample() == null) {
+                        reaction.setFimsSample(sample);
                     }
                 }
             } catch (ConnectionException e) {
