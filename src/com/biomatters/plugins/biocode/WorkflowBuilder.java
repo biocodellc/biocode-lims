@@ -163,6 +163,9 @@ public class WorkflowBuilder extends DocumentOperation {
         } catch (DocumentImportException e) {
             e.printStackTrace();
             throw new DocumentOperationException(e.getMessage(), e);
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
+            throw new DocumentOperationException(e.getMessage(), e);
         }
     }
 
@@ -178,7 +181,7 @@ public class WorkflowBuilder extends DocumentOperation {
         return files;
     }
 
-    public void buildPlates(String traceLocation, SequenceListDocument sequenceList, WritableDatabaseService contigFolder, final ProgressListener progressListener) throws ConnectionException, SQLException, BadDataException, DocumentOperationException, IOException, DocumentImportException {
+    public void buildPlates(String traceLocation, SequenceListDocument sequenceList, WritableDatabaseService contigFolder, final ProgressListener progressListener) throws ConnectionException, SQLException, BadDataException, DocumentOperationException, IOException, DocumentImportException, DatabaseServiceException {
         Collection<String> plateNames = getPlateIds(traceLocation);
 
 

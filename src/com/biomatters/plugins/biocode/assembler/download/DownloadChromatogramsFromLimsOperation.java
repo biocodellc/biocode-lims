@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.assembler.download;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
@@ -91,6 +92,9 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 } catch (SQLException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                } catch (DatabaseServiceException e) {
+                    e.printStackTrace();
+                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
                 }
                 if (plateDocuments.isEmpty()) {
                     throw new DocumentOperationException("No plate found with name \"" + plateName + "\"");
@@ -116,6 +120,8 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                     workflows = limsConnection.getMatchingDocumentsFromLims(
                             workflowQuery, Collections.<FimsSample>emptyList(), null).getWorkflows();
                 } catch (SQLException e) {
+                    throw new DocumentOperationException(e.getMessage(), e);
+                } catch (DatabaseServiceException e) {
                     throw new DocumentOperationException(e.getMessage(), e);
                 }
 

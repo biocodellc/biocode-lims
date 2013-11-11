@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
@@ -442,6 +443,10 @@ public class ImportLimsOperation extends DocumentOperation {
                     canceled = true;
                     callbackException.set(e);
                     return;
+                } catch (DatabaseServiceException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                    return;
                 }
                 if(savedPlates.size() != 1) {
                     callbackException.set(new DocumentOperationException("The plate appears not to have been saved to the database - expected 1 plate but got "+savedPlates.size()));
@@ -581,6 +586,9 @@ public class ImportLimsOperation extends DocumentOperation {
                     canceled = true;
                     callbackException.set(e);
                 } catch (BadDataException e) {
+                    canceled = true;
+                    callbackException.set(e);
+                } catch (DatabaseServiceException e) {
                     canceled = true;
                     callbackException.set(e);
                 }

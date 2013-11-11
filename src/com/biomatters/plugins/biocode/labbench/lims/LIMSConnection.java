@@ -833,12 +833,12 @@ public abstract class LIMSConnection {
         return value.toString();
     }
 
-    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback) throws SQLException{
+    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback) throws SQLException, DatabaseServiceException {
         return getMatchingPlateDocuments(query, workflowDocuments, callback, callback);
     }
 
     @SuppressWarnings({"MismatchedQueryAndUpdateOfCollection"})
-    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback, Cancelable cancelable) throws SQLException{
+    public List<PlateDocument> getMatchingPlateDocuments(Query query, List<WorkflowDocument> workflowDocuments, RetrieveCallback callback, Cancelable cancelable) throws SQLException, DatabaseServiceException {
         Connection connection = getConnection();
         Connection connection2 = isLocal() ? connection : this.connection2;
         if(connection == null || connection2 == null) {
@@ -972,7 +972,7 @@ public abstract class LIMSConnection {
         }
     }
 
-    private Map<Integer, Plate> createPlateDocuments(RetrieveCallback callback, Cancelable cancelable, ResultSet resultSet) throws SQLException {
+    private Map<Integer, Plate> createPlateDocuments(RetrieveCallback callback, Cancelable cancelable, ResultSet resultSet) throws SQLException, DatabaseServiceException {
         Map<Integer, Plate> plates = createPlateAndWorkflowsFromResultSet(cancelable, resultSet).plates;
         if(callback != null) {
             for (Plate plate : plates.values()) {
@@ -983,10 +983,11 @@ public abstract class LIMSConnection {
         return plates;
     }
 
-    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet) throws SQLException {
+    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet) throws SQLException, DatabaseServiceException {
         final StringBuilder totalErrors = new StringBuilder("");
         Map<Integer, Plate> plateMap = new HashMap<Integer, Plate>();
         Map<Integer, WorkflowDocument> workflowDocs = new HashMap<Integer, WorkflowDocument>();
+        Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
         List<Integer> sequenceIds = new ArrayList<Integer>();
 
         System.out.println("Creating Reactions...");
@@ -1013,6 +1014,11 @@ public abstract class LIMSConnection {
             } else {
                 WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
                 workflowDocs.put(workflowId, newWorkflow);
+            }
+
+            String sampleId = resultSet.getString("extraction.sampleId");
+            if(sampleId != null) {
+                workflowToSampleId.put(workflowId, sampleId);
             }
 
             Plate plate;
@@ -1065,6 +1071,25 @@ public abstract class LIMSConnection {
 
                 plateMap.put(previousId, prevPlate);
 
+            }
+        }
+
+        if(!workflowToSampleId.isEmpty()) {
+            try {
+                // Instantiation of a ExtractionReaction's FIMS sample relies on it being in the cache.
+                // So pre-cache all the samples we need in one query and hold a reference so they don't get garbage collected
+                @SuppressWarnings("UnusedDeclaration")
+                List<FimsSample> samples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(workflowToSampleId.values());
+                for (Map.Entry<Integer, String> entry : workflowToSampleId.entrySet()) {
+                    WorkflowDocument workflowDocument = workflowDocs.get(entry.getKey());
+                    Reaction reactino = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
+                    FimsSample sample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(entry.getValue());
+                    if(reactino.getFimsSample() == null) {
+                        reactino.setFimsSample(sample);
+                    }
+                }
+            } catch (ConnectionException e) {
+                throw new DatabaseServiceException(e, "Unable to retrieve FIMS samples", false);
             }
         }
 
@@ -1365,7 +1390,7 @@ public abstract class LIMSConnection {
      *
      * @throws SQLException if there is a problem with the database
      */
-    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException {
+    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException, DatabaseServiceException {
 
         LimsSearchResult result = new LimsSearchResult();
 
@@ -1557,7 +1582,7 @@ public abstract class LIMSConnection {
         }
     }
 
-    private WorkflowsAndPlatesQueryResult getAnyPlatesThatDoNotHaveWorkflows(Cancelable cancelable, Collection<FimsSample> samples, CompoundSearchQuery.Operator operator, QueryPart workflowPart, QueryPart extractionPart, QueryPart platePart, QueryPart assemblyPart) throws SQLException {
+    private WorkflowsAndPlatesQueryResult getAnyPlatesThatDoNotHaveWorkflows(Cancelable cancelable, Collection<FimsSample> samples, CompoundSearchQuery.Operator operator, QueryPart workflowPart, QueryPart extractionPart, QueryPart platePart, QueryPart assemblyPart) throws SQLException, DatabaseServiceException {
         // Now we have to get the plates that don't have any workflows, these aren't caught by the above query
         // because it is workflow focused.  (This is because MySQL doesn't have FULL OUTER JOIN)
         String getPlatesWithNoWorkflows = getPlatesWithNoWorkflowsQuery(samples, operator, workflowPart,

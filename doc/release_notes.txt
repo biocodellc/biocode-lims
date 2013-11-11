@@ -1,6 +1,9 @@
 ==Biocode Plugin 2.6.0 - TBD==
 
 
+==Biocode Plugin 2.5.1 - TBD==
+* Annotate from FIMS/LIMS can now use the annotated workflow name in addition to the annotated plate/well.
+
 ==Biocode Plugin 2.5.0 - TBD==
 * Old FIMS fields from MySQL and older Excel connections are now detected when annotating from FIMS/LIMS and can be removed.
 * A text filter can now be used when bulk adding traces to sequencing plates.

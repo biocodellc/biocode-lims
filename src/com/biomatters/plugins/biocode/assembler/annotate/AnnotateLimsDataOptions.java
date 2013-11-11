@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.assembler.annotate;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -14,7 +15,6 @@ import javax.swing.*;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -78,7 +78,9 @@ public class AnnotateLimsDataOptions extends Options {
 
         useExistingValues = new OptionValue[] {
                 new OptionValue("plateFromOptions", "Use the following plate/well"),
-                new OptionValue("existingPlate", "Use annotated plate/well", "Your sequences will have annotated plate and well values if you have run annotate with \nFIMS data on them before, or if you downloaded them directly from the database.")
+                new OptionValue("existingPlate", "Use annotated workflow/plate/well",
+                        "Your sequences will have annotated workflow, plate and well values if you have run annotate with \n" +
+                                "FIMS/LIMS data on them before, or if you downloaded them directly from the database.")
         };
 
         addChildOptions("useExistingOptions", "", "", useExistingOptions);
@@ -115,6 +117,10 @@ public class AnnotateLimsDataOptions extends Options {
         return nameSeparatorOption.getSeparatorString();
     }
 
+    boolean isAnnotateWithSpecifiedPlate() {
+        return useExistingPlates.getValue() == useExistingValues[0];
+    }
+
     /**
      *
      * @param annotatedDocument
@@ -122,52 +128,7 @@ public class AnnotateLimsDataOptions extends Options {
      * @throws com.biomatters.plugins.biocode.labbench.ConnectionException
      * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      */
-    public FimsData getFimsData(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
-        if(useExistingPlates.getValue() == useExistingValues[0]) {
-            return getFIMSDataForGivenPlate(annotatedDocument);
-        }
-        else {
-            return getFIMSDataForPlateByDocumentFields(annotatedDocument);
-        }
-    }
-
-    private Map<String, Map<BiocodeUtilities.Well, WorkflowDocument>> plateCache = new HashMap<String, Map<BiocodeUtilities.Well, WorkflowDocument>>();
-
-    private FimsData getFIMSDataForPlateByDocumentFields(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException{
-        Object plateName = annotatedDocument.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
-        if(plateName == null) {
-            return null;
-        }
-        Map<BiocodeUtilities.Well, WorkflowDocument> workflowMap;
-        try {
-            workflowMap = getWorkflowMap(plateName.toString());
-        } catch (SQLException e) {
-            throw new DocumentOperationException("Failed to retrieve FIMS data for plate " + plateName+". "+e.getMessage());
-        }
-
-        if(workflowMap != null) {
-            Object wellName = annotatedDocument.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD);
-            if(wellName == null) { //this shouldn't happen - if we have the plate field we should have the well field.
-                return null;
-            }
-            BiocodeUtilities.Well well = new BiocodeUtilities.Well(wellName.toString());       
-            WorkflowDocument workflowDocument = workflowMap.get(well);
-            return new FimsData(workflowDocument, plateName.toString(), well);
-        }
-
-        return null;
-    }
-
-    private Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowMap(String plateName) throws SQLException, DocumentOperationException{
-        Map<BiocodeUtilities.Well, WorkflowDocument> workflowMap = plateCache.get(plateName);
-        if(workflowMap == null) {
-            workflowMap = BiocodeService.getInstance().getWorkflowsForCycleSequencingPlate(plateName);
-            plateCache.put(plateName, workflowMap);
-        }
-        return workflowMap;
-    }
-
-    private FimsData getFIMSDataForGivenPlate(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
+    FimsData getFIMSDataForGivenPlate(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         if (idType.getValue() == BARCODE) {
 //            if (true) {
                 throw new DocumentOperationException("FIMS data cannot be retrieved using barcodes. Please contact Biomatters if you require this functionality.");
@@ -219,7 +180,7 @@ public class AnnotateLimsDataOptions extends Options {
 
     @Override
     public String verifyOptionsAreValid() {
-        if (useExistingPlates.getValue() == useExistingValues[0] && getForwardPlateName().trim().equals("")) {
+        if (isAnnotateWithSpecifiedPlate() && getForwardPlateName().trim().equals("")) {
             return "A forward plate name must be entered (reverse can be empty)";
         }
         return null;
@@ -265,7 +226,9 @@ public class AnnotateLimsDataOptions extends Options {
                         break;
                 }
             } catch (SQLException e) {
-                throw new DocumentOperationException("Failed to retrieve FIMS data for plates " + forwardPlateName + " and " + reversePlateName);
+                throw new DocumentOperationException("Failed to retrieve FIMS data for plates " + forwardPlateName + " and " + reversePlateName, e);
+            } catch (DatabaseServiceException e) {
+                throw new DocumentOperationException("Failed to retrieve FIMS data for plates " + forwardPlateName + " and " + reversePlateName, e);
             }
         }
     }

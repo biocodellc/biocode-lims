@@ -715,7 +715,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         try {
             List<FimsSample> tissueSamples = null;
             List<Query> fimsQueries = new ArrayList<Query>();
-            List<Query> limsQueries = new ArrayList<Query>();
             callback.setIndeterminateProgress();
 
             if(query instanceof CompoundSearchQuery) {
@@ -726,9 +725,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     }
                     if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
                         fimsQueries.add(childQuery);//todo: distinguish between queries from multiple FIMS connections
-                    }
-                    else {
-                        limsQueries.add(childQuery);
                     }
                 }
                 if(fimsQueries.size() > 0) {
@@ -761,7 +757,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     throw new DatabaseServiceException(e, e.getMessage(), false);
                 }
                 fimsQueries.add(query);
-                limsQueries.add(query);
             } else if(query instanceof AdvancedSearchQueryTerm){
                 if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                     return;
@@ -774,9 +769,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     } catch (ConnectionException e) {
                         throw new DatabaseServiceException(e.getMessage(), false);
                     }
-                }
-                else {
-                    limsQueries.add(query);
                 }
             }
             if(callback.isCanceled()) {
@@ -793,13 +785,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 return;
             }
             try {
-                boolean isAnd = true;
-                if(query instanceof CompoundSearchQuery) {
-                    isAnd = ((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND;
-                }
-                Query limsQuery = isAnd ? Query.Factory.createAndQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap()) : Query.Factory.createOrQuery(limsQueries.toArray(new Query[limsQueries.size()]), Collections.<String, Object>emptyMap());
-
-                if((Boolean)query.getExtendedOptionValue("workflowDocuments") || (Boolean)query.getExtendedOptionValue("plateDocuments")) {
+                if(!Boolean.FALSE.equals(query.getExtendedOptionValue("workflowDocuments")) ||
+                        !Boolean.FALSE.equals(query.getExtendedOptionValue("plateDocuments"))) {
                     callback.setMessage("Downloading Workflows & Plates");
                 } else {
                     callback.setMessage("Searching");
@@ -814,7 +801,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
 
                 // Now add tissues that match the LIMS query
-                if(!workflowList.isEmpty() && (tissueSamples == null || tissueSamples.isEmpty()) && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
+                if(!workflowList.isEmpty() && (tissueSamples == null || tissueSamples.isEmpty()) && !Boolean.FALSE.equals(query.getExtendedOptionValue("tissueDocuments"))) {
                     for (WorkflowDocument workflowDocument : workflowList) {
                         FimsSample sample = workflowDocument.getFimsSample();
                         if(sample != null) {
@@ -2048,7 +2035,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws SQLException, DocumentOperationException {
+    public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws SQLException, DocumentOperationException, DatabaseServiceException {
         List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName), null, null);
         if(plateList.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");

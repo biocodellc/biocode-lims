@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.assembler.lims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.*;
@@ -254,6 +255,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 } catch (SQLException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                } catch (DatabaseServiceException e) {
+                    e.printStackTrace();
+                    throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
                 }
                 if (plateDocuments.isEmpty()) {
                     sequencingPlateCache.put(plateName, null);

@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.submission.genbank.barstool;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
@@ -58,7 +59,9 @@ public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel 
                         Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, workflowName), null, null).
                         getWorkflows();
             } catch (SQLException e) {
-                throw new DocumentOperationException("Could not connect to the LIMS database: "+e.getMessage());
+                throw new DocumentOperationException("Could not connect to the LIMS database: "+e.getMessage(), e);
+            } catch (DatabaseServiceException e) {
+                throw new DocumentOperationException("Could not connect to the LIMS database: "+e.getMessage(), e);
             }
             if(matchingWorkflows == null || matchingWorkflows.size() == 0) {
                 throw new DocumentOperationException("The workflow '"+workflowName+"' could not be found.  Make sure that the workflow was not deleted in the database after you annotated your traces with FIMS data.");
