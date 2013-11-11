@@ -59,23 +59,27 @@ public class FailureReason {
 
     private static final String NO_REASON = "Unspecified";
     public static Options.ComboBoxOption<Options.OptionValue> addToOptions(Options toAddTo) throws DocumentOperationException {
-        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
-        if(limsConnection == null) {
-            throw new DocumentOperationException("You must be logged into the Biocode service") ;
-        }
-        List<FailureReason> possibleFailureReasons = limsConnection.getPossibleFailureReasons();
         List<Options.OptionValue> possibleValues = new ArrayList<Options.OptionValue>();
         Options.OptionValue defaultValue = new Options.OptionValue(NO_REASON, NO_REASON);
         possibleValues.add(defaultValue);
-        for (FailureReason reason : possibleFailureReasons) {
-            possibleValues.add(new Options.OptionValue("" + reason.getId(), reason.getName(), reason.getDescription()));
+
+        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+        if(limsConnection != null) {
+            List<FailureReason> possibleFailureReasons = limsConnection.getPossibleFailureReasons();
+            for (FailureReason reason : possibleFailureReasons) {
+                possibleValues.add(new Options.OptionValue("" + reason.getId(), reason.getName(), reason.getDescription()));
+            }
         }
 
         Options.ComboBoxOption<Options.OptionValue> option = toAddTo.addComboBoxOption(OPTION_NAME, "Reason", possibleValues, defaultValue);
         if(possibleValues.size() == 1) {
             option.setEnabled(false);
-            option.setDescription("Possible values for this option need to be set up in the database. " +
-                    "An admin can add values directly into the failure_reason table.");
+            if(limsConnection == null) {
+                option.setDescription("You must log into the Biocode service to view potential failure reasons.");
+            } else {
+                option.setDescription("Possible values for this option need to be set up in the database. " +
+                        "An admin can add values directly into the failure_reason table.");
+            }
         }
         return option;
     }
