@@ -158,7 +158,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     }
 
     protected void setCreated(Date date) {
-        this.date = date;
+        this.date = new Date(date.getTime());
     }
 
 
