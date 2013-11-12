@@ -920,7 +920,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         try {
             //check schema privileges
-            String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE GRANTEE LIKE ? AND PRIVILEGE_TYPE='DELETE' AND TABLE_SCHEMA=?;";
+            String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE " +
+                    "GRANTEE LIKE ? AND " +
+                    "PRIVILEGE_TYPE='DELETE' AND " +
+                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%');";
             PreparedStatement statement = limsConnection.createStatement(schemaSql);
             statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
             statement.setString(2, limsConnection.getSchema());
@@ -931,7 +934,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             resultSet.close();
 
             //check table privileges
-            String tableSql = "select * from information_schema.TABLE_PRIVILEGES WHERE GRANTEE LIKE ? AND PRIVILEGE_TYPE='DELETE' AND TABLE_SCHEMA=? AND TABLE_NAME=?;";
+            String tableSql = "select * from information_schema.TABLE_PRIVILEGES WHERE " +
+                    "GRANTEE LIKE ? AND " +
+                    "PRIVILEGE_TYPE='DELETE' AND " +
+                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%') AND " +
+                    "(TABLE_NAME=? OR TABLE_NAME='%');";
             statement = limsConnection.createStatement(tableSql);
             statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
             statement.setString(2, limsConnection.getSchema());
