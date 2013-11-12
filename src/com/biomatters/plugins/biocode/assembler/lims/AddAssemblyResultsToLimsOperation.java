@@ -215,7 +215,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
 
-    private String getChromatogramProperties(MarkInLimsUtilities.InputType inputType, Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
+    private String getChromatogramProperties(InputType inputType, Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
                                              AnnotatedPluginDocument annotatedDocument, AssemblyResult assemblyResult) throws DocumentOperationException {
         List<AnnotatedPluginDocument> chromatograms = new ArrayList<AnnotatedPluginDocument>();
         if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
@@ -231,7 +231,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 }
                 chromatograms.add(referencedDocument);
             }
-        } else if(inputType == MarkInLimsUtilities.InputType.TRACES) {
+        } else if(inputType == InputType.TRACES) {
             chromatograms.add(annotatedDocument);
         }
 

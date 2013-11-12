@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.assembler.lims;
 
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.*;
-import com.biomatters.geneious.publicapi.plugin.PluginUtilities;
 import com.biomatters.geneious.publicapi.plugin.SequenceSelection;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtilities;
@@ -36,7 +35,7 @@ public class MarkInLimsUtilities {
      * @throws DocumentOperationException
      */
     public static Map<AnnotatedPluginDocument, SequenceDocument> getDocsToMark(AnnotatedPluginDocument[] annotatedDocuments, SequenceSelection selection) throws DocumentOperationException {
-        InputType inputType = determineInputType(annotatedDocuments);
+        InputType inputType = InputType.determineInputType(annotatedDocuments);
 
         Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = new HashMap<AnnotatedPluginDocument, SequenceDocument>();
         int sequenceCount = -1;
@@ -234,72 +233,6 @@ public class MarkInLimsUtilities {
         int minimum = interval.getMinimumIndex() - 1;
         int maximum = interval.getMaximumIndex();
         return sequence.subSequence(minimum, maximum);
-    }
-
-    static InputType determineInputType(AnnotatedPluginDocument[] documents) throws DocumentOperationException {
-        boolean contigSelected = false;
-        boolean alignmentOfConsensus = false;
-        boolean tracesSelected = false;
-        boolean nonTraceSequenceSelected = false;
-        for (AnnotatedPluginDocument doc : documents) {
-            Class<? extends PluginDocument> docClass = doc.getDocumentClass();
-            if (SequenceAlignmentDocument.class.isAssignableFrom(docClass)) {
-                if(((SequenceAlignmentDocument)doc.getDocument()).isContig()) {
-                    contigSelected = true;
-                } else {
-                    alignmentOfConsensus = true;
-                }
-            } else if(NucleotideGraph.class.isAssignableFrom(docClass)){
-                NucleotideGraph graph = (NucleotideGraph) doc.getDocument();
-                if(graph.getChromatogramLength() > 0) {
-                    tracesSelected = true;
-                } else {
-                    nonTraceSequenceSelected = true;
-                }
-            } else {
-                nonTraceSequenceSelected = true;
-            }
-        }
-        if(contigSelected && alignmentOfConsensus) {
-            return InputType.MIXED;
-        } else if(contigSelected) {
-            return InputType.CONTIGS;
-        } else if(alignmentOfConsensus) {
-            return InputType.ALIGNMENT_OF_CONSENSUS;
-        }
-
-        // If we get here then we must have standalone sequences because the selection signature only allows one type
-        if(nonTraceSequenceSelected && tracesSelected) {
-            return InputType.MIXED;
-        } else if(tracesSelected) {
-            return InputType.TRACES;
-        } else {
-            return InputType.CONSENSUS_SEQS;
-        }
-    }
-
-    public static enum InputType {
-        CONTIGS("Consensus sequence", "Consensus sequence with source chromatograms"),
-        ALIGNMENT_OF_CONSENSUS("Consensus sequences", "Consensus sequences with source traces"),
-        CONSENSUS_SEQS("Consensus sequence", "Consensus sequence with source traces"),
-        TRACES("Trace as final sequence", "Trace as both final sequence and source trace"),
-        MIXED(null, null);
-
-        private String uploadDescription;
-        private String withTracesDescription;
-
-        private InputType(String uploadDescription, String withTracesDescription) {
-            this.uploadDescription = uploadDescription;
-            this.withTracesDescription = withTracesDescription;
-        }
-
-        public String getUploadDescription() {
-            return uploadDescription;
-        }
-
-        public String getWithTracesDescription() {
-            return withTracesDescription;
-        }
     }
 
     /**

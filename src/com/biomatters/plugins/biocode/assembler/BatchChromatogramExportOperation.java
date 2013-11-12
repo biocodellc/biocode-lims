@@ -3,8 +3,11 @@ package com.biomatters.plugins.biocode.assembler;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
+import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.assembler.lims.InputType;
+import com.biomatters.plugins.biocode.assembler.lims.MarkInLimsUtilities;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -37,7 +40,8 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
                                 new DocumentSelectionSignature.DocumentSelectionSignatureAtom(NucleotideGraphSequenceDocument.class, 1, Integer.MAX_VALUE),
                                 new DocumentSelectionSignature.DocumentSelectionSignatureAtom(PluginDocument.class, 0, Integer.MAX_VALUE)
                         }
-                )
+                ),
+                DocumentSelectionSignature.forNucleotideAlignments(1, Integer.MAX_VALUE)
         };
     }
 
@@ -54,6 +58,22 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
     @Override
     public Options getOptions(AnnotatedPluginDocument... documents) throws DocumentOperationException {
         Options options = new Options(BatchChromatogramExportOperation.class);
+
+        String labelText = null;
+        InputType type = InputType.determineInputType(documents);
+        if(type == InputType.CONSENSUS_SEQS || type == InputType.ALIGNMENT_OF_CONSENSUS) {
+            labelText = "Source chromatograms will be exported instead of the selected consensus sequences.";
+        } else if(type == InputType.CONTIGS) {
+            labelText = "Source chromatograms will be exported instead of the selected contig assemblies.";
+        } else if(type == InputType.MIXED) {
+            labelText = "Source chromatograms will be exported instead of the selected documents.";
+        }
+
+        if(labelText != null) {
+            options.addLabel("<html><b>Note</b>:<i>" + labelText + "</i></html>");
+            options.addLabel("");
+        }
+
         Options.FileSelectionOption folderOption = options.addFileSelectionOption("exportTo", "Export to Folder:", "");
         folderOption.setSelectionType(JFileChooser.DIRECTORIES_ONLY);
         return options;
@@ -71,43 +91,100 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         }
         CompositeProgressListener compositeProgress = new CompositeProgressListener(progressListener, annotatedDocuments.length);
         compositeProgress.setMessage("Exporting chromatograms");
-        List<AnnotatedPluginDocument> failures = new ArrayList<AnnotatedPluginDocument>();
+        List<AnnotatedPluginDocument> consensusWithoutLinks = new ArrayList<AnnotatedPluginDocument>();
+        List<String> namesOfFailedSeqs = new ArrayList<String>();
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
             if (compositeProgress.isCanceled()) {
                 return null;
             }
             compositeProgress.beginSubtask();
-            if (NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
-                try {
-                    File file = getExportFile(directory, annotatedDocument, abiExporter);
-                    AnnotatedPluginDocument[] documentArray = {annotatedDocument};
-                    Options exporterOptions = abiExporter.getOptions(documentArray);
-                    if(exporterOptions != null) {
-                        exporterOptions.setValue("exportMethod", "originalSource");
+            InputType inputType = InputType.determineInputType(new AnnotatedPluginDocument[]{annotatedDocument});
+
+            List<AnnotatedPluginDocument> assemblies = new ArrayList<AnnotatedPluginDocument>();
+            if(inputType == InputType.ALIGNMENT_OF_CONSENSUS) {
+                PluginDocument pluginDoc = annotatedDocument.getDocument();
+                for (AnnotatedPluginDocument consensus : ((SequenceAlignmentDocument) pluginDoc).getReferencedDocuments()) {
+                    if(consensus != null) {
+                        AnnotatedPluginDocument assembly = MarkInLimsUtilities.getAssemblyFromConsensus(consensus);
+                        if(assembly != null) {
+                            assemblies.add(assembly);
+                        } else {
+                            consensusWithoutLinks.add(consensus);
+                        }
                     }
-                    abiExporter.export(file, documentArray, ProgressListener.EMPTY, exporterOptions);
-                    formats.put(annotatedDocument, "ABI");
-                    names.put(annotatedDocument, file.getName());
-                    continue;
-                } catch (IOException e) {
-                    //try scf below
                 }
-                try {
-                    File file = getExportFile(directory, annotatedDocument, scfExporter);
-                    scfExporter.export(file, new AnnotatedPluginDocument[] {annotatedDocument}, ProgressListener.EMPTY, null);
-                    formats.put(annotatedDocument, "SCF");
-                    names.put(annotatedDocument, file.getName());
-                    continue;
-                } catch (IOException e) {
-                    //fail below
+            } else if(inputType == InputType.CONSENSUS_SEQS) {
+                AnnotatedPluginDocument assembly = MarkInLimsUtilities.getAssemblyFromConsensus(annotatedDocument);
+                if(assembly != null) {
+                    assemblies.add(assembly);
+                } else {
+                    consensusWithoutLinks.add(annotatedDocument);
                 }
-                failures.add(annotatedDocument);
+            } else if(inputType == InputType.CONTIGS) {
+                assemblies.add(annotatedDocument);
+            } else if (inputType == InputType.TRACES) {
+                if(!exportChromatSeq(abiExporter, scfExporter, directory, annotatedDocument)) {
+                    namesOfFailedSeqs.add(annotatedDocument.getName());
+                }
+            } else {
+                namesOfFailedSeqs.add(annotatedDocument.getName());
+            }
+
+            for (AnnotatedPluginDocument assembly : assemblies) {
+                PluginDocument pluginDoc = assembly.getDocument();
+                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument) pluginDoc;
+                for (int i=0; i< alignment.getNumberOfSequences(); i++) {
+                    AnnotatedPluginDocument refDoc = alignment.getReferencedDocument(i);
+                    if(refDoc != null && NucleotideGraphSequenceDocument.class.isAssignableFrom(refDoc.getDocumentClass())) {
+                        if(!exportChromatSeq(abiExporter, scfExporter, directory, refDoc)) {
+                            namesOfFailedSeqs.add(refDoc.getName());
+                        }
+                    } else {
+                        namesOfFailedSeqs.add(alignment.getSequence(i).getName());
+                    }
+                }
             }
         }
-        if (!failures.isEmpty()) {
-            throwExceptionForFailedDocuments(failures);
+        if (!namesOfFailedSeqs.isEmpty() || !consensusWithoutLinks.isEmpty()) {
+            throwExceptionForFailedDocuments(namesOfFailedSeqs, consensusWithoutLinks);
         }
         return null;
+    }
+
+    /**
+     * Exports a chromatogram
+     *
+     * @param abiExporter Used to export ab1 format
+     * @param scfExporter Used to export scf format
+     * @param directory Directory to export to
+     * @param annotatedDocument The document to export
+     * @return true if exported, false if failure
+     */
+    private boolean exportChromatSeq(DocumentFileExporter abiExporter, DocumentFileExporter scfExporter, File directory, AnnotatedPluginDocument annotatedDocument) {
+        try {
+            File file = getExportFile(directory, annotatedDocument, abiExporter);
+            AnnotatedPluginDocument[] documentArray = {annotatedDocument};
+            Options exporterOptions = abiExporter.getOptions(documentArray);
+            if(exporterOptions != null) {
+                exporterOptions.setValue("exportMethod", "originalSource");
+            }
+            abiExporter.export(file, documentArray, ProgressListener.EMPTY, exporterOptions);
+            formats.put(annotatedDocument, "ABI");
+            names.put(annotatedDocument, file.getName());
+            return true;
+        } catch (IOException e) {
+            //try scf below
+        }
+        try {
+            File file = getExportFile(directory, annotatedDocument, scfExporter);
+            scfExporter.export(file, new AnnotatedPluginDocument[] {annotatedDocument}, ProgressListener.EMPTY, null);
+            formats.put(annotatedDocument, "SCF");
+            names.put(annotatedDocument, file.getName());
+            return true;
+        } catch (IOException e) {
+            //fail below
+        }
+        return false;
     }
 
     Map<AnnotatedPluginDocument, String> formats = new HashMap<AnnotatedPluginDocument, String>();
@@ -121,15 +198,29 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         return names.get(document);
     }
 
-    private void throwExceptionForFailedDocuments(List<AnnotatedPluginDocument> failures) throws DocumentOperationException {
-        List<String> names = new ArrayList<String>();
-        for (AnnotatedPluginDocument failure : failures) {
-            names.add(failure.getName());
+    private void throwExceptionForFailedDocuments(List<String> names, List<AnnotatedPluginDocument> consensusWithoutLinks) throws DocumentOperationException {
+        List<String> consensusNames = new ArrayList<String>();
+        for (AnnotatedPluginDocument consensusWithoutLink : consensusWithoutLinks) {
+            consensusNames.add(consensusWithoutLink.getName());
         }
-        String message = "The following " + failures.size() + " chromatograms couldn't be exported because they didn't come " +
-                "from ab1 or SCF files or they were imported in an earlier version of " + Geneious.getName() + ":\n\n" +
-                StringUtilities.humanJoin(names);
-        throw new DocumentOperationException(message);
+
+        StringBuilder message = new StringBuilder();
+        if(!consensusNames.isEmpty()) {
+            message.append("Source chromatograms could not be exported for the following ").
+                    append(consensusNames.size()).append(" consensus sequences because they do not have a link back to an assembly:\n");
+            message.append(StringUtilities.join("\n", consensusNames));
+            if(!names.isEmpty()) {
+                message.append("\n\n");
+            }
+        }
+
+        if(!names.isEmpty()) {
+            message.append("The following ").append(names.size()).append(
+                    " chromatograms couldn't be exported because they didn't come from ab1 or SCF files or they were " +
+                            "imported in an earlier version of ").append(
+                    Geneious.getName()).append(":\n").append(StringUtilities.join("\n", names));
+        }
+        throw new DocumentOperationException(message.toString());
     }
 
     private File getExportFile(File directory, AnnotatedPluginDocument annotatedDocument, DocumentFileExporter exporter) {

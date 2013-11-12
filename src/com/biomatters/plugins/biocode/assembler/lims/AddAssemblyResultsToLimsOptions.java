@@ -22,16 +22,16 @@ public class AddAssemblyResultsToLimsOptions extends Options {
     private BooleanOption removePrevious;
     private ComboBoxOption<OptionValue> reasonOption;
 
-    private MarkInLimsUtilities.InputType inputType;
+    private InputType inputType;
 
     public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents, boolean passed) throws DocumentOperationException {
-        inputType = MarkInLimsUtilities.determineInputType(documents);
-        if(inputType == MarkInLimsUtilities.InputType.MIXED) {
+        inputType = InputType.determineInputType(documents);
+        if(inputType == InputType.MIXED) {
             throw new DocumentOperationException("This operation only works on documents of the same type.  " +
                     "Either select assemblies or consensus sequences.");
         }
 
-        boolean contigSelected = inputType == MarkInLimsUtilities.InputType.CONTIGS;
+        boolean contigSelected = inputType == InputType.CONTIGS;
 
         for (AnnotatedPluginDocument doc : documents) {
             if (SequenceAlignmentDocument.class.isAssignableFrom(doc.getDocumentClass()) && !BiocodeUtilities.isAlignmentOfContigConsensusSequences(doc)) {
@@ -42,9 +42,9 @@ public class AddAssemblyResultsToLimsOptions extends Options {
 
         if(passed) {
             String sequenceOrSequences = documents.length > 1 ||
-                    inputType == MarkInLimsUtilities.InputType.ALIGNMENT_OF_CONSENSUS ? "sequences" : "sequence";
+                    inputType == InputType.ALIGNMENT_OF_CONSENSUS ? "sequences" : "sequence";
             StringBuilder message = new StringBuilder("The ");
-            message.append(inputType == MarkInLimsUtilities.InputType.CONTIGS ? "generated consensus " : "selected ");
+            message.append(inputType == InputType.CONTIGS ? "generated consensus " : "selected ");
             message.append(sequenceOrSequences);
             message.append(" will be uploaded to the LIMS as the final sequencing result.");
             addLabel(message.toString());
@@ -87,7 +87,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
         return getValueAsString("details.notes");
     }
 
-    public MarkInLimsUtilities.InputType getInputType() {
+    public InputType getInputType() {
         return inputType;
     }
 
