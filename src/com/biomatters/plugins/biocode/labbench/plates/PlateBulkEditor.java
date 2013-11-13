@@ -5,9 +5,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.GeneiousActionOptions;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.FileUtilities;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -26,6 +24,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -772,6 +772,7 @@ public class PlateBulkEditor {
                     return new Dimension(regularPrefSize.width, height);
                 }
             };
+            valueArea.setTransferHandler(new PasteHandler());
             lineNumbers = new LineNumbers() {
                 @Override
                 public Dimension getPreferredSize() {
@@ -932,6 +933,96 @@ public class PlateBulkEditor {
 
         public void addScrollListener(AdjustmentListener al) {
             scroller.getVerticalScrollBar().addAdjustmentListener(al);
+        }
+
+        private class PasteHandler extends TransferHandler {
+            @Override
+            public boolean importData(TransferSupport support) {
+                try {
+                    DataFlavor textFlavour = DataFlavor.selectBestTextFlavor(support.getTransferable().getTransferDataFlavors());
+                    if(textFlavour == null) {
+                        return super.importData(support);  // Let the super implementation try
+                    }
+                    Object textData = support.getTransferable().getTransferData(textFlavour);
+                    if(textData == null) {
+                        return super.importData(support);  // Let the super implementation try
+                    }
+
+                    String text = support.getTransferable().getTransferData(DataFlavor.stringFlavor).toString();
+                    String[] newLines = text.split("\n", -1);
+
+                    String originalText = valueArea.getText();
+                    String trailingLineAfterPaste = originalText.substring(valueArea.getSelectionEnd(),
+                            originalText.indexOf("\n", valueArea.getSelectionEnd()));
+
+                    int pasteStart = valueArea.getSelectionStart();
+                    String remainingText = originalText.substring(pasteStart);
+                    String[] oldLines = remainingText.split("\n", -1);
+
+                    String selection = valueArea.getSelectedText();
+                    int selectedLines = selection == null ? 1 : 1 + CharSequenceUtilities.count('\n', selection);
+                    int extraEmptyRowsBeingOverwritten = 0;
+                    if(newLines.length > 1) {
+                        for(int i=selectedLines; i<newLines.length && i<oldLines.length; i++) {
+                            if(oldLines[i].trim().length() > 0) {
+                                extraEmptyRowsBeingOverwritten++;
+                            }
+                        }
+                    }
+
+                    if(extraEmptyRowsBeingOverwritten > 0) {
+                        if (displayOverwritingWarning(newLines, selectedLines, extraEmptyRowsBeingOverwritten))
+                            return false;
+                    }
+
+
+                    StringBuilder newText = new StringBuilder();
+                    newText.append(originalText.substring(0, pasteStart));
+                    for(int i=0; i<oldLines.length || i<newLines.length; i++) {
+                        if(i>0) {
+                            newText.append("\n");
+                        }
+                        if(i < newLines.length) {
+                            newText.append(newLines[i]);
+                            if(selectedLines == newLines.length && i == newLines.length-1) {
+                                newText.append(trailingLineAfterPaste);
+                            }
+                        } else {
+                            newText.append(oldLines[i]);
+                        }
+                    }
+                    valueArea.setText(newText.toString());
+                    valueArea.setCaretPosition(pasteStart + text.length());
+                    return true;
+                } catch (UnsupportedFlavorException e) {
+                    e.printStackTrace();
+                    return false;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+
+            private boolean displayOverwritingWarning(String[] newLines, int selectedLines, int extraEmptyRowsBeingOverwritten) {
+                StringBuilder message = new StringBuilder("<html>You are pasting <strong>" + newLines.length + "</strong> lines");
+                if(selectedLines > 1) {
+                    message.append(", but have only selected <strong>").append(selectedLines).append("</strong> lines");
+                }
+                message.append(". This will overwrite <font color=\"red\"><strong>").append(extraEmptyRowsBeingOverwritten).append(
+                        "</strong></font> existing well");
+                if(extraEmptyRowsBeingOverwritten > 1) {
+                    message.append("s");
+                }
+                if(selectedLines > 1) {
+                    message.append(" outside of your selection");
+                }
+                message.append(".");
+
+                if(!Dialogs.showYesNoDialog(message + "\n\nContinue?</html>", "Overwriting Existing Data", null, Dialogs.DialogIcon.WARNING)) {
+                    return true;
+                }
+                return false;
+            }
         }
 
         private class LineNumbers extends JPanel implements DocumentListener {
