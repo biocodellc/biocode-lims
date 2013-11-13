@@ -22,8 +22,9 @@ import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeListener;
-import javax.swing.text.Caret;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -745,11 +746,11 @@ public class PlateBulkEditor {
         private String[][] values;
         Direction direction;
         private JButton setAllButton;
-        private JTextArea lineNumbers;
+        private LineNumbers lineNumbers;
         private JTextArea valueArea;
         private JScrollPane scroller;
 
-        public DocumentFieldEditor(DocumentField field, Plate plate, Direction direction, JButton setAllButton){
+        public DocumentFieldEditor(DocumentField field, Plate plate, Direction direction, JButton setAllButton) {
             this.field = field;
             this.plate = plate;
             this.direction = direction;
@@ -761,34 +762,23 @@ public class PlateBulkEditor {
                     values[row][col] = value != null ? value.toString() : "";
                 }
             }
-            valueArea = new JTextArea();
-            lineNumbers = new JTextArea() {
+            valueArea = new JTextArea() {
+                private int minimumRows = DocumentFieldEditor.this.plate.getCols()*DocumentFieldEditor.this.plate.getRows();
+
+                @Override
+                public Dimension getPreferredSize() {
+                    Dimension regularPrefSize = super.getPreferredSize();
+                    int height = Math.max(minimumRows * getRowHeight(), regularPrefSize.height);
+                    return new Dimension(regularPrefSize.width, height);
+                }
+            };
+            lineNumbers = new LineNumbers() {
                 @Override
                 public Dimension getPreferredSize() {
                     return new Dimension(30, valueArea.getPreferredSize().height);
                 }
             };
-            lineNumbers.setEditable(false);
-            lineNumbers.setCaret(new Caret(){//disable selections and cursor setting on the line numbers
-                public void install(javax.swing.text.JTextComponent c){}
-                public void deinstall(javax.swing.text.JTextComponent c){}
-                public void paint(Graphics g){}
-                public void addChangeListener(ChangeListener l){}
-                public void removeChangeListener(ChangeListener l){}
-                public boolean isVisible(){return false;}
-                public void setVisible(boolean v){}
-                public boolean isSelectionVisible(){return false;}
-                public void setSelectionVisible(boolean v){}
-                public void setMagicCaretPosition(Point p){}
-                public Point getMagicCaretPosition(){return new Point(0,0);}
-                public void setBlinkRate(int rate){}
-                public int getBlinkRate(){return 10000;}
-                public int getDot(){return 0;}
-                public int getMark(){return 0;}
-                public void setDot(int dot){}
-                public void moveDot(int dot){}
-            });
-            lineNumbers.setBackground(new Color(225,225,225));
+
             scroller = new JScrollPane(valueArea);
             scroller.setRowHeaderView(lineNumbers);
             textViewFromValues();
@@ -808,6 +798,8 @@ public class PlateBulkEditor {
                 spacer.setPreferredSize(new Dimension(1, 15));
                 topPanel.add(spacer, BorderLayout.EAST);
             }
+
+            valueArea.getDocument().addDocumentListener(lineNumbers);
         }
 
         public void setText(String text) {
@@ -817,24 +809,26 @@ public class PlateBulkEditor {
         public void textViewFromValues() {
             final int scrollPosition = scroller.getVerticalScrollBar().getValue();
             final StringBuilder valuesBuilder = new StringBuilder();
-            final StringBuilder lineNumbersBuilder = new StringBuilder();
+            final List<String> lineNumbersBuilder = new ArrayList<String>();
             if(direction == Direction.DOWN_AND_ACROSS) {
                 for(int row = 0; row < plate.getRows(); row++) {
                     for(int col = 0; col < plate.getCols(); col++) {
-                        //noinspection StringConcatenationInsideStringBufferAppend
-                        valuesBuilder.append(values[row][col]+"\n");
-                        //noinspection StringConcatenationInsideStringBufferAppend
-                        lineNumbersBuilder.append(Plate.getWellName(row, col)+"\n");
+                        if(col != 0 || row != 0) {
+                            valuesBuilder.append("\n");
+                        }
+                        valuesBuilder.append(values[row][col]);
+                        lineNumbersBuilder.add(Plate.getWellName(row, col));
                     }
                 }
             }
             else {
                 for(int col = 0; col < plate.getCols(); col++) {
                     for(int row = 0; row < plate.getRows(); row++) {
-                        //noinspection StringConcatenationInsideStringBufferAppend
-                        valuesBuilder.append(values[row][col]+"\n");
-                        //noinspection StringConcatenationInsideStringBufferAppend
-                        lineNumbersBuilder.append(Plate.getWellName(row, col)+"\n");
+                        if(col != 0 || row != 0) {
+                            valuesBuilder.append("\n");
+                        }
+                        valuesBuilder.append(values[row][col]);
+                        lineNumbersBuilder.add(Plate.getWellName(row, col));
                     }
                 }
             }
@@ -842,8 +836,10 @@ public class PlateBulkEditor {
             Runnable runnable = new Runnable() {
                 public void run() {
                     valueArea.setText(valuesBuilder.toString());
-                    lineNumbers.setText(lineNumbersBuilder.toString());
                     scroller.getVerticalScrollBar().setValue(scrollPosition);
+                    for (int i = 0; i < lineNumbersBuilder.size(); i++) {
+                        lineNumbers.setValue(i, lineNumbersBuilder.get(i));
+                    }
                 }
             };
             ThreadUtilities.invokeNowOrLater(runnable);
@@ -936,6 +932,82 @@ public class PlateBulkEditor {
 
         public void addScrollListener(AdjustmentListener al) {
             scroller.getVerticalScrollBar().addAdjustmentListener(al);
+        }
+
+        private class LineNumbers extends JPanel implements DocumentListener {
+            private JLabel[] rowComponents;
+
+            private LineNumbers() {
+                setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+                setBackground(new Color(225, 225, 225));
+                rowComponents = new JLabel[plate.getRows() * plate.getCols()];
+                for(int i=0; i< rowComponents.length; i++) {
+                    JLabel label = new JLabel();
+                    add(label);
+                    rowComponents[i] = label;
+                }
+            }
+
+            void setValue(int i, String value) {
+                rowComponents[i].setText(value);
+            }
+
+            private void docChanged(DocumentEvent changeEvent) {
+                try {
+                    String contents = changeEvent.getDocument().getText(0, changeEvent.getDocument().getLength());
+                    String[] parts = contents.split("\n");
+
+                    for(int i=0; i<rowComponents.length; i++) {
+                        String oldValue = getPlateValue(i);
+                        String newValue = i < parts.length ? parts[i] : "";
+                        boolean changed = !oldValue.equals(newValue);
+                        rowComponents[i].setForeground(changed ? Color.RED : Color.BLACK);
+                        rowComponents[i].setFont(rowComponents[i].getFont().deriveFont(
+                                changed ? Font.BOLD : Font.PLAIN));
+                    }
+
+                } catch (BadLocationException e) {
+                    throw new IllegalStateException("Unable to get document contents.  Should not happen.", e);
+                }
+            }
+
+            /**
+             *
+             * @param rowIndex The row index in the line numbers component
+             * @return field value or "" if it does not exist.  Never null.
+             */
+            private String getPlateValue(int rowIndex) {
+                int row;
+                int col;
+                if(direction == Direction.DOWN_AND_ACROSS) {
+                    row = rowIndex / plate.getCols();
+                    col = rowIndex % plate.getCols();
+                } else {
+                    col = rowIndex / plate.getRows();
+                    row = rowIndex % plate.getRows();
+                }
+                Reaction reaction = plate.getReaction(row, col);
+                if(reaction == null) {
+                    return "";
+                }
+                Object fieldValue = reaction.getFieldValue(field.getCode());
+                return fieldValue == null ? "" : fieldValue.toString();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                docChanged(e);
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                docChanged(e);
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                docChanged(e);
+            }
         }
     }
 
