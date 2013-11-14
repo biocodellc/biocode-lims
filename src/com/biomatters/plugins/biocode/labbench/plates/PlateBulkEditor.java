@@ -24,12 +24,11 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
+import java.awt.event.*;
 import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
@@ -772,7 +771,10 @@ public class PlateBulkEditor {
                     return new Dimension(regularPrefSize.width, height);
                 }
             };
-            valueArea.setTransferHandler(new PasteHandler());
+            GuiUtilities.addUndoSupport(valueArea);
+            GuiUtilities.addEditMenuSupport(valueArea);
+            GuiUtilities.addPopupEditMenu(valueArea);
+            valueArea.setTransferHandler(new PasteHandler(valueArea.getTransferHandler()));
             lineNumbers = new LineNumbers() {
                 @Override
                 public Dimension getPreferredSize() {
@@ -936,24 +938,30 @@ public class PlateBulkEditor {
         }
 
         private class PasteHandler extends TransferHandler {
+            private TransferHandler original;
+            public PasteHandler(TransferHandler transferHandler) {
+                original = transferHandler;
+            }
+
             @Override
             public boolean importData(TransferSupport support) {
                 try {
                     DataFlavor textFlavour = DataFlavor.selectBestTextFlavor(support.getTransferable().getTransferDataFlavors());
                     if(textFlavour == null) {
-                        return super.importData(support);  // Let the super implementation try
+                        return original.importData(support);  // Let the original implementation try
                     }
                     Object textData = support.getTransferable().getTransferData(textFlavour);
                     if(textData == null) {
-                        return super.importData(support);  // Let the super implementation try
+                        return original.importData(support);  // Let the original implementation try
                     }
 
                     String text = support.getTransferable().getTransferData(DataFlavor.stringFlavor).toString();
                     String[] newLines = text.split("\n", -1);
 
                     String originalText = valueArea.getText();
+                    int endOfLineAfterSelection = originalText.indexOf("\n", valueArea.getSelectionEnd());
                     String trailingLineAfterPaste = originalText.substring(valueArea.getSelectionEnd(),
-                            originalText.indexOf("\n", valueArea.getSelectionEnd()));
+                            endOfLineAfterSelection == -1 ? originalText.length() : endOfLineAfterSelection);
 
                     int pasteStart = valueArea.getSelectionStart();
                     String remainingText = originalText.substring(pasteStart);
@@ -1022,6 +1030,41 @@ public class PlateBulkEditor {
                     return true;
                 }
                 return false;
+            }
+
+            @Override
+            public void exportAsDrag(JComponent comp, InputEvent e, int action) {
+                original.exportAsDrag(comp, e, action);
+            }
+
+            @Override
+            public void exportToClipboard(JComponent comp, Clipboard clip, int action) throws IllegalStateException {
+                original.exportToClipboard(comp, clip, action);
+            }
+
+            @Override
+            public boolean importData(JComponent comp, Transferable t) {
+                return original.importData(comp, t);
+            }
+
+            @Override
+            public boolean canImport(TransferSupport support) {
+                return original.canImport(support);
+            }
+
+            @Override
+            public boolean canImport(JComponent comp, DataFlavor[] transferFlavors) {
+                return original.canImport(comp, transferFlavors);
+            }
+
+            @Override
+            public int getSourceActions(JComponent c) {
+                return original.getSourceActions(c);
+            }
+
+            @Override
+            public Icon getVisualRepresentation(Transferable t) {
+                return original.getVisualRepresentation(t);
             }
         }
 
