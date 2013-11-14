@@ -20,6 +20,7 @@ public abstract class ReactionOptions<T extends Reaction> extends Options {
     public static final OptionValue PASSED_VALUE = new OptionValue("passed", "passed");
     public static final OptionValue SUSPECT_VALUE = new OptionValue("suspect", "suspect");
     public static final OptionValue FAILED_VALUE = new OptionValue("failed", "failed");
+    public static final OptionValue[] STATUS_VALUES = new OptionValue[] { NOT_RUN_VALUE, RUN_VALUE, PASSED_VALUE, SUSPECT_VALUE, FAILED_VALUE };
     protected T reaction;
 
     public ReactionOptions() {

@@ -165,8 +165,7 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
         addDateOption("date", "Date", new Date());
 
 
-        OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, RUN_VALUE, PASSED_VALUE, SUSPECT_VALUE, FAILED_VALUE };
-        addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
+        addComboBoxOption(RUN_STATUS, "Reaction state", STATUS_VALUES, STATUS_VALUES[0]);
 
         addLabel("");
         addPrimerSelectionOption(PRIMER_OPTION_ID, "Forward Primer", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());

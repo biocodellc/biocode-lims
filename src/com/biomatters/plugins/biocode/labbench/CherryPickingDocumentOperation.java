@@ -128,20 +128,13 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 new OptionValue(FailureReason.getOptionName(), "Failure Reason")
         };
 
-        static final OptionValue[] statusValues = new OptionValue[] {
-                ReactionOptions.NOT_RUN_VALUE,
-                ReactionOptions.PASSED_VALUE,
-                ReactionOptions.SUSPECT_VALUE,
-                ReactionOptions.FAILED_VALUE
-        };
-
         public CherryPickingOptions(Class sourceClass) throws DocumentOperationException {
             super(sourceClass);
             beginAlignHorizontally("", false);
 
             addComboBoxOption("condition", "", cherryPickingConditions, cherryPickingConditions[0]);
 
-            addComboBoxOption(STATE, "is", statusValues, statusValues[0]);
+            addComboBoxOption(STATE, "is", ReactionOptions.STATUS_VALUES, ReactionOptions.STATUS_VALUES[0]);
             addStringOption(TAXON, "contains", "");
             addPrimerSelectionOption(PRIMER, "is", DocumentSelectionOption.FolderOrDocuments.EMPTY, false, Collections.<AnnotatedPluginDocument>emptyList());
             FailureReason.addToOptions(this);

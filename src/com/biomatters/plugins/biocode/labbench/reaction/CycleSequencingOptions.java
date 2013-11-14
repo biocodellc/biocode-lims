@@ -243,8 +243,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         addDateOption("date", "Date", new Date());
 
 
-        OptionValue[] statusValues = new OptionValue[] { NOT_RUN_VALUE, RUN_VALUE, PASSED_VALUE, SUSPECT_VALUE, FAILED_VALUE };
-        addComboBoxOption(RUN_STATUS, "Reaction state", statusValues, statusValues[0]);
+        addComboBoxOption(RUN_STATUS, "Reaction state", STATUS_VALUES, STATUS_VALUES[0]);
         addButtonOption(SEQ_RESULTS_BUTTON_NAME, "", "View " + (reaction != null ? reaction.getSequencingResults().size() : 0) + " Sequencing Results");
 
         addLabel("");
