@@ -154,15 +154,18 @@ public class AnnotateLimsDataOptions extends Options {
             if (well == null) {
                 return null;
             }
+            Object isForwardValue = annotatedDocument.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
+            if(isForwardValue == null && noDirectionPlateSpecimens == null) {
+                //happens if user specifies different plates for forward and reverse but the sequences aren't annotated with directions
+                throw new DocumentOperationException("Could not determine direction of reads, make sure you have run " +
+                        "<strong>Set Read Direction</strong> first if specifying both forward and reverse sequencing " +
+                        "plates to annotate from.");
+            }
             loadPlateSpecimens();
             WorkflowDocument workflow;
             String sequencingPlateName;
-            Object isForwardValue = annotatedDocument.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
             if (isForwardValue == null) {
-                if (noDirectionPlateSpecimens == null) {
-                    //happens if user specifies different plates for forward and reverse but the sequences aren't annotated with directions
-                    throw new DocumentOperationException("Could not determine direction of reads, make sure you have run Set Read Direction first.");
-                }
+                assert(noDirectionPlateSpecimens != null);
                 workflow = noDirectionPlateSpecimens.get(well);
                 sequencingPlateName = actualNoDirectionPlateName;
             } else if ((Boolean)isForwardValue) {

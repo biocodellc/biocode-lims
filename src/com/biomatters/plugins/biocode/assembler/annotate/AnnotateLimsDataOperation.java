@@ -74,6 +74,9 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
             };
         } else {
             final Map<String, WorkflowDocument> workflowMap = getWorkflowDocumentsForDocs(documents);
+            if(workflowMap.isEmpty()) {
+                throw new DocumentOperationException("Could not find any matching samples in FIMS for annotated workflow or plate/well.");
+            }
 
             return new FimsDataGetter() {
                 public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
@@ -136,6 +139,11 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
             for (String plateName : plateNames) {
                 queries.add(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName));
             }
+        }
+        if(queries.isEmpty()) {
+            throw new DocumentOperationException("Could not find any FIMS samples because document" +
+                    (documents.length > 1 ? "s" : "") +
+                    " do not have any annotated workflow names or plates/wells.");
         }
 
         List<AnnotatedPluginDocument> workflowDocs;
