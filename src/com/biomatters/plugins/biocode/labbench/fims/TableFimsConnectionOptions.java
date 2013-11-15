@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -7,12 +8,12 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 
-import java.util.List;
-import java.util.Arrays;
+import java.util.*;
 import java.io.IOException;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.*;
+import java.util.List;
 
 import org.virion.jam.util.SimpleListener;
 
@@ -37,8 +38,18 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
 
     protected abstract PasswordOptions getConnectionOptions();
 
+    final List<OptionValue> getTableColumns() throws IOException {
+        List<OptionValue> list = new ArrayList<OptionValue>(_getTableColumns());
+        Collections.sort(list, new Comparator<OptionValue>() {
+            @Override
+            public int compare(OptionValue o1, OptionValue o2) {
+                return o1.getLabel().toLowerCase().compareTo(o2.getLabel().toLowerCase());
+            }
+        });
+        return list;
+    }
 
-    protected abstract List<OptionValue> getTableColumns() throws IOException;
+    protected abstract List<OptionValue> _getTableColumns() throws IOException;
 
     protected abstract boolean updateAutomatically();
 

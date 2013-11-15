@@ -37,7 +37,7 @@ public class ExcelFimsConnectionOptions extends TableFimsConnectionOptions{
         return options;
     }
 
-    protected List<OptionValue> getTableColumns() throws IOException {
+    protected List<OptionValue> _getTableColumns() throws IOException {
         FileSelectionOption location = (FileSelectionOption)getChildOptions().get(CONNECTION_OPTIONS_KEY).getOption(FILE_LOCATION);
         return getTableColumns(location.getValue().length() > 0 ? new File(location.getValue()) : null, getPanel());
     }

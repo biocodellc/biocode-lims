@@ -21,7 +21,7 @@ public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOption
     }
 
 
-    protected List<OptionValue> getTableColumns() throws IOException {
+    protected List<OptionValue> _getTableColumns() throws IOException {
         Options connectionOptions = getChildOptions().get(CONNECTION_OPTIONS_KEY);
         return getTableColumns(connectionOptions.getValueAsString(TABLE_ID));
     }

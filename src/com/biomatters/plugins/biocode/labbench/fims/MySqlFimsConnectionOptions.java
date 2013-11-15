@@ -21,7 +21,7 @@ public class MySqlFimsConnectionOptions extends TableFimsConnectionOptions{
         return new MooreaFimsConnectionOptions(this.getClass(), true);
     }
 
-    protected List<OptionValue> getTableColumns() throws IOException {
+    protected List<OptionValue> _getTableColumns() throws IOException {
         MooreaFimsConnectionOptions connectionOptions = (MooreaFimsConnectionOptions)getChildOptions().get(CONNECTION_OPTIONS_KEY);
 
         driver = MySQLFimsConnection.getDriver();

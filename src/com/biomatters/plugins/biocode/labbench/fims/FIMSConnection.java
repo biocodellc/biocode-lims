@@ -89,7 +89,17 @@ public abstract class FIMSConnection {
      */
     public abstract List<DocumentField> getTaxonomyAttributes();
 
-    public abstract List<DocumentField> getSearchAttributes();
+    public final List<DocumentField> getSearchAttributes() {
+        List<DocumentField> list = new ArrayList<DocumentField>(_getSearchAttributes());
+        Collections.sort(list, new Comparator<DocumentField>() {
+            @Override
+            public int compare(DocumentField o1, DocumentField o2) {
+                return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
+            }
+        });
+        return list;
+    }
+    public abstract List<DocumentField> _getSearchAttributes();
 
     public abstract BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument);
 

@@ -214,7 +214,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         return fields;
     }
 
-    public List<DocumentField> getSearchAttributes() {
+    public List<DocumentField> _getSearchAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
         fields.addAll(getCollectionAttributes());
         fields.addAll(getTaxonomyAttributes());

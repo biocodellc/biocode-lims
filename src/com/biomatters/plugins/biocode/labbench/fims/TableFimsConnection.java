@@ -9,10 +9,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -164,7 +161,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
         return isConnected() ? new ArrayList<DocumentField>(taxonomyFields) : Collections.<DocumentField>emptyList();
     }
 
-    public final List<DocumentField> getSearchAttributes() {
+    public final List<DocumentField> _getSearchAttributes() {
         ArrayList<DocumentField> fields = new ArrayList<DocumentField>();
         if(isConnected()) {
             fields.addAll(this.fields);

@@ -100,7 +100,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return new DocumentField("Tissue ID", "", "http://biocode.berkeley.edu/schema/tissue_id", String.class, true, false);
     }
 
-    public List<DocumentField> getSearchAttributes() {
+    public List<DocumentField> _getSearchAttributes() {
         return getMatchingFields(searchAttributes, false);
     }
 
