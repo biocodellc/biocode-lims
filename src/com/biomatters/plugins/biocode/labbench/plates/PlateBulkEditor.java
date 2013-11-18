@@ -113,9 +113,25 @@ public class PlateBulkEditor {
                         doWorkflows.setToolTipText("Updates the workflow ids to the correct workflow for the new locus");
                         messagePanel.addComponent(doWorkflows, false);
                         if(Dialogs.showOkCancelDialog(messagePanel, "Enter Value", editor.get())) {
+                            for (DocumentFieldEditor editorToCheck : editors) {
+                                editorToCheck.valuesFromTextView();  // Get values from current text
+                            }
+
                             for(int i=0; i < editor.get().values.length; i++) {
                                 for(int j=0; j < editor.get().values[0].length; j++) {
-                                    editor.get().values[i][j] = textField.getText();
+                                    boolean blank = true;
+                                    for (DocumentFieldEditor editorToCheck : editors) {
+                                        if(editorToCheck == editor.get()) {
+                                            continue;
+                                        }
+                                        Object value = editorToCheck.getValue(i, j);
+                                        if(value != null && value.toString().trim().length() > 0 && !value.equals("None")) {
+                                            blank = false;
+                                        }
+                                    }
+                                    if(!blank) {
+                                        editor.get().values[i][j] = textField.getText();
+                                    }
                                 }
                             }
                             editor.get().textViewFromValues();
