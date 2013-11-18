@@ -148,13 +148,10 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
 
         List<AnnotatedPluginDocument> workflowDocs;
         try {
-            Map<String, Object> searchOptions = new HashMap<String, Object>();
-            searchOptions.put("tissueDocuments", Boolean.FALSE);
-            searchOptions.put("plateDocuments", Boolean.FALSE);
-            searchOptions.put("workflowDocuments", Boolean.TRUE);
-            searchOptions.put("sequenceDocuments", Boolean.FALSE);
             workflowDocs = BiocodeService.getInstance().retrieve(Query.Factory.createOrQuery(
-                    queries.toArray(new Query[queries.size()]), searchOptions), ProgressListener.EMPTY);
+                    queries.toArray(new Query[queries.size()]),
+                    BiocodeService.getSearchDownloadOptions(false, false, true, false)
+                    ), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Unable to load workflows for documents", e);
         }

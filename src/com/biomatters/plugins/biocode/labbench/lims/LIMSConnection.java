@@ -1395,9 +1395,9 @@ public abstract class LIMSConnection {
         LimsSearchResult result = new LimsSearchResult();
 
         // We test against false so that the default is to download
-        Boolean downloadWorkflows = !Boolean.FALSE.equals(query.getExtendedOptionValue("workflowDocuments"));
-        Boolean downloadPlates = !Boolean.FALSE.equals(query.getExtendedOptionValue("plateDocuments"));
-        Boolean downloadSequences = !Boolean.FALSE.equals(query.getExtendedOptionValue("sequenceDocuments"));
+        Boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
+        Boolean downloadPlates = BiocodeService.isDownloadPlates(query);
+        Boolean downloadSequences = BiocodeService.isDownloadSequences(query);
 
         if(query instanceof BasicSearchQuery) {
             query = generateAdvancedQueryFromBasicQuery(query);
@@ -1487,10 +1487,7 @@ public abstract class LIMSConnection {
         // searched for a Cycle Sequencing Plate 'A001'.  We would only have the sequencing reactions.  So in this case
         // we need to perform an additional step to download all the reactions in the workflow.
         if((downloadWorkflows || downloadSequences) && !workflows.isEmpty() && (platePart != null || assemblyPart != null)) {
-            Map<String, Object> options = new HashMap<String, Object>();
-            options.put("plateDocuments", Boolean.FALSE);
-            options.put("workflowDocuments", Boolean.TRUE);
-            options.put("sequences", Boolean.FALSE);
+            Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false);
 
             Query[] subqueries = new Query[workflows.size()];
             int i=0;
@@ -1516,10 +1513,7 @@ public abstract class LIMSConnection {
         // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
         // the plate will not be complete.  So we have to do another query to get the complete plate
         if(downloadPlates && !plates.isEmpty() && ((samples != null && !samples.isEmpty()) || workflowPart != null || extractionPart != null || assemblyPart != null)) {
-            Map<String, Object> options = new HashMap<String, Object>();
-            options.put("plateDocuments", Boolean.TRUE);
-            options.put("workflowDocuments", Boolean.FALSE);
-            options.put("sequences", Boolean.FALSE);
+            Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, false, true, false);
 
             Query[] subqueries = new Query[plates.size()];
             int i=0;

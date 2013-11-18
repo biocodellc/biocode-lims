@@ -51,6 +51,10 @@ import java.util.prefs.Preferences;
  */
 @SuppressWarnings({"ConstantConditions"})
 public class BiocodeService extends PartiallyWritableDatabaseService {
+    private static final String DOWNLOAD_TISSUES = "tissueDocuments";
+    private static final String DOWNLOAD_WORKFLOWS = "workflowDocuments";
+    private static final String DOWNLOAD_PLATES = "plateDocuments";
+    private static final String DOWNLOAD_SEQS = "sequenceDocuments";
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection;
@@ -60,6 +64,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private static BiocodeService instance = null;
     public final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
+
     private static Preferences getPreferencesForService() {
         return Preferences.userNodeForPackage(BiocodeService.class);
     }
@@ -305,11 +310,37 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     @Override
     public ExtendedSearchOption[] getExtendedSearchOptions(boolean isAdvancedSearch) {
         return new ExtendedSearchOption[] {
-                new CheckboxSearchOption("tissueDocuments", "Tissues", true),
-                new CheckboxSearchOption("workflowDocuments", "Workflows", true),
-                new CheckboxSearchOption("plateDocuments", "Plates", true),
-                new CheckboxSearchOption("sequenceDocuments", "Sequences", false)
+                new CheckboxSearchOption(DOWNLOAD_TISSUES, "Tissues", true),
+                new CheckboxSearchOption(DOWNLOAD_WORKFLOWS, "Workflows", true),
+                new CheckboxSearchOption(DOWNLOAD_PLATES, "Plates", true),
+                new CheckboxSearchOption(DOWNLOAD_SEQS, "Sequences", false)
         };
+    }
+
+    public static boolean isDownloadTissues(Query query) {
+        return isDownloadTypeQuery(query, DOWNLOAD_TISSUES);
+    }
+    public static boolean isDownloadWorkflows(Query query) {
+        return isDownloadTypeQuery(query, DOWNLOAD_WORKFLOWS);
+    }
+    public static boolean isDownloadPlates(Query query) {
+        return isDownloadTypeQuery(query, DOWNLOAD_PLATES);
+    }
+    public static boolean isDownloadSequences(Query query) {
+        return isDownloadTypeQuery(query, DOWNLOAD_SEQS);
+    }
+
+    private static boolean isDownloadTypeQuery(Query query, String type) {
+        return !Boolean.FALSE.equals(query.getExtendedOptionValue(type));
+    }
+
+    public static Map<String, Object> getSearchDownloadOptions(boolean tissues, boolean workflows, boolean plates, boolean sequences) {
+        Map<String, Object> searchOptions = new HashMap<String, Object>();
+        searchOptions.put(DOWNLOAD_TISSUES, tissues);
+        searchOptions.put(DOWNLOAD_WORKFLOWS, workflows);
+        searchOptions.put(DOWNLOAD_PLATES, plates);
+        searchOptions.put(DOWNLOAD_SEQS, sequences);
+        return searchOptions;
     }
 
     static FIMSConnection[] getFimsConnections() {
@@ -775,7 +806,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 return;
             }
 
-            if(tissueSamples != null && (Boolean)query.getExtendedOptionValue("tissueDocuments")) {
+            if(isDownloadTissues(query)) {
                 for(FimsSample sample : tissueSamples) {
                     TissueDocument doc = new TissueDocument(sample);
                     callback.add(doc, Collections.<String, Object>emptyMap());
@@ -785,8 +816,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 return;
             }
             try {
-                if(!Boolean.FALSE.equals(query.getExtendedOptionValue("workflowDocuments")) ||
-                        !Boolean.FALSE.equals(query.getExtendedOptionValue("plateDocuments"))) {
+                if(isDownloadWorkflows(query) || isDownloadPlates(query)) {
                     callback.setMessage("Downloading Workflows & Plates");
                 } else {
                     callback.setMessage("Searching");
@@ -801,7 +831,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
 
                 // Now add tissues that match the LIMS query
-                if(!workflowList.isEmpty() && (tissueSamples == null || tissueSamples.isEmpty()) && !Boolean.FALSE.equals(query.getExtendedOptionValue("tissueDocuments"))) {
+                if(!workflowList.isEmpty() && (tissueSamples == null || tissueSamples.isEmpty()) && isDownloadTissues(query)) {
                     for (WorkflowDocument workflowDocument : workflowList) {
                         FimsSample sample = workflowDocument.getFimsSample();
                         if(sample != null) {
@@ -814,7 +844,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     return;
                 }
 
-                if(query.getExtendedOptionValue("sequenceDocuments") != null && (Boolean)query.getExtendedOptionValue("sequenceDocuments")) {
+                if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading Sequences");
                     limsConnection.getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, false);
                 }
