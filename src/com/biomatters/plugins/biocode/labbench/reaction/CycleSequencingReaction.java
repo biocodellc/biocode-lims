@@ -161,34 +161,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
         }
 
-        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
-        if(fimsConnection != null) {
-            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
-        }
-
         SequencingResult result = SequencingResult.fromResultSet(r);
         if(result != null) {
             sequencingResults.add(result);
         }
-
-//        String sequenceString = r.getString("cyclesequencing.sequences");
-//        if(sequenceString != null && sequenceString.length() > 0) {
-//            SAXBuilder builder = new SAXBuilder();
-//            try {
-//                Element sequenceElement = builder.build(new StringReader(sequenceString)).detachRootElement();
-//                DefaultSequenceListDocument defaultSequenceListDocument = XMLSerializer.classFromXML(sequenceElement, DefaultSequenceListDocument.class);
-//                ((CycleSequencingOptions)options).setSequences(defaultSequenceListDocument.getNucleotideSequences());
-//            } catch (JDOMException e) {
-//                e.printStackTrace();
-//                throw new SQLException("Could not deserialize the sequences: "+e.getMessage());
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//                throw new SQLException("Could not read the sequences: "+e.getMessage());
-//            } catch (XMLSerializationException e) {
-//                e.printStackTrace();
-//                throw new SQLException("Couldn't deserialize the sequences: "+e.getMessage());
-//            }
-//        }
     }
 
     public void setCacheNumTraces(int cacheNumTraces) {

@@ -257,7 +257,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         if(query instanceof CompoundSearchQuery && (((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.OR)) {
             Set<FimsSample> results = new LinkedHashSet<FimsSample>();
             for(Query q : ((CompoundSearchQuery)query).getChildren()) {
-                results.addAll(_getMatchingSamples(q));
+                results.addAll(getMatchingSamples(q));
             }
             return new ArrayList<FimsSample>(results);
         }

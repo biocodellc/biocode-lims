@@ -145,11 +145,17 @@ public abstract class FIMSConnection {
     }
 
     public final List<FimsSample> getMatchingSamples(Query query) throws ConnectionException {
-        List<FimsSample> samples = _getMatchingSamples(query);
-        for(FimsSample sample : samples) {
-            sampleCache.put(sample.getId(), new SoftReference<FimsSample>(sample));
+        List<FimsSample> toReturn = new ArrayList<FimsSample>();
+
+        for(FimsSample sample : _getMatchingSamples(query)) {
+            String sampleId = sample.getId();
+            if(sampleId == null || sampleId.trim().length() == 0) {
+                continue;
+            }
+            sampleCache.put(sampleId, new SoftReference<FimsSample>(sample));
+            toReturn.add(sample);
         }
-        return samples;
+        return toReturn;
     }
 
     public abstract List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException;
@@ -192,11 +198,7 @@ public abstract class FIMSConnection {
             }
 
             Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap());
-            List<FimsSample> searchedSamples = getMatchingSamples(orQuery);
-            for(FimsSample sample : searchedSamples) {
-                sampleCache.put(sample.getId(), new SoftReference<FimsSample>(sample));
-            }
-            samplesToReturn.addAll(searchedSamples);
+            samplesToReturn.addAll(getMatchingSamples(orQuery));
         }
 
         return samplesToReturn;
