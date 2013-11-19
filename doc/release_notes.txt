@@ -6,6 +6,7 @@
 * Improved plate bulk editor.  Changed wells are now highlighted.  Pasting doesn't shift existing wells down.
 * Export of original chromatograms can now be done when selecting assemblies or consensus sequences.
 * Fixed a bug that could cause all chromatograms to be unannotated if there was an empty row in an Excel FIMS.
+* Lists of FIMS fields are now sorted.
 
 ==Biocode Plugin 2.5.0 - TBD==
 * Old FIMS fields from MySQL and older Excel connections are now detected when annotating from FIMS/LIMS and can be removed.
