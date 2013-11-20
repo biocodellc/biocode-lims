@@ -806,7 +806,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 return;
             }
 
-            if(isDownloadTissues(query)) {
+            if(tissueSamples != null && isDownloadTissues(query)) {
                 for(FimsSample sample : tissueSamples) {
                     TissueDocument doc = new TissueDocument(sample);
                     callback.add(doc, Collections.<String, Object>emptyMap());
