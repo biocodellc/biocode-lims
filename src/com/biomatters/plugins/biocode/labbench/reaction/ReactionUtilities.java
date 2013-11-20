@@ -640,6 +640,9 @@ public class ReactionUtilities {
             }
             else {
                 for(Reaction reaction : reactions) {
+                    if(reaction.isEmpty()) {
+                        continue;
+                    }
                     for(final Options.Option option : options.getOptions()) {
                         if(option.isEnabled() && !(option instanceof Options.LabelOption)) {
                             reaction.getOptions().refreshValuesFromCaches();
