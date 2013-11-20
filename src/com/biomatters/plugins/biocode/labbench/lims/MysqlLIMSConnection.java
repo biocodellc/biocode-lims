@@ -50,22 +50,15 @@ public class MysqlLIMSConnection extends LIMSConnection {
             schema = LIMSOptions.getValueAsString("database");
             connection = driver.connect("jdbc:mysql://" + serverUrn + "/" + schema, properties);
             connection2 = driver.connect("jdbc:mysql://"+ serverUrn + "/" + schema, properties);
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT * FROM databaseversion LIMIT 1");
             serverUrn += "/"+ schema;
-            if(!resultSet.next()) {
-                throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
-            }
-            else {
-                int version = resultSet.getInt("version");
-                if(version != EXPECTED_SERVER_VERSION) {
-                    throw new ConnectionException("The server you are connecting to is running an "+(version > EXPECTED_SERVER_VERSION ? "newer" : "older")+" version of the LIMS database ("+version+") than this plugin was designed for ("+EXPECTED_SERVER_VERSION+").  Please contact your systems administrator for assistance.");
-                }
-            }
-            resultSet.close();
         } catch (SQLException e1) {
             throw new ConnectionException(e1);
         }
+    }
+
+    @Override
+    protected boolean canUpgradeDatabase() {
+        return false;
     }
 
     @Override

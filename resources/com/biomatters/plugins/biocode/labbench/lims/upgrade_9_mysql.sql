@@ -22,4 +22,5 @@ CREATE TABLE properties (
     value    VARCHAR(255)
 ) ENGINE=INNODB;
 
-UPDATE databaseversion SET version = 10;
+UPDATE databaseversion SET version = 9;
+INSERT INTO properties (name,value) VALUES ('fullDatabaseVersion', '9.1');

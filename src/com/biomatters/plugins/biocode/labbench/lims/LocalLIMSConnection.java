@@ -1,10 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.biomatters.utilities.VersionNumberUtilities;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -34,7 +34,7 @@ public class LocalLIMSConnection extends LIMSConnection {
      * @throws ConnectionException
      */
     public LocalLIMSConnection(String localDatabaseName) throws ConnectionException{
-        connect(localDatabaseName, false);
+        connect(localDatabaseName);
     }
 
     @Override
@@ -50,37 +50,12 @@ public class LocalLIMSConnection extends LIMSConnection {
     @Override
     public void connectToDb(Options connectionOptions) throws ConnectionException {
         String dbName = connectionOptions.getValueAsString("database");
-        connect(dbName, false);
+        connect(dbName);
     }
 
-    private void connect(String dbName, boolean alreadyAskedAboutUpgrade) throws ConnectionException {
+    private void connect(String dbName) throws ConnectionException {
         connection = getDbConnection(dbName);
         serverUrn = "local/"+dbName;
-        try {
-            ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
-            if(!resultSet.next()) {
-                throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
-            }
-            else {
-                int version = resultSet.getInt("version");
-
-                if(version < EXPECTED_SERVER_VERSION) {
-                    if(alreadyAskedAboutUpgrade || Dialogs.showYesNoDialog("The LIMS database you are connecting to is written for an older version of this plugin.  Would you like to upgrade it?", "Old database", null, Dialogs.DialogIcon.QUESTION)) {
-                        upgradeDatabase(dbName);
-                        connect(dbName, true);
-                    }
-                    else {
-                        throw new ConnectionException("You need to upgrade your database, or choose another one to continue");
-                    }
-                }
-                else if(version > EXPECTED_SERVER_VERSION) {
-                    throw new ConnectionException("This database was written for a newer version of the LIMS plugin, and cannot be accessed");
-                }
-            }
-        }
-        catch(SQLException ex) {
-            throw new ConnectionException(ex.getMessage(), ex);
-        }
     }
 
     static String getDbPath(String newDbName) throws IOException {
@@ -114,34 +89,27 @@ public class LocalLIMSConnection extends LIMSConnection {
         }
     }
 
-    public void upgradeDatabase(String dbName) throws SQLException{
-        Connection connection;
-        try {
-            connection = getDbConnection(dbName);
-        }
-        catch(ConnectionException ex) {
-            throw new SQLException("Could not connect to the database to upgrade it: "+ex.getMessage());
-        }
-        try {
-            ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
-            if(!resultSet.next()) {
-                throw new SQLException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
-            }
-            int version = resultSet.getInt("version");
-            resultSet.close();
+    @Override
+    protected boolean canUpgradeDatabase() {
+        return true;
+    }
 
-            while(version < EXPECTED_SERVER_VERSION) {  // Keep applying upgrade scripts til version is expected
-                String upgradeName = "upgrade_" + version++ + "_sqlite.sql";
+    protected void upgradeDatabase(String currentVersion) throws ConnectionException {
+        try {
+            while(VersionNumberUtilities.compare(currentVersion, EXPECTED_SERVER_FULL_VERSION) < 0) {  // Keep applying upgrade scripts til version is expected
+                String upgradeName = "upgrade_" + currentVersion + "_sqlite.sql";
                 InputStream scriptStream = getClass().getResourceAsStream(upgradeName);
                 if(scriptStream == null) {
                     throw new FileNotFoundException("Could not find resource "+getClass().getPackage().getName()+"."+upgradeName);
                 }
                 DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
+
+                currentVersion = getFullVersionStringFromDatabase();
             }
-            connection.close();
-        }
-        catch(IOException ex) {
-            throw new SQLException(ex.getMessage());
+        } catch(IOException ex) {
+            throw new ConnectionException("Unable to read database upgrade script: " + ex.getMessage(), ex);
+        } catch (SQLException e) {
+            throw new ConnectionException("Failed to upgrade database:" + e.getMessage(), e);
         }
     }
 

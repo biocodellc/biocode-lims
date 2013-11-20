@@ -270,7 +270,7 @@ CREATE TABLE  databaseversion  (
 -- Dumping data for table  databaseversion
 --
 
-INSERT INTO databaseversion VALUES  (10);
+INSERT INTO databaseversion VALUES  (9);
 
 
 
@@ -414,6 +414,12 @@ CREATE TABLE properties (
     name     VARCHAR(255)     PRIMARY KEY,
     value    VARCHAR(255)
 );
+
+--
+-- Dumping data for table `properties`
+--
+INSERT INTO properties (name,value) VALUES
+ ('fullDatabaseVersion', '9.1');
 
 --
 -- Definition of table `sequencing_result`
