@@ -287,8 +287,6 @@ public abstract class LIMSConnection {
         }
     }
 
-    private static final String POPULATE_ASSEMBLIES = "populatedAssemblyReactionField";
-
     public void doAnyExtraInitialziation() throws TransactionException {
         try {
             PreparedStatement getFailureReasons = null;
@@ -300,42 +298,39 @@ public abstract class LIMSConnection {
                 cleanUpStatements(getFailureReasons);
             }
 
-            boolean hasPopulatedAssemblies = Boolean.TRUE.toString().equals(getProperty(POPULATE_ASSEMBLIES));
-            if (!hasPopulatedAssemblies) {
-                System.out.println("Populating sequencing_result table...");
-                PreparedStatement getReactionsAndResults = null;
-                PreparedStatement updateReaction = null;
-                try {
-                    getReactionsAndResults = connection.prepareStatement(
-                            "SELECT assembly.id AS assembly, cyclesequencing.id AS reaction FROM workflow " +
-                                    "INNER JOIN cyclesequencing ON workflow.id = cyclesequencing.workflow " +
-                                    "INNER JOIN assembly ON assembly.workflow = cyclesequencing.workflow;"
-                    );
-                    updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
-                    ResultSet resultSet = getReactionsAndResults.executeQuery();
-                    int count = 0;
-                    while (resultSet.next()) {
-                        count++;
-                        updateReaction.setObject(1, resultSet.getInt("assembly"));
-                        updateReaction.setObject(2, resultSet.getInt("reaction"));
-                        updateReaction.addBatch();
-                    }
-
-                    if (count > 0) {
-                        long start = System.currentTimeMillis();
-                        int[] updateResults = updateReaction.executeBatch();
-                        int updated = 0;
-                        for (int result : updateResults) {
-                            if (result >= 0) {
-                                updated += result;
-                            }
-                        }
-                        System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
-                    }
-                } finally {
-                    cleanUpStatements(getReactionsAndResults, updateReaction);
+            System.out.println("Populating sequencing_result table from results marked in previous versions...");
+            PreparedStatement getReactionsAndResults = null;
+            PreparedStatement updateReaction = null;
+            try {
+                getReactionsAndResults = connection.prepareStatement(
+                        "SELECT assembly.id AS assembly, cyclesequencing.id AS reaction FROM workflow " +
+                                "INNER JOIN cyclesequencing ON workflow.id = cyclesequencing.workflow " +
+                                "INNER JOIN assembly ON assembly.workflow = cyclesequencing.workflow AND " +
+                                "assembly.id NOT IN (SELECT assembly FROM sequencing_result);"
+                );
+                updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
+                ResultSet resultSet = getReactionsAndResults.executeQuery();
+                int count = 0;
+                while (resultSet.next()) {
+                    count++;
+                    updateReaction.setObject(1, resultSet.getInt("assembly"));
+                    updateReaction.setObject(2, resultSet.getInt("reaction"));
+                    updateReaction.addBatch();
                 }
-                setProperty(POPULATE_ASSEMBLIES, Boolean.TRUE.toString());
+
+                if (count > 0) {
+                    long start = System.currentTimeMillis();
+                    int[] updateResults = updateReaction.executeBatch();
+                    int updated = 0;
+                    for (int result : updateResults) {
+                        if (result >= 0) {
+                            updated += result;
+                        }
+                    }
+                    System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
+                }
+            } finally {
+                cleanUpStatements(getReactionsAndResults, updateReaction);
             }
         } catch (SQLException e) {
             throw new TransactionException("Failed to initialize database: " + e.getMessage(), e);
