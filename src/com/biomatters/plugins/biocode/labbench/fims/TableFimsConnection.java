@@ -95,7 +95,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
 
         //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
-        if(getTableCol(fields, tissueCol) == null) {
+        if(getTableCol(tissueCol) == null) {
             StringBuilder error = new StringBuilder("You have listed your tissue sample field (" + tissueCol + ") as also being a taxonomy field.  This is not allowed.");
             error.append("\n\nTaxonomy Fields:\n\n");
             for(DocumentField field : taxonomyFields) {
@@ -108,7 +108,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
             
             throw new ConnectionException(null, error.toString());
         }
-        if(getTableCol(fields, specimenCol) == null) {
+        if(getTableCol(specimenCol) == null) {
             throw new ConnectionException(null, "You have listed your specimen field ("+tissueCol+") as also being a taxonomy field.  This is not allowed.");
         }
         if(getTissueSampleDocumentField() == null) {
@@ -119,10 +119,12 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     public abstract List<DocumentField> getTableColumns() throws IOException;
 
-    public static DocumentField getTableCol(List<DocumentField> fields, String colName) {
-        for(DocumentField field : fields) {
-            if(field.getCode().equals(colName)) {
-                return field;
+    public DocumentField getTableCol(String colName) {
+        if(fields != null) {
+            for(DocumentField field : fields) {
+                if(field.getCode().equals(colName)) {
+                    return field;
+                }
             }
         }
         return null;
@@ -146,11 +148,11 @@ public abstract class TableFimsConnection extends FIMSConnection{
     public abstract void _disconnect();
 
     public final DocumentField getTissueSampleDocumentField() {
-        return getTableCol(fields, tissueCol);
+        return getTableCol(tissueCol);
     }
 
     public final DocumentField getSpecimenDocumentField() {
-        return getTableCol(fields, specimenCol);
+        return getTableCol(specimenCol);
     }
 
     public final List<DocumentField> getCollectionAttributes() {
@@ -183,7 +185,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
         if(!storePlates) {
             return null;
         }
-        return getTableCol(fields, plateCol);
+        return getTableCol(plateCol);
     }
 
     @Override
@@ -191,7 +193,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
         if(!storePlates) {
             return null;
         }
-        return getTableCol(fields, wellCol);
+        return getTableCol(wellCol);
     }
 
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException {
