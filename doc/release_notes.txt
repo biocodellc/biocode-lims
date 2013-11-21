@@ -15,7 +15,7 @@
 * Other minor fixes and improvements.
 
 '''Additional Notes'''
-* The minimum required version of Geneious is now 6.0.0.
+* The minimum required version of Geneious is now 6.1.1.
 * This version includes an update to the LIMS database format.  Built-in MySQL users will be upgraded automatically.
 Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
 
