@@ -230,7 +230,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     @Override
     public boolean canEditDocumentField(AnnotatedPluginDocument document, DocumentField field) {
-        return !FimsSample.class.isAssignableFrom(document.getDocumentClass()) && field.getCode().equals(DocumentField.NAME_FIELD.getCode());
+        return (WorkflowDocument.class.isAssignableFrom(document.getDocumentClass()) ||
+                PlateDocument.class.isAssignableFrom(document.getDocumentClass())) &&
+                field.getCode().equals(DocumentField.NAME_FIELD.getCode());
     }
 
     @Override
