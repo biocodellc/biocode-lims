@@ -7,15 +7,16 @@
 * Export of original chromatograms can now be done when selecting assemblies or consensus sequences.
 * Fixed a bug that could cause all chromatograms to be unannotated if there was an empty row in an Excel FIMS.
 * Lists of FIMS fields are now sorted.
-
-==Biocode Plugin 2.5.0 - TBD==
 * Old FIMS fields from MySQL and older Excel connections are now detected when annotating from FIMS/LIMS and can be removed.
 * A text filter can now be used when bulk adding traces to sequencing plates.
 * Added # Traces field to the display options in the plate view.
-* Added 2 new failure reason fields for marking sequencing results as fail.
+* Added 2 new failure reason fields for marking sequencing results as fail.  These can be configured in the database.
 * Sequencing results now belong to a specific reaction rather than a workflow.
+* Other minor fixes and improvements.
+
+'''Additional Notes'''
 * The minimum required version of Geneious is now 6.0.0.
-'''NOTE''': This version includes an update to the LIMS database format.  Built-in MySQL users will be upgraded automatically.
+* This version includes an update to the LIMS database format.  Built-in MySQL users will be upgraded automatically.
 Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
 
 ==Biocode Plugin 2.4.5 - 7 October 2013==
