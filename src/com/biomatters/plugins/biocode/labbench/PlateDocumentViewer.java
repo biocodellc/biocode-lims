@@ -1068,7 +1068,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         scroller.getVerticalScrollBar().setUnitIncrement(20);
         scroller.getHorizontalScrollBar().setUnitIncrement(20);
         panel.add(scroller, BorderLayout.CENTER);
-        ThreadUtilities.invokeLater(new Runnable() {
+        EventQueue.invokeLater(new Runnable() {
             public void run() {
                 mainPanel.scrollRectToVisible(new Rectangle(1,1,1,1));
             }
