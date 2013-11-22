@@ -1111,7 +1111,7 @@ public class PlateBulkEditor {
                         String oldValue = getPlateValue(i);
                         String newValue = i < parts.length ? parts[i] : "";
                         boolean changed = !oldValue.equals(newValue);
-                        rowComponents[i].setForeground(changed ? Color.RED : Color.BLACK);
+                        rowComponents[i].setForeground(changed ? Color.BLUE : Color.BLACK);
                         rowComponents[i].setFont(rowComponents[i].getFont().deriveFont(
                                 changed ? Font.BOLD : Font.PLAIN));
                     }
