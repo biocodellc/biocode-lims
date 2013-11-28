@@ -1027,18 +1027,20 @@ public class PlateBulkEditor {
                 }
             }
 
-            private boolean displayOverwritingWarning(String[] newLines, int selectedLines, int extraEmptyRowsBeingOverwritten) {
+            private boolean displayOverwritingWarning(String[] newLines, int selectedLines, int extraNonEmptyRowsBeingOverwritten) {
                 StringBuilder message = new StringBuilder("<html>You are pasting <strong>" + newLines.length + "</strong> lines");
                 if(selectedLines > 1) {
                     message.append(", but have only selected <strong>").append(selectedLines).append("</strong> lines");
                 }
-                message.append(". This will overwrite <font color=\"red\"><strong>").append(extraEmptyRowsBeingOverwritten).append(
+                message.append(". This will overwrite <font color=\"red\"><strong>").append(extraNonEmptyRowsBeingOverwritten).append(
                         "</strong></font> existing well");
-                if(extraEmptyRowsBeingOverwritten > 1) {
+                if(extraNonEmptyRowsBeingOverwritten > 1) {
                     message.append("s");
                 }
                 if(selectedLines > 1) {
                     message.append(" outside of your selection");
+                } else {
+                    message.append(" below the current well");
                 }
                 message.append(".");
 
@@ -1093,6 +1095,7 @@ public class PlateBulkEditor {
                 rowComponents = new JLabel[plate.getRows() * plate.getCols()];
                 for(int i=0; i< rowComponents.length; i++) {
                     JLabel label = new JLabel();
+                    label.setFont(valueArea.getFont().deriveFont(Font.PLAIN));
                     add(label);
                     rowComponents[i] = label;
                 }
