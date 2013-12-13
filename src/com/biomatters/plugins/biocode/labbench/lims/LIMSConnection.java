@@ -21,7 +21,6 @@ import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.utilities.VersionNumberUtilities;
 import jebl.util.Cancelable;
 
 import java.sql.*;
@@ -216,7 +215,7 @@ public abstract class LIMSConnection {
                     }
                 }
 
-                boolean databaseIsOlder = VersionNumberUtilities.compare(fullVersionString, EXPECTED_SERVER_FULL_VERSION) < 0;
+                boolean databaseIsOlder = BiocodeUtilities.compareVersions(fullVersionString, EXPECTED_SERVER_FULL_VERSION) < 0;
                 if (version > EXPECTED_SERVER_MAJOR_VERSION) {
                     throw new ConnectionException("This database was written for a newer version of the LIMS plugin, and cannot be accessed");
                 } else if (version < EXPECTED_SERVER_MAJOR_VERSION || databaseIsOlder) {

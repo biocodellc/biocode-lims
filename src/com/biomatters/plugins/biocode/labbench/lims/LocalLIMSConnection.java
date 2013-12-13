@@ -1,10 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.utilities.VersionNumberUtilities;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -96,7 +96,7 @@ public class LocalLIMSConnection extends LIMSConnection {
 
     protected void upgradeDatabase(String currentVersion) throws ConnectionException {
         try {
-            while(VersionNumberUtilities.compare(currentVersion, EXPECTED_SERVER_FULL_VERSION) < 0) {  // Keep applying upgrade scripts til version is expected
+            while(BiocodeUtilities.compareVersions(currentVersion, EXPECTED_SERVER_FULL_VERSION) < 0) {  // Keep applying upgrade scripts til version is expected
                 String upgradeName = "upgrade_" + currentVersion + "_sqlite.sql";
                 InputStream scriptStream = getClass().getResourceAsStream(upgradeName);
                 if(scriptStream == null) {

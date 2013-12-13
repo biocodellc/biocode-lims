@@ -552,4 +552,43 @@ public class BiocodeUtilities {
             running = false;
         }
     }
+
+    /**
+     * Compares version numbers.
+     *
+     * @param versionA version string of the form nnn[.nnn[.nnn][-nnn]]
+     * @param versionB version string of the form nnn[.nnn[.nnn][-nnn]]
+     * @return 0 if the two versions are equal, or a negative number if versionA < versionB
+     * or a positive number if versionA > versionB.
+     * The absolute value of the return value specifies the first field in which the versions differ.
+     * Fields that are present in only one version string are interpreted as 0 in the other.
+     * It is guaranteed that compare(a,b) == - compare(b,a).
+     *
+     * For example
+     *   compare("2.0", "2.0.1") == -3   (the 3rd field is the first in which they differ)
+     *   compare("2.0.1", "2.0") == 3  (3rd field again, but order is other way round)
+     *   compare("0.9", "1.0") == -1
+     *   compare("0.9", "0.9") == 0
+     *   compare("2.5", "2.5.0") == 0
+     */
+    public static int compareVersions(String versionA, String versionB) {
+        String[] fieldsA = versionA.split("[\\.-]");
+        String[] fieldsB = versionB.split("[\\.-]");
+
+        int maxLength = Math.max(fieldsA.length, fieldsB.length);
+
+        for (int fieldNum = 0; fieldNum < maxLength; fieldNum++) {
+            int valA = (fieldNum < fieldsA.length ? Integer.parseInt(fieldsA[fieldNum]) : 0);
+            int valB = (fieldNum < fieldsB.length ? Integer.parseInt(fieldsB[fieldNum]) : 0);
+            if (valA != valB) {
+                return signum(valA - valB) * (fieldNum+1);
+            }
+        }
+        // return signum(fieldsA.length - fieldsB.length) * (maxLength + 1); (if we want 2.5 < 2.5.0; then, also change max to min above)
+        return 0;
+    }
+
+    private static int signum(int i) {
+        return (i == 0) ? 0 : ((i > 0) ? 1 : -1);
+    }
 }
