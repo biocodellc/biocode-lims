@@ -9,7 +9,7 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.SplitPaneListSelector;
-import com.biomatters.utilities.ObjectAndColor;
+import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;

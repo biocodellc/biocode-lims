@@ -21,7 +21,7 @@ import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import com.biomatters.utilities.ObjectAndColor;
+import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 

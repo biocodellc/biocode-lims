@@ -6,7 +6,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.utilities.ObjectAndColor;
+import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;

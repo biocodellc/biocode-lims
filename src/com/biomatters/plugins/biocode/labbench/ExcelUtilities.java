@@ -1,6 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.utilities.ObjectAndColor;
+import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import jxl.write.*;
 import jxl.write.Label;
 import jxl.format.Colour;

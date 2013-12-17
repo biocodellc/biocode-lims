@@ -13,7 +13,7 @@ import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.TableSorter;
-import com.biomatters.utilities.ObjectAndColor;
+import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import org.jdom.Element;
 
 import javax.swing.*;
