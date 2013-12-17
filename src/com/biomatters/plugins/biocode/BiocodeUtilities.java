@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -267,6 +268,21 @@ public class BiocodeUtilities {
     @SuppressWarnings("unchecked")
     public static String getValueAsString(Options.Option option) {
         return option.getValueAsString(option.getValue());
+    }
+
+    public static JPanel getRoundedBorderPanel(String message) {
+        JTextPane textPane = new JTextPane();
+        textPane.setEditable(false);
+        textPane.setContentType("text/html");
+        textPane.setText("<html>" + GuiUtilities.getHtmlHead() + "<body>" + "<center>" + message + "</center>" + "</body>" + "</html>");
+        JPanel roundedBorderPanel = new JPanel(new BorderLayout());
+        roundedBorderPanel.setBackground(Color.WHITE);
+        OptionsPanel.RoundedLineBorder border = new OptionsPanel.RoundedLineBorder(null, false);
+        border.setInsets(new Insets(30,30,30,30));
+        roundedBorderPanel.setBorder(border);
+        roundedBorderPanel.add(textPane, BorderLayout.CENTER);
+        roundedBorderPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        return roundedBorderPanel;
     }
 
     public enum ReadDirection {

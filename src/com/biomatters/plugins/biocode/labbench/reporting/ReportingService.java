@@ -3,11 +3,10 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.components.RoundedShadowBorder;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.labels.PieSectionLabelGenerator;
@@ -134,15 +133,8 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
         panel.removeAll();
 
         if(!BiocodeService.getInstance().isLoggedIn() || reportGenerator == null) {
-            JTextPane textPane = new JTextPane();
-            textPane.setContentType("text/html");
-            textPane.setText("<html>" + GuiUtilities.getHtmlHead() + "<body>" + "<center>" + "Please Log in to a LIMS to view the reporting functions." + "</center>" + "</body>" + "</html>");
-            JPanel roundedBorderPanel = new JPanel(new BorderLayout());
-            roundedBorderPanel.setBorder(new RoundedShadowBorder());
-            roundedBorderPanel.add(textPane, BorderLayout.CENTER);
-            roundedBorderPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-            Dimension textPanePreferredSize = textPane.getPreferredSize();
-            roundedBorderPanel.setPreferredSize(new Dimension(textPanePreferredSize.width + 50, textPanePreferredSize.height + 50));
+            String message = "Please Log in to a LIMS to view the reporting functions.";
+            JPanel roundedBorderPanel = BiocodeUtilities.getRoundedBorderPanel(message);
             JPanel roundedBorderPanelWrapper = new JPanel();
             roundedBorderPanelWrapper.add(roundedBorderPanel);
             JPanel holderPanel = new GPanel(new GridBagLayout());
