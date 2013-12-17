@@ -263,8 +263,7 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new VerifyTaxonomyDocumentViewerFactory(),
                 new CherryPickingDocumentViewerFactory(),
                 new MultiLocusDocumentViewerFactory(),
-                new TabularPlateDocumentViewerFactory(),
-//                new MetagenomicsDocumentViewer()
+                new TabularPlateDocumentViewerFactory()
         };
     }
 
