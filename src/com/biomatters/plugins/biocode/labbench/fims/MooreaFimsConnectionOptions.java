@@ -3,7 +3,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.options.PasswordOption;
+import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import org.jdom.Element;
 
 /**

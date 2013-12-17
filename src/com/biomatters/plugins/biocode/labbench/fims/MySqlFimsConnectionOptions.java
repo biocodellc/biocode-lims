@@ -1,7 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.options.PasswordOption;
+import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 
 import java.util.List;

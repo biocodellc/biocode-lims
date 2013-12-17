@@ -7,7 +7,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.options.PasswordOption;
+import com.biomatters.plugins.biocode.utilities.PasswordOption;
 
 import java.sql.*;
 import java.util.*;

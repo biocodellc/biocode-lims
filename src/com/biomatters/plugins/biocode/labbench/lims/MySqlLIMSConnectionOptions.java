@@ -1,7 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.options.PasswordOption;
+import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 
 
