@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
@@ -96,7 +97,7 @@ public class FailureReason {
         if(!option.getName().equals(OPTION_NAME)) {
             throw new IllegalArgumentException("This method should only be called using an Option returned from calling FailureReason.addToOptions()");
         }
-        String reasonId = option.getValueAsString();
+        String reasonId = BiocodeUtilities.getValueAsString(option);
         if(NO_REASON.equals(reasonId)) {
             return null;
         }

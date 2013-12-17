@@ -259,6 +259,16 @@ public class BiocodeUtilities {
         return progressFrame;
     }
 
+    /**
+     * The same as {@link com.biomatters.geneious.publicapi.plugin.Options.Option#getValueAsString()}.  Is required for versions before R7.1 where the method
+     * is not publicly available.  The method was supposed to be introduced in R6, however a bug caused it to be
+     * obfuscated away.
+     */
+    @SuppressWarnings("unchecked")
+    public static String getValueAsString(Options.Option option) {
+        return option.getValueAsString(option.getValue());
+    }
+
     public enum ReadDirection {
         NONE("N"), FORWARD("F"), REVERSE("R");
 

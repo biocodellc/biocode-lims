@@ -153,7 +153,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             final Option conditionOption = getOption("condition");
             SimpleListener listener = new SimpleListener() {
                 public void objectChanged() {
-                    String chosenCondition = conditionOption.getValueAsString();
+                    String chosenCondition = BiocodeUtilities.getValueAsString(conditionOption);
                     for(String optionName : new String[] {STATE, TAXON, PRIMER, FailureReason.getOptionName()}) {
                         Option option = getOption(optionName);
                         option.setVisible(chosenCondition.equals(optionName));
