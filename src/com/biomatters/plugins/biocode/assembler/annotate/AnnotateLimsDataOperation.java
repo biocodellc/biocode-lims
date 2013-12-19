@@ -150,7 +150,7 @@ public class AnnotateLimsDataOperation extends DocumentOperation {
         try {
             workflowDocs = BiocodeService.getInstance().retrieve(Query.Factory.createOrQuery(
                     queries.toArray(new Query[queries.size()]),
-                    BiocodeService.getSearchDownloadOptions(false, false, true, false)
+                    BiocodeService.getSearchDownloadOptions(false, true, false, false)
                     ), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Unable to load workflows for documents", e);
