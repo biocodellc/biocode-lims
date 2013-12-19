@@ -176,19 +176,23 @@ public class PasswordOption extends Options.Option<String, JPanel> {
      * @return the decrypted String
      */
     public static String decrypt(String str) {
+        if (str == null || "".equals(str)) return str;
+
         if(!str.startsWith(ENCODED)) {
             return str;
         }
-        byte[] result = null;
+        if(str.length() == ENCODED.length()) {
+            return "";
+        }
 
-        if (str == null || "".equals(str)) return str;
+        byte[] result = null;
 
         try {
             Key key = getKey();
 
             Cipher cipher = Cipher.getInstance("DES/ECB/PKCS5Padding");
             cipher.init(Cipher.DECRYPT_MODE, key);
-            result = cipher.doFinal(stringToBytes(str));
+            result = cipher.doFinal(stringToBytes(str.substring(ENCODED.length())));
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             log.severe(e.toString());
