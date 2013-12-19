@@ -819,6 +819,30 @@ public class PlateBulkEditor {
             }
 
             valueArea.getDocument().addDocumentListener(lineNumbers);
+
+            String triggerKey = "ENTER";
+            KeyStroke keystroke = KeyStroke.getKeyStroke(triggerKey);
+            Object originalMapKey = valueArea.getInputMap().get(keystroke);
+            ActionMap actionMap = valueArea.getActionMap();
+            final Action originalAction = actionMap.get(originalMapKey);
+            Object mapKeyToUse = originalMapKey == null ? triggerKey : originalMapKey;
+            actionMap.put(mapKeyToUse, new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    int caretPosition = valueArea.getCaretPosition();
+                    if (caretPosition <= valueArea.getText().length() - 1) {
+                        char c = valueArea.getText().charAt(caretPosition);
+                        if (c == '\n') {
+                            valueArea.setCaretPosition(caretPosition + 1);
+                            return;
+                        }
+                    }
+                    if (originalAction != null) {
+                        originalAction.actionPerformed(e);
+                    }
+                }
+            });
+            valueArea.getInputMap().put(keystroke, mapKeyToUse);
         }
 
         public void setText(String text) {
