@@ -271,7 +271,11 @@ public class Plate implements XMLSerializable {
     }
 
     public Reaction getReaction(int row, int col) {
-        return reactions[cols * row + col];
+        int index = cols * row + col;
+        if(index >= reactions.length) {
+            return null;
+        }
+        return reactions[index];
     }
 
     public BiocodeUtilities.Well getWell(int row, int col) {
