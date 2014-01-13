@@ -1,4 +1,4 @@
-<project name="MooreaLabBench" default="dist" basedir=".">
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench" default="dist" basedir=".">
 
     <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
     <property name="short-plugin-name" value="Biocode_2_5_3"/>
@@ -42,7 +42,7 @@
 
     </target>
 
-    <target name="compile" depends="prepare">
+    <target name="compile" depends="prepare,resolve">
         <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
             <classpath refid="classpath"/>
             <src path="${src}"/>
@@ -57,5 +57,22 @@
     <target name="clean">
         <delete dir="${build}"/>
         <delete dir="${classes}"/>
+    </target>
+
+
+    <!-- setup reference to the Ivy Ant tasks library -->
+    <path id="ivy.lib.path">
+        <fileset dir="tools" includes="ivy*.jar" />
+    </path>
+
+
+    <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path" />
+
+    <!-- load ivy settings -->
+    <ivy:settings file="ivysettings.xml" id="biocode.ivy.config" />
+
+    <target name="resolve" description="--> retrieve dependencies with ivy">
+       <ivy:retrieve settingsref="biocode.ivy.config"/>
+       <ivy:cachepath pathid="lib" settingsref="biocode.ivy.config"/>
     </target>
 </project>
