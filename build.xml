@@ -11,7 +11,6 @@
 
 
     <path id="classpath">
-        <fileset dir="geneious-api-libs"/>
         <fileset dir="${lib}"/>
     </path>
 
@@ -36,6 +35,13 @@
             </fileset>
             <fileset dir="lib">
                 <include name="*.jar"/>
+                <!-- Exclude Javadoc and sources from build -->
+                <exclude name="*-sources.jar"/>
+                <exclude name="*-javadoc.jar"/>
+                <!-- Exclude the Geneious Public API libraries because they are available at runtime -->
+                <exclude name="GeneiousPublicAPI*.jar"/>
+                <exclude name="jdom*.jar"/>
+                <exclude name="jebl*.jar"/>
             </fileset>
             <fileset dir="resources"/>
         </copy>
@@ -71,8 +77,12 @@
     <!-- load ivy settings -->
     <ivy:settings file="ivysettings.xml" id="biocode.ivy.config" />
 
-    <target name="resolve" description="--> retrieve dependencies with ivy">
+    <target name="resolve" description="Retrieve dependencies with ivy">
        <ivy:retrieve settingsref="biocode.ivy.config"/>
        <ivy:cachepath pathid="lib" settingsref="biocode.ivy.config"/>
+    </target>
+
+    <target name="clean-ivy-cache">
+        <ivy:cleancache settingsRef="biocode.ivy.config"/>
     </target>
 </project>

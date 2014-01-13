@@ -2,14 +2,20 @@
     <info organisation="com.biomatters" module="BiocodeLIMS"/>
 
     <dependencies>
-        <!--<dependency org="com.biomatters" name="GeneiousPublicAPI" rev="latest.integration"/>-->
+        <dependency org="com.biomatters" name="geneious.publicapi" rev="7.0.5"/>
 
         <dependency org="com.google.guava" name="guava" rev="15.0"/>
         <dependency org="org.hsqldb" name="hsqldb" rev="2.3.0"/>
         <dependency org="org.jcommon" name="jcommon" rev="1.0"/>
         <dependency org="org.jfree" name="jfreechart" rev="1.0.15"/>
         <dependency org="net.sourceforge.jexcelapi" name="jxl" rev="2.6.12"/>
+        <dependency org="com.google.api-client" name="google-api-client" rev="1.17.0-rc"/>
+        <dependency org="com.google.api-client" name="google-api-client-servlet" rev="1.17.0-rc"/>
+        <dependency org="com.google.api-client" name="google-api-client-appengine" rev="1.17.0-rc"/>
+        <dependency org="com.google.http-client" name="google-http-client-gson" rev="1.17.0-rc"/>
         <dependency org="com.google.apis" name="google-api-services-fusiontables" rev="v1-rev33-1.17.0-rc"/>
+        <dependency org="com.google.oauth-client" name="google-oauth-client-jetty" rev="1.17.0-rc"/>
+        <dependency org="com.google.oauth-client" name="google-oauth-client-java6" rev="1.17.0-rc"/>
 
         <!-- We bring the following in from the SpringSource repository because they are missing from Maven2 -->
         <dependency org="javax.media.jai" name="com.springsource.javax.media.jai.core" rev="1.1.3"/>
