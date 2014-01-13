@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.documents.sequence.*;
 import com.biomatters.geneious.publicapi.plugin.DocumentFileExporter;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.sun.xml.ws.api.server.SDDocument;
 import jebl.util.ProgressListener;
 
 import java.io.File;

@@ -1,8 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
-import com.biomatters.components.RoundedShadowBorder;
-import com.biomatters.geneious.publicapi.utilities.IconUtilities;
-import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 
 import javax.swing.*;
