@@ -1,100 +1,61 @@
 <project name="MooreaLabBench" default="dist" basedir=".">
 
-   <import file="../build.xml"/>
+    <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
+    <property name="short-plugin-name" value="Biocode_2_5_3"/>
 
-    <taskdef resource="net/sf/antcontrib/antlib.xml">
-        <classpath>
-            <pathelement location="${dir.base}/tools/ant-contrib-1.0b3.jar"/>
-        </classpath>
-    </taskdef>
-
-   <property file="plugin.properties"/>
-   <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
-   <property name="classes" location="bin"/>
-   <property name="lib" location="lib"/>
-   <property name="resources" location="resources"/>
-   <property name="src" location="src"/>
+    <property name="build" location="build"/>
+    <property name="classes" location="classes"/>
+    <property name="lib" location="lib"/>
+    <property name="resources" location="resources"/>
+    <property name="src" location="src"/>
 
 
-   <path id="classpath">
-      <fileset dir="${lib}"/>
-      <path refid="classpath.privateapi"/>
-   </path>
+    <path id="classpath">
+        <fileset dir="geneious-api-libs"/>
+        <fileset dir="${lib}"/>
+    </path>
 
-   <path id="classpath.test.local">
-      <path refid="classpath"/>
-      <path refid="classpath.test"/>
-      <pathelement location="bin"/>
-      <pathelement location="testdata"/>
-   </path>
+    <target name= "dist" depends="build">
+        <zip zipfile="${build}/${short-plugin-name}.gplugin">
+            <fileset dir="${build}">
+               <include name="${plugin-name}/**/*"/>
+            </fileset>
+        </zip>
+        <copy file="${build}/${short-plugin-name}.gplugin" todir="${build}/../../downloads"/>
 
-   <target name="dist">
-      <zip zipfile="${dist}/${short-plugin-name}.gplugin">
-         <fileset dir="${build.externalPlugins}/${plugin-name}"/>
-      </zip>
-   </target>
+    </target>
 
-   <target name="install-for-test" depends="build">
-      <move file="${build.externalPlugins}/${plugin-name}/${plugin-name}" todir="${build.plugins}"/>
-   </target>
+    <target name="build" depends="compile">
+        <jar jarfile="${build}/${plugin-name}.jar">
+            <fileset dir="${classes}"/>
+        </jar>
+        <mkdir dir="${build}/${plugin-name}"/>
+        <copy todir="${build}/${plugin-name}">
+            <fileset dir="${build}">
+                <include name="${plugin-name}.jar"/>
+            </fileset>
+            <fileset dir="lib">
+                <include name="*.jar"/>
+            </fileset>
+            <fileset dir="resources"/>
+        </copy>
 
-   <target name="build">
-      <jar jarfile="${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar">
-         <fileset dir="${classes}"/>
-         <fileset dir="${resources}">
-            <exclude name="plugin.properties"/>
-         </fileset>
-      </jar>
-      <copy todir="${build.externalPlugins}/${plugin-name}/${plugin-name}" flatten="true">
-         <fileset dir="${lib}" excludes="fusiotables/*-sources.jar fusiotables/*-javadoc.jar" />
-         <fileset dir="">
-            <include name="plugin.properties"/>
-         </fileset>
-         <fileset dir="doc">
-             <include name="readme.html"/>
-         </fileset>
-      </copy>
-      <echo file="${plugins.proguard}" append="true"
-            message="-injars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}.jar${line.separator}"/>
-      <echo file="${plugins.proguard}" append="true"
-            message="-outjars ${build.externalPlugins}/${plugin-name}/${plugin-name}/${short-plugin-name}-obfuscated.jar${line.separator}"/>
+    </target>
 
+    <target name="compile" depends="prepare">
+        <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
+            <classpath refid="classpath"/>
+            <src path="${src}"/>
+        </javac>
+    </target>
 
-       <for param="lib-file">
-           <path>
-               <fileset dir="${build.externalPlugins}/${plugin-name}/${plugin-name}">
-                   <exclude name="${short-plugin-name}.jar"/>
-                   <include name="*.jar"/>
-               </fileset>
-           </path>
-           <sequential>
-               <echo file="${plugins.proguard}" append="true" message="-libraryjars   @{lib-file}${line.separator}"/>
-           </sequential>
-       </for>
-   </target>
+    <target name="prepare">
+        <mkdir dir="${build}"/>
+        <mkdir dir="${classes}"/>
+    </target>
 
-   <target name="compile" depends="prepare">
-      <javac target="1.5" destdir="${classes}" debug="true">
-         <classpath refid="classpath"/>
-         <src path="src"/>
-      </javac>
-      <javac target="1.5" destdir="${classes.test}" debug="${debug}">
-         <classpath refid="classpath.test.local"/>
-         <src path="test"/>
-      </javac>
-      <copy todir="${classes.test}" failonerror="false">
-         <fileset dir="testdata"/>
-      </copy>
-   </target>
-
-   <target name="prepare" depends="clean">
-      <mkdir dir="${build.externalPlugins}/${plugin-name}/${plugin-name}"/>
-      <mkdir dir="${classes}"/>
-   </target>
-
-   <target name="clean">
-      <delete dir="${build.externalPlugins}/${plugin-name}"/>
-      <delete dir="${classes}"/>
-      <delete  file="${dist}/${short-plugin-name}.gplugin"/>
-   </target>
+    <target name="clean">
+        <delete dir="${build}"/>
+        <delete dir="${classes}"/>
+    </target>
 </project>
