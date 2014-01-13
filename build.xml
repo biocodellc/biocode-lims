@@ -44,6 +44,9 @@
                 <exclude name="jebl*.jar"/>
             </fileset>
             <fileset dir="resources"/>
+            <fileset dir="doc">
+                <include name="readme.html"/>
+            </fileset>
         </copy>
 
     </target>
