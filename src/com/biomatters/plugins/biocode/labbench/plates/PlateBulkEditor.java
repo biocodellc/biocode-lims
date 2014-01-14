@@ -824,7 +824,7 @@ public class PlateBulkEditor {
             KeyStroke keystroke = KeyStroke.getKeyStroke(triggerKey);
             Object originalMapKey = valueArea.getInputMap().get(keystroke);
             ActionMap actionMap = valueArea.getActionMap();
-            final Action originalAction = actionMap.get(originalMapKey);
+            final Action originalAction = originalMapKey == null ? null : actionMap.get(originalMapKey);
             Object mapKeyToUse = originalMapKey == null ? triggerKey : originalMapKey;
             actionMap.put(mapKeyToUse, new AbstractAction() {
                 @Override
