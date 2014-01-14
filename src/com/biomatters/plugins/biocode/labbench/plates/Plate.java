@@ -271,11 +271,7 @@ public class Plate implements XMLSerializable {
     }
 
     public Reaction getReaction(int row, int col) {
-        int index = cols * row + col;
-        if(index >= reactions.length) {
-            return null;
-        }
-        return reactions[index];
+        return getReaction(cols * row + col);
     }
 
     public BiocodeUtilities.Well getWell(int row, int col) {
@@ -284,13 +280,20 @@ public class Plate implements XMLSerializable {
 
     public Reaction getReaction(BiocodeUtilities.Well well) {
         int index = cols * well.row() + well.col();
+        Reaction reaction = getReaction(index);
+        if(reaction == null) {
+            System.out.println("Reaction does not exist for well " + well);
+        }
+        return reaction;
+    }
+
+    private Reaction getReaction(int index) {
         if(index < reactions.length) {
             Reaction reaction = reactions[index];
             reaction.setPosition(index);
             return reaction;
-        }
-        else {
-            System.out.println("Well out of index! "+well);
+        } else {
+            System.out.println("Index " + index + " does not exist in plate " + getName() + "!");
             return null;
         }
     }
