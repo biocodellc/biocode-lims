@@ -7,10 +7,10 @@
                 <ivy pattern="${ivy.settings.dir}/repository/[module]/ ivy-[revision].xml" />
                 <artifact pattern="${ivy.settings.dir}/repository/[module]/ [artifact]-[revision].[ext]" />
             </filesystem>
-            <filesystem name="test">
-                <ivy pattern="/opt/apache-ivy-2.3.0/src/example/build-a-ivy-repository/myrepository/advanced/[organisation]/[module]/ivys/ivy-[revision].xml" />
-                <artifact pattern="/opt/apache-ivy-2.3.0/src/example/build-a-ivy-repository/myrepository/advanced/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]" />
-            </filesystem>
+            <url name="Geneious">
+                <ivy pattern="http://assets.geneious.com/developer/geneious/ivy/[organisation]/[module]/ivys/ivy-[revision].xml" />
+                <artifact pattern="http://assets.geneious.com/developer/geneious/ivy/[organisation]/[module]/[type]s/[artifact]-[revision].[ext]" />
+            </url>
             <url name="com.springsource.repository.bundles.external">
                 <ivy pattern="http://repository.springsource.com/ivy/bundles/external/[organisation]/[module]/[revision]/[artifact]-[revision].[ext]" />
                 <artifact pattern="http://repository.springsource.com/ivy/bundles/external/[organisation]/[module]/[revision]/[artifact]-[revision].[ext]" />
