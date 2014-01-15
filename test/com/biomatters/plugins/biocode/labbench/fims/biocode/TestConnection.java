@@ -14,16 +14,15 @@ public class TestConnection extends Assert {
 
     @Test
     public void getGraphs() {
-        List<Graph> graphs = BiocodeFIMSConnectionOptions.getGraphsForExpedition("1");
+        List<Graph> graphs = BiocodeFIMSUtils.getGraphsForExpedition("1");
         assertNotNull(graphs);
         assertFalse(graphs.isEmpty());
     }
 
     @Test
     public void getFimsData() throws DatabaseServiceException {
-        BiocodeFimsData data = BiocodeFIMSConnectionOptions.getData(
-                BiocodeFIMSConnectionOptions.getWebTarget("1", "urn:uuid:7c4e6526-830e-4b9a-be65-8ea4179f5077")
-                , null);
+        BiocodeFimsData data = BiocodeFIMSUtils.getData(
+                "1", "urn:uuid:7c4e6526-830e-4b9a-be65-8ea4179f5077", null);
 
         System.out.println(data.header);
         assertFalse(data.header.isEmpty());
