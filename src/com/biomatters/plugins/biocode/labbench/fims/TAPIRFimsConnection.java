@@ -79,8 +79,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
         String schemaName = options.getValueAsString(SCHEMA_OP_KEY);
         DataStandard dataStandard = DataStandard.valueOf(schemaName);
         schema = dataStandard.schema;
-        client = new TAPIRClient(schema, options.getValueAsString("accessPoint"));
         try {
+            client = new TAPIRClient(schema, options.getValueAsString("accessPoint"));
             searchAttributes = getMatchingFields(client.getSearchAttributes(), false);
             taxonomyAttributes = getMatchingFields(client.getSearchAttributes(), true);
         } catch (JDOMException e) {
@@ -88,6 +88,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
             throw new ConnectionException(e.getMessage(), e);
         } catch (IOException e) {
             e.printStackTrace();
+            throw new ConnectionException(e.getMessage(), e);
+        } catch(IllegalArgumentException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
     }
