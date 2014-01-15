@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 
@@ -34,7 +33,7 @@ public class BiocodeFIMSOptions extends TableFimsConnectionOptions {
 
     @Override
     protected boolean updateAutomatically() {
-        return false;
+        return true;
     }
 
     @Override
@@ -42,7 +41,7 @@ public class BiocodeFIMSOptions extends TableFimsConnectionOptions {
         return super.linkPhotos();
     }
 
-    public WebTarget getWebTarget() {
-        return connectionOptions.getWebTarget();
+    public String getExpedition() {
+        return connectionOptions.getExpedition();
     }
 }

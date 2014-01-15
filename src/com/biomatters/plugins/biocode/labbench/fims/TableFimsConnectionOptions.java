@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -14,6 +16,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.virion.jam.util.SimpleListener;
 
@@ -39,13 +42,40 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     protected abstract PasswordOptions getConnectionOptions();
 
     final List<OptionValue> getTableColumns() throws IOException {
-        List<OptionValue> list = new ArrayList<OptionValue>(_getTableColumns());
-        Collections.sort(list, new Comparator<OptionValue>() {
-            @Override
-            public int compare(OptionValue o1, OptionValue o2) {
-                return o1.getLabel().toLowerCase().compareTo(o2.getLabel().toLowerCase());
+        final ProgressFrame progressFrame = new ProgressFrame("Loading", "Loading Columns", GuiUtilities.getMainFrame());
+        progressFrame.setCancelable(false);
+        progressFrame.setIndeterminateProgress();
+        final List<OptionValue> list = new ArrayList<OptionValue>();
+        final AtomicReference<IOException> ioException = new AtomicReference<IOException>();
+        Thread fillList = new Thread() {
+            public void run() {
+                try {
+                    list.addAll(_getTableColumns());
+                    Collections.sort(list, new Comparator<OptionValue>() {
+                        @Override
+                        public int compare(OptionValue o1, OptionValue o2) {
+                            return o1.getLabel().toLowerCase().compareTo(o2.getLabel().toLowerCase());
+                        }
+
+                    });
+                } catch(IOException e) {
+                    ioException.set(e);
+                }
+                progressFrame.setComplete();
             }
-        });
+        };
+        fillList.start();
+        try {
+            fillList.join();
+        } catch(InterruptedException e) {
+            // todo
+            e.printStackTrace();
+        }
+
+        IOException ex = ioException.get();
+        if(ex != null) {
+            throw ex;
+        }
         return list;
     }
 

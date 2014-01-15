@@ -9,7 +9,6 @@ import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
 
-import javax.ws.rs.client.WebTarget;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,18 +42,23 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     @Override
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
         String filterText = null;
+        String projectToSearch = null;
         if(query instanceof BasicSearchQuery) {
             filterText = ((BasicSearchQuery) query).getSearchText();
         } else if(query instanceof AdvancedSearchQueryTerm) {
             AdvancedSearchQueryTerm termQuery = (AdvancedSearchQueryTerm) query;
             if(termQuery.getValues().length == 1 && termQuery.getCondition() == Condition.EQUAL) {
-                filterText = termQuery.getValues()[0].toString();
+                if(termQuery.getField().getCode().equals(CODE_PREFIX + BiocodeFIMSUtils.PROJECT_COL)) {
+                    projectToSearch = termQuery.getValues()[0].toString();
+                } else {
+                    filterText = termQuery.getValues()[0].toString();
+                }
             }
         }
 
         if(filterText != null) {
             try {
-                BiocodeFimsData data = BiocodeFIMSConnectionOptions.getData(target, filterText);
+                BiocodeFimsData data = BiocodeFIMSUtils.getData(expedition, projectToSearch, filterText);
                 List<FimsSample> samples = new ArrayList<FimsSample>();
                 for (Row row : data.data) {
                     Map<String, Object> values = new HashMap<String, Object>();
@@ -95,26 +99,26 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return new BiocodeFIMSOptions();
     }
 
-    private WebTarget target;
+    private String expedition;
     @Override
     public void _connect(TableFimsConnectionOptions options) throws ConnectionException {
         if(!(options instanceof BiocodeFIMSOptions)) {
             throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptiions()");
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
-        target = fimsOptions.getWebTarget();
+        expedition = fimsOptions.getExpedition();
     }
 
     @Override
     public void _disconnect() {
-        target = null;
+        expedition = null;
     }
 
     @Override
     public List<DocumentField> getTableColumns() throws IOException {
         List<DocumentField> fields = new ArrayList<DocumentField>();
         try {
-            BiocodeFimsData fimsData = BiocodeFIMSConnectionOptions.getData(target, "nofilterwejustwantheader");
+            BiocodeFimsData fimsData = BiocodeFIMSUtils.getData(expedition, null, "nofilterwejustwantheader");
             for (String column : fimsData.header) {
                 fields.add(new DocumentField(column, column, CODE_PREFIX + column, String.class, true, false));
             }
