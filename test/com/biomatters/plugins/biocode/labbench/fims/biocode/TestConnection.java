@@ -22,7 +22,7 @@ public class TestConnection extends Assert {
     @Test
     public void getFimsData() throws DatabaseServiceException {
         BiocodeFimsData data = BiocodeFIMSUtils.getData(
-                "1", "urn:uuid:7c4e6526-830e-4b9a-be65-8ea4179f5077", null);
+                "1", null, null);
 
         System.out.println(data.header);
         assertFalse(data.header.isEmpty());

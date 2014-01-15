@@ -48,7 +48,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         } else if(query instanceof AdvancedSearchQueryTerm) {
             AdvancedSearchQueryTerm termQuery = (AdvancedSearchQueryTerm) query;
             if(termQuery.getValues().length == 1 && termQuery.getCondition() == Condition.EQUAL) {
-                if(termQuery.getField().getCode().equals(CODE_PREFIX + BiocodeFIMSUtils.PROJECT_COL)) {
+                if(termQuery.getField().getCode().equals(CODE_PREFIX + BiocodeFIMSUtils.PROJECT_NAME)) {
                     projectToSearch = termQuery.getValues()[0].toString();
                 } else {
                     filterText = termQuery.getValues()[0].toString();
@@ -58,7 +58,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
         if(filterText != null) {
             try {
-                BiocodeFimsData data = BiocodeFIMSUtils.getData(expedition, projectToSearch, filterText);
+                BiocodeFimsData data = BiocodeFIMSUtils.getData(expedition, graphs.get(projectToSearch), filterText);
                 List<FimsSample> samples = new ArrayList<FimsSample>();
                 for (Row row : data.data) {
                     Map<String, Object> values = new HashMap<String, Object>();
@@ -100,6 +100,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     }
 
     private String expedition;
+    private Map<String, Graph> graphs;
     @Override
     public void _connect(TableFimsConnectionOptions options) throws ConnectionException {
         if(!(options instanceof BiocodeFIMSOptions)) {
@@ -107,6 +108,11 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
         expedition = fimsOptions.getExpedition();
+        List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForExpedition(expedition);
+        graphs = new HashMap<String, Graph>();
+        for (Graph graph : graphsForExpedition) {
+            graphs.put(graph.getGraphId(), graph);
+        }
     }
 
     @Override
