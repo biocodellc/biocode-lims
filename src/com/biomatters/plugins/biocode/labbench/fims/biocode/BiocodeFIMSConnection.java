@@ -1,9 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
-import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
-import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
+import com.biomatters.geneious.publicapi.databaseservice.*;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -44,9 +42,19 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
+        String filterText = null;
         if(query instanceof BasicSearchQuery) {
+            filterText = ((BasicSearchQuery) query).getSearchText();
+        } else if(query instanceof AdvancedSearchQueryTerm) {
+            AdvancedSearchQueryTerm termQuery = (AdvancedSearchQueryTerm) query;
+            if(termQuery.getValues().length == 1 && termQuery.getCondition() == Condition.EQUAL) {
+                filterText = termQuery.getValues()[0].toString();
+            }
+        }
+
+        if(filterText != null) {
             try {
-                BiocodeFimsData data = BiocodeFIMSConnectionOptions.getData(target, ((BasicSearchQuery) query).getSearchText());
+                BiocodeFimsData data = BiocodeFIMSConnectionOptions.getData(target, filterText);
                 List<FimsSample> samples = new ArrayList<FimsSample>();
                 for (Row row : data.data) {
                     Map<String, Object> values = new HashMap<String, Object>();

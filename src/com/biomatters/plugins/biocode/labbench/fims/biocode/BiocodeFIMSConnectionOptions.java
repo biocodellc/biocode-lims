@@ -3,10 +3,12 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
+import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.ws.rs.NotFoundException;
@@ -23,6 +25,8 @@ import java.util.List;
  */
 public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
+    private final String GRAPH_ID = "id";
+    private final String GRAPH_LABEL = "label";
     ComboBoxOption<OptionValue> expeditionOption;
     ComboBoxOption<OptionValue> graphOption;
 
@@ -46,12 +50,43 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
         expeditionOption = addComboBoxOption("expedition", "Expedition:", expeditionOptions, expeditionOptions.get(0));
 
         List<OptionValue> dataSetOptions = new ArrayList<OptionValue>();
-        dataSetOptions.add(LOADING);
+        dataSetOptions.add(LOADING);  // todo need to cache these options otherwise storing doesn't work :(
         graphOption = addComboBoxOption("dataset", "Data Set:", dataSetOptions, dataSetOptions.get(0));
 
         SimpleListener expeditionChangedListener = getExpeditionChangedListener();
         expeditionOption.addChangeListener(expeditionChangedListener);
         expeditionChangedListener.objectChanged();
+    }
+
+
+    private static final String GRAPHS_ELEMENT = "availableGraphs";
+    @Override
+    public Element toXML() {
+        Element root = super.toXML();
+        Element graphsElement = new Element(GRAPHS_ELEMENT);
+        for (OptionValue optionValue : graphOption.getPossibleOptionValues()) {
+            graphsElement.addContent(new Element("graph").setAttribute(GRAPH_ID, optionValue.getName()).setAttribute(GRAPH_LABEL, optionValue.getLabel()));
+        }
+        root.addContent(graphsElement);
+        return root;
+    }
+
+    public BiocodeFIMSConnectionOptions(Element element) throws XMLSerializationException {
+        super(element);
+        Element graphsElement = element.getChild(GRAPHS_ELEMENT);
+        if(graphsElement != null) {
+            List<OptionValue> values = new ArrayList<OptionValue>();
+            for (Element child : graphsElement.getChildren()) {
+                String id = child.getAttributeValue(GRAPH_ID);
+                String label = child.getAttributeValue(GRAPH_LABEL);
+                if(id != null && label != null) {
+                    values.add(new OptionValue(id, label));
+                }
+            }
+            if(!values.isEmpty()) {
+                graphOption.setPossibleValues(values);
+            }
+        }
     }
 
     private SimpleListener getExpeditionChangedListener() {
@@ -119,7 +154,8 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
     public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
         if(graphOption.getValue() == LOADING) {
-            Dialogs.showMessageDialog("Still loading available data sets from " + BiocodeFIMSConnection.HOST + ".  Please wait.");
+            // todo get this to only show up on user input, not other
+//            Dialogs.showMessageDialog("Still loading available data sets from " + BiocodeFIMSConnection.HOST + ".  Please wait.");
         } else if(graphOption.getValue() == NO_VALUES) {
             Dialogs.showMessageDialog("No data is available for expedition " + expeditionOption.getValue().getLabel());
         }
