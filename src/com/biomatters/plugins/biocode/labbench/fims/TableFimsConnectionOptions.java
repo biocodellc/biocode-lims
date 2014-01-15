@@ -42,14 +42,14 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     protected abstract PasswordOptions getConnectionOptions();
 
     final List<OptionValue> getTableColumns() throws IOException {
-        final ProgressFrame progressFrame = new ProgressFrame("Loading", "Loading Columns", GuiUtilities.getMainFrame());
-        progressFrame.setCancelable(false);
-        progressFrame.setIndeterminateProgress();
         final List<OptionValue> list = new ArrayList<OptionValue>();
-        final AtomicReference<IOException> ioException = new AtomicReference<IOException>();
-        Thread fillList = new Thread() {
-            public void run() {
-                try {
+//        final ProgressFrame progressFrame = new ProgressFrame("Loading", "Loading Columns", GuiUtilities.getMainFrame());
+//        progressFrame.setCancelable(false);
+//        progressFrame.setIndeterminateProgress();
+//        final AtomicReference<IOException> ioException = new AtomicReference<IOException>();
+//        Thread fillList = new Thread() {
+//            public void run() {
+//                try {
                     list.addAll(_getTableColumns());
                     Collections.sort(list, new Comparator<OptionValue>() {
                         @Override
@@ -58,24 +58,24 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
                         }
 
                     });
-                } catch(IOException e) {
-                    ioException.set(e);
-                }
-                progressFrame.setComplete();
-            }
-        };
-        fillList.start();
-        try {
-            fillList.join();
-        } catch(InterruptedException e) {
-            // todo
-            e.printStackTrace();
-        }
-
-        IOException ex = ioException.get();
-        if(ex != null) {
-            throw ex;
-        }
+//                } catch(IOException e) {
+//                    ioException.set(e);
+//                }
+//                progressFrame.setComplete();
+//            }
+//        };
+//        fillList.start();
+//        try {
+//            fillList.join();
+//        } catch(InterruptedException e) {
+//            // todo
+//            e.printStackTrace();
+//        }
+//
+//        IOException ex = ioException.get();
+//        if(ex != null) {
+//            throw ex;
+//        }
         return list;
     }
 

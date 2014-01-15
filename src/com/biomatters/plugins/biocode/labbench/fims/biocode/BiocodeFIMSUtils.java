@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import sun.security.pkcs.EncodingException;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.WebApplicationException;
@@ -8,6 +9,8 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,6 +40,15 @@ public class BiocodeFIMSUtils {
     static final String PROJECT_NAME = "Project";
 
     static BiocodeFimsData getData(String expedition, Graph graph, String filter) throws DatabaseServiceException {
+        if(filter != null && filter.contains(",")) {
+            try {
+                filter = URLEncoder.encode(filter, "UTF-8");
+            } catch(UnsupportedEncodingException e) {
+                // todo
+                e.printStackTrace();
+            }
+        }
+
         List<Graph> graphsToSearch = new ArrayList<Graph>();
         if(graph != null) {
             graphsToSearch.add(graph);
