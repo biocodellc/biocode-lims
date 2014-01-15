@@ -34,28 +34,28 @@ public class BiocodeFIMSUtils {
         return graphs.data;
     }
 
-    static final String PROJECT_COL = "Project";
+    static final String PROJECT_NAME = "Project";
 
-    static BiocodeFimsData getData(String expedition, String graphId, String filter) throws DatabaseServiceException {
-        List<String> graphsToSearch = new ArrayList<String>();
-        if(graphId != null) {
-            graphsToSearch.add(graphId);
+    static BiocodeFimsData getData(String expedition, Graph graph, String filter) throws DatabaseServiceException {
+        List<Graph> graphsToSearch = new ArrayList<Graph>();
+        if(graph != null) {
+            graphsToSearch.add(graph);
         } else {
-            for (Graph graph : getGraphsForExpedition(expedition)) {
-                graphsToSearch.add(graph.getGraphId());
+            for (Graph g : getGraphsForExpedition(expedition)) {
+                graphsToSearch.add(g);
             }
         }
 
         BiocodeFimsData data = new BiocodeFimsData();
-        for (String graph : graphsToSearch) {
-            BiocodeFimsData toAdd = getBiocodeFimsData(expedition, graph, filter);
+        for (Graph g : graphsToSearch) {
+            BiocodeFimsData toAdd = getBiocodeFimsData(expedition, g.getGraphId(), filter);
             if(data.header == null || data.header.isEmpty()) {
                 data.header = toAdd.header;
-                data.header.add(0, PROJECT_COL);
+                data.header.add(0, PROJECT_NAME);
                 data.data = new ArrayList<Row>();
             }
             for (Row row : toAdd.data) {
-                row.rowItems.add(graph);
+                row.rowItems.add(0,g.getProjectTitle());
                 data.data.add(row);
             }
         }
@@ -69,6 +69,7 @@ public class BiocodeFIMSUtils {
             if(filter != null) {
                 target = target.queryParam("filter", filter);
             }
+            System.out.println(target.getUri());
             Invocation.Builder request = target.
                     request(MediaType.APPLICATION_JSON_TYPE);
             return request.get(BiocodeFimsData.class);

@@ -53,7 +53,7 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
         }
 
         List<OptionValue> fields = new ArrayList<OptionValue>();
-        BiocodeFimsData data = BiocodeFIMSUtils.getData(expedition, graphs.get(0).getGraphId(), "dontMatchThisStringReturnJustHeader");
+        BiocodeFimsData data = BiocodeFIMSUtils.getData(expedition, graphs.get(0), "dontMatchThisStringReturnJustHeader");
         for (String fieldName : data.header) {
             fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + fieldName, fieldName));
         }
