@@ -1,3 +1,6 @@
+==Biocode Plugin X - TBD==
+* Support for the new Biocode FIMS (https://code.google.com/p/biocode-fims)
+
 ==Biocode Plugin 2.6.0 - TBD==
 * Improved LIMS search performance.
 * Greatly improved memory usage and search performance when searching on FIMS fields.
