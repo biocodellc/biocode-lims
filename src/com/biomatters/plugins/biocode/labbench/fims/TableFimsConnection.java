@@ -30,7 +30,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     // We would add this prefix to all codes except Steve originally defined them without it and we don't want to mess
     // up users databases with extra fields.
-    static final String CODE_PREFIX = "TABLEFIMS:";
+    public static final String CODE_PREFIX = "TABLEFIMS:";
 
     private String tissueCol;
     private String specimenCol;

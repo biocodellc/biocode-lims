@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.*;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -351,7 +352,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 new FusionTablesFimsConnection(),
                 new MySQLFimsConnection(),
                 new MooreaFimsConnection(),
-                new TAPIRFimsConnection()
+                new TAPIRFimsConnection(),
+                new BiocodeFIMSConnection()
         };
     }
 
