@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
+import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
@@ -8,11 +9,14 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
 
 import javax.ws.rs.client.WebTarget;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Connection to the new Biocode FIMS
@@ -40,13 +44,31 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
-
-        return null;
+        if(query instanceof BasicSearchQuery) {
+            try {
+                BiocodeFimsData data = BiocodeFIMSConnectionOptions.getData(target, ((BasicSearchQuery) query).getSearchText());
+                List<FimsSample> samples = new ArrayList<FimsSample>();
+                for (Row row : data.data) {
+                    Map<String, Object> values = new HashMap<String, Object>();
+                    for(int i=0; i<data.header.size(); i++) {
+                        if(i < row.rowItems.size()) {  // todo should we error out?
+                            values.put(TableFimsConnection.CODE_PREFIX + data.header.get(i), row.rowItems.get(i));
+                        }
+                    }
+                    samples.add(new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField(), getSpecimenDocumentField()));
+                }
+                return samples;
+            } catch (DatabaseServiceException e) {
+                throw new ConnectionException(e.getMessage(), e);
+            }
+        } else {
+            throw new ConnectionException("The new Biocode FIMS does not support field queries yet.  Use a basic query.");
+        }
     }
 
     @Override
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-
+        // todo
     }
 
     @Override
