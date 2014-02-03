@@ -1,5 +1,5 @@
 ==Biocode Plugin 2.6.0 - TBD==
-
+* Support for the new Biocode FIMS (https://code.google.com/p/biocode-fims)
 
 ==Biocode Plugin 2.5.3 - 7 Jan 2014==
 * Annotate from FIMS/LIMS can now use the annotated workflow name in addition to the annotated plate/well.
