@@ -144,11 +144,12 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         expedition = null;
     }
 
+    public static final String FILTER_FOR_NO_DATA = "dontMatchAnythingPleaseJustGiveMeYourColumnsThanksSir";
     @Override
     public List<DocumentField> getTableColumns() throws IOException {
         List<DocumentField> fields = new ArrayList<DocumentField>();
         try {
-            BiocodeFimsData fimsData = BiocodeFIMSUtils.getData(expedition, null, null);
+            BiocodeFimsData fimsData = BiocodeFIMSUtils.getData(expedition, null, FILTER_FOR_NO_DATA);
             for (String column : fimsData.header) {
                 fields.add(new DocumentField(column, column, CODE_PREFIX + column, String.class, true, false));
             }
