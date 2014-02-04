@@ -1,9 +1,9 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import sun.security.pkcs.EncodingException;
 
 import javax.ws.rs.NotFoundException;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
@@ -30,11 +30,17 @@ public class BiocodeFIMSUtils {
         return target;
     }
 
-    static List<Graph> getGraphsForExpedition(String id) {
-        WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
-        Invocation.Builder request = target.path("id/expeditionService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
-        GraphList graphs = request.get(GraphList.class);
-        return graphs.data;
+    static List<Graph> getGraphsForExpedition(String id) throws DatabaseServiceException {
+        try {
+            WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
+            Invocation.Builder request = target.path("id/expeditionService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
+            GraphList graphs = request.get(GraphList.class);
+            return graphs.data;
+        } catch(WebApplicationException e) {
+            throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
+        } catch(ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), true);  // todo
+        }
     }
 
     static final String PROJECT_NAME = "Project";

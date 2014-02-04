@@ -132,10 +132,14 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
         expedition = fimsOptions.getExpedition();
-        List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForExpedition(expedition);
         graphs = new HashMap<String, Graph>();
-        for (Graph graph : graphsForExpedition) {
-            graphs.put(graph.getGraphId(), graph);
+        try {
+            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForExpedition(expedition);
+            for (Graph graph : graphsForExpedition) {
+                graphs.put(graph.getGraphId(), graph);
+            }
+        } catch (DatabaseServiceException e) {
+            throw new ConnectionException(e.getMessage(), e);
         }
     }
 
