@@ -1,66 +1,155 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.geneious.publicapi.utilities.xml.FastSaxBuilder;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import org.jdom.Element;
-import org.virion.jam.util.SimpleListener;
+import org.jdom.JDOMException;
 
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
+import javax.swing.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
 
 /**
  * Created by matthew on 1/02/14.
  */
 public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
-    ComboBoxOption<OptionValue> expeditionOption;
+    ComboBoxOption<ExpeditionOptionValue> expeditionOption;
 
     public BiocodeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
 
-//        addLabel("<html><i>The Biocode-FIMS is still under active development.<br>" +
-//                "There is currently a limitation that prevents Geneious from retrieving fields on the fly.  Due to this the whole FIMS is downloaded and cached when" +
-//                "the connection is made.</i></html>");
-
-        // These are hard coded because there is currently no way to query for available expeditions
-        final List<OptionValue> expeditionOptions = new ArrayList<OptionValue>();
-        expeditionOptions.add(new OptionValue("1", "IndoPacific Database"));
-        expeditionOptions.add(new OptionValue("2", "Smithsonian LAB"));
-        expeditionOptions.add(new OptionValue("3", "Hawaii Dimensions"));
-        expeditionOptions.add(new OptionValue("5", "Barcode of Wildlife Training"));
+        final List<ExpeditionOptionValue> expeditionOptions = new ArrayList<ExpeditionOptionValue>();
+        List<Expedition> expeditionCache = getExpeditionCache();
+        if(expeditionCache == null) {
+            expeditionOptions.add(new ExpeditionOptionValue(new Expedition(1, "IndoP",
+                    "IndoPacific Database", "https://biocode-fims.googlecode.com/svn/trunk/Documents/IndoPacific/indoPacificConfiguration.xml")));
+        } else {
+            for (Expedition expedition : expeditionCache) {
+                expeditionOptions.add(new ExpeditionOptionValue(expedition));
+            }
+        }
         expeditionOption = addComboBoxOption("expedition", "Expedition:", expeditionOptions, expeditionOptions.get(0));
+
+        new Thread() {
+            public void run() {
+                try {
+                    List<Expedition> expeditions = BiocodeFIMSUtils.getExpeditions();
+                    cacheExpeditions(expeditions);
+
+                    final List<ExpeditionOptionValue> optionValues = new ArrayList<ExpeditionOptionValue>();
+                    for (Expedition expedition : expeditions) {
+                        optionValues.add(new ExpeditionOptionValue(expedition));
+                    }
+
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            expeditionOption.setPossibleValues(optionValues);
+                        }
+                    });
+                } catch (DatabaseServiceException e) {
+                    Dialogs.showMessageDialog("Failed to load expedition list from " + BiocodeFIMSConnection.HOST);
+                }
+            }
+        }.start();
+    }
+
+    private static final String CACHE_NAME = "cachedExpeditions";
+    private static final String ID = "id";
+    private static final String CODE = "code";
+    private static final String TITLE = "title";
+    private static final String XML = "xmlConfigLocation";
+
+    /**
+     * Stores expeditions to a cache to be retrieved when Options are created to avoid the delay that is
+     * required to query the web service for the live list of expeditions.
+     *
+     * @param expeditions
+     */
+    private void cacheExpeditions(List<Expedition> expeditions) {
+        try {
+            Preferences cacheNode = getCacheNode();
+            cacheNode.clear();
+            for (Expedition expedition : expeditions) {
+                Preferences childNode = cacheNode.node(expedition.code);
+                childNode.putInt(ID, expedition.id);
+                childNode.put(CODE, expedition.code);
+                childNode.put(TITLE, expedition.title);
+                childNode.put(XML, expedition.xmlLocation);
+            }
+            cacheNode.flush();
+        } catch (BackingStoreException e) {
+            e.printStackTrace();  // Won't be able to store anything in the cache.  Oh well
+        }
+    }
+
+    /**
+     *
+     * @return A list of {@link Expedition}s retrieved previously or null if the cache is empty or if there
+     * is a problem retrieving the cache from preferences
+     */
+    private List<Expedition> getExpeditionCache() {
+        try {
+            List<Expedition> fromCache = new ArrayList<Expedition>();
+            Preferences cacheNode = getCacheNode();
+            String[] children = cacheNode.childrenNames();
+            if(children == null || children.length == 0) {
+                return null;
+            }
+            for (String child : children) {
+                Preferences expeditionNode = cacheNode.node(child);
+                int id = expeditionNode.getInt(ID, -1);
+                String code = expeditionNode.get(CODE, null);
+                String title = expeditionNode.get(TITLE, null);
+                String xml = expeditionNode.get(XML, null);
+                if(id != -1 && code != null && title != null && xml != null) {
+                    fromCache.add(new Expedition(id, code, title, xml));
+                }
+            }
+            return fromCache;
+        } catch (BackingStoreException e) {
+            e.printStackTrace();
+            return null;  // Won't be able to use the cache, but oh well.
+        }
+    }
+
+    private Preferences getCacheNode() {
+        Preferences preferences = Preferences.userNodeForPackage(BiocodeFIMSConnection.class);
+        return preferences.node(CACHE_NAME);
+    }
+
+    private static class ExpeditionOptionValue extends OptionValue {
+        Expedition expedition;
+
+        ExpeditionOptionValue(Expedition expedition) {
+            super(expedition.code, expedition.title);
+            this.expedition = expedition;
+        }
     }
 
 
     public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
-        String expedition = expeditionOption.getValue().getName();
-        List<Graph> graphs = BiocodeFIMSUtils.getGraphsForExpedition(expedition);
-        if(graphs.isEmpty()) {
-            return Collections.singletonList(new OptionValue("none", "No Fields"));
-        }
-
         List<OptionValue> fields = new ArrayList<OptionValue>();
-        BiocodeFimsData data = BiocodeFIMSUtils.getData(expedition, graphs.get(0), BiocodeFIMSConnection.FILTER_FOR_NO_DATA);
-        for (String fieldName : data.header) {
-            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + fieldName, fieldName));
+        for (Expedition.Field field : expeditionOption.getValue().expedition.getFields()) {
+            // todo Should we be using the uri of the column.  ie darwin core term
+            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.name, field.name));
         }
         return fields;
     }
 
-    public String getExpedition() {
-        return expeditionOption.getValue().getName();
+
+
+    public Expedition getExpedition() {
+        return expeditionOption.getValue().expedition;
     }
 }

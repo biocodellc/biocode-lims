@@ -4,7 +4,6 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 
-import javax.ws.rs.client.WebTarget;
 import java.io.IOException;
 import java.util.List;
 
@@ -41,7 +40,7 @@ public class BiocodeFIMSOptions extends TableFimsConnectionOptions {
         return super.linkPhotos();
     }
 
-    public String getExpedition() {
+    public Expedition getExpedition() {
         return connectionOptions.getExpedition();
     }
 }
