@@ -30,6 +30,26 @@ public class BiocodeFIMSUtils {
         return target;
     }
 
+    public static void main(String[] args) throws DatabaseServiceException {
+        List<Expedition> expeditions = getExpeditions();
+        for (Expedition expedition : expeditions) {
+            System.out.println(expedition.title);
+        }
+    }
+
+    static List<Expedition> getExpeditions() throws DatabaseServiceException {
+        try {
+            WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
+            Invocation.Builder request = target.path("id/expeditionService/list").request(MediaType.APPLICATION_JSON_TYPE);
+            ExpeditionList expeditionList = request.get(ExpeditionList.class);
+            return expeditionList.getExpeditions();
+        } catch(WebApplicationException e) {
+            throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
+        } catch(ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), true);  // todo
+        }
+    }
+
     static List<Graph> getGraphsForExpedition(String id) throws DatabaseServiceException {
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");

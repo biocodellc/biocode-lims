@@ -70,7 +70,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         }
 
         try {
-            BiocodeFimsData data = BiocodeFIMSUtils.getData(expedition, graphs.get(projectToSearch),
+            BiocodeFimsData data = BiocodeFIMSUtils.getData(""+expedition.id, graphs.get(projectToSearch),
                     filterText.length() > 0 ? filterText.toString() : null);
             List<FimsSample> samples = new ArrayList<FimsSample>();
             for (Row row : data.data) {
@@ -123,7 +123,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return new BiocodeFIMSOptions();
     }
 
-    private String expedition;
+    private Expedition expedition;
     private Map<String, Graph> graphs;
     @Override
     public void _connect(TableFimsConnectionOptions options) throws ConnectionException {
@@ -134,7 +134,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         expedition = fimsOptions.getExpedition();
         graphs = new HashMap<String, Graph>();
         try {
-            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForExpedition(expedition);
+            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForExpedition(""+expedition.id);
             for (Graph graph : graphsForExpedition) {
                 graphs.put(graph.getGraphId(), graph);
             }
@@ -148,17 +148,12 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         expedition = null;
     }
 
-    public static final String FILTER_FOR_NO_DATA = "dontMatchAnythingPleaseJustGiveMeYourColumnsThanksSir";
     @Override
     public List<DocumentField> getTableColumns() throws IOException {
         List<DocumentField> fields = new ArrayList<DocumentField>();
-        try {
-            BiocodeFimsData fimsData = BiocodeFIMSUtils.getData(expedition, null, FILTER_FOR_NO_DATA);
-            for (String column : fimsData.header) {
-                fields.add(new DocumentField(column, column, CODE_PREFIX + column, String.class, true, false));
-            }
-        } catch (DatabaseServiceException e) {
-            throw new IOException(e.getMessage(), e);
+        fields.add(new DocumentField(BiocodeFIMSUtils.PROJECT_NAME, "", CODE_PREFIX + BiocodeFIMSUtils.PROJECT_NAME, String.class, true, false));
+        for (Expedition.Field field : expedition.getFields()) {
+            fields.add(new DocumentField(field.name, field.name + "(" + field.uri + ")", CODE_PREFIX + field.name, String.class, true, false));
         }
         return fields;
     }
