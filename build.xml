@@ -13,7 +13,7 @@
     </loadfile>
 
     <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
-    <property name="short-plugin-name" value="Biocode_2_5_99"/>
+    <property name="short-plugin-name" value="Biocode_2_5_999"/>
 
     <property name="build" location="build"/>
     <property name="classes" location="classes"/>
