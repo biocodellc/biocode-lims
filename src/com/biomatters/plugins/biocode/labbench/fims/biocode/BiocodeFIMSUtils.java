@@ -20,10 +20,10 @@ import java.util.List;
  */
 public class BiocodeFIMSUtils {
 
-    static WebTarget getWebTarget(String expedition, String graph) {
+    static WebTarget getWebTarget(String project, String graph) {
         WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
         target = target.path("biocode-fims/query/json").
-                queryParam("expedition_id", expedition);
+                queryParam("project_id", project);
         if(graph != null) {
             target = target.queryParam("graphs", graph);
         }
@@ -31,18 +31,18 @@ public class BiocodeFIMSUtils {
     }
 
     public static void main(String[] args) throws DatabaseServiceException {
-        List<Expedition> expeditions = getExpeditions();
-        for (Expedition expedition : expeditions) {
+        List<Project> expeditions = getProjects();
+        for (Project expedition : expeditions) {
             System.out.println(expedition.title);
         }
     }
 
-    static List<Expedition> getExpeditions() throws DatabaseServiceException {
+    static List<Project> getProjects() throws DatabaseServiceException {
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
-            Invocation.Builder request = target.path("id/expeditionService/list").request(MediaType.APPLICATION_JSON_TYPE);
-            ExpeditionList expeditionList = request.get(ExpeditionList.class);
-            return expeditionList.getExpeditions();
+            Invocation.Builder request = target.path("id/projectService/list").request(MediaType.APPLICATION_JSON_TYPE);
+            ProjectList projectList = request.get(ProjectList.class);
+            return projectList.getProjects();
         } catch(WebApplicationException e) {
             throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
         } catch(ProcessingException e) {
@@ -50,10 +50,10 @@ public class BiocodeFIMSUtils {
         }
     }
 
-    static List<Graph> getGraphsForExpedition(String id) throws DatabaseServiceException {
+    static List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
-            Invocation.Builder request = target.path("id/expeditionService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
+            Invocation.Builder request = target.path("id/projectService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
             GraphList graphs = request.get(GraphList.class);
             return graphs.data;
         } catch(WebApplicationException e) {
@@ -63,9 +63,9 @@ public class BiocodeFIMSUtils {
         }
     }
 
-    static final String PROJECT_NAME = "Project";
+    static final String EXPEDITION_NAME = "Expedition";
 
-    static BiocodeFimsData getData(String expedition, Graph graph, String filter) throws DatabaseServiceException {
+    static BiocodeFimsData getData(String project, Graph graph, String filter) throws DatabaseServiceException {
         if(filter != null && filter.contains(",")) {
             try {
                 filter = URLEncoder.encode(filter, "UTF-8");
@@ -79,21 +79,21 @@ public class BiocodeFIMSUtils {
         if(graph != null) {
             graphsToSearch.add(graph);
         } else {
-            for (Graph g : getGraphsForExpedition(expedition)) {
+            for (Graph g : getGraphsForProject(project)) {
                 graphsToSearch.add(g);
             }
         }
 
         BiocodeFimsData data = new BiocodeFimsData();
         for (Graph g : graphsToSearch) {
-            BiocodeFimsData toAdd = getBiocodeFimsData(expedition, g.getGraphId(), filter);
+            BiocodeFimsData toAdd = getBiocodeFimsData(project, g.getGraphId(), filter);
             if(data.header == null || data.header.isEmpty()) {
                 data.header = toAdd.header;
-                data.header.add(0, PROJECT_NAME);
+                data.header.add(0, EXPEDITION_NAME);
                 data.data = new ArrayList<Row>();
             }
             for (Row row : toAdd.data) {
-                row.rowItems.add(0,g.getProjectTitle());
+                row.rowItems.add(0,g.getExpeditionTitle());
                 data.data.add(row);
             }
         }
@@ -101,9 +101,9 @@ public class BiocodeFIMSUtils {
         return data;
     }
 
-    private static BiocodeFimsData getBiocodeFimsData(String expedition, String graph, String filter) throws DatabaseServiceException {
+    private static BiocodeFimsData getBiocodeFimsData(String project, String graph, String filter) throws DatabaseServiceException {
         try {
-            WebTarget target = getWebTarget(expedition, graph);
+            WebTarget target = getWebTarget(project, graph);
             if(filter != null) {
                 target = target.queryParam("filter", filter);
             }
