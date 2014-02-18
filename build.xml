@@ -1,7 +1,7 @@
 <project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench" default="dist" basedir=".">
 
     <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
-    <property name="short-plugin-name" value="Biocode_2_5_999"/>
+    <property name="short-plugin-name" value="Biocode_2_5_9999"/>
 
     <property name="build" location="build"/>
     <property name="classes" location="classes"/>
