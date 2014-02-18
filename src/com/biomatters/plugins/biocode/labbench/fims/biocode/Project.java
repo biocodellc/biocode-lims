@@ -18,19 +18,19 @@ import java.util.List;
  * @author Matthew Cheung
  *         Created on 13/02/14 8:52 PM
  */
-public class Expedition {
+public class Project {
 
-    @XmlElement(name="expedition_id")public int id;
-    @XmlElement(name="expedition_code")public String code;
-    @XmlElement(name="expedition_title")public String title;
+    @XmlElement(name="project_id")public int id;
+    @XmlElement(name="project_code")public String code;
+    @XmlElement(name="project_title")public String title;
     @XmlElement(name="biovalidator_validation_xml")public String xmlLocation;
 
     private List<Field> fields;
 
-    public Expedition() {
+    public Project() {
     }
 
-    public Expedition(int id, String code, String title, String xmlLocation) {
+    public Project(int id, String code, String title, String xmlLocation) {
         this.id = id;
         this.code = code;
         this.title = title;
@@ -48,8 +48,8 @@ public class Expedition {
         return fields;
     }
 
-    private List<Expedition.Field> retrieveFieldsFromXmlConfigurationFile() throws DatabaseServiceException {
-        List<Expedition.Field> fromXml = new ArrayList<Field>();
+    private List<Project.Field> retrieveFieldsFromXmlConfigurationFile() throws DatabaseServiceException {
+        List<Project.Field> fromXml = new ArrayList<Field>();
         String expeditionXmlLocation = xmlLocation;
         try {
             URL url = new URL(expeditionXmlLocation);
@@ -68,7 +68,7 @@ public class Expedition {
             }
             List<Element> children = entityElement.getChildren("attribute");
             for (Element child : children) {
-                fromXml.add(new Expedition.Field(child.getAttributeValue("uri"), child.getAttributeValue("column")));
+                fromXml.add(new Project.Field(child.getAttributeValue("uri"), child.getAttributeValue("column")));
             }
         } catch (MalformedURLException e) {
             throw new DatabaseServiceException(e, "Configuration file location for " + title
@@ -86,7 +86,7 @@ public class Expedition {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        Expedition that = (Expedition) o;
+        Project that = (Project) o;
 
         if (id != that.id) return false;
         if (!code.equals(that.code)) return false;

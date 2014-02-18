@@ -2,18 +2,11 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.utilities.xml.FastSaxBuilder;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
-import org.jdom.Element;
-import org.jdom.JDOMException;
 
 import javax.swing.*;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.prefs.BackingStoreException;
@@ -24,37 +17,37 @@ import java.util.prefs.Preferences;
  */
 public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
-    ComboBoxOption<ExpeditionOptionValue> expeditionOption;
+    ComboBoxOption<ProjectOptionValue> projectOption;
 
     public BiocodeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
 
-        final List<ExpeditionOptionValue> expeditionOptions = new ArrayList<ExpeditionOptionValue>();
-        List<Expedition> expeditionCache = getExpeditionCache();
+        final List<ProjectOptionValue> projectOptions = new ArrayList<ProjectOptionValue>();
+        List<Project> expeditionCache = getExpeditionCache();
         if(expeditionCache == null) {
-            expeditionOptions.add(new ExpeditionOptionValue(new Expedition(1, "IndoP",
+            projectOptions.add(new ProjectOptionValue(new Project(1, "IndoP",
                     "IndoPacific Database", "https://biocode-fims.googlecode.com/svn/trunk/Documents/IndoPacific/indoPacificConfiguration.xml")));
         } else {
-            for (Expedition expedition : expeditionCache) {
-                expeditionOptions.add(new ExpeditionOptionValue(expedition));
+            for (Project expedition : expeditionCache) {
+                projectOptions.add(new ProjectOptionValue(expedition));
             }
         }
-        expeditionOption = addComboBoxOption("expedition", "Expedition:", expeditionOptions, expeditionOptions.get(0));
+        projectOption = addComboBoxOption("project", "Project:", projectOptions, projectOptions.get(0));
 
         new Thread() {
             public void run() {
                 try {
-                    List<Expedition> expeditions = BiocodeFIMSUtils.getExpeditions();
-                    cacheExpeditions(expeditions);
+                    List<Project> projects = BiocodeFIMSUtils.getProjects();
+                    cacheProjects(projects);
 
-                    final List<ExpeditionOptionValue> optionValues = new ArrayList<ExpeditionOptionValue>();
-                    for (Expedition expedition : expeditions) {
-                        optionValues.add(new ExpeditionOptionValue(expedition));
+                    final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();
+                    for (Project project : projects) {
+                        optionValues.add(new ProjectOptionValue(project));
                     }
 
                     SwingUtilities.invokeLater(new Runnable() {
                         public void run() {
-                            expeditionOption.setPossibleValues(optionValues);
+                            projectOption.setPossibleValues(optionValues);
                         }
                     });
                 } catch (DatabaseServiceException e) {
@@ -64,7 +57,7 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
         }.start();
     }
 
-    private static final String CACHE_NAME = "cachedExpeditions";
+    private static final String CACHE_NAME = "cachedProjects";
     private static final String ID = "id";
     private static final String CODE = "code";
     private static final String TITLE = "title";
@@ -74,18 +67,18 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
      * Stores expeditions to a cache to be retrieved when Options are created to avoid the delay that is
      * required to query the web service for the live list of expeditions.
      *
-     * @param expeditions
+     * @param projects
      */
-    private void cacheExpeditions(List<Expedition> expeditions) {
+    private void cacheProjects(List<Project> projects) {
         try {
             Preferences cacheNode = getCacheNode();
             cacheNode.clear();
-            for (Expedition expedition : expeditions) {
-                Preferences childNode = cacheNode.node(expedition.code);
-                childNode.putInt(ID, expedition.id);
-                childNode.put(CODE, expedition.code);
-                childNode.put(TITLE, expedition.title);
-                childNode.put(XML, expedition.xmlLocation);
+            for (Project project : projects) {
+                Preferences childNode = cacheNode.node(project.code);
+                childNode.putInt(ID, project.id);
+                childNode.put(CODE, project.code);
+                childNode.put(TITLE, project.title);
+                childNode.put(XML, project.xmlLocation);
             }
             cacheNode.flush();
         } catch (BackingStoreException e) {
@@ -95,12 +88,12 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
     /**
      *
-     * @return A list of {@link Expedition}s retrieved previously or null if the cache is empty or if there
+     * @return A list of {@link Project}s retrieved previously or null if the cache is empty or if there
      * is a problem retrieving the cache from preferences
      */
-    private List<Expedition> getExpeditionCache() {
+    private List<Project> getExpeditionCache() {
         try {
-            List<Expedition> fromCache = new ArrayList<Expedition>();
+            List<Project> fromCache = new ArrayList<Project>();
             Preferences cacheNode = getCacheNode();
             String[] children = cacheNode.childrenNames();
             if(children == null || children.length == 0) {
@@ -113,7 +106,7 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
                 String title = expeditionNode.get(TITLE, null);
                 String xml = expeditionNode.get(XML, null);
                 if(id != -1 && code != null && title != null && xml != null) {
-                    fromCache.add(new Expedition(id, code, title, xml));
+                    fromCache.add(new Project(id, code, title, xml));
                 }
             }
             return fromCache;
@@ -128,19 +121,19 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
         return preferences.node(CACHE_NAME);
     }
 
-    private static class ExpeditionOptionValue extends OptionValue {
-        Expedition expedition;
+    private static class ProjectOptionValue extends OptionValue {
+        Project project;
 
-        ExpeditionOptionValue(Expedition expedition) {
-            super(expedition.code, expedition.title);
-            this.expedition = expedition;
+        ProjectOptionValue(Project project) {
+            super(project.code, project.title);
+            this.project = project;
         }
     }
 
 
     public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
         List<OptionValue> fields = new ArrayList<OptionValue>();
-        for (Expedition.Field field : expeditionOption.getValue().expedition.getFields()) {
+        for (Project.Field field : projectOption.getValue().project.getFields()) {
             // todo Should we be using the uri of the column.  ie darwin core term
             fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.name, field.name));
         }
@@ -149,7 +142,7 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
 
 
-    public Expedition getExpedition() {
-        return expeditionOption.getValue().expedition;
+    public Project getExpedition() {
+        return projectOption.getValue().project;
     }
 }

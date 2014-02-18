@@ -14,7 +14,7 @@ public class TestConnection extends Assert {
 
     @Test
     public void getGraphs() throws DatabaseServiceException {
-        List<Graph> graphs = BiocodeFIMSUtils.getGraphsForExpedition("1");
+        List<Graph> graphs = BiocodeFIMSUtils.getGraphsForProject("1");
         assertNotNull(graphs);
         assertFalse(graphs.isEmpty());
     }

@@ -91,7 +91,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     private String getProjectOrAppendToFilterText(StringBuilder filterText, String projectToSearch, AdvancedSearchQueryTerm termQuery) throws ConnectionException {
         if(termQuery.getValues().length == 1 && termQuery.getCondition() == Condition.EQUAL) {
             String columnName = termQuery.getField().getCode().replace(CODE_PREFIX, "");
-            if(columnName.equals(BiocodeFIMSUtils.PROJECT_NAME)) {
+            if(columnName.equals(BiocodeFIMSUtils.EXPEDITION_NAME)) {
                 projectToSearch = termQuery.getValues()[0].toString();
             } else {
                 filterText.append(columnName).append(":").append(termQuery.getValues()[0].toString());
@@ -123,7 +123,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return new BiocodeFIMSOptions();
     }
 
-    private Expedition expedition;
+    private Project expedition;
     private Map<String, Graph> graphs;
     @Override
     public void _connect(TableFimsConnectionOptions options) throws ConnectionException {
@@ -134,9 +134,9 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         expedition = fimsOptions.getExpedition();
         graphs = new HashMap<String, Graph>();
         try {
-            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForExpedition(""+expedition.id);
+            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForProject("" + expedition.id);
             for (Graph graph : graphsForExpedition) {
-                graphs.put(graph.getGraphId(), graph);
+                graphs.put(graph.getExpeditionTitle(), graph);
             }
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e.getMessage(), e);
@@ -151,8 +151,8 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     @Override
     public List<DocumentField> getTableColumns() throws IOException {
         List<DocumentField> fields = new ArrayList<DocumentField>();
-        fields.add(new DocumentField(BiocodeFIMSUtils.PROJECT_NAME, "", CODE_PREFIX + BiocodeFIMSUtils.PROJECT_NAME, String.class, true, false));
-        for (Expedition.Field field : expedition.getFields()) {
+        fields.add(new DocumentField(BiocodeFIMSUtils.EXPEDITION_NAME, "", CODE_PREFIX + BiocodeFIMSUtils.EXPEDITION_NAME, String.class, true, false));
+        for (Project.Field field : expedition.getFields()) {
             fields.add(new DocumentField(field.name, field.name + "(" + field.uri + ")", CODE_PREFIX + field.name, String.class, true, false));
         }
         return fields;
