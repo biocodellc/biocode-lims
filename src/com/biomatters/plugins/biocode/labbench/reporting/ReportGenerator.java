@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.AbstractListComboBoxModel;
@@ -487,7 +488,7 @@ public class ReportGenerator {
         if(geneiousFieldName.equals("workflowId")) {
             return false;
         }
-        if(geneiousFieldName.equals("notes")) {
+        if(geneiousFieldName.equals("notes") || geneiousFieldName.equals(AnnotateUtilities.NOTES_FIELD.getCode())) {
             return false;
         }
         if(geneiousFieldName.equals("locus") && excludeLocus) {

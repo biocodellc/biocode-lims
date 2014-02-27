@@ -26,7 +26,7 @@ public class AnnotateUtilities {
                 DocumentField.SEQUENCE_LENGTH.getCode(), DocumentField.TOPOLOGY_FIELD.getCode(), DocumentField.UNREAD_FIELD.getCode(),
                 PluginDocument.MODIFIED_DATE_FIELD.getCode(), "document_size", DocumentField.SEQUENCE_COUNT.getCode());
 
-    public static final DocumentField NOTES_FIELD = new DocumentField("Notes", "", "notes", String.class, false, false);
+    public static final DocumentField NOTES_FIELD = new DocumentField("Assembly Notes", "", "assemblyNotes", String.class, false, false);
     public static final DocumentField PROGRESS_FIELD = new DocumentField("Progress", "", "progress", String.class, true, false);
     public static final DocumentField EDITS_FIELD = new DocumentField("# Edits", "The number of manual edits made in the assembly", "edits", Integer.class, true, false);
     public static final DocumentField REFERENCE_SEQ_FIELD = new DocumentField("Reference Sequence", "", "refSeqId", String.class, false, false);
