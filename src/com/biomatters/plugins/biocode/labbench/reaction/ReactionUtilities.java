@@ -29,6 +29,8 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -710,7 +712,7 @@ public class ReactionUtilities {
                 }
                 else {
                     final JCheckBox checkbox = new JCheckBox(option.getLabel(), haveAllSameValues.get(option.getName()));
-                    if(!License.isProVersion() || !option.isEnabled()) {
+                    if(!License.isProVersion()) {
                         checkbox.setEnabled(false);
                         checkbox.setSelected(false);
                     }
