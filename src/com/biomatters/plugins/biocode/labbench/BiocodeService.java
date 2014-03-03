@@ -848,7 +848,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading Sequences");
-                    limsConnection.getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, false);
+                    limsConnection.getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
             } catch (SQLException e) {
