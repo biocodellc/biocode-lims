@@ -1,7 +1,19 @@
 <project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench" default="dist" basedir=".">
 
+    <property name="version-regex-pattern" value=".*PLUGIN_VERSION\s+=\s+&quot;(\d+\.\d+\.\d+)&quot;;.*"/>
+
+    <loadfile property="plugin.version" srcfile="src/com/biomatters/plugins/biocode/BiocodePlugin.java">
+        <filterchain>
+            <linecontainsregexp>
+                <regexp pattern="${version-regex-pattern}"/>
+            </linecontainsregexp>
+            <replaceregex pattern="${version-regex-pattern}" replace="\1"/>
+            <replacestring from="." to="_"/>
+        </filterchain>
+    </loadfile>
+
     <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
-    <property name="short-plugin-name" value="Biocode_2_5_3"/>
+    <property name="short-plugin-name" value="Biocode_${plugin.version}"/>
 
     <property name="build" location="build"/>
     <property name="classes" location="classes"/>
