@@ -1,8 +1,13 @@
 <ivy-module version="1.0">
     <info organisation="com.biomatters" module="BiocodeLIMS"/>
 
+    <configurations>
+        <conf name="build" description="For building the plugin."/>
+        <conf name="test" description="For running tests.  Includes the Geneious runtime and test environment."/>
+    </configurations>
+
     <dependencies>
-        <dependency org="com.biomatters" name="geneious.publicapi" rev="7.0.5"/>
+        <dependency org="com.biomatters" name="geneious.publicapi" rev="7.0.5" conf="build->api; test->runtime"/>
 
         <dependency org="com.google.guava" name="guava" rev="15.0"/>
         <dependency org="org.hsqldb" name="hsqldb" rev="2.3.0"/>
