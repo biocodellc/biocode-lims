@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LocalLIMSConnectionOptions extends PasswordOptions {
     private static final String SCRIPT_NAME = "labbench_"+LIMSConnection.EXPECTED_SERVER_FULL_VERSION +"_sqlite.sql";
     private static final Options.OptionValue NULL_DATABASE = new Options.OptionValue("null", "No databases");
-
+    static final String DATABASE = "database";
 
 
     @SuppressWarnings("UnusedDeclaration")
@@ -54,7 +54,7 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
         List<OptionValue> dbValues = getDbValues(updateDatabaseList());
 
         beginAlignHorizontally("Choose database", false);
-        final Options.ComboBoxOption<Options.OptionValue> databaseOption = addComboBoxOption("database", "", dbValues, dbValues.get(0));
+        final Options.ComboBoxOption<Options.OptionValue> databaseOption = addComboBoxOption(DATABASE, "", dbValues, dbValues.get(0));
         final Options.ButtonOption addDatabaseOption = addButtonOption("addDatabase", "", "Add Database");
         final Options.ButtonOption removeDatabaseOption = addButtonOption("removeDatabase", "", "Remove Database");
         endAlignHorizontally();
@@ -131,7 +131,7 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
         });
     }
 
-    private static void createDatabase(String newDbName) throws SQLException {
+    static void createDatabase(String newDbName) throws SQLException {
         try {
             InputStream scriptStream = LocalLIMSConnection.class.getResourceAsStream(SCRIPT_NAME);
             if(scriptStream == null) {

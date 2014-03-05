@@ -1113,17 +1113,19 @@ public abstract class LIMSConnection {
             }
 
             int workflowId = resultSet.getInt("workflow.id");
-            WorkflowDocument existingWorkflow = result.workflows.get(workflowId);
-            if (existingWorkflow != null) {
-                existingWorkflow.addRow(resultSet);
-            } else {
-                WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
-                result.workflows.put(workflowId, newWorkflow);
-            }
+            if(workflowId != 0) {  // 0 means there is no workflow
+                WorkflowDocument existingWorkflow = result.workflows.get(workflowId);
+                if (existingWorkflow != null) {
+                    existingWorkflow.addRow(resultSet);
+                } else {
+                    WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
+                    result.workflows.put(workflowId, newWorkflow);
+                }
 
-            String sampleId = resultSet.getString("extraction.sampleId");
-            if (sampleId != null) {
-                workflowToSampleId.put(workflowId, sampleId);
+                String sampleId = resultSet.getString("extraction.sampleId");
+                if (sampleId != null) {
+                    workflowToSampleId.put(workflowId, sampleId);
+                }
             }
 
             Plate plate;

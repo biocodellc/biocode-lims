@@ -500,7 +500,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    private void connect(ConnectionManager.Connection connection, boolean block) {
+    public void connect(ConnectionManager.Connection connection, boolean block) {
         synchronized (this) {
             loggingIn = true;
         }
@@ -528,7 +528,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: "+e.getMessage();
         }
 
-        if(error == null && (!limsConnection.requiresMySql() || connection.getFimsConnection().requiresMySql())) {
+        if(error == null && (limsConnection.requiresMySql() || connection.getFimsConnection().requiresMySql())) {
             error = loadMySqlDriver(block);
         }
 

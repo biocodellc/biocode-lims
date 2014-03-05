@@ -27,13 +27,13 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     static final List<OptionValue> NO_FIELDS = Arrays.asList(new Options.OptionValue("None", "None"));
 
     static final String TABLE_ID = "tableId";
-    static final String TISSUE_ID = "tissueId";
-    static final String SPECIMEN_ID = "specimenId";
-    static final String STORE_PLATES = "storePlates";
-    static final String PLATE_NAME = "plateName";
-    static final String PLATE_WELL = "plateWell";
-    static final String TAX_FIELDS = "taxFields";
-    static final String TAX_COL = "taxCol";
+    public static final String TISSUE_ID = "tissueId";
+    public static final String SPECIMEN_ID = "specimenId";
+    public static final String STORE_PLATES = "storePlates";
+    public static final String PLATE_NAME = "plateName";
+    public static final String PLATE_WELL = "plateWell";
+    public static final String TAX_FIELDS = "taxFields";
+    public static final String TAX_COL = "taxCol";
     public static final String CONNECTION_OPTIONS_KEY = "connection";
 
     protected abstract PasswordOptions getConnectionOptions();
@@ -93,10 +93,10 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         endAlignHorizontally();
         Options taxonomyOptions = new Options(this.getClass());
         taxonomyOptions.beginAlignHorizontally("", false);
-        final ComboBoxOption<OptionValue> taxCol = taxonomyOptions.addComboBoxOption(TAX_COL, "", cols, cols.get(0));
+        taxonomyOptions.addComboBoxOption(TAX_COL, "", cols, cols.get(0));
         taxonomyOptions.endAlignHorizontally();
 
-        final MultipleOptions taxOptions = addMultipleOptions(TAX_FIELDS, taxonomyOptions, false);
+        addMultipleOptions(TAX_FIELDS, taxonomyOptions, false);
 
         //make sure the listeners are set up after all the options are added - it seems that the listener can fire immediately in some cases
         if(updateAutomatically()) {
@@ -128,27 +128,36 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
 
         autodetectTaxonomyButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                taxOptions.restoreDefaults();
-                int foundCount = 0;
-                for(String s : BiocodeUtilities.taxonomyNames) {
-                    for(OptionValue ov : taxCol.getPossibleOptionValues()) {
-                        if(ov.getLabel().equalsIgnoreCase(s)) {
-                            Options newOptions;
-                            if(foundCount == 0) {
-                                newOptions = taxOptions.getValues().get(0);
-                            }
-                            else {
-                                newOptions = taxOptions.addValue(false);
-                            }
-                            ComboBoxOption<OptionValue> list = (ComboBoxOption<OptionValue>)newOptions.getOption(TAX_COL);
-                            list.setValueFromString(ov.getName());
-                            foundCount ++;
-                        }
-                    }
-                }
+                autodetectTaxonFields();
             }
         });
 
+    }
+
+    @SuppressWarnings("unchecked")
+    public void autodetectTaxonFields() {
+        MultipleOptions taxOptions = getMultipleOptions(TAX_FIELDS);
+        ComboBoxOption<OptionValue> taxCol = (ComboBoxOption<OptionValue>)taxOptions.getMasterOptions().getOption(TAX_COL);
+        List<OptionValue> possibleOptionValues = taxCol.getPossibleOptionValues();
+
+        taxOptions.restoreDefaults();
+        int foundCount = 0;
+        for(String s : BiocodeUtilities.taxonomyNames) {
+            for(OptionValue ov : possibleOptionValues) {
+                if(ov.getLabel().equalsIgnoreCase(s)) {
+                    Options newOptions;
+                    if(foundCount == 0) {
+                        newOptions = taxOptions.getValues().get(0);
+                    }
+                    else {
+                        newOptions = taxOptions.addValue(false);
+                    }
+                    ComboBoxOption<OptionValue> list = (ComboBoxOption<OptionValue>)newOptions.getOption(TAX_COL);
+                    list.setValueFromString(ov.getName());
+                    foundCount ++;
+                }
+            }
+        }
     }
 
     @Override
