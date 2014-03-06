@@ -23,13 +23,13 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
         super(BiocodePlugin.class);
 
         final List<ProjectOptionValue> projectOptions = new ArrayList<ProjectOptionValue>();
-        List<Project> expeditionCache = getExpeditionCache();
-        if(expeditionCache == null) {
+        List<Project> projectCache = getProjectCache();
+        if(projectCache == null) {
             projectOptions.add(new ProjectOptionValue(new Project(1, "IndoP",
                     "IndoPacific Database", "https://biocode-fims.googlecode.com/svn/trunk/Documents/IndoPacific/indoPacificConfiguration.xml")));
         } else {
-            for (Project expedition : expeditionCache) {
-                projectOptions.add(new ProjectOptionValue(expedition));
+            for (Project project : projectCache) {
+                projectOptions.add(new ProjectOptionValue(project));
             }
         }
         projectOption = addComboBoxOption("project", "Project:", projectOptions, projectOptions.get(0));
@@ -91,7 +91,7 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
      * @return A list of {@link Project}s retrieved previously or null if the cache is empty or if there
      * is a problem retrieving the cache from preferences
      */
-    private List<Project> getExpeditionCache() {
+    private List<Project> getProjectCache() {
         try {
             List<Project> fromCache = new ArrayList<Project>();
             Preferences cacheNode = getCacheNode();
@@ -100,11 +100,11 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
                 return null;
             }
             for (String child : children) {
-                Preferences expeditionNode = cacheNode.node(child);
-                int id = expeditionNode.getInt(ID, -1);
-                String code = expeditionNode.get(CODE, null);
-                String title = expeditionNode.get(TITLE, null);
-                String xml = expeditionNode.get(XML, null);
+                Preferences projectNode = cacheNode.node(child);
+                int id = projectNode.getInt(ID, -1);
+                String code = projectNode.get(CODE, null);
+                String title = projectNode.get(TITLE, null);
+                String xml = projectNode.get(XML, null);
                 if(id != -1 && code != null && title != null && xml != null) {
                     fromCache.add(new Project(id, code, title, xml));
                 }
