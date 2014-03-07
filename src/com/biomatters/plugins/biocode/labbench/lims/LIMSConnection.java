@@ -1486,12 +1486,12 @@ public abstract class LIMSConnection {
 
     /**
      * @param query    The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
-     * @param samples  A list of FIMS samples to match.  Or null to return all results.
+     * @param tissueIdsToMatch  A list of FIMS samples to match.  Or null to return all results.
      * @param callback To add results to as they are found.  Can be null.
      * @return {@link LimsSearchResult} with workflows and plates found.
      * @throws SQLException if there is a problem with the database
      */
-    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<FimsSample> samples, RetrieveCallback callback) throws SQLException, DatabaseServiceException {
+    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws SQLException, DatabaseServiceException {
 
         LimsSearchResult result = new LimsSearchResult();
 
@@ -1527,10 +1527,8 @@ public abstract class LIMSConnection {
 
         Map<String, List<AdvancedSearchQueryTerm>> tableToTerms = mapQueryTermsToTable(terms);
         List<Object> sqlValues = new ArrayList<Object>();
-        if (samples != null && !samples.isEmpty()) {
-            for (FimsSample sample : samples) {
-                sqlValues.add(sample.getId());
-            }
+        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
+            sqlValues.addAll(tissueIdsToMatch);
         }
         QueryPart workflowPart = getQueryForTable("workflow", tableToTerms, operator);
         if (workflowPart != null) {
@@ -1552,13 +1550,13 @@ public abstract class LIMSConnection {
             sqlValues.addAll(assemblyPart.parameters);
         }
 
-        boolean searchedForSamplesButFoundNone = samples != null && samples.isEmpty();  // samples == null when doing a browse query
+        boolean searchedForSamplesButFoundNone = tissueIdsToMatch != null && tissueIdsToMatch.isEmpty();  // samples == null when doing a browse query
         boolean nothingToSearchForInLims = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
         if (searchedForSamplesButFoundNone && nothingToSearchForInLims) {
             return result;
         }
 
-        StringBuilder queryBuilder = constructWorkflowQueryString(samples, operator,
+        StringBuilder queryBuilder = constructWorkflowQueryString(tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
         WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet;
@@ -1581,7 +1579,7 @@ public abstract class LIMSConnection {
         }
 
         // The previous query was extraction/workflow focused.  We now need to get all reactions without a workflow
-        addReactionsWithoutWorkflows(plateAndWorkflowsFromResultSet, callback, samples, operator, workflowPart, extractionPart, platePart, assemblyPart);
+        addReactionsWithoutWorkflows(plateAndWorkflowsFromResultSet, callback, tissueIdsToMatch, operator, workflowPart, extractionPart, platePart, assemblyPart);
 
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(plateAndWorkflowsFromResultSet.workflows.values());
         // If we searched on something that wasn't a workflow attribute then we might be missing reactions.  ie If we
@@ -1611,7 +1609,7 @@ public abstract class LIMSConnection {
 
         // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
         // the plate will not be complete.  So we have to do another query to get the complete plate
-        if (downloadPlates && !plates.isEmpty() && ((samples != null && !samples.isEmpty()) || workflowPart != null || extractionPart != null || assemblyPart != null)) {
+        if (downloadPlates && !plates.isEmpty() && ((tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) || workflowPart != null || extractionPart != null || assemblyPart != null)) {
             Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, false, true, false);
 
             Query[] subqueries = new Query[plates.size()];
@@ -1681,7 +1679,7 @@ public abstract class LIMSConnection {
      *
      * @param toAddTo The result to add to
      * @param cancelable To check for cancel status
-     * @param samples A list of FIMS samples to match.  Or null to return all results.
+     * @param tissueIdsToMatch A list of FIMS samples to match.  Or null to return all results.
      * @param operator The {@link com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery.Operator} to use for the query
      * @param workflowPart workflow conditions
      * @param extractionPart extraction conditions
@@ -1690,8 +1688,8 @@ public abstract class LIMSConnection {
      * @throws SQLException if a problem occurs communicating with the backend SQL database
      * @throws DatabaseServiceException if another type of problem occurs
      */
-    private void addReactionsWithoutWorkflows(WorkflowsAndPlatesQueryResult toAddTo, Cancelable cancelable, Collection<FimsSample> samples, CompoundSearchQuery.Operator operator, QueryPart workflowPart, QueryPart extractionPart, QueryPart platePart, QueryPart assemblyPart) throws SQLException, DatabaseServiceException {
-        String getPlatesWithNoWorkflows = getReactionsWithNoWorkflowsQuery(samples, operator, workflowPart,
+    private void addReactionsWithoutWorkflows(WorkflowsAndPlatesQueryResult toAddTo, Cancelable cancelable, Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator, QueryPart workflowPart, QueryPart extractionPart, QueryPart platePart, QueryPart assemblyPart) throws SQLException, DatabaseServiceException {
+        String getPlatesWithNoWorkflows = getReactionsWithNoWorkflowsQuery(tissueIdsToMatch, operator, workflowPart,
                 extractionPart, platePart, assemblyPart);
         if (getPlatesWithNoWorkflows == null) {
             return;
@@ -1707,10 +1705,8 @@ public abstract class LIMSConnection {
             if (platePart != null) {
                 parameters.addAll(platePart.parameters);
             }
-            if (samples != null) {
-                for (FimsSample sample : samples) {
-                    parameters.add(sample.getId());
-                }
+            if (tissueIdsToMatch != null) {
+                parameters.addAll(tissueIdsToMatch);
             }
             fillStatement(parameters, getRemainingPlates);
             System.out.println("Running LIMS (non-workflow plates) query:");
@@ -1726,7 +1722,7 @@ public abstract class LIMSConnection {
         }
     }
 
-    private String getReactionsWithNoWorkflowsQuery(Collection<FimsSample> samples, CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
+    private String getReactionsWithNoWorkflowsQuery(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
                                                     QueryPart extractionQueryConditions, QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         if (operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || assemblyQueryConditions != null)) {
             // No point doing a query.  Both workflows and assemblies require workflow links which are non-existent
@@ -1753,9 +1749,9 @@ public abstract class LIMSConnection {
         if (extractionQueryConditions != null) {
             conditions.add("(" + extractionQueryConditions + ")");
         }
-        if (samples != null && !samples.isEmpty()) {
+        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             StringBuilder builder = new StringBuilder("(extraction.sampleId IN ");
-            appendSetOfQuestionMarks(builder, samples.size());
+            appendSetOfQuestionMarks(builder, tissueIdsToMatch.size());
             builder.append(")");
             conditions.add(builder.toString());
         }
@@ -1770,7 +1766,7 @@ public abstract class LIMSConnection {
     /**
      * Builds the complete LIMS SQL query
      *
-     * @param samples                   The samples to match
+     * @param tissueIdsToMatch                   The samples to match
      * @param operator                  The {@link com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery.Operator} to use for the query
      * @param workflowQueryConditions   Conditions to search workflow on
      * @param extractionQueryConditions Conditions to search extraction on
@@ -1778,7 +1774,7 @@ public abstract class LIMSConnection {
      * @param assemblyQueryConditions   Conditions to search assembly on
      * @return A SQL string that can be used to query the MySQL LIMS
      */
-    private StringBuilder constructWorkflowQueryString(Collection<FimsSample> samples, CompoundSearchQuery.Operator operator,
+    private StringBuilder constructWorkflowQueryString(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
                                                        QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
                                                        QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
@@ -1791,15 +1787,15 @@ public abstract class LIMSConnection {
 
         // Can safely do INNER JOIN here because extractionId is non-null column in workflow
         queryBuilder.append(" FROM workflow INNER JOIN ").append("extraction ON extraction.id = workflow.extractionId");
-        if (samples != null && !samples.isEmpty()) {
+        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
             }
             conditionBuilder.append(" (LOWER(sampleId) IN ");
-            appendSetOfQuestionMarks(conditionBuilder, samples.size());
+            appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
         }
         if (workflowQueryConditions != null) {
-            if (samples != null && !samples.isEmpty()) {
+            if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
                 conditionBuilder.append(operatorString);
             } else if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
@@ -1811,7 +1807,7 @@ public abstract class LIMSConnection {
             conditionBuilder.append("(").append(extractionQueryConditions).append(")");
         }
 
-        if (samples != null && !samples.isEmpty()) {
+        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             conditionBuilder.append(")");
         }
 

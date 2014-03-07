@@ -824,8 +824,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     callback.setMessage("Searching");
                 }
 
+                List<String> tissueIds = new ArrayList<String>();
+                for (FimsSample tissueSample : tissueSamples) {
+                    tissueIds.add(tissueSample.getId());
+                }
                 LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
-                        areBrowseQueries(fimsQueries) ? null : tissueSamples, callback);
+                        areBrowseQueries(fimsQueries) ? null : tissueIds, callback);
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
 
                 if(callback.isCanceled()) {
