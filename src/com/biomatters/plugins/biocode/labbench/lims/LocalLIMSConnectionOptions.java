@@ -150,7 +150,7 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
         }
     }
 
-    private static void deleteDatabase(String dbName) throws IOException{
+    static void deleteDatabase(String dbName) throws IOException{
         String[] extensions = new String[] {"properties", "script", "log", "data", "backup", "lobs", "lck", "tmp"};
         for(String extension : extensions) {
             File dbFile = new File(LocalLIMSConnection.getDbPath(dbName)+"."+extension);

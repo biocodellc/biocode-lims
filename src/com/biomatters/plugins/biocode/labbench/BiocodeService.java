@@ -441,7 +441,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return actions;
     }
 
-    private void logOut() {
+    public void logOut() {
         synchronized (this) {
             isLoggedIn = false;
             loggingIn = false;

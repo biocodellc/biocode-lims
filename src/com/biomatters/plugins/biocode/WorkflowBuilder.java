@@ -307,7 +307,7 @@ public class WorkflowBuilder extends DocumentOperation {
                 if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()) {
                     r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "COI");
                     r.getOptions().setValue(ReactionOptions.RUN_STATUS, "failed");
-                    r.getOptions().setValue(CycleSequencingOptions.DIRECTION, "reverse");
+                    r.getOptions().setValue(CycleSequencingOptions.DIRECTION, CycleSequencingOptions.REVERSE_VALUE);
                     r.getOptions().setValue("cocktail", ""+getCocktail(BiocodeService.getInstance().getCycleSequencingCocktails(),"Sylvain").getId());
                     r.getOptions().setValue(PCROptions.PRIMER_OPTION_ID, "urn:local:.:1321408024304.13");
                     r.getOptions().setValue("technician", "Sylvain Charlat");

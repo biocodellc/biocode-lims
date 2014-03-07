@@ -1113,7 +1113,8 @@ public abstract class LIMSConnection {
             }
 
             int workflowId = resultSet.getInt("workflow.id");
-            if(workflowId != 0) {  // 0 means there is no workflow
+            String workflowName = resultSet.getString("workflow.name");
+            if(workflowName != null) {  // null name means there is no workflow
                 WorkflowDocument existingWorkflow = result.workflows.get(workflowId);
                 if (existingWorkflow != null) {
                     existingWorkflow.addRow(resultSet);

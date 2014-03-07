@@ -67,8 +67,8 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
     private ButtonOption addPrimersButton;
 
 
-
     public static final String FORWARD_VALUE = "forward";
+    public static final String REVERSE_VALUE = "reverse";
     public static final String DIRECTION = "direction";
 
     public CycleSequencingOptions(Class c) {
