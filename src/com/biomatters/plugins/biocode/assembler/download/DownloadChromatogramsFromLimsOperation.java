@@ -118,7 +118,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 List<WorkflowDocument> workflows;
                 try {
                     workflows = limsConnection.getMatchingDocumentsFromLims(
-                            workflowQuery, Collections.<FimsSample>emptyList(), null).getWorkflows();
+                            workflowQuery, Collections.<String>emptyList(), null).getWorkflows();
                 } catch (SQLException e) {
                     throw new DocumentOperationException(e.getMessage(), e);
                 } catch (DatabaseServiceException e) {
