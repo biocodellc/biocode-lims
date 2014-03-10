@@ -15,6 +15,7 @@ import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.*;
+import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
@@ -211,7 +212,7 @@ public abstract class LIMSConnection {
                         insertVersion.executeUpdate();
                         fullVersionString = EXPECTED_SERVER_FULL_VERSION;
                     } finally {
-                        cleanUpStatements(updateMajorVersion, insertVersion);
+                        SqlUtilities.cleanUpStatements(updateMajorVersion, insertVersion);
                     }
                 }
 
@@ -260,7 +261,7 @@ public abstract class LIMSConnection {
                     return versionSet.getString("value");
                 }
             } finally {
-                cleanUpStatements(getFullVersion);
+                SqlUtilities.cleanUpStatements(getFullVersion);
             }
         }
         return VERSION_WITHOUT_PROPS;
@@ -294,7 +295,7 @@ public abstract class LIMSConnection {
                 ResultSet resultSet = getFailureReasons.executeQuery();
                 failureReasons = new ArrayList<FailureReason>(FailureReason.getPossibleListFromResultSet(resultSet));
             } finally {
-                cleanUpStatements(getFailureReasons);
+                SqlUtilities.cleanUpStatements(getFailureReasons);
             }
 
             System.out.println("Populating sequencing_result table from results marked in previous versions...");
@@ -329,7 +330,7 @@ public abstract class LIMSConnection {
                     System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
                 }
             } finally {
-                cleanUpStatements(getReactionsAndResults, updateReaction);
+                SqlUtilities.cleanUpStatements(getReactionsAndResults, updateReaction);
             }
         } catch (SQLException e) {
             throw new TransactionException("Failed to initialize database: " + e.getMessage(), e);
@@ -690,7 +691,7 @@ public abstract class LIMSConnection {
             }
 
             //annotate with FIMS data if we couldn't before...
-            final List<FimsSample> newFimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(missingTissueIds);
+            final List<FimsSample> newFimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(missingTissueIds);
             FimsDataGetter fimsDataGetter = new FimsDataGetter() {
                 public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                     String tissueId = (String) document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
@@ -1051,7 +1052,7 @@ public abstract class LIMSConnection {
             int time = (int) (System.currentTimeMillis() - startTime) / 1000;
             System.out.println("done in " + time + " seconds!");
         } finally {
-            cleanUpStatements(statement);
+            SqlUtilities.cleanUpStatements(statement);
         }
         if (listeningThread != null) {
             listeningThread.finish();
@@ -1186,7 +1187,7 @@ public abstract class LIMSConnection {
                 // Instantiation of a ExtractionReaction's FIMS sample relies on it being in the cache.
                 // So pre-cache all the samples we need in one query and hold a reference so they don't get garbage collected
                 @SuppressWarnings("UnusedDeclaration")
-                List<FimsSample> samples = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(workflowToSampleId.values());
+                List<FimsSample> samples = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(workflowToSampleId.values());
                 for (Map.Entry<Integer, String> entry : workflowToSampleId.entrySet()) {
                     WorkflowDocument workflowDocument = result.workflows.get(entry.getKey());
                     Reaction reaction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
@@ -1575,7 +1576,7 @@ public abstract class LIMSConnection {
             plateAndWorkflowsFromResultSet = createPlateAndWorkflowsFromResultSet(callback, resultSet);
             result.sequenceIds.addAll(plateAndWorkflowsFromResultSet.sequenceIds);
         } finally {
-            cleanUpStatements(preparedStatement);
+            SqlUtilities.cleanUpStatements(preparedStatement);
         }
 
         // The previous query was extraction/workflow focused.  We now need to get all reactions without a workflow
@@ -1669,7 +1670,7 @@ public abstract class LIMSConnection {
                 }
             }
         } finally {
-            cleanUpStatements(getCount);
+            SqlUtilities.cleanUpStatements(getCount);
         }
     }
 
@@ -1718,7 +1719,7 @@ public abstract class LIMSConnection {
 
             addResultSetToWorkflowAndPlatesQueryResult(remainingReactionsSet, toAddTo, cancelable);
         } finally {
-            cleanUpStatements(getRemainingPlates);
+            SqlUtilities.cleanUpStatements(getRemainingPlates);
         }
     }
 
@@ -1936,7 +1937,7 @@ public abstract class LIMSConnection {
                 insert.executeUpdate();
             }
         } finally {
-            cleanUpStatements(update, insert);
+            SqlUtilities.cleanUpStatements(update, insert);
         }
     }
 
@@ -1959,24 +1960,9 @@ public abstract class LIMSConnection {
                 return null;
             }
         } finally {
-            cleanUpStatements(get);
+            SqlUtilities.cleanUpStatements(get);
         }
     }
 
-    /**
-     * Closes a collection of {@link PreparedStatement}s, ignoring any SQLExceptions that are thrown as a result.
-     *
-     * @param statements The statements to close
-     */
-    private void cleanUpStatements(PreparedStatement... statements) {
-        for (PreparedStatement statement : statements) {
-            if (statement != null) {
-                try {
-                    statement.close();
-                } catch (SQLException e) {
-                    // Ignore
-                }
-            }
-        }
-    }
+
 }

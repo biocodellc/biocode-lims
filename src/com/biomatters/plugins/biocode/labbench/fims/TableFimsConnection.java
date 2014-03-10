@@ -32,6 +32,10 @@ public abstract class TableFimsConnection extends FIMSConnection{
     // up users databases with extra fields.
     static final String CODE_PREFIX = "TABLEFIMS:";
 
+    protected String getTissueCol() {
+        return tissueCol;
+    }
+
     private String tissueCol;
     private String specimenCol;
     private boolean storePlates;

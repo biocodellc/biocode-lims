@@ -143,7 +143,7 @@ public class AnnotateLimsDataOptions extends Options {
 //                DocumentField tissueIdField = activeFimsConnection.getTissueSampleDocumentField();
 //                Query tissueFieldQuery = Query.Factory.createFieldQuery(tissueIdField, Condition.EQUAL , tissueId);
 //                Query compoundQuery = Query.Factory.createAndQuery(new Query[] {plateFieldQuery, tissueFieldQuery}, Collections.<String, Object>emptyMap());
-//                List<FimsSample> samples = activeFimsConnection.getMatchingSamples(compoundQuery);
+//                List<FimsSample> samples = activeFimsConnection.retrieveSamplesForTissueIds(compoundQuery);
 //                if (samples.size() != 1) {
 //                    return null;
 //                }

@@ -189,7 +189,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         boolean emptyFimsRecord = false;
 
         try {
-            List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
+            List<FimsSample> docList = fimsConnection.retrieveSamplesForTissueIds(samplesToGet);
             Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
             for(FimsSample sample : docList) {
                 if(sample == null) {  //don't know how this could happen but it is a possible cause of MBP-269

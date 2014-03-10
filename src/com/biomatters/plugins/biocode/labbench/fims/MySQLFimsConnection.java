@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
@@ -15,7 +16,7 @@ import java.sql.*;
  * @author Steve
  * @version $Id$
  */
-public class MySQLFimsConnection extends TableFimsConnection{
+public class MySQLFimsConnection extends TableFimsConnection {
     private Connection connection;
     private Driver driver;
     private String tableName;
@@ -126,31 +127,43 @@ public class MySQLFimsConnection extends TableFimsConnection{
         connection = null;
     }
 
-    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
-
-
-        queryBuilder.append("SELECT * FROM "+tableName+" WHERE ");
+        queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName).append(" WHERE ");
 
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), FIELD_PREFIX, false);
         if(sqlString == null) {
+            // todo Make this handle browse queries?
             return Collections.emptyList();
         }
         queryBuilder.append(sqlString);
 
-
-        String queryString = queryBuilder.toString();
-
-        return getFimsSamplesFromSql(queryString, null);
+        System.out.println(queryBuilder.toString());
+        List<String> results = new ArrayList<String>();
+        Statement select = null;
+        try {
+            select = createStatement();
+            ResultSet resultSet = select.executeQuery(queryBuilder.toString());
+            while(resultSet.next()) {
+                results.add(resultSet.getString(1));
+            }
+        } catch (SQLException e) {
+            throw new ConnectionException("Failed to query FIMS: " + e.getMessage(), e);
+        } finally {
+            SqlUtilities.cleanUpStatements(select);
+        }
+        return results;
     }
 
-    private List<FimsSample> getFimsSamplesFromSql(String queryString, RetrieveCallback callback) throws ConnectionException {
+    @Override
+    public List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
+        String queryString = "SELECT * FROM " + tableName + " WHERE " + getTissueCol() + " IN (" + StringUtilities.join(",", tissueIds) + ")";
         System.out.println(queryString);
         try {
             Statement statement = createStatement();
             ResultSet resultSet = statement.executeQuery(queryString);
             List<FimsSample> samples = new ArrayList<FimsSample>();
-            ResultSetMetaData metadata = resultSet.getMetaData();
             while(resultSet.next() && connection != null){
                 Map<String, Object> data = new HashMap<String, Object>();
                 for(DocumentField f : getSearchAttributes()) {
@@ -196,7 +209,10 @@ public class MySQLFimsConnection extends TableFimsConnection{
     }
 
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        getFimsSamplesFromSql("SELECT * FROM "+tableName, callback);
+        // todo
+        for (FimsSample fimsSample : getMatchingSamples(Query.Factory.createBrowseQuery())) {
+            callback.add(new TissueDocument(fimsSample), Collections.<String, Object>emptyMap());
+        }
     }
 
     public int getTotalNumberOfSamples() throws ConnectionException {

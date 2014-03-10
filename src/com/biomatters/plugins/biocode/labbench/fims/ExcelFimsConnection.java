@@ -2,16 +2,12 @@ package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
@@ -20,12 +16,8 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jxl.Cell;
 import jxl.Sheet;
 import jxl.Workbook;
-import org.virion.jam.util.SimpleListener;
 
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -183,7 +175,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
         return -1;
     }
 
-    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
+    private List<Integer> getListOfRowsMatchingQuery(Query query) throws ConnectionException {
         CompoundSearchQuery.Operator operator;
         List<AdvancedSearchQueryTerm> queries;
 
@@ -212,7 +204,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
 
         //do the actual search...
         Sheet sheet = workbook.getSheet(0);
-        List<FimsSample> result = new ArrayList<FimsSample>();
+        List<Integer> result = new ArrayList<Integer>();
         for(int i=1; i < sheet.getRows(); i++) {
             for (int i1 = 0, queriesSize = queries.size(); i1 < queriesSize; i1++) {
                 AdvancedSearchQueryTerm term = queries.get(i1);
@@ -251,7 +243,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
                         colMatch = false;
                 }
                 if (colMatch && (operator == CompoundSearchQuery.Operator.OR || i == queriesSize-1)) {
-                    result.add(new TableFimsSample(sheet, i, this));
+                    result.add(i);
                     break;
                 } else if (!colMatch && operator == CompoundSearchQuery.Operator.AND) {
                     break;
@@ -260,8 +252,32 @@ public class ExcelFimsConnection extends TableFimsConnection{
             }
         }
 
-
         return result;
+    }
+
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+        List<String> tissueIds = new ArrayList<String>();
+        for (Integer row : getListOfRowsMatchingQuery(query)) {
+            tissueIds.add(workbook.getSheet(0).getRow(row)[columnNames.indexOf(getTissueCol())].getContents());
+        }
+        return tissueIds;
+    }
+
+    @Override
+    public List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
+        List<FimsSample> results = new ArrayList<FimsSample>();
+
+        Sheet sheet = workbook.getSheet(0);
+        Query[] queries = new Query[tissueIds.size()];
+        int i = 0;
+        for (String tissueId : tissueIds) {
+            queries[i++] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueId);
+        }
+        for (Integer row : getListOfRowsMatchingQuery(Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap()))) {
+            results.add(new TableFimsSample(sheet, row, this));
+        }
+        return results;
     }
 
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{

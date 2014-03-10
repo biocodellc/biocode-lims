@@ -310,7 +310,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         }
 
         try {
-            List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
+            List<FimsSample> docList = fimsConnection.retrieveSamplesForTissueIds(samplesToGet);
             Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
             for(FimsSample sample : docList) {
                 docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);

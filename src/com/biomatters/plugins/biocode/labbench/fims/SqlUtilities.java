@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 
+import java.sql.Statement;
 import java.util.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -231,5 +232,22 @@ public class SqlUtilities {
         }
         assert false : "unrecognized column type: "+type;
         return DocumentField.createStringField(fieldName, fieldName, MySQLFimsConnection.FIELD_PREFIX + fieldName, true, false);
+    }
+
+    /**
+     * Closes a collection of {@link java.sql.PreparedStatement}s, ignoring any SQLExceptions that are thrown as a result.
+     *
+     * @param statements The statements to close
+     */
+    public static void cleanUpStatements(Statement... statements) {
+        for (Statement statement : statements) {
+            if (statement != null) {
+                try {
+                    statement.close();
+                } catch (SQLException e) {
+                    // Ignore
+                }
+            }
+        }
     }
 }

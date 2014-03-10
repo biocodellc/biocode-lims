@@ -205,7 +205,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         //add FIMS data to the reaction...
         if(samplesToGet.size() > 0) {
             try {
-                List<FimsSample> docList = fimsConnection.getMatchingSamples(samplesToGet);
+                List<FimsSample> docList = fimsConnection.retrieveSamplesForTissueIds(samplesToGet);
                 Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
                 for(FimsSample sample : docList) {
                     docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);

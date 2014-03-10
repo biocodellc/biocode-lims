@@ -217,6 +217,16 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return Collections.emptyList();
     }
 
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+        return Collections.emptyList();
+    }
+
+    @Override
+    protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
+        return Collections.emptyList();
+    }
+
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
         return Collections.emptyMap();
     }

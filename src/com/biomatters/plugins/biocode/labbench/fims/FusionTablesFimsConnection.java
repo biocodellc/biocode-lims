@@ -6,18 +6,14 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
-import com.biomatters.plugins.biocode.CSVUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.google.api.services.fusiontables.model.Sqlresponse;
 
-import java.util.regex.Pattern;
 import java.util.*;
 import java.io.IOException;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
@@ -85,13 +81,12 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
 
                 queryList.add(BasicSearchQuery.Factory.createFieldQuery(field, Condition.CONTAINS, searchText));
             }
-            Query compoundQuery = CompoundSearchQuery.Factory.createOrQuery(queryList.toArray(new Query[queryList.size()]), Collections.EMPTY_MAP);
+            Query compoundQuery = CompoundSearchQuery.Factory.createOrQuery(queryList.toArray(new Query[queryList.size()]), Collections.<String, Object>emptyMap());
             return getQuerySQLString(compoundQuery);
         }
         else if(query instanceof AdvancedSearchQueryTerm) {
             AdvancedSearchQueryTerm aquery = (AdvancedSearchQueryTerm)query;
             String fieldCode = "'"+aquery.getField().getCode()+"'";
-            Class valueClass = aquery.getField().getValueType();
 
             if(aquery.getCondition() == Condition.STRING_LENGTH_GREATER_THAN) {
                 return "LEN("+fieldCode+") > "+aquery.getValues()[0];
@@ -245,50 +240,83 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         }
     }
 
-    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException {
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
         if(query instanceof BasicSearchQuery) {
             String value = ((BasicSearchQuery)query).getSearchText();
             List<Query> queries = new ArrayList<Query>();
             for(DocumentField field : getSearchAttributes()) {
                 queries.add(Query.Factory.createFieldQuery(field, Condition.APPROXIMATELY_EQUAL, value));
             }
-            return getMatchingSamples(Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String,Object>emptyMap()));
+            return getTissueIdsMatchingQuery(Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap()));
         }
         if(query instanceof CompoundSearchQuery && (((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.OR)) {
-            Set<FimsSample> results = new LinkedHashSet<FimsSample>();
+            Set<String> results = new LinkedHashSet<String>();
             for(Query q : ((CompoundSearchQuery)query).getChildren()) {
-                results.addAll(getMatchingSamples(q));
+                results.addAll(getTissueIdsMatchingQuery(q));
             }
-            return new ArrayList<FimsSample>(results);
+            return new ArrayList<String>(results);
         }
-        final List<FimsSample> results = new ArrayList<FimsSample>();
+        final List<String> results = new ArrayList<String>();
         String querySQLString = getQuerySQLString(query);
         if(querySQLString == null) {
             return Collections.emptyList();
         }
-        String sql = "SELECT * FROM "+tableId+" WHERE "+ querySQLString;
+        String sql = "SELECT " + getTissueCol() + " FROM "+tableId+" WHERE "+ querySQLString;
         System.out.println(sql);
 
         try {
-            RetrieveCallback callback = new RetrieveCallback() {
+            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+            List<List<Object>> rows = sqlresponse.getRows();
+            if(rows == null) {
+                return Collections.emptyList();
+            }
+            for (List<Object> row : rows) {
+                String decoded = getRowValue(row, 0);
+                results.add(decoded);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new ConnectionException(e.getMessage(), e);
+        }
+
+        return results;
+    }
+
+    private String getRowValue(List<Object> row, int index) {
+        Object element = row.get(index);
+        return element == null ? "" : element.toString().replaceAll("\"\"", "\"");
+    }
+
+    @Override
+    public List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, final RetrieveCallback callback) throws ConnectionException {
+        final List<FimsSample> results = new ArrayList<FimsSample>();
+        try {
+            RetrieveCallback myCallback = new RetrieveCallback() {
                 @Override
                 protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
                     if(!TissueDocument.class.isAssignableFrom(document.getClass())) {
                         throw new RuntimeException("Should only call this with a TissueDocument");
                     }
                     results.add((TissueDocument)document);
+                    callback.add(document, searchResultProperties);
                 }
 
                 @Override
                 protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
                     throw new RuntimeException("Should not call this with an AnnotatedPluginDocument");
                 }
+
+                @Override
+                protected boolean _isCanceled() {
+                    return callback.isCanceled();
+                }
             };
-            getFimsSamples(sql, callback);
-            
+            String queryString = "SELECT * FROM " + tableId + " WHERE " + getTissueCol() + " IN (" + StringUtilities.join(",", tissueIds) + ")";
+            getFimsSamples(queryString, myCallback);
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new ConnectionException(e.getMessage(), e);
+            throw new ConnectionException("Could not retrieve samples from FIMS: " + e.getMessage(), e);
         }
 
         return results;
@@ -303,8 +331,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         }
 
         List<DocumentField> columns = getSearchAttributes();
-        for (int i = 0; i < columns.size(); i++) {
-            DocumentField field = columns.get(i);
+        for (DocumentField field : columns) {
             if (field.getName().equals(columnName)) {
                 if (Double.class.isAssignableFrom(field.getValueType())) {
                     try {
@@ -368,18 +395,16 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
 
         List<String> colHeaders = sqlresponse.getColumns();
-        String line = null;
         List<List<Object>> rows = sqlresponse.getRows();
         if(rows == null) {
             return;
         }
         for(List<Object> row : rows) {
             Map<String, Object> values = new LinkedHashMap<String, Object>();
-            assert row.size() == colHeaders.size() : "Please contact Steve if you see this error: getAllSamples(): "+line+"  |  "+ StringUtilities.join(",", colHeaders);
+            assert row.size() == colHeaders.size() : "Please contact Steve if you see this error: getAllSamples(): "+row+"  |  "+ StringUtilities.join(",", colHeaders);
             int numberOfCols = Math.min(row.size(), colHeaders.size());
             for (int i = 0; i < numberOfCols; i++) {
-                Object element = row.get(i);
-                String decoded = element == null ? "" : element.toString().replaceAll("\"\"", "\"");
+                String decoded = getRowValue(row, i);
                 values.put(colHeaders.get(i), convertValue(colHeaders.get(i), decoded));
             }
             callback.add(new TissueDocument(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, tissueCol, specimenCol)), Collections.<String, Object>emptyMap());

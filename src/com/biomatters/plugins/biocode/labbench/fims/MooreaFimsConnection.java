@@ -291,6 +291,16 @@ public class MooreaFimsConnection extends FIMSConnection{
         }
     }
 
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+        return Collections.emptyList();
+    }
+
+    @Override
+    protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
+        return Collections.emptyList();
+    }
+
     public boolean storesPlateAndWellInformation() {
         return true;
     }

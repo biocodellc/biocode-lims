@@ -145,24 +145,35 @@ public abstract class FIMSConnection {
     }
 
     public final List<FimsSample> getMatchingSamples(Query query) throws ConnectionException {
-        List<FimsSample> toReturn = new ArrayList<FimsSample>();
-
-        for(FimsSample sample : _getMatchingSamples(query)) {
-            String sampleId = sample.getId();
-            if(sampleId == null || sampleId.trim().length() == 0) {
-                continue;
-            }
-            sampleCache.put(sampleId, new SoftReference<FimsSample>(sample));
-            toReturn.add(sample);
-        }
-        return toReturn;
+        List<String> tissueIds = getTissueIdsMatchingQuery(query);
+        return retrieveSamplesForTissueIds(tissueIds);
     }
 
-    public abstract List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException;
+    /**
+     * Return tissue IDs for FIMS entries that match a specified {@link com.biomatters.geneious.publicapi.databaseservice.Query}
+     *
+     * @param query The query to match
+     * @return a list of tissue IDs
+     *
+     * @throws ConnectionException if there is a problem communicating with the database
+     */
+    public abstract List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException;
+
+    /**
+     * Retrieve {@link com.biomatters.plugins.biocode.labbench.FimsSample} for the specified tissue IDs
+     *
+     *
+     * @param tissueIds The ids to find samples for
+     * @param callback Callback to add results to.  May be null.
+     * @return A list of all the samples found
+     *
+     * @throws ConnectionException if there is a problem communicating with the FIMS
+     */
+    protected abstract List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException;
 
     private Map<String, SoftReference<FimsSample>> sampleCache = new HashMap<String, SoftReference<FimsSample>>();
 
-    public FimsSample getFimsSampleFromCache(String tissueId) {
+    public final FimsSample getFimsSampleFromCache(String tissueId) {
         SoftReference<FimsSample> fimsSampleSoftReference = sampleCache.get(tissueId);
         return fimsSampleSoftReference != null ? fimsSampleSoftReference.get() : null;
     }
@@ -171,7 +182,16 @@ public abstract class FIMSConnection {
 
     public abstract int getTotalNumberOfSamples() throws ConnectionException;
 
-    public List<FimsSample> getMatchingSamples(Collection<String> tissueIds) throws ConnectionException{
+    /**
+     * Retrieve {@link com.biomatters.plugins.biocode.labbench.FimsSample} for the specified tissue IDs.  If the sample
+     * has been retrieved with this method previously, a cached copy may be returned.
+     *
+     * @param tissueIds The ids to find samples for
+     * @return A list of all the samples found
+     *
+     * @throws ConnectionException if there is a problem communicating with the FIMS
+     */
+    public final List<FimsSample> retrieveSamplesForTissueIds(Collection<String> tissueIds) throws ConnectionException{
         List<String> samplesToSearch = new ArrayList<String>();
         List<FimsSample> samplesToReturn = new ArrayList<FimsSample>();
 
@@ -187,18 +207,14 @@ public abstract class FIMSConnection {
         }
 
         if(samplesToSearch.size() > 0) {
-            List<Query> queries = new ArrayList<Query>();
-            for(String tissue : samplesToSearch) {
-                if(tissue != null) {
-                    Query fieldQuery = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissue);
-                    if(!queries.contains(fieldQuery)) {
-                         queries.add(fieldQuery);
-                    }
+            for(FimsSample sample : _retrieveSamplesForTissueIds(samplesToSearch, null)) {
+                String sampleId = sample.getId();
+                if(sampleId == null || sampleId.trim().length() == 0) {
+                    continue;
                 }
+                sampleCache.put(sampleId, new SoftReference<FimsSample>(sample));
+                samplesToReturn.add(sample);
             }
-
-            Query orQuery = Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap());
-            samplesToReturn.addAll(getMatchingSamples(orQuery));
         }
 
         return samplesToReturn;

@@ -2151,7 +2151,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(activeFIMSConnection == null) {
                 return Collections.emptyMap();
             }
-            List<FimsSample> list = activeFIMSConnection.getMatchingSamples(samplesToGet);
+            List<FimsSample> list = activeFIMSConnection.retrieveSamplesForTissueIds(samplesToGet);
             Map<BiocodeUtilities.Well, FimsSample> result = new HashMap<BiocodeUtilities.Well, FimsSample>();
             for(FimsSample sample : list) {
                 Integer location = tissueToLocationMap.get(sample.getId());
