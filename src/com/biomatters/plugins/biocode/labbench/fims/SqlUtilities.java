@@ -250,4 +250,18 @@ public class SqlUtilities {
             }
         }
     }
+
+    public static void printSql(String sql, List sqlValues) {
+        for (Object o : sqlValues) {
+            String toPrint;
+            if (o instanceof CharSequence) {
+                toPrint = "'" + o.toString().toLowerCase() + "'";
+            } else {
+                toPrint = o.toString();
+            }
+            sql = sql.replaceFirst("\\?", toPrint);
+        }
+
+        System.out.println(sql);
+    }
 }

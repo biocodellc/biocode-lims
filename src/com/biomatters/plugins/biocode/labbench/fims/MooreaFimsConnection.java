@@ -261,44 +261,91 @@ public class MooreaFimsConnection extends FIMSConnection{
         }
     }
 
-    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
-        
 
-        queryBuilder.append("SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID AND ");
+        queryBuilder.append("SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID AND ");
 
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), true);
         if(sqlString == null) {
             return Collections.emptyList();
         }
         queryBuilder.append(sqlString);
-        
+
 
         String queryString = queryBuilder.toString();
 
+        Statement statement = null;
         System.out.println(queryString);
         try {
-            Statement statement = createStatement();
+            statement = createStatement();
             ResultSet resultSet = statement.executeQuery(queryString);
-            List<FimsSample> samples = new ArrayList<FimsSample>();
+            List<String> tissueIds = new ArrayList<String>();
             while(resultSet.next()){
-                samples.add(new MooreaFimsSample(resultSet, this));
+                tissueIds.add(resultSet.getString("biocode_tissue.bnhm_id") + "." + resultSet.getInt("biocode_tissue.tissue_num"));
             }
             resultSet.close();
-            return samples;
+            return tissueIds;
         } catch (SQLException e) {
             throw new ConnectionException(e);
+        } finally {
+            SqlUtilities.cleanUpStatements(statement);
         }
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
-        return Collections.emptyList();
-    }
-
-    @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        return Collections.emptyList();
+        List<FimsSample> samples = new ArrayList<FimsSample>();
+        StringBuilder queryBuilder = new StringBuilder("SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID");
+
+        queryBuilder.append(" AND (");
+
+        List<Object> parameters = new ArrayList<Object>();
+        boolean first = true;
+        for (String tissueId : tissueIds) {
+            try {
+                int dot = tissueId.lastIndexOf(".");
+                if (dot == -1) {
+                    continue; // Not in our expected format.  Means there will be no match in the FIMS
+                }
+                String sampleId = tissueId.substring(0, dot);
+                parameters.add(sampleId);
+                Integer tissueNum = Integer.parseInt(tissueId.substring(dot + 1));
+                parameters.add(tissueNum);
+            } catch (NumberFormatException e) {
+                continue;  // Not in our expected format.  Means there will be no match in the FIMS
+            }
+
+            if (!first) {
+                queryBuilder.append(" OR ");
+            } else {
+                first = false;
+            }
+            queryBuilder.append("(biocode_tissue.bnhm_id = ? AND biocode_tissue.tissue_num = ?)");
+        }
+        queryBuilder.append(")");
+        if(parameters.isEmpty()) {  // No valid tissue IDs
+            return Collections.emptyList();
+        }
+
+        SqlUtilities.printSql(queryBuilder.toString(), parameters);
+        PreparedStatement select = null;
+        try {
+            select = connection.prepareStatement(queryBuilder.toString());
+            for (int index=1; index<=parameters.size(); index++) {
+                select.setObject(index, parameters.get(index - 1));
+            }
+            ResultSet resultSet = select.executeQuery();
+            while(resultSet.next()) {
+                samples.add(new MooreaFimsSample(resultSet, this));
+            }
+            return samples;
+        } catch (SQLException e) {
+            throw new ConnectionException("Failed to retrieve samples from FIMS: " + e.getMessage(), e);
+        } finally {
+            SqlUtilities.cleanUpStatements(select);
+        }
     }
 
     public boolean storesPlateAndWellInformation() {

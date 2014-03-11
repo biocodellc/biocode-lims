@@ -598,27 +598,13 @@ public abstract class LIMSConnection {
                 callback, new URN[0], callback, sql.toString(), sqlValues);
     }
 
-    private static void printSql(String sql, List sqlValues) {
-        for (Object o : sqlValues) {
-            String toPrint;
-            if (o instanceof CharSequence) {
-                toPrint = "'" + o.toString().toLowerCase() + "'";
-            } else {
-                toPrint = o.toString();
-            }
-            sql = sql.replaceFirst("\\?", toPrint);
-        }
-
-        System.out.println(sql);
-    }
-
     private List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForSQL(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws SQLException {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyList();
         }
         PreparedStatement statement = createStatement(sql);
         fillStatement(sqlValues, statement);
-        printSql(sql, sqlValues);
+        SqlUtilities.printSql(sql, sqlValues);
         BiocodeUtilities.CancelListeningThread listeningThread = null;
         if (cancelable != null) {
             //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
@@ -1568,7 +1554,7 @@ public abstract class LIMSConnection {
 
             System.out.println("Running LIMS (workflows&plates) query:");
             System.out.print("\t");
-            printSql(queryBuilder.toString(), sqlValues);
+            SqlUtilities.printSql(queryBuilder.toString(), sqlValues);
             long start = System.currentTimeMillis();
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
@@ -1655,7 +1641,7 @@ public abstract class LIMSConnection {
         try {
             getCount = connection.prepareStatement(countingQuery.toString());
             fillStatement(plateIds, getCount);
-            printSql(countingQuery.toString(), plateIds);
+            SqlUtilities.printSql(countingQuery.toString(), plateIds);
             System.out.println("Running trace counting query:");
             System.out.print("\t");
             long start = System.currentTimeMillis();
@@ -1712,7 +1698,7 @@ public abstract class LIMSConnection {
             fillStatement(parameters, getRemainingPlates);
             System.out.println("Running LIMS (non-workflow plates) query:");
             System.out.print("\t");
-            printSql(getPlatesWithNoWorkflows, parameters);
+            SqlUtilities.printSql(getPlatesWithNoWorkflows, parameters);
             long start = System.currentTimeMillis();
             ResultSet remainingReactionsSet = getRemainingPlates.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
