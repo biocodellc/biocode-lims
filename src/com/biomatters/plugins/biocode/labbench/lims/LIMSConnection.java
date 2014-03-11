@@ -1074,7 +1074,7 @@ public abstract class LIMSConnection {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
 
         addResultSetToWorkflowAndPlatesQueryResult(resultSet, result, cancelable);
-        if(cancelable.isCanceled()) {
+        if(cancelable != null && cancelable.isCanceled()) {
             return new WorkflowsAndPlatesQueryResult();
         }
         return result;
