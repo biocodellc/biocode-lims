@@ -10,11 +10,23 @@ package com.biomatters.plugins.biocode.labbench.fims.tapir;
  */
 public abstract class TapirSchema {
 
+    /**
+     *
+     * @return The tissue ID.  This defaults to the specimen ID unless overridden.
+     */
+    public String getTissueIdField() {
+        return getSpecimenIdField();
+    }
     public abstract String getSpecimenIdField();
     public abstract String[] getTaxonomyCodes();
     public abstract String[] getFields();
 
     public static TapirSchema DarwinCore = new TapirSchema() {
+
+        @Override
+        public String getTissueIdField() {
+            return "http://biocode.berkeley.edu/schema/tissue_id";
+        }
 
         @Override
         public String getSpecimenIdField() {

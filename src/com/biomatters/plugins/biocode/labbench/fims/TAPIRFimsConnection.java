@@ -26,7 +26,6 @@ import java.util.*;
  */
 public class TAPIRFimsConnection extends FIMSConnection{
     private TapirSchema schema;
-    // todo name when tissue id isn't mapped?
 
     private List<DocumentField> searchAttributes;
     private List<DocumentField> taxonomyAttributes;
@@ -79,10 +78,16 @@ public class TAPIRFimsConnection extends FIMSConnection{
         String schemaName = options.getValueAsString(SCHEMA_OP_KEY);
         DataStandard dataStandard = DataStandard.valueOf(schemaName);
         schema = dataStandard.schema;
+
         try {
             client = new TAPIRClient(schema, options.getValueAsString("accessPoint"));
             searchAttributes = getMatchingFields(client.getSearchAttributes(), false);
             taxonomyAttributes = getMatchingFields(client.getSearchAttributes(), true);
+            for (DocumentField field : searchAttributes) {
+                if(schema.getTissueIdField().equals(field.getCode())) {
+                    tissueField = field;
+                }
+            }
         } catch (JDOMException e) {
             e.printStackTrace();
             throw new ConnectionException(e.getMessage(), e);
@@ -98,8 +103,9 @@ public class TAPIRFimsConnection extends FIMSConnection{
         
     }
 
+    private DocumentField tissueField;
     public DocumentField getTissueSampleDocumentField() {
-        return new DocumentField("Tissue ID", "", "http://biocode.berkeley.edu/schema/tissue_id", String.class, true, false);
+        return tissueField;
     }
 
     public List<DocumentField> _getSearchAttributes() {
@@ -146,13 +152,14 @@ public class TAPIRFimsConnection extends FIMSConnection{
         throw new ConnectionException("Retrieving all results is not currently supported for TAPIR connections.  Please contact Biomatters if you would like to see this feature"); //todo:
     }
 
-    public List<FimsSample> _getMatchingSamples(Query query) throws ConnectionException{
+    private Element searchTapirServer(Query query, boolean justReturnTissueID) throws ConnectionException {
+        List<DocumentField> fieldsToReturn = justReturnTissueID ? Collections.singletonList(getTissueSampleDocumentField()) : null;
         Element searchXML = null;
         if(query instanceof CompoundSearchQuery) {
             try {
                 CompoundSearchQuery csq = (CompoundSearchQuery) query;
                 List<? extends Query> children = csq.getChildren();
-                searchXML = client.searchTapirServer((List<AdvancedSearchQueryTerm>)children, csq.getOperator(), searchAttributes);
+                searchXML = client.searchTapirServer((List<AdvancedSearchQueryTerm>)children, csq.getOperator(), searchAttributes, fieldsToReturn);
             } catch (JDOMException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -168,7 +175,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
                     }
                 }
 
-                searchXML = client.searchTapirServer(queries, CompoundSearchQuery.Operator.OR, searchAttributes);
+                searchXML = client.searchTapirServer(queries, CompoundSearchQuery.Operator.OR, searchAttributes, fieldsToReturn);
             } catch (JDOMException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -177,7 +184,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         }
         else if(query instanceof AdvancedSearchQueryTerm) {
             try {
-                searchXML = client.searchTapirServer(Arrays.asList((AdvancedSearchQueryTerm)query), CompoundSearchQuery.Operator.AND, searchAttributes);
+                searchXML = client.searchTapirServer(Arrays.asList((AdvancedSearchQueryTerm)query), CompoundSearchQuery.Operator.AND, searchAttributes, fieldsToReturn);
             } catch (JDOMException e) {
                 e.printStackTrace();
                 throw new ConnectionException(e.getMessage(), e);
@@ -186,45 +193,77 @@ public class TAPIRFimsConnection extends FIMSConnection{
                 throw new ConnectionException(e.getMessage(), e);
             }
         }
-        if(searchXML != null) {
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-            try {
-                out.output(searchXML, System.out);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            List<FimsSample> samples = new ArrayList<FimsSample>();
-            Element searchElement = searchXML.getChild("search", searchXML.getNamespace());
-            if(searchElement != null) {
-                Namespace namespace = Namespace.getNamespace("http://example.net/simple_specimen");
-                Element recordsElement = searchElement.getChild("records", namespace);
-                if(recordsElement != null) {
-                    List<Element> recordList = new ArrayList<Element>(recordsElement.getChildren("record", namespace));
-                    for (Element e : recordList) {
-                        samples.add(new TapirFimsSample(schema.getSpecimenIdField(), (Element)e.clone(), searchAttributes, taxonomyAttributes));
-                    }
-                    return samples;
-                }
-            }
-            else {
-                Element errorElement = searchXML.getChild("error", searchXML.getNamespace());
-                if(errorElement != null) {
-                    throw new ConnectionException("TAPIR Server reported an error: "+errorElement.getText());
-                }
-            }
+        return searchXML;
 
-        }
-        return Collections.emptyList();
     }
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
-        return Collections.emptyList();//todo
+        Element searchXml = searchTapirServer(query, true);
+        List<Element> results = getRecordElementsFromSearchResultXml(searchXml);
+
+        List<String> tissueIds = new ArrayList<String>();
+        for (Element resultElement : results) {
+            String tissueId = null;
+            List<Element> children = resultElement.getChildren();
+            assert(children.size() <= 1);
+            if(children.size() > 0) {
+                tissueId = children.get(0).getText();
+            }
+            if(tissueId != null) {
+                tissueId = tissueId.trim();
+                if(tissueId.length() > 0) {
+                    tissueIds.add(tissueId);
+                }
+            }
+        }
+        return tissueIds;
     }
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        return Collections.emptyList();//todo
+        Query[] queries = new Query[tissueIds.size()];
+        int i = 0;
+        for (String tissueId : tissueIds) {
+            queries[i++] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueId);
+        }
+        Element searchXML = searchTapirServer(Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap()), false);
+        if(searchXML != null) {
+            List<Element> recordList = getRecordElementsFromSearchResultXml(searchXML);
+            if(recordList != null) {
+                List<FimsSample> samples = new ArrayList<FimsSample>();
+                for (Element e : recordList) {
+                    samples.add(new TapirFimsSample(schema.getTissueIdField(), schema.getSpecimenIdField(), (Element)e.clone(), searchAttributes, taxonomyAttributes));
+                }
+                return samples;
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    private List<Element> getRecordElementsFromSearchResultXml(Element searchXML) throws ConnectionException {
+        XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        try {
+            out.output(searchXML, System.out);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Element searchElement = searchXML.getChild("search", searchXML.getNamespace());
+        List<Element> recordList = null;
+        if(searchElement != null) {
+            Namespace namespace = Namespace.getNamespace("http://example.net/simple_specimen");
+            Element recordsElement = searchElement.getChild("records", namespace);
+            if(recordsElement != null) {
+                recordList = new ArrayList<Element>(recordsElement.getChildren("record", namespace));
+            }
+        }
+        else {
+            Element errorElement = searchXML.getChild("error", searchXML.getNamespace());
+            if(errorElement != null) {
+                throw new ConnectionException("TAPIR Server reported an error: "+errorElement.getText());
+            }
+        }
+        return recordList;
     }
 
     public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{

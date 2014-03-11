@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.fims.tapir.TAPIRClient;
+import com.biomatters.plugins.biocode.labbench.fims.tapir.TapirSchema;
 import org.jdom.Element;
 
 import java.util.*;
@@ -14,7 +15,9 @@ import java.util.*;
  * @version $Id: 20/08/2009 2:34:58 PM steve $
  */
 public class TapirFimsSample implements FimsSample {
-    String specimenIdField;
+    // Defaults to Biocode values
+    private String tissueIdField = "http://biocode.berkeley.edu/schema/tissue_id";
+    private String specimenIdField = "http://rs.tdwg.org/dwc/dwcore/CatalogNumber";
 
     private List<DocumentField> searchFields;
     private List<DocumentField> taxonomyFields;
@@ -24,7 +27,8 @@ public class TapirFimsSample implements FimsSample {
         fromXML(e);
     }
 
-    public TapirFimsSample(String specimenIdField, Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
+    public TapirFimsSample(String tissueIdField, String specimenIdField, Element tapirHit, List<DocumentField> searchFields, List<DocumentField> taxonomyFields) {
+        this.tissueIdField = tissueIdField;
         this.specimenIdField = specimenIdField;
         TAPIRClient.clearNamespace(tapirHit);
         this.searchFields = new ArrayList<DocumentField>(searchFields);
@@ -87,6 +91,9 @@ public class TapirFimsSample implements FimsSample {
         return values.get(attributeName);
     }
 
+    private static final String TISSUE_ID = "tissueIdField";
+    private static final String SPECIMEN_ID = "specimenIdField";
+
     public Element toXML() {
         Element fieldsElement = new Element("documentFields");
         for(DocumentField field : searchFields) {
@@ -106,6 +113,9 @@ public class TapirFimsSample implements FimsSample {
         }
         root.addContent(hits);
         root.addContent(new Element("test"));
+
+        root.addContent(new Element(TISSUE_ID).setText(tissueIdField));
+        root.addContent(new Element(SPECIMEN_ID).setText(specimenIdField));
         return root;
     }
 
@@ -133,6 +143,16 @@ public class TapirFimsSample implements FimsSample {
                 continue;
             }
             values.put(name, getObjectFromString(e.getAttributeValue("value"), field.getValueType()));
+        }
+
+        String tissueElementText = element.getChildText(TISSUE_ID);
+        if(tissueElementText != null) {
+            tissueIdField = tissueElementText;
+        }
+
+        String specimenElemetnText = element.getChildText(SPECIMEN_ID);
+        if(specimenElemetnText != null) {
+            specimenIdField = specimenElemetnText;
         }
     }
 

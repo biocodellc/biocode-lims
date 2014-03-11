@@ -173,7 +173,7 @@ public class TAPIRClient {
         return doc.detachRootElement();
     }
 
-    public Element getStructure(List<DocumentField> fieldsToSearch) {
+    public Element getStructure(List<DocumentField> fieldsToReturn) {
         Element structure = new Element("structure");
 
         Namespace namespace = Namespace.getNamespace("xs", "http://www.w3.org/2001/XMLSchema");
@@ -191,10 +191,7 @@ public class TAPIRClient {
         unitType.addContent(new Element("attribute", namespace).setAttribute("name", "catnum").setAttribute("type", "xs:int").setAttribute("use", "required"));
         Element sequence = new Element("sequence", namespace);
         unitType.addContent(sequence);
-        for(DocumentField field : fieldsToSearch) {
-            if(field.equals(new TAPIRFimsConnection().getTissueSampleDocumentField())) {
-                continue;
-            }
+        for(DocumentField field : fieldsToReturn) {
             Element unitElement = new Element("element", namespace);
             unitElement.setAttribute("name", field.getName());
             unitElement.setAttribute("type", getElementType(field.getValueType()));
@@ -220,8 +217,8 @@ public class TAPIRClient {
         return "xs:string";
     }
 
-    public Element searchTapirServer(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) throws JDOMException, IOException {
-        Element searchXML = generateSearchXML(queries, operator, fieldsToSearch);
+    public Element searchTapirServer(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch, List<DocumentField> fieldsToReturn) throws JDOMException, IOException {
+        Element searchXML = generateSearchXML(queries, operator, fieldsToSearch, fieldsToReturn);
         searchXML = padQueryXML(searchXML);
         XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
         out.output(searchXML, System.out);
@@ -237,8 +234,17 @@ public class TAPIRClient {
     }
 
 
-
-    public Element generateSearchXML(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch) {
+    /**
+     * Generate XML to query a tapir server
+     *
+     * @param queries The Geneious queries
+     * @param operator Operator for the search
+     * @param fieldsToSearch A list of all fields to be searched.  Can include all fields for convenience.  Must include fields specified in the query.
+     * @param fieldsToReturn A list of fields to return from the search.  Or null to return all fields from fieldsToSearch
+     *
+     * @return The XML response element from the tapir server
+     */
+    public Element generateSearchXML(List<AdvancedSearchQueryTerm> queries, CompoundSearchQuery.Operator operator, List<DocumentField> fieldsToSearch, List<DocumentField> fieldsToReturn) {
         Element searchElement = new Element("search");
         searchElement.setAttribute("count", "true").setAttribute("start", "0").setAttribute("envelope", "true");
 
@@ -246,7 +252,7 @@ public class TAPIRClient {
         searchElement.addContent(outputModel);
 
 
-        outputModel.addContent(getStructure(fieldsToSearch));
+        outputModel.addContent(getStructure(fieldsToReturn == null ? fieldsToSearch : fieldsToReturn));
 
         outputModel.addContent(new Element("indexingElement").setAttribute("path", "/records/record"));
 
