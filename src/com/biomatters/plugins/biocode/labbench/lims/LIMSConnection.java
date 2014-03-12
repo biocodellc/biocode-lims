@@ -873,7 +873,7 @@ public abstract class LIMSConnection {
                     DocumentField field = q.getField();
                     if (field.isEnumeratedField() && field.getEnumerationValues().length == 2 && field.getEnumerationValues()[0].equals("Yes") && field.getEnumerationValues()[1].equals("No")) {
                         isBooleanQuery = true;
-                    } else {
+                    } else if (isLocal()) {
                         code = "LOWER(" + code + ")";
                     }
                 }
@@ -1544,7 +1544,7 @@ public abstract class LIMSConnection {
         }
 
         StringBuilder queryBuilder = constructWorkflowQueryString(tissueIdsToMatch, operator,
-                workflowPart, extractionPart, platePart, assemblyPart);
+                workflowPart, extractionPart, platePart, assemblyPart, true);
 
         WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet;
         PreparedStatement preparedStatement = null;
@@ -1611,7 +1611,7 @@ public abstract class LIMSConnection {
             for (Plate plate : plates) {
                 PlateDocument plateDocument = new PlateDocument(plate);
                 if (downloadPlates && callback != null) {
-                    callback.add(plateDocument, Collections.<String, Object>emptyMap());
+                    callback.add(DocumentUtilities.createAnnotatedPluginDocument(plateDocument), Collections.<String, Object>emptyMap());
                 }
                 result.plates.add(plateDocument);
             }
@@ -1759,11 +1759,14 @@ public abstract class LIMSConnection {
      * @param extractionQueryConditions Conditions to search extraction on
      * @param plateQueryConditions      Conditions to search plate on
      * @param assemblyQueryConditions   Conditions to search assembly on
+     * @param justRetrieveSummaryInfo True to make a query only ask for the relevant information for the document table.
+     *                                False to return all associated data ie reactions, workflows, plates etc
      * @return A SQL string that can be used to query the MySQL LIMS
      */
     private StringBuilder constructWorkflowQueryString(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
                                                        QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
-                                                       QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
+                                                       QueryPart plateQueryConditions, QueryPart assemblyQueryConditions,
+                                                       boolean justRetrieveSummaryInfo) {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 

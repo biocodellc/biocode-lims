@@ -837,7 +837,36 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     }
                 }
 
-                // todo Do we need to do anything if it was an OR query.  Or has it been handled by the LIMS query.
+
+                if(isDownloadTissues(query)) {
+                    boolean downloadAllSamplesFromFimsQuery = false;
+                    if(query instanceof BasicSearchQuery || areBrowseQueries(Collections.singletonList(query))) {
+                        downloadAllSamplesFromFimsQuery = true;
+                    } else if(query instanceof AdvancedSearchQueryTerm) {
+                        downloadAllSamplesFromFimsQuery = !fimsQueries.isEmpty();
+                    } else if(query instanceof CompoundSearchQuery) {
+                        CompoundSearchQuery compoundQuery = (CompoundSearchQuery) query;
+                        downloadAllSamplesFromFimsQuery = !fimsQueries.isEmpty() && (
+                                fimsQueries.size() == compoundQuery.getChildren().size() ||
+                                compoundQuery.getOperator() == CompoundSearchQuery.Operator.OR
+                        );
+
+                    }
+                    if(downloadAllSamplesFromFimsQuery) {
+                        try {
+                            List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsMatchingFimsQuery);
+                            for (FimsSample sample : fimsSamples) {
+                                if(!tissueSamples.contains(sample)) {
+                                    callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
+                                    tissueSamples.add(sample);
+                                }
+                            }
+                        } catch (ConnectionException e) {
+                            throw new DatabaseServiceException(e, e.getMessage(), false);
+                        }
+                    }
+                }
+
                 if(callback.isCanceled()) {
                     return;
                 }
