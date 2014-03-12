@@ -7,10 +7,9 @@ import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.util.Date;
 
 /**
  * @author Steve
@@ -252,16 +251,36 @@ public class SqlUtilities {
     }
 
     public static void printSql(String sql, List sqlValues) {
-        for (Object o : sqlValues) {
-            String toPrint;
-            if (o instanceof CharSequence) {
-                toPrint = "'" + o.toString().toLowerCase() + "'";
-            } else {
-                toPrint = o.toString();
-            }
-            sql = sql.replaceFirst("\\?", toPrint);
+        if(sqlValues.isEmpty()) {
+            System.out.println(sql);
+            return;
         }
+        StringBuilder builder = new StringBuilder();
+        Iterator valueIterator = sqlValues.iterator();
+        int index = 0;
+        int oldIndex;
+        do {
+            oldIndex = index;
+            index = sql.indexOf("?", index);
+            if(index != -1) {
+                builder.append(sql.substring(oldIndex, index));
+                String toPrint = valueIterator.hasNext() ? getStringToPrint(valueIterator.next()) : "?";
+                builder.append(toPrint);
+                index++;
+            }
+        } while(index >= 0);
+        builder.append(sql.substring(oldIndex));
 
-        System.out.println(sql);
+        System.out.println(builder.toString());
+    }
+
+    private static String getStringToPrint(Object o) {
+        String toPrint;
+        if (o instanceof CharSequence) {
+            toPrint = "'" + o.toString().toLowerCase() + "'";
+        } else {
+            toPrint = o.toString();
+        }
+        return toPrint;
     }
 }

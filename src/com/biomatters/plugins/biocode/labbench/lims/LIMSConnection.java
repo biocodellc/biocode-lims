@@ -1778,7 +1778,8 @@ public abstract class LIMSConnection {
             if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
             }
-            conditionBuilder.append(" (LOWER(sampleId) IN ");
+            String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
+            conditionBuilder.append(" (").append(sampleColumn).append(" IN ");
             appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
         }
         if (workflowQueryConditions != null) {

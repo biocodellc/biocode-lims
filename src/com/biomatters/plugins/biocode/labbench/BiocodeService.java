@@ -739,14 +739,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private Set<BiocodeCallback> activeCallbacks = new HashSet<BiocodeCallback>();
 
     private void retrieve(Query query, RetrieveCallback rc, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
-        // todo FIMS results don't take ANDing results from the LIMS.  Should we leave it like this? or change it
         BiocodeCallback callback = null;
         if(rc != null) {
             callback = new BiocodeCallback(rc);
             activeCallbacks.add(callback);
         }
         try {
-            List<FimsSample> tissueSamples = null;
+            List<String> tissueIdsMatchingFimsQuery = null;
             List<Query> fimsQueries = new ArrayList<Query>();
             callback.setIndeterminateProgress();
 
@@ -773,7 +772,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                             return;
                         }
-                        tissueSamples = activeFIMSConnection.getMatchingSamples(compoundQuery);
+                        tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(compoundQuery);
                     } catch (ConnectionException e) {
                         throw new DatabaseServiceException(e.getMessage(), false);
                     }
@@ -785,7 +784,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                         return;
                     }
-                    tissueSamples = activeFIMSConnection.getMatchingSamples(query);
+                    tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(query);
                 } catch (ConnectionException e) {
                     throw new DatabaseServiceException(e, e.getMessage(), false);
                 }
@@ -798,7 +797,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     fimsQueries.add(query);
                     try {
                         callback.setMessage("Downloading Tissues");
-                        tissueSamples = activeFIMSConnection.getMatchingSamples(query);
+                        tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(query);
                     } catch (ConnectionException e) {
                         throw new DatabaseServiceException(e.getMessage(), false);
                     }
@@ -808,15 +807,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 return;
             }
 
-            if(tissueSamples != null && isDownloadTissues(query)) {
-                for(FimsSample sample : tissueSamples) {
-                    TissueDocument doc = new TissueDocument(sample);
-                    callback.add(doc, Collections.<String, Object>emptyMap());
-                }
-            }
-            if(callback.isCanceled()) {
-                return;
-            }
             try {
                 if(isDownloadWorkflows(query) || isDownloadPlates(query)) {
                     callback.setMessage("Downloading Workflows & Plates");
@@ -824,12 +814,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     callback.setMessage("Searching");
                 }
 
-                List<String> tissueIds = new ArrayList<String>();
-                for (FimsSample tissueSample : tissueSamples) {
-                    tissueIds.add(tissueSample.getId());
-                }
                 LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
-                        areBrowseQueries(fimsQueries) ? null : tissueIds, callback);
+                        areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
 
                 if(callback.isCanceled()) {
@@ -837,15 +823,21 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
 
                 // Now add tissues that match the LIMS query
-                if(!workflowList.isEmpty() && (tissueSamples == null || tissueSamples.isEmpty()) && isDownloadTissues(query)) {
+                // FimsSamples would have been downloaded as part of plate creation.  Collect them now.
+                List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
+                if(!workflowList.isEmpty()) {
                     for (WorkflowDocument workflowDocument : workflowList) {
                         FimsSample sample = workflowDocument.getFimsSample();
                         if(sample != null) {
-                            callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
+                            if(isDownloadTissues(query)) {
+                                callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
+                            }
+                            tissueSamples.add(sample);
                         }
                     }
                 }
 
+                // todo Do we need to do anything if it was an OR query.  Or has it been handled by the LIMS query.
                 if(callback.isCanceled()) {
                     return;
                 }
