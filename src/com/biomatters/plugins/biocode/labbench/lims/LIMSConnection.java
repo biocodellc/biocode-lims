@@ -1479,7 +1479,7 @@ public abstract class LIMSConnection {
      * @throws SQLException if there is a problem with the database
      */
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws SQLException, DatabaseServiceException {
-
+        // todo Do workflows ever exist without plates....  workflows must have an extraction which must have a plate
         LimsSearchResult result = new LimsSearchResult();
 
         // We test against false so that the default is to download
@@ -1544,17 +1544,18 @@ public abstract class LIMSConnection {
         }
 
         StringBuilder queryBuilder = constructWorkflowQueryString(tissueIdsToMatch, operator,
-                workflowPart, extractionPart, platePart, assemblyPart, true);
+                workflowPart, extractionPart, platePart, assemblyPart);
 
         WorkflowsAndPlatesQueryResult plateAndWorkflowsFromResultSet;
         PreparedStatement preparedStatement = null;
         try {
-            preparedStatement = connection.prepareStatement(queryBuilder.toString());
-            fillStatement(sqlValues, preparedStatement);
-
             System.out.println("Running LIMS (workflows&plates) query:");
             System.out.print("\t");
             SqlUtilities.printSql(queryBuilder.toString(), sqlValues);
+
+            preparedStatement = connection.prepareStatement(queryBuilder.toString());
+            fillStatement(sqlValues, preparedStatement);
+
             long start = System.currentTimeMillis();
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
@@ -1565,56 +1566,21 @@ public abstract class LIMSConnection {
             SqlUtilities.cleanUpStatements(preparedStatement);
         }
 
-        // The previous query was extraction/workflow focused.  We now need to get all reactions without a workflow
-        addReactionsWithoutWorkflows(plateAndWorkflowsFromResultSet, callback, tissueIdsToMatch, operator, workflowPart, extractionPart, platePart, assemblyPart);
-
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(plateAndWorkflowsFromResultSet.workflows.values());
-        // If we searched on something that wasn't a workflow attribute then we might be missing reactions.  ie If we
-        // searched for a Cycle Sequencing Plate 'A001'.  We would only have the sequencing reactions.  So in this case
-        // we need to perform an additional step to download all the reactions in the workflow.
-        if ((downloadWorkflows || downloadSequences) && !workflows.isEmpty() && (platePart != null || assemblyPart != null)) {
-            Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false);
-
-            Query[] subqueries = new Query[workflows.size()];
-            int i = 0;
-            for (WorkflowDocument workflowDocument : workflows) {
-                subqueries[i++] = Query.Factory.createFieldQuery(WORKFLOW_NAME_FIELD, Condition.EQUAL, new Object[]{workflowDocument.getName()}, options);
+        if (downloadWorkflows && callback != null) {
+            for (WorkflowDocument document : workflows) {
+                callback.add(document, Collections.<String, Object>emptyMap());
             }
-            result.workflows.addAll(getMatchingDocumentsFromLims(
-                    Query.Factory.createOrQuery(subqueries, options),
-                    null, downloadWorkflows ? callback : null).getWorkflows());
-        } else {
-            if (downloadWorkflows && callback != null) {
-                for (WorkflowDocument document : workflows) {
-                    callback.add(document, Collections.<String, Object>emptyMap());
-                }
-            }
-            result.workflows.addAll(workflows);
         }
+        result.workflows.addAll(workflows);
 
         List<Plate> plates = new ArrayList<Plate>(plateAndWorkflowsFromResultSet.plates.values());
-
-        // If we searched on something that wasn't a plate attribute then we will only have the matching reactions and
-        // the plate will not be complete.  So we have to do another query to get the complete plate
-        if (downloadPlates && !plates.isEmpty() && ((tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) || workflowPart != null || extractionPart != null || assemblyPart != null)) {
-            Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, false, true, false);
-
-            Query[] subqueries = new Query[plates.size()];
-            int i = 0;
-            for (Plate plate : plates) {
-                subqueries[i++] = Query.Factory.createFieldQuery(PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plate.getName()}, options);
+        for (Plate plate : plates) {
+            PlateDocument plateDocument = new PlateDocument(plate);
+            if (downloadPlates && callback != null) {
+                callback.add(DocumentUtilities.createAnnotatedPluginDocument(plateDocument), Collections.<String, Object>emptyMap());
             }
-            result.plates.addAll(getMatchingDocumentsFromLims(
-                    Query.Factory.createOrQuery(subqueries, options),
-                    null, callback).getPlates());
-        } else {
-            for (Plate plate : plates) {
-                PlateDocument plateDocument = new PlateDocument(plate);
-                if (downloadPlates && callback != null) {
-                    callback.add(DocumentUtilities.createAnnotatedPluginDocument(plateDocument), Collections.<String, Object>emptyMap());
-                }
-                result.plates.add(plateDocument);
-            }
+            result.plates.add(plateDocument);
         }
         return result;
     }
@@ -1753,30 +1719,34 @@ public abstract class LIMSConnection {
     /**
      * Builds the complete LIMS SQL query
      *
+     *
      * @param tissueIdsToMatch                   The samples to match
      * @param operator                  The {@link com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery.Operator} to use for the query
      * @param workflowQueryConditions   Conditions to search workflow on
      * @param extractionQueryConditions Conditions to search extraction on
      * @param plateQueryConditions      Conditions to search plate on
      * @param assemblyQueryConditions   Conditions to search assembly on
-     * @param justRetrieveSummaryInfo True to make a query only ask for the relevant information for the document table.
-     *                                False to return all associated data ie reactions, workflows, plates etc
      * @return A SQL string that can be used to query the MySQL LIMS
      */
     private StringBuilder constructWorkflowQueryString(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
                                                        QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
-                                                       QueryPart plateQueryConditions, QueryPart assemblyQueryConditions,
-                                                       boolean justRetrieveSummaryInfo) {
+                                                       QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
+        /* Note: We have to use a CASE statement in the column definitions because there is a bug in HSQL which ignores
+         * the column label and always uses the column name.  This effectively means the table name is ignored when
+         * calling ResultSet.get*() and the first column with the name is returned.  Even when using AS x, the x label is ignored.
+         */
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.*, extraction.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress, " +
+                "SELECT E.extractionId, E.extractionBarcode, " +
+                        "extraction.*, workflow.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress, " +
                         "assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
-        // Can safely do INNER JOIN here because extractionId is non-null column in workflow
-        queryBuilder.append(" FROM workflow INNER JOIN ").append("extraction ON extraction.id = workflow.extractionId");
+        queryBuilder.append(" FROM (SELECT DISTINCT(plate.id) ");
+
+        queryBuilder.append(" FROM extraction LEFT OUTER JOIN ").append("workflow ON extraction.id = workflow.extractionId");
         if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
@@ -1828,7 +1798,36 @@ public abstract class LIMSConnection {
             queryBuilder.append(whereConditionForOrQuery);
         }
 
-        queryBuilder.append(" ORDER BY plate.id, assembly.date desc");
+        queryBuilder.append(" ORDER BY plate.id) matching ");
+        queryBuilder.append("LEFT OUTER JOIN extraction ON matching.id = extraction.plate ");
+        queryBuilder.append("LEFT OUTER JOIN workflow W ON W.extractionId = extraction.id ");
+        queryBuilder.append("LEFT OUTER JOIN pcr P1 ON matching.id = P1.plate ");
+        queryBuilder.append("LEFT OUTER JOIN cyclesequencing C1 ON matching.id = C1.plate ");
+
+        // This bit of if else is required so that MySQL will use the index on workflow ID.  Using multiple columns causes it to do a full table scan.
+        queryBuilder.append("LEFT OUTER JOIN workflow ON workflow.id = ");
+        queryBuilder.append(    "CASE WHEN P1.workflow IS NOT NULL THEN P1.workflow ELSE ");
+        queryBuilder.append(        "CASE WHEN W.id IS NOT NULL THEN W.id ELSE ");
+        queryBuilder.append(        "C1.workflow END ");
+        queryBuilder.append(    "END ");
+
+        // todo At this point we have all the reactions and their workflows.  We now need to join all other reactions to those workflows
+        queryBuilder.append("LEFT OUTER JOIN pcr P2 ON workflow.id = P2.workflow ");
+        queryBuilder.append("LEFT OUTER JOIN pcr ON pcr.id = CASE WHEN P1.id IS NOT NULL THEN P1.id ELSE P2.id END ");
+
+        queryBuilder.append("LEFT OUTER JOIN cyclesequencing C2 ON workflow.id = C2.workflow ");
+        queryBuilder.append("LEFT OUTER JOIN cyclesequencing ON cyclesequencing.id = CASE WHEN C1.id IS NOT NULL THEN C1.id ELSE C2.id END ");
+        queryBuilder.append("LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
+        queryBuilder.append("LEFT OUTER JOIN assembly ON assembly.id = sequencing_result.assembly ");
+
+        queryBuilder.append("LEFT OUTER JOIN extraction E ON E.id = workflow.extractionId ");
+        queryBuilder.append("LEFT OUTER JOIN plate ON plate.id = ");  // Use outer join to be safe.  Although every entry at this point should match a plate
+        queryBuilder.append(    "CASE WHEN extraction.plate IS NOT NULL THEN extraction.plate ELSE ");
+        queryBuilder.append(        "CASE WHEN pcr.plate IS NOT NULL THEN pcr.plate ELSE ");
+        queryBuilder.append(        "cyclesequencing.plate END ");
+        queryBuilder.append(    "END ");
+
+        queryBuilder.append("ORDER BY plate.id, assembly.date desc");
         return queryBuilder;
     }
 

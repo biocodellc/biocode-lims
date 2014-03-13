@@ -111,18 +111,18 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         setPlateId(r.getInt("cyclesequencing.plate"));
         setPosition(r.getInt("cyclesequencing.location"));
         setCreated(r.getTimestamp("cyclesequencing.date"));
-        extractionBarcode = r.getString("extraction.extractionBarcode");
+        extractionBarcode = r.getString("extractionBarcode");
         setId(r.getInt("cyclesequencing.id"));
         Options options = getOptions();
 
-        String extractionId = r.getString("extraction.extractionId");
+        String extractionId = r.getString("extractionId");
         if(extractionId != null) {
             options.setValue("extractionId", extractionId);
         }
         String s = r.getString("workflow.name");
         if(s != null) {
             options.setValue("workflowId", s);
-            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
+            setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
             options.setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), r.getString("workflow.locus"));
         }
 

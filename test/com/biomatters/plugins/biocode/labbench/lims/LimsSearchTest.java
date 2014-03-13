@@ -338,4 +338,8 @@ public class LimsSearchTest extends Assert {
         }
         return resource.getFile().replace("%20", " ");
     }
+
+    // todo Search for workflow on cycle seq plate name, workflow needs to come back with all reactions not just the seq one
+    // todo Search for plate on reaction property, plate needs to be full
+
 }

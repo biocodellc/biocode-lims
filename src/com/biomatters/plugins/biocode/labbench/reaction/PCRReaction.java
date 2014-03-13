@@ -41,9 +41,9 @@ public class PCRReaction extends Reaction<PCRReaction> {
     private void init(ResultSet r) throws SQLException {
         setId(r.getInt("pcr.id"));
         setPlateId(r.getInt("pcr.plate"));
-        extractionBarcode = r.getString("extraction.extractionBarcode");
+        extractionBarcode = r.getString("extractionBarcode");
         ReactionOptions options = getOptions();
-        String extractionId = r.getString("extraction.extractionId");
+        String extractionId = r.getString("extractionId");
         if(extractionId != null) {
             options.setValue("extractionId", extractionId);
         }

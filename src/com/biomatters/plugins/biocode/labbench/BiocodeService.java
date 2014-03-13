@@ -768,7 +768,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
                     }
                     try {
-                        callback.setMessage("Downloading Tissues");
+                        callback.setMessage("Searching FIMS");
                         if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                             return;
                         }
@@ -780,7 +780,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             else if(query instanceof BasicSearchQuery){
                 try {
-                    callback.setMessage("Downloading Tissues");
+                    callback.setMessage("Searching FIMS");
                     if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                         return;
                     }
@@ -796,7 +796,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
                     fimsQueries.add(query);
                     try {
-                        callback.setMessage("Downloading Tissues");
+                        callback.setMessage("Searching FIMS");
                         tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(query);
                     } catch (ConnectionException e) {
                         throw new DatabaseServiceException(e.getMessage(), false);
@@ -853,6 +853,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                     }
                     if(downloadAllSamplesFromFimsQuery) {
+                        callback.setMessage("Downloading Tissues");
                         try {
                             List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsMatchingFimsQuery);
                             for (FimsSample sample : fimsSamples) {
