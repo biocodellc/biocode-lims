@@ -331,7 +331,15 @@ public class WorkflowBuilder extends DocumentOperation {
             composite.beginSubtask("Creating PCR plate");
             Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
 
-            NewPlateDocumentOperation.copyPlateOfSameSize(extractionPlate, pcrPlate, null);
+            // We don't want to copy all extractions.  Just the ones we have traces for.
+            Set<String> idsToMatch = new HashSet<String>();
+            for (AnnotatedPluginDocument doc : plateEntry.getValue()) {
+                Object id = doc.getFieldValue("biocode.Specimen_Num_Collector");
+                if(id != null) {
+                    idsToMatch.add(id.toString());
+                }
+            }
+            copyPlateOfSameSizeIfIdFound(extractionPlate, pcrPlate, idsToMatch);
 
             for(Reaction r : pcrPlate.getReactions()) {
                 if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()){
@@ -460,8 +468,11 @@ public class WorkflowBuilder extends DocumentOperation {
                         if (!NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
                             throw new DocumentOperationException("Contig \"" + assembly.getName() + "\" contains a sequence which is not DNA");
                         }
+                        boolean originalReversed = referencedDocument.getName().endsWith(SequenceExtractionUtilities.REVERSED_NAME_SUFFIX);
+                        boolean reversedInAssembly =  alignment.isReferencedDocumentReversed(i);
+                        boolean reversed = (originalReversed || reversedInAssembly) && !(originalReversed && reversedInAssembly);
                         referencedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD,
-                                alignment.isReferencedDocumentReversed(i) ? seqRPlateName : seqFPlateName);
+                                reversed ? seqRPlateName : seqFPlateName);
                         referencedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflowName);
                         referencedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, well);
                         referencedDocument.save();
@@ -482,6 +493,27 @@ public class WorkflowBuilder extends DocumentOperation {
         if(!assemblyMissing.isEmpty()) {
             Dialogs.showMessageDialog("Assemblies Missing:\n" + StringUtilities.join("\n", assemblyMissing));
         }
+    }
+
+    private void copyPlateOfSameSizeIfIdFound(Plate srcPlate, Plate destPlate, Collection<String> ids) {
+        if(srcPlate.getReactionType() == destPlate.getReactionType()) { //copy everything
+            destPlate.setName(srcPlate.getName());
+            destPlate.setThermocycle(srcPlate.getThermocycle());
+        }
+        Reaction[] srcReactions = srcPlate.getReactions();
+        Reaction[] destReactions = destPlate.getReactions();
+        int count = 0;
+        for(int i=0; i < srcReactions.length; i++) {
+            boolean copy = ids.contains(String.valueOf(srcReactions[i].getFieldValue("biocode.Specimen_Num_Collector")));
+            if(copy) {
+                count++;
+                ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
+            }
+            else {
+                System.out.println("didn't copy!");
+            }
+        }
+        System.out.println("Copied " + count + " reactions from " + srcPlate.getName() + " to " + destPlate.getName());
     }
 
     private void setOperationRecordForConsensusAndAssembly(AnnotatedPluginDocument assemblyDoc, AnnotatedPluginDocument consensus) throws DocumentOperationException, DatabaseServiceException {
