@@ -132,13 +132,33 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
         if(searchValue == null) {
             return null;
         }
+        FimsSample toReturn = null;
         for(FimsSample sample : fimsSamples) {
             Object resultValue = sample.getFimsAttributeValue(searchField.getCode());
             if(resultValue != null && searchValue.equalsIgnoreCase(resultValue.toString())) {
-                return sample;
+                if(toReturn == null || getTissueRevision(sample) >= getTissueRevision(toReturn)) {
+                    toReturn = sample;
+                }
             }
         }
-        return null;
+        return toReturn;
+    }
+
+    private static int getTissueRevision(FimsSample toReturn) {
+        int revision = 0;
+        String tissueId = toReturn.getId();
+        int lastDot = tissueId.lastIndexOf(".");
+        if(lastDot != -1) {
+            String revisionString = tissueId.substring(lastDot).trim();
+            if(revisionString.matches("\\d+")) {
+                try {
+                    revision = Integer.parseInt(revisionString);
+                } catch (NumberFormatException e) {
+                    revision = 0;
+                }
+            }
+        }
+        return revision;
     }
 
     private static Query getFieldQuery(DocumentField field, List<String> values) throws DocumentOperationException{
