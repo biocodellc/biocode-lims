@@ -1363,6 +1363,9 @@ public abstract class LIMSConnection {
     }
 
     public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws SQLException {
+        if(tissueIds.isEmpty()) {
+            return Collections.emptySet();
+        }
         List<String> queries = new ArrayList<String>();
         //noinspection UnusedDeclaration
         for (String s : tissueIds) {
