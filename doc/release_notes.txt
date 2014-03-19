@@ -4,6 +4,7 @@
 * Fix a bug that was causing failed sequences to not be returned from searches.
 * Fix a bug that was causing reactions that had no associated workflow to be missing from plate searches.
 * Fix a bug that disabled the clean up method field.
+* Fix a bug that prevented traces or sequences from being deleted from plates.
 
 ==Biocode Plugin 2.5.3 - 7 Jan 2014==
 * Annotate from FIMS/LIMS can now use the annotated workflow name in addition to the annotated plate/well.

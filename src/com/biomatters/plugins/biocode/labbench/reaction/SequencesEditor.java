@@ -49,6 +49,7 @@ public abstract class SequencesEditor<T> {
             public void actionPerformed(ActionEvent e) {
                 List<T> removed = removeSequences();
                 SequencesEditor.this.sourceObjects.removeAll(removed);
+                SequencesEditor.this.deletedObjects.addAll(removed);
                 updateViewer();
             }
         };
