@@ -250,7 +250,7 @@ public class SqlUtilities {
         }
     }
 
-    public static void printSql(String sql, List sqlValues) {
+    public static void printSql(String sql, Collection sqlValues) {
         if(sqlValues.isEmpty()) {
             System.out.println(sql);
             return;

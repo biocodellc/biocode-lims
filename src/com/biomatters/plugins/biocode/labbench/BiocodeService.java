@@ -811,7 +811,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 if(isDownloadWorkflows(query) || isDownloadPlates(query)) {
                     callback.setMessage("Downloading Workflows & Plates");
                 } else {
-                    callback.setMessage("Searching");
+                    callback.setMessage("Searching LIMS");
                 }
 
                 LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
