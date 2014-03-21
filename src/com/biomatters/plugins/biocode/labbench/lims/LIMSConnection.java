@@ -1060,7 +1060,7 @@ public abstract class LIMSConnection {
     }
 
     private Map<Integer, Plate> createPlateDocuments(RetrieveCallback callback, Cancelable cancelable, ResultSet resultSet) throws SQLException, DatabaseServiceException {
-        Map<Integer, Plate> plates = createPlateAndWorkflowsFromResultSet(cancelable, resultSet).plates;
+        Map<Integer, Plate> plates = createPlateAndWorkflowsFromResultSet(cancelable, resultSet, false, true, false).plates;
         if (callback != null) {
             for (Plate plate : plates.values()) {
                 System.out.println("Adding " + plate.getName());
@@ -1070,7 +1070,7 @@ public abstract class LIMSConnection {
         return plates;
     }
 
-    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet) throws SQLException, DatabaseServiceException {
+    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet, boolean createWorkflows, boolean createPlates, boolean collectSequenceIds) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
         final StringBuilder totalErrors = new StringBuilder("");
 
@@ -1091,25 +1091,29 @@ public abstract class LIMSConnection {
                 plateIds.add(plateId);
             }
 
-            int sequenceId = resultSet.getInt("assembly.id");
-            if (!resultSet.wasNull()) {
-                result.sequenceIds.add(sequenceId);
+            if(collectSequenceIds) {
+                int sequenceId = resultSet.getInt("assembly.id");
+                if (!resultSet.wasNull()) {
+                    result.sequenceIds.add(sequenceId);
+                }
             }
 
-            int workflowId = resultSet.getInt("workflow.id");
-            String workflowName = resultSet.getString("workflow.name");
-            if(workflowName != null) {  // null name means there is no workflow
-                WorkflowDocument existingWorkflow = result.workflows.get(workflowId);
-                if (existingWorkflow != null) {
-                    existingWorkflow.addRow(resultSet);
-                } else {
-                    WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
-                    result.workflows.put(workflowId, newWorkflow);
-                }
+            if(createWorkflows) {
+                int workflowId = resultSet.getInt("workflow.id");
+                String workflowName = resultSet.getString("workflow.name");
+                if(workflowName != null) {  // null name means there is no workflow
+                    WorkflowDocument existingWorkflow = result.workflows.get(workflowId);
+                    if (existingWorkflow != null) {
+                        existingWorkflow.addRow(resultSet);
+                    } else {
+                        WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
+                        result.workflows.put(workflowId, newWorkflow);
+                    }
 
-                String sampleId = resultSet.getString("extraction.sampleId");
-                if (sampleId != null) {
-                    workflowToSampleId.put(workflowId, sampleId);
+                    String sampleId = resultSet.getString("extraction.sampleId");
+                    if (sampleId != null) {
+                        workflowToSampleId.put(workflowId, sampleId);
+                    }
                 }
             }
         }
@@ -1133,7 +1137,7 @@ public abstract class LIMSConnection {
             }
         }
 
-        if(!plateIds.isEmpty()) {
+        if(createPlates && !plateIds.isEmpty()) {
             // Query for full contents of plates that matched our query
             String plateQueryString = constructPlateQuery(plateIds);
             PreparedStatement selectPlate = null;
@@ -1517,13 +1521,15 @@ public abstract class LIMSConnection {
     }
 
     /**
+     *
      * @param query    The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
      * @param tissueIdsToMatch  A list of FIMS samples to match.  Or null to return all results.
      * @param callback To add results to as they are found.  Can be null.
+     * @param downloadTissues True if we are downloding tissues that match the LIMS query
      * @return {@link LimsSearchResult} with workflows and plates found.
      * @throws SQLException if there is a problem with the database
      */
-    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws SQLException, DatabaseServiceException {
+    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback, boolean downloadTissues) throws SQLException, DatabaseServiceException {
         LimsSearchResult result = new LimsSearchResult();
 
         // We test against false so that the default is to download
@@ -1581,13 +1587,17 @@ public abstract class LIMSConnection {
             sqlValues.addAll(assemblyPart.parameters);
         }
 
+        if(!downloadTissues && !downloadWorkflows && !downloadPlates && !downloadSequences) {
+            return result;
+        }
         boolean searchedForSamplesButFoundNone = tissueIdsToMatch != null && tissueIdsToMatch.isEmpty();  // samples == null when doing a browse query
         boolean nothingToSearchForInLims = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
         if (searchedForSamplesButFoundNone && nothingToSearchForInLims) {
             return result;
         }
 
-        StringBuilder workflowQuery = constructWorkflowQueryString(tissueIdsToMatch, operator,
+        StringBuilder workflowQuery = constructWorkflowQueryString(downloadTissues || downloadWorkflows,
+                downloadSequences, tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
         WorkflowsAndPlatesQueryResult queryResult;
@@ -1604,7 +1614,8 @@ public abstract class LIMSConnection {
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
 
-            queryResult = createPlateAndWorkflowsFromResultSet(callback, resultSet);
+            queryResult = createPlateAndWorkflowsFromResultSet(callback, resultSet, downloadTissues || downloadWorkflows,
+                    downloadTissues || downloadPlates, downloadSequences);
         } finally {
             SqlUtilities.cleanUpStatements(preparedStatement);
         }
@@ -1674,30 +1685,40 @@ public abstract class LIMSConnection {
      * Builds a LIMS SQL query from {@link Query}.  Can be used to create workflows and a list of plates that match
      * the query.
      *
+     *
+     *
+     * @param downloadWorkflows         True to download all workflow information.
+     * @param downloadSequences          True to download matching assembly IDs.
      * @param tissueIdsToMatch          The samples to match
      * @param operator                  The {@link com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery.Operator} to use for the query
      * @param workflowQueryConditions   Conditions to search workflow on
      * @param extractionQueryConditions Conditions to search extraction on
      * @param plateQueryConditions      Conditions to search plate on
-     * @param assemblyQueryConditions   Conditions to search assembly on
-     * @return A SQL string that can be used to query the MySQL LIMS
-     */
-    private StringBuilder constructWorkflowQueryString(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
+     * @param assemblyQueryConditions   Conditions to search assembly on       @return A SQL string that can be used to query the MySQL LIMS
+     * */
+    private StringBuilder constructWorkflowQueryString(boolean downloadWorkflows, boolean downloadSequences, Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
                                                        QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
                                                        QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
-        /* Note: We have to use a CASE statement in the column definitions because there is a bug in HSQL which ignores
-         * the column label and always uses the column name.  This effectively means the table name is ignored when
-         * calling ResultSet.get*() and the first column with the name is returned.  Even when using AS x, the x label is ignored.
-         */
+        String columnsToRetrieve = "plate.*";
+        if(downloadWorkflows) {
+            columnsToRetrieve += ",extraction.*, workflow.*, pcr.*, cyclesequencing.*, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes";
+        }
+        if(downloadWorkflows || downloadSequences) {
+            columnsToRetrieve += ", assembly.id";
+        }
+
+
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT extraction.*, workflow.*, pcr.*, cyclesequencing.*, plate.* , assembly.id, assembly.progress, " +
-                        "assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes");
+                "SELECT " + columnsToRetrieve);
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
-        queryBuilder.append(" FROM extraction LEFT OUTER JOIN ").append("workflow ON extraction.id = workflow.extractionId");
+        queryBuilder.append("\nFROM ");
+
+        queryBuilder.append("(\n\tSELECT workflow.id, extraction.id as ext FROM extraction");
+        queryBuilder.append("\n\tLEFT OUTER JOIN ").append("workflow ON extraction.id = workflow.extractionId");
         if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
@@ -1723,19 +1744,19 @@ public abstract class LIMSConnection {
             conditionBuilder.append(")");
         }
 
-        queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
-        queryBuilder.append(" LEFT OUTER JOIN ").append("cyclesequencing ON cyclesequencing.workflow = workflow.id ");
+        queryBuilder.append("\n\tLEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
+        queryBuilder.append("\n\tLEFT OUTER JOIN ").append("cyclesequencing ON cyclesequencing.workflow = workflow.id ");
 
         // INNER JOIN here because there should always be a plate for a reaction.  We have already joined the 3 reaction tables
-        queryBuilder.append(" INNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
+        queryBuilder.append("\n\tINNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
         if (plateQueryConditions != null) {
             if (operator == CompoundSearchQuery.Operator.AND || extractionQueryConditions != null || workflowQueryConditions != null) {
                 conditionBuilder.append(operatorString);
             }
             conditionBuilder.append("(").append(plateQueryConditions).append(")");
         }
-        queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
-        queryBuilder.append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
+        queryBuilder.append("\n\tLEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
+        queryBuilder.append("\n\t").append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
                 append("assembly ON assembly.id = sequencing_result.assembly");
 
         if (assemblyQueryConditions != null) {
@@ -1748,7 +1769,16 @@ public abstract class LIMSConnection {
             queryBuilder.append(whereConditionForOrQuery);
         }
 
-        queryBuilder.append(" ORDER BY workflow.id, assembly.date desc");
+        queryBuilder.append("\n\tGROUP BY workflow.id, ext\n) matching ");
+        queryBuilder.append("\nINNER JOIN extraction ON extraction.id = matching.ext ");
+        queryBuilder.append("\nLEFT OUTER JOIN workflow ON workflow.id = matching.id ");
+        queryBuilder.append("\nLEFT OUTER JOIN pcr ON pcr.workflow = workflow.id ");
+        queryBuilder.append("\nLEFT OUTER JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id ");
+        queryBuilder.append("\nINNER JOIN plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id) ");
+        queryBuilder.append("\nLEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
+        queryBuilder.append("\nLEFT OUTER JOIN assembly ON assembly.id = sequencing_result.assembly ");
+
+        queryBuilder.append("\nORDER BY workflow.id, assembly.date desc");
         return queryBuilder;
     }
 

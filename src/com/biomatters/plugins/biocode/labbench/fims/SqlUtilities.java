@@ -251,6 +251,7 @@ public class SqlUtilities {
     }
 
     public static void printSql(String sql, Collection sqlValues) {
+        sql = sql.replace("\n", "\n\t");
         if(sqlValues.isEmpty()) {
             System.out.println(sql);
             return;

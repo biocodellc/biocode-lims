@@ -815,7 +815,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
 
                 LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
-                        areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
+                        areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback, isDownloadTissues(query));
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
 
                 if(callback.isCanceled()) {
@@ -825,10 +825,21 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 // Now add tissues that match the LIMS query
                 // FimsSamples would have been downloaded as part of plate creation.  Collect them now.
                 List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
-                if(!workflowList.isEmpty()) {
-                    for (WorkflowDocument workflowDocument : workflowList) {
-                        FimsSample sample = workflowDocument.getFimsSample();
-                        if(sample != null) {
+
+                for (WorkflowDocument workflowDocument : workflowList) {
+                    FimsSample sample = workflowDocument.getFimsSample();
+                    if(sample != null && !tissueSamples.contains(sample)) {
+                        if(isDownloadTissues(query)) {
+                            callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
+                        }
+                        tissueSamples.add(sample);
+                    }
+                }
+
+                for (PlateDocument plateDoc : limsResult.getPlates()) {
+                    for (Reaction reaction : plateDoc.getPlate().getReactions()) {
+                        FimsSample sample = reaction.getFimsSample();
+                        if(sample != null && !tissueSamples.contains(sample)) {
                             if(isDownloadTissues(query)) {
                                 callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
                             }
@@ -836,7 +847,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         }
                     }
                 }
-
 
                 if(isDownloadTissues(query)) {
                     boolean downloadAllSamplesFromFimsQuery = false;
@@ -2120,7 +2130,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         List<WorkflowDocument> docs = limsConnection.getMatchingDocumentsFromLims(
                 Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]),
-                        Collections.<String, Object>emptyMap()), null, null).getWorkflows();
+                        Collections.<String, Object>emptyMap()), null, null, false).getWorkflows();
 
         Map<BiocodeUtilities.Well, WorkflowDocument> workflows = new HashMap<BiocodeUtilities.Well, WorkflowDocument>();
         for(Reaction r : plate.getReactions()) {
