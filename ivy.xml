@@ -3,30 +3,35 @@
 
     <configurations>
         <conf name="build" description="For building the plugin."/>
+        <conf name="server" description="For building the server."/>
         <conf name="test" description="For running tests.  Includes the Geneious runtime and test environment."/>
     </configurations>
 
     <dependencies>
         <dependency org="com.biomatters" name="geneious.publicapi" rev="7.0.5" conf="build->api; test->runtime"/>
 
-        <dependency org="com.google.guava" name="guava" rev="15.0"/>
-        <dependency org="org.hsqldb" name="hsqldb" rev="2.3.0"/>
-        <dependency org="org.jcommon" name="jcommon" rev="1.0"/>
-        <dependency org="org.jfree" name="jfreechart" rev="1.0.15"/>
-        <dependency org="net.sourceforge.jexcelapi" name="jxl" rev="2.6.12"/>
-        <dependency org="com.google.api-client" name="google-api-client" rev="1.17.0-rc"/>
-        <dependency org="com.google.api-client" name="google-api-client-servlet" rev="1.17.0-rc"/>
-        <dependency org="com.google.api-client" name="google-api-client-appengine" rev="1.17.0-rc"/>
-        <dependency org="com.google.http-client" name="google-http-client-gson" rev="1.17.0-rc"/>
-        <dependency org="com.google.apis" name="google-api-services-fusiontables" rev="v1-rev33-1.17.0-rc"/>
-        <dependency org="com.google.oauth-client" name="google-oauth-client-jetty" rev="1.17.0-rc"/>
-        <dependency org="com.google.oauth-client" name="google-oauth-client-java6" rev="1.17.0-rc"/>
+        <dependency org="com.google.guava" name="guava" rev="15.0" conf="build,test->default"/>
+        <dependency org="org.hsqldb" name="hsqldb" rev="2.3.0" conf="build,test->default"/>
+        <dependency org="org.jcommon" name="jcommon" rev="1.0" conf="build,test->default"/>
+        <dependency org="org.jfree" name="jfreechart" rev="1.0.15" conf="build,test->default"/>
+        <dependency org="net.sourceforge.jexcelapi" name="jxl" rev="2.6.12" conf="build,test->default"/>
+        <dependency org="com.google.api-client" name="google-api-client" rev="1.17.0-rc" conf="build,test->default"/>
+        <dependency org="com.google.api-client" name="google-api-client-servlet" rev="1.17.0-rc" conf="build,test->default"/>
+        <dependency org="com.google.api-client" name="google-api-client-appengine" rev="1.17.0-rc" conf="build,test->default"/>
+        <dependency org="com.google.http-client" name="google-http-client-gson" rev="1.17.0-rc" conf="build,test->default"/>
+        <dependency org="com.google.apis" name="google-api-services-fusiontables" rev="v1-rev33-1.17.0-rc" conf="build,test->default"/>
+        <dependency org="com.google.oauth-client" name="google-oauth-client-jetty" rev="1.17.0-rc" conf="build,test->default"/>
+        <dependency org="com.google.oauth-client" name="google-oauth-client-java6" rev="1.17.0-rc" conf="build,test->default"/>
 
         <!-- For tests -->
-        <dependency org="junit" name="junit" rev="4.11"/>
+        <dependency org="junit" name="junit" rev="4.11" conf="build,test->default"/>
 
         <!-- We bring the following in from the SpringSource repository because they are missing from Maven2 -->
-        <dependency org="javax.media.jai" name="com.springsource.javax.media.jai.core" rev="1.1.3"/>
-        <dependency org="javax.media.jai" name="com.springsource.javax.media.jai.codec" rev="1.1.3" />
+        <dependency org="javax.media.jai" name="com.springsource.javax.media.jai.core" rev="1.1.3" conf="build,test->*"/>
+        <dependency org="javax.media.jai" name="com.springsource.javax.media.jai.codec" rev="1.1.3" conf="build,test->*"/>
+
+        <!-- For server: Requirement Servlet API 3.0.  So Tomcat 7.0 -->
+        <dependency org="org.glassfish.jersey.containers" name="jersey-container-servlet" rev="2.7" conf="server->default"/>
+        <dependency org="org.glassfish.jersey.core" name="jersey-client" rev="2.7" conf="server->default"/>
     </dependencies>
 </ivy-module>

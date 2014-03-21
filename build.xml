@@ -26,21 +26,47 @@
     <property name="report" location="report"/>
     <property name="GeneiousFiles" location="GeneiousFiles"/>
 
+    <property name="server-folder" value="biocode-server"/>
+    <property name="server-lib" value="${server-folder}/web/WEB-INF/lib"/>
+    <property name="server-src" value="${server-folder}/src"/>
+    <property name="warfile" value="BiocodeLIMS.war"/>
+
     <path id="classpath">
         <fileset dir="${lib}"/>
     </path>
 
-    <target name= "dist" depends="build">
+    <path id="server-classpath">
+        <path refid="classpath"/>
+        <pathelement path="${classes}"/>
+        <fileset dir="${server-lib}"/>
+    </path>
+
+    <target name= "dist" depends="build-plugin">
         <zip zipfile="${build}/${short-plugin-name}.gplugin">
             <fileset dir="${build}">
                <include name="${plugin-name}/**/*"/>
             </fileset>
         </zip>
         <copy file="${build}/${short-plugin-name}.gplugin" todir="${build}/../../downloads"/>
-
     </target>
 
-    <target name="build" depends="clean,compile">
+    <target name="compile-server" depends="compile-plugin">
+        <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
+            <classpath refid="server-classpath"/>
+            <src path="${server-src}"/>
+        </javac>
+    </target>
+
+    <target name="war" depends="clean,compile-server">
+        <war destfile="${warfile}" webxml="${server-folder}/web/WEB-INF/web.xml">
+            <webinf dir="${server-folder}/web/WEB-INF"/>
+            <classes dir="${classes}"/>
+            <lib dir="${lib}" />
+            <lib dir="${server-lib}"/>
+        </war>
+    </target>
+
+    <target name="build-plugin" depends="clean,compile-plugin">
         <jar jarfile="${build}/${plugin-name}.jar">
             <fileset dir="${classes}"/>
         </jar>
@@ -67,7 +93,7 @@
 
     </target>
 
-    <target name="compile" depends="prepare,retrieve-build-dependencies">
+    <target name="compile-plugin" depends="prepare,retrieve-build-dependencies">
         <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
             <classpath refid="classpath"/>
             <src path="${src}"/>
@@ -85,15 +111,19 @@
         <delete>
             <fileset dir="${lib}"/>
         </delete>
+        <delete>
+            <fileset dir="${server-lib}"/>
+        </delete>
         <delete dir="${build}"/>
         <delete dir="${classes}"/>
         <delete dir="${test.classes}"/>
         <delete dir="${report}"/>
         <delete dir="${GeneiousFiles}"/>
         <delete file="GeneiousFiles.zip"/>
+        <delete file="${warfile}"/>
     </target>
 
-    <target name="compile-tests" depends="compile">
+    <target name="compile-tests" depends="compile-plugin">
         <javac target="1.6" source="1.6" destdir="${test.classes}" debug="true">
             <classpath>
                 <path refid="classpath"/>
@@ -149,6 +179,7 @@
 
     <target name="retrieve-build-dependencies" description="Retrieve dependencies with ivy">
        <ivy:retrieve conf="build" settingsref="biocode.ivy.config"/>
+       <ivy:retrieve conf="server" settingsref="biocode.ivy.config" pattern="${basedir}/biocode-server/web/WEB-INF/lib/[artifact].[ext]"/>
     </target>
 
     <condition property="GeneiousFiles.exists">
