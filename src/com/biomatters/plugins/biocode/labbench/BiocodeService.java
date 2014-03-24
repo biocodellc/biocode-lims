@@ -88,7 +88,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         if(!dataDirectory.exists()) {
             if(!dataDirectory.mkdirs()) {
-                //todo:handle
+                throw new UnsupportedOperationException("Unable to create directory: " + dataDirectory.getAbsolutePath());
             }
         }
 
@@ -374,10 +374,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return driver;
     }
 
-    public Class getLocalDriverClass() {
-        return localDriver != null ? localDriver.getClass() : null;
-    }
-
     public Driver getLocalDriver() {
         return localDriver;
     }
@@ -386,7 +382,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public QueryField[] getSearchFields() {
         List<QueryField> fieldList = new ArrayList<QueryField>();
 
-        List<DocumentField> limsFields = limsConnection.getSearchAttributes();
+        List<DocumentField> limsFields = LIMSConnection.getSearchAttributes();
         for(DocumentField field : limsFields) {
             Condition[] conditions;
             if(field.isEnumeratedField()) {
@@ -396,7 +392,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 };
             }
             else {
-                conditions = limsConnection.getFieldConditions(field.getValueType());
+                conditions = LIMSConnection.getFieldConditions(field.getValueType());
             }
             fieldList.add(new QueryField(field, conditions));
         }
@@ -652,7 +648,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                    error = "Could not find the MySQL connector file '"+driverFileName+"'.  Please check that this file exists, and is not a directory.";
                 }
                 else {
-                    URL driverUrl = driverFile.toURL();
+                    URL driverUrl = driverFile.toURI().toURL();
                     loader = new URLClassLoader(new URL[]{driverUrl}, loader);
                 }
             }
@@ -752,7 +748,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             activeCallbacks.add(callback);
         }
         try {
-            List<String> tissueIdsMatchingFimsQuery = null;
+            List<String> tissueIdsMatchingFimsQuery;
 
             callback.setIndeterminateProgress();
 
