@@ -1500,7 +1500,6 @@ public abstract class LIMSConnection {
     public class LimsSearchResult {
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
         List<PlateDocument> plates = new ArrayList<PlateDocument>();
-        List<AnnotatedPluginDocument> traces = new ArrayList<AnnotatedPluginDocument>();
         List<Integer> sequenceIds = new ArrayList<Integer>();
 
         public List<WorkflowDocument> getWorkflows() {
@@ -1509,10 +1508,6 @@ public abstract class LIMSConnection {
 
         public List<PlateDocument> getPlates() {
             return Collections.unmodifiableList(plates);
-        }
-
-        public List<AnnotatedPluginDocument> getTraces() {
-            return Collections.unmodifiableList(traces);
         }
 
         public List<Integer> getSequenceIds() {
