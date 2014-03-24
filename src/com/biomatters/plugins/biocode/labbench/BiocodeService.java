@@ -630,9 +630,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         updateStatus();
     }
 
+    public void setMySqlDriver(String path) {
+        if(connectionManager == null) {
+            initializeConnectionManager();
+        }
+        connectionManager.setMySQLDriverLocation(path);
+    }
+
     public String loadMySqlDriver(boolean block) {
         driverLoaded = true;
-        String driverFileName = connectionManager.getSqlLocationOptions();
+        String driverFileName = connectionManager.getMySQLDriverLocation();
         ClassLoader loader = BiocodeService.class.getClassLoader();
         String error = null;
         try {
@@ -746,63 +753,46 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         try {
             List<String> tissueIdsMatchingFimsQuery = null;
-            List<Query> fimsQueries = new ArrayList<Query>();
+
             callback.setIndeterminateProgress();
 
+
+            List<Query> fimsQueries = new ArrayList<Query>();
             if(query instanceof CompoundSearchQuery) {
                 CompoundSearchQuery masterQuery = (CompoundSearchQuery) query;
                 for(Query childQuery : masterQuery.getChildren()) {
-                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
-                        return;
-                    }
-                    if(childQuery instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)childQuery).getField())) {
-                        fimsQueries.add(childQuery);//todo: distinguish between queries from multiple FIMS connections
+                    if(isFimsTermQuery(childQuery)) {
+                        fimsQueries.add(childQuery);
                     }
                 }
-                if(fimsQueries.size() > 0) {
-                    Query compoundQuery;
-                    if(masterQuery.getOperator() == CompoundSearchQuery.Operator.AND) {
-                        compoundQuery = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
-                    }
-                    else {
-                        compoundQuery = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
-                    }
-                    try {
-                        callback.setMessage("Searching FIMS");
-                        if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
-                            return;
-                        }
-                        tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(compoundQuery);
-                    } catch (ConnectionException e) {
-                        throw new DatabaseServiceException(e.getMessage(), false);
-                    }
-                }
-            }
-            else if(query instanceof BasicSearchQuery){
-                try {
-                    callback.setMessage("Searching FIMS");
-                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
-                        return;
-                    }
-                    tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(query);
-                } catch (ConnectionException e) {
-                    throw new DatabaseServiceException(e, e.getMessage(), false);
-                }
+
+
+            } else if(isFimsTermQuery(query) || query instanceof BasicSearchQuery) {
                 fimsQueries.add(query);
-            } else if(query instanceof AdvancedSearchQueryTerm){
+            }
+
+            Query toSearchFimsWith = null;
+            if(fimsQueries.size() > 0) {
+                if(((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND) {
+                    toSearchFimsWith = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
+                } else {
+                    toSearchFimsWith = Query.Factory.createOrQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
+                }
+            } else if(fimsQueries.size() == 1) {
+                toSearchFimsWith = fimsQueries.get(0);
+            }
+
+            try {
+                callback.setMessage("Searching FIMS");
                 if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                     return;
                 }
-                if(activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm)query).getField())) {
-                    fimsQueries.add(query);
-                    try {
-                        callback.setMessage("Searching FIMS");
-                        tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(query);
-                    } catch (ConnectionException e) {
-                        throw new DatabaseServiceException(e.getMessage(), false);
-                    }
-                }
+
+                tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith);
+            } catch (ConnectionException e) {
+                throw new DatabaseServiceException(e.getMessage(), false);
             }
+
             if(callback.isCanceled()) {
                 return;
             }
@@ -916,6 +906,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 activeCallbacks.remove(callback);
             }
         }
+    }
+
+    private boolean isFimsTermQuery(Query query) {
+        return query instanceof AdvancedSearchQueryTerm && activeFIMSConnection.getSearchAttributes().contains(((AdvancedSearchQueryTerm) query).getField());
     }
 
     private boolean areBrowseQueries(List<? extends Query> queries) {
@@ -2121,16 +2115,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         Plate plate = plateList.get(0).getPlate();
 
-        List<Query> workflowNameQueries = new ArrayList<Query>();
-
+        List<String> workflowNames = new ArrayList<String>();
         for(Reaction r : plate.getReactions()) {
             if(r.getWorkflow() != null) {
-                workflowNameQueries.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, r.getWorkflow().getName()));
+                workflowNames.add(r.getWorkflow().getName());
             }
         }
-        List<WorkflowDocument> docs = limsConnection.getMatchingDocumentsFromLims(
-                Query.Factory.createOrQuery(workflowNameQueries.toArray(new Query[workflowNameQueries.size()]),
-                        Collections.<String, Object>emptyMap()), null, null, false).getWorkflows();
+        List<WorkflowDocument> docs = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflowNames);
 
         Map<BiocodeUtilities.Well, WorkflowDocument> workflows = new HashMap<BiocodeUtilities.Well, WorkflowDocument>();
         for(Reaction r : plate.getReactions()) {
@@ -2288,4 +2279,34 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public void unregisterCallback(BiocodeCallback callback) {
         activeCallbacks.remove(callback);
     }
+
+    public List<WorkflowDocument> getWorkflowDocumentsForNames(List<String> workflowNames) throws DatabaseServiceException {
+        List<WorkflowDocument> workflows;
+        workflows = new ArrayList<WorkflowDocument>();
+
+        Query workflowQuery;
+        Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false);
+        if(workflowNames.size() == 1) {
+            workflowQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL,
+                    new Object[]{workflowNames.get(0)}, options);
+        } else {
+            List<Query> subQueries = new ArrayList<Query>();
+            for (String id : workflowNames) {
+                subQueries.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, id));
+            }
+            workflowQuery = Query.Factory.createOrQuery(subQueries.toArray(new Query[subQueries.size()]), options);
+        }
+
+        List<AnnotatedPluginDocument> results = BiocodeService.getInstance().retrieve(workflowQuery, ProgressListener.EMPTY);
+        for (AnnotatedPluginDocument result : results) {
+           if(WorkflowDocument.class.isAssignableFrom(result.getDocumentClass())) {
+               PluginDocument doc = result.getDocumentOrNull();
+               if(doc instanceof WorkflowDocument) {
+                   workflows.add((WorkflowDocument)doc);
+               }
+           }
+        }
+        return workflows;
+    }
+
 }

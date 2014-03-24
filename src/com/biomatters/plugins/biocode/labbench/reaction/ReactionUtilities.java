@@ -986,7 +986,7 @@ public class ReactionUtilities {
             templateSelectorDropdown = new GeneiousAction.SubMenu(new GeneiousActionOptions("Select a template"), Collections.EMPTY_LIST);
             add(new GLabel("Template: "));
             final JButton button = new JButton(templateSelectorDropdown);
-            button.setIcon(IconUtilities.getIcons("dropdownArrow.png").getOriginalIcon());
+            button.setIcon(Geneious.isHeadless() ? null : IconUtilities.getIcons("dropdownArrow.png").getOriginalIcon());
             button.setHorizontalTextPosition(AbstractButton.LEFT);
             add(button);
             GButton setDefaultTemplateButton = new GButton("Save as default");

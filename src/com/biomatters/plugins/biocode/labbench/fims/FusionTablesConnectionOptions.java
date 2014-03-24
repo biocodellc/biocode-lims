@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -77,7 +78,9 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
         beginAlignHorizontally("", false);
         final ButtonOption authorizeButton = addButtonOption("authorize", "", "Sign In");
         final LabelOption waitLabel = new LabelOption("waitLabel", "");
-        waitLabel.setIcon(AnimatedIcon.getActivityIcon());
+        if(!Geneious.isHeadless()) {
+            waitLabel.setIcon(AnimatedIcon.getActivityIcon());
+        }
         waitLabel.setVisible(false);
         addCustomOption(waitLabel);
         endAlignHorizontally();
@@ -136,7 +139,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
         addDivider(" ");
         beginAlignHorizontally("Your Tables:", false);
         addComboBoxOption(TableFimsConnectionOptions.TABLE_ID, "", tables, tables.get(0));
-        ButtonOption helpButton = addButtonOption("help", "", "", IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
+        ButtonOption helpButton = addButtonOption("help", "", "", Geneious.isHeadless() ? null : IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
         helpButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
                 Dialogs.showMessageDialog("As Google no longer supports numeric table id's, we can only access tables stored in your google drive.  To move a table someone shared with you into your drive, just drag it into the red My Drive label on the right hand side of your google drive screen." +

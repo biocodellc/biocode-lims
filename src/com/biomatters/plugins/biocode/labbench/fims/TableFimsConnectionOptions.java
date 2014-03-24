@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -67,7 +68,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         beginAlignHorizontally("Specimen ID field:", false);
         final ComboBoxOption<OptionValue> specimenId = addComboBoxOption(SPECIMEN_ID, "", cols, cols.get(0));
         addBooleanOption("flickrPhotos", "Specimen photos on Flickr", false);
-        ButtonOption buttonOption = addButtonOption("flickrHelp", "", "", IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
+        ButtonOption buttonOption = addButtonOption("flickrHelp", "", "", Geneious.isHeadless() ? null : IconUtilities.getIcons("help16.png").getIcon16(), JButton.LEFT);
         buttonOption.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
                 String message = "<html>If you validate your specimen/tissue data using <i>BioValidator</i> (available from <a href=\"http://biovalidator.sourceforge.net/\">http://biovalidator.sourceforge.net/</a>), any photos that it uploads to Flickr will be automatically tagged for search by the Biocode LIMS plugin.</html>";
