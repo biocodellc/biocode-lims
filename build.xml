@@ -1,4 +1,4 @@
-<project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench" default="dist" basedir=".">
+<project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench" default="create-plugin" basedir=".">
 
     <property name="version-regex-pattern" value=".*PLUGIN_VERSION\s+=\s+&quot;(\d+\.\d+\.\d+)&quot;;.*"/>
 
@@ -30,7 +30,7 @@
         <fileset dir="${lib}"/>
     </path>
 
-    <target name= "dist" depends="build">
+    <target name= "create-plugin" depends="build">
         <zip zipfile="${build}/${short-plugin-name}.gplugin">
             <fileset dir="${build}">
                <include name="${plugin-name}/**/*"/>
