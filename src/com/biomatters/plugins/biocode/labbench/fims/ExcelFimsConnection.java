@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -259,7 +260,13 @@ public class ExcelFimsConnection extends TableFimsConnection{
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
         List<String> tissueIds = new ArrayList<String>();
         for (Integer row : getListOfRowsMatchingQuery(query)) {
-            tissueIds.add(workbook.getSheet(0).getRow(row)[columnNames.indexOf(getTissueCol())].getContents());
+            int index = columnNames.indexOf(getTissueCol());
+            if(index == -1) {
+                throw new ConnectionException("Could not find tissue column (" + getTissueCol() + ") in Excel sheet.\n\n" +
+                "Columns were:\n" + StringUtilities.join("\n", columnNames));
+            }
+
+            tissueIds.add(workbook.getSheet(0).getRow(row)[index].getContents());
         }
         return tissueIds;
     }
