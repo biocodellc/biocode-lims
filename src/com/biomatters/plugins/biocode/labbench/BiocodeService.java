@@ -768,7 +768,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
 
             Query toSearchFimsWith = null;
-            if(fimsQueries.size() > 0) {
+            if(query instanceof CompoundSearchQuery && fimsQueries.size() > 0) {
                 if(((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.AND) {
                     toSearchFimsWith = Query.Factory.createAndQuery(fimsQueries.toArray(new Query[fimsQueries.size()]), Collections.<String, Object>emptyMap());
                 } else {

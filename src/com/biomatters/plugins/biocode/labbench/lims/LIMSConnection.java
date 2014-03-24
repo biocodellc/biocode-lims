@@ -1582,12 +1582,14 @@ public abstract class LIMSConnection {
             sqlValues.addAll(assemblyPart.parameters);
         }
 
-        if(!downloadTissues && !downloadWorkflows && !downloadPlates && !downloadSequences) {
-            return result;
+        boolean onlySearchingOnFIMSFields = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
+        if(!downloadWorkflows && !downloadPlates && !downloadSequences) {
+            if(!downloadTissues || onlySearchingOnFIMSFields) {
+                return result;
+            }
         }
         boolean searchedForSamplesButFoundNone = tissueIdsToMatch != null && tissueIdsToMatch.isEmpty();  // samples == null when doing a browse query
-        boolean nothingToSearchForInLims = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
-        if (searchedForSamplesButFoundNone && nothingToSearchForInLims) {
+        if (searchedForSamplesButFoundNone && onlySearchingOnFIMSFields) {
             return result;
         }
 
@@ -1628,7 +1630,7 @@ public abstract class LIMSConnection {
         for (Plate plate : plates) {
             PlateDocument plateDocument = new PlateDocument(plate);
             if (downloadPlates && callback != null) {
-                callback.add(DocumentUtilities.createAnnotatedPluginDocument(plateDocument), Collections.<String, Object>emptyMap());
+                callback.add(plateDocument, Collections.<String, Object>emptyMap());
             }
             result.plates.add(plateDocument);
         }
