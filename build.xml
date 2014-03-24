@@ -79,6 +79,7 @@
         <mkdir dir="${classes}"/>
         <mkdir dir="${test.classes}"/>
         <mkdir dir="${report}"/>
+        <mkdir dir="${lib}"/>
     </target>
 
     <target name="clean">
