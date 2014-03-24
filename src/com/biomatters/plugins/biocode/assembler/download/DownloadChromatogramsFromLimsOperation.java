@@ -107,20 +107,16 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                     throw new DocumentOperationException("Plate \"" + plateName + "\" is not a sequencing plate");
                 }
 
-                List<Query> workflowNames = new ArrayList<Query>();
+                List<String> workflowNames = new ArrayList<String>();
                 for (Reaction reaction : plate.getReactions()) {
                     if(!reaction.isEmpty() && reaction.getWorkflow() != null) {
-                        workflowNames.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, reaction.getWorkflow().getName()));
+                        workflowNames.add(reaction.getWorkflow().getName());
                     }
                 }
 
-                Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.<String, Object>emptyMap());
                 List<WorkflowDocument> workflows;
                 try {
-                    workflows = limsConnection.getMatchingDocumentsFromLims(
-                            workflowQuery, Collections.<String>emptyList(), null, false).getWorkflows();
-                } catch (SQLException e) {
-                    throw new DocumentOperationException(e.getMessage(), e);
+                    workflows = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflowNames);
                 } catch (DatabaseServiceException e) {
                     throw new DocumentOperationException(e.getMessage(), e);
                 }

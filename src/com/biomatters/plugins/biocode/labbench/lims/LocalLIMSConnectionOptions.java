@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LocalLIMSConnectionOptions extends PasswordOptions {
     private static final String SCRIPT_NAME = "labbench_"+LIMSConnection.EXPECTED_SERVER_FULL_VERSION +"_sqlite.sql";
     private static final Options.OptionValue NULL_DATABASE = new Options.OptionValue("null", "No databases");
-    static final String DATABASE = "database";
+    public static final String DATABASE = "database";
 
 
     @SuppressWarnings("UnusedDeclaration")

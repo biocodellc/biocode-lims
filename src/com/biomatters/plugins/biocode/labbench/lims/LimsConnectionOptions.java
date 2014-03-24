@@ -11,7 +11,7 @@ import java.util.Collections;
  */
 public class LimsConnectionOptions extends PasswordOptions{
 
-    static final String CONNECTION_TYPE_CHOOSER = "connectionType";
+    public static final String CONNECTION_TYPE_CHOOSER = "connectionType";
 
     public LimsConnectionOptions() {
         init();

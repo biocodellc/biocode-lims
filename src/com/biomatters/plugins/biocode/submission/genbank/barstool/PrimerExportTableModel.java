@@ -17,6 +17,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.PrimerOption;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,11 +56,7 @@ public class PrimerExportTableModel extends TabDelimitedExport.ExportTableModel 
 
             List<WorkflowDocument> matchingWorkflows;
             try {
-                matchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
-                        Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, workflowName), null, null, false).
-                        getWorkflows();
-            } catch (SQLException e) {
-                throw new DocumentOperationException("Could not connect to the LIMS database: "+e.getMessage(), e);
+                matchingWorkflows = BiocodeService.getInstance().getWorkflowDocumentsForNames(Collections.<String>singletonList(workflowName.toString()));
             } catch (DatabaseServiceException e) {
                 throw new DocumentOperationException("Could not connect to the LIMS database: "+e.getMessage(), e);
             }

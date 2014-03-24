@@ -344,11 +344,19 @@ public class ConnectionManager implements XMLSerializable{
         return connectOnStartup;
     }
 
-    public String getSqlLocationOptions() {
+    private static final String DRIVER = "driver";
+    public String getMySQLDriverLocation() {
         if(sqlConnectorLocationOptions == null) {
             createSqlOptions();
         }
-        return ""+sqlConnectorLocationOptions.getValue("driver");
+        return ""+sqlConnectorLocationOptions.getValue(DRIVER);
+    }
+
+    public void setMySQLDriverLocation(String path) {
+        if(sqlConnectorLocationOptions == null) {
+            createSqlOptions();
+        }
+        sqlConnectorLocationOptions.setValue(DRIVER, path);
     }
 
     private void updateCenterPanel(JButton okButton) {
@@ -731,6 +739,10 @@ public class ConnectionManager implements XMLSerializable{
             return activeFIMSConnection;
         }
 
+        /**
+         * Return the Options for the currently selected FIMS
+         * @return
+         */
         public PasswordOptions getFimsOptions() {
             if(loginOptions == null) {
                 createLoginOptions();
@@ -738,6 +750,13 @@ public class ConnectionManager implements XMLSerializable{
             Options fimsOptions = loginOptions.getChildOptions().get("fims");
             String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
             return (PasswordOptions)fimsOptions.getChildOptions().get(selectedFimsServiceName);
+        }
+
+        public void setFims(String name) {
+            if(loginOptions == null) {
+                createLoginOptions();
+            }
+            loginOptions.setValue("fims.fims", name);
         }
 
         private void createLoginOptions() {
@@ -759,6 +778,10 @@ public class ConnectionManager implements XMLSerializable{
             }
         }
 
+        /**
+         *
+         * @return the parent Options that contains all the child LIMSOptions
+         */
         public PasswordOptions getLimsOptions() {
             if(loginOptions == null) {
                 createLoginOptions();
