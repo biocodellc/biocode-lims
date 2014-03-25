@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
+import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -43,7 +44,7 @@ public class LimsSearchTest extends Assert {
         biocodeeService.setDataDirectory(temp);
         LocalLIMSConnectionOptions.createDatabase(DATABASE_NAME);
 
-        ConnectionManager.Connection connectionConfig = new ConnectionManager.Connection("forTests");
+        Connection connectionConfig = new Connection("forTests");
         PasswordOptions _fimsOptions = connectionConfig.getFimsOptions();
         assertTrue("First FIMS option has changed from Excel FIMS.  Test needs updating",
                 _fimsOptions instanceof ExcelFimsConnectionOptions);

@@ -12,6 +12,8 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
+import com.biomatters.plugins.biocode.labbench.connection.Connection;
+import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -51,6 +53,8 @@ import java.util.prefs.Preferences;
  */
 @SuppressWarnings({"ConstantConditions"})
 public class BiocodeService extends PartiallyWritableDatabaseService {
+    private QueryService backend;
+
     private static final String DOWNLOAD_TISSUES = "tissueDocuments";
     private static final String DOWNLOAD_WORKFLOWS = "workflowDocuments";
     private static final String DOWNLOAD_PLATES = "plateDocuments";
@@ -68,7 +72,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private static Preferences getPreferencesForService() {
         return Preferences.userNodeForPackage(BiocodeService.class);
     }
-    private ConnectionManager.Connection activeConnection;
+    private com.biomatters.plugins.biocode.labbench.connection.Connection activeConnection;
 
     public static final DateFormat dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);//synchronize access on this (it's not threadsafe!)
     public static final DateFormat XMLDateFormat = new SimpleDateFormat("yyyy MMM dd hh:mm:ss");
@@ -345,7 +349,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return searchOptions;
     }
 
-    static FIMSConnection[] getFimsConnections() {
+    public static FIMSConnection[] getFimsConnections() {
         return new FIMSConnection[] {
                 new ExcelFimsConnection(),
                 new FusionTablesFimsConnection(),
@@ -472,7 +476,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     private void logIn() {
-        final ConnectionManager.Connection connection = connectionManager.getConnectionFromUser(null);
+        final Connection connection = connectionManager.getConnectionFromUser(null);
 
         if (connection != null) {
             try {
@@ -496,7 +500,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public void connect(ConnectionManager.Connection connection, boolean block) {
+    public void connect(Connection connection, boolean block) {
         synchronized (this) {
             loggingIn = true;
         }
@@ -1853,7 +1857,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 mainFrame = GuiUtilities.getMainFrame();
             }
             if(connectionManager.checkIfWeCanLogIn()) {
-                ConnectionManager.Connection connection = connectionManager.getCurrentlySelectedConnection();
+                Connection connection = connectionManager.getCurrentlySelectedConnection();
                 connect(connection, false);
             }
         }
