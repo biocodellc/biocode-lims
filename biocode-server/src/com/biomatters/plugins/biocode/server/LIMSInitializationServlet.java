@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.privateApi.PrivateApiUtilities;
 import com.biomatters.geneious.privateApi.PrivateApiUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.components.ComponentUtilitiesImplementation;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.QueryFactoryImplementation;
 import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseServiceActions;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilitiesImplementation;
@@ -15,20 +14,13 @@ import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.FileUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.utilities.ImportUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.utilities.SequenceUtilitiesImplementation;
-import com.biomatters.iseek.application.ISeekMain;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
-import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.MySqlLIMSConnectionOptions;
 import jebl.util.ProgressListener;
-import org.virion.jam.framework.Application;
 
 import javax.servlet.*;
 import java.io.File;
@@ -60,7 +52,7 @@ public class LIMSInitializationServlet extends GenericServlet {
         initializeGeneiousUtilities();
 
         BiocodeService biocodeeService = null;
-        ConnectionManager.Connection connectionConfig = null;
+        Connection connectionConfig = null;
         File settingsFolder = new File(System.getProperty("user.home"), settingsFolderName);
         File connectionPropertiesFile = new File(settingsFolder, propertiesFile);
         if(!connectionPropertiesFile.exists()) {
@@ -86,7 +78,7 @@ public class LIMSInitializationServlet extends GenericServlet {
             }
             biocodeeService.setDataDirectory(dataDir);
 
-            connectionConfig = new ConnectionManager.Connection("forServer");
+            connectionConfig = new Connection("forServer");
             String driverFile = config.getProperty("sql.driver");
             if(driverFile != null) {
                 biocodeeService.setMySqlDriver(driverFile);

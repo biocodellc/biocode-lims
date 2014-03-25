@@ -34,7 +34,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     private Driver driver;
     private Connection connection;
 
-    private static final DocumentField MOOREA_TISSUE_ID_FIELD = new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
+    public static final DocumentField MOOREA_TISSUE_ID_FIELD = new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
     private static final DocumentField MOOREA_PLATE_NAME_FIELD = new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false);
     private static final DocumentField MOOREA_WELL_NUMBER_FIELD = new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false);
     private static final DocumentField MOOREA_TISSUE_BARCODE_FIELD = new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false);

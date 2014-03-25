@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import org.jdom.Element;
 

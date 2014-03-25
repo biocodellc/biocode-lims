@@ -1,19 +1,18 @@
-package com.biomatters.plugins.biocode.labbench;
+package com.biomatters.plugins.biocode.labbench.connection;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
-import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
-import org.jdom.Attribute;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -102,7 +101,7 @@ public class ConnectionManager implements XMLSerializable{
         loginOptions.addChildOptions("fims", null, null, fimsOptions);
         loginOptions.addChildOptions("lims", null, null, limsOptions);
         loginOptions.restorePreferences();
-        return new Connection("My Default Connection", loginOptions.valuesToXML("root"));
+        return Connection.forOld("My Default Connection", loginOptions.valuesToXML("root"));
     }
 
     private static Preferences getPreferencesFromPreviousVersion() {
@@ -372,7 +371,9 @@ public class ConnectionManager implements XMLSerializable{
         }
 
         Connection selectedConnection = connections.get(this.selectedConnection);
-        centerPanel.add(selectedConnection.getConnectionOptionsPanel(okButton), BorderLayout.CENTER);
+        JPanel chosenConnectionPanel = selectedConnection.getConnectionOptionsPanel(okButton);
+        centerPanel.add(chosenConnectionPanel, BorderLayout.CENTER);
+        ConnectionManager.packAncestor(chosenConnectionPanel);
         centerPanel.revalidate();
         if(selectedConnection.optionsCreated()) {
             packAncestor(centerPanel);
@@ -395,12 +396,17 @@ public class ConnectionManager implements XMLSerializable{
     }
 
     public void fromXML(Element element) throws XMLSerializationException {
-        List<Element> connectionElements = element.getChildren("Connection");
+        List<Element> connectionElements = element.getChildren("Connection");  // todo this won't work now
         connectOnStartup = element.getAttribute("connectOnStartup") != null;
         connections = new ArrayList<Connection>();
         for(Element e : connectionElements) {
             try {
-                Connection newConnection = new Connection(e);
+                Connection newConnection;
+                if(XMLSerializable.ROOT_ELEMENT_NAME.equals(e.getName())) {
+                    newConnection = XMLSerializer.classFromXML(e, Connection.class);
+                } else {
+                    newConnection = new Connection(e);
+                }
                 addConnection(newConnection);
             } catch (XMLSerializationException e1) {
                 StringWriter stringWriter = new StringWriter();
@@ -430,7 +436,7 @@ public class ConnectionManager implements XMLSerializable{
         connectionNameChangedListener.objectChanged();
     }
 
-    private static void packAncestor(final JComponent panel) {
+    static void packAncestor(final JComponent panel) {
         Runnable runnable = new Runnable() {
             public void run() {
                 JRootPane rootPane = panel.getRootPane();
@@ -447,355 +453,4 @@ public class ConnectionManager implements XMLSerializable{
         };
         ThreadUtilities.invokeNowOrLater(runnable);
     }
-
-    public static class Connection implements XMLSerializable{
-        private LoginOptions loginOptions;
-        private String name;
-        Element loginOptionsValues;
-        private List<SimpleListener> nameChangedListeners = new ArrayList<SimpleListener>();
-        protected String CONNECTION_OPTIONS_ELEMENT_NAME = "connectionOptions";
-
-
-        public Connection(String name) {
-            this.name = name;
-        }
-
-        public Connection(Element e) throws XMLSerializationException{
-            if(e == null) {
-                throw new XMLSerializationException("You cannot create a new connection with a null element");
-            }
-            loginOptionsValues = e.getChild(CONNECTION_OPTIONS_ELEMENT_NAME);
-            if(loginOptionsValues == null) {
-                throw new XMLSerializationException("The child element "+CONNECTION_OPTIONS_ELEMENT_NAME+" does not exist");
-            }
-            correctElementForBackwardsCompatibility(loginOptionsValues);
-            name = e.getChildText("Name");
-        }
-
-        public Connection(String name, Element connectionOptions) {
-            this.name = name;
-            correctElementForBackwardsCompatibility(connectionOptions);
-            loginOptions = new LoginOptions(ConnectionManager.class);
-            loginOptions.valuesFromXML(connectionOptions);
-            this.loginOptionsValues = connectionOptions;
-            if(loginOptionsValues == null) {
-                throw new IllegalArgumentException("Connection options are null");
-            }
-        }
-
-        public void correctElementForBackwardsCompatibility(Element e) {   //backwards compatibility - we moved some things to child options...
-            for (Element child : e.getChildren("childOption")) {
-                if ("fims".equals(child.getAttributeValue("name"))) {
-                    boolean excelActive = false;
-                    for (Element fimsOptionElement : child.getChildren("option")) {
-                        if("fims".equals(fimsOptionElement.getAttributeValue("name")) && "excel".equals(fimsOptionElement.getText())) {
-                            excelActive = true;
-                            break;
-                        }
-                    }
-                    for (Element child2 : child.getChildren("childOption")) {
-                        if ("excel".equals(child2.getAttributeValue("name"))) {
-                            if (child2.getChild("childOption") == null) {
-                                //now do the work...
-                                Element newChildOption = new Element("childOption");
-                                newChildOption.setAttribute("name", TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
-                                for (Element optionElement : child2.getChildren("option")) {
-                                    if (ExcelFimsConnectionOptions.FILE_LOCATION.equals(optionElement.getAttributeValue("name")) && excelActive) {
-                                        Element element = new Element("option").setAttribute("name", ExcelFimsConnectionOptions.FILE_LOCATION).setText(optionElement.getText());
-                                        for (Attribute a : (List<Attribute>) optionElement.getAttributes()) {
-                                            element.setAttribute(a.getName(), a.getValue());
-                                        }
-                                        newChildOption.addContent(element);
-                                    }
-                                    if ("label_1".equals(optionElement.getAttributeValue("name"))) {
-                                        optionElement.setAttribute("name", "label_0");
-                                    }
-                                    if ("label_2".equals(optionElement.getAttributeValue("name"))) {
-                                        optionElement.setAttribute("name", "label_1");
-                                    }
-                                    if ("label_3".equals(optionElement.getAttributeValue("name"))) {
-                                        optionElement.setAttribute("name", "label_2");
-                                    }
-                                }
-                                child2.addContent(newChildOption);
-                            } else if (!excelActive) {
-                                for (Element childOption : child2.getChildren("childOption")) {
-                                    if ("excel".equals(childOption.getAttributeValue("name"))) {
-                                        for (Element optionElement : child2.getChildren("option")) {
-                                            if (ExcelFimsConnectionOptions.FILE_LOCATION.equals(optionElement.getAttributeValue("name"))) {
-                                                optionElement.setText("");
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if ("Google".equals(child2.getAttributeValue("name"))) {
-                            if (child2.getChild("childOption") == null) {
-                                //now do the work...
-                                Element newChildOption = new Element("childOption");
-                                newChildOption.setAttribute("name", TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
-                                for (Element optionElement : child2.getChildren("option")) {
-
-                                    if ("label_1".equals(optionElement.getAttributeValue("name"))) {
-                                        optionElement.setAttribute("name", "label_0");
-                                    }
-                                    if ("label_2".equals(optionElement.getAttributeValue("name"))) {
-                                        optionElement.setAttribute("name", "label_1");
-                                    }
-                                    if ("label_3".equals(optionElement.getAttributeValue("name"))) {
-                                        optionElement.setAttribute("name", "label_2");
-                                    }
-                                }
-                                child2.addContent(newChildOption);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        public void setName(String name) {
-            this.name = name;
-            fireNameChangedListeners();
-        }
-
-        private void setLocationOptions() {
-            createLoginOptions();
-        }
-
-        public boolean optionsCreated() {
-            return loginOptions != null;
-        }
-
-        public void addNameChangedListener(SimpleListener l) {
-            nameChangedListeners.add(l);
-        }
-
-        public void removeNameChangedListener(SimpleListener l) {
-            nameChangedListeners.remove(l);
-        }
-
-        private void fireNameChangedListeners() {
-            for(SimpleListener listener : nameChangedListeners) {
-                listener.objectChanged();
-            }
-        }
-
-        public Options getEnterPasswordOptions() {
-            if(loginOptions == null) {
-                createLoginOptions();
-            }
-            int count = 0;
-
-            Options passwordOptions = new Options(this.getClass());
-            passwordOptions.addLabel("Please enter your credentials for "+getName());
-            PasswordOptions fimsOptions = getFimsOptions();
-            Options fimsEnterPasswordOptions = fimsOptions.getEnterPasswordOptions();
-            if(fimsEnterPasswordOptions != null) {
-                passwordOptions.addChildOptions("fimsOptions", "FIMS account", "The connection options for your FIMS account", fimsEnterPasswordOptions);
-                count++;
-            }
-            PasswordOptions limsOptions = getLimsOptions();
-            Options limsEnterPasswordOptions = limsOptions.getEnterPasswordOptions();
-            if(limsEnterPasswordOptions != null) {
-                passwordOptions.addChildOptions("limsOptions", "LIMS account", "The connection options for your LIMS account", limsEnterPasswordOptions);
-                count++;
-            }
-
-            if(count > 0) {
-                return passwordOptions;
-            }
-            return null;
-        }
-
-        public void setPasswordsFromOptions(final Options enterPasswordOptions) {
-            Runnable runnable = new Runnable() {
-                public void run() {
-                    loginOptions.getPanel(); //we need to create the panel first so that password options keep their save/don't save status
-                    Options fimsOptions = enterPasswordOptions.getChildOptions().get("fimsOptions");
-                    Options limsOptions = enterPasswordOptions.getChildOptions().get("limsOptions");
-                    if(fimsOptions != null) {
-                        getFimsOptions().setPasswordsFromOptions(fimsOptions);
-                    }
-                    if(limsOptions != null) {
-                        getLimsOptions().setPasswordsFromOptions(limsOptions);
-                    }
-                }
-            };
-            ThreadUtilities.invokeNowOrWait(runnable);
-        }
-
-
-
-
-        public JPanel getConnectionOptionsPanel(final JButton button){  //we only set the values when the panel is actually required - constructing the options can take some time for large excel files...
-            final JPanel panel = new GPanel(new BorderLayout());
-            final Options nameOptions = new Options(ConnectionManager.class);
-            final Options.StringOption nameOption = nameOptions.addStringOption("name", "Connection Name: ", "");
-            nameOption.setValue(name);
-            nameOption.addChangeListener(new SimpleListener(){
-                public void objectChanged() {
-                    setName(nameOption.getValue());
-                }
-            });
-            if(loginOptions != null) {
-                panel.add(loginOptions.getPanel());
-                panel.add(nameOptions.getPanel(), BorderLayout.NORTH);
-                if(button != null) {
-                    button.setEnabled(true);
-                }
-            }
-            else {
-                JPanel labelPanel = new GPanel(new GridBagLayout());
-                AnimatedIcon activityIcon = AnimatedIcon.getActivityIcon();
-                JLabel label = new GLabel("Loading connection options...", activityIcon, SwingConstants.CENTER);
-                activityIcon.startAnimation();
-                labelPanel.add(label, new GridBagConstraints());
-                panel.add(labelPanel, BorderLayout.CENTER);
-
-                Runnable runnable = new Runnable() {
-                    public void run() {
-                        ThreadUtilities.sleep(100); //let's give the UI a chance to update before we use up all the CPU
-                        setLocationOptions();
-                        Runnable runnable = new Runnable() {
-                            public void run() {
-                                if(loginOptionsValues != null) {
-                                    createLoginOptions();
-                                }
-                                panel.removeAll();
-                                panel.add(nameOptions.getPanel(), BorderLayout.NORTH);
-                                panel.add(loginOptions.getPanel(), BorderLayout.CENTER);
-                                panel.revalidate();
-                                panel.invalidate();
-                                packAncestor(panel);
-                                if(button != null && panel.isShowing()) {
-                                    button.setEnabled(true);
-                                }
-                            }
-                        };
-                        ThreadUtilities.invokeNowOrLater(runnable);
-                    }
-                };
-                new Thread(runnable).start();
-            }
-            return panel;
-        }
-
-
-        @Override
-        public String toString() {
-            return getName();
-        }
-
-        public String getName() {
-            if(name == null || name.length() == 0) {
-                return "Untitled";
-            }
-            return name;
-        }
-
-        public Element toXML() {
-            return getXml(true);
-        }
-
-        public Element getXml(boolean reserializeOptionsIfTheyExist) {
-            Element connectionElement = new Element("Connection");
-            if(loginOptions != null && (reserializeOptionsIfTheyExist || loginOptionsValues == null)) {
-                connectionElement.addContent(loginOptions.valuesToXML(CONNECTION_OPTIONS_ELEMENT_NAME));
-            }
-            else if(loginOptionsValues != null) {
-                connectionElement.addContent(((Element)loginOptionsValues.clone()).setName(CONNECTION_OPTIONS_ELEMENT_NAME));
-            }
-            else {
-                setLocationOptions();
-                loginOptions.restoreDefaults();
-                connectionElement.addContent(loginOptions.valuesToXML(CONNECTION_OPTIONS_ELEMENT_NAME));
-            }
-            connectionElement.addContent(new Element("Name").setText(name));
-            return connectionElement;
-        }
-
-        public void fromXML(Element element) throws XMLSerializationException {
-            throw new UnsupportedOperationException("Call the constructor");
-        }
-
-
-        public FIMSConnection getFimsConnection() {
-            if(loginOptions == null) {
-                createLoginOptions();
-            }
-            Options fimsOptions = loginOptions.getChildOptions().get("fims");
-            String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
-            FIMSConnection activeFIMSConnection = null;
-            for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
-                if (connection.getName().equals(selectedFimsServiceName)) {
-                    activeFIMSConnection = connection;
-                }
-            }
-            if (activeFIMSConnection == null) {
-                throw new RuntimeException("Could not find a FIMS connection called " + selectedFimsServiceName);
-            }
-            return activeFIMSConnection;
-        }
-
-        /**
-         * Return the Options for the currently selected FIMS
-         * @return
-         */
-        public PasswordOptions getFimsOptions() {
-            if(loginOptions == null) {
-                createLoginOptions();
-            }
-            Options fimsOptions = loginOptions.getChildOptions().get("fims");
-            String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
-            return (PasswordOptions)fimsOptions.getChildOptions().get(selectedFimsServiceName);
-        }
-
-        public void setFims(String name) {
-            if(loginOptions == null) {
-                createLoginOptions();
-            }
-            loginOptions.setValue("fims.fims", name);
-        }
-
-        private void createLoginOptions() {
-            loginOptions = new LoginOptions(ConnectionManager.class);
-            if(loginOptionsValues != null) {
-                final Element loginOptionsValuesLocal = loginOptionsValues;
-                ThreadUtilities.invokeNowOrWait(new Runnable() {
-                    public void run() {
-                        loginOptions.valuesFromXML((Element)loginOptionsValuesLocal.clone());
-                        try {
-                            loginOptions.updateOptions();
-                        } catch (ConnectionException e) {
-                            //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
-                            e.printStackTrace();
-                        }
-                        loginOptions.valuesFromXML((Element)loginOptionsValuesLocal.clone());
-                    }
-                });
-            }
-        }
-
-        /**
-         *
-         * @return the parent Options that contains all the child LIMSOptions
-         */
-        public PasswordOptions getLimsOptions() {
-            if(loginOptions == null) {
-                createLoginOptions();
-            }
-            return (PasswordOptions)loginOptions.getChildOptions().get("lims");
-        }
-
-        public void updateNowThatWeHaveAPassword() throws ConnectionException{
-            loginOptions.updateOptions();
-            if(loginOptionsValues != null) {
-                loginOptions.valuesFromXML(loginOptionsValues);
-            }
-        }
-    }
-
-
 }
