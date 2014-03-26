@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.labbench;
+package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -12,6 +12,7 @@ import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.CSVUtilities;
+import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnectionOptions;

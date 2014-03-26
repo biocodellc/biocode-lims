@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 import jebl.util.ProgressListener;
 
 import java.sql.SQLException;

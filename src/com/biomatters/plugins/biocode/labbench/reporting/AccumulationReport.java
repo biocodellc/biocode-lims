@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.awt.*;
 import java.text.DateFormat;
 
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 import org.jfree.chart.*;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;

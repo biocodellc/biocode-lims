@@ -5,25 +5,31 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
+import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
+import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
+import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOptions;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
-import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.Cancelable;
+import jebl.util.CompositeProgressListener;
+import jebl.util.ProgressListener;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -103,6 +109,582 @@ public abstract class LIMSConnection {
     String serverUrn;
 
     private List<FailureReason> failureReasons = Collections.emptyList();
+
+    public static Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, LIMSConnection limsConnection, boolean isPass) throws DocumentOperationException {
+        Map<URN, String> toReturn = new HashMap<URN, String>(assemblyResults.size());
+
+        PreparedStatement statement = null;
+        PreparedStatement statement2 = null;
+        PreparedStatement updateReaction;
+        //noinspection ConstantConditions
+        try {
+            statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+                "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
+            updateReaction = limsConnection.createStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
+
+            statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
+            for (Map.Entry<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> resultEntry : assemblyResults.entrySet()) {
+                AddAssemblyResultsToLimsOperation.AssemblyResult result = resultEntry.getValue();
+                progress.beginSubtask();
+                if (progress.isCanceled()) {
+                    return Collections.emptyMap();
+                }
+                statement.setString(1, result.extractionId);
+                statement.setInt(2, result.workflowId);
+                statement.setString(3, isPass ? "passed" : "failed");
+                if (result.consensus == null) {
+                    statement.setNull(4, Types.LONGVARCHAR);
+                } else {
+                    statement.setString(4, result.consensus);
+                }
+                if (result.coverage == null) {
+                    statement.setNull(5, Types.FLOAT);
+                } else {
+                    statement.setDouble(5, result.coverage);
+                }
+                if (result.disagreements == null) {
+                    statement.setNull(6, Types.INTEGER);
+                } else {
+                    statement.setInt(6, result.disagreements);
+                }
+                if (result.trims[0] == null) {
+                    statement.setNull(7, Types.LONGVARCHAR);
+                } else {
+                    statement.setString(7, result.trims[0]);
+                }
+                if (result.trims[1] == null) {
+                    statement.setNull(8, Types.LONGVARCHAR);
+                } else {
+                    statement.setString(8, result.trims[1]);
+                }
+                statement.setInt(9, result.edits);
+                String params = result.assemblyOptionValues;
+                if(params != null) {
+                    statement.setString(10, params); //params
+                }
+                else {
+                    statement.setNull(10, Types.LONGVARCHAR); //params
+                }
+                statement.setNull(11, Types.INTEGER); //reference_seq_id
+                if(result.qualities != null) {
+                    List<Integer> qualitiesList = new ArrayList<Integer>();
+                    for(int i : result.qualities) {
+                        qualitiesList.add(i);
+                    }
+                    statement.setString(12, StringUtilities.join(",", qualitiesList));
+                }
+                else {
+                    statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
+                }
+                statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
+                statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
+
+                statement.setString(15, options.getNotes()); //notes
+
+
+                //technician, date, bin, ambiguities
+                statement.setString(16, options.getTechnician());
+
+                if(result.bin != null) {
+                    statement.setString(17, result.bin);
+                }
+                else {
+                    statement.setNull(17, Types.LONGVARCHAR);
+                }
+                if(result.ambiguities != null) {
+                    statement.setInt(18, result.ambiguities);
+                }
+                else {
+                    statement.setNull(18, Types.INTEGER);
+                }
+                statement.setString(19, result.editRecord);
+                FailureReason reason = options.getFailureReason();
+                if(reason == null) {
+                    statement.setObject(20, null);
+                } else {
+                    statement.setInt(20, reason.getId());
+                }
+                String failNotes = options.getFailureNotes();
+                if(failNotes == null) {
+                    statement.setObject(21, null);
+                } else {
+                    statement.setString(21, failNotes);
+                }
+
+                statement.execute();
+
+                ResultSet resultSet = statement2.executeQuery();
+                resultSet.next();
+                int sequenceId = resultSet.getInt(1);
+                updateReaction.setObject(1,sequenceId);
+                for(Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
+                    updateReaction.setObject(2, entry.getKey().getId());
+                    updateReaction.executeUpdate();
+                    for(AnnotatedPluginDocument doc : entry.getValue()) {
+                        doc.setFieldValue(SEQUENCE_ID, sequenceId);
+                        doc.save();
+                    }
+                }
+
+                BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
+                Options chromatogramExportOptions = null;
+                File tempFolder;
+                try {
+                    tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
+                    if (options.isAddChromatograms()) {
+                        if (chromatogramExportOptions == null) {
+                            chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
+                            chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
+                        }
+                        List<Trace> traces = new ArrayList<Trace>();
+                        for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
+                            chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
+                            File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
+                            try {
+                                traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument) chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                        entry.getKey().addSequences(traces);
+                    }
+                    entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+                }
+
+                Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
+                limsConnection.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, null);
+
+                toReturn.put(resultEntry.getKey(), ""+sequenceId);
+            }
+            return toReturn;
+        } catch (SQLException e) {
+            throw new DocumentOperationException("Failed to park as pass/fail in LIMS: " + e.getMessage(), e);
+        } finally {
+            try {
+                if(statement != null)
+                    statement.close();
+                if(statement2 != null)
+                    statement2.close();
+            } catch (SQLException e) {
+                // If we failed to close statements, we'll have to let the garbage collector handle it
+            }
+        }
+    }
+
+    public void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws IllegalStateException, SQLException {
+        PreparedStatement getLastId = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ?
+                createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
+        switch(type) {
+            case Extraction:
+                String insertSQL;
+                String updateSQL;
+                insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage, control) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=?, control=? WHERE id=?";
+
+                PreparedStatement insertStatement = createStatement(insertSQL);
+                PreparedStatement updateStatement = createStatement(updateSQL);
+                for (int i = 0; i < reactions.length; i++) {
+                    Reaction reaction = reactions[i];
+                    if(progress != null) {
+                        progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                    }
+                    if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
+                        PreparedStatement statement;
+                        boolean isUpdateNotInsert = reaction.getId() >= 0;
+                        if(isUpdateNotInsert) { //the reaction is already in the database
+                            statement = updateStatement;
+                            statement.setInt(19, reaction.getId());
+                        }
+                        else {
+                            statement = insertStatement;
+                        }
+                        ReactionOptions options = reaction.getOptions();
+                        statement.setString(1, options.getValueAsString("extractionMethod"));
+                        statement.setInt(2, (Integer) options.getValue("volume"));
+                        statement.setInt(3, (Integer) options.getValue("dilution"));
+                        statement.setString(4, options.getValueAsString("parentExtraction"));
+                        statement.setString(5, options.getValueAsString("sampleId"));
+                        statement.setString(6, options.getValueAsString("extractionId"));
+                        statement.setString(7, options.getValueAsString("extractionBarcode"));
+                        statement.setInt(8, reaction.getPlateId());
+                        statement.setInt(9, reaction.getPosition());
+                        statement.setString(10, options.getValueAsString("notes"));
+                        statement.setString(11, options.getValueAsString("previousPlate"));
+                        statement.setString(12, options.getValueAsString("previousWell"));
+                        statement.setDate(13, new java.sql.Date(((Date)options.getValue("date")).getTime()));
+                        statement.setString(14, options.getValueAsString("technician"));
+                        statement.setInt(15, "yes".equals(options.getValueAsString("concentrationStored")) ? 1 : 0);
+                        statement.setDouble(16, (Double)options.getValue("concentration"));
+                        GelImage image = reaction.getGelImage();
+                        statement.setBytes(17, image != null ? image.getImageBytes() : null);
+                        statement.setString(18, options.getValueAsString("control"));
+
+                        if(isUpdateNotInsert) {
+                            updateStatement.executeUpdate();
+                        } else {
+                            insertStatement.executeUpdate();
+                            ResultSet resultSet = getLastId.executeQuery();
+                            if(resultSet.next()) {
+                                reaction.setId(resultSet.getInt(1));
+                            }
+                            resultSet.close();
+                        }
+                    }
+                }
+                insertStatement.close();
+                updateStatement.close();
+                break;
+            case PCR:
+                insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=?, technician=?, gelimage=? WHERE id=?";
+                insertStatement = createStatement(insertSQL);
+                updateStatement = createStatement(updateSQL);
+                int saveCount = 0;
+                for (int i = 0; i < reactions.length; i++) {
+                    Reaction reaction = reactions[i];
+                    if(progress != null) {
+                        progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                    }
+                    if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
+                        PreparedStatement statement;
+                        if(reaction.getId() >= 0) { //the reaction is already in the database
+                            statement = updateStatement;
+                            statement.setInt(18, reaction.getId());
+                        }
+                        else {
+                            statement = insertStatement;
+                        }
+
+                        ReactionOptions options = reaction.getOptions();
+                        Options.Option option = options.getOption(PCROptions.PRIMER_OPTION_ID);
+                        if(!(option instanceof DocumentSelectionOption)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option.getClass().getCanonicalName());
+                        }
+                        List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption)option).getDocuments();
+                        if(primerOptionValue.size() == 0) {
+                            statement.setString(1, "None");
+                            statement.setString(2, "");
+                        }
+                        else {
+                            AnnotatedPluginDocument selectedDoc = primerOptionValue.get(0);
+                            NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                            statement.setString(1, selectedDoc.getName());
+                            statement.setString(2, sequence.getSequenceString());
+                        }
+                        //statement.setInt(3, (Integer)options.getValue("prAmount"));
+
+                        Options.Option option2 = options.getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
+                        if(!(option2 instanceof DocumentSelectionOption)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option2.getClass().getCanonicalName());
+                        }
+                        List<AnnotatedPluginDocument> primerOptionValue2 = ((DocumentSelectionOption)option2).getDocuments();
+                        if(primerOptionValue2.size() == 0) {
+                            statement.setString(13, "None");
+                            statement.setString(14, "");
+                        }
+                        else {
+                            AnnotatedPluginDocument selectedDoc = primerOptionValue2.get(0);
+                            NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                            statement.setString(13, selectedDoc.getName());
+                            statement.setString(14, sequence.getSequenceString());
+                        }
+                        statement.setDate(15, new java.sql.Date(((Date)options.getValue("date")).getTime()));
+                        statement.setString(16, options.getValueAsString("technician"));
+//                        statement.setInt(14, (Integer)options.getValue("revPrAmount"));
+//                        if (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0) {
+//                            throw new SQLException("The reaction " + reaction.getId() + " does not have a workflow set.");
+//                        }
+                        //statement.setInt(4, reaction.getWorkflow() != null ? reaction.getWorkflow().getId() : 0);
+                        if(reaction.getWorkflow() != null) {
+                            statement.setInt(3, reaction.getWorkflow().getId());
+                        }
+                        else {
+                            statement.setObject(3, null);
+                        }
+                        statement.setInt(4, reaction.getPlateId());
+                        statement.setInt(5, reaction.getPosition());
+                        int cocktailId;
+                        Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
+                        try {
+                            cocktailId = Integer.parseInt(cocktailValue.getName());
+                        }
+                        catch(NumberFormatException ex) {
+                            throw new SQLException("The reaction " + reaction.getId() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
+                        }
+                        if(cocktailId < 0) {
+                            throw new SQLException("The reaction " + reaction.getPosition() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                        }
+                        statement.setInt(6, cocktailId);
+                        statement.setString(7, ((Options.OptionValue)options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
+                        if(reaction.getThermocycle() != null) {
+                            statement.setInt(8, reaction.getThermocycle().getId());
+                        }
+                        else {
+                            statement.setInt(8, -1);
+                        }
+                        statement.setInt(9, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
+                        statement.setString(10, options.getValueAsString("cleanupMethod"));
+                        statement.setString(11, reaction.getExtractionId());
+                        System.out.println(reaction.getExtractionId());
+                        statement.setString(12, options.getValueAsString("notes"));
+                        GelImage image = reaction.getGelImage();
+                        statement.setBytes(17, image != null ? image.getImageBytes() : null);
+                        statement.execute();
+
+                        if(reaction.getId() < 0) {
+                            ResultSet resultSet = getLastId.executeQuery();
+                            if(resultSet.next()) {
+                                reaction.setId(resultSet.getInt(1));
+                            }
+                            resultSet.close();
+                        }
+
+                        saveCount++;
+                    }
+                }
+                insertStatement.close();
+                updateStatement.close();
+                System.out.println(saveCount+" reactions saved...");
+                break;
+            case CycleSequencing:
+                insertSQL = "INSERT INTO cyclesequencing (primerName, primerSequence, direction, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                updateSQL = "UPDATE cyclesequencing SET primerName=?, primerSequence=?, direction=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, date=?, technician=?, gelimage=? WHERE id=?";
+                String clearTracesSQL = "DELETE FROM traces WHERE id=?";
+                String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
+
+                insertStatement = createStatement(insertSQL);
+                updateStatement = createStatement(updateSQL);
+                PreparedStatement clearTracesStatement = createStatement(clearTracesSQL);
+                PreparedStatement insertTracesStatement = createStatement(insertTracesSQL);
+                for (int i = 0; i < reactions.length; i++) {
+                    Reaction reaction = reactions[i];
+                    if(progress != null) {
+                        progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                    }
+                    if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
+
+                        PreparedStatement statement;
+                        if(reaction.getId() >= 0) { //the reaction is already in the database
+                            statement = updateStatement;
+                            statement.setInt(17, reaction.getId());
+                        }
+                        else {
+                            statement = insertStatement;
+                        }
+
+                        ReactionOptions options = reaction.getOptions();
+                        Options.Option option = options.getOption(PCROptions.PRIMER_OPTION_ID);
+                        if(!(option instanceof DocumentSelectionOption)) {
+                            throw new SQLException("Could not save reactions - expected primer type "+DocumentSelectionOption.class.getCanonicalName()+" but found a "+option.getClass().getCanonicalName());
+                        }
+                        List<AnnotatedPluginDocument> primerOptionValue = ((DocumentSelectionOption)option).getDocuments();
+                        if(primerOptionValue.size() == 0) {
+                            statement.setString(1, "None");
+                            statement.setString(2, "");
+                        }
+                        else {
+                            AnnotatedPluginDocument selectedDoc = primerOptionValue.get(0);
+                            NucleotideSequenceDocument sequence = (NucleotideSequenceDocument)selectedDoc.getDocumentOrThrow(SQLException.class);
+                            statement.setString(1, selectedDoc.getName());
+                            statement.setString(2, sequence.getSequenceString());
+                        }
+                        statement.setString(3, options.getValueAsString("direction"));
+                        //statement.setInt(3, (Integer)options.getValue("prAmount"));
+                        if(reaction.getWorkflow() != null) {
+                            statement.setInt(4, reaction.getWorkflow().getId());
+                        }
+                        else {
+                            statement.setObject(4, null);
+                        }
+                        statement.setInt(5, reaction.getPlateId());
+                        statement.setInt(6, reaction.getPosition());
+                        int cocktailId;
+                        Options.OptionValue cocktailValue = (Options.OptionValue) options.getValue("cocktail");
+                        try {
+                            cocktailId = Integer.parseInt(cocktailValue.getName());
+                        }
+                        catch(NumberFormatException ex) {
+                            throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+ cocktailValue.getLabel()+", "+cocktailValue.getName()+").");
+                        }
+                        if(cocktailId < 0) {
+                            throw new SQLException("The reaction " + reaction.getLocationString() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
+                        }
+                        statement.setInt(7, cocktailId);
+                        statement.setString(8, ((Options.OptionValue)options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
+                        if(reaction.getThermocycle() != null) {
+                            statement.setInt(9, reaction.getThermocycle().getId());
+                        }
+                        else {
+                            statement.setInt(9, -1);
+                        }
+                        statement.setInt(10, ((Options.OptionValue)options.getValue("cleanupPerformed")).getName().equals("true") ? 1 : 0);
+                        statement.setString(11, options.getValueAsString("cleanupMethod"));
+                        statement.setString(12, reaction.getExtractionId());
+                        statement.setString(13, options.getValueAsString("notes"));
+                        statement.setDate(14, new java.sql.Date(((Date)options.getValue("date")).getTime()));
+                        statement.setString(15, options.getValueAsString("technician"));
+                        GelImage image = reaction.getGelImage();
+                        statement.setBytes(16, image != null ? image.getImageBytes() : null);
+
+//                        List<NucleotideSequenceDocument> sequences = ((CycleSequencingOptions)options).getTraces();
+//                        String sequenceString = "";
+//                        if(sequences != null && sequences.size() > 0) {
+//                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+//                            Element element = XMLSerializer.classToXML("sequences", sequenceList);
+//                            XMLOutputter out = new XMLOutputter(Format.getCompactFormat());
+//                            StringWriter writer = new StringWriter();
+//                            try {
+//                                out.output(element, writer);
+//                                sequenceString = writer.toString();
+//                            } catch (IOException e) {
+//                                throw new SQLException("Could not write the sequences to the database: "+e.getMessage());
+//                            }
+//                        }
+//
+//                        statement.setString(14, sequenceString);
+                        statement.execute();
+                        if(reaction.getId() < 0) {
+                            ResultSet resultSet = getLastId.executeQuery();
+                            if(resultSet.next()) {
+                                reaction.setId(resultSet.getInt(1));
+                            }
+                            resultSet.close();
+                        }
+
+                        if(((CycleSequencingReaction)reaction).getTraces() != null) {
+                            int reactionId = reaction.getId();
+                            for(Integer traceId : ((CycleSequencingReaction)reaction).getTracesToRemoveOnSave()) {
+                                if(!BiocodeService.getInstance().deleteAllowed("traces")) {
+                                    throw new SQLException("It appears that you do not have permission to delete traces.  Please contact your System Administrator for assistance");
+                                }
+                                clearTracesStatement.setInt(1, traceId);
+                                clearTracesStatement.execute();
+                            }
+                            ((CycleSequencingReaction)reaction).clearTracesToRemoveOnSave();
+                            if(reactionId < 0) {
+                                reactionId = getLastInsertId();
+                            }
+
+                            List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
+                            if(traces != null) {
+                                for(Trace trace : traces) {
+                                    if(trace.getId() >= 0) {
+                                        continue; //already added these...
+                                    }
+                                    ReactionUtilities.MemoryFile file = trace.getFile();
+                                    if(file != null) {
+                                        insertTracesStatement.setInt(1, reactionId);
+                                        insertTracesStatement.setString(2, file.getName());
+                                        insertTracesStatement.setBytes(3, file.getData());
+                                        insertTracesStatement.execute();
+                                        trace.setId(getLastInsertId());
+                                    }
+                                }
+                            }
+                        }
+                        FailureReason reason = FailureReason.getReasonFromOptions(options);
+                        if(reason != null) {
+                            // Requires schema 10.  This won't work for reactions that don't have an assembly.
+                            PreparedStatement update = createStatement(
+                                    "UPDATE assembly SET failure_reason = ? WHERE id IN (" +
+                                        "SELECT assembly FROM sequencing_result WHERE reaction = ?" +
+                                    ")");
+                            update.setInt(1, reason.getId());
+                            update.setInt(2, reaction.getId());
+                            update.executeUpdate();
+                            update.close();
+                        }
+                    }
+                }
+                insertStatement.close();
+                updateStatement.close();
+                insertTracesStatement.close();
+                break;
+        }
+    }
+
+    public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws SQLException, BadDataException{
+        //check the vaidity of the plate.
+        isPlateValid(plate);
+
+        beginTransaction();
+        try {
+            //update the plate
+            PreparedStatement statement = plate.toSQL(this);
+            statement.execute();
+            statement.close();
+            if(plate.getId() < 0) {
+                PreparedStatement statement1 = isLocal() ? createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
+                ResultSet resultSet = statement1.executeQuery();
+                resultSet.next();
+                int plateId = resultSet.getInt(1);
+                plate.setId(plateId);
+                statement1.close();
+            }
+
+            //replace the images
+            if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
+                if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
+                    throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
+                }
+                PreparedStatement deleteImagesStatement = createStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
+                deleteImagesStatement.execute();
+                for(GelImage image : plate.getImages()) {
+                    PreparedStatement statement1 = image.toSql(this);
+                    statement1.execute();
+                    statement1.close();
+                }
+                deleteImagesStatement.close();
+            }
+
+            saveReactions(plate.getReactions(), plate.getReactionType(), progress);
+
+            //update the last-modified on the workflows associated with this plate...
+            String sql;
+            if(plate.getReactionType() == Reaction.Type.Extraction) {
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
+            }
+            else if(plate.getReactionType() == Reaction.Type.PCR){
+                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
+            }
+            else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
+                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
+            }
+            else {
+                throw new SQLException("There is no reaction type "+plate.getReactionType());
+            }
+            Statement workflowUpdateStatement = createStatement();
+            workflowUpdateStatement.executeUpdate(sql);
+            workflowUpdateStatement.close();
+        } catch(SQLException e) {
+            rollback();
+            throw e;
+        } finally {
+            endTransaction();
+        }
+    }
+
+    public void isPlateValid(Plate plate) throws BadDataException, SQLException {
+        if(plate.getName() == null || plate.getName().length() == 0) {
+            throw new BadDataException("Plates cannot have empty names");
+        }
+        if(plate.getId() < 0) {
+            PreparedStatement plateCheckStatement = createStatement("SELECT name FROM plate WHERE name=?");
+            plateCheckStatement.setString(1, plate.getName());
+            if(plateCheckStatement.executeQuery().next()) {
+                throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
+            }
+            plateCheckStatement.close();
+        }
+        if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
+            throw new BadDataException("The plate has no thermocycle set");
+        }
+    }
 
     public List<FailureReason> getPossibleFailureReasons() {
         return failureReasons;

@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.labbench.reporting;
+package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -17,6 +17,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.plugins.biocode.labbench.reporting.PrimerSet;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import jebl.util.ProgressListener;
@@ -35,7 +36,7 @@ public class FimsToLims {
 
     private FIMSConnection fims;
     private LIMSConnection lims;
-    public static final String FIMS_DEFINITION_TABLE = "fims_definition";
+    private static final String FIMS_DEFINITION_TABLE = "fims_definition";
     public static final String FIMS_VALUES_TABLE = "fims_values";
     public static final String FIMS_DATE_TABLE = "fims_date";
     private List<Options.OptionValue> lociOptionValues;
