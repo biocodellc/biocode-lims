@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 import org.jdom.input.SAXBuilder;
 import org.jdom.JDOMException;
 import org.jdom.Element;

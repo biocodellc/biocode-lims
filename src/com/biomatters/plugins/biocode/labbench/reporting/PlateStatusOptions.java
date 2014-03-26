@@ -1,8 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 
-import java.util.Collections;
 import java.util.List;
 
 /**

@@ -18,6 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.ArrayList;
 import java.awt.*;
 
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;
 import org.jdom.Element;

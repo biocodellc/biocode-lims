@@ -16,7 +16,6 @@ import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
@@ -1684,7 +1683,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public void saveExtractions(ProgressListener progress, Plate plate, LIMSConnection limsConnection) throws SQLException, BadDataException{
         limsConnection.beginTransaction();
         try {
-            isPlateValid(plate, limsConnection);
+            limsConnection.isPlateValid(plate);
 
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
             for(Reaction reaction : plate.getReactions()) {
@@ -1702,7 +1701,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 throw new BadDataException(error);
             }
 
-            createOrUpdatePlate(plate, limsConnection, progress);
+            limsConnection.createOrUpdatePlate(plate, progress);
 
         } finally {
             limsConnection.endTransaction();
@@ -2019,88 +2018,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 progress.setMessage("Creating the plate");
             }
             //we need to create the plate
-            createOrUpdatePlate(plate, limsConnection, progress);
+            limsConnection.createOrUpdatePlate(plate, progress);
         } finally {
             limsConnection.endTransaction();
-        }
-    }
-
-    private static void createOrUpdatePlate(Plate plate, LIMSConnection limsConnection, ProgressListener progress) throws SQLException, BadDataException{
-
-        //check the vaidity of the plate.
-        isPlateValid(plate, limsConnection);
-
-        limsConnection.beginTransaction();
-        try {
-            //update the plate
-            PreparedStatement statement = plate.toSQL(limsConnection);
-            statement.execute();
-            statement.close();
-            if(plate.getId() < 0) {
-                PreparedStatement statement1 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
-                ResultSet resultSet = statement1.executeQuery();
-                resultSet.next();
-                int plateId = resultSet.getInt(1);
-                plate.setId(plateId);
-                statement1.close();
-            }
-
-            //replace the images
-            if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
-                if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
-                    throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
-                }
-                PreparedStatement deleteImagesStatement = limsConnection.createStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
-                deleteImagesStatement.execute();
-                for(GelImage image : plate.getImages()) {
-                    PreparedStatement statement1 = image.toSql(limsConnection);
-                    statement1.execute();
-                    statement1.close();
-                }
-                deleteImagesStatement.close();
-            }
-
-            Reaction.saveReactions(plate.getReactions(), plate.getReactionType(), limsConnection, progress);
-
-            //update the last-modified on the workflows associated with this plate...
-            String sql;
-            if(plate.getReactionType() == Reaction.Type.Extraction) {
-                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
-            }
-            else if(plate.getReactionType() == Reaction.Type.PCR){
-                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
-            }
-            else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
-                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
-            }
-            else {
-                throw new SQLException("There is no reaction type "+plate.getReactionType());
-            }
-            Statement workflowUpdateStatement = limsConnection.createStatement();
-            workflowUpdateStatement.executeUpdate(sql);
-            workflowUpdateStatement.close();
-        } catch(SQLException e) {
-            limsConnection.rollback();
-            throw e;
-        } finally {
-            limsConnection.endTransaction();
-        }
-    }
-
-    private static void isPlateValid(Plate plate, LIMSConnection connection) throws BadDataException, SQLException {
-        if(plate.getName() == null || plate.getName().length() == 0) {
-            throw new BadDataException("Plates cannot have empty names");
-        }
-        if(plate.getId() < 0) {
-            PreparedStatement plateCheckStatement = connection.createStatement("SELECT name FROM plate WHERE name=?");
-            plateCheckStatement.setString(1, plate.getName());
-            if(plateCheckStatement.executeQuery().next()) {
-                throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
-            }
-            plateCheckStatement.close();
-        }
-        if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
-            throw new BadDataException("The plate has no thermocycle set");
         }
     }
 
