@@ -159,7 +159,8 @@ public class PlateBulkEditor {
         swapAction = new SwapAction(editors);
         toolbar.addAction(swapAction);
         List<GeneiousAction> toolsActions = new ArrayList<GeneiousAction>();
-        if(plate.getReactionType() == Reaction.Type.Extraction && (plate.getPlateSize() != null) && BiocodeService.getInstance().getActiveFIMSConnection().storesPlateAndWellInformation()) {
+        boolean compatiblePlate = plate.getPlateSize() != null || plate.getReactions().length < 96;
+        if(plate.getReactionType() == Reaction.Type.Extraction && compatiblePlate && BiocodeService.getInstance().getActiveFIMSConnection().storesPlateAndWellInformation()) {
             archivePlateAction = new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", IconUtilities.getIcons("database16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
