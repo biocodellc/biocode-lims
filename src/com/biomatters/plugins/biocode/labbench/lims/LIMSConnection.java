@@ -2507,5 +2507,138 @@ public abstract class LIMSConnection {
         }
     }
 
+    public Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws SQLException {
+        progress.setMessage("deleting workflows");
+        if(plate.getReactionType() != Reaction.Type.Extraction) {
+            throw new IllegalArgumentException("You may only delete workflows from an extraction plate!");
+        }
 
+        ArrayList<Integer> workflows = new ArrayList<Integer>();
+        ArrayList<Integer> ids = new ArrayList<Integer>();
+
+
+        boolean first = true;
+        StringBuilder builder = new StringBuilder();
+        int reactionCount = 0;
+        Reaction[] reactions = plate.getReactions();
+        for(Reaction r : reactions) { //get the extraction id's and set up the query to get the workflow id's
+            if(r.getId() >= 0) {
+                ids.add(r.getId());
+                if(!first) {
+                    builder.append(" OR ");
+                }
+                //noinspection StringConcatenationInsideStringBufferAppend
+                builder.append("extractionId="+r.getId());
+                first = false;
+                reactionCount++;
+            }
+        }
+        if(reactionCount == 0) { //the plate is empty
+            return Collections.emptySet();
+        }
+
+        String getWorkflowSQL = "SELECT id FROM workflow WHERE "+builder.toString();
+        System.out.println(getWorkflowSQL);
+
+        Statement statement = createStatement();
+
+
+        ResultSet resultSet = statement.executeQuery(getWorkflowSQL);
+        while(resultSet.next()) {
+            workflows.add(resultSet.getInt("workflow.id"));
+        }
+
+        Set<Integer> plates = new HashSet<Integer>();
+
+        plates.addAll(deleteRecords("pcr", "workflow", workflows));
+        //plates.addAll(limsConnection.deleteRecords("pcr", "extractionId", extractionNames));
+        plates.addAll(deleteRecords("cyclesequencing", "workflow", workflows));
+       // plates.addAll(limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames));
+        deleteRecords("assembly", "workflow", workflows);
+        deleteRecords("workflow", "id", workflows);
+        plates.addAll(deleteRecords("extraction", "id", ids));
+
+        return plates;
+    }
+
+    public void testConnection() throws DatabaseServiceException {
+        try {
+            createStatement().execute(isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    /**
+     * @param plateIds the ids of the plates to check
+     * returns all the empty plates in the database...
+     * @return all the empty plates in the database...
+     * @throws SQLException if the database cannot be queried for some reason
+     */
+    public List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws SQLException{
+        if(plateIds == null || plateIds.size() == 0) {
+            return Collections.emptyList();
+        }
+
+        String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN (select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
+
+
+        List<String> idMatches = new ArrayList<String>();
+        for(Integer num : plateIds) {
+            idMatches.add("id="+num);
+        }
+
+        String termString = StringUtilities.join(" OR ", idMatches);
+        if(termString.length() > 0) {
+            sql += " AND ("+termString+")";
+        }
+
+        ResultSet resultSet = createStatement().executeQuery(sql);
+        List<Plate> result = new ArrayList<Plate>();
+        while(resultSet.next()) {
+            Plate plate = new Plate(resultSet);
+            plate.initialiseReactions();
+            result.add(plate);
+        }
+        return result;
+    }
+
+    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws SQLException{
+        if(cocktail.getId() < 0) {
+            return Collections.emptyList();
+        }
+        String tableName;
+        switch(cocktail.getReactionType()) {
+            case PCR:
+                tableName = "pcr";
+                break;
+            case CycleSequencing:
+                tableName = "cyclesequencing";
+                break;
+            default:
+                throw new RuntimeException(cocktail.getReactionType()+" reactions cannot have a cocktail");
+        }
+        String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktail.getId();
+        ResultSet resultSet = createStatement().executeQuery(sql);
+
+        Set<String> plateNames = new LinkedHashSet<String>();
+        while(resultSet.next()) {
+            plateNames.add(resultSet.getString(1));
+        }
+        return plateNames;
+    }
+
+    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws SQLException {
+        if(thermocycle.getId() < 0) {
+            return Collections.emptyList();
+        }
+        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycle.getId();
+        ResultSet resultSet = createStatement().executeQuery(sql);
+
+        List<String> plateNames = new ArrayList<String>();
+        while(resultSet.next()) {
+            plateNames.add(resultSet.getString(1));
+        }
+        return plateNames;
+    }
 }

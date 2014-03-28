@@ -716,8 +716,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 while(isLoggedIn() && limsConnection != null) {
                     if(activeCallbacks.isEmpty()) {
                         try {
-                            limsConnection.createStatement().execute(limsConnection.isLocal() ? "SELECT * FROM databaseversion" : "SELECT 1"); //because JDBC doesn't have a better way of checking whether a connection is enabled
-                        } catch (SQLException e) {
+                            limsConnection.testConnection();
+                        } catch (DatabaseServiceException e) {
                             if(!e.getMessage().contains("Streaming result set")) {  //last ditch attempt to stop the system logging users out incorrectly - we should have caught all cases of this because the operations creating streaming result sets should have registered their callbacks/progress listeners with the service
                                 e.printStackTrace();
                                 if(isLoggedIn()) {
@@ -731,6 +731,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         };
     }
+
+
 
     @Override
     public void addDatabaseServiceListener(DatabaseServiceListener listener) {
@@ -1034,7 +1036,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
                 PreparedStatement statement = limsConnection.createStatement(sql);
                 if(cocktail.getId() >= 0) {
-                    if(getPlatesUsingCocktail(cocktail).size() > 0) {
+                    if(limsConnection.getPlatesUsingCocktail(cocktail).size() > 0) {
                         throw new TransactionException("The cocktail "+cocktail.getName()+" is in use by reactions in your database.  Only unused cocktails can be removed.");
                     }
                     statement.setInt(1, cocktail.getId());
@@ -1046,34 +1048,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             throw new TransactionException("Could not delete cocktails: "+e.getMessage(), e);
         }
         buildCaches();
-    }
-
-    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws SQLException{
-        if(limsConnection == null) {
-            throw new SQLException("You are not logged in");
-        }
-        if(cocktail.getId() < 0) {
-            return Collections.emptyList();
-        }
-        String tableName;
-        switch(cocktail.getReactionType()) {
-            case PCR:
-                tableName = "pcr";
-                break;
-            case CycleSequencing:
-                tableName = "cyclesequencing";
-                break;
-            default:
-                throw new RuntimeException(cocktail.getReactionType()+" reactions cannot have a cocktail");
-        }
-        String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktail.getId();
-        ResultSet resultSet = BiocodeService.getInstance().getActiveLIMSConnection().createStatement().executeQuery(sql);
-
-        Set<String> plateNames = new LinkedHashSet<String>();
-        while(resultSet.next()) {
-            plateNames.add(resultSet.getString(1));
-        }
-        return plateNames;
     }
 
     private List<Thermocycle> PCRThermocycles = null;
@@ -1453,7 +1427,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             final PreparedStatement statement4 = getActiveLIMSConnection().createStatement(sql4);
             for(Thermocycle thermocycle : cycles) {
                 if(thermocycle.getId() >= 0) {
-                    if(getPlatesUsingThermocycle(thermocycle).size() > 0) {
+                    if(limsConnection.getPlatesUsingThermocycle(thermocycle).size() > 0) {
                         throw new SQLException("The thermocycle "+thermocycle.getName()+" is being used by plates in your database.  Only unused thermocycles can be removed");
                     }
                     for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
@@ -1500,20 +1474,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         }
         buildCaches();
-    }
-
-    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws SQLException {
-        if(thermocycle.getId() < 0) {
-            return Collections.emptyList();
-        }
-        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycle.getId();
-        ResultSet resultSet = limsConnection.createStatement().executeQuery(sql);
-
-        List<String> plateNames = new ArrayList<String>();
-        while(resultSet.next()) {
-            plateNames.add(resultSet.getString(1));
-        }
-        return plateNames;
     }
 
     /**
@@ -1716,7 +1676,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         //delete the reactions...
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            plateIds.addAll(deleteWorkflows(progress, plate));
+            plateIds.addAll(limsConnection.deleteWorkflows(progress, plate));
         }
         else {
             deleteReactions(progress, plate);
@@ -1733,7 +1693,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         limsConnection.deleteRecords("plate", "id", Arrays.asList(plate.getId()));
 
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            List<Plate> emptyPlates = getEmptyPlates(plateIds);
+            List<Plate> emptyPlates = limsConnection.getEmptyPlates(plateIds);
             if(emptyPlates.size() > 0) {
                 StringBuilder message = new StringBuilder("Geneious has found the following empty plates in the database.\n  Do you want to delete them as well?\n");
                 for(Plate emptyPlate : emptyPlates) {
@@ -1752,60 +1712,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         plate.setDeleted(true);
 
-    }
-
-    private Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws SQLException {
-        progress.setMessage("deleting workflows");
-        if(plate.getReactionType() != Reaction.Type.Extraction) {
-            throw new IllegalArgumentException("You may only delete workflows from an extraction plate!");
-        }
-
-        ArrayList<Integer> workflows = new ArrayList<Integer>();
-        ArrayList<Integer> ids = new ArrayList<Integer>();
-
-
-        boolean first = true;
-        StringBuilder builder = new StringBuilder();
-        int reactionCount = 0;
-        Reaction[] reactions = plate.getReactions();
-        for(Reaction r : reactions) { //get the extraction id's and set up the query to get the workflow id's
-            if(r.getId() >= 0) {
-                ids.add(r.getId());
-                if(!first) {
-                    builder.append(" OR ");
-                }
-                //noinspection StringConcatenationInsideStringBufferAppend
-                builder.append("extractionId="+r.getId());
-                first = false;
-                reactionCount++;
-            }
-        }
-        if(reactionCount == 0) { //the plate is empty
-            return Collections.emptySet();
-        }
-
-        String getWorkflowSQL = "SELECT id FROM workflow WHERE "+builder.toString();
-        System.out.println(getWorkflowSQL);
-
-        Statement statement = limsConnection.createStatement();
-
-
-        ResultSet resultSet = statement.executeQuery(getWorkflowSQL);
-        while(resultSet.next()) {
-            workflows.add(resultSet.getInt("workflow.id"));
-        }
-
-        Set<Integer> plates = new HashSet<Integer>();
-
-        plates.addAll(limsConnection.deleteRecords("pcr", "workflow", workflows));
-        //plates.addAll(limsConnection.deleteRecords("pcr", "extractionId", extractionNames));
-        plates.addAll(limsConnection.deleteRecords("cyclesequencing", "workflow", workflows));
-       // plates.addAll(limsConnection.deleteRecords("cyclesequencing", "extractionId", extractionNames));
-        limsConnection.deleteRecords("assembly", "workflow", workflows);
-        limsConnection.deleteRecords("workflow", "id", workflows);
-        plates.addAll(limsConnection.deleteRecords("extraction", "id", ids));
-
-        return plates;
     }
 
     private void deleteReactions(ProgressListener progress, Plate plate) throws SQLException {
@@ -1882,40 +1788,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 connectionManager = new ConnectionManager();
             }
         }
-    }
-
-    /**
-     * @param plateIds the ids of the plates to check
-     * returns all the empty plates in the database...
-     * @return all the empty plates in the database...
-     * @throws SQLException if the database cannot be queried for some reason
-     */
-    private List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws SQLException{
-        if(plateIds == null || plateIds.size() == 0) {
-            return Collections.emptyList();
-        }
-
-        String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN (select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
-
-
-        List<String> idMatches = new ArrayList<String>();
-        for(Integer num : plateIds) {
-            idMatches.add("id="+num);
-        }
-
-        String termString = StringUtilities.join(" OR ", idMatches);
-        if(termString.length() > 0) {
-            sql += " AND ("+termString+")";
-        }
-
-        ResultSet resultSet = limsConnection.createStatement().executeQuery(sql);
-        List<Plate> result = new ArrayList<Plate>();
-        while(resultSet.next()) {
-            Plate plate = new Plate(resultSet);
-            plate.initialiseReactions();
-            result.add(plate);
-        }
-        return result;
     }
 
     public void saveReactions(ProgressListener progress, Plate plate) throws SQLException, BadDataException {
