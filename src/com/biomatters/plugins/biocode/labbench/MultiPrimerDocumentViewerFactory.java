@@ -358,7 +358,7 @@ public class MultiPrimerDocumentViewerFactory extends TableDocumentViewerFactory
                     }
                     return workflowDocument.getFimsSample().getFimsAttributeValue(fimsFields.get(columnIndex-colStart).getCode());
                 }
-                return tableValues[rowIndex][columnIndex-2-fimsFields.size()];
+                return tableValues[rowIndex][columnIndex-colStart-fimsFields.size()];
             }
 
             public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
