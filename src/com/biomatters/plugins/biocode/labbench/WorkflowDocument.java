@@ -511,7 +511,7 @@ public class WorkflowDocument extends MuitiPartDocument {
 
         public void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws SQLException{
             reaction.areReactionsValid(Arrays.asList(reaction), null, true);
-            LIMSConnection.saveReactions(new Reaction[]{reaction}, reaction.getType(), connection, progress);
+            connection.saveReactions(new Reaction[]{reaction}, reaction.getType(), progress);
             changes = false;
         }
     }

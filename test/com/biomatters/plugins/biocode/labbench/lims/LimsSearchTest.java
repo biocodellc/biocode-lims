@@ -232,7 +232,7 @@ public class LimsSearchTest extends Assert {
             String TECH_FIELD = "technician";
             p.getReactions()[0].setWorkflow(null);
             p.getReactions()[0].getOptions().setValue(TECH_FIELD, tech);
-            LIMSConnection.saveReactions(p.getReactions(), type, service.getActiveLIMSConnection(), ProgressListener.EMPTY);
+            service.getActiveLIMSConnection().saveReactions(p.getReactions(), type, ProgressListener.EMPTY);
 
             // Check it is still part of the plate
             results = service.retrieve(plateName);
