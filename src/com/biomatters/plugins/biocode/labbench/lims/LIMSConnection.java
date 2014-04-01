@@ -61,9 +61,9 @@ public abstract class LIMSConnection {
      */
     public static final String VERSION_PROPERTY = "fullDatabaseVersion";
 
-    Driver driver;
-    Connection connection;
-    Connection connection2;
+    protected Driver driver;
+    protected Connection connection;
+    protected Connection connection2;
     private PasswordOptions limsOptions;
 
     public static final DocumentField DATE_FIELD = new DocumentField("Last Modified (LIMS)", "", "date", Date.class, true, false);
