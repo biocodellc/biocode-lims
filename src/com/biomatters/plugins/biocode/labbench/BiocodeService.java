@@ -779,15 +779,19 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 toSearchFimsWith = fimsQueries.get(0);
             }
 
-            try {
-                callback.setMessage("Searching FIMS");
-                if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
-                    return;
-                }
+            if(toSearchFimsWith == null) {
+                try {
+                    callback.setMessage("Searching FIMS");
+                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                        return;
+                    }
 
-                tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith);
-            } catch (ConnectionException e) {
-                throw new DatabaseServiceException(e.getMessage(), false);
+                    tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith);
+                } catch (ConnectionException e) {
+                    throw new DatabaseServiceException(e.getMessage(), false);
+                }
+            } else {
+                tissueIdsMatchingFimsQuery = null;
             }
 
             if(callback.isCanceled()) {
@@ -835,7 +839,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     }
                 }
 
-                if(isDownloadTissues(query)) {
+                if(isDownloadTissues(query) && tissueIdsMatchingFimsQuery != null) {
                     boolean downloadAllSamplesFromFimsQuery = false;
                     if(query instanceof BasicSearchQuery || areBrowseQueries(Collections.singletonList(query))) {
                         downloadAllSamplesFromFimsQuery = true;
