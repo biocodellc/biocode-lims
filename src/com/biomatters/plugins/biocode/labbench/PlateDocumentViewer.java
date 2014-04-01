@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -119,7 +120,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                                         reloadViewer();
                                     }
                                 });
-                            } catch (SQLException e1) {
+                            } catch (DatabaseServiceException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());
                                 Runnable runnable = new Runnable() {
                                     public void run() {

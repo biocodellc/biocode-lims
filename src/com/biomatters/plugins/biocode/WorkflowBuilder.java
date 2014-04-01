@@ -269,7 +269,9 @@ public class WorkflowBuilder extends DocumentOperation {
             //==================(1) EXTRACTION PLATE====================================================================
             composite.beginSubtask("Creating extraction plate");
             String extractionPlateName = plateName + "_X1";
-            List<PlateDocument> existing = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, extractionPlateName), Collections.<WorkflowDocument>emptyList(), null);
+            List<PlateDocument> existing = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
+                    Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
+                            BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null, false).getPlates();
 
             Plate extractionPlate;
             if(existing.isEmpty()) {
@@ -318,7 +320,10 @@ public class WorkflowBuilder extends DocumentOperation {
             }
 
             BiocodeService.getInstance().saveExtractions(progressListener, extractionPlate);
-            List<PlateDocument> plates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, extractionPlateName), Collections.<WorkflowDocument>emptyList(), null);
+            List<PlateDocument> plates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
+                    Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
+            BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                    null, null, false).getPlates();
             if(plates.size() != 1) {
                 throw new DocumentOperationException("Could not find the plate "+extractionPlateName);
             }
@@ -525,7 +530,7 @@ public class WorkflowBuilder extends DocumentOperation {
         }
     }
 
-    private String createCycleSequencingPlate(Plate pcrPlateToCopyFrom, String plateName, boolean forwardNotReverse, String locus, String tech, String primerUrn, ProgressListener progressListener) throws DocumentOperationException, SQLException, BadDataException {
+    private String createCycleSequencingPlate(Plate pcrPlateToCopyFrom, String plateName, boolean forwardNotReverse, String locus, String tech, String primerUrn, ProgressListener progressListener) throws DocumentOperationException, DatabaseServiceException, BadDataException {
         System.out.println("Creating Cycle Sequencing Plate");
         Plate csPlate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
         NewPlateDocumentOperation.copyPlateOfSameSize(pcrPlateToCopyFrom, csPlate, false);

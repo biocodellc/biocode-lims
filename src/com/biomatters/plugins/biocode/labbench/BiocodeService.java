@@ -142,14 +142,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void deleteSequences(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
-        try {
-            if(!deleteAllowed("assembly")) {
-                throw new DatabaseServiceException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance", false);
-            }
-        } catch (SQLException e) {
-            //this might not be a real error so I'm going to let it continue...
-            e.printStackTrace();
-            assert false : e.getMessage();
+        if(!deleteAllowed("assembly")) {
+            throw new DatabaseServiceException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance", false);
         }
 
         List<Integer> sequencesToDelete = new ArrayList<Integer>();
@@ -200,14 +194,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void deletePlates(List<AnnotatedPluginDocument> documents) throws DatabaseServiceException {
-        try {
-            if(!deleteAllowed("plate")) {
-                throw new DatabaseServiceException("It appears that you do not have permission to delete plate records.  Please contact your System Administrator for assistance", false);
-            }
-        } catch (SQLException e) {
-            //this might not be a real error so I'm going to let it continue...
-            e.printStackTrace();
-            assert false : e.getMessage();
+        if(!deleteAllowed("plate")) {
+            throw new DatabaseServiceException("It appears that you do not have permission to delete plate records.  Please contact your System Administrator for assistance", false);
         }
         List<Plate> platesToDelete = new ArrayList<Plate>();
         for(AnnotatedPluginDocument doc : documents) {
@@ -226,9 +214,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             for(Plate plate : platesToDelete) {
                 deletePlate(progressFrame, plate);
             }
-        }
-        catch (SQLException e) {
-            throw new DatabaseServiceException(e.getMessage(), true);
         } finally {
             progressFrame.setComplete();
         }
@@ -627,6 +612,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             String message = "Geneious could not connect to the LIMS database";
             showErrorDialog(e2, title, message);
             return;
+        } catch (DatabaseServiceException e3) {
+            logOut();
+            progressListener.setProgress(1.0);
+            String title = "Connection Failure";
+            String message = "Geneious could not connect to the LIMS database";
+            showErrorDialog(e3, title, message);
+            return;
         } finally {
             progressListener.setProgress(1.0);
         }
@@ -882,7 +874,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     limsConnection.getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 e.printStackTrace();
                 String message = e.getMessage();
                 boolean isNetwork = true;
@@ -977,9 +969,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         buildCaches();
     }
 
-    public boolean deleteAllowed(String tableName) throws SQLException{
+    public boolean deleteAllowed(String tableName) throws DatabaseServiceException {
         if(!isLoggedIn) {
-            throw new SQLException("You need to be logged in");
+            throw new DatabaseServiceException("You need to be logged in", false);
         }
         if(limsConnection.isLocal() || limsConnection.getUsername().toLowerCase().equals("root")) {
             return true;
@@ -1017,6 +1009,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             resultSet.close();
         }
         catch(SQLException ex) {
+            // todo
             ex.printStackTrace();
             assert false : ex.getMessage();
             // there could be a number of errors here due to the user not having privileges to access the schema information,
@@ -1048,6 +1041,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
         } catch (SQLException e) {
+            e.printStackTrace();
+            throw new TransactionException("Could not delete cocktails: "+e.getMessage(), e);
+        } catch (DatabaseServiceException e) {
             e.printStackTrace();
             throw new TransactionException("Could not delete cocktails: "+e.getMessage(), e);
         }
@@ -1421,8 +1417,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String sql3 = "DELETE  FROM thermocycle WHERE thermocycle.id=?";
         String sql4 = "DELETE FROM "+tableName+" WHERE cycle =?";
         try {
-            if(!BiocodeService.getInstance().deleteAllowed("state") || !BiocodeService.getInstance().deleteAllowed("cycle") || !BiocodeService.getInstance().deleteAllowed("thermocycle") || !BiocodeService.getInstance().deleteAllowed(tableName)) {
-                throw new TransactionException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance");
+            try {
+                if(!BiocodeService.getInstance().deleteAllowed("state") || !BiocodeService.getInstance().deleteAllowed("cycle") || !BiocodeService.getInstance().deleteAllowed("thermocycle") || !BiocodeService.getInstance().deleteAllowed(tableName)) {
+                    throw new TransactionException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance");
+                }
+            } catch (DatabaseServiceException e) {
+                throw new TransactionException(e.getMessage(), e);
             }
 
             final PreparedStatement statement = getActiveLIMSConnection().createStatement(sql);
@@ -1640,13 +1640,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public void saveExtractions(ProgressListener progress, Plate plate) throws SQLException, BadDataException{
+    public void saveExtractions(ProgressListener progress, Plate plate) throws DatabaseServiceException, BadDataException {
         saveExtractions(progress, plate, limsConnection);
     }
 
-    public void saveExtractions(ProgressListener progress, Plate plate, LIMSConnection limsConnection) throws SQLException, BadDataException{
-        limsConnection.beginTransaction();
+    public void saveExtractions(ProgressListener progress, Plate plate, LIMSConnection limsConnection) throws DatabaseServiceException, BadDataException {
         try {
+            limsConnection.beginTransaction();
             limsConnection.isPlateValid(plate);
 
             List<Reaction> reactionsToSave = new ArrayList<Reaction>();
@@ -1667,14 +1667,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
             limsConnection.createOrUpdatePlate(plate, progress);
 
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
-            limsConnection.endTransaction();
+            try {
+                limsConnection.endTransaction();
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e, e.getMessage(), false);
+            }
         }
 
 
     }
 
-    public void deletePlate(ProgressListener progress, Plate plate) throws SQLException {
+    public void deletePlate(ProgressListener progress, Plate plate) throws DatabaseServiceException {
 
         Set<Integer> plateIds = new HashSet<Integer>();
 
@@ -1718,7 +1724,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     }
 
-    private void deleteReactions(ProgressListener progress, Plate plate) throws SQLException {
+    private void deleteReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException {
         progress.setMessage("deleting reactions");
 
         String tableName;
@@ -1794,18 +1800,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public void saveReactions(ProgressListener progress, Plate plate) throws SQLException, BadDataException {
+    public void saveReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException, BadDataException {
         saveReactions(progress, limsConnection, plate);
     }
 
-    public static void saveReactions(ProgressListener progress, LIMSConnection limsConnection, Plate plate) throws SQLException, BadDataException {
+    public static void saveReactions(ProgressListener progress, LIMSConnection limsConnection, Plate plate) throws DatabaseServiceException, BadDataException {
         if(progress != null) {
             progress.setMessage("Retrieving existing workflows");
         }
 
-        limsConnection.beginTransaction();
         int originalPlateId = plate.getId();
         try {
+            limsConnection.beginTransaction();
 
 
             //set workflows for reactions that have id's
@@ -1895,13 +1901,21 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             //we need to create the plate
             limsConnection.createOrUpdatePlate(plate, progress);
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
-            limsConnection.endTransaction();
+            try {
+                limsConnection.endTransaction();
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e, e.getMessage(), false);
+            }
         }
     }
 
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws SQLException, DocumentOperationException, DatabaseServiceException {
-        List<PlateDocument> plateList = limsConnection.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName), null, null);
+        List<PlateDocument> plateList = limsConnection.getMatchingDocumentsFromLims(
+                Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null, false).getPlates();
         if(plateList.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }

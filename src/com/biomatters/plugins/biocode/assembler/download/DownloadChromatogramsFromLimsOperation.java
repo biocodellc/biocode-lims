@@ -84,14 +84,12 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             for (String plateName : plateNames) {
                 reactionsProgress.beginSubtask(plateName);
                 if (reactionsProgress.isCanceled()) return null;
-                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);
+                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false));
                 List<PlateDocument> plateDocuments;
 
                 try {
-                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null, false).getPlates();
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);

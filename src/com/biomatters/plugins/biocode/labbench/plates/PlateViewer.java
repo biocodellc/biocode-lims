@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GComboBox;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
@@ -386,7 +387,7 @@ public class PlateViewer extends JPanel {
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
                                     return;
-                                } catch(SQLException ex){
+                                } catch(DatabaseServiceException ex){
                                     ex.printStackTrace();
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);

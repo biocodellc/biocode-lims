@@ -74,7 +74,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void basicExtractionSearch() throws IOException, BadDataException, SQLException {
+    public void basicExtractionSearch() throws IOException, BadDataException, DatabaseServiceException {
         String plateName = "Plate_M037";
         String tissue = "MBIO24950.1";
         String extractionId = "MBIO24950.1.1";
@@ -98,7 +98,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void pcrAndWorkflowSearch() throws BadDataException, SQLException {
+    public void pcrAndWorkflowSearch() throws BadDataException, DatabaseServiceException {
         String tissue = "MBIO24950.1";
         String extractionId = "MBIO24950.1.1";
 
@@ -125,7 +125,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void cyclesequencingSearch() throws BadDataException, SQLException, DocumentOperationException {
+    public void cyclesequencingSearch() throws BadDataException, DatabaseServiceException, DocumentOperationException {
         String extractionId = "MBIO24950.1.1";
         String seqFName = "SeqF_M037";
         String seqRName = "SeqR_M037";
@@ -158,7 +158,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, SQLException {
+    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, DatabaseServiceException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
@@ -196,7 +196,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, SQLException, DocumentOperationException {
+    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, DatabaseServiceException, DocumentOperationException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
@@ -281,12 +281,12 @@ public class LimsSearchTest extends Assert {
         return null;
     }
 
-    private void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service) throws SQLException, BadDataException {
+    private void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service) throws DatabaseServiceException, BadDataException {
         Map<String,String> values = Collections.singletonMap(tissue, extractionId);
         saveExtractionPlate(plateName, service, values);
     }
 
-    private void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values) throws SQLException, BadDataException {
+    private void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values) throws DatabaseServiceException, BadDataException {
         Plate extractionPlate = new Plate(Plate.Size.w96, Reaction.Type.Extraction);
         extractionPlate.setName(plateName);
 
@@ -300,7 +300,7 @@ public class LimsSearchTest extends Assert {
         service.saveExtractions(ProgressListener.EMPTY, extractionPlate);
     }
 
-    private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws SQLException, BadDataException {
+    private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws DatabaseServiceException, BadDataException {
         Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
         pcrPlate.setName(plateName);
         List<Thermocycle> thermocycle = BiocodeService.getInstance().getPCRThermocycles();
@@ -318,7 +318,7 @@ public class LimsSearchTest extends Assert {
         return pcrPlate;
     }
 
-    private void saveCyclesequencingPlate(String plateName, String locus, String direction, BiocodeService service, Plate copyReactionsFrom, String... extractionIds) throws SQLException, BadDataException, DocumentOperationException {
+    private void saveCyclesequencingPlate(String plateName, String locus, String direction, BiocodeService service, Plate copyReactionsFrom, String... extractionIds) throws DatabaseServiceException, BadDataException, DocumentOperationException {
         Plate plate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
         if(copyReactionsFrom != null) {
             NewPlateDocumentOperation.copyPlateOfSameSize(copyReactionsFrom, plate, null);
