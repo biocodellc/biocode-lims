@@ -350,7 +350,10 @@ public class ImportLimsOperation extends DocumentOperation {
         final int plateCount = getPlateCount(sourceLims, reactionType);
 
 
-        sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, reactionType), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
+        sourceLims.getMatchingDocumentsFromLims(
+                Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, new Object[]{reactionType},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                null, new RetrieveCallback(){
             private boolean canceled = false;
             double currentPlate = 0;
 
@@ -425,7 +428,7 @@ public class ImportLimsOperation extends DocumentOperation {
                     }
                 }
                 try {
-                    BiocodeService.getInstance().saveReactions(null, destinationLims, plate.getPlate());
+                    BiocodeService.getInstance().saveReactions(null, plate.getPlate());
                     copyGelImages(sourceLims, destinationLims, oldPlateId, plate.getPlate().getId());
                 } catch (SQLException e) {
                     canceled = true;
@@ -435,15 +438,18 @@ public class ImportLimsOperation extends DocumentOperation {
                     canceled = true;
                     callbackException.set(e);
                     return;
+                } catch (DatabaseServiceException e) {
+                    canceled = true;
+                                        callbackException.set(e);
+                                        return;
                 }
 
-                List<PlateDocument> savedPlates = null;
+                List<PlateDocument> savedPlates;
                 try {
-                    savedPlates = destinationLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plate.getPlate().getName()), Collections.<WorkflowDocument>emptyList(), null);
-                } catch (SQLException e) {
-                    canceled = true;
-                    callbackException.set(e);
-                    return;
+                    savedPlates = destinationLims.getMatchingDocumentsFromLims(
+                            Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL,
+                                    new Object[]{plate.getPlate().getName()}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                            null, null, false).getPlates();
                 } catch (DatabaseServiceException e) {
                     canceled = true;
                     callbackException.set(e);
@@ -472,7 +478,7 @@ public class ImportLimsOperation extends DocumentOperation {
             protected boolean _isCanceled() {
                 return progressListener.isCanceled() || canceled;
             }
-        });
+        }, false);
 
         if(callbackException.get() != null) {
             throw callbackException.get();
@@ -507,102 +513,105 @@ public class ImportLimsOperation extends DocumentOperation {
         final int plateCount = getPlateCount(sourceLims, "extraction");
         final Map<String, String> extractionIdMapping = new HashMap<String, String>();
 
-        sourceLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, "Extraction"), Collections.<WorkflowDocument>emptyList(), new RetrieveCallback(){
-            private boolean canceled = false;
-            double currentPlate = 0;
+        sourceLims.getMatchingDocumentsFromLims(
+                Query.Factory.createFieldQuery(LIMSConnection.PLATE_TYPE_FIELD, Condition.EQUAL, new Object[]{"Extraction"},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                null, new RetrieveCallback() {
+                    private boolean canceled = false;
+                    double currentPlate = 0;
 
-            protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
-                if(canceled) {
-                    return;
-                }
-                handleDocument((PlateDocument)document);
-            }
-
-            protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
-                if(canceled) {
-                    return;
-                }
-                try {
-                    PluginDocument pluginDocument = document.getDocument();
-                    handleDocument((PlateDocument) pluginDocument);
-                } catch (DocumentOperationException e) {
-                    canceled = true;
-                    callbackException.set(e);
-                }
-            }
-
-
-
-            private void handleDocument(PlateDocument plate) {
-                progressListener.setProgress(currentPlate/plateCount);
-                currentPlate++;
-                int oldPlateId = plate.getPlate().getId();
-                plate.getPlate().setId(-1);
-                List<String> sourceExtractionIds = new ArrayList<String>();
-                for(Reaction r : plate.getPlate().getReactions()) {
-                    if(!r.isEmpty() && r.getExtractionId().length() > 0) {
-                        sourceExtractionIds.add(r.getExtractionId());
-                    }
-                }
-                Set<String> existingExtractionIds = null;
-                try {
-                    existingExtractionIds = destinationLims.getAllExtractionIdsStartingWith(sourceExtractionIds);
-                } catch (SQLException e) {
-                    canceled = true;
-                    callbackException.set(e);
-                    return;
-                }
-                for(Reaction r : plate.getPlate().getReactions()) {
-                    ExtractionReaction reaction = (ExtractionReaction)r;
-                    reaction.setId(-1);
-                    String tissueId = reaction.getTissueId();
-                    if(tissueIdMapping != null && tissueId != null && tissueId.length() > 0) {
-                        String newTissueId = tissueIdMapping.get(tissueId);
-                        if(newTissueId == null) {
-                            callbackException.set(new DocumentOperationException("Could not find a mapped value for the tissue id \""+tissueId+"\""));
+                    protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
+                        if (canceled) {
                             return;
                         }
-                        reaction.setTissueId(newTissueId);
+                        handleDocument((PlateDocument) document);
                     }
-                    String extractionId = reaction.getExtractionId();
-                    String originalExtractionId = extractionId;
-                    if(extractionId.length() > 0) {
-                        int count = 2;
-                        while(existingExtractionIds.contains(extractionId)) {
-                            extractionId = originalExtractionId+"_"+count;
-                            count++;
+
+                    protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
+                        if (canceled) {
+                            return;
                         }
-                        existingExtractionIds.add(extractionId);
-                        reaction.setExtractionId(extractionId);
-                        if(!extractionId.equals(originalExtractionId)) {
-                            extractionIdMapping.put(originalExtractionId, extractionId);
+                        try {
+                            PluginDocument pluginDocument = document.getDocument();
+                            handleDocument((PlateDocument) pluginDocument);
+                        } catch (DocumentOperationException e) {
+                            canceled = true;
+                            callbackException.set(e);
                         }
                     }
-                }
-                try {
-                    BiocodeService.getInstance().saveExtractions(null, plate.getPlate(), destinationLims);
-                    copyGelImages(sourceLims, destinationLims, oldPlateId, plate.getPlate().getId());
-                    List<PlateDocument> justSavedPlates = destinationLims.getMatchingPlateDocuments(Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plate.getPlate().getName()), Collections.<WorkflowDocument>emptyList(), null);
-                } catch (SQLException e) {
-                    canceled = true;
-                    callbackException.set(e);
-                } catch (BadDataException e) {
-                    canceled = true;
-                    callbackException.set(e);
-                } catch (DatabaseServiceException e) {
-                    canceled = true;
-                    callbackException.set(e);
-                }
-            }
 
-            @Override
-            protected boolean _isCanceled() {
-                return progressListener.isCanceled() || canceled;
-            }
-        });
 
-        if(callbackException.get() != null) {
-            throw callbackException.get();
+                    private void handleDocument(PlateDocument plate) {
+                        progressListener.setProgress(currentPlate / plateCount);
+                        currentPlate++;
+                        int oldPlateId = plate.getPlate().getId();
+                        plate.getPlate().setId(-1);
+                        List<String> sourceExtractionIds = new ArrayList<String>();
+                        for (Reaction r : plate.getPlate().getReactions()) {
+                            if (!r.isEmpty() && r.getExtractionId().length() > 0) {
+                                sourceExtractionIds.add(r.getExtractionId());
+                            }
+                        }
+                        Set<String> existingExtractionIds;
+                        try {
+                            existingExtractionIds = destinationLims.getAllExtractionIdsStartingWith(sourceExtractionIds);
+                        } catch (SQLException e) {
+                            canceled = true;
+                            callbackException.set(e);
+                            return;
+                        }
+                        for (Reaction r : plate.getPlate().getReactions()) {
+                            ExtractionReaction reaction = (ExtractionReaction) r;
+                            reaction.setId(-1);
+                            String tissueId = reaction.getTissueId();
+                            if (tissueIdMapping != null && tissueId != null && tissueId.length() > 0) {
+                                String newTissueId = tissueIdMapping.get(tissueId);
+                                if (newTissueId == null) {
+                                    callbackException.set(new DocumentOperationException("Could not find a mapped value for the tissue id \"" + tissueId + "\""));
+                                    return;
+                                }
+                                reaction.setTissueId(newTissueId);
+                            }
+                            String extractionId = reaction.getExtractionId();
+                            String originalExtractionId = extractionId;
+                            if (extractionId.length() > 0) {
+                                int count = 2;
+                                while (existingExtractionIds.contains(extractionId)) {
+                                    extractionId = originalExtractionId + "_" + count;
+                                    count++;
+                                }
+                                existingExtractionIds.add(extractionId);
+                                reaction.setExtractionId(extractionId);
+                                if (!extractionId.equals(originalExtractionId)) {
+                                    extractionIdMapping.put(originalExtractionId, extractionId);
+                                }
+                            }
+                        }
+                        try {
+                            BiocodeService.getInstance().saveExtractions(null, plate.getPlate(), destinationLims);
+                            copyGelImages(sourceLims, destinationLims, oldPlateId, plate.getPlate().getId());
+                        } catch (SQLException e) {
+                            canceled = true;
+                            callbackException.set(e);
+                        } catch (BadDataException e) {
+                            canceled = true;
+                            callbackException.set(e);
+                        } catch (DatabaseServiceException e) {
+                            canceled = true;
+                            callbackException.set(e);
+                        }
+                    }
+
+                    @Override
+                    protected boolean _isCanceled() {
+                        return progressListener.isCanceled() || canceled;
+                    }
+                }, false
+        );
+
+        Throwable exception = callbackException.get();
+        if(exception != null) {
+            throw exception;
         }
         return extractionIdMapping;
     }

@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.plugin.ExtendedPrintable;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -45,7 +46,7 @@ public abstract class MuitiPartDocument implements PluginDocument {
 
         public void removeModifiedStateChangedListener(SimpleListener sl){}
 
-        public abstract void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws SQLException;
+        public abstract void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws DatabaseServiceException;
         
     }
 }

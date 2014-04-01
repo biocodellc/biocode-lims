@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -128,7 +129,7 @@ public class OneOffHackOperation extends DocumentOperation{
                     else {
                         BiocodeService.getInstance().saveReactions(null, plate);
                     }
-                } catch (SQLException e) {
+                } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException(e.getMessage(), e);
                 } catch (BadDataException e) {

@@ -195,8 +195,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         if(assemblyResult.workflowId == null || assemblyResult.extractionId == null) {
             return 0;
         }
-        if(!BiocodeService.getInstance().deleteAllowed("assembly")) {
-            throw new DocumentOperationException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance");
+        try {
+            if(!BiocodeService.getInstance().deleteAllowed("assembly")) {
+                throw new DocumentOperationException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance");
+            }
+        } catch (DatabaseServiceException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
         }
 
         String sql = "DELETE FROM assembly WHERE workflow=? AND extraction_id=?";
@@ -244,13 +248,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             if (sequencingPlateCache.containsKey(plateName)) {
                 plate = sequencingPlateCache.get(plateName);
             } else {
-                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);//Query.Factory.createQuery(plateName);
+                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false));//Query.Factory.createQuery(plateName);
                 List<PlateDocument> plateDocuments;
                 try {
-                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null, false).getPlates();
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
@@ -390,7 +392,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
 //        }
 
-        Map<URN, String> seqIds = LIMSConnection.addAssembly(options, progress, assemblyResults, limsConnection, isPass);
+        Map<URN, String> seqIds = null;
+        try {
+            seqIds = limsConnection.addAssembly(options, progress, assemblyResults, isPass);
+        } catch (DatabaseServiceException e) {
+            throw new DocumentOperationException("Failed to park as pass/fail in LIMS: " + e.getMessage(), e);
+        }
         if(seqIds != null) {
             for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
                 String savedSeqId = seqIds.get(annotatedDocument.getURN());

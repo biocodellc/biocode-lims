@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultSequenceListDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
@@ -509,7 +510,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             return changes;
         }
 
-        public void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws SQLException{
+        public void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws DatabaseServiceException {
             reaction.areReactionsValid(Arrays.asList(reaction), null, true);
             connection.saveReactions(new Reaction[]{reaction}, reaction.getType(), progress);
             changes = false;
