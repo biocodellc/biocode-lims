@@ -375,19 +375,6 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         }
     }
 
-    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        String sql = "SELECT * FROM "+tableId;
-        System.out.println(sql);
-
-        try {
-            getFimsSamples(sql, callback);
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new ConnectionException(e.getMessage(), e);
-        }
-
-    }
-
     private void getFimsSamples(String sql, RetrieveCallback callback) throws IOException {
         DocumentField tissueCol = getTissueSampleDocumentField();
         DocumentField specimenCol = getSpecimenDocumentField();

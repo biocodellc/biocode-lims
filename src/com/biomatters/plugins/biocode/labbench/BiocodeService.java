@@ -515,6 +515,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         //load the connection driver -------------------------------------------------------------------
         try {
             new XMLOutputter().output(connection.getXml(true), System.out);
+            System.out.println();
         } catch (IOException e) {
             e.printStackTrace();
         }

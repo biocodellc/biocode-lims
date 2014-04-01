@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.rest.client;
 
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 
 /**
@@ -9,7 +10,7 @@ import com.biomatters.plugins.biocode.utilities.PasswordOption;
  *          <p/>
  *          Created on 25/03/14 2:45 PM
  */
-public class RESTConnectionOptions extends Options {
+public class RESTConnectionOptions extends PasswordOptions {
 
     private static final String URL = "url";
     private static final String USERNAME = "username";
@@ -25,5 +26,9 @@ public class RESTConnectionOptions extends Options {
 
     public String getName() {
         return "Connect through hosted Biocode LIMS website";
+    }
+
+    public String getHost() {
+        return getValueAsString(URL);
     }
 }

@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
+import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
@@ -39,6 +40,6 @@ public class XMLSerializableMessageWriter implements MessageBodyWriter<XMLSerial
 
     @Override
     public void writeTo(XMLSerializable xmlSerializable, Class<?> aClass, Type type, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> stringObjectMultivaluedMap, OutputStream outputStream) throws IOException, WebApplicationException {
-        new XMLOutputter(Format.getPrettyFormat()).output(xmlSerializable.toXML(), outputStream);
+        new XMLOutputter(Format.getPrettyFormat()).output(XMLSerializer.classToXML("root", xmlSerializable), outputStream);
     }
 }

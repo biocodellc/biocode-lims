@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.rest.client.RESTConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
 import org.jdom.Attribute;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -370,6 +371,9 @@ public class Connection implements XMLSerializable {
 
 
     public FIMSConnection getFimsConnection() {
+        if(type == ConnectionType.server) {
+            return new ServerFimsConnection();
+        }
         if(directOptions == null) {
             createLoginOptions();
         }
@@ -392,6 +396,10 @@ public class Connection implements XMLSerializable {
      * @return
      */
     public PasswordOptions getFimsOptions() {
+        if(type == ConnectionType.server) {
+            return serverOptions;
+        }
+
         if(directOptions == null) {
             createLoginOptions();
         }

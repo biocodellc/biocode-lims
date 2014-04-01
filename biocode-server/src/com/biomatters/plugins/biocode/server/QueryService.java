@@ -61,8 +61,8 @@ public class QueryService {
                     include == null || include.toLowerCase().contains("plates"),
                     include == null || include.toLowerCase().contains("sequences"));
 
-            Query query = createQueryFromQueryString(queryString, searchOptions);
-            final ArrayList<XMLSerializable> docs = new ArrayList<XMLSerializable>();
+            Query query = QueryUtils.createQueryFromQueryString(QueryUtils.QueryType.AND, queryString, searchOptions);
+            final ArrayList<PluginDocument> docs = new ArrayList<PluginDocument>();
             RetrieveCallback callback = new RetrieveCallback() {
 
                 @Override
@@ -77,7 +77,7 @@ public class QueryService {
                 }
             };
             service.retrieve(query, callback, new URN[0]);
-            return Response.ok(new XMLSerializableList(docs)).build();
+            return Response.ok(new XMLSerializableList<PluginDocument>(PluginDocument.class, docs)).build();
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException("Encountered error: " + e.getMessage());
         }
@@ -90,11 +90,6 @@ public class QueryService {
 
         // Do we need this method for POST
         return id;
-    }
-
-    private Query createQueryFromQueryString(String queryString, Map<String, Object> searchOptions) {
-        return Query.Factory.createFieldQuery(MooreaFimsConnection.MOOREA_TISSUE_ID_FIELD, Condition.CONTAINS,
-                new Object[]{queryString}, searchOptions);
     }
 
     private class WebCallback extends RetrieveCallback {

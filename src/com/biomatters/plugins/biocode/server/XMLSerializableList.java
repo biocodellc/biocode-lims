@@ -18,31 +18,42 @@ import java.util.List;
  *          Created on 25/03/14 11:44 AM
  */
 @XmlRootElement
-public class XMLSerializableList implements XMLSerializable {
+public class XMLSerializableList<T extends XMLSerializable> implements XMLSerializable {
 
     public XMLSerializableList() {
     }
 
-    public List<XMLSerializable> list = new ArrayList<XMLSerializable>();
+    private Class<T> type;
+    public List<T> list = new ArrayList<T>();
 
-    public XMLSerializableList(List<XMLSerializable> list) {
+    public XMLSerializableList(Class<T> type, List<T> list) {
         this.list = list;
+        this.type = type;
     }
 
+    private static final String TYPE = "class";
     @Override
     public Element toXML() {
         Element root = new Element(XMLSerializable.ROOT_ELEMENT_NAME);
+        root.setAttribute(TYPE, type.getName());
+
         for (XMLSerializable child : list) {
-            root.addContent(child.toXML());
+            root.addContent(XMLSerializer.classToXML("child", child));
         }
         return root;
     }
 
     @Override
     public void fromXML(Element element) throws XMLSerializationException {
-        list = new ArrayList<XMLSerializable>();
+        list = new ArrayList<T>();
+        try {
+            //noinspection unchecked
+            type = (Class<T>)Class.forName(element.getAttributeValue(TYPE));
+        } catch (ClassNotFoundException e) {
+            throw new XMLSerializationException(e.getMessage(), e);
+        }
         for (Element childElement : element.getChildren()) {
-            list.add(XMLSerializer.classFromXML(childElement));
+            list.add(XMLSerializer.classFromXML(childElement, type));
         }
     }
 }

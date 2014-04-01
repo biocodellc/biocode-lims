@@ -1024,6 +1024,7 @@ public abstract class LIMSConnection {
         return connection.getMetaData();
     }
 
+    // todo We want to get rid of all of these so we can just call a web method from the GUI in addition to the SQL method
     public Statement createStatement() throws SQLException {
         Connection connection = getConnection();
         Statement statement = connection.createStatement();
