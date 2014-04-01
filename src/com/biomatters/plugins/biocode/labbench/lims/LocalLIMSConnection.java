@@ -20,7 +20,7 @@ import java.sql.*;
  */
 
 
-public class LocalLIMSConnection extends LIMSConnection {
+public class LocalLIMSConnection extends SqlLimsConnection {
 
 
     @SuppressWarnings("UnusedDeclaration")
