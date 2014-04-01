@@ -81,6 +81,9 @@ public abstract class FIMSConnection {
 
     public abstract DocumentField getTissueSampleDocumentField();
 
+    /**
+     * @return list of non-taxonomy fields
+     */
     public abstract List<DocumentField> getCollectionAttributes();
 
     /**
@@ -89,6 +92,9 @@ public abstract class FIMSConnection {
      */
     public abstract List<DocumentField> getTaxonomyAttributes();
 
+    /**
+     * @return list of all attributes that can be searched
+     */
     public final List<DocumentField> getSearchAttributes() {
         List<DocumentField> list = new ArrayList<DocumentField>(_getSearchAttributes());
         Collections.sort(list, new Comparator<DocumentField>() {
@@ -101,7 +107,22 @@ public abstract class FIMSConnection {
     }
     public abstract List<DocumentField> _getSearchAttributes();
 
-    public abstract BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument);
+    public DocumentField getLatitudeField() { return null; }
+    public DocumentField getLongitudeField() { return null; }
+
+    public final BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
+        DocumentField latField = getLatitudeField();
+        DocumentField longField = getLongitudeField();
+        if(latField == null || longField == null) {
+            return null;
+        }
+        Object latObject = annotatedDocument.getFieldValue(latField);
+        Object longObject = annotatedDocument.getFieldValue(longField);
+        if (latObject == null || longObject == null) {
+            return null;
+        }
+        return new BiocodeUtilities.LatLong((Double)latObject, (Double)longObject);
+    }
 
     public Condition[] getFieldConditions(Class fieldClass) {
         if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
@@ -178,8 +199,6 @@ public abstract class FIMSConnection {
         return fimsSampleSoftReference != null ? fimsSampleSoftReference.get() : null;
     }
 
-    public abstract void getAllSamples(RetrieveCallback callback) throws ConnectionException;
-
     public abstract int getTotalNumberOfSamples() throws ConnectionException;
 
     /**
@@ -219,10 +238,6 @@ public abstract class FIMSConnection {
 
         return samplesToReturn;
     }
-
-    public abstract Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException;
-
-    public abstract Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException;
 
     public abstract DocumentField getPlateDocumentField();
 

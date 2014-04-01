@@ -220,13 +220,6 @@ public class MySQLFimsConnection extends TableFimsConnection {
         }
     }
 
-    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        // todo
-        for (FimsSample fimsSample : getMatchingSamples(Query.Factory.createBrowseQuery())) {
-            callback.add(new TissueDocument(fimsSample), Collections.<String, Object>emptyMap());
-        }
-    }
-
     public int getTotalNumberOfSamples() throws ConnectionException {
         String query = "SELECT count(*) FROM "+tableName;
         try {

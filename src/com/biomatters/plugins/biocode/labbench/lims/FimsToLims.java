@@ -1,5 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.URN;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -364,7 +367,8 @@ public class FimsToLims {
                 }
             };
 
-            fims.getAllSamples(callback);
+            BiocodeService.getInstance().retrieve(Query.Factory.createExtendedQuery("",
+                    BiocodeService.getSearchDownloadOptions(true, false, false, false)), callback, new URN[0]);
             try {
                 copyFimsSet(fimsSamples, lims, fields);
                 fimsSamples.clear();
@@ -422,6 +426,9 @@ public class FimsToLims {
             ex.printStackTrace();
             Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+ex.getMessage());
 
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
+            Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+e.getMessage());
         } finally {
             listener.setProgress(1.0);
             BiocodeService.getInstance().unregisterCallback(listener);

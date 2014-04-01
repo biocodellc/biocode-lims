@@ -9,7 +9,6 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.TissueDocument;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRReaction;
@@ -152,13 +151,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
         }
     }
 
-    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        Sheet sheet = workbook.getSheet(0);
-        for(int i=1; i < sheet.getRows(); i++) {
-            callback.add(new TissueDocument(new TableFimsSample(sheet, i, this)), Collections.<String,Object>emptyMap());
-        }
-    }
-
     public int getTotalNumberOfSamples() throws ConnectionException {
         Sheet sheet = workbook.getSheet(0);
         return sheet.getRows();
@@ -286,14 +278,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
             results.add(new TableFimsSample(sheet, row, this));
         }
         return results;
-    }
-
-    public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
-        return Collections.emptyMap();
-    }
-
-    public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException{
-        return Collections.emptyMap();
     }
 
 }

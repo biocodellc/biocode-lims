@@ -11,7 +11,7 @@ import javax.ws.rs.Path;
  *          <p/>
  *          Created on 20/03/14 2:55 PM
  */
-@ApplicationPath("lims")
+@ApplicationPath("biocode")
 public class LIMSWebService extends ResourceConfig {
     public LIMSWebService() {
         packages("com.biomatters.plugins.biocode.server");
