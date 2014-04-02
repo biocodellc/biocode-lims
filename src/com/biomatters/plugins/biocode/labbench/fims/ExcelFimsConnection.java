@@ -220,7 +220,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
                         colMatch = termValue.equalsIgnoreCase(value);
                         break;
                     case NOT_EQUAL:
-                        colMatch = !termValue.equalsIgnoreCase(value);
+                       colMatch = !termValue.equalsIgnoreCase(value);
                         break;
                     case CONTAINS:
                         colMatch = value.toLowerCase().contains(termValue.toLowerCase());
@@ -260,9 +260,10 @@ public class ExcelFimsConnection extends TableFimsConnection{
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
         List<String> tissueIds = new ArrayList<String>();
         for (Integer row : getListOfRowsMatchingQuery(query)) {
-            int index = columnNames.indexOf(getTissueCol());
+
+            int index = getTableIndex(getTissueSampleDocumentField());
             if(index == -1) {
-                throw new ConnectionException("Could not find tissue column (" + getTissueCol() + ") in Excel sheet.\n\n" +
+                throw new ConnectionException("Could not find tissue column (" + getTissueSampleDocumentField().getCode() + ") in Excel sheet.\n\n" +
                 "Columns were:\n" + StringUtilities.join("\n", columnNames));
             }
 
