@@ -1,38 +1,18 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
-import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
-import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
-import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.*;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
-import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
-import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
-import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOptions;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
-import jebl.util.Cancelable;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
-import java.io.File;
-import java.io.IOException;
 import java.sql.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.List;
@@ -94,75 +74,13 @@ public abstract class LIMSConnection {
 
     public abstract void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException;
 
-    public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
-        try {
-            //check the vaidity of the plate.
-            isPlateValid(plate);
-
-            beginTransaction();
-
-            //update the plate
-            PreparedStatement statement = plate.toSQL(this);
-            statement.execute();
-            statement.close();
-            if(plate.getId() < 0) {
-                PreparedStatement statement1 = isLocal() ? createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
-                ResultSet resultSet = statement1.executeQuery();
-                resultSet.next();
-                int plateId = resultSet.getInt(1);
-                plate.setId(plateId);
-                statement1.close();
-            }
-
-            //replace the images
-            if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
-                if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
-                    throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
-                }
-                PreparedStatement deleteImagesStatement = createStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
-                deleteImagesStatement.execute();
-                for(GelImage image : plate.getImages()) {
-                    PreparedStatement statement1 = image.toSql(this);
-                    statement1.execute();
-                    statement1.close();
-                }
-                deleteImagesStatement.close();
-            }
-
-            saveReactions(plate.getReactions(), plate.getReactionType(), progress);
-
-            //update the last-modified on the workflows associated with this plate...
-            String sql;
-            if(plate.getReactionType() == Reaction.Type.Extraction) {
-                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
-            }
-            else if(plate.getReactionType() == Reaction.Type.PCR){
-                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
-            }
-            else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
-                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
-            }
-            else {
-                throw new SQLException("There is no reaction type "+plate.getReactionType());
-            }
-            Statement workflowUpdateStatement = createStatement();
-            workflowUpdateStatement.executeUpdate(sql);
-            workflowUpdateStatement.close();
-        } catch(SQLException e) {
-            rollback();
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } finally {
-            try {
-                endTransaction();
-            } catch (SQLException e) {
-                throw new DatabaseServiceException(e, e.getMessage(), false);
-            }
-        }
-    }
+    public abstract void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException;
 
     public abstract void isPlateValid(Plate plate) throws DatabaseServiceException;
 
     public abstract List<FailureReason> getPossibleFailureReasons();
+
+    public abstract boolean deleteAllowed(String tableName);
 
     public static enum AvailableLimsTypes {
         local(LocalLIMSConnection.class, "Built-in MySQL Database", "Create and connect to LIMS databases on your local computer (stored with your Geneious data)"),
@@ -245,46 +163,7 @@ public abstract class LIMSConnection {
 
     public abstract void doAnyExtraInitialziation() throws DatabaseServiceException;
 
-    public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws DatabaseServiceException {
-        if (!BiocodeService.getInstance().deleteAllowed(tableName)) {
-            throw new DatabaseServiceException("It appears that you do not have permission to delete from " + tableName + ".  Please contact your System Administrator for assistance", false);
-        }
-
-        List<String> terms = new ArrayList<String>();
-        int count = 0;
-        for (Object id : ids) {
-            count++;
-            terms.add(term + "=" + id);
-        }
-
-        if (count == 0) {
-            return Collections.emptySet();
-        }
-
-        String termString = StringUtilities.join(" OR ", terms);
-
-        PreparedStatement getPlatesStatement = null;
-        PreparedStatement deleteStatement = null;
-        try {
-            Set<Integer> plateIds = new HashSet<Integer>();
-            if (tableName.equals("extraction") || tableName.equals("pcr") || tableName.equals("cyclesequencing")) {
-                getPlatesStatement = createStatement("SELECT plate FROM " + tableName + " WHERE " + termString);
-                ResultSet resultSet = getPlatesStatement.executeQuery();
-                while (resultSet.next()) {
-                    plateIds.add(resultSet.getInt("plate"));
-                }
-            }
-
-            deleteStatement = createStatement("DELETE FROM " + tableName + " WHERE " + termString);
-            deleteStatement.executeUpdate();
-
-            return plateIds;
-        } catch (SQLException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } finally {
-            SqlUtilities.cleanUpStatements(getPlatesStatement, deleteStatement);
-        }
-    }
+    public abstract Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws DatabaseServiceException;
 
     public ResultSet executeQuery(String sql) throws TransactionException {
         try {
@@ -298,7 +177,7 @@ public abstract class LIMSConnection {
     public void executeUpdate(String sql) throws TransactionException {
         Connection connection = null;
         try {
-            connection = getConnection();
+            connection = getConnectionInternal();
             if (connection == null) {
                 return;
             }
@@ -322,30 +201,39 @@ public abstract class LIMSConnection {
     }
 
     // todo We want to get rid of all of these so we can just call a web method from the GUI in addition to the SQL method
-    protected abstract Connection getConnection() throws SQLException;
+
+    /**
+     *
+     * @return The single connection that the Biocode service keeps open.  Ideally we want to remove this in the future
+     * and have the service make use of a connection pool.  The current method assumes everything is single threaded
+     * in respect to transactions.
+     *
+     * @throws SQLException if something goes wrong
+     */
+    protected abstract Connection getConnectionInternal() throws SQLException;
 
 
     public DatabaseMetaData getMetaData() throws SQLException {
-        Connection connection = getConnection();
+        Connection connection = getConnectionInternal();
         return connection.getMetaData();
     }
 
     public Statement createStatement() throws SQLException {
-        Connection connection = getConnection();
+        Connection connection = getConnectionInternal();
         Statement statement = connection.createStatement();
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
 
     public PreparedStatement createStatement(String sql) throws SQLException {
-        Connection connection = getConnection();
+        Connection connection = getConnectionInternal();
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
 
     public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
-        Connection connection = getConnection();
+        Connection connection = getConnectionInternal();
         Statement statement = connection.createStatement(resultSetType, resultSetConcurrency);
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
@@ -366,7 +254,7 @@ public abstract class LIMSConnection {
      */
     public void beginTransaction() throws SQLException {
         if (transactionLevel == 0) {
-            Connection connection = getConnection();
+            Connection connection = getConnectionInternal();
             connection.setAutoCommit(false);
         }
         transactionLevel++;
@@ -377,7 +265,7 @@ public abstract class LIMSConnection {
      */
     public void rollback() {
         try {
-            Connection connection = getConnection();
+            Connection connection = getConnectionInternal();
             connection.rollback();
             connection.setAutoCommit(true);
         } catch (SQLException ex) {/*if we can't rollback, let's ignore*/}
@@ -389,7 +277,7 @@ public abstract class LIMSConnection {
      */
     public void endTransaction() throws SQLException {
         // todo Should be threadsafe and shoudln't throw SQLException
-        Connection connection = getConnection();
+        Connection connection = getConnectionInternal();
         if (transactionLevel == 0) {
             return;  //we've rolled back our changes by calling rollback() so no commits are necessary
         }
@@ -723,4 +611,13 @@ public abstract class LIMSConnection {
         }
         return plateNames;
     }
+
+    public abstract void addCocktails(List<? extends Cocktail> cocktails) throws DatabaseServiceException;
+    public abstract void deleteCocktails(List<? extends Cocktail> deletedCocktails) throws DatabaseServiceException;
+    public abstract List<PCRCocktail> getPCRCocktailsFromDatabase() throws DatabaseServiceException;
+    public abstract List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase() throws DatabaseServiceException;
+
+    public abstract List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws DatabaseServiceException;
+    public abstract void addThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException;
+    public abstract void deleteThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException;
 }

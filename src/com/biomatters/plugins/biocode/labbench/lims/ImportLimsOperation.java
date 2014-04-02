@@ -149,16 +149,16 @@ public class ImportLimsOperation extends DocumentOperation {
             destinationLims.beginTransaction();
             checkForCancelled(progressListener);
 
-            Map<Integer, Integer> pcrCocktailMap = copyCocktails(BiocodeService.getPCRCocktailsFromDatabase(sourceLims), destinationLims);
+            Map<Integer, Integer> pcrCocktailMap = copyCocktails(sourceLims.getPCRCocktailsFromDatabase(), destinationLims);
             checkForCancelled(progressListener);
 
-            Map<Integer, Integer> sequencingCocktailMap = copyCocktails(BiocodeService.getCycleSequencingCocktailsFromDatabase(sourceLims), destinationLims);
+            Map<Integer, Integer> sequencingCocktailMap = copyCocktails(sourceLims.getCycleSequencingCocktailsFromDatabase(), destinationLims);
             checkForCancelled(progressListener);
 
-            Map<Integer, Integer> pcrThermocycleMap = copyThermocycles(BiocodeService.getThermocyclesFromDatabase("pcr_thermocycle", sourceLims), "pcr_thermocycle", destinationLims);
+            Map<Integer, Integer> pcrThermocycleMap = copyThermocycles(sourceLims.getThermocyclesFromDatabase("pcr_thermocycle"), "pcr_thermocycle", destinationLims);
             checkForCancelled(progressListener);
 
-            Map<Integer, Integer> sequencingThermocycleMap = copyThermocycles(BiocodeService.getThermocyclesFromDatabase("cyclesequencing_thermocycle", sourceLims), "cyclesequencing_thermocycle", destinationLims);
+            Map<Integer, Integer> sequencingThermocycleMap = copyThermocycles(sourceLims.getThermocyclesFromDatabase("cyclesequencing_thermocycle"), "cyclesequencing_thermocycle", destinationLims);
             checkForCancelled(progressListener);
 
             BiocodeService.getInstance().buildCaches();
@@ -194,26 +194,26 @@ public class ImportLimsOperation extends DocumentOperation {
             destinationLims.rollback();
             try {
                 BiocodeService.getInstance().buildCaches();
-            } catch (TransactionException ignore) {}
+            } catch (DatabaseServiceException ignore) {}
             throw new DocumentOperationException(e.getMessage(), e);
         } catch (SQLException e) {
             destinationLims.rollback();
             try {
                 BiocodeService.getInstance().buildCaches();
-            } catch (TransactionException ignore) {}
+            } catch (DatabaseServiceException ignore) {}
             e.printStackTrace();
             throw new DocumentOperationException(e.getMessage(), e);
         } catch(DocumentOperationException ex) {
             destinationLims.rollback();
             try {
                 BiocodeService.getInstance().buildCaches();
-            } catch (TransactionException ignore) {}
+            } catch (DatabaseServiceException ignore) {}
             throw ex;
         } catch(Throwable th) {
             destinationLims.rollback();
             try {
                 BiocodeService.getInstance().buildCaches();
-            } catch (TransactionException ignore) {}
+            } catch (DatabaseServiceException ignore) {}
             throw new DocumentOperationException("There was a problem importing your LIMS: "+th.getMessage(), th);
         }
         finally {

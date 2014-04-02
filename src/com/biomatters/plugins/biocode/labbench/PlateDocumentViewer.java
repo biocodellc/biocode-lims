@@ -456,7 +456,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                             if(deletedThermocycles.size() > 0) {
                                 BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, tableName);    
                             }
-                        } catch (final TransactionException e1) {
+                        } catch (final DatabaseServiceException e1) {
                             e1.printStackTrace();
                             Runnable runnable = new Runnable() {
                                 public void run() {

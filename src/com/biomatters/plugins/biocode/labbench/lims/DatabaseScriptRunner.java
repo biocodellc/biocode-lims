@@ -31,17 +31,15 @@ class DatabaseScriptRunner {
      * @throws SQLException if a problem is encountered while communicating with the database, this may include bad syntax
      * @throws IOException if a problem occurs reading the script file.  This is a FileNotFoundException if the script file did not exist.
      */
-    public static void runScript(Connection connection, InputStream scriptFile, boolean allowDrops, boolean ignoreErrors) throws SQLException, IOException {
+    public static void runScript(SqlLimsConnection.ConnectionWrapper connection, InputStream scriptFile, boolean allowDrops, boolean ignoreErrors) throws SQLException, IOException {
         List<String> commands = getCommandsFromScript(scriptFile);
-
-        Statement statement = connection.createStatement();
 
         for(String command : commands) {
             // Do not run the drop lines; As at 2007-11-20, this code is only called when a database is empty.
             if (allowDrops || !command.toUpperCase().startsWith("DROP ")) {
                 System.out.println(command);
                 try {
-                    statement.executeUpdate(command);
+                    connection.executeUpdate(command);
                     System.out.println("ok");
                 } catch (SQLException e) {
                     if(ignoreErrors) {

@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
@@ -102,7 +103,7 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
                                 };
                                 ThreadUtilities.invokeNowOrLater(runnable);
                             }
-                        } catch (final TransactionException e1) {
+                        } catch (final DatabaseServiceException e1) {
                             Runnable runnable = new Runnable() {
                                 public void run() {
                                     Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Error saving cocktails", cocktailButton.getComponent()), e1.getMessage());

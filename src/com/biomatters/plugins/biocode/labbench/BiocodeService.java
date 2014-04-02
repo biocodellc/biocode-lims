@@ -594,20 +594,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             String message = "Geneious could not connect to the LIMS database";
             showErrorDialog(e1, title, message);
             return;
-        } catch (TransactionException e2) {
-            logOut();
-            progressListener.setProgress(1.0);
-            String title = "Connection Failure";
-            String message = "Geneious could not connect to the LIMS database";
-            showErrorDialog(e2, title, message);
-            return;
         } catch (DatabaseServiceException e3) {
             logOut();
             progressListener.setProgress(1.0);
             String title = "Connection Failure";
             String message = "Geneious could not connect to the LIMS database";
             showErrorDialog(e3, title, message);
-            return;
         } finally {
             progressListener.setProgress(1.0);
         }
@@ -923,11 +915,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return isLoggedIn() ? BiocodePlugin.getIcons("biocode16_connected.png") : BiocodePlugin.getIcons("biocode16_disconnected.png");
     }
 
-    public void addNewCocktails(List<? extends Cocktail> newCocktails) throws TransactionException{
+    public void addNewCocktails(List<? extends Cocktail> newCocktails) throws DatabaseServiceException {
         if(newCocktails.size() > 0) {
-            for(Cocktail cocktail : newCocktails) {
-                limsConnection.executeUpdate(cocktail.getSQLString());
-            }
+            limsConnection.addCocktails(newCocktails);
         }
         buildCaches();
     }
@@ -936,80 +926,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(!isLoggedIn) {
             throw new DatabaseServiceException("You need to be logged in", false);
         }
-        if(limsConnection.isLocal() || limsConnection.getUsername().toLowerCase().equals("root")) {
-            return true;
-        }
+        return limsConnection.deleteAllowed(tableName);
 
-        try {
-            //check schema privileges
-            String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE " +
-                    "GRANTEE LIKE ? AND " +
-                    "PRIVILEGE_TYPE='DELETE' AND " +
-                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%');";
-            PreparedStatement statement = limsConnection.createStatement(schemaSql);
-            statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
-            statement.setString(2, limsConnection.getSchema());
-            ResultSet resultSet = statement.executeQuery();
-            if(resultSet.next()) {
-                return true;
-            }
-            resultSet.close();
 
-            //check table privileges
-            String tableSql = "select * from information_schema.TABLE_PRIVILEGES WHERE " +
-                    "GRANTEE LIKE ? AND " +
-                    "PRIVILEGE_TYPE='DELETE' AND " +
-                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%') AND " +
-                    "(TABLE_NAME=? OR TABLE_NAME='%');";
-            statement = limsConnection.createStatement(tableSql);
-            statement.setString(1, "'"+limsConnection.getUsername()+"'@%");
-            statement.setString(2, limsConnection.getSchema());
-            statement.setString(3, tableName);
-            resultSet = statement.executeQuery();
-            if(resultSet.next()) {
-                return true;
-            }
-            resultSet.close();
-        }
-        catch(SQLException ex) {
-            // todo
-            ex.printStackTrace();
-            assert false : ex.getMessage();
-            // there could be a number of errors here due to the user not having privileges to access the schema information,
-            // so I don't want to halt on this error as it could stop the user from deleting when they are actually allowed...
-        }
-
-        //Can't find privileges...
-        return false;
     }
 
-    public void removeCocktails(List<? extends Cocktail> deletedCocktails) throws TransactionException{
+    public void removeCocktails(List<? extends Cocktail> deletedCocktails) throws DatabaseServiceException {
         if(deletedCocktails == null || deletedCocktails.size() == 0) {
             return;
         }
-        try {
-            if(!BiocodeService.getInstance().deleteAllowed("cocktail")) {
-                throw new TransactionException("It appears that you do not have permission to delete cocktails.  Please contact your System Administrator for assistance");
-            }
-            for(Cocktail cocktail : deletedCocktails) {
-
-                String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
-                PreparedStatement statement = limsConnection.createStatement(sql);
-                if(cocktail.getId() >= 0) {
-                    if(limsConnection.getPlatesUsingCocktail(cocktail).size() > 0) {
-                        throw new TransactionException("The cocktail "+cocktail.getName()+" is in use by reactions in your database.  Only unused cocktails can be removed.");
-                    }
-                    statement.setInt(1, cocktail.getId());
-                    statement.executeUpdate();
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new TransactionException("Could not delete cocktails: "+e.getMessage(), e);
-        } catch (DatabaseServiceException e) {
-            e.printStackTrace();
-            throw new TransactionException("Could not delete cocktails: "+e.getMessage(), e);
-        }
+        limsConnection.deleteCocktails(deletedCocktails);
         buildCaches();
     }
 
@@ -1021,24 +947,24 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private List<DisplayFieldsTemplate> pcrDisplayedFields = null;
     private List<DisplayFieldsTemplate> cycleSequencingDisplayedFields = null;
 
-    public void buildCaches() throws TransactionException {
+    public void buildCaches() throws DatabaseServiceException {
         try {
             buildCachesFromDisk();
         } catch (IOException e) {
-            throw new TransactionException("Could not read the caches from disk", e);
+            throw new DatabaseServiceException(e, "Could not read the caches from disk", false);
         } catch (JDOMException e) {
-            throw new TransactionException("Could not read the caches from disk", e);
+            throw new DatabaseServiceException(e, "Could not read the caches from disk", false);
         } catch (XMLSerializationException e) {
-            throw new TransactionException("Could not read the caches from disk", e);
+            throw new DatabaseServiceException(e, "Could not read the caches from disk", false);
         }
-        PCRThermocycles = getThermocyclesFromDatabase("pcr_thermocycle", limsConnection);
-        cyclesequencingThermocycles = getThermocyclesFromDatabase("cyclesequencing_thermocycle", limsConnection);
-        PCRCocktails = getPCRCocktailsFromDatabase(limsConnection);
-        cyclesequencingCocktails = getCycleSequencingCocktailsFromDatabase(limsConnection);
+        PCRThermocycles = limsConnection.getThermocyclesFromDatabase("pcr_thermocycle");
+        cyclesequencingThermocycles = limsConnection.getThermocyclesFromDatabase("cyclesequencing_thermocycle");
+        PCRCocktails = limsConnection.getPCRCocktailsFromDatabase();
+        cyclesequencingCocktails = limsConnection.getCycleSequencingCocktailsFromDatabase();
         try {
             saveCachesToDisk();
         } catch (IOException e) {
-            throw new TransactionException("Could not write the caches to disk", e);
+            throw new DatabaseServiceException(e, "Could not write the caches to disk", false);
         }
     }
 
@@ -1246,73 +1172,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public static List<PCRCocktail> getPCRCocktailsFromDatabase(LIMSConnection limsConnection) throws TransactionException{
-        ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM pcr_cocktail");
-        List<PCRCocktail> cocktails = new ArrayList<PCRCocktail>();
-        try {
-            while(resultSet.next()) {
-                cocktails.add(new PCRCocktail(resultSet));    
-            }
-            resultSet.getStatement().close();
-        }
-        catch(SQLException ex) {
-            ex.printStackTrace();
-            throw new TransactionException("Could not query PCR Cocktails from the database");
-        }
-        return cocktails;
-    }
-
-    public static List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase(LIMSConnection limsConnection) throws TransactionException{
-        ResultSet resultSet = limsConnection.executeQuery("SELECT * FROM cyclesequencing_cocktail");
-        List<CycleSequencingCocktail> cocktails = new ArrayList<CycleSequencingCocktail>();
-        try {
-            while(resultSet.next()) {
-                cocktails.add(new CycleSequencingCocktail(resultSet));    
-            }
-            resultSet.getStatement().close();
-        }
-        catch(SQLException ex) {
-            throw new TransactionException("Could not query CycleSequencing Cocktails from the database");
-        }
-        return cocktails;
-    }
-
-    public static List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable, LIMSConnection limsConnection) throws TransactionException {
-        //String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN (thermocycle, cycle, state) ON (thermocycleid = "+thermocycleIdentifierTable+".cycle AND thermocycle.id = cycle.thermocycleId AND cycle.id = state.cycleId);";
-        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON (thermocycle.id = "+thermocycleIdentifierTable+".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
-//        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON thermocycle.id = "+thermocycleIdentifierTable+".cycle LEFT JOIN cycle ON thermocycle.id = cycle.thermocycleId LEFT JOIN state ON cycle.id = state.cycleId;";
-        System.out.println(sql);
-
-
-        ResultSet resultSet = limsConnection.executeQuery(sql);
-
-        List<Thermocycle> tCycles = new ArrayList<Thermocycle>();
-
-        try {
-            resultSet.next();
-            while(true) {
-                try {
-                    Thermocycle thermocycle = Thermocycle.fromSQL(resultSet);
-                    if(thermocycle != null) {
-                        tCycles.add(thermocycle);
-                    }
-                    else {
-                        break;
-                    }
-                }
-                catch(SQLException e) {
-                    break;
-                }
-            }
-            resultSet.getStatement().close();
-        }
-        catch(SQLException ex) {
-            throw new TransactionException("could not read thermocycles from the database", ex);
-        }
-
-        return tCycles;
-    }
-
     public List<DisplayFieldsTemplate> getDisplayedFieldTemplates(Reaction.Type type) {
         switch(type) {
             case Extraction:return new ArrayList<DisplayFieldsTemplate>(extractionDisplayedFields);
@@ -1374,72 +1233,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return cycles;
     }
 
-    public void removeThermoCycles(List<Thermocycle> cycles,  String tableName) throws TransactionException {
-        String sql = "DELETE  FROM state WHERE state.id=?";
-        String sql2 = "DELETE  FROM cycle WHERE cycle.id=?";
-        String sql3 = "DELETE  FROM thermocycle WHERE thermocycle.id=?";
-        String sql4 = "DELETE FROM "+tableName+" WHERE cycle =?";
-        try {
-            try {
-                if(!BiocodeService.getInstance().deleteAllowed("state") || !BiocodeService.getInstance().deleteAllowed("cycle") || !BiocodeService.getInstance().deleteAllowed("thermocycle") || !BiocodeService.getInstance().deleteAllowed(tableName)) {
-                    throw new TransactionException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance");
-                }
-            } catch (DatabaseServiceException e) {
-                throw new TransactionException(e.getMessage(), e);
-            }
-
-            final PreparedStatement statement = getActiveLIMSConnection().createStatement(sql);
-            final PreparedStatement statement2 = getActiveLIMSConnection().createStatement(sql2);
-            final PreparedStatement statement3 = getActiveLIMSConnection().createStatement(sql3);
-            final PreparedStatement statement4 = getActiveLIMSConnection().createStatement(sql4);
-            for(Thermocycle thermocycle : cycles) {
-                if(thermocycle.getId() >= 0) {
-                    if(limsConnection.getPlatesUsingThermocycle(thermocycle).size() > 0) {
-                        throw new SQLException("The thermocycle "+thermocycle.getName()+" is being used by plates in your database.  Only unused thermocycles can be removed");
-                    }
-                    for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
-                        for(Thermocycle.State state : cycle.getStates()) {
-                            statement.setInt(1, state.getId());
-                            statement.executeUpdate();
-                        }
-                        statement2.setInt(1, cycle.getId());
-                        statement2.executeUpdate();
-                    }
-                    statement3.setInt(1, thermocycle.getId());
-                    statement3.executeUpdate();
-                    statement4.setInt(1, thermocycle.getId());
-                    statement4.executeUpdate();
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new TransactionException("Could not delete thermocycles: "+e.getMessage(), e);
-        }
+    public void removeThermoCycles(List<Thermocycle> cycles,  String tableName) throws DatabaseServiceException {
+        limsConnection.deleteThermoCycles(tableName, cycles);
         buildCaches();
     }
 
-    public void insertThermocycles(List<Thermocycle> cycles, String tableName) throws TransactionException {
+    public void insertThermocycles(List<Thermocycle> cycles, String tableName) throws DatabaseServiceException {
         if(limsConnection == null) {
-            throw new TransactionException("You are not logged in");
+            throw new DatabaseServiceException("You are not logged in", false);
         }
-        try {
-            limsConnection.beginTransaction();
-            for(Thermocycle tCycle : cycles) {
-                int id = tCycle.toSQL(limsConnection);
-                PreparedStatement statement = limsConnection.createStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+");\n");
-                statement.execute();
-                statement.close();
-            }
-        } catch (SQLException e) {
-            limsConnection.rollback();
-            throw new TransactionException("Could not add thermocycle(s): "+e.getMessage(), e);
-        } finally {
-            try {
-                limsConnection.endTransaction();
-            } catch (SQLException e) {
-                throw new TransactionException(e.getMessage(), e);
-            }
-        }
+        limsConnection.addThermoCycles(tableName, cycles);
         buildCaches();
     }
 

@@ -73,7 +73,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
         dataSource = connectToDb(selectedLimsOptions);
         try {
-            connection = dataSource.getConnection();
+            connection = getConnection().connection;
         } catch (SQLException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
@@ -84,8 +84,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     @Override
-    protected Connection getConnection() throws SQLException {
+    protected Connection getConnectionInternal() throws SQLException {
         return connection;
+    }
+
+    /**
+     * @return A {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper} from the
+     * connection pool.  Should be closed after use with {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper#closeConnection(com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper)}
+     * or {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper#close()}
+     *
+     * @throws SQLException if the connection could not be established
+     */
+    protected ConnectionWrapper getConnection() throws SQLException {
+        return new ConnectionWrapper(dataSource.getConnection());
     }
 
     public void disconnect() {
@@ -1381,6 +1392,72 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return new QueryTermSurrounder(prepend, append, join);
     }
 
+    public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
+        try {
+            //check the vaidity of the plate.
+            isPlateValid(plate);
+
+            beginTransaction();
+
+            //update the plate
+            PreparedStatement statement = plate.toSQL(this);
+            statement.execute();
+            statement.close();
+            if(plate.getId() < 0) {
+                PreparedStatement statement1 = isLocal() ? createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
+                ResultSet resultSet = statement1.executeQuery();
+                resultSet.next();
+                int plateId = resultSet.getInt(1);
+                plate.setId(plateId);
+                statement1.close();
+            }
+
+            //replace the images
+            if(plate.gelImagesHaveBeenDownloaded()) { //don't modify the gel images if we haven't downloaded them from the server or looked at them...
+                if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
+                    throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
+                }
+                PreparedStatement deleteImagesStatement = createStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
+                deleteImagesStatement.execute();
+                for(GelImage image : plate.getImages()) {
+                    PreparedStatement statement1 = image.toSql(this);
+                    statement1.execute();
+                    statement1.close();
+                }
+                deleteImagesStatement.close();
+            }
+
+            saveReactions(plate.getReactions(), plate.getReactionType(), progress);
+
+            //update the last-modified on the workflows associated with this plate...
+            String sql;
+            if(plate.getReactionType() == Reaction.Type.Extraction) {
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
+            }
+            else if(plate.getReactionType() == Reaction.Type.PCR){
+                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
+            }
+            else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
+                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
+            }
+            else {
+                throw new SQLException("There is no reaction type "+plate.getReactionType());
+            }
+            Statement workflowUpdateStatement = createStatement();
+            workflowUpdateStatement.executeUpdate(sql);
+            workflowUpdateStatement.close();
+        } catch(SQLException e) {
+            rollback();
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            try {
+                endTransaction();
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e, e.getMessage(), false);
+            }
+        }
+    }
+
     public void isPlateValid(Plate plate) throws DatabaseServiceException {
         try {
             if(plate.getName() == null || plate.getName().length() == 0) {
@@ -1939,6 +2016,349 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             } catch (SQLException e) {
                 // If we failed to close statements, we'll have to let the garbage collector handle it
             }
+        }
+    }
+
+    @Override
+    public boolean deleteAllowed(String tableName) {
+        if(isLocal() || getUsername().toLowerCase().equals("root")) {
+            return true;
+        }
+
+        try {
+            //check schema privileges
+            String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE " +
+                    "GRANTEE LIKE ? AND " +
+                    "PRIVILEGE_TYPE='DELETE' AND " +
+                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%');";
+            PreparedStatement statement = createStatement(schemaSql);
+            statement.setString(1, "'"+getUsername()+"'@%");
+            statement.setString(2, getSchema());
+            ResultSet resultSet = statement.executeQuery();
+            if(resultSet.next()) {
+                return true;
+            }
+            resultSet.close();
+
+            //check table privileges
+            String tableSql = "select * from information_schema.TABLE_PRIVILEGES WHERE " +
+                    "GRANTEE LIKE ? AND " +
+                    "PRIVILEGE_TYPE='DELETE' AND " +
+                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%') AND " +
+                    "(TABLE_NAME=? OR TABLE_NAME='%');";
+            statement = createStatement(tableSql);
+            statement.setString(1, "'"+getUsername()+"'@%");
+            statement.setString(2, getSchema());
+            statement.setString(3, tableName);
+            resultSet = statement.executeQuery();
+            if(resultSet.next()) {
+                return true;
+            }
+            resultSet.close();
+        }
+        catch(SQLException ex) {
+            // todo
+            ex.printStackTrace();
+            assert false : ex.getMessage();
+            // there could be a number of errors here due to the user not having privileges to access the schema information,
+            // so I don't want to halt on this error as it could stop the user from deleting when they are actually allowed...
+        }
+
+        //Can't find privileges...
+        return false;
+    }
+
+    public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws DatabaseServiceException {
+        if (!BiocodeService.getInstance().deleteAllowed(tableName)) {
+            throw new DatabaseServiceException("It appears that you do not have permission to delete from " + tableName + ".  Please contact your System Administrator for assistance", false);
+        }
+
+        List<String> terms = new ArrayList<String>();
+        int count = 0;
+        for (Object id : ids) {
+            count++;
+            terms.add(term + "=" + id);
+        }
+
+        if (count == 0) {
+            return Collections.emptySet();
+        }
+
+        String termString = StringUtilities.join(" OR ", terms);
+
+        PreparedStatement getPlatesStatement = null;
+        PreparedStatement deleteStatement = null;
+        try {
+            Set<Integer> plateIds = new HashSet<Integer>();
+            if (tableName.equals("extraction") || tableName.equals("pcr") || tableName.equals("cyclesequencing")) {
+                getPlatesStatement = createStatement("SELECT plate FROM " + tableName + " WHERE " + termString);
+                ResultSet resultSet = getPlatesStatement.executeQuery();
+                while (resultSet.next()) {
+                    plateIds.add(resultSet.getInt("plate"));
+                }
+            }
+
+            deleteStatement = createStatement("DELETE FROM " + tableName + " WHERE " + termString);
+            deleteStatement.executeUpdate();
+
+            return plateIds;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            SqlUtilities.cleanUpStatements(getPlatesStatement, deleteStatement);
+        }
+    }
+
+    @Override
+    public void addCocktails(List<? extends Cocktail> cocktails) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            for(Cocktail cocktail : cocktails) {
+                connection.executeUpdate(cocktail.getSQLString());
+            }
+            connection.close();
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
+        }
+    }
+
+    @Override
+    public void deleteCocktails(List<? extends Cocktail> deletedCocktails) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            if(!BiocodeService.getInstance().deleteAllowed("cocktail")) {
+                throw new DatabaseServiceException("It appears that you do not have permission to delete cocktails.  Please contact your System Administrator for assistance", false);
+            }
+            for(Cocktail cocktail : deletedCocktails) {
+                String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
+                PreparedStatement statement = connection.prepareStatement(sql);
+                if(cocktail.getId() >= 0) {
+                    if(getPlatesUsingCocktail(cocktail).size() > 0) {
+                        throw new DatabaseServiceException("The cocktail "+cocktail.getName()+" is in use by reactions in your database.  Only unused cocktails can be removed.", false);
+                    }
+                    statement.setInt(1, cocktail.getId());
+                    statement.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, "Could not delete cocktails: "+e.getMessage(), false);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
+        }
+    }
+
+    public List<PCRCocktail> getPCRCocktailsFromDatabase() throws DatabaseServiceException {
+        List<PCRCocktail> cocktails = new ArrayList<PCRCocktail>();
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            ResultSet resultSet = connection.executeQuery("SELECT * FROM pcr_cocktail");
+            while(resultSet.next()) {
+                cocktails.add(new PCRCocktail(resultSet));
+            }
+            resultSet.getStatement().close();
+        }
+        catch(SQLException ex) {
+            ex.printStackTrace();
+            throw new DatabaseServiceException(ex, "Could not query PCR Cocktails from the database", false);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
+        }
+        return cocktails;
+    }
+
+    public List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase() throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+
+        List<CycleSequencingCocktail> cocktails = new ArrayList<CycleSequencingCocktail>();
+        try {
+            connection = getConnection();
+            ResultSet resultSet = connection.executeQuery("SELECT * FROM cyclesequencing_cocktail");
+            while(resultSet.next()) {
+                cocktails.add(new CycleSequencingCocktail(resultSet));
+            }
+            resultSet.getStatement().close();
+        }
+        catch(SQLException ex) {
+            throw new DatabaseServiceException(ex, "Could not query CycleSequencing Cocktails from the database", false);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
+        }
+        return cocktails;
+    }
+
+    public List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws DatabaseServiceException {
+        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON (thermocycle.id = "+thermocycleIdentifierTable+".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
+        System.out.println(sql);
+
+        List<Thermocycle> tCycles = new ArrayList<Thermocycle>();
+
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            ResultSet resultSet = connection.executeQuery(sql);
+            resultSet.next();
+            while(true) {
+                try {
+                    Thermocycle thermocycle = Thermocycle.fromSQL(resultSet);
+                    if(thermocycle != null) {
+                        tCycles.add(thermocycle);
+                    }
+                    else {
+                        break;
+                    }
+                }
+                catch(SQLException e) {
+                    break;
+                }
+            }
+            resultSet.getStatement().close();
+        } catch(SQLException ex) {
+            throw new DatabaseServiceException(ex, "could not read thermocycles from the database", false);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
+        }
+
+        return tCycles;
+    }
+
+    @Override
+    public void addThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            connection.beginTransaction();
+            for(Thermocycle tCycle : cycles) {
+                int id = tCycle.toSQL(this);
+                PreparedStatement statement = createStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+");\n");
+                statement.execute();
+                statement.close();
+            }
+            connection.endTransaction();
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, "Could not add thermocycle(s): "+e.getMessage(), false);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
+        }
+    }
+
+    @Override
+    public void deleteThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException {
+        String sql = "DELETE  FROM state WHERE state.id=?";
+        String sql2 = "DELETE  FROM cycle WHERE cycle.id=?";
+        String sql3 = "DELETE  FROM thermocycle WHERE thermocycle.id=?";
+        String sql4 = "DELETE FROM "+tableName+" WHERE cycle =?";
+        ConnectionWrapper connection = null;
+        try {
+            if(!BiocodeService.getInstance().deleteAllowed("state") || !BiocodeService.getInstance().deleteAllowed("cycle") || !BiocodeService.getInstance().deleteAllowed("thermocycle") || !BiocodeService.getInstance().deleteAllowed(tableName)) {
+                throw new DatabaseServiceException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance", false);
+            }
+
+            connection = getConnection();
+
+            final PreparedStatement statement = connection.prepareStatement(sql);
+            final PreparedStatement statement2 = connection.prepareStatement(sql2);
+            final PreparedStatement statement3 = connection.prepareStatement(sql3);
+            final PreparedStatement statement4 = connection.prepareStatement(sql4);
+            for(Thermocycle thermocycle : cycles) {
+                if(thermocycle.getId() >= 0) {
+                    if(getPlatesUsingThermocycle(thermocycle).size() > 0) {
+                        throw new SQLException("The thermocycle "+thermocycle.getName()+" is being used by plates in your database.  Only unused thermocycles can be removed");
+                    }
+                    for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
+                        for(Thermocycle.State state : cycle.getStates()) {
+                            statement.setInt(1, state.getId());
+                            statement.executeUpdate();
+                        }
+                        statement2.setInt(1, cycle.getId());
+                        statement2.executeUpdate();
+                    }
+                    statement3.setInt(1, thermocycle.getId());
+                    statement3.executeUpdate();
+                    statement4.setInt(1, thermocycle.getId());
+                    statement4.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new DatabaseServiceException(e, "Could not delete thermocycles: "+e.getMessage(), false);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
+        }
+    }
+
+    protected static class ConnectionWrapper {
+        private Connection connection;
+        private int transactionLevel = 0;
+        private List<Statement> statements = new ArrayList<Statement>();
+
+        protected ConnectionWrapper(Connection connection) {
+            this.connection = connection;
+        }
+
+        protected void beginTransaction() throws SQLException {
+            if (transactionLevel == 0) {
+                connection.setAutoCommit(false);
+            }
+            transactionLevel++;
+        }
+
+        protected void rollback() {
+            try {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {/*if we can't rollback, let's ignore*/}
+            transactionLevel = 0;
+        }
+
+        protected void endTransaction() throws SQLException {
+            if (transactionLevel == 0) {
+                return;  //we've rolled back our changes by calling rollback() so no commits are necessary
+            }
+            transactionLevel--;
+            if (transactionLevel == 0) {
+                connection.commit();
+                connection.setAutoCommit(true);
+            }
+        }
+
+        private void close() throws SQLException {
+            rollback();
+            SqlUtilities.cleanUpStatements(statements.toArray(new Statement[statements.size()]));
+            connection.close();
+        }
+
+        protected static void closeConnection(ConnectionWrapper connection) {
+            if(connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    // Let garbage collector clean up
+                }
+            }
+        }
+
+        protected PreparedStatement prepareStatement(String query) throws SQLException {
+            return connection.prepareStatement(query);
+        }
+
+        protected void executeUpdate(String sql) throws SQLException {
+            Statement statement = connection.createStatement();
+            try {
+                statement.executeUpdate(sql);
+            } finally {
+                statement.close();
+            }
+        }
+
+        protected ResultSet executeQuery(String sql) throws SQLException {
+            Statement statement = connection.createStatement();
+            statements.add(statement);
+            return statement.executeQuery(sql);
         }
     }
 }

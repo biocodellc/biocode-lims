@@ -63,8 +63,9 @@ public class LocalLIMSConnection extends SqlLimsConnection {
     }
 
     protected void upgradeDatabase(String currentVersion) throws ConnectionException {
+        ConnectionWrapper connection = null;
         try {
-            Connection connection = getConnection();
+            connection = getConnection();
             while(BiocodeUtilities.compareVersions(currentVersion, EXPECTED_SERVER_FULL_VERSION) < 0) {  // Keep applying upgrade scripts til version is expected
                 String upgradeName = "upgrade_" + currentVersion + "_sqlite.sql";
                 InputStream scriptStream = getClass().getResourceAsStream(upgradeName);
@@ -75,11 +76,12 @@ public class LocalLIMSConnection extends SqlLimsConnection {
 
                 currentVersion = getFullVersionStringFromDatabase();
             }
-            connection.close();
         } catch(IOException ex) {
             throw new ConnectionException("Unable to read database upgrade script: " + ex.getMessage(), ex);
         } catch (SQLException e) {
             throw new ConnectionException("Failed to upgrade database:" + e.getMessage(), e);
+        } finally {
+            ConnectionWrapper.closeConnection(connection);
         }
     }
 
