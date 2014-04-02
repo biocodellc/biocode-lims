@@ -12,7 +12,6 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
@@ -42,8 +41,6 @@ public class ConnectionManager implements XMLSerializable{
     private boolean connectOnStartup = false;
     private JPanel centerPanel;
     private JList connectionsList;
-    private Options sqlConnectorLocationOptions;
-    private String sqlDirverLocation;
     private JButton removeButton;
 
     public ConnectionManager() {
@@ -254,8 +251,6 @@ public class ConnectionManager implements XMLSerializable{
         connectionsPanel.add(leftPanel, BorderLayout.WEST);
         connectionsPanel.add(centerPanel, BorderLayout.CENTER);
 
-        createSqlOptions();
-
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Biocode Connections", dialogParent);
         dialogOptions.setMaxWidth(Integer.MAX_VALUE);
         dialogOptions.setMaxHeight(Integer.MAX_VALUE);
@@ -263,8 +258,7 @@ public class ConnectionManager implements XMLSerializable{
             okButton.get().setEnabled(false);
         }
         updateCenterPanel(okButton.get());
-        if(Dialogs.showDialog(dialogOptions, connectionsPanel, sqlConnectorLocationOptions.getPanel()).equals(Dialogs.OK)) {
-            sqlDirverLocation = sqlConnectorLocationOptions.getValueAsString("driver");
+        if(Dialogs.showDialog(dialogOptions, connectionsPanel).equals(Dialogs.OK)) {
             if(checkIfWeCanLogIn()) {
                 return selectedConnection >= 0 ? connections.get(selectedConnection) : null;
             }
@@ -272,29 +266,6 @@ public class ConnectionManager implements XMLSerializable{
         return null;
     }
 
-    private void createSqlOptions() {
-        sqlConnectorLocationOptions = new Options(ConnectionManager.class);
-        String driverDefault;
-        Preferences prefs = getPreferencesFromPreviousVersion();
-        if(prefs != null) {
-            driverDefault = prefs.get("driver", "");
-        }
-        else {
-            driverDefault = "";
-        }
-        if(sqlDirverLocation == null) {
-            sqlDirverLocation = driverDefault;
-        }
-        Options.FileSelectionOption driverOption = sqlConnectorLocationOptions.addFileSelectionOption("driver", "MySQL Driver:", driverDefault, new String[0], "Browse...", new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                return name.toLowerCase().endsWith(".jar");
-            }
-        });
-        driverOption.setDescription("A file similar to \"mysql-connector-java-5.1.12-bin.jar\", available for download from http://dev.mysql.com/downloads/connector/j/");
-        driverOption.setSelectionType(JFileChooser.FILES_ONLY);
-        driverOption.setValue(sqlDirverLocation);
-        sqlConnectorLocationOptions.restorePreferences();
-    }
 
     public Connection getCurrentlySelectedConnection() {
         if(selectedConnection >= 0 && selectedConnection < connections.size()) {
@@ -344,21 +315,6 @@ public class ConnectionManager implements XMLSerializable{
         return connectOnStartup;
     }
 
-    private static final String DRIVER = "driver";
-    public String getMySQLDriverLocation() {
-        if(sqlConnectorLocationOptions == null) {
-            createSqlOptions();
-        }
-        return ""+sqlConnectorLocationOptions.getValue(DRIVER);
-    }
-
-    public void setMySQLDriverLocation(String path) {
-        if(sqlConnectorLocationOptions == null) {
-            createSqlOptions();
-        }
-        sqlConnectorLocationOptions.setValue(DRIVER, path);
-    }
-
     private void updateCenterPanel(JButton okButton) {
         centerPanel.removeAll();
         if(selectedConnection < 0) {
@@ -390,9 +346,6 @@ public class ConnectionManager implements XMLSerializable{
         if(connectOnStartup) {
             root.setAttribute("connectOnStartup", "true");
         }
-        if(sqlDirverLocation != null) {
-            root.addContent(new Element("driverLocation").setText(sqlDirverLocation));
-        }
         return root;
     }
 
@@ -422,7 +375,6 @@ public class ConnectionManager implements XMLSerializable{
         if(selectedConnection >= connectionElements.size()) {
             selectedConnection = connectionElements.size()-1;
         }
-        sqlDirverLocation = element.getChildText("driverLocation");
     }
 
     private SimpleListener connectionNameChangedListener = new SimpleListener(){

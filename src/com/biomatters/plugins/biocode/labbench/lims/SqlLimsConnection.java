@@ -30,6 +30,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.Cancelable;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
+import org.apache.commons.dbcp.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,12 +50,7 @@ import java.util.Date;
  */
 public abstract class SqlLimsConnection extends LIMSConnection {
 
-    protected Driver driver;
-    protected Connection connection;
-    protected Connection connection2;
-
-    @Override
-    public abstract boolean requiresMySql();
+    private Connection connection;
 
     @Override
     public abstract PasswordOptions getConnectionOptions();
@@ -68,27 +64,35 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     @Override
     public abstract String getSchema();
 
-    public abstract Driver getDriver() throws ConnectionException;
+    abstract BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException;
 
-    abstract void connectToDb(Options connectionOptions) throws ConnectionException;
-
+    private BasicDataSource dataSource;
     @Override
-    protected final void _connect(PasswordOptions options) throws ConnectionException {
-        driver = getDriver();
+    protected void _connect(PasswordOptions options) throws ConnectionException {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
-        connectToDb(selectedLimsOptions);
+        dataSource = connectToDb(selectedLimsOptions);
+        try {
+            connection = dataSource.getConnection();
+        } catch (SQLException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
         String errorMessage = verifyDatabaseVersionAndUpgradeIfNecessary();
         if (errorMessage != null) {
             throw new ConnectionException(errorMessage);
         }
     }
 
+    @Override
+    protected Connection getConnection() throws SQLException {
+        return connection;
+    }
+
     public void disconnect() {
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
         connection = null;
-        connection2 = null;
+        dataSource = null;
         serverUrn = null;
     }
 
@@ -251,14 +255,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         }
         return VERSION_WITHOUT_PROPS;
-    }
-
-    @Override
-    protected Connection getConnection() throws SQLException {
-        if (connection == null) {
-            throw new SQLException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
-        }
-        return connection;
     }
 
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback, boolean downloadTissues) throws DatabaseServiceException {

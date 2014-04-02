@@ -209,8 +209,6 @@ public abstract class LIMSConnection {
         }
     }
 
-    public abstract boolean requiresMySql();
-
     public abstract PasswordOptions getConnectionOptions();
 
     public abstract boolean isLocal();

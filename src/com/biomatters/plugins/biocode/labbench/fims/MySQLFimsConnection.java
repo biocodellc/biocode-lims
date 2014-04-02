@@ -25,7 +25,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
         try {
             Class driverClass = BiocodeService.getInstance().getDriverClass();
             if(driverClass == null) {
-                String error = BiocodeService.getInstance().loadMySqlDriver(false);
+                String error = BiocodeService.getInstance().loadMySqlDriver();
                 if(error != null) {
                     throw new IOException(error);
                 }

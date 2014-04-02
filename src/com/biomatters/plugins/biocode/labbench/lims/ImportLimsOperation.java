@@ -129,7 +129,10 @@ public class ImportLimsOperation extends DocumentOperation {
             progressListener.setIndeterminateProgress();
             progressListener.setMessage("Checking for plates, cocktails, and thermocycles with the same name");
 
-            LIMSConnection sourceLims = new LocalLIMSConnection(databaseName);
+            LIMSConnection sourceLims = new LocalLIMSConnection();
+            LocalLIMSConnectionOptions connectOptions = new LocalLIMSConnectionOptions();
+            connectOptions.setValue(LocalLIMSConnectionOptions.DATABASE, databaseName);
+            sourceLims.connect(connectOptions);
 
             checkForDuplicateNames(sourceLims, destinationLims, "plate", "name", "plate(s)");
             checkForCancelled(progressListener);

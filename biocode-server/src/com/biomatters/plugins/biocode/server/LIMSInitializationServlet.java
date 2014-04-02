@@ -79,10 +79,6 @@ public class LIMSInitializationServlet extends GenericServlet {
             biocodeeService.setDataDirectory(dataDir);
 
             connectionConfig = new Connection("forServer");
-            String driverFile = config.getProperty("sql.driver");
-            if(driverFile != null) {
-                biocodeeService.setMySqlDriver(driverFile);
-            }
 
             connectionConfig.setFims("biocode");
             PasswordOptions fimsOptions = connectionConfig.getFimsOptions();
