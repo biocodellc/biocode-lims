@@ -48,7 +48,6 @@ import java.util.prefs.Preferences;
  */
 @SuppressWarnings({"ConstantConditions"})
 public class BiocodeService extends PartiallyWritableDatabaseService {
-    private QueryService backend;
 
     private static final String DOWNLOAD_TISSUES = "tissueDocuments";
     private static final String DOWNLOAD_WORKFLOWS = "workflowDocuments";
