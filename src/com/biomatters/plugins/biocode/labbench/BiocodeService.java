@@ -1885,11 +1885,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return workflows;
     }
 
-    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws SQLException {
+    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws DatabaseServiceException {
         return limsConnection.getPlatesUsingThermocycle(thermocycle);
     }
 
-    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws SQLException {
-            return limsConnection.getPlatesUsingCocktail(cocktail);
-        }
+    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException {
+        return limsConnection.getPlatesUsingCocktail(cocktail);
+    }
 }

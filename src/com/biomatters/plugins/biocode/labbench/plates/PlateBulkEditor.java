@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseService;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.GeneiousActionOptions;
@@ -378,7 +380,7 @@ public class PlateBulkEditor {
                         }
                         extractionEditor.textViewFromValues();
 
-                    } catch (SQLException e1) {
+                    } catch (DatabaseServiceException e1) {
                         //todo: handle
                         //todo: multithread
                     }
@@ -1279,7 +1281,7 @@ public class PlateBulkEditor {
                     if(tissueEditor != null)
                         tissueEditor.textViewFromValues();
                 }
-            } catch (SQLException e1) {
+            } catch (DatabaseServiceException e1) {
                 Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
                 return;
             }

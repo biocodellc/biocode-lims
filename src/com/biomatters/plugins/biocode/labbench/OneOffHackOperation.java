@@ -216,7 +216,7 @@ public class OneOffHackOperation extends DocumentOperation{
                 }
             }
 
-        } catch (SQLException e1) {
+        } catch (DatabaseServiceException e1) {
             //todo: handle
             //todo: multithread
         }

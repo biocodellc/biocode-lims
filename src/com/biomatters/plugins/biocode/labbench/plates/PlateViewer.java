@@ -188,7 +188,7 @@ public class PlateViewer extends JPanel {
                         public void run() {
                             try {
                                 BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
-                            } catch (SQLException e1) {
+                            } catch (DatabaseServiceException e1) {
                                 Dialogs.showMessageDialog(e1.getMessage());
                             }
                         }

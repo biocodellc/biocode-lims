@@ -407,7 +407,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                     public void run() {
                         try {
                             BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
-                        } catch (SQLException e1) {
+                        } catch (DatabaseServiceException e1) {
                             Dialogs.showMessageDialog(e1.getMessage());
                         }
                     }
@@ -1048,7 +1048,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                                     buttonHolder.setLayout(new BorderLayout());
                                     buttonHolder.add(gelPanel);
                                     buttonHolder.revalidate();
-                                } catch (SQLException e1) {
+                                } catch (DatabaseServiceException e1) {
                                     buttonHolder.remove(loadingLabel);
                                     buttonHolder.add(new GLabel("Could not load GEL images: "+e1.getMessage(), JLabel.CENTER));
                                     buttonHolder.revalidate();

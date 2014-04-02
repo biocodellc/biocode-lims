@@ -558,7 +558,7 @@ public class ImportLimsOperation extends DocumentOperation {
                         Set<String> existingExtractionIds;
                         try {
                             existingExtractionIds = destinationLims.getAllExtractionIdsStartingWith(sourceExtractionIds);
-                        } catch (SQLException e) {
+                        } catch (DatabaseServiceException e) {
                             canceled = true;
                             callbackException.set(e);
                             return;

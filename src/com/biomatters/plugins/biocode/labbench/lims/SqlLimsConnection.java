@@ -570,6 +570,194 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return new QueryPart(queryConditions, objects);
     }
 
+    public Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws DatabaseServiceException {
+        if (sourceReactions == null || sourceReactions.size() == 0) {
+            return Collections.emptyMap();
+        }
+        StringBuilder sql = new StringBuilder("SELECT plate.name, plate.size, extraction.* FROM extraction, plate WHERE plate.id = extraction.plate AND (");
+        for (int i = 0; i < sourceReactions.size(); i++) {
+            sql.append("extractionId=?");
+            if (i < sourceReactions.size() - 1) {
+                sql.append(" OR ");
+            }
+        }
+        sql.append(")");
+        try {
+            PreparedStatement statement = createStatement(sql.toString());
+            for (int i = 0; i < sourceReactions.size(); i++) {
+                statement.setString(i + 1, sourceReactions.get(i).getExtractionId());
+            }
+            ResultSet resultSet = statement.executeQuery();
+            Map<String, Reaction> reactions = new HashMap<String, Reaction>();
+            while (resultSet.next()) {
+                ExtractionReaction reaction = new ExtractionReaction(resultSet);
+                reactions.put(reaction.getExtractionId(), reaction);
+            }
+            return reactions;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    protected Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
+        if (plateIds == null || plateIds.size() == 0) {
+            return Collections.emptyMap();
+        }
+        StringBuilder sql = new StringBuilder("SELECT * FROM gelimages WHERE (");
+        for (Iterator<Integer> it = plateIds.iterator(); it.hasNext(); ) {
+            Integer i = it.next();
+            //noinspection StringConcatenationInsideStringBufferAppend
+            sql.append("gelimages.plate=" + i);
+            if (it.hasNext()) {
+                sql.append(" OR ");
+            }
+        }
+        sql.append(")");
+        System.out.println(sql);
+        try {
+            PreparedStatement statement = createStatement(sql.toString());
+            ResultSet resultSet = statement.executeQuery();
+            Map<Integer, List<GelImage>> map = new HashMap<Integer, List<GelImage>>();
+            while (resultSet.next()) {
+                GelImage image = new GelImage(resultSet);
+                List<GelImage> imageList;
+                List<GelImage> existingImageList = map.get(image.getPlate());
+                if (existingImageList != null) {
+                    imageList = existingImageList;
+                } else {
+                    imageList = new ArrayList<GelImage>();
+                    map.put(image.getPlate(), imageList);
+                }
+                imageList.add(image);
+            }
+            statement.close();
+            return map;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws DatabaseServiceException {
+        if(tissueIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        List<String> queries = new ArrayList<String>();
+        //noinspection UnusedDeclaration
+        for (String s : tissueIds) {
+            queries.add("extractionId LIKE ?");
+        }
+
+        String sql = "SELECT extractionId FROM extraction WHERE " + StringUtilities.join(" OR ", queries);
+
+        Set<String> result = null;
+        try {
+            PreparedStatement statement = createStatement(sql);
+            for (int i = 0; i < tissueIds.size(); i++) {
+                statement.setString(i + 1, tissueIds.get(i) + "%");
+            }
+
+            ResultSet set = statement.executeQuery();
+            result = new HashSet<String>();
+
+            while (set.next()) {
+                result.add(set.getString("extractionId"));
+            }
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+
+
+        return result;
+    }
+
+    public Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
+        if (barcodes.size() == 0) {
+            System.out.println("empty!");
+            return Collections.emptyMap();
+        }
+        StringBuilder sql = new StringBuilder("SELECT * FROM extraction " +
+                "LEFT JOIN plate ON plate.id = extraction.plate " +
+                "WHERE (");
+
+        List<String> queryParams = new ArrayList<String>();
+        //noinspection UnusedDeclaration
+        for (String barcode : barcodes) {
+            queryParams.add("extraction.extractionBarcode = ?");
+        }
+
+        sql.append(StringUtilities.join(" OR ", queryParams));
+
+        sql.append(")");
+
+        try {
+            PreparedStatement statement = createStatement(sql.toString());
+
+            for (int i = 0; i < barcodes.size(); i++) {
+                String barcode = barcodes.get(i);
+                statement.setString(i + 1, barcode);
+            }
+
+            ResultSet r = statement.executeQuery();
+
+            Map<String, ExtractionReaction> results = new HashMap<String, ExtractionReaction>();
+            while (r.next()) {
+                ExtractionReaction reaction = new ExtractionReaction(r);
+                results.put("" + reaction.getFieldValue("extractionBarcode"), reaction);
+            }
+
+            return results;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException {
+        if(cocktail.getId() < 0) {
+            return Collections.emptyList();
+        }
+        String tableName;
+        switch(cocktail.getReactionType()) {
+            case PCR:
+                tableName = "pcr";
+                break;
+            case CycleSequencing:
+                tableName = "cyclesequencing";
+                break;
+            default:
+                throw new RuntimeException(cocktail.getReactionType()+" reactions cannot have a cocktail");
+        }
+        String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktail.getId();
+        try {
+            ResultSet resultSet = createStatement().executeQuery(sql);
+
+            Set<String> plateNames = new LinkedHashSet<String>();
+            while(resultSet.next()) {
+                plateNames.add(resultSet.getString(1));
+            }
+            return plateNames;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws DatabaseServiceException {
+        if(thermocycle.getId() < 0) {
+            return Collections.emptyList();
+        }
+        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycle.getId();
+        try {
+            ResultSet resultSet = createStatement().executeQuery(sql);
+
+            List<String> plateNames = new ArrayList<String>();
+            while(resultSet.next()) {
+                plateNames.add(resultSet.getString(1));
+            }
+            return plateNames;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
     private static class QueryPart {
         private String queryConditions;
         private List<Object> parameters;

@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
@@ -285,7 +286,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                     extractionIds.add(extractionId);
                 }
             }
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Error reading the database: "+e.getMessage(), e);
         }
     }

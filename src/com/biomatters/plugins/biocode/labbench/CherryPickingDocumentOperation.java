@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
@@ -297,7 +298,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                     }
                     newReactions.add(r);
                 }
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 throw new DocumentOperationException("Could not fetch existing extractions from database: "+e.getMessage());
             }
         }
@@ -398,7 +399,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         }
         try {
             return new ArrayList<Reaction>(BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(reactions).values());
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             e.printStackTrace();
             throw new DocumentOperationException("Error getting extraction reactions from database: "+e.getMessage(), e);
         }
