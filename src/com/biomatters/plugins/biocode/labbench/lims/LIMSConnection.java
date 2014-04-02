@@ -587,7 +587,7 @@ public abstract class LIMSConnection {
 
         StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
         sql.append("FROM workflow INNER JOIN assembly ON assembly.id IN ");
-        appendSetOfQuestionMarks(sql, sequenceIds.size());
+        SqlUtilities.appendSetOfQuestionMarks(sql, sequenceIds.size());
         if (!includeFailed) {
             sql.append(" AND assembly.progress = ?");
             sqlValues.add("passed");
@@ -1645,7 +1645,7 @@ public abstract class LIMSConnection {
 
         StringBuilder countingQuery = new StringBuilder("SELECT cyclesequencing.id, COUNT(traces.id) as traceCount FROM " +
                 "cyclesequencing LEFT JOIN traces ON cyclesequencing.id = traces.reaction WHERE cyclesequencing.plate IN ");
-        appendSetOfQuestionMarks(countingQuery, plateMap.size());
+        SqlUtilities.appendSetOfQuestionMarks(countingQuery, plateMap.size());
         countingQuery.append(" GROUP BY cyclesequencing.id");
         PreparedStatement getCount = null;
         try {
@@ -1704,7 +1704,7 @@ public abstract class LIMSConnection {
             }
             String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
             conditionBuilder.append(" (").append(sampleColumn).append(" IN ");
-            appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+            SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
         }
         if (workflowQueryConditions != null) {
             if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
@@ -1758,7 +1758,7 @@ public abstract class LIMSConnection {
                 "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes FROM ");
         // We join plate twice because HSQL doesn't let us use aliases.  The way the query is written means the select would produce a derived table.
         queryBuilder.append("(SELECT * FROM plate WHERE id IN ");
-        appendSetOfQuestionMarks(queryBuilder, plateIds.size());
+        SqlUtilities.appendSetOfQuestionMarks(queryBuilder, plateIds.size());
         queryBuilder.append(") matching ");
         queryBuilder.append("INNER JOIN plate ON plate.id = matching.id ");
         queryBuilder.append("LEFT OUTER JOIN extraction ON extraction.plate = plate.id ");
@@ -1780,12 +1780,6 @@ public abstract class LIMSConnection {
 
         queryBuilder.append(" ORDER by plate.id, assembly.date desc");
         return queryBuilder.toString();
-    }
-
-    private void appendSetOfQuestionMarks(StringBuilder builder, int count) {
-        String[] qMarks = new String[count];
-        Arrays.fill(qMarks, "?");
-        builder.append("(").append(StringUtilities.join(",", Arrays.asList(qMarks))).append(")");
     }
 
     private QueryPart getQueryForTable(String table, Map<String, List<AdvancedSearchQueryTerm>> tableToTerms, CompoundSearchQuery.Operator operator) {

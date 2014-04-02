@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
@@ -157,12 +156,25 @@ public class MySQLFimsConnection extends TableFimsConnection {
     }
 
     @Override
+    protected String getTissueCol() {
+        return super.getTissueCol().replace(FIELD_PREFIX, "");
+    }
+
+    @Override
     public List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        String queryString = "SELECT * FROM " + tableName + " WHERE " + getTissueCol() + " IN (" + StringUtilities.join(",", tissueIds) + ")";
-        System.out.println(queryString);
+        StringBuilder query = new StringBuilder("SELECT * FROM " + tableName + " WHERE " + getTissueCol() + " IN ");
+        SqlUtilities.appendSetOfQuestionMarks(query, tissueIds.size());
+
+        String queryString = query.toString();
+        SqlUtilities.printSql(queryString, tissueIds);
         try {
-            Statement statement = createStatement();
-            ResultSet resultSet = statement.executeQuery(queryString);
+            PreparedStatement statement = connection.prepareStatement(queryString);
+            int index = 1;
+            for (String tissueId : tissueIds) {
+                statement.setObject(index++, tissueId);
+            }
+
+            ResultSet resultSet = statement.executeQuery();
             List<FimsSample> samples = new ArrayList<FimsSample>();
             while(resultSet.next() && connection != null){
                 Map<String, Object> data = new HashMap<String, Object>();

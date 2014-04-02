@@ -33,7 +33,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     static final String CODE_PREFIX = "TABLEFIMS:";
 
     protected String getTissueCol() {
-        return tissueCol;
+        return tissueCol.replace(CODE_PREFIX, "");
     }
 
     private String tissueCol;

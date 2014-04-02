@@ -300,7 +300,9 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                         throw new RuntimeException("Should only call this with a TissueDocument");
                     }
                     results.add((TissueDocument)document);
-                    callback.add(document, searchResultProperties);
+                    if(callback != null) {
+                        callback.add(document, searchResultProperties);
+                    }
                 }
 
                 @Override
@@ -310,11 +312,24 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
 
                 @Override
                 protected boolean _isCanceled() {
+                    if(callback == null) {
+                        return false;
+                    }
                     return callback.isCanceled();
                 }
             };
-            String queryString = "SELECT * FROM " + tableId + " WHERE " + getTissueCol() + " IN (" + StringUtilities.join(",", tissueIds) + ")";
-            getFimsSamples(queryString, myCallback);
+            StringBuilder queryString = new StringBuilder("SELECT * FROM " + tableId + " WHERE " + getTissueCol() + " IN (");
+            boolean first = true;
+            for (String tissueId : tissueIds) {
+                if(first) {
+                    first = false;
+                } else {
+                    queryString.append(",");
+                }
+                queryString.append("'").append(tissueId).append("'");
+            }
+            queryString.append(")");
+            getFimsSamples(queryString.toString(), myCallback);
         } catch (IOException e) {
             throw new ConnectionException("Could not retrieve samples from FIMS: " + e.getMessage(), e);
         }

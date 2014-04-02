@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 
 import java.sql.*;
 import java.util.*;
@@ -283,4 +284,10 @@ public class SqlUtilities {
         }
         return toPrint;
     }
+
+    public static void appendSetOfQuestionMarks(StringBuilder builder, int count) {
+            String[] qMarks = new String[count];
+            Arrays.fill(qMarks, "?");
+            builder.append("(").append(StringUtilities.join(",", Arrays.asList(qMarks))).append(")");
+        }
 }
