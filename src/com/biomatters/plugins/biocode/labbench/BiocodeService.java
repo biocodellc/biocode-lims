@@ -7,7 +7,6 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -20,9 +19,6 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
 import jebl.util.ProgressListener;
-import org.apache.commons.dbcp.*;
-import org.apache.commons.pool.ObjectPool;
-import org.apache.commons.pool.impl.GenericObjectPool;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
@@ -36,9 +32,6 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.sql.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -352,7 +345,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public Driver getDriver() throws ConnectionException {
         if(!driverLoaded) {
-            String error = loadMySqlDriver(true);
+            String error = loadMySqlDriver();
             if(error != null) {
                 throw new ConnectionException(error);
             }
@@ -516,10 +509,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: "+e.getMessage();
         }
 
-        if(error == null && (limsConnection.requiresMySql() || connection.getFimsConnection().requiresMySql())) {
-            error = loadMySqlDriver(block);
-        }
-
         if(error == null) {
             try {
                 Class driverClass = getClass().getClassLoader().loadClass("org.hsqldb.jdbc.JDBCDriver");
@@ -625,53 +614,23 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         updateStatus();
     }
 
-    public void setMySqlDriver(String path) {
-        if(connectionManager == null) {
-            initializeConnectionManager();
-        }
-        connectionManager.setMySQLDriverLocation(path);
-    }
-
-    public String loadMySqlDriver(boolean block) {
+    public String loadMySqlDriver() {
         driverLoaded = true;
-        String driverFileName = connectionManager.getMySQLDriverLocation();
-        ClassLoader loader = BiocodeService.class.getClassLoader();
+
         String error = null;
         try {
-            if(driverFileName.trim().length() == 0) {
-                error = "You have not specified the location of your MySQL driver file.  If you do not have a copy, you can download the file from <a href=\"http://www.mysql.com/downloads/connector/j/\">http://www.mysql.com/downloads/connector/j/</a>.";
-            }
-            else {
-                File driverFile = new File(driverFileName);
-                if(!driverFile.exists() || driverFile.isDirectory()) {
-                   error = "Could not find the MySQL connector file '"+driverFileName+"'.  Please check that this file exists, and is not a directory.";
-                }
-                else {
-                    URL driverUrl = driverFile.toURI().toURL();
-                    loader = new URLClassLoader(new URL[]{driverUrl}, loader);
-                }
-            }
-        } catch (MalformedURLException ex) {
-            if(block) {
-                error = "Could not load the MySql Driver!";
-            }
+            Class driverClass = Class.forName("com.mysql.jdbc.Driver");
+            driver = (Driver) driverClass.newInstance();
+        } catch (ClassNotFoundException e1) {
+            error = "Could not find MySQL driver class";
+        } catch (IllegalAccessException e1) {
+            error = "Could not access MySQL driver class";
+        } catch (InstantiationException e1) {
+            error = "Could not instantiate MySQL driver class";
+        } catch (ClassCastException e1) {
+            error = "MySQL Driver class exists, but is not an SQL driver";
         }
 
-
-        if(error == null) {
-            try {
-                Class driverClass = loader.loadClass("com.mysql.jdbc.Driver");
-                driver = (Driver) driverClass.newInstance();
-            } catch (ClassNotFoundException e1) {
-                error = "Could not find MySQL driver class";
-            } catch (IllegalAccessException e1) {
-                error = "Could not access MySQL driver class";
-            } catch (InstantiationException e1) {
-                error = "Could not instantiate MySQL driver class";
-            } catch (ClassCastException e1) {
-                error = "MySQL Driver class exists, but is not an SQL driver";
-            }
-        }
         return error;
     }
 
@@ -788,7 +747,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                     tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith);
                 } catch (ConnectionException e) {
-                    throw new DatabaseServiceException(e.getMessage(), false);
+                    throw new DatabaseServiceException(e, e.getMessage(), false);
                 }
             } else {
                 tissueIdsMatchingFimsQuery = null;
