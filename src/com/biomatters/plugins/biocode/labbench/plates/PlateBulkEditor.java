@@ -997,7 +997,7 @@ public class PlateBulkEditor {
                     }
 
                     String text = support.getTransferable().getTransferData(DataFlavor.stringFlavor).toString();
-                    String[] newLines = text.split("\n", -1);
+                    String[] newLines = text.split("\\r?\\n", -1);
 
                     String originalText = valueArea.getText();
                     int endOfLineAfterSelection = originalText.indexOf("\n", valueArea.getSelectionEnd());
