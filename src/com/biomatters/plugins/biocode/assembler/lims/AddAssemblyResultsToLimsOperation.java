@@ -19,7 +19,6 @@ import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.io.IOException;
-import java.sql.*;
 import java.util.*;
 
 /**
@@ -109,9 +108,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             if(options.removePreviousSequences()) {
                 try {
-                    removeAllExistingSequencesInDatabase(assemblyResult);
-                } catch (SQLException e) {
-                    e.printStackTrace();
+                    removeAllExistingSequencesInDatabase(assemblyResult.workflowId, assemblyResult.extractionId);
+                } catch (DatabaseServiceException e) {
                     throw new DocumentOperationException("Could not remove existing sequences: "+e.getMessage(), e);
                 }
             }
@@ -191,9 +189,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         document.save();
     }
 
-    private int removeAllExistingSequencesInDatabase(AssemblyResult assemblyResult) throws SQLException, DocumentOperationException {
-        if(assemblyResult.workflowId == null || assemblyResult.extractionId == null) {
-            return 0;
+    private void removeAllExistingSequencesInDatabase(Integer workflowId, String extractionId) throws DatabaseServiceException, DocumentOperationException {
+        if(workflowId == null || extractionId == null) {
+            return;
         }
         try {
             if(!BiocodeService.getInstance().deleteAllowed("assembly")) {
@@ -203,15 +201,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             throw new DocumentOperationException(e.getMessage(), e);
         }
 
-        String sql = "DELETE FROM assembly WHERE workflow=? AND extraction_id=?";
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         if(limsConnection == null) {
             throw new DocumentOperationException("You have been disconnected from the LIMS database.  Please reconnect and try again.");
         }
-        PreparedStatement statement = limsConnection.createStatement(sql);
-        statement.setInt(1, assemblyResult.workflowId);
-        statement.setString(2, assemblyResult.extractionId);
-        return statement.executeUpdate();
+        limsConnection.deleteSequencesForWorkflowId(workflowId, extractionId);
     }
 
 

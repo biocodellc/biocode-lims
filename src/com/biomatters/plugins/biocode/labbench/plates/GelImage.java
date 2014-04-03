@@ -102,16 +102,6 @@ public class GelImage implements XMLSerializable {
 
     }
 
-    public PreparedStatement toSql(LIMSConnection conn) throws SQLException {
-        PreparedStatement statement;
-        statement = conn.createStatement("INSERT INTO gelimages (plate, imageData, notes, name) VALUES (?, ?, ?, ?)");
-        statement.setInt(1, plate);
-        statement.setObject(2, imageBytes);
-        statement.setString(3, notes);
-        statement.setString(4, filename);
-        return statement;
-    }
-
     public Element toXML() {
         Element xml = new Element("GelImage");
         xml.addContent(new Element("id").setText(""+getId()));

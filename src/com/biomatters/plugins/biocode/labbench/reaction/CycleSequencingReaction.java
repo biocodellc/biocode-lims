@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.File;
 import java.lang.ref.WeakReference;
 
+import jebl.util.ProgressListener;
 import org.jdom.Element;
 
 /**
@@ -249,20 +250,16 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         }
 
         try {
-            String sql = "SELECT * FROM traces WHERE reaction = ?";
 
-            PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(sql);
-            statement.setInt(1, getId());
-            ResultSet set = statement.executeQuery();
+            Map<Integer, List<ReactionUtilities.MemoryFile>> traces = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(Collections.singletonList("" + getId()), ProgressListener.EMPTY);
 
             List<Trace> result = new ArrayList<Trace>();
-            while(set.next()) {
-                result.add(new Trace(new ReactionUtilities.MemoryFile(set.getString("name"), set.getBytes("data")), set.getInt("id")));
+            for (ReactionUtilities.MemoryFile memoryFile : traces.get(getId())) {
+                result.add(new Trace(memoryFile));
             }
-            statement.close();
 
             addTraces(result);
-        } catch (SQLException e1) {
+        } catch (DatabaseServiceException e1) {
             Dialogs.showMessageDialog("Could not get the sequences: "+e1.getMessage());
         } catch (IOException e1) {
             Dialogs.showMessageDialog("Could not write temp files to disk: "+e1.getMessage());

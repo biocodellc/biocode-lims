@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
@@ -127,7 +128,7 @@ public class BiocodeUtilities {
     }
 
 
-    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions_a, ProgressListener progressListener) throws SQLException, IOException, DocumentImportException{
+    public static void downloadTracesForReactions(List<CycleSequencingReaction> reactions_a, ProgressListener progressListener) throws DatabaseServiceException, IOException, DocumentImportException{
         List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
         for(CycleSequencingReaction reaction : reactions_a) { //try not to download if we've already downloaded!
             if(!reaction.hasDownloadedChromats()) {
@@ -145,34 +146,7 @@ public class BiocodeUtilities {
             return;
         }
 
-        Statement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(java.sql.ResultSet.TYPE_FORWARD_ONLY, java.sql.ResultSet.CONCUR_READ_ONLY);
-        if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
-            statement.setFetchSize(Integer.MIN_VALUE);
-        }
-        ResultSet countResultSet = statement.executeQuery("SELECT COUNT(*) FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
-        countResultSet.next();
-        int count = countResultSet.getInt(1);
-        countResultSet.close();
-        ResultSet resultSet = statement.executeQuery("SELECT * FROM traces WHERE " + StringUtilities.join(" OR ", idQueries));
-        Map<Integer, List<ReactionUtilities.MemoryFile>> results = new HashMap<Integer, List<ReactionUtilities.MemoryFile>>();
-        double pos = 0;
-        long bytes = 0;
-        while(resultSet.next()) {
-            if (progressListener.isCanceled()) break;
-            progressListener.setMessage("downloaded "+formatSize(bytes, 2));
-            progressListener.setProgress(pos/count);
-            pos++;
-            ReactionUtilities.MemoryFile memoryFile = new ReactionUtilities.MemoryFile(resultSet.getString("name"), resultSet.getBytes("data"));
-            bytes += memoryFile.getData().length;
-            int id = resultSet.getInt("reaction");
-            List<ReactionUtilities.MemoryFile> files = results.get(id);
-            if(files == null) {
-                files = new ArrayList<ReactionUtilities.MemoryFile>();
-                results.put(id, files);
-            }
-            files.add(memoryFile);
-        }
-        resultSet.close();
+        Map<Integer, List<ReactionUtilities.MemoryFile>> results = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(idQueries, progressListener);
         if(progressListener.isCanceled()) {
             return;
         }

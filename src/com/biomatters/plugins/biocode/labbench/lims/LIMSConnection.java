@@ -84,8 +84,15 @@ public abstract class LIMSConnection {
     public abstract boolean deleteAllowed(String tableName);
 
     public abstract void deleteSequences(List<Integer> sequencesToDelete) throws DatabaseServiceException;
+    public abstract void deleteSequencesForWorkflowId(Integer workflowId, String extractionId) throws DatabaseServiceException;
 
     public abstract Map<String,String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws DatabaseServiceException;
+
+    public abstract Map<Integer,List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException;
+
+    public abstract List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException;
+
+    public abstract void setSequenceStatus(boolean submitted, List<Integer> ids) throws DatabaseServiceException;
 
     public static enum AvailableLimsTypes {
         local(LocalLIMSConnection.class, "Built-in MySQL Database", "Create and connect to LIMS databases on your local computer (stored with your Geneious data)"),
@@ -201,22 +208,6 @@ public abstract class LIMSConnection {
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
-
-    public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
-        Connection connection = getConnectionInternal();
-        Statement statement = connection.createStatement(resultSetType, resultSetConcurrency);
-        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
-        return statement;
-    }
-
-    public int getLastInsertId() throws SQLException {
-        int reactionId;
-        ResultSet reactionIdResultSet = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ? createStatement().executeQuery("CALL IDENTITY();") : createStatement().executeQuery("SELECT last_insert_id()");
-        reactionIdResultSet.next();
-        reactionId = reactionIdResultSet.getInt(1);
-        return reactionId;
-    }
-
 
     public static List<DocumentField> getSearchAttributes() {
         return Arrays.asList(

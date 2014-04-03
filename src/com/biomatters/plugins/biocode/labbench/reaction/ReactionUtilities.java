@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
@@ -249,7 +250,7 @@ public class ReactionUtilities {
     private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames, String filterText) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             e.printStackTrace();
             return new ImportTracesResult(0, "Error reading existing sequences from database: "+e.getMessage());
         } catch (IOException e) {

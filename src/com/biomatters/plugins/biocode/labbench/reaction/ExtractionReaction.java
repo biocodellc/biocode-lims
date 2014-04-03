@@ -1,8 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -232,29 +232,14 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         try {
             //check that the extraction id's don't already exist in the database...
-            List<String> reactionOrs = new ArrayList<String>();
+            List<String> extractionIds = new ArrayList<String>();
             for(Reaction r : reactions) {
                 if(r.getId() < 0 && r.getExtractionId().length() > 0) {
-                    reactionOrs.add("extraction.extractionId=?");
+                    extractionIds.add(r.getExtractionId());
                 }
             }
-            if(reactionOrs.size() > 0) {
-                String sql = "SELECT * FROM extraction, plate WHERE plate.id = extraction.plate AND ("+StringUtilities.join(" OR ", reactionOrs)+")";
-                PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(sql);
-                int count=1;
-                for(Reaction r : reactions) {
-                    if(r.getId() < 0 && r.getExtractionId().length() > 0) {
-                        statement.setString(count, r.getExtractionId());
-                        count++;
-                    }
-                }
-                ResultSet results = statement.executeQuery();
-                List<ExtractionReaction> extractionsThatExist = new ArrayList<ExtractionReaction>();
-                while(results.next()) {
-                    extractionsThatExist.add(new ExtractionReaction(results));
-                    //String extractionId = results.getString("extraction.extractionId");
-                }
-                statement.close();
+            if(extractionIds.size() > 0) {
+                List<ExtractionReaction> extractionsThatExist = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsForIds(extractionIds);
                 if(extractionsThatExist.size() > 0) {
                     //ask the user if they want to move the extractions that are already attached to a plate.
                     StringBuilder moveMessage = new StringBuilder("The following extractions already exist in the database.\nDo you want to move them to this plate?\n\n");
@@ -290,7 +275,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                 }
 
             }
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             return "Could not qurey the LIMS database: "+e.getMessage();
         }
 

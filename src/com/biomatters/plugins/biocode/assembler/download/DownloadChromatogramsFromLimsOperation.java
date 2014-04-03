@@ -138,7 +138,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             progress.beginSubtask("Downloading Traces");
             try {
                 BiocodeUtilities.downloadTracesForReactions(reactions, progress);
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 e.printStackTrace();
                 throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
             } catch (IOException e) {
