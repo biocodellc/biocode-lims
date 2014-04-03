@@ -3185,7 +3185,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             return extractionsThatExist;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT * FROM extraction, plate WHERE plate.id = extraction.plate IN ");
+        StringBuilder sql = new StringBuilder("SELECT * FROM extraction, plate WHERE plate.id = extraction.plate AND extraction.extractionId IN ");
         SqlUtilities.appendSetOfQuestionMarks(sql, extractionIds.size());
 
         ConnectionWrapper connection = null;
