@@ -72,7 +72,7 @@ public class LocalLIMSConnection extends SqlLimsConnection {
                 if(scriptStream == null) {
                     throw new FileNotFoundException("Could not find resource "+getClass().getPackage().getName()+"."+upgradeName);
                 }
-                DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
+                DatabaseScriptRunner.runScript(connection.getInternalConnection(), scriptStream, true, false);
 
                 currentVersion = getFullVersionStringFromDatabase();
             }
@@ -81,7 +81,7 @@ public class LocalLIMSConnection extends SqlLimsConnection {
         } catch (SQLException e) {
             throw new ConnectionException("Failed to upgrade database:" + e.getMessage(), e);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
     }
 

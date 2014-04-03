@@ -72,15 +72,20 @@ public abstract class LIMSConnection {
 
     public abstract Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException;
 
+    public abstract void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException;
     public abstract void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException;
 
     public abstract void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException;
-
+    public abstract void renamePlate(int id, String newName) throws DatabaseServiceException;
     public abstract void isPlateValid(Plate plate) throws DatabaseServiceException;
 
     public abstract List<FailureReason> getPossibleFailureReasons();
 
     public abstract boolean deleteAllowed(String tableName);
+
+    public abstract void deleteSequences(List<Integer> sequencesToDelete) throws DatabaseServiceException;
+
+    public abstract Map<String,String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws DatabaseServiceException;
 
     public static enum AvailableLimsTypes {
         local(LocalLIMSConnection.class, "Built-in MySQL Database", "Create and connect to LIMS databases on your local computer (stored with your Geneious data)"),
@@ -411,6 +416,9 @@ public abstract class LIMSConnection {
     abstract String getProperty(String key) throws DatabaseServiceException;
 
     public abstract Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws DatabaseServiceException ;
+    public abstract Map<String,Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException;
+    public abstract Map<String,String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException;
+    public abstract void renameWorkflow(int id, String newName) throws DatabaseServiceException;
 
     public abstract void testConnection() throws DatabaseServiceException;
 

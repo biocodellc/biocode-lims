@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -289,7 +290,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         Map<String, String> tissueMapping;
         try {
             tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("cyclesequencing", reactions);
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             return "Could not connect to the LIMS database";
         }
 
@@ -368,7 +369,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                         reaction.setWorkflow(workflow);
                     }
                 }
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 return "Could not query the LIMS database.  "+e.getMessage();
             }
         }

@@ -314,7 +314,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        catch(SQLException ex) {
+        catch(DatabaseServiceException ex) {
             throw new DocumentOperationException(ex.getMessage(), ex);
         }
     }

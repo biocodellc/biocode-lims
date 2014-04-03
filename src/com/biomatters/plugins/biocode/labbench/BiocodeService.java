@@ -36,7 +36,6 @@ import java.sql.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.Date;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -152,33 +151,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         }
 
-        if (!sequencesToDelete.isEmpty()) {
-            StringBuilder sql = new StringBuilder("DELETE FROM assembly WHERE (");
-            for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
-                sql.append("id=?");
-                if(i1 < sequencesToDelete.size()-1) {
-                    sql.append(" OR ");
-                }
-            }
-            sql.append(")");
-            try {
-                PreparedStatement statement = limsConnection.createStatement(sql.toString());
-
-
-                for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
-                    Integer i = sequencesToDelete.get(i1);
-                    statement.setInt(i1+1, i);
-                }
-
-                int notDeletedCount = sequencesToDelete.size() - statement.executeUpdate();
-                if(notDeletedCount > 0) {
-                    throw new DatabaseServiceException(notDeletedCount + " sequences were not deleted.", false);
-                }
-            }
-            catch(SQLException e) {
-                throw new DatabaseServiceException(e, "Could not delete sequences: "+e.getMessage(), true);
-            }
-        }
+        limsConnection.deleteSequences(sequencesToDelete);
 
         if(documentsWithNoIdField.size() > 0) {
             throw new DatabaseServiceException("Some of your selected documents were not correctly annotated with LIMS data, and could not be deleted.  Please contact Biomatters for assistance.", false);
@@ -226,44 +199,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         if(WorkflowDocument.class.isAssignableFrom(document.getDocumentClass())) {
             WorkflowDocument doc = (WorkflowDocument)document.getDocumentOrThrow(DatabaseServiceException.class);
-            try {
-                renameWorkflow(doc.getWorkflow().getId(), newValue.getValue().toString());
-            } catch (SQLException e) {
-                throw new DatabaseServiceException(e.getMessage(), true);
-            }
+            limsConnection.renameWorkflow(doc.getWorkflow().getId(), newValue.getValue().toString());
         }
 
         if(PlateDocument.class.isAssignableFrom(document.getDocumentClass())) {
             PlateDocument doc = (PlateDocument)document.getDocumentOrThrow(DatabaseServiceException.class);
-            try {
-                renamePlate(doc.getPlate().getId(), newValue.getValue().toString());
-            } catch (SQLException e) {
-                throw new DatabaseServiceException(e.getMessage(), true);
-            }
+            limsConnection.renamePlate(doc.getPlate().getId(), newValue.getValue().toString());
         }
-    }
-
-
-    private void renameWorkflow(int id, String newName) throws SQLException {
-        String sql = "UPDATE workflow SET name=? WHERE id=?";
-        PreparedStatement statement = limsConnection.createStatement(sql);
-
-        statement.setString(1, newName);
-        statement.setInt(2, id);
-
-        statement.executeUpdate();
-        statement.close();
-    }
-
-    private void renamePlate(int id, String newName) throws SQLException{
-        String sql = "UPDATE plate SET name=? WHERE id=?";
-        PreparedStatement statement = limsConnection.createStatement(sql);
-
-        statement.setString(1, newName);
-        statement.setInt(2, id);
-
-        statement.executeUpdate();
-        statement.close();
     }
 
     private void loadEmptyCaches() {
@@ -1019,7 +961,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        //template.toSQL(limsConnection.getConnection());
         updateDisplayFieldsTemplates();
     }
 
@@ -1323,86 +1264,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return result;
     }
 
-    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws SQLException{
+    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws DatabaseServiceException{
         if(reactions.size() == 0 || !BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyMap();
         }
-        String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
-        String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
-        StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
-
-        int count = 0;
-        for (Reaction reaction : reactions) {
-            if (reaction.isEmpty()) {
-                continue;
-            }
-            if (count > 0) {
-                sql.append(" OR ");
-            }
-            sql.append("extraction.extractionId=?");
-            count++;
-        }
-        sql.append(")");
-        if(count == 0) {
-            return Collections.emptyMap();
-        }
-        PreparedStatement statement = limsConnection.createStatement(sql.toString());
-        int reactionCount = 1;
-        for (Reaction reaction : reactions) {
-            if (reaction.isEmpty()) {
-                continue;
-            }
-            statement.setString(reactionCount, reaction.getExtractionId());
-            reactionCount++;
-        }
-
-        ResultSet resultSet = statement.executeQuery();
-
-        Map<String, String> results = new HashMap<String, String>();
-        while(resultSet.next()) {
-            results.put(resultSet.getString("extractionId"), resultSet.getString("tissue"));
-        }
-
-        statement.close();
-        return results;
-    }
-
-    public static List<Workflow> createWorkflows(List<Reaction> reactions, LIMSConnection limsConnection, ProgressListener progress) throws SQLException{
-        List<Workflow> workflows = new ArrayList<Workflow>();
-        limsConnection.beginTransaction();
-        try {
-            PreparedStatement statement = limsConnection.createStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
-            PreparedStatement statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
-            PreparedStatement statement3 = limsConnection.createStatement("UPDATE workflow SET name = ? WHERE id=?");
-            for(int i=0; i < reactions.size(); i++) {
-                if(progress != null) {
-                    progress.setMessage("Creating new workflow "+(i+1)+" of "+reactions.size());
-                }
-                statement.setString(2, reactions.get(i).getExtractionId());
-                statement.setString(1, reactions.get(i).getLocus());
-                statement.setDate(3, new java.sql.Date(new Date().getTime()));
-                statement.execute();
-                ResultSet resultSet = statement2.executeQuery();
-                resultSet.next();
-                int workflowId = resultSet.getInt(1);
-                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
-                statement3.setString(1, reactions.get(i).getLocus()+"_workflow"+workflowId);
-                statement3.setInt(2, workflowId);
-                statement3.execute();
-            }
-
-            statement.close();
-            statement2.close();
-            statement3.close();
-            return workflows;
-        }
-        catch(SQLException ex) {
-            limsConnection.rollback();
-            throw ex;
-        }
-        finally {
-            limsConnection.endTransaction();
-        }
+        return limsConnection.getReactionToTissueIdMapping(tableName, reactions);
     }
 
     public void saveExtractions(ProgressListener progress, Plate plate) throws DatabaseServiceException, BadDataException {
@@ -1410,39 +1276,26 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void saveExtractions(ProgressListener progress, Plate plate, LIMSConnection limsConnection) throws DatabaseServiceException, BadDataException {
-        try {
-            limsConnection.beginTransaction();
-            limsConnection.isPlateValid(plate);
 
-            List<Reaction> reactionsToSave = new ArrayList<Reaction>();
-            for(Reaction reaction : plate.getReactions()) {
-                if(!reaction.isEmpty()) {
-                    reactionsToSave.add(reaction);
-                }
-            }
+        limsConnection.isPlateValid(plate);
 
-            if(reactionsToSave.size() == 0) {
-                throw new BadDataException("You need to save at least one reaction with your plate");
-            }
-
-            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
-            if(error != null && error.length() > 0) {
-                throw new BadDataException(error);
-            }
-
-            limsConnection.createOrUpdatePlate(plate, progress);
-
-        } catch (SQLException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } finally {
-            try {
-                limsConnection.endTransaction();
-            } catch (SQLException e) {
-                throw new DatabaseServiceException(e, e.getMessage(), false);
+        List<Reaction> reactionsToSave = new ArrayList<Reaction>();
+        for(Reaction reaction : plate.getReactions()) {
+            if(!reaction.isEmpty()) {
+                reactionsToSave.add(reaction);
             }
         }
 
+        if(reactionsToSave.size() == 0) {
+            throw new BadDataException("You need to save at least one reaction with your plate");
+        }
 
+        String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
+        if(error != null && error.length() > 0) {
+            throw new BadDataException(error);
+        }
+
+        limsConnection.createOrUpdatePlate(plate, progress);
     }
 
     public void deletePlate(ProgressListener progress, Plate plate) throws DatabaseServiceException {
@@ -1482,8 +1335,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
         }
-
-
 
         plate.setDeleted(true);
 
@@ -1566,118 +1417,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void saveReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException, BadDataException {
-        saveReactions(progress, limsConnection, plate);
-    }
-
-    public static void saveReactions(ProgressListener progress, LIMSConnection limsConnection, Plate plate) throws DatabaseServiceException, BadDataException {
         if(progress != null) {
             progress.setMessage("Retrieving existing workflows");
         }
 
-        int originalPlateId = plate.getId();
-        try {
-            limsConnection.beginTransaction();
-
-
-            //set workflows for reactions that have id's
-            List<Reaction> reactionsToSave = new ArrayList<Reaction>();
-            List<String> workflowIdStrings = new ArrayList<String>();
-            for(Reaction reaction : plate.getReactions()) {
-
-                Object workflowId = reaction.getFieldValue("workflowId");
-                Object tissueId = reaction.getFieldValue("sampleId");
-                String extractionId = reaction.getExtractionId();
-
-                if(!reaction.isEmpty() && reaction.getType() != Reaction.Type.Extraction) {
-                    reactionsToSave.add(reaction);
-                    if(extractionId != null && tissueId != null && tissueId.toString().length() > 0) {
-                        if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
-                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
-                                reaction.setHasError(true);
-                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
-                            }
-//                          ssh: commenting this out because it appears to have no effect
-//                            if(reaction.getWorkflow().getName().equals(workflowId)) {
-//                                continue;
-//                            }
-                        }
-                        else {
-                            reaction.setWorkflow(null);
-                            workflowIdStrings.add(workflowId.toString());
-                        }
-                    }
-                }
-            }
-
-            if(reactionsToSave.size() == 0) {
-                throw new BadDataException("You need to save at least one reaction with your plate");
-            }
-
-            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
-            if(error != null && error.length() > 0) {
-                throw new BadDataException(error);
-            }
-
-            if(workflowIdStrings.size() > 0) {
-                Map<String,Workflow> map = BiocodeService.getInstance().getWorkflows(workflowIdStrings);
-                for(Reaction reaction : plate.getReactions()) {
-
-                    Object workflowId = reaction.getFieldValue("workflowId");
-                    Object tissueId = reaction.getFieldValue("sampleId");
-                    String extractionId = reaction.getExtractionId();
-
-                    if(workflowId != null && reaction.getWorkflow() == null && tissueId != null && tissueId.toString().length() > 0){
-                        Workflow workflow = map.get(workflowId.toString());
-                        if(workflow != null) {
-                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
-                                reaction.setHasError(true);
-                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
-                            }
-                        }
-                        reaction.setWorkflow(workflow);
-                    }
-                }
-            }
-            if(progress != null) {
-                progress.setMessage("Creating new workflows");
-            }
-
-            //create workflows if necessary
-            //int workflowCount = 0;
-            List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
-            for(Reaction reaction : plate.getReactions()) {
-                if(reaction.getType() == Reaction.Type.Extraction) {
-                    continue;
-                }
-                Object extractionId = reaction.getFieldValue("extractionId");
-                if(!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                    reactionsWithoutWorkflows.add(reaction);
-                }
-            }
-            if(reactionsWithoutWorkflows.size() > 0) {
-                List<Workflow> workflowList = createWorkflows(reactionsWithoutWorkflows, limsConnection, progress);
-                for (int i = 0; i < reactionsWithoutWorkflows.size(); i++) {
-                    Reaction reaction = reactionsWithoutWorkflows.get(i);
-                    reaction.setWorkflow(workflowList.get(i));
-                }
-            }
-            if(progress != null) {
-                progress.setMessage("Creating the plate");
-            }
-            //we need to create the plate
-            limsConnection.createOrUpdatePlate(plate, progress);
-        } catch (SQLException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } finally {
-            try {
-                limsConnection.endTransaction();
-            } catch (SQLException e) {
-                throw new DatabaseServiceException(e, e.getMessage(), false);
-            }
-        }
+        limsConnection.saveReactions(plate, progress);
     }
 
-    public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws SQLException, DocumentOperationException, DatabaseServiceException {
+    public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws DocumentOperationException, DatabaseServiceException {
         List<PlateDocument> plateList = limsConnection.getMatchingDocumentsFromLims(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                         BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null, false).getPlates();
@@ -1712,139 +1459,19 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return workflows;
     }
 
-    public Map<BiocodeUtilities.Well, FimsSample> getFimsSamplesForCycleSequencingPlate(String plateName) throws SQLException{
-        //step 1, query the plate record
-        String query1 = "SELECT plate.size, plate.id FROM plate WHERE plate.name = ?";
-        PreparedStatement statement1 = limsConnection.createStatement(query1);
-        statement1.setString(1, plateName);
-        ResultSet resultSet1 = statement1.executeQuery();
-        if(!resultSet1.next()) {
-            return null;
-        }
-        int plateId = resultSet1.getInt("plate.id");
-
-
-        int size = resultSet1.getInt("plate.size");
-        Plate.Size sizeEnum = Plate.getSizeEnum(size);
-
-        //step 2, get the relevant reaction record
-        String query2 = "SELECT extraction.sampleId, cyclesequencing.location FROM cyclesequencing, plate, extraction WHERE cyclesequencing.extractionId = extraction.extractionId AND cyclesequencing.plate = ?";
-        PreparedStatement statement2 = limsConnection.createStatement(query2);
-        statement2.setInt(1, plateId);
-        ResultSet resultSet2 = statement2.executeQuery();
-        Set<String> samplesToGet = new HashSet<String>();
-        Map<String, Integer> tissueToLocationMap = new HashMap<String, Integer>();
-        while(resultSet2.next()) {
-            tissueToLocationMap.put(resultSet2.getString("extraction.sampleId"), resultSet2.getInt("cycleSequencing.location"));
-            String sampleId = resultSet2.getString("extraction.sampleId");
-            if(sampleId != null && sampleId.length() > 0) {
-                samplesToGet.add(sampleId);
-            }
-        }
-        statement1.close();
-        statement2.close();
-
-        //step 3 - get the fims samples from the fims database
-        try {
-            if(activeFIMSConnection == null) {
-                return Collections.emptyMap();
-            }
-            List<FimsSample> list = activeFIMSConnection.retrieveSamplesForTissueIds(samplesToGet);
-            Map<BiocodeUtilities.Well, FimsSample> result = new HashMap<BiocodeUtilities.Well, FimsSample>();
-            for(FimsSample sample : list) {
-                Integer location = tissueToLocationMap.get(sample.getId());
-                if(location != null) {
-                    BiocodeUtilities.Well well = Plate.getWell(location, sizeEnum);
-                    result.put(well, sample);
-                }
-            }
-            return result;
-        } catch (ConnectionException e) {
-            if(e == ConnectionException.NO_DIALOG) {
-                return null;
-            }
-            if(e.getCause() instanceof SQLException){
-                throw (SQLException)e.getCause();
-            }
-            e.printStackTrace();
-            assert false;
-        }
-        return null;
-    }
-
-    public Map<String, String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws SQLException{
+    public Map<String, String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException {
         if(idsToCheck.size() == 0) {
             return Collections.emptyMap();
         }
-        StringBuilder sqlBuilder = new StringBuilder();
-        List<String> values = new ArrayList<String>();
-        switch(reactionType) {
-            case Extraction:
-                throw new RuntimeException("You should not be adding extractions to existing workflows!");
-            case PCR:
-            case CycleSequencing:
-                sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.date AS date, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
-                for (int i = 0; i < idsToCheck.size(); i++) {
-                    if(loci.get(i) != null && loci.get(i).length() > 0) {
-                        sqlBuilder.append("(extraction.extractionId = ? AND locus = ?)");
-                        values.add(idsToCheck.get(i));
-                        values.add(loci.get(i));
-                    }
-                    else {
-                        sqlBuilder.append("extraction.extractionId = ?");
-                        values.add(idsToCheck.get(i));
-                    }
-
-                    if(i < idsToCheck.size()-1) {
-                        sqlBuilder.append(" OR ");
-                    }
-                }
-                sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
-            default:
-                break;
-        }
-        System.out.println(sqlBuilder.toString());
-        PreparedStatement statement = limsConnection.createStatement(sqlBuilder.toString());
-        for (int i = 0; i < values.size(); i++) {
-            statement.setString(i+1, values.get(i));
-        }
-        ResultSet results = statement.executeQuery();
-        Map<String, String> result = new HashMap<String, String>();
-
-        while(results.next()) {
-            result.put(results.getString("id"), results.getString("workflow")/*new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("id"))*/);
-        }
-        statement.close();
-        return result;
+        return limsConnection.getWorkflowIds(idsToCheck, loci, reactionType);
     }
 
-    public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws SQLException{
+    public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
         if(workflowIds.size() == 0) {
             return Collections.emptyMap();
         }
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, workflow.date AS date, workflow.locus AS locus, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
-        for(int i=0; i < workflowIds.size(); i++) {
-            sqlBuilder.append("workflow.name = ? ");
-            if(i < workflowIds.size()-1) {
-                sqlBuilder.append("OR ");
-            }
-        }
-        sqlBuilder.append(")");
-        PreparedStatement statement = limsConnection.createStatement(sqlBuilder.toString());
-        int i=0;
-        for (String s : workflowIds) {
-            statement.setString(i+1, s);
-            i++;
-        }
-        ResultSet results = statement.executeQuery();
-        Map<String, Workflow> result = new HashMap<String, Workflow>();
 
-        while(results.next()) {
-            result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId"), results.getString("locus"), results.getDate("workflow.date")));
-        }
-        statement.close();
-        return result;
+        return limsConnection.getWorkflows(workflowIds);
     }
 
     public void registerCallback(BiocodeCallback callback) {

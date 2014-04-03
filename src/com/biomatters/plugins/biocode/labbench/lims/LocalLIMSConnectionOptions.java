@@ -132,7 +132,6 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
     }
 
     static void createDatabase(String newDbName) throws SQLException {
-        SqlLimsConnection.ConnectionWrapper connection = null;
         try {
             InputStream scriptStream = LocalLIMSConnection.class.getResourceAsStream(SCRIPT_NAME);
             if(scriptStream == null) {
@@ -143,10 +142,9 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
             } catch (ClassNotFoundException e) {
                 e.printStackTrace(); //do nothing
             }
-            Connection _connection = DriverManager.getConnection("jdbc:hsqldb:file:" + LocalLIMSConnection.getDbPath(newDbName) + ";shutdown=true");
-            connection = new SqlLimsConnection.ConnectionWrapper(_connection);
+            Connection connection = DriverManager.getConnection("jdbc:hsqldb:file:" + LocalLIMSConnection.getDbPath(newDbName) + ";shutdown=true");
             DatabaseScriptRunner.runScript(connection, scriptStream, true, false);
-            SqlLimsConnection.ConnectionWrapper.closeConnection(connection);
+            connection.close();
         } catch (IOException e) {
             throw new SQLException(e.getMessage());
         }

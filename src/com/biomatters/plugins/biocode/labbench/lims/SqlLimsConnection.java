@@ -39,6 +39,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * An SQL based {@link LIMSConnection}
@@ -49,8 +50,6 @@ import java.util.Date;
  *          Created on 1/04/14 4:45 PM
  */
 public abstract class SqlLimsConnection extends LIMSConnection {
-
-    private Connection connection;
 
     @Override
     public abstract PasswordOptions getConnectionOptions();
@@ -72,37 +71,69 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
         dataSource = connectToDb(selectedLimsOptions);
+        ConnectionWrapper connection = null;
         try {
-            connection = getConnection().connection;
+            connection = getConnection();
+            String errorMessage = verifyDatabaseVersionAndUpgradeIfNecessary(connection);
+            if (errorMessage != null) {
+                throw new ConnectionException(errorMessage);
+            }
         } catch (SQLException e) {
-            throw new ConnectionException(e.getMessage(), e);
-        }
-        String errorMessage = verifyDatabaseVersionAndUpgradeIfNecessary();
-        if (errorMessage != null) {
-            throw new ConnectionException(errorMessage);
+            throw new ConnectionException(e.getMessage());
+        } finally {
+            returnConnection(connection);
         }
     }
 
     @Override
     protected Connection getConnectionInternal() throws SQLException {
-        return connection;
+        return getConnection().connection;
     }
+
+
+    final ThreadLocal<ConnectionWrapper> connectionForThread = new ThreadLocal<ConnectionWrapper>();
 
     /**
      * @return A {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper} from the
-     * connection pool.  Should be closed after use with {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper#closeConnection(com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper)}
-     * or {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper#close()}
-     *
+     * connection pool.  Should be returned after use with {@link #returnConnection(com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper)}
+     * 
      * @throws SQLException if the connection could not be established
      */
     protected ConnectionWrapper getConnection() throws SQLException {
-        return new ConnectionWrapper(dataSource.getConnection());
+        ConnectionWrapper toReturn;
+        synchronized (connectionForThread) {
+            toReturn = connectionForThread.get();
+            if (toReturn == null || toReturn.isClosed()) {
+                toReturn = new ConnectionWrapper(dataSource.getConnection());
+                connectionForThread.set(toReturn);
+            }
+        }
+        synchronized (connectionCounts) {
+            Integer current = connectionCounts.get(toReturn);
+            if(current == null) {
+                current = 1;
+            } else {
+                current = current + 1;
+            }
+            connectionCounts.put(toReturn, current);
+        }
+        return toReturn;
+    }
+    
+    private final Map<ConnectionWrapper, Integer> connectionCounts = new HashMap<ConnectionWrapper, Integer>();
+    protected void returnConnection(ConnectionWrapper connection) {
+        synchronized (connectionCounts) {
+            Integer current = connectionCounts.get(connection);
+            current = current -1;
+            if(current <= 0) {
+                ConnectionWrapper.closeConnection(connection);
+            }
+        }
     }
 
     public void disconnect() {
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
-        connection = null;
         dataSource = null;
         serverUrn = null;
     }
@@ -114,7 +145,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     public void doAnyExtraInitialziation() throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
         try {
+            connection = getConnection();
             PreparedStatement getFailureReasons = null;
             try {
                 getFailureReasons = connection.prepareStatement("SELECT * FROM failure_reason");
@@ -160,6 +193,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Failed to initialize database: " + e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
         }
     }
 
@@ -188,9 +223,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      * @return an error message or null if everything is OK
      * @throws ConnectionException
      */
-    private String verifyDatabaseVersionAndUpgradeIfNecessary() throws ConnectionException {
+    private String verifyDatabaseVersionAndUpgradeIfNecessary(ConnectionWrapper connection) throws ConnectionException {
         try {
-            ResultSet resultSet = connection.createStatement().executeQuery("SELECT * FROM databaseversion LIMIT 1");
+            ResultSet resultSet = connection.executeQuery("SELECT * FROM databaseversion LIMIT 1");
             if (!resultSet.next()) {
                 throw new ConnectionException("Your LIMS database appears to be corrupt.  Please contact your systems administrator for assistance.");
             } else {
@@ -242,30 +277,36 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     protected String getFullVersionStringFromDatabase() throws SQLException, ConnectionException {
-        ResultSet tableSet = connection.getMetaData().getTables(null, null, "%", null);
-        boolean hasPropertiesTable = false;
-        while (tableSet.next()) {
-            String tableName = tableSet.getString("TABLE_NAME");
-            if (tableName.equalsIgnoreCase("properties")) {
-                hasPropertiesTable = true;
-            }
-        }
-        tableSet.close();
-
-        if (hasPropertiesTable) {
-            PreparedStatement getFullVersion = null;
-            try {
-                getFullVersion = connection.prepareStatement("SELECT value FROM properties WHERE name = ?");
-                getFullVersion.setObject(1, VERSION_PROPERTY);
-                ResultSet versionSet = getFullVersion.executeQuery();
-                if (versionSet.next()) {
-                    return versionSet.getString("value");
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            ResultSet tableSet = connection.connection.getMetaData().getTables(null, null, "%", null);
+            boolean hasPropertiesTable = false;
+            while (tableSet.next()) {
+                String tableName = tableSet.getString("TABLE_NAME");
+                if (tableName.equalsIgnoreCase("properties")) {
+                    hasPropertiesTable = true;
                 }
-            } finally {
-                SqlUtilities.cleanUpStatements(getFullVersion);
             }
+            tableSet.close();
+
+            if (hasPropertiesTable) {
+                PreparedStatement getFullVersion = null;
+                try {
+                    getFullVersion = connection.prepareStatement("SELECT value FROM properties WHERE name = ?");
+                    getFullVersion.setObject(1, VERSION_PROPERTY);
+                    ResultSet versionSet = getFullVersion.executeQuery();
+                    if (versionSet.next()) {
+                        return versionSet.getString("value");
+                    }
+                } finally {
+                    SqlUtilities.cleanUpStatements(getFullVersion);
+                }
+            }
+            return VERSION_WITHOUT_PROPS;
+        } finally {
+            returnConnection(connection);
         }
-        return VERSION_WITHOUT_PROPS;
     }
 
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback, boolean downloadTissues) throws DatabaseServiceException {
@@ -341,9 +382,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 downloadSequences, tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
+        ConnectionWrapper connection = null;
         WorkflowsAndPlatesQueryResult queryResult;
         PreparedStatement preparedStatement = null;
         try {
+            connection = getConnection();
             System.out.println("Running LIMS (workflows) query:");
             System.out.print("\t");
             SqlUtilities.printSql(workflowQuery.toString(), sqlValues);
@@ -361,6 +404,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(preparedStatement);
+            returnConnection(connection);
         }
 
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(queryResult.workflows.values());
@@ -402,7 +446,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         appendSetOfQuestionMarks(countingQuery, plateMap.size());
         countingQuery.append(" GROUP BY cyclesequencing.id");
         PreparedStatement getCount = null;
+        ConnectionWrapper connection = null;
         try {
+            connection = getConnection();
             getCount = connection.prepareStatement(countingQuery.toString());
             fillStatement(plateIds, getCount);
             SqlUtilities.printSql(countingQuery.toString(), plateIds);
@@ -421,6 +467,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         } finally {
             SqlUtilities.cleanUpStatements(getCount);
+            returnConnection(connection);
         }
     }
 
@@ -758,6 +805,45 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
+    public void renameWorkflow(int id, String newName) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            String sql = "UPDATE workflow SET name=? WHERE id=?";
+            PreparedStatement statement = createStatement(sql);
+
+            statement.setString(1, newName);
+            statement.setInt(2, id);
+
+            statement.executeUpdate();
+            statement.close();
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
+        }
+    }
+
+    public void renamePlate(int id, String newName) throws DatabaseServiceException{
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+
+            String sql = "UPDATE plate SET name=? WHERE id=?";
+            PreparedStatement statement = createStatement(sql);
+
+            statement.setString(1, newName);
+            statement.setInt(2, id);
+
+            statement.executeUpdate();
+            statement.close();
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
+        }
+    }
+
     private static class QueryPart {
         private String queryConditions;
         private List<Object> parameters;
@@ -913,9 +999,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
         if (createPlates && !plateIds.isEmpty()) {
             // Query for full contents of plates that matched our query
+            ConnectionWrapper connection = null;
             String plateQueryString = constructPlateQuery(plateIds);
             PreparedStatement selectPlate = null;
             try {
+                connection = getConnection();
                 System.out.println("Running LIMS (plates) query:");
                 System.out.print("\t");
                 SqlUtilities.printSql(plateQueryString, plateIds);
@@ -931,6 +1019,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 plateSet.close();
             } finally {
                 SqlUtilities.cleanUpStatements(selectPlate);
+                returnConnection(connection);
             }
         }
 
@@ -1034,7 +1123,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         PreparedStatement update = null;
         PreparedStatement insert = null;
 
+        ConnectionWrapper connection = null;
         try {
+            connection = getConnection();
             update = connection.prepareStatement("UPDATE properties SET value = ? WHERE name = ?");
 
             update.setObject(1, value);
@@ -1050,6 +1141,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(update, insert);
+            returnConnection(connection);
         }
     }
 
@@ -1061,8 +1153,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      * @throws SQLException if something goes wrong communicating with the database.
      */
     String getProperty(String key) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
         PreparedStatement get = null;
         try {
+            connection = getConnection();
             get = connection.prepareStatement("SELECT value FROM properties WHERE name = ?");
             get.setObject(1, key);
             ResultSet resultSet = get.executeQuery();
@@ -1075,6 +1169,46 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(get);
+            returnConnection(connection);
+        }
+    }
+
+    private List<Workflow> addWorkflows(List<Reaction> reactions, ProgressListener progress) throws DatabaseServiceException {
+        List<Workflow> workflows = new ArrayList<Workflow>();
+        ConnectionWrapper connection = null;
+
+        try {
+            connection = getConnection();
+            connection.beginTransaction();
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
+            PreparedStatement statement2 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
+            PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = ? WHERE id=?");
+            for(int i=0; i < reactions.size(); i++) {
+                if(progress != null) {
+                    progress.setMessage("Creating new workflow "+(i+1)+" of "+reactions.size());
+                }
+                statement.setString(2, reactions.get(i).getExtractionId());
+                statement.setString(1, reactions.get(i).getLocus());
+                statement.setDate(3, new java.sql.Date(new Date().getTime()));
+                statement.execute();
+                ResultSet resultSet = statement2.executeQuery();
+                resultSet.next();
+                int workflowId = resultSet.getInt(1);
+                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
+                statement3.setString(1, reactions.get(i).getLocus()+"_workflow"+workflowId);
+                statement3.setInt(2, workflowId);
+                statement3.execute();
+            }
+
+            statement.close();
+            statement2.close();
+            statement3.close();
+            connection.endTransaction();
+            return workflows;
+        } catch(SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
         }
     }
 
@@ -1136,6 +1270,98 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(statement);
+        }
+    }
+
+    @Override
+    public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+
+        try {
+            connection = getConnection();
+
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder.append("SELECT workflow.name AS workflow, workflow.id AS workflowId, workflow.date AS date, workflow.locus AS locus, extraction.extractionId FROM workflow, extraction WHERE extraction.id = workflow.extractionId AND (");
+            for (int i = 0; i < workflowIds.size(); i++) {
+                sqlBuilder.append("workflow.name = ? ");
+                if (i < workflowIds.size() - 1) {
+                    sqlBuilder.append("OR ");
+                }
+            }
+            sqlBuilder.append(")");
+            PreparedStatement statement = connection.prepareStatement(sqlBuilder.toString());
+            int i = 0;
+            for (String s : workflowIds) {
+                statement.setString(i + 1, s);
+                i++;
+            }
+            ResultSet results = statement.executeQuery();
+            Map<String, Workflow> result = new HashMap<String, Workflow>();
+
+            while (results.next()) {
+                result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId"), results.getString("locus"), results.getDate("workflow.date")));
+            }
+            statement.close();
+            return result;
+        } catch(SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
+        }
+    }
+
+    @Override
+    public Map<String, String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException {
+        StringBuilder sqlBuilder = new StringBuilder();
+        List<String> values = new ArrayList<String>();
+        switch(reactionType) {
+            case Extraction:
+                throw new RuntimeException("You should not be adding extractions to existing workflows!");
+            case PCR:
+            case CycleSequencing:
+                sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.date AS date, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
+                for (int i = 0; i < idsToCheck.size(); i++) {
+                    if(loci.get(i) != null && loci.get(i).length() > 0) {
+                        sqlBuilder.append("(extraction.extractionId = ? AND locus = ?)");
+                        values.add(idsToCheck.get(i));
+                        values.add(loci.get(i));
+                    }
+                    else {
+                        sqlBuilder.append("extraction.extractionId = ?");
+                        values.add(idsToCheck.get(i));
+                    }
+
+                    if(i < idsToCheck.size()-1) {
+                        sqlBuilder.append(" OR ");
+                    }
+                }
+                sqlBuilder.append(") ORDER BY extraction.date"); //make sure the most recent workflow is stored in the map
+            default:
+                break;
+        }
+
+        ConnectionWrapper connection = null;
+
+        try {
+            connection = getConnection();
+
+            System.out.println(sqlBuilder.toString());
+            PreparedStatement statement = connection.prepareStatement(sqlBuilder.toString());
+            for (int i = 0; i < values.size(); i++) {
+                statement.setString(i + 1, values.get(i));
+            }
+            ResultSet results = statement.executeQuery();
+            Map<String, String> result = new HashMap<String, String>();
+
+            while (results.next()) {
+                result.put(results.getString("id"), results.getString("workflow")/*new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("id"))*/);
+            }
+            statement.close();
+            return result;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
         }
     }
 
@@ -1581,18 +1807,20 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
         try {
             //check the vaidity of the plate.
             isPlateValid(plate);
 
-            beginTransaction();
+            connection = getConnection();
+            connection.beginTransaction();
 
             //update the plate
-            PreparedStatement statement = plate.toSQL(this);
+            PreparedStatement statement = plateToSQL(connection, plate);
             statement.execute();
             statement.close();
             if(plate.getId() < 0) {
-                PreparedStatement statement1 = isLocal() ? createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
+                PreparedStatement statement1 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
                 ResultSet resultSet = statement1.executeQuery();
                 resultSet.next();
                 int plateId = resultSet.getInt(1);
@@ -1634,16 +1862,41 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             Statement workflowUpdateStatement = createStatement();
             workflowUpdateStatement.executeUpdate(sql);
             workflowUpdateStatement.close();
+
+            connection.endTransaction();
         } catch(SQLException e) {
-            rollback();
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
-            try {
-                endTransaction();
-            } catch (SQLException e) {
-                throw new DatabaseServiceException(e, e.getMessage(), false);
-            }
+            returnConnection(connection);
         }
+    }
+
+    private static PreparedStatement plateToSQL(ConnectionWrapper connection, Plate plate) throws SQLException{
+        String name = plate.getName();
+        if(name == null || name.trim().length() == 0) {
+            throw new SQLException("Plates cannot have empty names");
+        }
+        PreparedStatement statement;
+        int id = plate.getId();
+        if(id < 0) {
+            statement = connection.prepareStatement("INSERT INTO plate (name, size, type, thermocycle, date) VALUES (?, ?, ?, ?, ?)");
+        }
+        else {
+            statement = connection.prepareStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=? WHERE id=?");
+            statement.setInt(6, id);
+        }
+        statement.setString(1, name);
+        statement.setInt(2, plate.getReactions().length);
+        statement.setString(3, plate.getReactionType().toString());
+        Thermocycle tc = plate.getThermocycle();
+        if(tc != null) {
+            statement.setInt(4, tc.getId());
+        }
+        else {
+            statement.setInt(4, plate.getThermocycleId());
+        }
+        statement.setDate(5, new java.sql.Date(new Date().getTime()));
+        return statement;
     }
 
     public void isPlateValid(Plate plate) throws DatabaseServiceException {
@@ -1701,11 +1954,109 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException {
-
+    @Override
+    public void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException{
+        ConnectionWrapper connection = null;
         try {
+            connection = getConnection();
+            connection.beginTransaction();
+            //set workflows for reactions that have id's
+            List<Reaction> reactionsToSave = new ArrayList<Reaction>();
+            List<String> workflowIdStrings = new ArrayList<String>();
+            for(Reaction reaction : plate.getReactions()) {
+
+                Object workflowId = reaction.getFieldValue("workflowId");
+                Object tissueId = reaction.getFieldValue("sampleId");
+                String extractionId = reaction.getExtractionId();
+
+                if(!reaction.isEmpty() && reaction.getType() != Reaction.Type.Extraction) {
+                    reactionsToSave.add(reaction);
+                    if(extractionId != null && tissueId != null && tissueId.toString().length() > 0) {
+                        if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
+                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                                reaction.setHasError(true);
+                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                            }
+                        }
+                        else {
+                            reaction.setWorkflow(null);
+                            workflowIdStrings.add(workflowId.toString());
+                        }
+                    }
+                }
+            }
+
+            if(reactionsToSave.size() == 0) {
+                throw new BadDataException("You need to save at least one reaction with your plate");
+            }
+
+            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
+            if(error != null && error.length() > 0) {
+                throw new BadDataException(error);
+            }
+
+            if(workflowIdStrings.size() > 0) {
+                Map<String,Workflow> map = BiocodeService.getInstance().getWorkflows(workflowIdStrings);
+                for(Reaction reaction : plate.getReactions()) {
+
+                    Object workflowId = reaction.getFieldValue("workflowId");
+                    Object tissueId = reaction.getFieldValue("sampleId");
+                    String extractionId = reaction.getExtractionId();
+
+                    if(workflowId != null && reaction.getWorkflow() == null && tissueId != null && tissueId.toString().length() > 0){
+                        Workflow workflow = map.get(workflowId.toString());
+                        if(workflow != null) {
+                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                                reaction.setHasError(true);
+                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                            }
+                        }
+                        reaction.setWorkflow(workflow);
+                    }
+                }
+            }
+            if(progress != null) {
+                progress.setMessage("Creating new workflows");
+            }
+
+            //create workflows if necessary
+            //int workflowCount = 0;
+            List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
+            for(Reaction reaction : plate.getReactions()) {
+                if(reaction.getType() == Reaction.Type.Extraction) {
+                    continue;
+                }
+                Object extractionId = reaction.getFieldValue("extractionId");
+                if(!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                    reactionsWithoutWorkflows.add(reaction);
+                }
+            }
+            if(reactionsWithoutWorkflows.size() > 0) {
+                List<Workflow> workflowList = addWorkflows(reactionsWithoutWorkflows, progress);
+                for (int i = 0; i < reactionsWithoutWorkflows.size(); i++) {
+                    Reaction reaction = reactionsWithoutWorkflows.get(i);
+                    reaction.setWorkflow(workflowList.get(i));
+                }
+            }
+            if(progress != null) {
+                progress.setMessage("Creating the plate");
+            }
+            //we need to create the plate
+            createOrUpdatePlate(plate, progress);
+            connection.endTransaction();
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
+        }
+    }
+
+    public void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
             PreparedStatement getLastId = BiocodeService.getInstance().getActiveLIMSConnection().isLocal() ?
-                    createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
+                    connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
             switch(type) {
                 case Extraction:
                     String insertSQL;
@@ -1713,8 +2064,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     insertSQL  = "INSERT INTO extraction (method, volume, dilution, parent, sampleId, extractionId, extractionBarcode, plate, location, notes, previousPlate, previousWell, date, technician, concentrationStored, concentration, gelimage, control) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     updateSQL  = "UPDATE extraction SET method=?, volume=?, dilution=?, parent=?, sampleId=?, extractionId=?, extractionBarcode=?, plate=?, location=?, notes=?, previousPlate=?, previousWell=?, date=?, technician=?, concentrationStored=?, concentration=?, gelImage=?, control=? WHERE id=?";
 
-                    PreparedStatement insertStatement = createStatement(insertSQL);
-                    PreparedStatement updateStatement = createStatement(updateSQL);
+                    PreparedStatement insertStatement = connection.prepareStatement(insertSQL);
+                    PreparedStatement updateStatement = connection.prepareStatement(updateSQL);
                     for (int i = 0; i < reactions.length; i++) {
                         Reaction reaction = reactions[i];
                         if(progress != null) {
@@ -1769,8 +2120,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 case PCR:
                     insertSQL = "INSERT INTO pcr (prName, prSequence, workflow, plate, location, cocktail, progress, thermocycle, cleanupPerformed, cleanupMethod, extractionId, notes, revPrName, revPrSequence, date, technician, gelimage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                     updateSQL = "UPDATE pcr SET prName=?, prSequence=?, workflow=?, plate=?, location=?, cocktail=?, progress=?, thermocycle=?, cleanupPerformed=?, cleanupMethod=?, extractionId=?, notes=?, revPrName=?, revPrSequence=?, date=?, technician=?, gelimage=? WHERE id=?";
-                    insertStatement = createStatement(insertSQL);
-                    updateStatement = createStatement(updateSQL);
+                    insertStatement = connection.prepareStatement(insertSQL);
+                    updateStatement = connection.prepareStatement(updateSQL);
                     int saveCount = 0;
                     for (int i = 0; i < reactions.length; i++) {
                         Reaction reaction = reactions[i];
@@ -1884,10 +2235,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     String clearTracesSQL = "DELETE FROM traces WHERE id=?";
                     String insertTracesSQL = "INSERT INTO traces(reaction, name, data) values(?, ?, ?)";
 
-                    insertStatement = createStatement(insertSQL);
-                    updateStatement = createStatement(updateSQL);
-                    PreparedStatement clearTracesStatement = createStatement(clearTracesSQL);
-                    PreparedStatement insertTracesStatement = createStatement(insertTracesSQL);
+                    insertStatement = connection.prepareStatement(insertSQL);
+                    updateStatement = connection.prepareStatement(updateSQL);
+                    PreparedStatement clearTracesStatement = connection.prepareStatement(clearTracesSQL);
+                    PreparedStatement insertTracesStatement = connection.prepareStatement(insertTracesSQL);
                     for (int i = 0; i < reactions.length; i++) {
                         Reaction reaction = reactions[i];
                         if(progress != null) {
@@ -2017,10 +2368,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                             FailureReason reason = FailureReason.getReasonFromOptions(options);
                             if(reason != null) {
                                 // Requires schema 10.  This won't work for reactions that don't have an assembly.
-                                PreparedStatement update = createStatement(
+                                PreparedStatement update = connection.prepareStatement(
                                         "UPDATE assembly SET failure_reason = ? WHERE id IN (" +
-                                            "SELECT assembly FROM sequencing_result WHERE reaction = ?" +
-                                        ")");
+                                                "SELECT assembly FROM sequencing_result WHERE reaction = ?" +
+                                                ")"
+                                );
                                 update.setInt(1, reason.getId());
                                 update.setInt(2, reaction.getId());
                                 update.executeUpdate();
@@ -2035,6 +2387,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
         }
     }
 
@@ -2309,7 +2663,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
     }
 
@@ -2335,7 +2689,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Could not delete cocktails: "+e.getMessage(), false);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
     }
 
@@ -2354,7 +2708,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             ex.printStackTrace();
             throw new DatabaseServiceException(ex, "Could not query PCR Cocktails from the database", false);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
         return cocktails;
     }
@@ -2374,7 +2728,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         catch(SQLException ex) {
             throw new DatabaseServiceException(ex, "Could not query CycleSequencing Cocktails from the database", false);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
         return cocktails;
     }
@@ -2408,7 +2762,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         } catch(SQLException ex) {
             throw new DatabaseServiceException(ex, "could not read thermocycles from the database", false);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
 
         return tCycles;
@@ -2430,7 +2784,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Could not add thermocycle(s): "+e.getMessage(), false);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
     }
 
@@ -2475,7 +2829,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             e.printStackTrace();
             throw new DatabaseServiceException(e, "Could not delete thermocycles: "+e.getMessage(), false);
         } finally {
-            ConnectionWrapper.closeConnection(connection);
+            returnConnection(connection);
         }
     }
 
@@ -2483,9 +2837,14 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         private Connection connection;
         private int transactionLevel = 0;
         private List<Statement> statements = new ArrayList<Statement>();
+        private AtomicBoolean closed = new AtomicBoolean(false);
 
         protected ConnectionWrapper(Connection connection) {
             this.connection = connection;
+        }
+
+        Connection getInternalConnection() {
+            return connection;
         }
 
         protected void beginTransaction() throws SQLException {
@@ -2514,13 +2873,14 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         }
 
-        private void close() throws SQLException {
+        protected void close() throws SQLException {
             rollback();
             SqlUtilities.cleanUpStatements(statements.toArray(new Statement[statements.size()]));
             connection.close();
+            closed.set(true);
         }
 
-        protected static void closeConnection(ConnectionWrapper connection) {
+        private static void closeConnection(ConnectionWrapper connection) {
             if(connection != null) {
                 try {
                     connection.close();
@@ -2547,6 +2907,94 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             Statement statement = connection.createStatement();
             statements.add(statement);
             return statement.executeQuery(sql);
+        }
+
+        public boolean isClosed() {
+            return closed.get();
+        }
+    }
+
+    @Override
+    public void deleteSequences(List<Integer> sequencesToDelete) throws DatabaseServiceException {
+        if (!sequencesToDelete.isEmpty()) {
+            StringBuilder sql = new StringBuilder("DELETE FROM assembly WHERE (");
+            for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
+                sql.append("id=?");
+                if(i1 < sequencesToDelete.size()-1) {
+                    sql.append(" OR ");
+                }
+            }
+            sql.append(")");
+            ConnectionWrapper connection = null;
+            try {
+                connection = getConnection();
+                PreparedStatement statement = connection.prepareStatement(sql.toString());
+
+                for (int i1 = 0; i1 < sequencesToDelete.size(); i1++) {
+                    Integer i = sequencesToDelete.get(i1);
+                    statement.setInt(i1+1, i);
+                }
+
+                int notDeletedCount = sequencesToDelete.size() - statement.executeUpdate();
+                if(notDeletedCount > 0) {
+                    throw new DatabaseServiceException(notDeletedCount + " sequences were not deleted.", false);
+                }
+            } catch(SQLException e) {
+                throw new DatabaseServiceException(e, "Could not delete sequences: "+e.getMessage(), true);
+            } finally {
+                returnConnection(connection);
+            }
+        }
+    }
+
+    @Override
+    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws DatabaseServiceException {
+        String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
+        String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
+        StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
+
+        int count = 0;
+        for (Reaction reaction : reactions) {
+            if (reaction.isEmpty()) {
+                continue;
+            }
+            if (count > 0) {
+                sql.append(" OR ");
+            }
+            sql.append("extraction.extractionId=?");
+            count++;
+        }
+        sql.append(")");
+        if(count == 0) {
+            return Collections.emptyMap();
+        }
+
+        ConnectionWrapper connection = null;
+        try {
+            connection = getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql.toString());
+            int reactionCount = 1;
+            for (Reaction reaction : reactions) {
+                if (reaction.isEmpty()) {
+                    continue;
+                }
+                statement.setString(reactionCount, reaction.getExtractionId());
+                reactionCount++;
+            }
+
+            ResultSet resultSet = statement.executeQuery();
+
+            Map<String, String> results = new HashMap<String, String>();
+            while(resultSet.next()) {
+                results.put(resultSet.getString("extractionId"), resultSet.getString("tissue"));
+            }
+
+            statement.close();
+            return results;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            returnConnection(connection);
         }
     }
 }

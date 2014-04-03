@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
@@ -175,7 +176,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         Map<String, String> tissueMapping;
         try {
             tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("extraction", reactions);
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             e.printStackTrace();
             return "Could not connect to the LIMS database: "+e.getMessage();
         }
@@ -281,7 +282,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
                         }
                     }
                 }
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 return "Could not query the LIMS database.  "+e.getMessage();
             }
         }

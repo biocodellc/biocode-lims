@@ -490,7 +490,7 @@ public class PlateBulkEditor {
                                 } else {
                                     putMappedValuesIntoEditor(editorToCheck, workflowEditor, idToWorkflow, plate, true);
                                 }
-                            } catch (SQLException e1) {
+                            } catch (DatabaseServiceException e1) {
                                 Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
                             }
                         }
@@ -551,7 +551,7 @@ public class PlateBulkEditor {
         if(workflowIds.size() > 0) {
             try {
                 workflows = BiocodeService.getInstance().getWorkflows(workflowIds);
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 Dialogs.showMessageDialog("Could not get the workflows from the database: "+e.getMessage());
             }
         }
