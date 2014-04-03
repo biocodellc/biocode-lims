@@ -51,16 +51,8 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                                 }
                             }
                         } catch (DatabaseServiceException ex) {
-                            limsConnection.rollback();
                             Dialogs.showMessageDialog("Error saving your reactions: " + ex.getMessage());
                         } finally {
-                            try {
-                                if (limsConnection != null) {
-                                    limsConnection.endTransaction();
-                                }
-                            } catch (SQLException e1) {
-                                e1.printStackTrace();  //don't need to catch this
-                            }
                             annotatedDocument.saveDocument();
                             updateToolbar();
                             progressFrame.setComplete();

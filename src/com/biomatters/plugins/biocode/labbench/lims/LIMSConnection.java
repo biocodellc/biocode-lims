@@ -217,47 +217,6 @@ public abstract class LIMSConnection {
         return reactionId;
     }
 
-    private int transactionLevel = 0;
-
-    /**
-     * Note that this is not thread safe - it is assumed that only one atomic transaction will access the LIMSConnection at any one time
-     */
-    public void beginTransaction() throws SQLException {
-        if (transactionLevel == 0) {
-            Connection connection = getConnectionInternal();
-            connection.setAutoCommit(false);
-        }
-        transactionLevel++;
-    }
-
-    /**
-     * Note that this is not thread safe - it is assumed that only one atomic transaction will access the LIMSConnection at any one time
-     */
-    public void rollback() {
-        try {
-            Connection connection = getConnectionInternal();
-            connection.rollback();
-            connection.setAutoCommit(true);
-        } catch (SQLException ex) {/*if we can't rollback, let's ignore*/}
-        transactionLevel = 0;
-    }
-
-    /**
-     * Note that this is not thread safe - it is assumed that only one atomic transaction will access the LIMSConnection at any one time
-     */
-    public void endTransaction() throws SQLException {
-        // todo Should be threadsafe and shoudln't throw SQLException
-        Connection connection = getConnectionInternal();
-        if (transactionLevel == 0) {
-            return;  //we've rolled back our changes by calling rollback() so no commits are necessary
-        }
-        transactionLevel--;
-        if (transactionLevel == 0) {
-            connection.commit();
-            connection.setAutoCommit(true);
-        }
-    }
-
 
     public static List<DocumentField> getSearchAttributes() {
         return Arrays.asList(
