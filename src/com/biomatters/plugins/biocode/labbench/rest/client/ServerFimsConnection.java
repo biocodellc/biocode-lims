@@ -1,7 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.rest.client;
 
-import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
-import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -11,6 +9,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.server.QueryUtils;
 import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
@@ -20,10 +19,8 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * @author Matthew Cheung
@@ -112,52 +109,27 @@ public class ServerFimsConnection extends FIMSConnection {
     @Override
     public List<DocumentField> getCollectionAttributes() {
         Invocation.Builder request = target.path("fields").queryParam("type", "collection").request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).list;
+        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).getList();
     }
 
     @Override
     public List<DocumentField> getTaxonomyAttributes() {
         Invocation.Builder request = target.path("fields").queryParam("type", "taxonomy").request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).list;
+        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).getList();
     }
 
     @Override
     public List<DocumentField> _getSearchAttributes() {
         Invocation.Builder request = target.path("fields").request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).list;
+        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).getList();
     }
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
-        List<AdvancedSearchQueryTerm> terms = new ArrayList<AdvancedSearchQueryTerm>();
-        String type = "AND";
-        if(query instanceof CompoundSearchQuery) {
-            if(((CompoundSearchQuery) query).getOperator() == CompoundSearchQuery.Operator.OR) {
-                type = "OR";
-            }
-            for (Query child : ((CompoundSearchQuery) query).getChildren()) {
-                if(child instanceof AdvancedSearchQueryTerm) {
-                    terms.add((AdvancedSearchQueryTerm) child);
-                }
-            }
-        } else if(query instanceof AdvancedSearchQueryTerm) {
-            terms.add((AdvancedSearchQueryTerm)query);
-        }
-
-        StringBuilder queryBuilder = new StringBuilder();
-        boolean first = true;
-        for (AdvancedSearchQueryTerm term : terms) {
-            if(!first) {
-                queryBuilder.append("+");
-            } else {
-                first = false;
-            }
-            queryBuilder.append(term.getField().getCode()).append(":").append(
-                                        StringUtilities.join(",", Arrays.asList(term.getValues())));
-        }
+        QueryUtils.Query restQuery = QueryUtils.createRestQuery(query);
         Invocation.Builder request = target.path("samples/search").
-                queryParam("query", queryBuilder.toString()).
-                queryParam("type", type).
+                queryParam("query", restQuery.getQueryString()).
+                queryParam("type", restQuery.getType()).
                 request(MediaType.TEXT_PLAIN_TYPE);
 
         return Arrays.asList(request.get(String.class).split(","));
@@ -166,7 +138,7 @@ public class ServerFimsConnection extends FIMSConnection {
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
         Invocation.Builder request = target.path("samples").queryParam("ids", StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<FimsSample>>(){}).list;
+        return request.get(new GenericType<XMLSerializableList<FimsSample>>(){}).getList();
     }
 
     @Override

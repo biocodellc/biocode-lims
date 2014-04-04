@@ -7,6 +7,8 @@ import org.jdom.Element;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -24,7 +26,7 @@ public class XMLSerializableList<T extends XMLSerializable> implements XMLSerial
     }
 
     private Class<T> type;
-    public List<T> list = new ArrayList<T>();
+    private List<T> list = new ArrayList<T>();
 
     public XMLSerializableList(Class<T> type, List<T> list) {
         this.list = list;
@@ -55,5 +57,29 @@ public class XMLSerializableList<T extends XMLSerializable> implements XMLSerial
         for (Element childElement : element.getChildren()) {
             list.add(XMLSerializer.classFromXML(childElement, type));
         }
+    }
+
+    /**
+     *
+     * @return An unmodifiable list
+     */
+    public List<T> getList() {
+        return Collections.unmodifiableList(list);
+    }
+
+    /**
+     * Adds an item to the list
+     * @param item
+     */
+    public void add(T item) {
+        list.add(item);
+    }
+
+    /**
+     * Adds a collection of items to the list
+     * @param items
+     */
+    public void addAll(Collection<? extends T> items) {
+        list.addAll(items);
     }
 }

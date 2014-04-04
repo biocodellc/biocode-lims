@@ -61,18 +61,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     public void _connect(Options options) throws ConnectionException {
 
         //instantiate the driver class
-        try {
-            Class driverClass = BiocodeService.getInstance().getDriverClass();
-            if(driverClass == null) {
-                throw new ConnectionException("You need to specify the location of your MySQL Driver file");
-            }
-            driver = (Driver) driverClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new ConnectionException("Could not instantiate SQL driver.");
-        } catch (IllegalAccessException e) {
-            throw new ConnectionException("Could not access SQL driver.");
-        }
-
+        driver = BiocodeService.getInstance().getDriver();
 
         //connect
         Properties properties = new Properties();

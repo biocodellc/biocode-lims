@@ -38,7 +38,7 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
     private Runnable loginStatusChangedRunnable = new Runnable() {
         public void run() {
             try {
-                if(BiocodeService.getInstance().isLoggedIn()) {
+                if(BiocodeService.getInstance().isLoggedIn() && BiocodeService.getInstance().getActiveLIMSConnection().supportReporting()) {
                     reportGenerator = new ReportGenerator(ReportingService.this, BiocodeService.getInstance().getDataDirectory());
                     reportGenerator.update();
                 }
@@ -134,6 +134,9 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
 
         if(!BiocodeService.getInstance().isLoggedIn() || reportGenerator == null) {
             String message = "Please Log in to a LIMS to view the reporting functions.";
+            if(BiocodeService.getInstance().isLoggedIn() && !BiocodeService.getInstance().getActiveLIMSConnection().supportReporting()) {
+                message = "This LIMS connection does not support the reporting module.";
+            }
             JPanel roundedBorderPanel = BiocodeUtilities.getRoundedBorderPanel(message);
             JPanel roundedBorderPanelWrapper = new JPanel();
             roundedBorderPanelWrapper.add(roundedBorderPanel);

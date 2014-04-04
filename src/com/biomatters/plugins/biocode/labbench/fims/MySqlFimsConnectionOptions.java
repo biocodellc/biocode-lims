@@ -1,5 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -24,7 +26,11 @@ public class MySqlFimsConnectionOptions extends TableFimsConnectionOptions{
     protected List<OptionValue> _getTableColumns() throws IOException {
         MooreaFimsConnectionOptions connectionOptions = (MooreaFimsConnectionOptions)getChildOptions().get(CONNECTION_OPTIONS_KEY);
 
-        driver = MySQLFimsConnection.getDriver();
+        try {
+            driver = BiocodeService.getInstance().getDriver();
+        } catch (ConnectionException e) {
+            throw new IOException("Could not load MySQL driver");
+        }
 
         Properties properties = new Properties();
         properties.put("user", connectionOptions.getValueAsString("username"));

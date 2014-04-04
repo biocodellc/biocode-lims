@@ -127,18 +127,6 @@ public abstract class LIMSConnection {
         return new LimsConnectionOptions(LIMSConnection.class);
     }
 
-    public static LIMSConnection getLIMSConnection(PasswordOptions connectionOptions) throws ConnectionException {
-        LimsConnectionOptions limsOptions = (LimsConnectionOptions) connectionOptions;
-
-        try {
-            return (LIMSConnection) limsOptions.getSelectedLIMSType().getLimsClass().newInstance();
-        } catch (InstantiationException e) {
-            throw new ConnectionException(e);
-        } catch (IllegalAccessException e) {
-            throw new ConnectionException(e);
-        }
-    }
-
     public abstract PasswordOptions getConnectionOptions();
 
     public abstract boolean isLocal();
@@ -152,8 +140,6 @@ public abstract class LIMSConnection {
     }
 
     public abstract String getUsername();
-
-    public abstract String getSchema();
 
     public final void connect(PasswordOptions options) throws ConnectionException {
         this.limsOptions = options;
@@ -189,6 +175,7 @@ public abstract class LIMSConnection {
      */
     protected abstract Connection getConnectionInternal() throws SQLException;
 
+    public abstract boolean supportReporting();
 
     public DatabaseMetaData getMetaData() throws SQLException {
         Connection connection = getConnectionInternal();
@@ -317,25 +304,6 @@ public abstract class LIMSConnection {
 
     public abstract Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException;
 
-
-    public class LimsSearchResult {
-        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
-        List<PlateDocument> plates = new ArrayList<PlateDocument>();
-        List<Integer> sequenceIds = new ArrayList<Integer>();
-
-        public List<WorkflowDocument> getWorkflows() {
-            return Collections.unmodifiableList(workflows);
-        }
-
-        public List<PlateDocument> getPlates() {
-            return Collections.unmodifiableList(plates);
-        }
-
-        public List<Integer> getSequenceIds() {
-            return Collections.unmodifiableList(sequenceIds);
-        }
-    }
-
     /**
      *
      * @param query    The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
@@ -354,7 +322,7 @@ public abstract class LIMSConnection {
      * @param value The value to set for the property
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    abstract void setProperty(String key, String value) throws DatabaseServiceException;
+    protected abstract void setProperty(String key, String value) throws DatabaseServiceException;
 
     /**
      * Retrieves a property from the database previously set by calling {@link #setProperty(String, String)}
@@ -363,7 +331,7 @@ public abstract class LIMSConnection {
      * @return value of the property or null if it does not exist
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    abstract String getProperty(String key) throws DatabaseServiceException;
+    protected abstract String getProperty(String key) throws DatabaseServiceException;
 
     public abstract Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws DatabaseServiceException ;
     public abstract Map<String,Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException;

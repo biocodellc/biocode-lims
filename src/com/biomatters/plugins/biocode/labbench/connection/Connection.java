@@ -10,8 +10,11 @@ import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.rest.client.RESTConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
+import com.biomatters.plugins.biocode.labbench.rest.client.ServerLimsConnetion;
 import org.jdom.Attribute;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -434,11 +437,31 @@ public class Connection implements XMLSerializable {
         }
     }
 
+    public LIMSConnection getLIMSConnection() throws ConnectionException {
+        if(type == ConnectionType.server) {
+            return new ServerLimsConnetion();
+        }
+
+        LimsConnectionOptions limsOptions = (LimsConnectionOptions) getLimsOptions();
+
+        try {
+            return (LIMSConnection) limsOptions.getSelectedLIMSType().getLimsClass().newInstance();
+        } catch (InstantiationException e) {
+            throw new ConnectionException(e);
+        } catch (IllegalAccessException e) {
+            throw new ConnectionException(e);
+        }
+    }
+
     /**
      *
      * @return the parent Options that contains all the child LIMSOptions
      */
     public PasswordOptions getLimsOptions() {
+        if(type == ConnectionType.server) {
+            return serverOptions;
+        }
+
         if(directOptions == null) {
             createLoginOptions();
         }

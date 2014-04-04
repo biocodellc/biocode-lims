@@ -15,6 +15,7 @@ import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
@@ -280,10 +281,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         };
     }
 
-    public Class getDriverClass() {
-        return driver != null ? driver.getClass() : null;
-    }
-
     public Driver getDriver() throws ConnectionException {
         if(!driverLoaded) {
             String error = loadMySqlDriver();
@@ -445,7 +442,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String error = null;
 
         try {
-            limsConnection = LIMSConnection.getLIMSConnection(connection.getLimsOptions());
+            limsConnection = connection.getLIMSConnection();
         } catch (ConnectionException e) {
             error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: "+e.getMessage();
         }
@@ -697,7 +694,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     callback.setMessage("Searching LIMS");
                 }
 
-                LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
+                LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
                         areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback, isDownloadTissues(query));
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
 

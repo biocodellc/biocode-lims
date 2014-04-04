@@ -60,7 +60,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     @Override
     public abstract String getUsername();
 
-    @Override
     public abstract String getSchema();
 
     abstract BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException;
@@ -1022,6 +1021,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
         if (createPlates && !plateIds.isEmpty()) {
             // Query for full contents of plates that matched our query
+            // todo batch these
             ConnectionWrapper connection = null;
             String plateQueryString = constructPlateQuery(plateIds);
             PreparedStatement selectPlate = null;
@@ -1142,7 +1142,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      * @param value The value to set for the property
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    void setProperty(String key, String value) throws DatabaseServiceException {
+    protected void setProperty(String key, String value) throws DatabaseServiceException {
         PreparedStatement update = null;
         PreparedStatement insert = null;
 
@@ -1175,7 +1175,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      * @return value of the property or null if it does not exist
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    String getProperty(String key) throws DatabaseServiceException {
+    protected String getProperty(String key) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         PreparedStatement get = null;
         try {
@@ -3208,5 +3208,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         } finally {
             returnConnection(connection);
         }
+    }
+
+    @Override
+    public boolean supportReporting() {
+        return true;
     }
 }

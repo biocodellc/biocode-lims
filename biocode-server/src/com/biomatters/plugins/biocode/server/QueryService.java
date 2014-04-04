@@ -6,7 +6,7 @@ import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
@@ -50,6 +50,7 @@ public class QueryService {
     @GET
     @Produces("application/xml")
     public Response search(@QueryParam("q")String queryString,
+                           @QueryParam("type")String type,
                       @DefaultValue("tissues,workflows,plates")@QueryParam("include")String include) {
         // todo Consider ChunkedOutput.  Woudl need a way to separate chunks when reading back in
         try {
@@ -61,7 +62,9 @@ public class QueryService {
                     include == null || include.toLowerCase().contains("plates"),
                     include == null || include.toLowerCase().contains("sequences"));
 
-            Query query = QueryUtils.createQueryFromQueryString(QueryUtils.QueryType.AND, queryString, searchOptions);
+            Query query = QueryUtils.createQueryFromQueryString(
+                    type == null || type.equals(QueryUtils.QueryType.AND.name()) ?
+                            QueryUtils.QueryType.AND : QueryUtils.QueryType.OR, queryString, searchOptions);
             final ArrayList<PluginDocument> docs = new ArrayList<PluginDocument>();
             RetrieveCallback callback = new RetrieveCallback() {
 
@@ -77,7 +80,8 @@ public class QueryService {
                 }
             };
             service.retrieve(query, callback, new URN[0]);
-            return Response.ok(new XMLSerializableList<PluginDocument>(PluginDocument.class, docs)).build();
+            LimsSearchResult result = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(query, null, null, false);
+            return Response.ok(result).build();
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException("Encountered error: " + e.getMessage());
         }

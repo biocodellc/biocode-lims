@@ -31,4 +31,8 @@ public class RESTConnectionOptions extends PasswordOptions {
     public String getHost() {
         return getValueAsString(URL);
     }
+
+    public String getUsername() {
+        return getValueAsString(USERNAME);
+    }
 }

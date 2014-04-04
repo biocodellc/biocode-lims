@@ -25,7 +25,7 @@ public class FIMS {
     @Path("fields/{id}")
     @GET
     @Produces("application/xml")
-    public DocumentField tissueIdField(@PathParam("id")String id) {
+    public DocumentField getField(@PathParam("id") String id) {
         if("tissue".equals(id)) {
             return BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField();
         } else if("latitude".equals(id)) {
