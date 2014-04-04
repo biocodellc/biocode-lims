@@ -1265,21 +1265,40 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(reactions.size() == 0 || !BiocodeService.getInstance().isLoggedIn()) {
             return Collections.emptyMap();
         }
-        return limsConnection.getReactionToTissueIdMapping(tableName, reactions);
+        List<String> extractionIds = new ArrayList<String>();
+        for (Reaction reaction : reactions) {
+            if(reaction.isEmpty()) {
+                continue;
+            }
+            extractionIds.add(reaction.getExtractionId());
+        }
+        return limsConnection.getTissueIdsForExtractionIds(tableName, extractionIds);
     }
 
-    public void saveExtractions(ProgressListener progress, Plate plate) throws DatabaseServiceException, BadDataException {
-        saveExtractions(progress, plate, limsConnection);
-    }
-
-    public void saveExtractions(ProgressListener progress, Plate plate, LIMSConnection limsConnection) throws DatabaseServiceException, BadDataException {
-
-        limsConnection.isPlateValid(plate);
-
+    public void savePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException, BadDataException {
+        //set workflows for reactions that have id's
         List<Reaction> reactionsToSave = new ArrayList<Reaction>();
+        List<String> workflowIdStrings = new ArrayList<String>();
         for(Reaction reaction : plate.getReactions()) {
+
+            Object workflowId = reaction.getFieldValue("workflowId");
+            Object tissueId = reaction.getFieldValue("sampleId");
+            String extractionId = reaction.getExtractionId();
+
             if(!reaction.isEmpty()) {
                 reactionsToSave.add(reaction);
+                if(extractionId != null && tissueId != null && tissueId.toString().length() > 0) {
+                    if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
+                        if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                            reaction.setHasError(true);
+                            throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                        }
+                    }
+                    else {
+                        reaction.setWorkflow(null);
+                        workflowIdStrings.add(workflowId.toString());
+                    }
+                }
             }
         }
 
@@ -1287,12 +1306,28 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             throw new BadDataException("You need to save at least one reaction with your plate");
         }
 
-        String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
-        if(error != null && error.length() > 0) {
-            throw new BadDataException(error);
+        if(workflowIdStrings.size() > 0) {
+            Map<String,Workflow> map = BiocodeService.getInstance().getWorkflows(workflowIdStrings);
+            for(Reaction reaction : plate.getReactions()) {
+
+                Object workflowId = reaction.getFieldValue("workflowId");
+                Object tissueId = reaction.getFieldValue("sampleId");
+                String extractionId = reaction.getExtractionId();
+
+                if(workflowId != null && reaction.getWorkflow() == null && tissueId != null && tissueId.toString().length() > 0){
+                    Workflow workflow = map.get(workflowId.toString());
+                    if(workflow != null) {
+                        if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                            reaction.setHasError(true);
+                            throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
+                        }
+                    }
+                    reaction.setWorkflow(workflow);
+                }
+            }
         }
 
-        limsConnection.createOrUpdatePlate(plate, progress);
+        limsConnection.savePlate(plate, progress);
     }
 
     public void deletePlate(ProgressListener progress, Plate plate) throws DatabaseServiceException {
@@ -1411,14 +1446,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 connectionManager = new ConnectionManager();
             }
         }
-    }
-
-    public void saveReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException, BadDataException {
-        if(progress != null) {
-            progress.setMessage("Retrieving existing workflows");
-        }
-
-        limsConnection.saveReactions(plate, progress);
     }
 
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws DocumentOperationException, DatabaseServiceException {

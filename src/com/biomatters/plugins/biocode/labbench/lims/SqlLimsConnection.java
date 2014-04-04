@@ -123,9 +123,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     protected void returnConnection(ConnectionWrapper connection) {
         synchronized (connectionCounts) {
             Integer current = connectionCounts.get(connection);
-            current = current -1;
-            if(current <= 0) {
+            if(current == null) {
                 ConnectionWrapper.closeConnection(connection);
+            } else {
+                current = current - 1;
+                if (current <= 0) {
+                    ConnectionWrapper.closeConnection(connection);
+                }
             }
         }
     }
@@ -864,6 +868,17 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             returnConnection(connection);
         }
 
+    }
+
+    private String checkReactions(Plate plate) {
+        System.out.println("Checking " + plate.getName());
+        List<Reaction> reactions = new ArrayList<Reaction>();
+        for (Reaction r : plate.getReactions()) {
+            if (r != null) {
+                reactions.add(r);
+            }
+        }
+        return reactions.get(0).areReactionsValid(reactions, null, true);
     }
 
     private static class QueryPart {
@@ -1993,67 +2008,20 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    @Override
-    public void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException{
+    public void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
+        if(plate.getReactionType() == Reaction.Type.Extraction) {
+            saveExtractions(plate, progress);
+        } else {
+            saveReactions(plate, progress);
+        }
+    }
+
+    private void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException{
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
             connection.beginTransaction();
-            //set workflows for reactions that have id's
-            List<Reaction> reactionsToSave = new ArrayList<Reaction>();
-            List<String> workflowIdStrings = new ArrayList<String>();
-            for(Reaction reaction : plate.getReactions()) {
 
-                Object workflowId = reaction.getFieldValue("workflowId");
-                Object tissueId = reaction.getFieldValue("sampleId");
-                String extractionId = reaction.getExtractionId();
-
-                if(!reaction.isEmpty() && reaction.getType() != Reaction.Type.Extraction) {
-                    reactionsToSave.add(reaction);
-                    if(extractionId != null && tissueId != null && tissueId.toString().length() > 0) {
-                        if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
-                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
-                                reaction.setHasError(true);
-                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
-                            }
-                        }
-                        else {
-                            reaction.setWorkflow(null);
-                            workflowIdStrings.add(workflowId.toString());
-                        }
-                    }
-                }
-            }
-
-            if(reactionsToSave.size() == 0) {
-                throw new BadDataException("You need to save at least one reaction with your plate");
-            }
-
-            String error = reactionsToSave.get(0).areReactionsValid(reactionsToSave, null, true);
-            if(error != null && error.length() > 0) {
-                throw new BadDataException(error);
-            }
-
-            if(workflowIdStrings.size() > 0) {
-                Map<String,Workflow> map = BiocodeService.getInstance().getWorkflows(workflowIdStrings);
-                for(Reaction reaction : plate.getReactions()) {
-
-                    Object workflowId = reaction.getFieldValue("workflowId");
-                    Object tissueId = reaction.getFieldValue("sampleId");
-                    String extractionId = reaction.getExtractionId();
-
-                    if(workflowId != null && reaction.getWorkflow() == null && tissueId != null && tissueId.toString().length() > 0){
-                        Workflow workflow = map.get(workflowId.toString());
-                        if(workflow != null) {
-                            if(!reaction.getWorkflow().getExtractionId().equals(extractionId)) {
-                                reaction.setHasError(true);
-                                throw new BadDataException("The workflow "+workflowId+" does not match the extraction "+extractionId);
-                            }
-                        }
-                        reaction.setWorkflow(workflow);
-                    }
-                }
-            }
             if(progress != null) {
                 progress.setMessage("Creating new workflows");
             }
@@ -2088,6 +2056,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         } finally {
             returnConnection(connection);
         }
+    }
+
+    private void saveExtractions(Plate plate, ProgressListener progress) throws DatabaseServiceException, BadDataException {
+        isPlateValid(plate);
+        createOrUpdatePlate(plate, progress);
     }
 
     public void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException {
@@ -2430,7 +2403,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             returnConnection(connection);
         }
     }
-
 
     public Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException {
         Map<URN, String> toReturn = new HashMap<URN, String>(assemblyResults.size());
@@ -3085,16 +3057,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws DatabaseServiceException {
+    public Map<String, String> getTissueIdsForExtractionIds(String tableName, List<String> extractionIds) throws DatabaseServiceException {
         String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
         String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
         StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
 
         int count = 0;
-        for (Reaction reaction : reactions) {
-            if (reaction.isEmpty()) {
-                continue;
-            }
+        for (String extractionId : extractionIds) {
             if (count > 0) {
                 sql.append(" OR ");
             }
@@ -3111,11 +3080,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             connection = getConnection();
             PreparedStatement statement = connection.prepareStatement(sql.toString());
             int reactionCount = 1;
-            for (Reaction reaction : reactions) {
-                if (reaction.isEmpty()) {
-                    continue;
-                }
-                statement.setString(reactionCount, reaction.getExtractionId());
+            for (String extractionId : extractionIds) {
+                statement.setString(reactionCount, extractionId);
                 reactionCount++;
             }
 

@@ -271,7 +271,8 @@ public class WorkflowBuilder extends DocumentOperation {
             String extractionPlateName = plateName + "_X1";
             List<PlateDocument> existing = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
                     Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
-                            BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null, false).getPlates();
+                            BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null, false
+            ).getPlates();
 
             Plate extractionPlate;
             if(existing.isEmpty()) {
@@ -319,11 +320,12 @@ public class WorkflowBuilder extends DocumentOperation {
                 }
             }
 
-            BiocodeService.getInstance().saveExtractions(progressListener, extractionPlate);
+            BiocodeService.getInstance().savePlate(extractionPlate, progressListener);
             List<PlateDocument> plates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
                     Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
-            BiocodeService.getSearchDownloadOptions(false, false, true, false)),
-                    null, null, false).getPlates();
+                            BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                    null, null, false
+            ).getPlates();
             if(plates.size() != 1) {
                 throw new DocumentOperationException("Could not find the plate "+extractionPlateName);
             }
@@ -366,7 +368,7 @@ public class WorkflowBuilder extends DocumentOperation {
                 }
             }
 
-            BiocodeService.getInstance().saveReactions(composite, pcrPlate);
+            BiocodeService.getInstance().savePlate(pcrPlate, composite);
             System.out.println("\tCreated PCR plate " + pcrPlateName);
             System.out.println("\tempty PCR: "+emptyCount);
             System.out.println();
@@ -549,7 +551,7 @@ public class WorkflowBuilder extends DocumentOperation {
         csPlate.setName(seqPlateName);
         csPlate.setThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles().get(0));
 
-        BiocodeService.getInstance().saveReactions(progressListener, csPlate);
+        BiocodeService.getInstance().savePlate(csPlate, progressListener);
         System.out.println("\tCreated cycle sequencing plate " + seqPlateName);
         System.out.println();
         return seqPlateName;

@@ -14,16 +14,17 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
-import com.biomatters.plugins.biocode.server.QueryUtils;
-import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
-import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
+import com.biomatters.plugins.biocode.server.*;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
@@ -98,28 +99,30 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    public void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
-
+    public void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
+        Invocation.Builder request = target.path("plates").request();
+        Response response = request.put(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
+        System.out.println(response);
     }
 
     @Override
     public void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException {
 
-    }
-
-    @Override
-    public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
-
+        Invocation.Builder request = target.path("plates").path("reactions").
+                queryParam("reactions", new XMLSerializableList<Reaction>(Reaction.class, Arrays.asList(reactions))).
+                queryParam("type", type.name()).
+                request();
+        Response response = request.get();
+        System.out.println(response);
     }
 
     @Override
     public void renamePlate(int id, String newName) throws DatabaseServiceException {
-
-    }
-
-    @Override
-    public void isPlateValid(Plate plate) throws DatabaseServiceException {
-
+        Invocation.Builder request = target.path("plates").path(id + "/name").
+                queryParam("name", newName).
+                request();
+        Response response = request.get();
+        System.out.println(response);
     }
 
     @Override
@@ -143,8 +146,12 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    public Map<String, String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws DatabaseServiceException {
-        return null;
+    public Map<String, String> getTissueIdsForExtractionIds(String tableName, List<String> extractionIds) throws DatabaseServiceException {
+        return target.path("plates").path("tissues").
+                        queryParam("type", tableName).
+                        queryParam("extractionIds", StringUtilities.join(",", extractionIds)).
+                        request(MediaType.APPLICATION_XML_TYPE).
+                        get(StringMap.class).getMap();
     }
 
     @Override
@@ -154,7 +161,11 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException {
-        return null;
+        return target.path("plates").path("extractions").
+                queryParam("ids", StringUtilities.join(",", extractionIds)).
+                request(MediaType.APPLICATION_XML_TYPE).
+                get(new GenericType<XMLSerializableList<ExtractionReaction>>() {
+                }).getList();
     }
 
     @Override
@@ -184,17 +195,12 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public void doAnyExtraInitialziation() throws DatabaseServiceException {
-
+        // Nothing required on the client side
     }
 
     @Override
     public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws DatabaseServiceException {
         return Collections.emptySet();
-    }
-
-    @Override
-    protected Connection getConnectionInternal() throws SQLException {
-        throw new UnsupportedOperationException("Does not support getting a SQL Connection");
     }
 
     @Override
@@ -310,5 +316,10 @@ public class ServerLimsConnetion extends LIMSConnection {
     @Override
     public boolean supportReporting() {
         return false;
+    }
+
+    @Override
+    protected Connection getConnectionInternal() throws SQLException {
+        throw new UnsupportedOperationException("Does not support getting a SQL Connection");
     }
 }

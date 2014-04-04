@@ -90,11 +90,11 @@ public class LIMSInitializationServlet extends GenericServlet {
             PasswordOptions _limsOptions = parentLimsOptions.getSelectedLIMSOptions();
             MySqlLIMSConnectionOptions limsOptions = (MySqlLIMSConnectionOptions) _limsOptions;
 
-            limsOptions.setValue("server", "darwin.berkeley.edu");
+            limsOptions.setValue("server", config.getProperty("lims.host", "darwin.berkeley.edu"));
             //port
-//            limsOptions.setValue("database", "labbench");
-            limsOptions.setValue("username", "limsuser");
-            limsOptions.setValue("password", "biomatters");
+            limsOptions.setValue("database", config.getProperty("lims.name", "labbench"));
+            limsOptions.setValue("username", config.getProperty("lims.username", "limsuser"));
+            limsOptions.setValue("password", config.getProperty("lims.password", "biomatters"));
 
             // todo
         } catch (IOException e) {

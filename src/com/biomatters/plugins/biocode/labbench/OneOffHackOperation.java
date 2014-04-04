@@ -14,7 +14,6 @@ import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
-import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -124,11 +123,8 @@ public class OneOffHackOperation extends DocumentOperation{
                 try {
                     if(plate.getReactionType() == Reaction.Type.Extraction) {
                         extractionPlate = plate;
-                        BiocodeService.getInstance().saveExtractions(null, plate);
                     }
-                    else {
-                        BiocodeService.getInstance().saveReactions(null, plate);
-                    }
+                    BiocodeService.getInstance().savePlate(plate, null);
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException(e.getMessage(), e);

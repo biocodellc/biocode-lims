@@ -13,7 +13,6 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.TransactionException;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.Thermocycle;
@@ -26,7 +25,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -377,12 +375,7 @@ public class PlateViewer extends JPanel {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    if(plate.getReactionType() == Reaction.Type.Extraction) {
-                                        BiocodeService.getInstance().saveExtractions(progress, plate);
-                                    }
-                                    else {
-                                        BiocodeService.getInstance().saveReactions(progress, plate);
-                                    }
+                                    BiocodeService.getInstance().savePlate(plate, progress);
                                 } catch(BadDataException ex) {
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);

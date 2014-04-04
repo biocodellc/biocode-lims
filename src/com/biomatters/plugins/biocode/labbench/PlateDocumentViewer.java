@@ -26,7 +26,6 @@ import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
@@ -103,13 +102,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                                    BiocodeService.getInstance().saveExtractions(progressFrame, plateView.getPlate());
-                                }
-                                else {
-                                    BiocodeService.getInstance().saveReactions(progressFrame, plateView.getPlate());
-                                }
-
+                                BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
                                     for(Reaction r : plateView.getPlate().getReactions()) {
                                         ((CycleSequencingReaction)r).purgeChromats();

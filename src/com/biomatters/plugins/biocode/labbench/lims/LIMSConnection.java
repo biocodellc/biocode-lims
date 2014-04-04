@@ -72,12 +72,10 @@ public abstract class LIMSConnection {
 
     public abstract Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException;
 
-    public abstract void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException;
+    public abstract void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException;
     public abstract void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException;
 
-    public abstract void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException;
     public abstract void renamePlate(int id, String newName) throws DatabaseServiceException;
-    public abstract void isPlateValid(Plate plate) throws DatabaseServiceException;
 
     public abstract List<FailureReason> getPossibleFailureReasons();
 
@@ -86,7 +84,7 @@ public abstract class LIMSConnection {
     public abstract void deleteSequences(List<Integer> sequencesToDelete) throws DatabaseServiceException;
     public abstract void deleteSequencesForWorkflowId(Integer workflowId, String extractionId) throws DatabaseServiceException;
 
-    public abstract Map<String,String> getReactionToTissueIdMapping(String tableName, List<? extends Reaction> reactions) throws DatabaseServiceException;
+    public abstract Map<String,String> getTissueIdsForExtractionIds(String tableName, List<String> extractionIds) throws DatabaseServiceException;
 
     public abstract Map<Integer,List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException;
 
@@ -265,20 +263,6 @@ public abstract class LIMSConnection {
             Collection<WorkflowDocument> workflows, List<FimsSample> samples,
             List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
 
-
-
-
-
-    protected String checkReactions(Plate plate) {
-        System.out.println("Checking " + plate.getName());
-        List<Reaction> reactions = new ArrayList<Reaction>();
-        for (Reaction r : plate.getReactions()) {
-            if (r != null) {
-                reactions.add(r);
-            }
-        }
-        return reactions.get(0).areReactionsValid(reactions, null, true);
-    }
 
     public abstract Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws DatabaseServiceException;
 

@@ -297,7 +297,7 @@ public class LimsSearchTest extends Assert {
             reaction.setExtractionId(entry.getValue());
         }
 
-        service.saveExtractions(ProgressListener.EMPTY, extractionPlate);
+        service.savePlate(extractionPlate, ProgressListener.EMPTY);
     }
 
     private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws DatabaseServiceException, BadDataException {
@@ -314,7 +314,7 @@ public class LimsSearchTest extends Assert {
             reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
         }
 
-        service.saveReactions(ProgressListener.EMPTY, pcrPlate);
+        service.savePlate(pcrPlate, ProgressListener.EMPTY);
         return pcrPlate;
     }
 
@@ -336,7 +336,7 @@ public class LimsSearchTest extends Assert {
             reaction.getOptions().setValue(CycleSequencingOptions.DIRECTION, direction);
         }
 
-        service.saveReactions(ProgressListener.EMPTY, plate);
+        service.savePlate(plate, ProgressListener.EMPTY);
     }
 
     private String getPathToDemoFIMSExcel() {
