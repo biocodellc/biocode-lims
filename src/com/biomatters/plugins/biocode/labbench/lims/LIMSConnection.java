@@ -261,8 +261,6 @@ public abstract class LIMSConnection {
             List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
 
 
-    public abstract Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws DatabaseServiceException;
-
     public void getGelImagesForPlates(Collection<Plate> plates) throws DatabaseServiceException {
         List<Integer> plateIds = new ArrayList<Integer>();
         for (Plate plate : plates) {
@@ -281,9 +279,9 @@ public abstract class LIMSConnection {
     protected abstract Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException;
 
 
-    public abstract Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws DatabaseServiceException;
+    public abstract Set<String> getAllExtractionIdsForTissueIds(List<String> tissueIds) throws DatabaseServiceException;
 
-    public abstract Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException;
+    public abstract List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException;
 
     /**
      *
@@ -314,7 +312,7 @@ public abstract class LIMSConnection {
      */
     public abstract String getProperty(String key) throws DatabaseServiceException;
 
-    public abstract Map<String,Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException;
+    public abstract List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException;
     public abstract Map<String,String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException;
     public abstract void renameWorkflow(int id, String newName) throws DatabaseServiceException;
 

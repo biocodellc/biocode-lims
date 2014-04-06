@@ -287,7 +287,7 @@ public class WorkflowBuilder extends DocumentOperation {
 
             // Fill in any missing
             Map<String, String> tissueIds = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateName);
-            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(new ArrayList<String>(tissueIds.values()));
+            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(new ArrayList<String>(tissueIds.values()));
 
                 Set<String> wellsToExtract = new HashSet<String>();
                 for (AnnotatedPluginDocument document : plateEntry.getValue()) {

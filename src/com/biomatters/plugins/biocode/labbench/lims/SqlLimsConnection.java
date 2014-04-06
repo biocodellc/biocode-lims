@@ -620,35 +620,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return new QueryPart(queryConditions, objects);
     }
 
-    public Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws DatabaseServiceException {
-        if (sourceReactions == null || sourceReactions.size() == 0) {
-            return Collections.emptyMap();
-        }
-        StringBuilder sql = new StringBuilder("SELECT plate.name, plate.size, extraction.* FROM extraction, plate WHERE plate.id = extraction.plate AND (");
-        for (int i = 0; i < sourceReactions.size(); i++) {
-            sql.append("extractionId=?");
-            if (i < sourceReactions.size() - 1) {
-                sql.append(" OR ");
-            }
-        }
-        sql.append(")");
-        try {
-            PreparedStatement statement = createStatement(sql.toString());
-            for (int i = 0; i < sourceReactions.size(); i++) {
-                statement.setString(i + 1, sourceReactions.get(i).getExtractionId());
-            }
-            ResultSet resultSet = statement.executeQuery();
-            Map<String, Reaction> reactions = new HashMap<String, Reaction>();
-            while (resultSet.next()) {
-                ExtractionReaction reaction = new ExtractionReaction(resultSet);
-                reactions.put(reaction.getExtractionId(), reaction);
-            }
-            return reactions;
-        } catch (SQLException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
-    }
-
     protected Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
         if (plateIds == null || plateIds.size() == 0) {
             return Collections.emptyMap();
@@ -687,7 +658,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws DatabaseServiceException {
+    public Set<String> getAllExtractionIdsForTissueIds(List<String> tissueIds) throws DatabaseServiceException {
         if(tissueIds.isEmpty()) {
             return Collections.emptySet();
         }
@@ -720,10 +691,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return result;
     }
 
-    public Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
+    public List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
         if (barcodes.size() == 0) {
             System.out.println("empty!");
-            return Collections.emptyMap();
+            return Collections.emptyList();
         }
         StringBuilder sql = new StringBuilder("SELECT * FROM extraction " +
                 "LEFT JOIN plate ON plate.id = extraction.plate " +
@@ -749,10 +720,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
             ResultSet r = statement.executeQuery();
 
-            Map<String, ExtractionReaction> results = new HashMap<String, ExtractionReaction>();
+            List<ExtractionReaction> results = new ArrayList<ExtractionReaction>();
             while (r.next()) {
                 ExtractionReaction reaction = new ExtractionReaction(r);
-                results.put("" + reaction.getFieldValue("extractionBarcode"), reaction);
+                results.add(reaction);
             }
 
             return results;
@@ -1367,7 +1338,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
+    public List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
 
         try {
@@ -1389,10 +1360,10 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 i++;
             }
             ResultSet results = statement.executeQuery();
-            Map<String, Workflow> result = new HashMap<String, Workflow>();
+            List<Workflow> result = new ArrayList<Workflow>();
 
             while (results.next()) {
-                result.put(results.getString("workflow"), new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId"), results.getString("locus"), results.getDate("workflow.date")));
+                result.add(new Workflow(results.getInt("workflowId"), results.getString("workflow"), results.getString("extractionId"), results.getString("locus"), results.getDate("workflow.date")));
             }
             statement.close();
             return result;

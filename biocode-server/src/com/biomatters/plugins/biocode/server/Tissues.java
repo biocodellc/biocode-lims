@@ -1,11 +1,13 @@
 package com.biomatters.plugins.biocode.server;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import javax.ws.rs.*;
+import java.util.Arrays;
+import java.util.Set;
 
 /**
  * A tissue entry
@@ -19,15 +21,19 @@ import javax.ws.rs.PathParam;
 public class Tissues {
 
     @GET
-    public String list() {
-        return "There are no tissues here yet";
-    }
+    @Produces("text/plain")
+    @Path("extractions")
+    public String getForBarcodes(@QueryParam("tissues")String tissueIds) {
+        if(tissueIds == null || tissueIds.trim().isEmpty()) {
+            throw new BadRequestException("Must specify tissues");
+        }
 
-    @GET
-    @Path("{tissueId}")
-    public String getTissue(@PathParam("tissueId")String tissueId) {
+        try {
+            return StringUtilities.join("\n", BiocodeService.getInstance().getActiveLIMSConnection().
+                    getAllExtractionIdsForTissueIds(Arrays.asList(tissueIds.split(","))));
 
-
-        throw new NotFoundException("No tissue for " + tissueId);
+        } catch (DatabaseServiceException e) {
+            throw new InternalServerErrorException(e.getMessage(), e);
+        }
     }
 }

@@ -18,7 +18,6 @@ import jebl.util.ProgressListener;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -276,7 +275,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
 
         try {
-            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
+            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(tissueIds);
 
             for(Reaction r : plate.getReactions()) {
                 String tissueId = ""+r.getFieldValue(ExtractionOptions.TISSUE_ID);

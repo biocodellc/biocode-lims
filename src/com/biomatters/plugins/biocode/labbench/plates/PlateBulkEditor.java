@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
 import com.biomatters.geneious.publicapi.components.*;
-import com.biomatters.geneious.publicapi.databaseservice.DatabaseService;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
@@ -32,7 +31,6 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.*;
 import java.io.*;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -348,7 +346,7 @@ public class PlateBulkEditor {
                     }
 
                     try {
-                        Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
+                        Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(tissueIds);
                         extractionIds.addAll(existingExtractionIds);
                         for(int row=0; row < plate.getRows(); row++) {
                             for(int col=0; col < plate.getCols(); col++) {
@@ -1243,7 +1241,11 @@ public class PlateBulkEditor {
             DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, parentExtractionField);
 
             try {
-                Map<String, ExtractionReaction> extractions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
+                List<ExtractionReaction> temp = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
+                Map<String, ExtractionReaction> extractions = new HashMap<String, ExtractionReaction>();
+                for (ExtractionReaction reaction : temp) {
+                    extractions.put(reaction.getExtractionBarcode(), reaction);
+                }
                 for(int i=0; i < plate.getRows(); i++) {
                     for(int j=0; j < plate.getCols(); j++) {
                         Object barcode = barcodeEditor.getValue(i,j);

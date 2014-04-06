@@ -1438,7 +1438,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             return Collections.emptyMap();
         }
 
-        return limsConnection.getWorkflows(workflowIds);
+        List<Workflow> list = limsConnection.getWorkflows(workflowIds);
+        Map<String, Workflow> result = new HashMap<String, Workflow>();
+        for (Workflow workflow : list) {
+            result.put(workflow.getName(), workflow);
+        }
+        return result;
     }
 
     public void registerCallback(BiocodeCallback callback) {

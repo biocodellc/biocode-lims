@@ -181,7 +181,7 @@ public class OneOffHackOperation extends DocumentOperation{
         }
 
         try {
-            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
+            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(tissueIds);
             extractionIds.addAll(existingExtractionIds);
             for(int row=0; row < plate.getRows(); row++) {
                 for(int col=0; col < plate.getCols(); col++) {

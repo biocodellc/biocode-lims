@@ -288,7 +288,15 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
         if(plateType == Reaction.Type.Extraction) { //if it's an extraction we want to move the existing extractions to this plate, not make new ones...
             try {
-                Map<String, Reaction> extractionReactions = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(failedReactions);
+                List<String> extractionIds = new ArrayList<String>();
+                for (Reaction failedReaction : failedReactions) {
+                    extractionIds.add(failedReaction.getExtractionId());
+                }
+                List<ExtractionReaction> temp = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsForIds(extractionIds);
+                Map<String, Reaction> extractionReactions = new HashMap<String, Reaction>();
+                for (ExtractionReaction reaction : temp) {
+                    extractionReactions.put(reaction.getExtractionId(), reaction);
+                }
                 newReactions = new ArrayList<Reaction>();
                 for(Reaction r : failedReactions) {
                     Reaction newReaction = extractionReactions.get(r.getExtractionId());
@@ -398,7 +406,11 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
             reactions.add(reaction);
         }
         try {
-            return new ArrayList<Reaction>(BiocodeService.getInstance().getActiveLIMSConnection().getExtractionReactions(reactions).values());
+            List<String> extractionIds = new ArrayList<String>();
+            for (Reaction reaction : reactions) {
+                extractionIds.add(reaction.getExtractionId());
+            }
+            return new ArrayList<Reaction>(BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsForIds(extractionIds));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
             throw new DocumentOperationException("Error getting extraction reactions from database: "+e.getMessage(), e);

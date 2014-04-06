@@ -234,20 +234,21 @@ public class ServerLimsConnetion extends LIMSConnection {
         // Nothing required on the client side
     }
 
-    // todo extractions
     @Override
-    public Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws DatabaseServiceException {
-        return null;
+    public Set<String> getAllExtractionIdsForTissueIds(List<String> tissueIds) throws DatabaseServiceException {
+        return new HashSet<String>(Arrays.asList(
+                target.path("tissues").path("extractions").queryParam("tissues",
+                        StringUtilities.join(",",tissueIds)).request(MediaType.TEXT_PLAIN_TYPE).get(String.class).split("\\n")
+        ));
     }
 
     @Override
-    public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws DatabaseServiceException {
-        return Collections.emptySet();
-    }
-
-    @Override
-    public Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
-        return Collections.emptyMap();
+    public List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
+        return target.path("extractions").
+                        queryParam("barcodes", StringUtilities.join(",", barcodes)).
+                        request(MediaType.APPLICATION_XML_TYPE).
+                        get(new GenericType<XMLSerializableList<ExtractionReaction>>() {
+                        }).getList();
     }
 
     // todo gels
@@ -266,20 +267,29 @@ public class ServerLimsConnetion extends LIMSConnection {
         return target.path("info").path("properties").path(key).request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
     }
 
-    // todo workflows
+    private static final String WORKFLOWS = "workflows";
     @Override
-    public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
-        return Collections.emptyMap();
+    public List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
+        return target.path(WORKFLOWS).queryParam("ids", StringUtilities.join(",", workflowIds)).
+                request(MediaType.APPLICATION_XML_TYPE).get(new GenericType<XMLSerializableList<Workflow>>(){}).getList();
     }
 
     @Override
     public Map<String, String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException {
-        return Collections.emptyMap();
+        return target.path(WORKFLOWS).
+                queryParam("extractionIds", StringUtilities.join(",", idsToCheck)).
+                queryParam("loci", StringUtilities.join(",", loci)).
+                queryParam("type", reactionType.name()).
+                        request(MediaType.APPLICATION_XML_TYPE).get(StringMap.class).getMap();
     }
 
     @Override
     public void renameWorkflow(int id, String newName) throws DatabaseServiceException {
-
+        Invocation.Builder request = target.path(WORKFLOWS).path(id + "/name").
+                queryParam("name", newName).
+                request();
+        Response response = request.get();
+        System.out.println(response);
     }
 
     @Override
