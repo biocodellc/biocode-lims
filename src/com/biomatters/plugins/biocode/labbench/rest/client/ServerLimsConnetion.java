@@ -206,7 +206,7 @@ public class ServerLimsConnetion extends LIMSConnection {
     // todo traces
     @Override
     public Map<Integer, List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
-        return null;
+        return Collections.emptyMap();
     }
 
     @Override
