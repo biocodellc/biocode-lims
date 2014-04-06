@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -12,6 +13,7 @@ import javax.ws.rs.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Matthew Cheung
@@ -34,7 +36,7 @@ public class Plates {
     }
 
     @PUT
-    @Consumes()
+    @Consumes("application/xml")
     public void savePlate(Plate plate) {
         try {
             BiocodeService.getInstance().getActiveLIMSConnection().savePlate(plate, ProgressListener.EMPTY);
@@ -44,6 +46,20 @@ public class Plates {
             throw new WebApplicationException(e.getMessage(), e);
         }
     }
+
+    @POST
+    @Consumes("application/xml")
+    @Produces("text/plain")
+    @Path("delete")
+    public String deletePlate(Plate plate) {
+        try {
+            Set<Integer> ids = BiocodeService.getInstance().getActiveLIMSConnection().deletePlate(plate, ProgressListener.EMPTY);
+            return StringUtilities.join("\n", ids);
+        } catch (DatabaseServiceException e) {
+            throw new WebApplicationException(e.getMessage(), e);
+        }
+    }
+
 
     @PUT
     @Consumes("text/plain")

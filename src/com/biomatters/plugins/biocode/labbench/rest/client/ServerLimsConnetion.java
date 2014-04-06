@@ -120,6 +120,26 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
+    public Set<Integer> deletePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
+        Invocation.Builder request = target.path("plates").path("delete").request(MediaType.TEXT_PLAIN_TYPE);
+        Response response = request.post(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
+        String result = response.getEntity().toString();
+        if(result == null) {
+            return Collections.emptySet();
+        } else {
+            HashSet<Integer> set = new HashSet<Integer>();
+            for (String idString : result.split("\\n")) {
+                try {
+                    set.add(Integer.parseInt(idString));
+                } catch (NumberFormatException e) {
+                    throw new DatabaseServiceException("Server returned bad plate ID: " + idString + " is not a number", false);
+                }
+            }
+            return set;
+        }
+    }
+
+    @Override
     public void renamePlate(int id, String newName) throws DatabaseServiceException {
         Invocation.Builder request = target.path("plates").path(id + "/name").
                 queryParam("name", newName).
@@ -139,6 +159,7 @@ public class ServerLimsConnetion extends LIMSConnection {
         return target.path("permissions").path("delete").path(tableName).request(MediaType.TEXT_PLAIN_TYPE).get(Boolean.class);
     }
 
+    // todo sequences
     @Override
     public Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException {
         return Collections.emptyMap();
@@ -150,8 +171,18 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
+    public void setSequenceStatus(boolean submitted, List<Integer> ids) throws DatabaseServiceException {
+
+    }
+
+    @Override
     public void deleteSequencesForWorkflowId(Integer workflowId, String extractionId) throws DatabaseServiceException {
 
+    }
+
+    @Override
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(Collection<WorkflowDocument> workflows, List<FimsSample> samples, List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+        return Collections.emptyList();
     }
 
     @Override
@@ -172,15 +203,10 @@ public class ServerLimsConnetion extends LIMSConnection {
                 }).getList();
     }
 
+    // todo traces
     @Override
     public Map<Integer, List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
-        // todo
         return null;
-    }
-
-    @Override
-    public void setSequenceStatus(boolean submitted, List<Integer> ids) throws DatabaseServiceException {
-
     }
 
     @Override
@@ -208,24 +234,10 @@ public class ServerLimsConnetion extends LIMSConnection {
         // Nothing required on the client side
     }
 
-    @Override
-    public Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws DatabaseServiceException {
-        return Collections.emptySet();
-    }
-
-    @Override
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(Collection<WorkflowDocument> workflows, List<FimsSample> samples, List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
-        return Collections.emptyList();
-    }
-
+    // todo extractions
     @Override
     public Map<String, Reaction> getExtractionReactions(List<Reaction> sourceReactions) throws DatabaseServiceException {
         return null;
-    }
-
-    @Override
-    protected Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
-        return Collections.emptyMap();
     }
 
     @Override
@@ -235,6 +247,12 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public Map<String, ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
+        return Collections.emptyMap();
+    }
+
+    // todo gels
+    @Override
+    protected Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
         return Collections.emptyMap();
     }
 
@@ -248,11 +266,7 @@ public class ServerLimsConnetion extends LIMSConnection {
         return target.path("info").path("properties").path(key).request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
     }
 
-    @Override
-    public Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws DatabaseServiceException {
-        return Collections.emptySet();
-    }
-
+    // todo workflows
     @Override
     public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
         return Collections.emptyMap();

@@ -1324,25 +1324,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public void deletePlate(ProgressListener progress, Plate plate) throws DatabaseServiceException {
 
-        Set<Integer> plateIds = new HashSet<Integer>();
-
-        //delete the reactions...
-        if(plate.getReactionType() == Reaction.Type.Extraction) {
-            plateIds.addAll(limsConnection.deleteWorkflows(progress, plate));
-        }
-        else {
-            deleteReactions(progress, plate);
-        }
-
-
-        //delete the images...
-        progress.setMessage("Deleting GEL images");
-        limsConnection.deleteRecords("gelimages", "plate", Arrays.asList(plate.getId()));
-
-        //delete the plate...
-        progress.setMessage("deleting the plate");
-
-        limsConnection.deleteRecords("plate", "id", Arrays.asList(plate.getId()));
+        Set<Integer> plateIds = limsConnection.deletePlate(plate, progress);
 
         if(plate.getReactionType() == Reaction.Type.Extraction) {
             List<Plate> emptyPlates = limsConnection.getEmptyPlates(plateIds);
@@ -1362,37 +1344,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         plate.setDeleted(true);
 
-    }
-
-    private void deleteReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException {
-        progress.setMessage("deleting reactions");
-
-        String tableName;
-        switch(plate.getReactionType()) {
-            case Extraction:
-                tableName = "extraction";
-                break;
-            case PCR:
-                tableName = "pcr";
-                break;
-            case CycleSequencing:
-            default:
-                tableName = "cyclesequencing";
-                break;
-        }
-
-        ArrayList<Integer> terms = new ArrayList<Integer>();
-        for(Reaction r : plate.getReactions()) {
-            if(r.getId() >= 0) {
-                terms.add(r.getId());
-            }
-        }
-
-        if(tableName.equals("cyclesequencing")) {
-            limsConnection.deleteRecords("traces", "reaction", terms);
-        }
-
-        limsConnection.deleteRecords(tableName, "id", terms);
     }
 
     @Override

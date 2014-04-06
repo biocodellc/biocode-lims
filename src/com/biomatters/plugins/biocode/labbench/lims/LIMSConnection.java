@@ -73,7 +73,7 @@ public abstract class LIMSConnection {
 
     public abstract void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException;
     public abstract void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException;
-
+    public abstract Set<Integer> deletePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException;
     public abstract void renamePlate(int id, String newName) throws DatabaseServiceException;
 
     public abstract List<FailureReason> getPossibleFailureReasons();
@@ -157,8 +157,6 @@ public abstract class LIMSConnection {
     }
 
     public abstract void doAnyExtraInitialziation() throws DatabaseServiceException;
-
-    public abstract Set<Integer> deleteRecords(String tableName, String term, Iterable ids) throws DatabaseServiceException;
 
     // todo We want to get rid of all of these so we can just call a web method from the GUI in addition to the SQL method
 
@@ -316,7 +314,6 @@ public abstract class LIMSConnection {
      */
     public abstract String getProperty(String key) throws DatabaseServiceException;
 
-    public abstract Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws DatabaseServiceException ;
     public abstract Map<String,Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException;
     public abstract Map<String,String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException;
     public abstract void renameWorkflow(int id, String newName) throws DatabaseServiceException;

@@ -835,6 +835,61 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
+    @Override
+    public Set<Integer> deletePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
+        Set<Integer> plateIds = new HashSet<Integer>();
+
+        //delete the reactions...
+        if(plate.getReactionType() == Reaction.Type.Extraction) {
+            plateIds.addAll(deleteWorkflows(progress, plate));
+        }
+        else {
+            deleteReactions(progress, plate);
+        }
+
+
+        //delete the images...
+        progress.setMessage("Deleting GEL images");
+        deleteRecords("gelimages", "plate", Arrays.asList(plate.getId()));
+
+        //delete the plate...
+        progress.setMessage("deleting the plate");
+
+        deleteRecords("plate", "id", Arrays.asList(plate.getId()));
+        return plateIds;
+    }
+
+private void deleteReactions(ProgressListener progress, Plate plate) throws DatabaseServiceException {
+        progress.setMessage("deleting reactions");
+
+        String tableName;
+        switch(plate.getReactionType()) {
+            case Extraction:
+                tableName = "extraction";
+                break;
+            case PCR:
+                tableName = "pcr";
+                break;
+            case CycleSequencing:
+            default:
+                tableName = "cyclesequencing";
+                break;
+        }
+
+        ArrayList<Integer> terms = new ArrayList<Integer>();
+        for(Reaction r : plate.getReactions()) {
+            if(r.getId() >= 0) {
+                terms.add(r.getId());
+            }
+        }
+
+        if(tableName.equals("cyclesequencing")) {
+            deleteRecords("traces", "reaction", terms);
+        }
+
+        deleteRecords(tableName, "id", terms);
+    }
+
     public void renamePlate(int id, String newName) throws DatabaseServiceException{
         ConnectionWrapper connection = null;
         try {
@@ -1250,7 +1305,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws DatabaseServiceException {
+    private Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws DatabaseServiceException {
         progress.setMessage("deleting workflows");
         if (plate.getReactionType() != Reaction.Type.Extraction) {
             throw new IllegalArgumentException("You may only delete workflows from an extraction plate!");
