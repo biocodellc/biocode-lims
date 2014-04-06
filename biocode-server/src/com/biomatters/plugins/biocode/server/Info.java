@@ -1,9 +1,10 @@
 package com.biomatters.plugins.biocode.server;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+
 import javax.inject.Singleton;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 
 /**
  * Provides basic information about the server.
@@ -27,8 +28,28 @@ public class Info {
     @GET
     @Path("details")
     public String getServerDetails() {
-        return "Version:" + System.getProperty("java.version");
+        return "Alpha Biocode LIMS Server\nAPI is likely to change\n\nJava Version:" + System.getProperty("java.version");
     }
 
+    @Produces("text/plain")
+    @GET
+    @Path("properties/{id}")
+    public String getProperty(@PathParam("id")String id) {
+        try {
+            return BiocodeService.getInstance().getActiveLIMSConnection().getProperty(id);
+        } catch (DatabaseServiceException e) {
+            throw new InternalServerErrorException(e.getMessage(), e);
+        }
+    }
 
+    @Consumes("text/plain")
+    @PUT
+    @Path("properties/{id}")
+    public void getProperty(@PathParam("id")String id, String value) {
+        try {
+            BiocodeService.getInstance().getActiveLIMSConnection().setProperty(id, value);
+        } catch (DatabaseServiceException e) {
+            throw new InternalServerErrorException(e.getMessage(), e);
+        }
+    }
 }

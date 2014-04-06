@@ -18,6 +18,7 @@ import com.biomatters.plugins.biocode.server.*;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
@@ -94,15 +95,17 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    public Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException {
-        return Collections.emptyMap();
-    }
-
-    @Override
     public void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         Invocation.Builder request = target.path("plates").request();
         Response response = request.put(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
         System.out.println(response);
+    }
+
+    @Override
+    public List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws DatabaseServiceException {
+        return target.path("plates").path("empty").request(MediaType.APPLICATION_XML_TYPE).get(
+                new GenericType<XMLSerializableList<Plate>>(){}
+        ).getList();
     }
 
     @Override
@@ -127,12 +130,18 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public List<FailureReason> getPossibleFailureReasons() {
-        return Collections.emptyList();
+        return target.path("failureReasons").request(MediaType.APPLICATION_XML_TYPE).get(
+                new GenericType<List<FailureReason>>() { });
     }
 
     @Override
     public boolean deleteAllowed(String tableName) {
-        return false;
+        return target.path("permissions").path("delete").path(tableName).request(MediaType.TEXT_PLAIN_TYPE).get(Boolean.class);
+    }
+
+    @Override
+    public Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException {
+        return Collections.emptyMap();
     }
 
     @Override
@@ -155,17 +164,18 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    public Map<Integer, List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
-        return null;
-    }
-
-    @Override
     public List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException {
         return target.path("plates").path("extractions").
                 queryParam("ids", StringUtilities.join(",", extractionIds)).
                 request(MediaType.APPLICATION_XML_TYPE).
                 get(new GenericType<XMLSerializableList<ExtractionReaction>>() {
                 }).getList();
+    }
+
+    @Override
+    public Map<Integer, List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
+        // todo
+        return null;
     }
 
     @Override
@@ -229,13 +239,13 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    protected void setProperty(String key, String value) throws DatabaseServiceException {
-
+    public void setProperty(String key, String value) throws DatabaseServiceException {
+        target.path("info").path("properties").path(key).request().put(Entity.entity(value, MediaType.TEXT_PLAIN_TYPE));
     }
 
     @Override
-    protected String getProperty(String key) throws DatabaseServiceException {
-        return null;
+    public String getProperty(String key) throws DatabaseServiceException {
+        return target.path("info").path("properties").path(key).request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
     }
 
     @Override
@@ -260,57 +270,78 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public void testConnection() throws DatabaseServiceException {
-
+        try {
+            target.path("info").path("details").request(MediaType.TEXT_PLAIN_TYPE).get();
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
     }
 
-    @Override
-    public List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws DatabaseServiceException {
-        return Collections.emptyList();
-    }
+    private static final String COCKTAILS = "cocktails";
 
     @Override
-    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws DatabaseServiceException {
-        return Collections.emptyList();
+    public Collection<String> getPlatesUsingCocktail(Reaction.Type type, int cocktailId) throws DatabaseServiceException {
+        String platesList = target.path(COCKTAILS).path(type.name()).path("" + cocktailId).path("plates").request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
+        return Arrays.asList(platesList.split("\\n"));
     }
 
     @Override
     public void addCocktails(List<? extends Cocktail> cocktails) throws DatabaseServiceException {
-
+        target.path(COCKTAILS).request().put(Entity.entity(
+                new XMLSerializableList<Cocktail>(Cocktail.class, new ArrayList<Cocktail>(cocktails)),
+                MediaType.APPLICATION_XML_TYPE));
     }
 
     @Override
     public void deleteCocktails(List<? extends Cocktail> deletedCocktails) throws DatabaseServiceException {
-
+        target.path(COCKTAILS).path("delete").request().post(Entity.entity(
+                new XMLSerializableList<Cocktail>(Cocktail.class, new ArrayList<Cocktail>(deletedCocktails)),
+                MediaType.APPLICATION_XML_TYPE));
     }
 
     @Override
     public List<PCRCocktail> getPCRCocktailsFromDatabase() throws DatabaseServiceException {
-        return Collections.emptyList();
+        return target.path(COCKTAILS).path(Cocktail.Type.pcr.name()).request(MediaType.APPLICATION_XML_TYPE).get(
+                new GenericType<XMLSerializableList<PCRCocktail>>(){}
+        ).getList();
     }
 
     @Override
     public List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase() throws DatabaseServiceException {
-        return Collections.emptyList();
+        return target.path(COCKTAILS).path(Cocktail.Type.cyclesequencing.name()).request(MediaType.APPLICATION_XML_TYPE).get(
+                        new GenericType<XMLSerializableList<CycleSequencingCocktail>>(){}
+                ).getList();
+    }
+
+    private static final String THERMOCYCLES = "thermocycles";
+
+    @Override
+    public List<Thermocycle> getThermocyclesFromDatabase(Thermocycle.Type type) throws DatabaseServiceException {
+        return target.path(THERMOCYCLES).path(type.name()).request(MediaType.APPLICATION_XML_TYPE).get(
+                new GenericType<XMLSerializableList<Thermocycle>>(){}
+        ).getList();
     }
 
     @Override
-    public List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws DatabaseServiceException {
-        return Collections.emptyList();
+    public void addThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException {
+        target.path(THERMOCYCLES).path(type.name()).request().post(Entity.entity(
+                new XMLSerializableList<Thermocycle>(Thermocycle.class, cycles), MediaType.APPLICATION_XML_TYPE));
     }
 
     @Override
-    public void addThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException {
-
+    public void deleteThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException {
+        target.path(THERMOCYCLES).path(type.name()).path("delete").request().post(Entity.entity(
+                        new XMLSerializableList<Thermocycle>(Thermocycle.class, cycles), MediaType.APPLICATION_XML_TYPE));
     }
 
     @Override
-    public void deleteThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException {
-
+    public List<String> getPlatesUsingThermocycle(int thermocycleId) throws DatabaseServiceException {
+        String result = target.path(THERMOCYCLES).path("" + thermocycleId).path("plates").request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
+        if(result == null) {
+            return Collections.emptyList();
+        } else {
+            return Arrays.asList(result.split("\\n"));
+        }
     }
 
     @Override

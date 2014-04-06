@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOptions;
 import com.biomatters.plugins.biocode.labbench.*;
@@ -306,7 +305,7 @@ public abstract class LIMSConnection {
      * @param value The value to set for the property
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    protected abstract void setProperty(String key, String value) throws DatabaseServiceException;
+    public abstract void setProperty(String key, String value) throws DatabaseServiceException;
 
     /**
      * Retrieves a property from the database previously set by calling {@link #setProperty(String, String)}
@@ -315,7 +314,7 @@ public abstract class LIMSConnection {
      * @return value of the property or null if it does not exist
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    protected abstract String getProperty(String key) throws DatabaseServiceException;
+    public abstract String getProperty(String key) throws DatabaseServiceException;
 
     public abstract Set<Integer> deleteWorkflows(ProgressListener progress, Plate plate) throws DatabaseServiceException ;
     public abstract Map<String,Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException;
@@ -332,15 +331,15 @@ public abstract class LIMSConnection {
      */
     public abstract List<Plate> getEmptyPlates(Collection<Integer> plateIds) throws DatabaseServiceException;
 
-    public abstract Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException;
-    public abstract List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws DatabaseServiceException;
+    public abstract Collection<String> getPlatesUsingCocktail(Reaction.Type type, int cocktailId) throws DatabaseServiceException;
+    public abstract List<String> getPlatesUsingThermocycle(int thermocycleId) throws DatabaseServiceException;
 
     public abstract void addCocktails(List<? extends Cocktail> cocktails) throws DatabaseServiceException;
     public abstract void deleteCocktails(List<? extends Cocktail> deletedCocktails) throws DatabaseServiceException;
     public abstract List<PCRCocktail> getPCRCocktailsFromDatabase() throws DatabaseServiceException;
     public abstract List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDatabase() throws DatabaseServiceException;
 
-    public abstract List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws DatabaseServiceException;
-    public abstract void addThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException;
-    public abstract void deleteThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException;
+    public abstract List<Thermocycle> getThermocyclesFromDatabase(Thermocycle.Type type) throws DatabaseServiceException;
+    public abstract void addThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException;
+    public abstract void deleteThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException;
 }

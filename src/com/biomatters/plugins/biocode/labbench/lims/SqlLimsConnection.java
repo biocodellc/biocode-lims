@@ -761,12 +761,12 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException {
-        if(cocktail.getId() < 0) {
+    public Collection<String> getPlatesUsingCocktail(Reaction.Type type, int cocktailId) throws DatabaseServiceException {
+        if(cocktailId < 0) {
             return Collections.emptyList();
         }
         String tableName;
-        switch(cocktail.getReactionType()) {
+        switch(type) {
             case PCR:
                 tableName = "pcr";
                 break;
@@ -774,9 +774,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 tableName = "cyclesequencing";
                 break;
             default:
-                throw new RuntimeException(cocktail.getReactionType()+" reactions cannot have a cocktail");
+                throw new RuntimeException(type+" reactions cannot have a cocktail");
         }
-        String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktail.getId();
+        String sql = "SELECT plate.name FROM plate, "+tableName+" WHERE "+tableName+".plate = plate.id AND "+tableName+".cocktail = "+cocktailId;
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
@@ -794,11 +794,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws DatabaseServiceException {
-        if(thermocycle.getId() < 0) {
+    public List<String> getPlatesUsingThermocycle(int thermocycleId) throws DatabaseServiceException {
+        if(thermocycleId < 0) {
             return Collections.emptyList();
         }
-        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycle.getId();
+        String sql = "SELECT name FROM plate WHERE thermocycle = "+thermocycleId;
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
@@ -1151,13 +1151,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     /**
-     * Sets a database wide property.  Can be retrieved by calling {@link #getProperty(String)}
+     * Sets a database wide property.  Can be retrieved by calling {@link LIMSConnection#getProperty(String)}
      *
      * @param key   The name of the property
      * @param value The value to set for the property
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    protected void setProperty(String key, String value) throws DatabaseServiceException {
+    public void setProperty(String key, String value) throws DatabaseServiceException {
         PreparedStatement update = null;
         PreparedStatement insert = null;
 
@@ -1184,13 +1184,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     /**
-     * Retrieves a property from the database previously set by calling {@link #setProperty(String, String)}
+     * Retrieves a property from the database previously set by calling {@link LIMSConnection#setProperty(String, String)}
      *
      * @param key The name of the property to retrieve
      * @return value of the property or null if it does not exist
      * @throws SQLException if something goes wrong communicating with the database.
      */
-    protected String getProperty(String key) throws DatabaseServiceException {
+    public String getProperty(String key) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         PreparedStatement get = null;
         try {
@@ -2690,7 +2690,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 String sql = "DELETE FROM "+cocktail.getTableName()+" WHERE id = ?";
                 PreparedStatement statement = connection.prepareStatement(sql);
                 if(cocktail.getId() >= 0) {
-                    if(getPlatesUsingCocktail(cocktail).size() > 0) {
+                    if(getPlatesUsingCocktail(cocktail.getReactionType(), cocktail.getId()).size() > 0) {
                         throw new DatabaseServiceException("The cocktail "+cocktail.getName()+" is in use by reactions in your database.  Only unused cocktails can be removed.", false);
                     }
                     statement.setInt(1, cocktail.getId());
@@ -2744,8 +2744,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return cocktails;
     }
 
-    public List<Thermocycle> getThermocyclesFromDatabase(String thermocycleIdentifierTable) throws DatabaseServiceException {
-        String sql = "SELECT * FROM "+thermocycleIdentifierTable+" LEFT JOIN thermocycle ON (thermocycle.id = "+thermocycleIdentifierTable+".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
+    public List<Thermocycle> getThermocyclesFromDatabase(Thermocycle.Type type) throws DatabaseServiceException {
+        String sql = "SELECT * FROM "+type.databaseTable+" LEFT JOIN thermocycle ON (thermocycle.id = "+type.databaseTable+".cycle) LEFT JOIN cycle ON (thermocycle.id = cycle.thermocycleId) LEFT JOIN state ON (cycle.id = state.cycleId);";
         System.out.println(sql);
 
         List<Thermocycle> tCycles = new ArrayList<Thermocycle>();
@@ -2780,14 +2780,14 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public void addThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException {
+    public void addThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
             connection.beginTransaction();
             for(Thermocycle tCycle : cycles) {
                 int id = addThermoCycle(connection, tCycle);
-                PreparedStatement statement = createStatement("INSERT INTO "+tableName+" (cycle) VALUES ("+id+");\n");
+                PreparedStatement statement = createStatement("INSERT INTO "+type.databaseTable+" (cycle) VALUES ("+id+");\n");
                 statement.execute();
                 statement.close();
             }
@@ -2842,14 +2842,18 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public void deleteThermoCycles(String tableName, List<Thermocycle> cycles) throws DatabaseServiceException {
+    public void deleteThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException {
+        // todo Consider using cascading deletes to get rid of cycles so we can just take the ids
         String sql = "DELETE  FROM state WHERE state.id=?";
         String sql2 = "DELETE  FROM cycle WHERE cycle.id=?";
         String sql3 = "DELETE  FROM thermocycle WHERE thermocycle.id=?";
-        String sql4 = "DELETE FROM "+tableName+" WHERE cycle =?";
+        String sql4 = "DELETE FROM "+type.databaseTable+" WHERE cycle =?";
         ConnectionWrapper connection = null;
         try {
-            if(!BiocodeService.getInstance().deleteAllowed("state") || !BiocodeService.getInstance().deleteAllowed("cycle") || !BiocodeService.getInstance().deleteAllowed("thermocycle") || !BiocodeService.getInstance().deleteAllowed(tableName)) {
+            if(!BiocodeService.getInstance().deleteAllowed("state") ||
+                !BiocodeService.getInstance().deleteAllowed("cycle") ||
+                !BiocodeService.getInstance().deleteAllowed("thermocycle") ||
+                !BiocodeService.getInstance().deleteAllowed(type.databaseTable)) {
                 throw new DatabaseServiceException("It appears that you do not have permission to delete thermocycles.  Please contact your System Administrator for assistance", false);
             }
 
@@ -2861,8 +2865,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             final PreparedStatement statement4 = connection.prepareStatement(sql4);
             for(Thermocycle thermocycle : cycles) {
                 if(thermocycle.getId() >= 0) {
-                    if(getPlatesUsingThermocycle(thermocycle).size() > 0) {
-                        throw new SQLException("The thermocycle "+thermocycle.getName()+" is being used by plates in your database.  Only unused thermocycles can be removed");
+                    if(getPlatesUsingThermocycle(thermocycle.getId()).size() > 0) {
+                        throw new DatabaseServiceException("The thermocycle "+thermocycle.getName()+" is being used by plates in your database.  Only unused thermocycles can be removed", false);
                     }
                     for(Thermocycle.Cycle cycle : thermocycle.getCycles()) {
                         for(Thermocycle.State state : cycle.getStates()) {

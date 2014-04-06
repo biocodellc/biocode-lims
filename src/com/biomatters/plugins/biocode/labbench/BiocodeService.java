@@ -895,8 +895,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         } catch (XMLSerializationException e) {
             throw new DatabaseServiceException(e, "Could not read the caches from disk", false);
         }
-        PCRThermocycles = limsConnection.getThermocyclesFromDatabase("pcr_thermocycle");
-        cyclesequencingThermocycles = limsConnection.getThermocyclesFromDatabase("cyclesequencing_thermocycle");
+        PCRThermocycles = limsConnection.getThermocyclesFromDatabase(Thermocycle.Type.pcr);
+        cyclesequencingThermocycles = limsConnection.getThermocyclesFromDatabase(Thermocycle.Type.cyclesequencing);
         PCRCocktails = limsConnection.getPCRCocktailsFromDatabase();
         cyclesequencingCocktails = limsConnection.getCycleSequencingCocktailsFromDatabase();
         try {
@@ -919,20 +919,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private void saveCachesToDisk() throws IOException {
         saveThermocyclesToDisk("pcr_thermocycle", PCRThermocycles);
         saveThermocyclesToDisk("cyclesequencing_thermocycle", cyclesequencingThermocycles);
-        savePCRCocktailsToDisk();
-        saveCycleSequencingCocktailsToDisk();
+        saveCocktailsToDisk(Cocktail.Type.pcr, PCRCocktails);
+        saveCocktailsToDisk(Cocktail.Type.cyclesequencing, cyclesequencingCocktails);
         saveDisplayedFieldsToDisk(Reaction.Type.Extraction, extractionDisplayedFields);
         saveDisplayedFieldsToDisk(Reaction.Type.PCR, pcrDisplayedFields);
         saveDisplayedFieldsToDisk(Reaction.Type.CycleSequencing, cycleSequencingDisplayedFields);
     }
 
     private List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDisk() throws JDOMException, IOException, XMLSerializationException{
-        File file = new File(dataDirectory, "cyclesequencingCocktails.xml");
+        File file = new File(dataDirectory, Cocktail.Type.cyclesequencing.cacheFilename);
         return (List<CycleSequencingCocktail>)getCocktails(file);
     }
 
     private List<PCRCocktail> getPCRCocktailsFromDisk() throws IOException, JDOMException, XMLSerializationException {
-        File file = new File(dataDirectory, "PCRCocktails.xml");
+        File file = new File(dataDirectory, Cocktail.Type.pcr.cacheFilename);
         return (List<PCRCocktail>)getCocktails(file);
     }
 
@@ -1020,20 +1020,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     //----
 
-    private void saveCycleSequencingCocktailsToDisk() throws IOException {
-        File file = new File(dataDirectory, "cyclesequencingCocktails.xml");
+    private void saveCocktailsToDisk(Cocktail.Type type, List<? extends Cocktail> cocktails) throws IOException {
+        File file = new File(dataDirectory, type.cacheFilename);
         if(!file.exists()) {
             createNewFile(file);
         }
-        saveCocktails(file, cyclesequencingCocktails);
-    }
-
-    private void savePCRCocktailsToDisk() throws IOException {
-        File file = new File(dataDirectory, "PCRCocktails.xml");
-        if(!file.exists()) {
-            createNewFile(file);
-        }
-        saveCocktails(file, PCRCocktails);
+        saveCocktails(file, cocktails);
     }
 
     private void saveCocktails(File file, List<? extends Cocktail> cocktails) throws IOException {
@@ -1170,16 +1162,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return cycles;
     }
 
-    public void removeThermoCycles(List<Thermocycle> cycles,  String tableName) throws DatabaseServiceException {
-        limsConnection.deleteThermoCycles(tableName, cycles);
+    public void removeThermoCycles(List<Thermocycle> cycles,  Thermocycle.Type type) throws DatabaseServiceException {
+        limsConnection.deleteThermoCycles(type, cycles);
         buildCaches();
     }
 
-    public void insertThermocycles(List<Thermocycle> cycles, String tableName) throws DatabaseServiceException {
+    public void insertThermocycles(List<Thermocycle> cycles, Thermocycle.Type type) throws DatabaseServiceException {
         if(limsConnection == null) {
             throw new DatabaseServiceException("You are not logged in", false);
         }
-        limsConnection.addThermoCycles(tableName, cycles);
+        limsConnection.addThermoCycles(type, cycles);
         buildCaches();
     }
 
@@ -1536,10 +1528,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws DatabaseServiceException {
-        return limsConnection.getPlatesUsingThermocycle(thermocycle);
+        return limsConnection.getPlatesUsingThermocycle(thermocycle.getId());
     }
 
     public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException {
-        return limsConnection.getPlatesUsingCocktail(cocktail);
+        return limsConnection.getPlatesUsingCocktail(cocktail.getReactionType(), cocktail.getId());
     }
 }

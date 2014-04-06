@@ -243,5 +243,12 @@ public class Thermocycle implements XMLSerializable {
         }
     }
 
+    public static enum Type {
+        pcr("pcr_thermocycle"), cyclesequencing("cyclesequencing_thermocycle");
 
+        public final String databaseTable;
+        private Type(String databaseTable) {
+            this.databaseTable = databaseTable;
+        }
+    }
 }

@@ -125,23 +125,23 @@ public class PlateViewer extends JPanel {
                                 ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Saving Thermocycles", selfReference);
                                 try {
 
-                                    String tableName;
+                                    Thermocycle.Type type;
                                     switch (plateView.getPlate().getReactionType()) {
                                         case PCR:
-                                            tableName = "pcr_thermocycle";
+                                            type = Thermocycle.Type.pcr;
                                             break;
                                         case CycleSequencing:
-                                            tableName = "cyclesequencing_thermocycle";
+                                            type = Thermocycle.Type.cyclesequencing;
                                             break;
                                         default:
                                             assert false : "Extractions do not have thermocycles!";
                                             return;
                                     }
                                     if(newThermocycles.size() > 0) {
-                                        BiocodeService.getInstance().insertThermocycles(newThermocycles, tableName);
+                                        BiocodeService.getInstance().insertThermocycles(newThermocycles, type);
                                     }
                                     if(deletedThermocycles.size() > 0) {
-                                        BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, tableName);
+                                        BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, type);
                                     }
                                 } catch (final DatabaseServiceException e1) {
                                     e1.printStackTrace();

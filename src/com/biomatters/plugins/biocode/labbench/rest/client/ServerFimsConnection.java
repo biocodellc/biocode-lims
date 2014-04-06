@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
@@ -64,10 +65,19 @@ public class ServerFimsConnection extends FIMSConnection {
             host = "http://" + host;
         }
 
-        target = ClientBuilder.newClient().
+        WebTarget server = ClientBuilder.newClient().
                 register(XMLSerializableMessageReader.class).
                 register(XMLSerializableMessageWriter.class).
-                target(host).path("biocode").path("fims");
+                target(host).path("biocode");
+        try {
+            String serverVersion = server.path("info").path("version").request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
+            if(!serverVersion.equals("0.1")) {
+                throw new ConnectionException("Incompatible server version.  Expected 0.1 (alpha), was " + serverVersion);
+            }
+        } catch (WebApplicationException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
+        target = server.path("fims");
     }
 
     @Override

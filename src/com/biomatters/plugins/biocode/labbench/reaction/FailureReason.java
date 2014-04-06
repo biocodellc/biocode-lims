@@ -6,6 +6,8 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -17,10 +19,15 @@ import java.util.List;
  *          <p/>
  *          Created on 6/09/13 5:12 PM
  */
+@XmlRootElement
 public class FailureReason {
-    private int id;
-    private String name;
-    private String description;
+    @XmlElement private int id;
+    @XmlElement private String name;
+    @XmlElement private String description;
+
+    private FailureReason(){
+        // For JAXB
+    }
 
     private FailureReason(int id, String name, String description) {
         this.id = id;

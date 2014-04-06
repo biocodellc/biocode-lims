@@ -9,6 +9,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -52,6 +53,31 @@ public class Plates {
             BiocodeService.getInstance().getActiveLIMSConnection().renamePlate(id, newName);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
+        }
+    }
+
+    @GET
+    @Produces("application/xml")
+    @Path("empty")
+    public XMLSerializableList<Plate> getEmptyPlates(@QueryParam("platesToCheck")String platesToCheck) {
+        if(platesToCheck == null || platesToCheck.trim().isEmpty()) {
+            return null;
+        }
+
+        String[] idStrings = platesToCheck.split(",");
+        List<Integer> ids = new ArrayList<Integer>();
+        for (String idString : idStrings) {
+            try {
+                ids.add(Integer.parseInt(idString));
+            } catch (NumberFormatException e) {
+                throw new BadRequestException("plansToCheck contained bad ID: " + idString + " not an integer", e);
+            }
+        }
+        try {
+            return new XMLSerializableList<Plate>(Plate.class,
+                    BiocodeService.getInstance().getActiveLIMSConnection().getEmptyPlates(ids));
+        } catch (DatabaseServiceException e) {
+            throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
 
