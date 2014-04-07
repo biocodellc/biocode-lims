@@ -3,9 +3,7 @@ package com.biomatters.plugins.biocode.labbench.rest.client;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
-import com.biomatters.geneious.publicapi.documents.URN;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
@@ -13,7 +11,7 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.server.*;
-import jebl.util.CompositeProgressListener;
+import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.WebApplicationException;
@@ -167,10 +165,22 @@ public class ServerLimsConnetion extends LIMSConnection {
         );
     }
 
-    // todo add sequences
     @Override
-    public Map<URN, String> addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, CompositeProgressListener progress) throws DatabaseServiceException {
-        return Collections.emptyMap();
+    public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
+        Response response = target.path("sequences").
+                queryParam("isPass", isPass).
+                queryParam("notes", notes).
+                queryParam("technician", technician).
+                queryParam("failureReason", failureReason).
+                queryParam("addChromatograms", addChromatograms).
+                queryParam("reactionIds", StringUtilities.join(",", reactionIds)).request(MediaType.TEXT_PLAIN_TYPE).
+                post(Entity.entity(seq, MediaType.APPLICATION_XML_TYPE));
+        Object entity = response.getEntity();
+        if(entity instanceof Integer) {
+            return (Integer)entity;
+        } else {
+            throw new DatabaseServiceException("Bad result from server, expected sequence ID, received " + entity, false);
+        }
     }
 
     @Override

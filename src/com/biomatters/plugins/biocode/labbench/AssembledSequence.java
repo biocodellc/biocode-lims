@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Matthew Cheung
@@ -10,13 +12,13 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement
 public class AssembledSequence {
-    public int id;
+    public Integer id;
     public Long date;
     public String progress;
-    public int limsId;
+    public Integer limsId;
 
     public String extractionId;
-    public int workflowId;
+    public Integer workflowId;
     public String workflowLocus;
     public String sampleId;
     public String extractionBarcode;
@@ -24,16 +26,16 @@ public class AssembledSequence {
     public String consensus;
     public String confidenceScore;
     public Double coverage;
-    public int numberOfDisagreements;
-    public int numOfEdits;
-    public int numberOfAmbiguities;
+    public Integer numberOfDisagreements;
+    public Integer numOfEdits;
+    public Integer numberOfAmbiguities;
     public String forwardTrimParameters;
     public String reverseTrimParameters;
     public String technician;
     public String bin;
     public String assemblyNotes;
     public String assemblyParameters;
-    public boolean submitted;
+    public Boolean submitted;
     public String editRecord;
 
     public AssembledSequence() {

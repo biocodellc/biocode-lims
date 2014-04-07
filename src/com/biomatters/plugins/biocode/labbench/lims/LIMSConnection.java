@@ -7,6 +7,7 @@ import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import jebl.util.Cancelable;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -66,7 +67,7 @@ public abstract class LIMSConnection {
 
     String serverUrn;
 
-    public abstract Map<URN, String> addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, CompositeProgressListener progress) throws DatabaseServiceException;
+    public abstract int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException;
 
     public abstract void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException;
     public abstract void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException;

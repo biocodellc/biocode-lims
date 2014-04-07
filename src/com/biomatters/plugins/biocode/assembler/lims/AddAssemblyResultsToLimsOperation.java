@@ -7,8 +7,12 @@ import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.*;
 import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtilities;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
+import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.Workflow;
@@ -18,6 +22,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -386,25 +391,98 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
 //        }
 
-        Map<URN, String> seqIds = null;
+        Map<URN, String> seqIds = new HashMap<URN, String>();
         try {
-            seqIds = limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(), options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), assemblyResults, progress);
+            for (Map.Entry<URN, AssemblyResult> entry : assemblyResults.entrySet()) {
+                progress.beginSubtask();
+                AssemblyResult assemblyResult = entry.getValue();
+                List<Integer> reactionIds = new ArrayList<Integer>();
+                for (CycleSequencingReaction reaction : assemblyResult.getReactions().keySet()) {
+                    reactionIds.add(reaction.getId());
+                }
+                AssembledSequence seq = new AssembledSequence();
+                seq.extractionId = assemblyResult.extractionId;
+                seq.workflowId = assemblyResult.workflowId;
+                seq.consensus = assemblyResult.consensus;
+                seq.coverage = assemblyResult.coverage;
+                seq.numberOfDisagreements = assemblyResult.disagreements;
+                seq.forwardTrimParameters = assemblyResult.trims[0];
+                seq.reverseTrimParameters = assemblyResult.trims[1];
+                seq.numOfEdits = assemblyResult.edits;
+                seq.assemblyParameters = assemblyResult.assemblyOptionValues;
+                if(assemblyResult.qualities != null) {
+                    seq.confidenceScore = StringUtilities.join(",", Arrays.asList(assemblyResult.qualities));
+                }
+                seq.bin = assemblyResult.bin;
+                seq.numberOfAmbiguities = assemblyResult.ambiguities;
+                seq.editRecord = assemblyResult.editRecord;
+
+                String seqId = "" + limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(),
+                        options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), seq, reactionIds, progress);
+                if(progress.isCanceled()) {
+                    return null;
+                }
+                seqIds.put(entry.getKey(), ""+seqId);
+
+                for (List<AnnotatedPluginDocument> docs : assemblyResult.getReactions().values()) {
+                    for (AnnotatedPluginDocument doc : docs) {
+                        doc.setFieldValue(LIMSConnection.SEQUENCE_ID, seqId);
+                        doc.save();
+                    }
+                }
+
+                attachChromats(limsConnection, isPass, options.isAddChromatograms(), assemblyResult);
+            }
+
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Failed to park as pass/fail in LIMS: " + e.getMessage(), e);
         }
-        if(seqIds != null) {
-            for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-                String savedSeqId = seqIds.get(annotatedDocument.getURN());
-                annotatedDocument.setFieldValue(LIMSConnection.SEQUENCE_ID, savedSeqId);
-                annotatedDocument.save();
-            }
-            for (AssemblyResult result : assemblyResults.values()) {
-                for(CycleSequencingReaction reaction : result.reactionsById.values()) {
-                    reaction.purgeChromats();
-                }
+        for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
+            String savedSeqId = seqIds.get(annotatedDocument.getURN());
+            annotatedDocument.setFieldValue(LIMSConnection.SEQUENCE_ID, savedSeqId);
+            annotatedDocument.save();
+        }
+        for (AssemblyResult result : assemblyResults.values()) {
+            for(CycleSequencingReaction reaction : result.reactionsById.values()) {
+                reaction.purgeChromats();
             }
         }
         return null;
+    }
+
+    private static void attachChromats(LIMSConnection limsConnection, boolean isPass, boolean addChromatograms, AddAssemblyResultsToLimsOperation.AssemblyResult result) throws DocumentOperationException, DatabaseServiceException {
+        BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
+        Options chromatogramExportOptions = null;
+        File tempFolder;
+        try {
+            tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
+            if (addChromatograms) {
+                if (chromatogramExportOptions == null) {
+                    chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
+                    chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
+                }
+                List<Trace> traces = new ArrayList<Trace>();
+                for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
+                    chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
+                    File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
+                    try {
+                        traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument) chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                entry.getKey().addSequences(traces);
+            }
+            entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+        }
+
+        Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
+        limsConnection.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, null);
     }
 
     private static String getAssemblyOptionsValues(AnnotatedPluginDocument document) throws DocumentOperationException{

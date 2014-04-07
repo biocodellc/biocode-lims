@@ -4,28 +4,21 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
-import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.Cancelable;
-import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import org.apache.commons.dbcp.*;
 
-import java.io.File;
-import java.io.IOException;
 import java.sql.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -2282,160 +2275,114 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
-    public Map<URN, String> addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, CompositeProgressListener progress) throws DatabaseServiceException {
-        Map<URN, String> toReturn = new HashMap<URN, String>(assemblyResults.size());
-
+    public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason,
+                           String failureNotes, boolean addChromatograms, AssembledSequence seq,
+                           List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
         PreparedStatement statement = null;
         PreparedStatement statement2 = null;
         PreparedStatement updateReaction;
         //noinspection ConstantConditions
+        ConnectionWrapper connection = null;
         try {
-            statement = createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
+            connection = getConnection();
+            statement = connection.prepareStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
                 "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
-            updateReaction = createStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
+            updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
 
             statement2 = isLocal() ? createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
-            for (Map.Entry<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> resultEntry : assemblyResults.entrySet()) {
-                AddAssemblyResultsToLimsOperation.AssemblyResult result = resultEntry.getValue();
-                progress.beginSubtask();
-                if (progress.isCanceled()) {
-                    return Collections.emptyMap();
-                }
-                statement.setString(1, result.extractionId);
-                statement.setInt(2, result.workflowId);
-                statement.setString(3, isPass ? "passed" : "failed");
-                if (result.consensus == null) {
-                    statement.setNull(4, Types.LONGVARCHAR);
-                } else {
-                    statement.setString(4, result.consensus);
-                }
-                if (result.coverage == null) {
-                    statement.setNull(5, Types.FLOAT);
-                } else {
-                    statement.setDouble(5, result.coverage);
-                }
-                if (result.disagreements == null) {
-                    statement.setNull(6, Types.INTEGER);
-                } else {
-                    statement.setInt(6, result.disagreements);
-                }
-                if (result.trims[0] == null) {
-                    statement.setNull(7, Types.LONGVARCHAR);
-                } else {
-                    statement.setString(7, result.trims[0]);
-                }
-                if (result.trims[1] == null) {
-                    statement.setNull(8, Types.LONGVARCHAR);
-                } else {
-                    statement.setString(8, result.trims[1]);
-                }
-                statement.setInt(9, result.edits);
-                String params = result.assemblyOptionValues;
-                if(params != null) {
-                    statement.setString(10, params); //params
-                }
-                else {
-                    statement.setNull(10, Types.LONGVARCHAR); //params
-                }
-                statement.setNull(11, Types.INTEGER); //reference_seq_id
-                if(result.qualities != null) {
-                    List<Integer> qualitiesList = new ArrayList<Integer>();
-                    for(int i : result.qualities) {
-                        qualitiesList.add(i);
-                    }
-                    statement.setString(12, StringUtilities.join(",", qualitiesList));
-                }
-                else {
-                    statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
-                }
-                statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
-                statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
 
-                statement.setString(15, notes); //notes
-
-
-                //technician, date, bin, ambiguities
-                statement.setString(16, technician);
-
-                if(result.bin != null) {
-                    statement.setString(17, result.bin);
-                }
-                else {
-                    statement.setNull(17, Types.LONGVARCHAR);
-                }
-                if(result.ambiguities != null) {
-                    statement.setInt(18, result.ambiguities);
-                }
-                else {
-                    statement.setNull(18, Types.INTEGER);
-                }
-                statement.setString(19, result.editRecord);
-                if(failureReason == null) {
-                    statement.setObject(20, null);
-                } else {
-                    statement.setInt(20, failureReason.getId());
-                }
-                String failNotes = failureNotes;
-                if(failNotes == null) {
-                    statement.setObject(21, null);
-                } else {
-                    statement.setString(21, failNotes);
-                }
-
-                statement.execute();
-
-                ResultSet resultSet = statement2.executeQuery();
-                resultSet.next();
-                int sequenceId = resultSet.getInt(1);
-                updateReaction.setObject(1,sequenceId);
-                for(Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
-                    updateReaction.setObject(2, entry.getKey().getId());
-                    updateReaction.executeUpdate();
-                    for(AnnotatedPluginDocument doc : entry.getValue()) {
-                        doc.setFieldValue(SEQUENCE_ID, sequenceId);
-                        doc.save();
-                    }
-                }
-
-                BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
-                Options chromatogramExportOptions = null;
-                File tempFolder;
-                try {
-                    tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-
-                for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
-                    if (addChromatograms) {
-                        if (chromatogramExportOptions == null) {
-                            chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
-                            chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
-                        }
-                        List<Trace> traces = new ArrayList<Trace>();
-                        for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
-                            chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
-                            File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
-                            try {
-                                traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument) chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                        entry.getKey().addSequences(traces);
-                    }
-                    entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
-                }
-
-                Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
-                saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, null);
-
-                toReturn.put(resultEntry.getKey(), ""+sequenceId);
+            if (cancelable.isCanceled()) {
+                return -1;
             }
-            return toReturn;
+            statement.setString(1, seq.extractionId);
+            statement.setInt(2, seq.workflowId);
+            statement.setString(3, isPass ? "passed" : "failed");
+            if (seq.consensus == null) {
+                statement.setNull(4, Types.LONGVARCHAR);
+            } else {
+                statement.setString(4, seq.consensus);
+            }
+            if (seq.coverage == null) {
+                statement.setNull(5, Types.FLOAT);
+            } else {
+                statement.setDouble(5, seq.coverage);
+            }
+            if (seq.numberOfDisagreements == null) {
+                statement.setNull(6, Types.INTEGER);
+            } else {
+                statement.setInt(6, seq.numberOfDisagreements);
+            }
+            if (seq.forwardTrimParameters == null) {
+                statement.setNull(7, Types.LONGVARCHAR);
+            } else {
+                statement.setString(7, seq.forwardTrimParameters);
+            }
+            if (seq.reverseTrimParameters == null) {
+                statement.setNull(8, Types.LONGVARCHAR);
+            } else {
+                statement.setString(8, seq.reverseTrimParameters);
+            }
+            statement.setInt(9, seq.numOfEdits);
+            if(seq.assemblyParameters != null) {
+                statement.setString(10, seq.assemblyParameters); //params
+            }
+            else {
+                statement.setNull(10, Types.LONGVARCHAR); //params
+            }
+            statement.setNull(11, Types.INTEGER); //reference_seq_id
+            if(seq.confidenceScore != null) {
+                statement.setString(12, seq.confidenceScore);
+            }
+            else {
+                statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
+            }
+            statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
+            statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
+
+            statement.setString(15, notes); //notes
+
+
+            //technician, date, bin, ambiguities
+            statement.setString(16, technician);
+
+            if(seq.bin != null) {
+                statement.setString(17, seq.bin);
+            }
+            else {
+                statement.setNull(17, Types.LONGVARCHAR);
+            }
+            if(seq.numberOfAmbiguities != null) {
+                statement.setInt(18, seq.numberOfAmbiguities);
+            }
+            else {
+                statement.setNull(18, Types.INTEGER);
+            }
+            statement.setString(19, seq.editRecord);
+            if(failureReason == null) {
+                statement.setObject(20, null);
+            } else {
+                statement.setInt(20, failureReason.getId());
+            }
+            if(failureNotes == null) {
+                statement.setObject(21, null);
+            } else {
+                statement.setString(21, failureNotes);
+            }
+
+            statement.execute();
+
+            ResultSet resultSet = statement2.executeQuery();
+            resultSet.next();
+            int sequenceId = resultSet.getInt(1);
+            updateReaction.setObject(1,sequenceId);
+            for(int reactionId: reactionIds) {
+                updateReaction.setObject(2, reactionId);
+                updateReaction.executeUpdate();
+            }
+
+            return sequenceId;
+
         } catch (SQLException e) {
-            throw new DatabaseServiceException(e, "Failed to park as pass/fail in LIMS: " + e.getMessage(), false);
-        } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, "Failed to park as pass/fail in LIMS: " + e.getMessage(), false);
         } finally {
             try {
@@ -2446,6 +2393,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             } catch (SQLException e) {
                 // If we failed to close statements, we'll have to let the garbage collector handle it
             }
+            returnConnection(connection);
         }
     }
 

@@ -3,6 +3,8 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
+import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
 import java.util.ArrayList;
@@ -67,6 +69,25 @@ public class Sequences {
             BiocodeService.getInstance().getActiveLIMSConnection().deleteSequences(getIntegerListFromString(idStrings));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
+        }
+    }
+
+    @POST
+    @Consumes("application/xml")
+    public int addSequence(AssembledSequence seq,
+                           @QueryParam("isPass")boolean isPass,
+                           @QueryParam("notes")String notes,
+                           @QueryParam("technician")String technician,
+                           @QueryParam("failureReason")FailureReason failureReason,
+                           @QueryParam("failureNotes")String failureNotes,
+                           @QueryParam("addChromatograms")boolean addChromatograms,
+                           @QueryParam("reactionIds")String reactionIds
+                           ) {
+        try {
+            return BiocodeService.getInstance().getActiveLIMSConnection().addAssembly(isPass, notes, technician, failureReason,
+                    failureNotes, addChromatograms, seq, getIntegerListFromString(reactionIds), ProgressListener.EMPTY);
+        } catch (DatabaseServiceException e) {
+            throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
 }
