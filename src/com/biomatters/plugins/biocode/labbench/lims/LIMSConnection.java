@@ -1213,7 +1213,7 @@ public abstract class LIMSConnection {
         queryBuilder.append("INNER JOIN plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id) ");
         queryBuilder.append("LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
         queryBuilder.append("LEFT OUTER JOIN assembly ON assembly.id = sequencing_result.assembly ");
-        queryBuilder.append("ORDER BY workflow.id asc, assembly.date asc");
+        queryBuilder.append("ORDER BY workflow.id, plate.id asc, assembly.date asc");
         return queryBuilder.toString();
     }
 
