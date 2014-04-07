@@ -366,8 +366,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             return result;
         }
 
-        StringBuilder workflowQuery = constructWorkflowQueryString(downloadTissues || downloadWorkflows,
-                downloadSequences, tissueIdsToMatch, operator,
+        StringBuilder workflowQuery = constructLimsQueryString(
+                tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
         ConnectionWrapper connection = null;
@@ -375,7 +375,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         PreparedStatement preparedStatement = null;
         try {
             connection = getConnection();
-            System.out.println("Running LIMS (workflows) query:");
+            System.out.println("Running LIMS query:");
             System.out.print("\t");
             SqlUtilities.printSql(workflowQuery.toString(), sqlValues);
 
@@ -384,9 +384,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
             long start = System.currentTimeMillis();
             ResultSet resultSet = preparedStatement.executeQuery();
-            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
+            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
-            queryResult = createPlateAndWorkflowsFromResultSet(callback, resultSet, downloadTissues || downloadWorkflows,
+            queryResult = createPlateAndWorkflowsFromResultSet(connection, callback, resultSet, downloadTissues || downloadWorkflows,
                     downloadTissues || downloadPlates, downloadSequences);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
@@ -462,33 +462,22 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     /**
      * Builds a LIMS SQL query from {@link Query}.  Can be used to create workflows and a list of plates that match
      * the query.
-     *
-     * @param downloadWorkflows         True to download all workflow information.
-     * @param downloadSequences         True to download matching assembly IDs.
-     * @param tissueIdsToMatch          The samples to match
+     *  @param tissueIdsToMatch          The samples to match
      * @param operator                  The {@link com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery.Operator} to use for the query
      * @param workflowQueryConditions   Conditions to search workflow on
      * @param extractionQueryConditions Conditions to search extraction on
      * @param plateQueryConditions      Conditions to search plate on
      * @param assemblyQueryConditions   Conditions to search assembly on       @return A SQL string that can be used to query the MySQL LIMS
      */
-    private StringBuilder constructWorkflowQueryString(boolean downloadWorkflows, boolean downloadSequences, Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
-                                                       QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
-                                                       QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
+    private StringBuilder constructLimsQueryString(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
+                                                   QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
+                                                   QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
-        String columnsToRetrieve = "plate.*";
-        if (downloadWorkflows) {
-            columnsToRetrieve += ",extraction.*, workflow.*, pcr.*, cyclesequencing.*, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes";
-        }
-        if (downloadWorkflows || downloadSequences) {
-            columnsToRetrieve += ", assembly.id";
-        }
-
 
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT " + columnsToRetrieve);
+                "SELECT workflow.id, plate.id, assembly.id, assembly.date");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
         queryBuilder.append("\nFROM ");
@@ -968,12 +957,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
 
-    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet, boolean createWorkflows, boolean createPlates, boolean collectSequenceIds) throws SQLException, DatabaseServiceException {
+    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(
+            ConnectionWrapper connection, Cancelable cancelable, ResultSet resultSet,
+            boolean downloadWorkflows, boolean downloadPlates, boolean downloadSequences) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
         final StringBuilder totalErrors = new StringBuilder("");
 
+        Set<Integer> workflowIds = new HashSet<Integer>();
         Set<Integer> plateIds = new HashSet<Integer>();
-        Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
+
         System.out.println("Creating Reactions...");
         while (resultSet.next()) {
             if (SystemUtilities.isAvailableMemoryLessThan(50)) {
@@ -985,36 +977,60 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             int plateId = resultSet.getInt("plate.id");
-            if (!resultSet.wasNull()) {
+            if(!resultSet.wasNull()) {
                 plateIds.add(plateId);
             }
 
-            if (collectSequenceIds) {
-                int sequenceId = resultSet.getInt("assembly.id");
-                if (!resultSet.wasNull()) {
-                    result.sequenceIds.add(sequenceId);
-                }
+            int workflowId = resultSet.getInt("workflow.id");
+            if(!resultSet.wasNull()) {
+                workflowIds.add(workflowId);
             }
 
-            if (createWorkflows) {
-                int workflowId = resultSet.getInt("workflow.id");
-                String workflowName = resultSet.getString("workflow.name");
-                if (workflowName != null) {  // null name means there is no workflow
+            int sequenceId = resultSet.getInt("assembly.id");
+            if (downloadSequences && !resultSet.wasNull()) {
+                result.sequenceIds.add(sequenceId);
+            }
+        }
+        resultSet.close();
+
+        Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
+        if(downloadWorkflows && !workflowIds.isEmpty()) {
+            // Query for full contents of plates that matched our query
+            String workflowQueryString = constructWorkflowQuery(workflowIds);
+            PreparedStatement selectWorkflow = null;
+            try {
+                System.out.println("Running LIMS (workflows) query:");
+                System.out.print("\t");
+                SqlUtilities.printSql(workflowQueryString, workflowIds);
+
+                selectWorkflow = connection.prepareStatement(workflowQueryString);
+                fillStatement(new ArrayList<Object>(workflowIds), selectWorkflow);
+
+                long start = System.currentTimeMillis();
+                ResultSet workflowsSet = selectWorkflow.executeQuery();
+                System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
+
+                while(workflowsSet.next()) {
+                    int workflowId = workflowsSet.getInt("workflow.id");
                     WorkflowDocument existingWorkflow = result.workflows.get(workflowId);
                     if (existingWorkflow != null) {
-                        existingWorkflow.addRow(resultSet);
+                        existingWorkflow.addRow(workflowsSet);
                     } else {
-                        WorkflowDocument newWorkflow = new WorkflowDocument(resultSet);
+                        WorkflowDocument newWorkflow = new WorkflowDocument(workflowsSet);
                         result.workflows.put(workflowId, newWorkflow);
                     }
 
-                    String sampleId = resultSet.getString("extraction.sampleId");
+                    String sampleId = workflowsSet.getString("extraction.sampleId");
                     if (sampleId != null) {
                         workflowToSampleId.put(workflowId, sampleId);
                     }
                 }
+                workflowsSet.close();
+            } finally {
+                SqlUtilities.cleanUpStatements(selectWorkflow);
             }
         }
+
 
         if (!workflowToSampleId.isEmpty()) {
             try {
@@ -1035,14 +1051,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
         }
 
-        if (createPlates && !plateIds.isEmpty()) {
+        if(downloadPlates && !plateIds.isEmpty()) {
             // Query for full contents of plates that matched our query
-            // todo batch these
-            ConnectionWrapper connection = null;
             String plateQueryString = constructPlateQuery(plateIds);
             PreparedStatement selectPlate = null;
             try {
-                connection = getConnection();
                 System.out.println("Running LIMS (plates) query:");
                 System.out.print("\t");
                 SqlUtilities.printSql(plateQueryString, plateIds);
@@ -1058,7 +1071,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 plateSet.close();
             } finally {
                 SqlUtilities.cleanUpStatements(selectPlate);
-                returnConnection(connection);
             }
         }
 
@@ -1075,6 +1087,23 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ThreadUtilities.invokeNowOrLater(runnable);
         }
         return result;
+    }
+
+    private String constructWorkflowQuery(Set<Integer> workflowIds) {
+        StringBuilder queryBuilder = new StringBuilder(
+                "SELECT extraction.*, workflow.*, pcr.*, cyclesequencing.*, plate.*, assembly.id, assembly.progress, " +
+                        "assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes ");
+        queryBuilder.append("FROM workflow ");
+        queryBuilder.append("INNER JOIN extraction ON extraction.id = workflow.extractionId AND workflow.id IN ");
+        SqlUtilities.appendSetOfQuestionMarks(queryBuilder, workflowIds.size());
+        queryBuilder.append(" ");
+        queryBuilder.append("LEFT OUTER JOIN pcr ON pcr.workflow = workflow.id ");
+        queryBuilder.append("LEFT OUTER JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id ");
+        queryBuilder.append("INNER JOIN plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id) ");
+        queryBuilder.append("LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
+        queryBuilder.append("LEFT OUTER JOIN assembly ON assembly.id = sequencing_result.assembly ");
+        queryBuilder.append("ORDER BY workflow.id, plate.id asc, assembly.date asc");
+        return queryBuilder.toString();
     }
 
     private Map<Integer, Plate> getPlatesFromResultSet(ResultSet resultSet) throws SQLException {
