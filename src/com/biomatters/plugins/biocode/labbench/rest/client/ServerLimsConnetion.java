@@ -93,8 +93,7 @@ public class ServerLimsConnetion extends LIMSConnection {
     @Override
     public void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         Invocation.Builder request = target.path("plates").request();
-        Response response = request.put(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
-        System.out.println(response);
+        request.put(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
     }
 
     @Override

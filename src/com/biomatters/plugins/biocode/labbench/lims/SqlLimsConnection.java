@@ -967,16 +967,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
-    private Map<Integer, Plate> createPlateDocuments(RetrieveCallback callback, Cancelable cancelable, ResultSet resultSet) throws SQLException, DatabaseServiceException {
-        Map<Integer, Plate> plates = createPlateAndWorkflowsFromResultSet(cancelable, resultSet, false, true, false).plates;
-        if (callback != null) {
-            for (Plate plate : plates.values()) {
-                System.out.println("Adding " + plate.getName());
-                callback.add(new PlateDocument(plate), Collections.<String, Object>emptyMap());
-            }
-        }
-        return plates;
-    }
 
     private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet, boolean createWorkflows, boolean createPlates, boolean collectSequenceIds) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
