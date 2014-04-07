@@ -475,22 +475,22 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
-
+        /* Note: We have to use a CASE statement in the column definitions because there is a bug in HSQL which ignores
+         * the column label and always uses the column name.  This effectively means the table name is ignored when
+         * calling ResultSet.get*() and the first column with the name is returned.  Even when using AS x, the x label is ignored.
+         */
         StringBuilder queryBuilder = new StringBuilder(
                 "SELECT workflow.id, plate.id, assembly.id, assembly.date");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
-        queryBuilder.append("\nFROM ");
-
-        queryBuilder.append("(\n\tSELECT workflow.id, extraction.id as ext FROM extraction");
-        queryBuilder.append("\n\tLEFT OUTER JOIN ").append("workflow ON extraction.id = workflow.extractionId");
+        queryBuilder.append(" FROM extraction LEFT OUTER JOIN ").append("workflow ON extraction.id = workflow.extractionId");
         if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
             }
             String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
             conditionBuilder.append(" (").append(sampleColumn).append(" IN ");
-            appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+            SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
         }
         if (workflowQueryConditions != null) {
             if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
@@ -509,19 +509,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             conditionBuilder.append(")");
         }
 
-        queryBuilder.append("\n\tLEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
-        queryBuilder.append("\n\tLEFT OUTER JOIN ").append("cyclesequencing ON cyclesequencing.workflow = workflow.id ");
+        queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
+        queryBuilder.append(" LEFT OUTER JOIN ").append("cyclesequencing ON cyclesequencing.workflow = workflow.id ");
 
         // INNER JOIN here because there should always be a plate for a reaction.  We have already joined the 3 reaction tables
-        queryBuilder.append("\n\tINNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
+        queryBuilder.append(" INNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
         if (plateQueryConditions != null) {
             if (operator == CompoundSearchQuery.Operator.AND || extractionQueryConditions != null || workflowQueryConditions != null) {
                 conditionBuilder.append(operatorString);
             }
             conditionBuilder.append("(").append(plateQueryConditions).append(")");
         }
-        queryBuilder.append("\n\tLEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
-        queryBuilder.append("\n\t").append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
+        queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
+        queryBuilder.append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
                 append("assembly ON assembly.id = sequencing_result.assembly");
 
         if (assemblyQueryConditions != null) {
@@ -534,16 +534,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             queryBuilder.append(whereConditionForOrQuery);
         }
 
-        queryBuilder.append("\n\tGROUP BY workflow.id, ext\n) matching ");
-        queryBuilder.append("\nINNER JOIN extraction ON extraction.id = matching.ext ");
-        queryBuilder.append("\nLEFT OUTER JOIN workflow ON workflow.id = matching.id ");
-        queryBuilder.append("\nLEFT OUTER JOIN pcr ON pcr.workflow = workflow.id ");
-        queryBuilder.append("\nLEFT OUTER JOIN cyclesequencing ON cyclesequencing.workflow = workflow.id ");
-        queryBuilder.append("\nINNER JOIN plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id) ");
-        queryBuilder.append("\nLEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
-        queryBuilder.append("\nLEFT OUTER JOIN assembly ON assembly.id = sequencing_result.assembly ");
-
-        queryBuilder.append("\nORDER BY workflow.id, assembly.date desc");
+        queryBuilder.append(" ORDER BY workflow.id, assembly.date desc");
         return queryBuilder;
     }
 
