@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StandardIcons;
@@ -49,17 +50,9 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                                     p.saveChangesToDatabase(progressFrame, limsConnection);
                                 }
                             }
-                        } catch (SQLException ex) {
-                            limsConnection.rollback();
+                        } catch (DatabaseServiceException ex) {
                             Dialogs.showMessageDialog("Error saving your reactions: " + ex.getMessage());
                         } finally {
-                            try {
-                                if (limsConnection != null) {
-                                    limsConnection.endTransaction();
-                                }
-                            } catch (SQLException e1) {
-                                e1.printStackTrace();  //don't need to catch this
-                            }
                             annotatedDocument.saveDocument();
                             updateToolbar();
                             progressFrame.setComplete();

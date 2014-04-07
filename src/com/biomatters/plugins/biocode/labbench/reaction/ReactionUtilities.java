@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
@@ -29,13 +30,10 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -249,7 +247,7 @@ public class ReactionUtilities {
     private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames, String filterText) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             e.printStackTrace();
             return new ImportTracesResult(0, "Error reading existing sequences from database: "+e.getMessage());
         } catch (IOException e) {
@@ -930,28 +928,6 @@ public class ReactionUtilities {
         return sequences;
     }
 
-    public static class MemoryFile{
-        private String name;
-        private byte[] data;
-
-        public MemoryFile(String name, byte[] data) {
-            this.name = name;
-            this.data = data;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public byte[] getData() {
-            return data;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-    }
-
     public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {
         private DocumentField documentField;
 
@@ -986,7 +962,7 @@ public class ReactionUtilities {
             templateSelectorDropdown = new GeneiousAction.SubMenu(new GeneiousActionOptions("Select a template"), Collections.EMPTY_LIST);
             add(new GLabel("Template: "));
             final JButton button = new JButton(templateSelectorDropdown);
-            button.setIcon(IconUtilities.getIcons("dropdownArrow.png").getOriginalIcon());
+            button.setIcon(Geneious.isHeadless() ? null : IconUtilities.getIcons("dropdownArrow.png").getOriginalIcon());
             button.setHorizontalTextPosition(AbstractButton.LEFT);
             add(button);
             GButton setDefaultTemplateButton = new GButton("Save as default");

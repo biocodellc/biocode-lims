@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.GTable;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
@@ -315,14 +316,13 @@ public class SequencingResult implements XMLSerializable {
             @Override
             public void run() {
                 try {
-                    LIMSConnection connection = BiocodeService.getInstance().getActiveLIMSConnection();
-                    List<AnnotatedPluginDocument> matching = connection.getMatchingAssemblyDocumentsForIds(
+                    List<AnnotatedPluginDocument> matching = BiocodeService.getInstance().getMatchingAssemblyDocumentsForIds(
                             null, null, Collections.singletonList(result.getSequenceId()), null, false);
                     assert(matching.size() <= 1);
                     for (AnnotatedPluginDocument annotatedPluginDocument : matching) {
                         doc.set((NucleotideSequenceDocument) annotatedPluginDocument.getDocumentOrNull());
                     }
-                } catch (SQLException e) {
+                } catch (DatabaseServiceException e) {
                     error.set(e);
                 }
             }

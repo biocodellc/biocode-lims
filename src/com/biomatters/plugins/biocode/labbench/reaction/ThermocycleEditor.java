@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.OptionsPanel;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.plugins.biocode.labbench.AdvancedAndNormalPanelsSwappedOptions;
@@ -445,7 +446,7 @@ public class ThermocycleEditor extends JPanel {
                     public void run() {
                         try {
                             platesUsing.set(BiocodeService.getInstance().getPlatesUsingThermocycle((Thermocycle)thermocycleList.getSelectedValue()));
-                        } catch (SQLException e1) {
+                        } catch (DatabaseServiceException e1) {
                             e1.printStackTrace();
                             Dialogs.showMessageDialog("Could not query database: "+e.getModifiers(), "Could not query database", removeButton, Dialogs.DialogIcon.ERROR);
                             return;

@@ -11,6 +11,9 @@ import com.sun.media.jai.codec.SeekableStream;
 import org.jdom.Element;
 
 import javax.media.jai.RenderedImageAdapter;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.awt.*;
 import java.awt.image.RenderedImage;
 import java.io.File;
@@ -27,6 +30,7 @@ import java.sql.SQLException;
  *          <p/>
  *          Created on 12/06/2009 11:14:15 AM
  */
+@XmlRootElement
 public class GelImage implements XMLSerializable {
     private int id = -1;
     private int plate;
@@ -34,6 +38,9 @@ public class GelImage implements XMLSerializable {
     private Image image;
     private String notes;
     private String filename;
+
+    public GelImage() {
+    }
 
     public GelImage(Element xml) throws XMLSerializationException {
         fromXML(xml);
@@ -102,16 +109,6 @@ public class GelImage implements XMLSerializable {
 
     }
 
-    public PreparedStatement toSql(LIMSConnection conn) throws SQLException {
-        PreparedStatement statement;
-        statement = conn.createStatement("INSERT INTO gelimages (plate, imageData, notes, name) VALUES (?, ?, ?, ?)");
-        statement.setInt(1, plate);
-        statement.setObject(2, imageBytes);
-        statement.setString(3, notes);
-        statement.setString(4, filename);
-        return statement;
-    }
-
     public Element toXML() {
         Element xml = new Element("GelImage");
         xml.addContent(new Element("id").setText(""+getId()));
@@ -141,12 +138,20 @@ public class GelImage implements XMLSerializable {
         return id;
     }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public int getPlate() {
         return plate;
     }
 
     public byte[] getImageBytes() {
         return imageBytes;
+    }
+
+    public void setImageBytes(byte[] imageBytes) {
+        this.imageBytes = imageBytes;
     }
 
     public Image getImage() {
@@ -163,5 +168,9 @@ public class GelImage implements XMLSerializable {
 
     public String getFilename() {
         return filename;
+    }
+
+    public void setFilename(String filename) {
+        this.filename = filename;
     }
 }

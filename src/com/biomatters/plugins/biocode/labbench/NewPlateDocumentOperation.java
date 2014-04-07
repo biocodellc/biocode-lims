@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
@@ -17,7 +18,6 @@ import jebl.util.ProgressListener;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.sql.SQLException;
 
 /**
  * @author Steven Stones-Havas
@@ -275,7 +275,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         }
 
         try {
-            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
+            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(tissueIds);
 
             for(Reaction r : plate.getReactions()) {
                 String tissueId = ""+r.getFieldValue(ExtractionOptions.TISSUE_ID);
@@ -285,7 +285,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                     extractionIds.add(extractionId);
                 }
             }
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Error reading the database: "+e.getMessage(), e);
         }
     }
@@ -313,7 +313,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        catch(SQLException ex) {
+        catch(DatabaseServiceException ex) {
             throw new DocumentOperationException(ex.getMessage(), ex);
         }
     }

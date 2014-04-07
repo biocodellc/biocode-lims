@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -25,7 +26,6 @@ import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
@@ -102,13 +102,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                                    BiocodeService.getInstance().saveExtractions(progressFrame, plateView.getPlate());
-                                }
-                                else {
-                                    BiocodeService.getInstance().saveReactions(progressFrame, plateView.getPlate());
-                                }
-
+                                BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
                                     for(Reaction r : plateView.getPlate().getReactions()) {
                                         ((CycleSequencingReaction)r).purgeChromats();
@@ -119,7 +113,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                                         reloadViewer();
                                     }
                                 });
-                            } catch (SQLException e1) {
+                            } catch (DatabaseServiceException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());
                                 Runnable runnable = new Runnable() {
                                     public void run() {
@@ -406,7 +400,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                     public void run() {
                         try {
                             BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
-                        } catch (SQLException e1) {
+                        } catch (DatabaseServiceException e1) {
                             Dialogs.showMessageDialog(e1.getMessage());
                         }
                     }
@@ -437,25 +431,25 @@ public class PlateDocumentViewer extends DocumentViewer{
                         ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Saving Thermocycles", container);
                         try {
 
-                            String tableName;
+                            Thermocycle.Type type;
                             switch (plateView.getPlate().getReactionType()) {
                                 case PCR:
-                                    tableName = "pcr_thermocycle";
+                                    type = Thermocycle.Type.pcr;
                                     break;
                                 case CycleSequencing:
-                                    tableName = "cyclesequencing_thermocycle";
+                                    type = Thermocycle.Type.cyclesequencing;
                                     break;
                                 default:
                                     assert false : "Extractions do not have thermocycles!";
                                     return;
                             }
                             if(newThermocycles.size() > 0) {
-                                BiocodeService.getInstance().insertThermocycles(newThermocycles, tableName);
+                                BiocodeService.getInstance().insertThermocycles(newThermocycles, type);
                             }
                             if(deletedThermocycles.size() > 0) {
-                                BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, tableName);    
+                                BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, type);
                             }
-                        } catch (final TransactionException e1) {
+                        } catch (final DatabaseServiceException e1) {
                             e1.printStackTrace();
                             Runnable runnable = new Runnable() {
                                 public void run() {
@@ -1047,7 +1041,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                                     buttonHolder.setLayout(new BorderLayout());
                                     buttonHolder.add(gelPanel);
                                     buttonHolder.revalidate();
-                                } catch (SQLException e1) {
+                                } catch (DatabaseServiceException e1) {
                                     buttonHolder.remove(loadingLabel);
                                     buttonHolder.add(new GLabel("Could not load GEL images: "+e1.getMessage(), JLabel.CENTER));
                                     buttonHolder.revalidate();

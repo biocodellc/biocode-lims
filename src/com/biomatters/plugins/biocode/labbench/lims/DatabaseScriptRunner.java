@@ -35,7 +35,6 @@ class DatabaseScriptRunner {
         List<String> commands = getCommandsFromScript(scriptFile);
 
         Statement statement = connection.createStatement();
-
         for(String command : commands) {
             // Do not run the drop lines; As at 2007-11-20, this code is only called when a database is empty.
             if (allowDrops || !command.toUpperCase().startsWith("DROP ")) {
@@ -54,6 +53,7 @@ class DatabaseScriptRunner {
                 }
             }
         }
+        statement.close();
     }
 
 

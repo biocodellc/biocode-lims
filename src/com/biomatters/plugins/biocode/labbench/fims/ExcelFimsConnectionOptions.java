@@ -1,8 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.XmlUtilities;
-import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 
@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.io.IOException;
 import java.io.File;
-import java.io.StringWriter;
-import java.io.PrintWriter;
 import java.awt.*;
 import java.util.Set;
 
@@ -39,7 +37,8 @@ public class ExcelFimsConnectionOptions extends TableFimsConnectionOptions{
 
     protected List<OptionValue> _getTableColumns() throws IOException {
         FileSelectionOption location = (FileSelectionOption)getChildOptions().get(CONNECTION_OPTIONS_KEY).getOption(FILE_LOCATION);
-        return getTableColumns(location.getValue().length() > 0 ? new File(location.getValue()) : null, getPanel());
+        return getTableColumns(location.getValue().length() > 0 ? new File(location.getValue()) : null,
+                Geneious.isHeadless() ? null : getPanel());
     }
 
     protected boolean updateAutomatically() {

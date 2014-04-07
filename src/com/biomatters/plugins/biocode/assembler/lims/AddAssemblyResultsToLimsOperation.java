@@ -12,6 +12,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
+import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.Workflow;
@@ -23,7 +24,6 @@ import jebl.util.ProgressListener;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.*;
 import java.util.*;
 
 /**
@@ -81,7 +81,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return new AddAssemblyResultsToLimsOptions(documents, isPass);
     }
 
-    public List<AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options, SequenceSelection selection) throws DocumentOperationException {
+    public Map<URN, AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options, SequenceSelection selection) throws DocumentOperationException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
@@ -91,7 +91,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         IssueTracker issueTracker = new IssueTracker(isAutomated);
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, docsToMark.size());
-        List<AssemblyResult> results = new ArrayList<AssemblyResult>();
+        Map<URN, AssemblyResult> results = new HashMap<URN, AssemblyResult>();
 //        Map<Integer, AssemblyResult> workflowsWithResults = new HashMap<Integer, AssemblyResult>();
         for (AnnotatedPluginDocument annotatedDocument : docsToMark.keySet()) {
             progress.beginSubtask();
@@ -113,9 +113,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             if(options.removePreviousSequences()) {
                 try {
-                    removeAllExistingSequencesInDatabase(assemblyResult);
-                } catch (SQLException e) {
-                    e.printStackTrace();
+                    removeAllExistingSequencesInDatabase(assemblyResult.workflowId, assemblyResult.extractionId);
+                } catch (DatabaseServiceException e) {
                     throw new DocumentOperationException("Could not remove existing sequences: "+e.getMessage(), e);
                 }
             }
@@ -153,7 +152,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 //            }
             assemblyResult.setContigProperties(annotatedDocument, consensus, qualities, coverage, disagreements, trims, edits, ambiguities, bin);
 //            workflowsWithResults.put(assemblyResult.workflowId, assemblyResult);
-            results.add(assemblyResult);
+            results.put(annotatedDocument.getURN(), assemblyResult);
         }
         if (!issueTracker.promptToContinue(!results.isEmpty())) {
             return null;
@@ -195,23 +194,23 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         document.save();
     }
 
-    private int removeAllExistingSequencesInDatabase(AssemblyResult assemblyResult) throws SQLException, DocumentOperationException {
-        if(assemblyResult.workflowId == null || assemblyResult.extractionId == null) {
-            return 0;
+    private void removeAllExistingSequencesInDatabase(Integer workflowId, String extractionId) throws DatabaseServiceException, DocumentOperationException {
+        if(workflowId == null || extractionId == null) {
+            return;
         }
-        if(!BiocodeService.getInstance().deleteAllowed("assembly")) {
-            throw new DocumentOperationException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance");
+        try {
+            if(!BiocodeService.getInstance().deleteAllowed("assembly")) {
+                throw new DocumentOperationException("It appears that you do not have permission to delete sequence records.  Please contact your System Administrator for assistance");
+            }
+        } catch (DatabaseServiceException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
         }
 
-        String sql = "DELETE FROM assembly WHERE workflow=? AND extraction_id=?";
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         if(limsConnection == null) {
             throw new DocumentOperationException("You have been disconnected from the LIMS database.  Please reconnect and try again.");
         }
-        PreparedStatement statement = limsConnection.createStatement(sql);
-        statement.setInt(1, assemblyResult.workflowId);
-        statement.setString(2, assemblyResult.extractionId);
-        return statement.executeUpdate();
+        limsConnection.deleteSequencesForWorkflowId(workflowId, extractionId);
     }
 
 
@@ -248,13 +247,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             if (sequencingPlateCache.containsKey(plateName)) {
                 plate = sequencingPlateCache.get(plateName);
             } else {
-                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);//Query.Factory.createQuery(plateName);
+                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false));//Query.Factory.createQuery(plateName);
                 List<PlateDocument> plateDocuments;
                 try {
-                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null, false).getPlates();
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
@@ -322,12 +319,10 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     /**
      * Assembly results for a single workflow. May involve several sequencing reactions though (normally a forward and reverse)
      */
-    private static final class AssemblyResult {
-
+    public static final class AssemblyResult {
         public String extractionId;
         public Integer workflowId;
         public String consensus;
-        public SequenceDocument consensusDoc;
         public Double coverage;
         public Integer disagreements;
         public String[] trims;
@@ -335,13 +330,14 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         public Integer edits;
         public Integer ambiguities;
         public String bin;
-        public AnnotatedPluginDocument assembly;
+        public String assemblyOptionValues;
+        public String editRecord;
 
         private Map<Integer, List<AnnotatedPluginDocument>> chromatograms = new HashMap<Integer, List<AnnotatedPluginDocument>>();
         private Map<Integer, CycleSequencingReaction> reactionsById = new HashMap<Integer, CycleSequencingReaction>();
 
-        public void setContigProperties(AnnotatedPluginDocument assembly, String consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, Integer edits, Integer ambiguities, String bin) {
-            this.consensus = consensus;
+        public void setContigProperties(AnnotatedPluginDocument assembly, SequenceDocument consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, Integer edits, Integer ambiguities, String bin) throws DocumentOperationException {
+            this.consensus = consensus.getSequenceString();
             this.coverage = coverage;
             this.disagreements = disagreements;
             this.trims = trims;
@@ -349,20 +345,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             this.ambiguities = ambiguities;
             this.bin = bin;
             this.qualities = qualities;
-            this.assembly = assembly;
-        }
+            this.assemblyOptionValues = getAssemblyOptionsValues(assembly);
+            this.editRecord = MarkInLimsUtilities.getEditRecords(assembly, consensus);
 
-        public void setContigProperties(AnnotatedPluginDocument assembly, SequenceDocument consensus, int[] qualities, Double coverage, Integer disagreements, String[] trims, Integer edits, Integer ambiguities, String bin) {
-            this.consensusDoc = consensus;
-            this.consensus = consensusDoc.getSequenceString();
-            this.coverage = coverage;
-            this.disagreements = disagreements;
-            this.trims = trims;
-            this.edits = edits;
-            this.ambiguities = ambiguities;
-            this.bin = bin;
-            this.qualities = qualities;
-            this.assembly = assembly;
         }
 
         public void addReaction(CycleSequencingReaction cycleSequencingReaction, List<AnnotatedPluginDocument> chromatograms) {
@@ -392,7 +377,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         AddAssemblyResultsToLimsOptions options = (AddAssemblyResultsToLimsOptions) o;
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.4, 0.2);
         progress.beginSubtask("Checking results");
-        List<AssemblyResult> assemblyResults = getAssemblyResults(annotatedDocuments, progress, options, selection);
+        Map<URN, AssemblyResult> assemblyResults = getAssemblyResults(annotatedDocuments, progress, options, selection);
 
         if(assemblyResults == null) {
             return null;
@@ -406,178 +391,101 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
 //        }
 
-        PreparedStatement statement = null;
-        PreparedStatement statement2 = null;
-        PreparedStatement updateReaction;
-        //noinspection ConstantConditions
+        Map<URN, String> seqIds = new HashMap<URN, String>();
         try {
-            statement = limsConnection.createStatement("INSERT INTO assembly (extraction_id, workflow, progress, consensus, " +
-                "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
-            updateReaction = limsConnection.createStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
-
-            statement2 = limsConnection.isLocal() ? limsConnection.createStatement("CALL IDENTITY();") : limsConnection.createStatement("SELECT last_insert_id()");
-            for (AssemblyResult result : assemblyResults) {
+            for (Map.Entry<URN, AssemblyResult> entry : assemblyResults.entrySet()) {
                 progress.beginSubtask();
-                if (progress.isCanceled()) {
+                AssemblyResult assemblyResult = entry.getValue();
+                List<Integer> reactionIds = new ArrayList<Integer>();
+                for (CycleSequencingReaction reaction : assemblyResult.getReactions().keySet()) {
+                    reactionIds.add(reaction.getId());
+                }
+                AssembledSequence seq = new AssembledSequence();
+                seq.extractionId = assemblyResult.extractionId;
+                seq.workflowId = assemblyResult.workflowId;
+                seq.consensus = assemblyResult.consensus;
+                seq.coverage = assemblyResult.coverage;
+                seq.numberOfDisagreements = assemblyResult.disagreements;
+                seq.forwardTrimParameters = assemblyResult.trims[0];
+                seq.reverseTrimParameters = assemblyResult.trims[1];
+                seq.numOfEdits = assemblyResult.edits;
+                seq.assemblyParameters = assemblyResult.assemblyOptionValues;
+                if(assemblyResult.qualities != null) {
+                    seq.confidenceScore = StringUtilities.join(",", Arrays.asList(assemblyResult.qualities));
+                }
+                seq.bin = assemblyResult.bin;
+                seq.numberOfAmbiguities = assemblyResult.ambiguities;
+                seq.editRecord = assemblyResult.editRecord;
+
+                String seqId = "" + limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(),
+                        options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), seq, reactionIds, progress);
+                if(progress.isCanceled()) {
                     return null;
                 }
-                statement.setString(1, result.extractionId);
-                statement.setInt(2, result.workflowId);
-                statement.setString(3, isPass ? "passed" : "failed");
-                if (result.consensus == null) {
-                    statement.setNull(4, Types.LONGVARCHAR);
-                } else {
-                    statement.setString(4, result.consensus);
-                }
-                if (result.coverage == null) {
-                    statement.setNull(5, Types.FLOAT);
-                } else {
-                    statement.setDouble(5, result.coverage);
-                }
-                if (result.disagreements == null) {
-                    statement.setNull(6, Types.INTEGER);
-                } else {
-                    statement.setInt(6, result.disagreements);
-                }
-                if (result.trims[0] == null) {
-                    statement.setNull(7, Types.LONGVARCHAR);
-                } else {
-                    statement.setString(7, result.trims[0]);
-                }
-                if (result.trims[1] == null) {
-                    statement.setNull(8, Types.LONGVARCHAR);
-                } else {
-                    statement.setString(8, result.trims[1]);
-                }
-                statement.setInt(9, result.edits);
-                String params = getAssemblyOptionsValues(result.assembly);
-                if(params != null) {
-                    statement.setString(10, params); //params
-                }
-                else {
-                    statement.setNull(10, Types.LONGVARCHAR); //params
-                }
-                statement.setNull(11, Types.INTEGER); //reference_seq_id
-                if(result.qualities != null) {
-                    List<Integer> qualitiesList = new ArrayList<Integer>();
-                    for(int i : result.qualities) {
-                        qualitiesList.add(i);
-                    }
-                    statement.setString(12, StringUtilities.join(",", qualitiesList));
-                }
-                else {
-                    statement.setNull(12, Types.LONGVARCHAR); //confidence_scores
-                }
-                statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
-                statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
+                seqIds.put(entry.getKey(), ""+seqId);
 
-                statement.setString(15, options.getNotes()); //notes
-
-
-                //technician, date, bin, ambiguities
-                statement.setString(16, options.getTechnician());
-
-                if(result.bin != null) {
-                    statement.setString(17, result.bin);
-                }
-                else {
-                    statement.setNull(17, Types.LONGVARCHAR);
-                }
-                if(result.ambiguities != null) {
-                    statement.setInt(18, result.ambiguities);
-                }
-                else {
-                    statement.setNull(18, Types.INTEGER);
-                }
-                statement.setString(19, MarkInLimsUtilities.getEditRecords(result.assembly, result.consensusDoc));
-                FailureReason reason = options.getFailureReason();
-                if(reason == null) {
-                    statement.setObject(20, null);
-                } else {
-                    statement.setInt(20, reason.getId());
-                }
-                String failNotes = options.getFailureNotes();
-                if(failNotes == null) {
-                    statement.setObject(21, null);
-                } else {
-                    statement.setString(21, failNotes);
-                }
-
-                statement.execute();
-
-                ResultSet resultSet = statement2.executeQuery();
-                resultSet.next();
-                int sequenceId = resultSet.getInt(1);
-                updateReaction.setObject(1,sequenceId);
-                for(Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
-                    updateReaction.setObject(2, entry.getKey().getId());
-                    updateReaction.executeUpdate();
-                    for(AnnotatedPluginDocument doc : entry.getValue()) {
-                        doc.setFieldValue(LIMSConnection.SEQUENCE_ID, sequenceId);
+                for (List<AnnotatedPluginDocument> docs : assemblyResult.getReactions().values()) {
+                    for (AnnotatedPluginDocument doc : docs) {
+                        doc.setFieldValue(LIMSConnection.SEQUENCE_ID, seqId);
                         doc.save();
                     }
                 }
-                result.assembly.setFieldValue(LIMSConnection.SEQUENCE_ID, sequenceId);
-                result.assembly.save();
 
-                BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
-                Options chromatogramExportOptions = null;
-                File tempFolder;
-                try {
-                    tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-
-                for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
-                    if (options.isAddChromatograms()) {
-                        if (chromatogramExportOptions == null) {
-                            chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
-                            chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
-                        }
-                        List<Trace> traces = new ArrayList<Trace>();
-                        for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
-                            chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
-                            File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
-                            try {
-                                traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument)chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                        entry.getKey().addSequences(traces);
-                    }
-                    entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
-                }
-
-                Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
-                Reaction.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, limsConnection, null);
-
-
-
-                for(CycleSequencingReaction reaction : result.reactionsById.values()) {
-                    reaction.purgeChromats();
-                }
-
-
+                attachChromats(limsConnection, isPass, options.isAddChromatograms(), assemblyResult);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+
+        } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Failed to park as pass/fail in LIMS: " + e.getMessage(), e);
-        } finally {
-            try {
-                if(statement != null)
-                    statement.close();
-                if(statement2 != null)
-                    statement2.close();
-            } catch (SQLException e) {
-                // If we failed to close statements, we'll have to let the garbage collector handle it
+        }
+        for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
+            String savedSeqId = seqIds.get(annotatedDocument.getURN());
+            annotatedDocument.setFieldValue(LIMSConnection.SEQUENCE_ID, savedSeqId);
+            annotatedDocument.save();
+        }
+        for (AssemblyResult result : assemblyResults.values()) {
+            for(CycleSequencingReaction reaction : result.reactionsById.values()) {
+                reaction.purgeChromats();
             }
         }
         return null;
     }
 
-    private String getAssemblyOptionsValues(AnnotatedPluginDocument document) throws DocumentOperationException{
+    private static void attachChromats(LIMSConnection limsConnection, boolean isPass, boolean addChromatograms, AddAssemblyResultsToLimsOperation.AssemblyResult result) throws DocumentOperationException, DatabaseServiceException {
+        BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
+        Options chromatogramExportOptions = null;
+        File tempFolder;
+        try {
+            tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
+            if (addChromatograms) {
+                if (chromatogramExportOptions == null) {
+                    chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
+                    chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
+                }
+                List<Trace> traces = new ArrayList<Trace>();
+                for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
+                    chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
+                    File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
+                    try {
+                        traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument) chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                entry.getKey().addSequences(traces);
+            }
+            entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+        }
+
+        Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
+        limsConnection.saveReactions(reactionSet.toArray(new Reaction[reactionSet.size()]), Reaction.Type.CycleSequencing, null);
+    }
+
+    private static String getAssemblyOptionsValues(AnnotatedPluginDocument document) throws DocumentOperationException{
         if(document == null) {
             return null;
         }

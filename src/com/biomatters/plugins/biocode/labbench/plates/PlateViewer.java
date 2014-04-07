@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GComboBox;
 import com.biomatters.geneious.publicapi.components.GeneiousActionToolbar;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
@@ -12,7 +13,6 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.TransactionException;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.Thermocycle;
@@ -25,7 +25,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -126,25 +125,25 @@ public class PlateViewer extends JPanel {
                                 ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Saving Thermocycles", selfReference);
                                 try {
 
-                                    String tableName;
+                                    Thermocycle.Type type;
                                     switch (plateView.getPlate().getReactionType()) {
                                         case PCR:
-                                            tableName = "pcr_thermocycle";
+                                            type = Thermocycle.Type.pcr;
                                             break;
                                         case CycleSequencing:
-                                            tableName = "cyclesequencing_thermocycle";
+                                            type = Thermocycle.Type.cyclesequencing;
                                             break;
                                         default:
                                             assert false : "Extractions do not have thermocycles!";
                                             return;
                                     }
                                     if(newThermocycles.size() > 0) {
-                                        BiocodeService.getInstance().insertThermocycles(newThermocycles, tableName);
+                                        BiocodeService.getInstance().insertThermocycles(newThermocycles, type);
                                     }
                                     if(deletedThermocycles.size() > 0) {
-                                        BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, tableName);
+                                        BiocodeService.getInstance().removeThermoCycles(deletedThermocycles, type);
                                     }
-                                } catch (final TransactionException e1) {
+                                } catch (final DatabaseServiceException e1) {
                                     e1.printStackTrace();
                                     Runnable runnable = new Runnable() {
                                         public void run() {
@@ -187,7 +186,7 @@ public class PlateViewer extends JPanel {
                         public void run() {
                             try {
                                 BiocodeService.getInstance().getActiveLIMSConnection().getGelImagesForPlates(Arrays.asList(plateView.getPlate()));
-                            } catch (SQLException e1) {
+                            } catch (DatabaseServiceException e1) {
                                 Dialogs.showMessageDialog(e1.getMessage());
                             }
                         }
@@ -376,17 +375,12 @@ public class PlateViewer extends JPanel {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    if(plate.getReactionType() == Reaction.Type.Extraction) {
-                                        BiocodeService.getInstance().saveExtractions(progress, plate);
-                                    }
-                                    else {
-                                        BiocodeService.getInstance().saveReactions(progress, plate);
-                                    }
+                                    BiocodeService.getInstance().savePlate(plate, progress);
                                 } catch(BadDataException ex) {
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
                                     return;
-                                } catch(SQLException ex){
+                                } catch(DatabaseServiceException ex){
                                     ex.printStackTrace();
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);

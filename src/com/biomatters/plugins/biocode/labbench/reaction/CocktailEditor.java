@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import org.virion.jam.util.SimpleListener;
@@ -115,7 +116,7 @@ public class CocktailEditor<T extends Cocktail> {
                     public void run() {
                         try {
                             platesUsing.set(BiocodeService.getInstance().getPlatesUsingCocktail((T)cocktailList.getSelectedValue()));
-                        } catch (SQLException e1) {
+                        } catch (DatabaseServiceException e1) {
                             e1.printStackTrace();
                             Dialogs.showMessageDialog("Could not query database: "+e1.getMessage(), "Could not query database", removeButton, Dialogs.DialogIcon.ERROR);
                         }

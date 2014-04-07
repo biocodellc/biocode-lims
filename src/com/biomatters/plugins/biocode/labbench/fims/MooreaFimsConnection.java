@@ -1,11 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 
@@ -34,7 +31,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     private Driver driver;
     private Connection connection;
 
-    private static final DocumentField MOOREA_TISSUE_ID_FIELD = new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
+    public static final DocumentField MOOREA_TISSUE_ID_FIELD = new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
     private static final DocumentField MOOREA_PLATE_NAME_FIELD = new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false);
     private static final DocumentField MOOREA_WELL_NUMBER_FIELD = new DocumentField("Well Number (FIMS)", "", "biocode_tissue.well_number96", String.class, true, false);
     private static final DocumentField MOOREA_TISSUE_BARCODE_FIELD = new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false);
@@ -64,18 +61,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     public void _connect(Options options) throws ConnectionException {
 
         //instantiate the driver class
-        try {
-            Class driverClass = BiocodeService.getInstance().getDriverClass();
-            if(driverClass == null) {
-                throw new ConnectionException("You need to specify the location of your MySQL Driver file");
-            }
-            driver = (Driver) driverClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new ConnectionException("Could not instantiate SQL driver.");
-        } catch (IllegalAccessException e) {
-            throw new ConnectionException("Could not access SQL driver.");
-        }
-
+        driver = BiocodeService.getInstance().getDriver();
 
         //connect
         Properties properties = new Properties();
@@ -221,13 +207,15 @@ public class MooreaFimsConnection extends FIMSConnection{
         return fields;
     }
 
-    public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
-        Object latObject = annotatedDocument.getFieldValue(LATITUDE_FIELD);
-        Object longObject = annotatedDocument.getFieldValue(LONGITUDE_FIELD);
-        if (latObject == null || longObject == null) {
-            return null;
-        }
-        return new BiocodeUtilities.LatLong((Double)latObject, (Double)longObject);
+
+    @Override
+    public DocumentField getLatitudeField() {
+        return LATITUDE_FIELD;
+    }
+
+    @Override
+    public DocumentField getLongitudeField() {
+        return LONGITUDE_FIELD;
     }
 
     public int getTotalNumberOfSamples() throws ConnectionException {
@@ -238,23 +226,6 @@ public class MooreaFimsConnection extends FIMSConnection{
             ResultSet resultSet = statement.executeQuery(query);
             resultSet.next();
             return resultSet.getInt(1);
-
-        } catch (SQLException e) {
-            throw new ConnectionException(e.getMessage(), e);
-        }
-    }
-
-    public void getAllSamples(RetrieveCallback callback) throws ConnectionException{
-        String query = "SELECT * FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID";
-        try {
-            Statement statement = createStatement();
-
-            statement.setFetchSize(Integer.MIN_VALUE);
-
-            ResultSet resultSet = statement.executeQuery(query);
-            while(resultSet.next() && !callback.isCanceled()) {
-                callback.add(new TissueDocument(new MooreaFimsSample(resultSet, this)), null);
-            }
 
         } catch (SQLException e) {
             throw new ConnectionException(e.getMessage(), e);
@@ -387,31 +358,6 @@ public class MooreaFimsConnection extends FIMSConnection{
             e.printStackTrace();
             throw new ConnectionException("Error fetching tissue data from FIMS", e);
         }
-    }
-
-    public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException{
-        if(plateId == null || plateId.length() == 0) {
-            return Collections.emptyMap();
-        }
-
-        return getFimsPlateData("biocode_extract.format_name96='"+plateId+"'", "biocode_extract.well_number96");
-    }
-
-    public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
-        if(extractionIds == null || extractionIds.size() == 0) {
-            return Collections.emptyMap();
-        }
-
-        StringBuilder query = new StringBuilder("(");
-
-        List<String> queryTerms = new ArrayList<String>();
-        for(String s : extractionIds) {
-            queryTerms.add("biocode_extract.extract_barcode = '"+s+"'");
-        }
-
-        query.append(StringUtilities.join(" OR ", queryTerms));
-        query.append(");");
-        return getFimsPlateData(query.toString(), "biocode_extract.extract_barcode");
     }
 
     private Map<String, String> getFimsPlateData(String andQuery, String colToUseForKey) throws ConnectionException {

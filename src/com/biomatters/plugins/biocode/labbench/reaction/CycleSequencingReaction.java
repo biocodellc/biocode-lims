@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -19,13 +20,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.PreparedStatement;
 import java.util.*;
 import java.util.List;
 import java.io.IOException;
 import java.io.File;
 import java.lang.ref.WeakReference;
 
+import jebl.util.ProgressListener;
 import org.jdom.Element;
 
 /**
@@ -248,20 +249,16 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         }
 
         try {
-            String sql = "SELECT * FROM traces WHERE reaction = ?";
 
-            PreparedStatement statement = BiocodeService.getInstance().getActiveLIMSConnection().createStatement(sql);
-            statement.setInt(1, getId());
-            ResultSet set = statement.executeQuery();
+            Map<Integer, List<MemoryFile>> traces = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(Collections.singletonList(getId()), ProgressListener.EMPTY);
 
             List<Trace> result = new ArrayList<Trace>();
-            while(set.next()) {
-                result.add(new Trace(new ReactionUtilities.MemoryFile(set.getString("name"), set.getBytes("data")), set.getInt("id")));
+            for (MemoryFile memoryFile : traces.get(getId())) {
+                result.add(new Trace(memoryFile));
             }
-            statement.close();
 
             addTraces(result);
-        } catch (SQLException e1) {
+        } catch (DatabaseServiceException e1) {
             Dialogs.showMessageDialog("Could not get the sequences: "+e1.getMessage());
         } catch (IOException e1) {
             Dialogs.showMessageDialog("Could not write temp files to disk: "+e1.getMessage());
@@ -289,7 +286,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         Map<String, String> tissueMapping;
         try {
             tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("cyclesequencing", reactions);
-        } catch (SQLException e) {
+        } catch (DatabaseServiceException e) {
             return "Could not connect to the LIMS database";
         }
 
@@ -368,7 +365,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
                         reaction.setWorkflow(workflow);
                     }
                 }
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 return "Could not query the LIMS database.  "+e.getMessage();
             }
         }
@@ -417,7 +414,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         this.traces = new WeakReference<List<Trace>>(tracesStrongReference);
     }
 
-    public void setChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+    public void setChromats(List<MemoryFile> files) throws IOException, DocumentImportException {
         if (tracesStrongReference == null) {
             tracesStrongReference = new ArrayList<Trace>();
         } else {
@@ -433,7 +430,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         convertRawTracesToTraceDocuments(files);
     }
 
-    public void addChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+    public void addChromats(List<MemoryFile> files) throws IOException, DocumentImportException {
         if(tracesStrongReference == null) {
             if(traces != null && traces.get() != null) {
                 tracesStrongReference = traces.get();
@@ -450,10 +447,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         convertRawTracesToTraceDocuments(files);
     }
 
-    private void convertRawTracesToTraceDocuments(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+    private void convertRawTracesToTraceDocuments(List<MemoryFile> files) throws IOException, DocumentImportException {
         List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
         File tempFolder = null;
-        for(ReactionUtilities.MemoryFile mFile : files) {
+        for(MemoryFile mFile : files) {
             tracesStrongReference.add(new Trace(mFile));
         }
     }

@@ -21,27 +21,6 @@ public class MySQLFimsConnection extends TableFimsConnection {
     private String tableName;
     public static final String FIELD_PREFIX = "MYSQLFIMS:";
 
-    static Driver getDriver() throws IOException {
-        try {
-            Class driverClass = BiocodeService.getInstance().getDriverClass();
-            if(driverClass == null) {
-                String error = BiocodeService.getInstance().loadMySqlDriver(false);
-                if(error != null) {
-                    throw new IOException(error);
-                }
-                driverClass = BiocodeService.getInstance().getDriverClass();
-                if(driverClass == null) {
-                    throw new IOException("You need to specify the location of your MySQL Driver file");
-                }
-            }
-            return (Driver) driverClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new IOException("Could not instantiate SQL driver.");
-        } catch (IllegalAccessException e) {
-            throw new IOException("Could not access SQL driver.");
-        }
-    }
-
     public String getLabel() {
         return "Remote MySQL Database";
     }
@@ -70,12 +49,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
     public void _connect(TableFimsConnectionOptions optionsa) throws ConnectionException {
         MooreaFimsConnectionOptions connectionOptions = (MooreaFimsConnectionOptions)optionsa.getChildOptions().get(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
 
-        try {
-            driver = MySQLFimsConnection.getDriver();
-        } catch (IOException e) {
-            throw new ConnectionException(e.getMessage(), e);
-        }
-
+        driver = BiocodeService.getInstance().getDriver();
         tableName = connectionOptions.getValueAsString("table");
 
         Properties properties = new Properties();
@@ -217,13 +191,6 @@ public class MySQLFimsConnection extends TableFimsConnection {
             return samples;
         } catch (SQLException e) {
             throw new ConnectionException(e);
-        }
-    }
-
-    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        // todo
-        for (FimsSample fimsSample : getMatchingSamples(Query.Factory.createBrowseQuery())) {
-            callback.add(new TissueDocument(fimsSample), Collections.<String, Object>emptyMap());
         }
     }
 

@@ -30,7 +30,7 @@ public class Plate implements XMLSerializable {
     private int id=-1;
     private int rows;
     private int cols;
-    private Date lastModified;
+    private Date lastModified = new Date();
     private String name = "";
     private Reaction[] reactions;
     private Reaction.Type type;
@@ -360,32 +360,6 @@ public class Plate implements XMLSerializable {
         }
 
         return (well.letter-65)*cols + well.number-1;
-    }
-
-    public PreparedStatement toSQL(LIMSConnection connection) throws SQLException{
-        if(name == null || name.trim().length() == 0) {
-            throw new SQLException("Plates cannot have empty names");
-        }
-        PreparedStatement statement;
-        if(getId() < 0) {
-            statement = connection.createStatement("INSERT INTO plate (name, size, type, thermocycle, date) VALUES (?, ?, ?, ?, ?)");
-        }
-        else {
-            statement = connection.createStatement("UPDATE plate SET name=?, size=?, type=?, thermocycle=?, date=? WHERE id=?");
-            statement.setInt(6, getId());
-        }
-        statement.setString(1, getName());
-        statement.setInt(2, reactions.length);
-        statement.setString(3, type.toString());
-        Thermocycle tc = getThermocycle();
-        if(tc != null) {
-            statement.setInt(4, tc.getId());
-        }
-        else {
-            statement.setInt(4, thermocycleId);
-        }
-        statement.setDate(5, new java.sql.Date(new Date().getTime()));
-        return statement;
     }
 
     public Reaction addReaction(ResultSet resultSet) throws SQLException{

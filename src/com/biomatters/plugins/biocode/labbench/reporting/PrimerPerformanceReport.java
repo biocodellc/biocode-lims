@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.implementations.Percentage;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
 import jebl.util.ProgressListener;
 import jebl.util.CompositeProgressListener;

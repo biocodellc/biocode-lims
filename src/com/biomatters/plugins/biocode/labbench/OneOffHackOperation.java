@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -13,7 +14,6 @@ import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
-import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -123,12 +123,9 @@ public class OneOffHackOperation extends DocumentOperation{
                 try {
                     if(plate.getReactionType() == Reaction.Type.Extraction) {
                         extractionPlate = plate;
-                        BiocodeService.getInstance().saveExtractions(null, plate);
                     }
-                    else {
-                        BiocodeService.getInstance().saveReactions(null, plate);
-                    }
-                } catch (SQLException e) {
+                    BiocodeService.getInstance().savePlate(plate, null);
+                } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException(e.getMessage(), e);
                 } catch (BadDataException e) {
@@ -184,7 +181,7 @@ public class OneOffHackOperation extends DocumentOperation{
         }
 
         try {
-            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsStartingWith(tissueIds);
+            Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(tissueIds);
             extractionIds.addAll(existingExtractionIds);
             for(int row=0; row < plate.getRows(); row++) {
                 for(int col=0; col < plate.getCols(); col++) {
@@ -215,7 +212,7 @@ public class OneOffHackOperation extends DocumentOperation{
                 }
             }
 
-        } catch (SQLException e1) {
+        } catch (DatabaseServiceException e1) {
             //todo: handle
             //todo: multithread
         }

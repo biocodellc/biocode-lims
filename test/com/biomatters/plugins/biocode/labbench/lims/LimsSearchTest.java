@@ -1,10 +1,14 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
+import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -40,7 +44,7 @@ public class LimsSearchTest extends Assert {
         biocodeeService.setDataDirectory(temp);
         LocalLIMSConnectionOptions.createDatabase(DATABASE_NAME);
 
-        ConnectionManager.Connection connectionConfig = new ConnectionManager.Connection("forTests");
+        Connection connectionConfig = new Connection("forTests");
         PasswordOptions _fimsOptions = connectionConfig.getFimsOptions();
         assertTrue("First FIMS option has changed from Excel FIMS.  Test needs updating",
                 _fimsOptions instanceof ExcelFimsConnectionOptions);
@@ -70,7 +74,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void basicExtractionSearch() throws IOException, BadDataException, SQLException {
+    public void basicExtractionSearch() throws IOException, BadDataException, DatabaseServiceException {
         String plateName = "Plate_M037";
         String tissue = "MBIO24950.1";
         String extractionId = "MBIO24950.1.1";
@@ -94,7 +98,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void pcrAndWorkflowSearch() throws BadDataException, SQLException {
+    public void pcrAndWorkflowSearch() throws BadDataException, DatabaseServiceException {
         String tissue = "MBIO24950.1";
         String extractionId = "MBIO24950.1.1";
 
@@ -121,17 +125,17 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void cyclesequencingSearch() throws BadDataException, SQLException, DocumentOperationException {
+    public void cyclesequencingSearch() throws BadDataException, DatabaseServiceException, DocumentOperationException {
         String extractionId = "MBIO24950.1.1";
         String seqFName = "SeqF_M037";
         String seqRName = "SeqR_M037";
 
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate("Plate_M037", "MBIO24950.1", extractionId, service);
-        savePcrPlate("PCR_M037", "COI", service, extractionId);
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, extractionId);
 
-        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, extractionId);
-        saveCyclesequencingPlate(seqRName, "COI", CycleSequencingOptions.REVERSE_VALUE, service, extractionId);
+        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, pcrPlate, extractionId);
+        saveCyclesequencingPlate(seqRName, "COI", CycleSequencingOptions.REVERSE_VALUE, service, pcrPlate, extractionId);
 
         List<AnnotatedPluginDocument> searchResults = service.retrieve(extractionId);
         boolean foundSeqF = false;
@@ -154,7 +158,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, SQLException {
+    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, DatabaseServiceException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
@@ -192,7 +196,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, SQLException {
+    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, DatabaseServiceException, DocumentOperationException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
@@ -210,7 +214,7 @@ public class LimsSearchTest extends Assert {
             } else {
                 plateName = "SeqF";
                 type = Reaction.Type.CycleSequencing;
-                saveCyclesequencingPlate(plateName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, "1", "2");
+                saveCyclesequencingPlate(plateName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, null, "1", "2");
             }
 
             List<AnnotatedPluginDocument> results = service.retrieve(plateName);
@@ -228,7 +232,7 @@ public class LimsSearchTest extends Assert {
             String TECH_FIELD = "technician";
             p.getReactions()[0].setWorkflow(null);
             p.getReactions()[0].getOptions().setValue(TECH_FIELD, tech);
-            Reaction.saveReactions(p.getReactions(), type, service.getActiveLIMSConnection(), ProgressListener.EMPTY);
+            service.getActiveLIMSConnection().saveReactions(p.getReactions(), type, ProgressListener.EMPTY);
 
             // Check it is still part of the plate
             results = service.retrieve(plateName);
@@ -277,12 +281,12 @@ public class LimsSearchTest extends Assert {
         return null;
     }
 
-    private void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service) throws SQLException, BadDataException {
+    private void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service) throws DatabaseServiceException, BadDataException {
         Map<String,String> values = Collections.singletonMap(tissue, extractionId);
         saveExtractionPlate(plateName, service, values);
     }
 
-    private void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values) throws SQLException, BadDataException {
+    private void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values) throws DatabaseServiceException, BadDataException {
         Plate extractionPlate = new Plate(Plate.Size.w96, Reaction.Type.Extraction);
         extractionPlate.setName(plateName);
 
@@ -293,10 +297,10 @@ public class LimsSearchTest extends Assert {
             reaction.setExtractionId(entry.getValue());
         }
 
-        service.saveExtractions(ProgressListener.EMPTY, extractionPlate);
+        service.savePlate(extractionPlate, ProgressListener.EMPTY);
     }
 
-    private void savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws SQLException, BadDataException {
+    private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws DatabaseServiceException, BadDataException {
         Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
         pcrPlate.setName(plateName);
         List<Thermocycle> thermocycle = BiocodeService.getInstance().getPCRThermocycles();
@@ -310,11 +314,15 @@ public class LimsSearchTest extends Assert {
             reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
         }
 
-        service.saveReactions(ProgressListener.EMPTY, pcrPlate);
+        service.savePlate(pcrPlate, ProgressListener.EMPTY);
+        return pcrPlate;
     }
 
-    private void saveCyclesequencingPlate(String plateName, String locus, String direction, BiocodeService service, String... extractionIds) throws SQLException, BadDataException {
+    private void saveCyclesequencingPlate(String plateName, String locus, String direction, BiocodeService service, Plate copyReactionsFrom, String... extractionIds) throws DatabaseServiceException, BadDataException, DocumentOperationException {
         Plate plate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
+        if(copyReactionsFrom != null) {
+            NewPlateDocumentOperation.copyPlateOfSameSize(copyReactionsFrom, plate, null);
+        }
         plate.setName(plateName);
         List<Thermocycle> thermocycle = BiocodeService.getInstance().getCycleSequencingThermocycles();
         assertFalse("No default thermocycles in the system", thermocycle.isEmpty());
@@ -328,7 +336,7 @@ public class LimsSearchTest extends Assert {
             reaction.getOptions().setValue(CycleSequencingOptions.DIRECTION, direction);
         }
 
-        service.saveReactions(ProgressListener.EMPTY, plate);
+        service.savePlate(plate, ProgressListener.EMPTY);
     }
 
     private String getPathToDemoFIMSExcel() {
@@ -339,7 +347,96 @@ public class LimsSearchTest extends Assert {
         return resource.getFile().replace("%20", " ");
     }
 
-    // todo Search for workflow on cycle seq plate name, workflow needs to come back with all reactions not just the seq one
-    // todo Search for plate on reaction property, plate needs to be full
+    @Test
+    public void plateNameSearchReturnsCompleteWorkflows() throws BadDataException, SQLException, DatabaseServiceException, DocumentOperationException {
+        String extractionId = "MBIO24950.1.1";
+        String seqFName = "SeqF_M037";
 
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_M037", "MBIO24950.1", extractionId, service);
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, extractionId);
+
+        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, pcrPlate, extractionId);
+
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{seqFName},
+                BiocodeService.getSearchDownloadOptions(false, true, false, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(1, searchResults.size());
+        for (AnnotatedPluginDocument result : searchResults) {
+            if(WorkflowDocument.class.isAssignableFrom(result.getDocumentClass())) {
+                boolean extractionFound = false;
+                boolean pcrFound = false;
+                boolean cycleSeqFound = false;
+                for(Reaction r : ((WorkflowDocument)result.getDocumentOrNull()).getReactions()) {
+                    if(r.getType() == Reaction.Type.Extraction) {
+                        extractionFound = true;
+                    } else if(r.getType() == Reaction.Type.PCR) {
+                        pcrFound = true;
+                    } else if(r.getType() == Reaction.Type.CycleSequencing) {
+                        cycleSeqFound = true;
+                    }
+                }
+                assertTrue("Workflow doc missing extraction reaction", extractionFound);
+                assertTrue("Workflow doc missing pcr reaction", pcrFound);
+                assertTrue("Workflow doc missing cycle sequencing reaction", cycleSeqFound);
+            } else {
+                fail("Search returned " + result.getDocumentClass() + ", when all we wanted was workflows.");
+            }
+        }
+    }
+
+    @Test
+    public void searchForSingleReactionValueReturnsFullPlate() throws BadDataException, SQLException, DatabaseServiceException {
+        Map<String, String> values = new HashMap<String, String>();
+        String toSearchFor = "1";
+        values.put("MBIO24950.1", toSearchFor);
+        values.put("MBIO24951.1", "2");
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("MyPlate", service, values);
+
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_ID_FIELD, Condition.EQUAL, new Object[]{toSearchFor},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(1, searchResults.size());
+
+        Map<String, Boolean> found = new HashMap<String, Boolean>();
+        for (AnnotatedPluginDocument result : searchResults) {
+            if(PlateDocument.class.isAssignableFrom(result.getDocumentClass())) {
+                for (Reaction reaction : ((PlateDocument) result.getDocumentOrNull()).getPlate().getReactions()) {
+                    for (Map.Entry<String, String> entry : values.entrySet()) {
+                        if(reaction.getExtractionId().equals(entry.getValue())) {
+                            found.put(entry.getKey(), Boolean.TRUE);
+                        }
+                    }
+                }
+            } else {
+                fail("Search returned " + result.getDocumentClass() + ", when all we wanted was plates.");
+            }
+        }
+        for (String key : values.keySet()) {
+            assertTrue("Did not find " + key + " on plate", found.get(key));
+        }
+    }
+
+    @Test
+    public void searchByPlateReturnsTissues() throws BadDataException, SQLException, DatabaseServiceException {
+        String plateName = "Plate_M037";
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate(plateName, tissue, extractionId, service);
+
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                                BiocodeService.getSearchDownloadOptions(true, false, false, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+
+        assertEquals(1, searchResults.size());
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(TissueDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                assertEquals(tissue, searchResult.getName());
+            }
+        }
+    }
 }

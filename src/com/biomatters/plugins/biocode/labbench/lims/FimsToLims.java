@@ -1,5 +1,8 @@
-package com.biomatters.plugins.biocode.labbench.reporting;
+package com.biomatters.plugins.biocode.labbench.lims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.URN;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
@@ -17,6 +20,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.plugins.biocode.labbench.reporting.PrimerSet;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import jebl.util.ProgressListener;
@@ -35,7 +39,7 @@ public class FimsToLims {
 
     private FIMSConnection fims;
     private LIMSConnection lims;
-    public static final String FIMS_DEFINITION_TABLE = "fims_definition";
+    private static final String FIMS_DEFINITION_TABLE = "fims_definition";
     public static final String FIMS_VALUES_TABLE = "fims_values";
     public static final String FIMS_DATE_TABLE = "fims_date";
     private List<Options.OptionValue> lociOptionValues;
@@ -363,7 +367,8 @@ public class FimsToLims {
                 }
             };
 
-            fims.getAllSamples(callback);
+            BiocodeService.getInstance().retrieve(Query.Factory.createExtendedQuery("",
+                    BiocodeService.getSearchDownloadOptions(true, false, false, false)), callback, new URN[0]);
             try {
                 copyFimsSet(fimsSamples, lims, fields);
                 fimsSamples.clear();
@@ -421,6 +426,9 @@ public class FimsToLims {
             ex.printStackTrace();
             Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+ex.getMessage());
 
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
+            Dialogs.showMessageDialog("There was an error copying your FIMS data into the LIMS: "+e.getMessage());
         } finally {
             listener.setProgress(1.0);
             BiocodeService.getInstance().unregisterCallback(listener);

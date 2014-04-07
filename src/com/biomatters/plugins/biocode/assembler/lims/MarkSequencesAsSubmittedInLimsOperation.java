@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.assembler.lims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
@@ -8,6 +9,7 @@ import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -72,41 +74,14 @@ public class MarkSequencesAsSubmittedInLimsOperation extends DocumentOperation {
         Map<AnnotatedPluginDocument,SequenceDocument> docsToMark = MarkInLimsUtilities.getDocsToMark(annotatedDocuments, sequenceSelection);
         boolean submitted = options.getValueAsString("markValue").equals("Yes");
         List<Integer> ids = new ArrayList<Integer>();
-        List<String> strings = new ArrayList<String>();
         for(AnnotatedPluginDocument doc : docsToMark.keySet()) {
             ids.add((Integer)doc.getFieldValue(LIMSConnection.SEQUENCE_ID));
-            strings.add("id=?");
         }
 
-        String idOr = StringUtilities.join(" OR ", strings);
-
-
-
-
         try {
-            PreparedStatement statement1 = BiocodeService.getInstance().getActiveLIMSConnection().createStatement("SELECT COUNT(*) FROM assembly WHERE ("+idOr+") AND progress=?");
-            for(int i=0; i < ids.size(); i++) {
-                statement1.setInt(i+1, ids.get(i));
-            }
-            statement1.setString(ids.size()+1, "passed");
-            ResultSet set = statement1.executeQuery();
-            set.next();
-            int count = set.getInt(1);
-
-            if(count < ids.size()) {
-                throw new DocumentOperationException("Some of the sequences you are marking are either not present in the database, or are marked as failed.  Please make sure that the sequences are present, and are passed before marking as submitted.");
-            }
-
-            PreparedStatement statement2 = BiocodeService.getInstance().getActiveLIMSConnection().createStatement("UPDATE assembly SET submitted = ? WHERE "+idOr);
-            statement2.setInt(1, submitted ? 1 : 0);
-            for(int i=0; i < ids.size(); i++) {
-                statement2.setInt(i+2, ids.get(i));
-            }
-            statement2.executeUpdate();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new DocumentOperationException("There was a problem marking as submitted in LIMS: "+e.getMessage());
+            BiocodeService.getInstance().getActiveLIMSConnection().setSequenceStatus(submitted, ids);
+        } catch (DatabaseServiceException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
         }
         return null;
     }

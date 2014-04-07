@@ -228,8 +228,6 @@ public class AnnotateLimsDataOptions extends Options {
                         }
                         break;
                 }
-            } catch (SQLException e) {
-                throw new DocumentOperationException("Failed to retrieve FIMS data for plates " + forwardPlateName + " and " + reversePlateName, e);
             } catch (DatabaseServiceException e) {
                 throw new DocumentOperationException("Failed to retrieve FIMS data for plates " + forwardPlateName + " and " + reversePlateName, e);
             }

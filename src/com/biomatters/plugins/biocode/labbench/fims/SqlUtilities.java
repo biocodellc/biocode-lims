@@ -251,7 +251,18 @@ public class SqlUtilities {
         }
     }
 
+    public static void closeConnection(Connection connection) {
+        if(connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                // Let garbage collector close
+            }
+        }
+    }
+
     public static void printSql(String sql, Collection sqlValues) {
+        sql = sql.replace("\n", "\n\t");
         if(sqlValues.isEmpty()) {
             System.out.println(sql);
             return;
@@ -286,8 +297,8 @@ public class SqlUtilities {
     }
 
     public static void appendSetOfQuestionMarks(StringBuilder builder, int count) {
-            String[] qMarks = new String[count];
-            Arrays.fill(qMarks, "?");
-            builder.append("(").append(StringUtilities.join(",", Arrays.asList(qMarks))).append(")");
-        }
+        String[] qMarks = new String[count];
+        Arrays.fill(qMarks, "?");
+        builder.append("(").append(StringUtilities.join(",", Arrays.asList(qMarks))).append(")");
+    }
 }

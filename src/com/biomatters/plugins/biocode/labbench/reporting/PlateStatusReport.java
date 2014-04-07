@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.TableDocumentViewerFactory;
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import org.jdom.Element;

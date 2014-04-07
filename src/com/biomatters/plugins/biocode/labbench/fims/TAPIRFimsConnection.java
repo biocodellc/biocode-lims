@@ -1,11 +1,9 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
@@ -112,11 +110,6 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return getMatchingFields(searchAttributes, false);
     }
 
-    public BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
-        //todo
-        return null;
-    }
-
     private List<DocumentField> getMatchingFields(List<DocumentField> searchAttributes, boolean taxonomy) {
         List<DocumentField> result = new ArrayList<DocumentField>();
         for(DocumentField field : searchAttributes) {
@@ -146,10 +139,6 @@ public class TAPIRFimsConnection extends FIMSConnection{
 
     public int getTotalNumberOfSamples() throws ConnectionException {
         return -1;
-    }
-
-    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        throw new ConnectionException("Retrieving all results is not currently supported for TAPIR connections.  Please contact Biomatters if you would like to see this feature"); //todo:
     }
 
     private Element searchTapirServer(Query query, boolean justReturnTissueID) throws ConnectionException {
@@ -264,14 +253,6 @@ public class TAPIRFimsConnection extends FIMSConnection{
             }
         }
         return recordList;
-    }
-
-    public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException{
-        return Collections.emptyMap();
-    }
-
-    public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException{
-        return Collections.emptyMap();
     }
 
     @Override

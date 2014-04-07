@@ -84,14 +84,12 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             for (String plateName : plateNames) {
                 reactionsProgress.beginSubtask(plateName);
                 if (reactionsProgress.isCanceled()) return null;
-                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, plateName);
+                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false));
                 List<PlateDocument> plateDocuments;
 
                 try {
-                    plateDocuments = limsConnection.getMatchingPlateDocuments(q, null, null);
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
+                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null, false).getPlates();
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
@@ -107,20 +105,16 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                     throw new DocumentOperationException("Plate \"" + plateName + "\" is not a sequencing plate");
                 }
 
-                List<Query> workflowNames = new ArrayList<Query>();
+                List<String> workflowNames = new ArrayList<String>();
                 for (Reaction reaction : plate.getReactions()) {
                     if(!reaction.isEmpty() && reaction.getWorkflow() != null) {
-                        workflowNames.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, reaction.getWorkflow().getName()));
+                        workflowNames.add(reaction.getWorkflow().getName());
                     }
                 }
 
-                Query workflowQuery = Query.Factory.createOrQuery(workflowNames.toArray(new Query[workflowNames.size()]), Collections.<String, Object>emptyMap());
                 List<WorkflowDocument> workflows;
                 try {
-                    workflows = limsConnection.getMatchingDocumentsFromLims(
-                            workflowQuery, Collections.<String>emptyList(), null).getWorkflows();
-                } catch (SQLException e) {
-                    throw new DocumentOperationException(e.getMessage(), e);
+                    workflows = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflowNames);
                 } catch (DatabaseServiceException e) {
                     throw new DocumentOperationException(e.getMessage(), e);
                 }
@@ -144,7 +138,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             progress.beginSubtask("Downloading Traces");
             try {
                 BiocodeUtilities.downloadTracesForReactions(reactions, progress);
-            } catch (SQLException e) {
+            } catch (DatabaseServiceException e) {
                 e.printStackTrace();
                 throw new DocumentOperationException("Failed to download raw traces: " + e.getMessage(), e);
             } catch (IOException e) {

@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.labbench.lims.FimsToLims;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 

@@ -3,11 +3,9 @@ package com.biomatters.plugins.biocode.labbench.fims;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 
 import java.util.*;
 import java.io.IOException;
@@ -176,10 +174,6 @@ public abstract class TableFimsConnection extends FIMSConnection{
         return fields;
     }
 
-    public final BiocodeUtilities.LatLong getLatLong(AnnotatedPluginDocument annotatedDocument) {
-        return null;  //todo
-    }
-
     public boolean storesPlateAndWellInformation() {
         return storePlates;
     }
@@ -198,14 +192,6 @@ public abstract class TableFimsConnection extends FIMSConnection{
             return null;
         }
         return getTableCol(wellCol);
-    }
-
-    public Map<String, String> getTissueIdsFromExtractionBarcodes(List<String> extractionIds) throws ConnectionException {
-        return null;
-    }
-
-    public Map<String, String> getTissueIdsFromFimsExtractionPlate(String plateId) throws ConnectionException {
-        return null;
     }
 
     public boolean hasPhotos() {

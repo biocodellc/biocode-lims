@@ -96,4 +96,19 @@ public abstract class Cocktail implements XMLSerializable {
         setName(element.getChildText("name"));
         setId(Integer.parseInt(element.getChildText("id")));
     }
+
+    public static enum Type {
+        pcr("pcr_thermocycle", "PCRCocktails.xml", Reaction.Type.PCR),
+        cyclesequencing("cyclesequencing_cocktail", "cyclesequencingCocktails.xml", Reaction.Type.CycleSequencing);
+
+        public final String databaseTable;
+        public final String cacheFilename;
+        public final Reaction.Type reactionType;
+
+        Type(String databaseTable, String cacheFilename, Reaction.Type reactionType) {
+            this.databaseTable = databaseTable;
+            this.cacheFilename = cacheFilename;
+            this.reactionType = reactionType;
+        }
+    }
 }
