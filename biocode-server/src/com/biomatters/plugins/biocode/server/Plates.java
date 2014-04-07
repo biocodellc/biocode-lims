@@ -4,16 +4,14 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Matthew Cheung
@@ -143,6 +141,19 @@ public class Plates {
                     table, Arrays.asList(ids.split(","))));
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
+        }
+    }
+
+    @GET
+    @Produces("application/xml")
+    @Path("{plateId}/gels")
+    public List<GelImage> getGels(@PathParam("plateId")int plateId) {
+        try {
+            Map<Integer, List<GelImage>> map = BiocodeService.getInstance().getActiveLIMSConnection().getGelImages(
+                    Collections.singletonList(plateId));
+            return map.get(plateId);
+        } catch (DatabaseServiceException e) {
+            throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
 }

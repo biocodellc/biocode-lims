@@ -316,8 +316,7 @@ public class SequencingResult implements XMLSerializable {
             @Override
             public void run() {
                 try {
-                    LIMSConnection connection = BiocodeService.getInstance().getActiveLIMSConnection();
-                    List<AnnotatedPluginDocument> matching = connection.getMatchingAssemblyDocumentsForIds(
+                    List<AnnotatedPluginDocument> matching = BiocodeService.getInstance().getMatchingAssemblyDocumentsForIds(
                             null, null, Collections.singletonList(result.getSequenceId()), null, false);
                     assert(matching.size() <= 1);
                     for (AnnotatedPluginDocument annotatedPluginDocument : matching) {

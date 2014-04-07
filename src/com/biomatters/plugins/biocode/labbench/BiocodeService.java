@@ -4,13 +4,19 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
+import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
+import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
+import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
@@ -37,6 +43,7 @@ import java.sql.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.Date;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -764,7 +771,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading Sequences");
-                    limsConnection.getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, true);
+                    getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
             } catch (DatabaseServiceException e) {
@@ -796,6 +803,173 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 activeCallbacks.remove(callback);
             }
         }
+    }
+
+    /**
+     * @param workflows     Used to retrieve FIMS data if not null
+     * @param samples       Used to retrieve FIMS data if not null
+     * @param sequenceIds   The sequences to retrieve
+     * @param callback      To add documents to
+     * @param includeFailed true to included empty sequences for failed results
+     * @return A list of the documents found/added
+     * @throws SQLException if anything goes wrong
+     */
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(
+            final Collection<WorkflowDocument> workflows, final List<FimsSample> samples,
+            List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+        if (sequenceIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        if (!BiocodeService.getInstance().isLoggedIn()) {
+            return Collections.emptyList();
+        }
+        List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
+        final List<String> missingTissueIds = new ArrayList<String>();
+        ArrayList<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
+
+        List<AssembledSequence> sequences = limsConnection.getAssemblyDocuments(sequenceIds, callback, includeFailed);
+
+        try {
+            for (final AssembledSequence seq : sequences) {
+                AnnotatedPluginDocument doc = createAssemblyDocument(seq);
+                FimsDataGetter getter = new FimsDataGetter() {
+                    public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                        if (workflows != null) {
+                            for (WorkflowDocument workflow : workflows) {
+                                if (workflow.getId() == seq.workflowId) {
+                                    return new FimsData(workflow, null, null);
+                                }
+                            }
+                        }
+
+                        String tissueId = seq.sampleId;
+                        if (samples != null) {
+                            for (FimsSample sample : samples) {
+                                if (sample.getId().equals(tissueId)) {
+                                    return new FimsData(sample, null, null);
+                                }
+                            }
+                        }
+                        if (!BiocodeService.getInstance().isLoggedIn()) {
+                            return null;
+                        }
+                        FimsSample fimsSample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(tissueId);
+                        if (fimsSample != null) {
+                            return new FimsData(fimsSample, null, null);
+                        } else {
+                            document.setFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), tissueId);
+                            missingTissueIds.add(tissueId);
+                        }
+                        return null;
+                    }
+                };
+
+                ArrayList<String> failBlog = new ArrayList<String>();
+                AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
+                if (failBlog.size() == 0) {
+                    resultDocuments.add(doc);
+                    if (callback != null) {
+                        callback.add(doc, Collections.<String, Object>emptyMap());
+                    }
+                } else {
+                    // Will be added to callback later
+                    documentsWithoutFimsData.add(doc);
+                }
+            }
+
+            //annotate with FIMS data if we couldn't before...
+            final List<FimsSample> newFimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(missingTissueIds);
+            FimsDataGetter fimsDataGetter = new FimsDataGetter() {
+                public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                    String tissueId = (String) document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
+                    if (tissueId != null) {
+                        for (FimsSample sample : newFimsSamples) {
+                            if (sample.getId().equals(tissueId)) {
+                                return new FimsData(sample, null, null);
+                            }
+                        }
+                    }
+                    return null;
+                }
+            };
+            for (AnnotatedPluginDocument doc : documentsWithoutFimsData) {
+                AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc, false);
+                resultDocuments.add(doc);
+                if (callback != null) {
+                    callback.add(doc, Collections.<String, Object>emptyMap());
+                }
+            }
+            return resultDocuments;
+        } catch (DocumentOperationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ConnectionException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq) {
+        String qualities = seq.confidenceScore;
+        DefaultNucleotideSequence sequence;
+        URN urn = new URN("Biocode", limsConnection.getUrn(), "" + seq.id);
+        String name = seq.extractionId + " " + seq.workflowLocus;
+
+        if (qualities == null || seq.progress == null || seq.progress.toLowerCase().contains("failed")) {
+            String consensus = seq.consensus;
+            String description = "Assembly consensus sequence for " + name;
+            if (consensus == null || seq.date == null) {
+                consensus = "";
+            } else if (seq.progress == null || seq.progress.toLowerCase().contains("failed")) {
+                consensus = "";
+                description = "Sequencing failed for this well";
+            }
+            consensus = consensus.replace("-", "");
+            sequence = new DefaultNucleotideSequence(name, description, consensus, new Date(seq.date), urn);
+        } else {
+            String sequenceString = seq.consensus;
+            sequenceString = sequenceString.replace("-", "");
+            NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
+            Date dateMarked = new Date(seq.date);
+            sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for " + name, sequenceString, dateMarked, graph, urn);
+            sequence.setFieldValue(PluginDocument.MODIFIED_DATE_FIELD, dateMarked);
+        }
+        AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
+
+        //todo: add data as fields and notes...
+        String notes = seq.assemblyNotes;
+        if (notes != null) {
+            doc.setFieldValue(AnnotateUtilities.NOTES_FIELD, notes);
+        }
+        doc.setFieldValue(LIMSConnection.WORKFLOW_LOCUS_FIELD, seq.workflowLocus);
+        doc.setFieldValue(AnnotateUtilities.PROGRESS_FIELD, seq.progress);
+        doc.setFieldValue(DocumentField.CONTIG_MEAN_COVERAGE, seq.coverage);
+        doc.setFieldValue(DocumentField.DISAGREEMENTS, seq.numberOfDisagreements);
+        doc.setFieldValue(AnnotateUtilities.EDITS_FIELD, seq.numOfEdits);
+        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_FWD_FIELD, seq.forwardTrimParameters);
+        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_REV_FIELD, seq.reverseTrimParameters);
+        doc.setHiddenFieldValue(AnnotateUtilities.LIMS_ID, seq.limsId);
+        //todo: fields that require a schema change
+        //noinspection ConstantConditions
+        doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, seq.technician);
+        doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(seq.date));
+        doc.setFieldValue(DocumentField.BIN, seq.bin);
+        doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, seq.numberOfAmbiguities);
+        doc.setFieldValue(AnnotateUtilities.ASSEMBLY_PARAMS_FIELD, seq.assemblyParameters);
+        doc.setFieldValue(LIMSConnection.SEQUENCE_ID, seq.id);
+        doc.setFieldValue(LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS, seq.submitted ? "Yes" : "No");
+        doc.setFieldValue(LIMSConnection.EDIT_RECORD, seq.editRecord);
+        doc.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, seq.extractionId);
+        doc.setFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD, seq.extractionBarcode);
+        return doc;
+    }
+
+    private int[] qualitiesFromString(String qualString) {
+        String[] values = qualString.split(",");
+        int[] result = new int[values.length];
+        for (int i = 0; i < values.length; i++) {
+            result[i] = Integer.parseInt(values[i]);
+        }
+        return result;
     }
 
     private boolean isFimsTermQuery(Query query) {

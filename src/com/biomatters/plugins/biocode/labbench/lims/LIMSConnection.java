@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.labbench.lims;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
-import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOptions;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -65,11 +64,9 @@ public abstract class LIMSConnection {
 
     public static final DocumentField SEQUENCE_ID = DocumentField.createIntegerField("LIMS Sequence ID", "The Unique ID of this sequence in LIMS", "LimsSequenceId", false, false);
 
-    private static final String LOCUS = "locus";
-
     String serverUrn;
 
-    public abstract Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException;
+    public abstract Map<URN, String> addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, CompositeProgressListener progress) throws DatabaseServiceException;
 
     public abstract void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException;
     public abstract void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException;
@@ -85,7 +82,7 @@ public abstract class LIMSConnection {
 
     public abstract Map<String,String> getTissueIdsForExtractionIds(String tableName, List<String> extractionIds) throws DatabaseServiceException;
 
-    public abstract Map<Integer,List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException;
+    public abstract Map<Integer,List<MemoryFile>> downloadTraces(List<Integer> reactionIds, ProgressListener progressListener) throws DatabaseServiceException;
 
     public abstract List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException;
 
@@ -247,20 +244,6 @@ public abstract class LIMSConnection {
     }
 
 
-    /**
-     * @param workflows     Used to retrieve FIMS data if not null
-     * @param samples       Used to retrieve FIMS data if not null
-     * @param sequenceIds   The sequences to retrieve
-     * @param callback      To add documents to
-     * @param includeFailed true to included empty sequences for failed results
-     * @return A list of the documents found/added
-     * @throws SQLException if anything goes wrong
-     */
-    public abstract List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(
-            Collection<WorkflowDocument> workflows, List<FimsSample> samples,
-            List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
-
-
     public void getGelImagesForPlates(Collection<Plate> plates) throws DatabaseServiceException {
         List<Integer> plateIds = new ArrayList<Integer>();
         for (Plate plate : plates) {
@@ -276,7 +259,7 @@ public abstract class LIMSConnection {
         }
     }
 
-    protected abstract Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException;
+    public abstract Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException;
 
 
     public abstract Set<String> getAllExtractionIdsForTissueIds(List<String> tissueIds) throws DatabaseServiceException;
@@ -317,6 +300,8 @@ public abstract class LIMSConnection {
     public abstract void renameWorkflow(int id, String newName) throws DatabaseServiceException;
 
     public abstract void testConnection() throws DatabaseServiceException;
+
+    public abstract List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
 
     /**
      * @param plateIds the ids of the plates to check

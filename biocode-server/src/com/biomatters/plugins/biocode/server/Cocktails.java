@@ -6,9 +6,8 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import javax.ws.rs.*;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Matthew Cheung
@@ -22,14 +21,16 @@ public class Cocktails {
     @Produces("application/xml")
     @GET
     @Path("{type}")
-    public XMLSerializableList<? extends Cocktail> getForType(@PathParam("type")String type) {
+    public XMLSerializableList<Cocktail> getForType(@PathParam("type")String type) {
         try {
             if(getType(type) == Cocktail.Type.pcr) {
-                return new XMLSerializableList<PCRCocktail>(PCRCocktail.class,
-                        BiocodeService.getInstance().getActiveLIMSConnection().getPCRCocktailsFromDatabase());
+                return new XMLSerializableList<Cocktail>(Cocktail.class,
+                        new ArrayList<Cocktail>(
+                        BiocodeService.getInstance().getActiveLIMSConnection().getPCRCocktailsFromDatabase()));
             } else {
-                return new XMLSerializableList<CycleSequencingCocktail>(CycleSequencingCocktail.class,
-                                    BiocodeService.getInstance().getActiveLIMSConnection().getCycleSequencingCocktailsFromDatabase());
+                return new XMLSerializableList<Cocktail>(Cocktail.class,
+                        new ArrayList<Cocktail>(
+                        BiocodeService.getInstance().getActiveLIMSConnection().getCycleSequencingCocktailsFromDatabase()));
             }
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);

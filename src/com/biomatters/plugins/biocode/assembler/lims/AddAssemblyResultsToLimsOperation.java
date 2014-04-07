@@ -388,7 +388,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
         Map<URN, String> seqIds = null;
         try {
-            seqIds = limsConnection.addAssembly(options, progress, assemblyResults, isPass);
+            seqIds = limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(), options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), assemblyResults, progress);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Failed to park as pass/fail in LIMS: " + e.getMessage(), e);
         }

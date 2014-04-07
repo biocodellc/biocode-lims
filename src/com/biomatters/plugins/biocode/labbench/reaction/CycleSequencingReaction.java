@@ -20,7 +20,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.PreparedStatement;
 import java.util.*;
 import java.util.List;
 import java.io.IOException;
@@ -251,10 +250,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
 
         try {
 
-            Map<Integer, List<ReactionUtilities.MemoryFile>> traces = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(Collections.singletonList("" + getId()), ProgressListener.EMPTY);
+            Map<Integer, List<MemoryFile>> traces = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(Collections.singletonList(getId()), ProgressListener.EMPTY);
 
             List<Trace> result = new ArrayList<Trace>();
-            for (ReactionUtilities.MemoryFile memoryFile : traces.get(getId())) {
+            for (MemoryFile memoryFile : traces.get(getId())) {
                 result.add(new Trace(memoryFile));
             }
 
@@ -415,7 +414,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         this.traces = new WeakReference<List<Trace>>(tracesStrongReference);
     }
 
-    public void setChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+    public void setChromats(List<MemoryFile> files) throws IOException, DocumentImportException {
         if (tracesStrongReference == null) {
             tracesStrongReference = new ArrayList<Trace>();
         } else {
@@ -431,7 +430,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         convertRawTracesToTraceDocuments(files);
     }
 
-    public void addChromats(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+    public void addChromats(List<MemoryFile> files) throws IOException, DocumentImportException {
         if(tracesStrongReference == null) {
             if(traces != null && traces.get() != null) {
                 tracesStrongReference = traces.get();
@@ -448,10 +447,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         convertRawTracesToTraceDocuments(files);
     }
 
-    private void convertRawTracesToTraceDocuments(List<ReactionUtilities.MemoryFile> files) throws IOException, DocumentImportException {
+    private void convertRawTracesToTraceDocuments(List<MemoryFile> files) throws IOException, DocumentImportException {
         List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
         File tempFolder = null;
-        for(ReactionUtilities.MemoryFile mFile : files) {
+        for(MemoryFile mFile : files) {
             tracesStrongReference.add(new Trace(mFile));
         }
     }

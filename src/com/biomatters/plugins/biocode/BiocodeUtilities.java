@@ -14,15 +14,14 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.MemoryFile;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
@@ -32,7 +31,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.NumberFormat;
@@ -136,21 +134,21 @@ public class BiocodeUtilities {
             }
         }
 
-        List<String> idQueries = new ArrayList<String>();
+        List<Integer> reactionIds = new ArrayList<Integer>();
         for(Reaction r : reactions) {
             if(r.getId() >= 0) {
-                idQueries.add("reaction="+r.getId());
+                reactionIds.add(r.getId());
             }
         }
-        if(idQueries.size() == 0) {
+        if(reactionIds.size() == 0) {
             return;
         }
 
-        Map<Integer, List<ReactionUtilities.MemoryFile>> results = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(idQueries, progressListener);
+        Map<Integer, List<MemoryFile>> results = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(reactionIds, progressListener);
         if(progressListener.isCanceled()) {
             return;
         }
-        for (Map.Entry<Integer, List<ReactionUtilities.MemoryFile>> result : results.entrySet()) {
+        for (Map.Entry<Integer, List<MemoryFile>> result : results.entrySet()) {
            if (progressListener.isCanceled()) return;
             //todo: there might be multiple instances of the same reaction in this list, so we loop through everything each time.  maybe we could sort the list if this is too slow?
             for(CycleSequencingReaction r : reactions) {

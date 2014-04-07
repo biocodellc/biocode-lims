@@ -21,26 +21,26 @@ import jebl.util.ProgressListener;
  */
 public class Trace implements XMLSerializable {
     private List<NucleotideSequenceDocument> sequences;
-    private ReactionUtilities.MemoryFile file;
+    private MemoryFile file;
     private int id;
 
     public Trace(Element e) throws XMLSerializationException {
         fromXML(e);
     }
 
-    public Trace(ReactionUtilities.MemoryFile file) throws IOException, DocumentImportException{
+    public Trace(MemoryFile file) throws IOException, DocumentImportException{
         this(file, -1);
     }
 
-    public Trace(ReactionUtilities.MemoryFile file, int id) throws IOException, DocumentImportException{
+    public Trace(MemoryFile file, int id) throws IOException, DocumentImportException{
         this(convertRawTracesToTraceDocuments(file), file, id);
     }
 
-    public Trace(List<NucleotideSequenceDocument> sequences, ReactionUtilities.MemoryFile file) {
+    public Trace(List<NucleotideSequenceDocument> sequences, MemoryFile file) {
         this(sequences, file, -1);
     }
 
-    public Trace(List<NucleotideSequenceDocument> sequences, ReactionUtilities.MemoryFile file, int id) {
+    public Trace(List<NucleotideSequenceDocument> sequences, MemoryFile file, int id) {
         this.sequences = sequences;
         this.file = file;
         this.id = id;
@@ -50,7 +50,7 @@ public class Trace implements XMLSerializable {
         return sequences;
     }
 
-    public ReactionUtilities.MemoryFile getFile() {
+    public MemoryFile getFile() {
         return file;
     }
 
@@ -96,7 +96,7 @@ public class Trace implements XMLSerializable {
         }
         Element rawTraceElement = element.getChild("rawTrace");
         if(rawTraceElement != null) {
-            file = new ReactionUtilities.MemoryFile(rawTraceElement.getAttributeValue("name"), Base64Coder.decode(rawTraceElement.getText().toCharArray()));
+            file = new MemoryFile(rawTraceElement.getAttributeValue("name"), Base64Coder.decode(rawTraceElement.getText().toCharArray()));
         }
         id = -1;
         if(element.getChild("id") != null) {
@@ -104,7 +104,7 @@ public class Trace implements XMLSerializable {
         }
     }
 
-    private static List<NucleotideSequenceDocument> convertRawTracesToTraceDocuments(ReactionUtilities.MemoryFile mFile) throws IOException, DocumentImportException {
+    private static List<NucleotideSequenceDocument> convertRawTracesToTraceDocuments(MemoryFile mFile) throws IOException, DocumentImportException {
         List<AnnotatedPluginDocument> docs = new ArrayList<AnnotatedPluginDocument>();
 
         File tempFolder = File.createTempFile("biocode_sequence", "");

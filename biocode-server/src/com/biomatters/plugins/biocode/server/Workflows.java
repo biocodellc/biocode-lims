@@ -31,36 +31,6 @@ public class Workflows {
         }
     }
 
-    @GET
-    @Produces("application/xml")
-    public StringMap getWorkflowsForExtractionIds(@QueryParam("extractionIds")String extractionIds,
-                                                  @QueryParam("loci")String loci, @QueryParam("type")String type) {
-        if(extractionIds == null || extractionIds.trim().isEmpty()) {
-            throw new BadRequestException("Must specify extractionIds");
-        }
-
-        if(loci == null || loci.trim().isEmpty()) {
-            throw new BadRequestException("Must specify loci");
-        }
-
-        if(type == null || type.trim().isEmpty()) {
-            throw new BadRequestException("Must specify type");
-        }
-
-        try {
-            return new StringMap(
-                    BiocodeService.getInstance().getActiveLIMSConnection().getWorkflowIds(
-                            Arrays.asList(extractionIds.split(",")),
-                            Arrays.asList(loci.split(",")),
-                            Reaction.Type.valueOf(type)
-                    ));
-        } catch (DatabaseServiceException e) {
-            throw new InternalServerErrorException(e.getMessage(), e);
-        } catch(IllegalArgumentException e) {
-            throw new BadRequestException(type + " is not valid type.");
-        }
-    }
-
     @PUT
     @Consumes("text/plain")
     @Path("{id}/name")
@@ -69,6 +39,16 @@ public class Workflows {
             BiocodeService.getInstance().getActiveLIMSConnection().renameWorkflow(id, newName);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
+        }
+    }
+
+    @DELETE
+    @Path("{workflowId}/sequences/{extractionId}")
+    public void deleteSequencesForWorkflow(@PathParam("workflowId")int workflowId, @PathParam("extractionId")String extractionId) {
+        try {
+            BiocodeService.getInstance().getActiveLIMSConnection().deleteSequencesForWorkflowId(workflowId, extractionId);
+        } catch (DatabaseServiceException e) {
+            throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
 }

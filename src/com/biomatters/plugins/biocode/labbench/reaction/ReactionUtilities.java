@@ -30,13 +30,10 @@ import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -929,28 +926,6 @@ public class ReactionUtilities {
             }
         }
         return sequences;
-    }
-
-    public static class MemoryFile{
-        private String name;
-        private byte[] data;
-
-        public MemoryFile(String name, byte[] data) {
-            this.name = name;
-            this.data = data;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public byte[] getData() {
-            return data;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
     }
 
     public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {

@@ -140,6 +140,7 @@ public class LIMSInitializationServlet extends GenericServlet {
         ComponentUtilitiesImplementation.setImplementation();
         PrivateUtilitiesImplementation.setImplementation();
         WritableDatabaseServiceActions.setImplemtation();
+
     }
 
     private static StringBuilder initializationErrors = new StringBuilder();

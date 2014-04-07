@@ -246,12 +246,12 @@ public class WorkflowBuilder extends DocumentOperation {
         }
     }
 
-    public List<ReactionUtilities.MemoryFile> getChromats(String traceLocation, String plateName, String well, boolean forward) throws IOException {
+    public List<MemoryFile> getChromats(String traceLocation, String plateName, String well, boolean forward) throws IOException {
         File traceFolder = new File(traceLocation);
-        List<ReactionUtilities.MemoryFile> files = new ArrayList<ReactionUtilities.MemoryFile>(1);
+        List<MemoryFile> files = new ArrayList<MemoryFile>(1);
         for(File f : traceFolder.listFiles()) {
             if(f.getName().startsWith(plateName) && f.getName().toLowerCase().contains(well.toLowerCase()) && f.getName().contains(forward ? "LCO" : "HCO")) {
-                ReactionUtilities.MemoryFile mf = ReactionUtilities.loadFileIntoMemory(f);
+                MemoryFile mf = ReactionUtilities.loadFileIntoMemory(f);
                 files.add(mf);
             }
         }

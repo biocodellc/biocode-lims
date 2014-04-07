@@ -3,11 +3,9 @@ package com.biomatters.plugins.biocode.labbench.rest.client;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.URN;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
-import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOptions;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
@@ -159,30 +157,38 @@ public class ServerLimsConnetion extends LIMSConnection {
         return target.path("permissions").path("delete").path(tableName).request(MediaType.TEXT_PLAIN_TYPE).get(Boolean.class);
     }
 
-    // todo sequences
     @Override
-    public Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException {
+    public List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+        return target.path("sequences").
+                queryParam("includeFailed", includeFailed).
+                queryParam("ids", StringUtilities.join(",", sequenceIds)).
+                request(MediaType.APPLICATION_XML_TYPE).get(
+                new GenericType<List<AssembledSequence>>(){}
+        );
+    }
+
+    // todo add sequences
+    @Override
+    public Map<URN, String> addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, CompositeProgressListener progress) throws DatabaseServiceException {
         return Collections.emptyMap();
     }
 
     @Override
     public void deleteSequences(List<Integer> sequencesToDelete) throws DatabaseServiceException {
-
+        target.path("sequences").path("deletes").request().post(Entity.entity(
+                StringUtilities.join(",", sequencesToDelete), MediaType.TEXT_PLAIN_TYPE));
     }
 
     @Override
     public void setSequenceStatus(boolean submitted, List<Integer> ids) throws DatabaseServiceException {
-
+        for (Integer id : ids) {
+            target.path("sequences").path(""+id).path("submitted").request().put(Entity.entity(submitted, MediaType.TEXT_PLAIN_TYPE));
+        }
     }
 
     @Override
     public void deleteSequencesForWorkflowId(Integer workflowId, String extractionId) throws DatabaseServiceException {
-
-    }
-
-    @Override
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(Collection<WorkflowDocument> workflows, List<FimsSample> samples, List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
-        return Collections.emptyList();
+        target.path("workflows").path(""+workflowId).path("sequences").path(extractionId).request().delete();
     }
 
     @Override
@@ -203,10 +209,20 @@ public class ServerLimsConnetion extends LIMSConnection {
                 }).getList();
     }
 
-    // todo traces
     @Override
-    public Map<Integer, List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
-        return Collections.emptyMap();
+    public Map<Integer, List<MemoryFile>> downloadTraces(List<Integer> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
+        Map<Integer, List<MemoryFile>> result = new HashMap<Integer, List<MemoryFile>>();
+        for (int reactionId : reactionIds) {
+            List<MemoryFile> memoryFiles = target.path("reactions").path(""+reactionId).path("traces").
+                    request(MediaType.APPLICATION_XML_TYPE).get(
+                    new GenericType<List<MemoryFile>>() {
+                    }
+            );
+            if(memoryFiles != null) {
+                result.put(reactionId, memoryFiles);
+            }
+        }
+        return result;
     }
 
     @Override
@@ -251,10 +267,17 @@ public class ServerLimsConnetion extends LIMSConnection {
                         }).getList();
     }
 
-    // todo gels
     @Override
-    protected Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
-        return Collections.emptyMap();
+    public Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
+        Map<Integer, List<GelImage>> images = new HashMap<Integer, List<GelImage>>();
+        for (Integer plateId : plateIds) {
+            List<GelImage> gelImages = target.path("plates").path(String.valueOf(plateId)).path("gels").request(MediaType.APPLICATION_XML_TYPE).get(
+                    new GenericType<List<GelImage>>() {
+                    }
+            );
+            images.put(plateId, gelImages);
+        }
+        return images;
     }
 
     @Override
@@ -276,7 +299,7 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public Map<String, String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException {
-        return target.path(WORKFLOWS).
+        return target.path("extractions").path(WORKFLOWS).
                 queryParam("extractionIds", StringUtilities.join(",", idsToCheck)).
                 queryParam("loci", StringUtilities.join(",", loci)).
                 queryParam("type", reactionType.name()).

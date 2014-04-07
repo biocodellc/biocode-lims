@@ -3,11 +3,7 @@ package com.biomatters.plugins.biocode.labbench.lims;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
-import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
-import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -17,11 +13,7 @@ import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
-import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
-import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
-import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
-import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOptions;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -620,7 +612,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return new QueryPart(queryConditions, objects);
     }
 
-    protected Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
+    public Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException {
         if (plateIds == null || plateIds.size() == 0) {
             return Collections.emptyMap();
         }
@@ -792,7 +784,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         try {
             connection = getConnection();
             String sql = "UPDATE workflow SET name=? WHERE id=?";
-            PreparedStatement statement = createStatement(sql);
+            PreparedStatement statement = connection.prepareStatement(sql);
 
             statement.setString(1, newName);
             statement.setInt(2, id);
@@ -867,7 +859,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection = getConnection();
 
             String sql = "UPDATE plate SET name=? WHERE id=?";
-            PreparedStatement statement = createStatement(sql);
+            PreparedStatement statement = connection.prepareStatement(sql);
 
             statement.setString(1, newName);
             statement.setInt(2, id);
@@ -1441,58 +1433,32 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 }
     }
 
-    /**
-     * @param workflows     Used to retrieve FIMS data if not null
-     * @param samples       Used to retrieve FIMS data if not null
-     * @param sequenceIds   The sequences to retrieve
-     * @param callback      To add documents to
-     * @param includeFailed true to included empty sequences for failed results
-     * @return A list of the documents found/added
-     * @throws SQLException if anything goes wrong
-     */
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(
-            Collection<WorkflowDocument> workflows, List<FimsSample> samples,
-            List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
-        if (sequenceIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<Object> sqlValues = new ArrayList<Object>(sequenceIds);
-
-        StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
-        sql.append("FROM workflow INNER JOIN assembly ON assembly.id IN ");
-        appendSetOfQuestionMarks(sql, sequenceIds.size());
-        if (!includeFailed) {
-            sql.append(" AND assembly.progress = ?");
-            sqlValues.add("passed");
-        }
-        sql.append(" AND workflow.id = assembly.workflow INNER JOIN extraction ON workflow.extractionId = extraction.id");
-
-        return getMatchingAssemblyDocumentsForSQL(workflows, samples,
-                callback, new URN[0], callback, sql.toString(), sqlValues);
-    }
-
-    private List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForSQL(final Collection<WorkflowDocument> workflows, final List<FimsSample> fimsSamples, RetrieveCallback callback, URN[] urnsToNotRetrieve, Cancelable cancelable, String sql, List<Object> sqlValues) throws DatabaseServiceException {
-
-        if (!BiocodeService.getInstance().isLoggedIn()) {
-            return Collections.emptyList();
-        }
+    @Override
+    public List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+        List<AssembledSequence> sequences = new ArrayList<AssembledSequence>();
+        ConnectionWrapper connection = null;
         PreparedStatement statement = null;
         try {
-            statement = createStatement(sql);
-            fillStatement(sqlValues, statement);
-            SqlUtilities.printSql(sql, sqlValues);
-            BiocodeUtilities.CancelListeningThread listeningThread = null;
-            if (cancelable != null) {
-                //todo: listeningThread = new BiocodeUtilities.CancelListeningThread(cancelable, statement);
+            connection = getConnection();
+            List<Object> sqlValues = new ArrayList<Object>(sequenceIds);
+
+            StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
+            sql.append("FROM workflow INNER JOIN assembly ON assembly.id IN ");
+            appendSetOfQuestionMarks(sql, sequenceIds.size());
+            if (!includeFailed) {
+                sql.append(" AND assembly.progress = ?");
+                sqlValues.add("passed");
             }
+            sql.append(" AND workflow.id = assembly.workflow INNER JOIN extraction ON workflow.extractionId = extraction.id");
+
+            statement = connection.prepareStatement(sql.toString());
+            fillStatement(sqlValues, statement);
+            SqlUtilities.printSql(sql.toString(), sqlValues);
             if (!isLocal()) {
                 statement.setFetchSize(Integer.MIN_VALUE);
             }
 
             final ResultSet resultSet = statement.executeQuery();
-            List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
-            final List<String> missingTissueIds = new ArrayList<String>();
-            ArrayList<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
             while (resultSet.next()) {
                 if (SystemUtilities.isAvailableMemoryLessThan(50)) {
                     statement.cancel();
@@ -1501,164 +1467,50 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 if (callback != null && callback.isCanceled()) {
                     return Collections.emptyList();
                 }
-                AnnotatedPluginDocument doc = createAssemblyDocument(resultSet, urnsToNotRetrieve);
-                if (doc == null) {
-                    continue;
-                }
-                FimsDataGetter getter = new FimsDataGetter() {
-                    public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
-                        try {
-                            if (workflows != null) {
-                                for (WorkflowDocument workflow : workflows) {
-                                    if (workflow.getId() == resultSet.getInt("workflow")) {
-                                        return new FimsData(workflow, null, null);
-                                    }
-                                }
-                            }
-                            String tissueId = resultSet.getString("sampleId");
-                            if (fimsSamples != null) {
-                                for (FimsSample sample : fimsSamples) {
-                                    if (sample.getId().equals(tissueId)) {
-                                        return new FimsData(sample, null, null);
-                                    }
-                                }
-                            }
-                            if (!BiocodeService.getInstance().isLoggedIn()) {
-                                return null;
-                            }
-                            FimsSample fimsSample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(tissueId);
-                            if (fimsSample != null) {
-                                return new FimsData(fimsSample, null, null);
-                            } else {
-                                document.setFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), tissueId);
-                                missingTissueIds.add(tissueId);
-                            }
-                        } catch (SQLException ex) {
-                            throw new DocumentOperationException("Could not get workflow id from assembly table: " + ex.getMessage());
-                        }
-                        return null;
-                    }
-                };
-                ArrayList<String> failBlog = new ArrayList<String>();
-                AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
-                if (failBlog.size() == 0) {
-                    resultDocuments.add(doc);
-                    if (callback != null) {
-                        callback.add(doc, Collections.<String, Object>emptyMap());
-                    }
-                } else {
-                    // Will be added to callback later
-                    documentsWithoutFimsData.add(doc);
+                AssembledSequence seq = getAssembledSequence(resultSet);
+                if (seq != null) {
+                    sequences.add(seq);
                 }
             }
-
-            //annotate with FIMS data if we couldn't before...
-            final List<FimsSample> newFimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(missingTissueIds);
-            FimsDataGetter fimsDataGetter = new FimsDataGetter() {
-                public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
-                    String tissueId = (String) document.getFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
-                    if (tissueId != null) {
-                        for (FimsSample sample : newFimsSamples) {
-                            if (sample.getId().equals(tissueId)) {
-                                return new FimsData(sample, null, null);
-                            }
-                        }
-                    }
-                    return null;
-                }
-            };
-            for (AnnotatedPluginDocument doc : documentsWithoutFimsData) {
-                AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc, false);
-                resultDocuments.add(doc);
-                if (callback != null) {
-                    callback.add(doc, Collections.<String, Object>emptyMap());
-                }
-            }
-
-            if (listeningThread != null) {
-                listeningThread.finish();
-            }
-            return resultDocuments;
-        } catch (DocumentOperationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ConnectionException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
+            return sequences;
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(statement);
+            returnConnection(connection);
         }
     }
 
-    private AnnotatedPluginDocument createAssemblyDocument(ResultSet resultSet, URN[] urnsToNotRetrieve) throws SQLException {
-        String qualities = resultSet.getString("assembly.confidence_scores");
-        DefaultNucleotideSequence sequence;
-        URN urn = new URN("Biocode", getUrn(), "" + resultSet.getInt("id"));
-        if (urnsToNotRetrieve != null) {
-            for (URN urnNotToRetrieve : urnsToNotRetrieve) {
-                if (urn.equals(urnNotToRetrieve)) {
-                    return null;
-                }
-            }
+    private AssembledSequence getAssembledSequence(ResultSet resultSet) throws SQLException {
+        AssembledSequence seq = new AssembledSequence();
+        seq.confidenceScore = resultSet.getString("assembly.confidence_scores");
+        seq.id = resultSet.getInt("id");
+        seq.workflowLocus = resultSet.getString("workflow.locus");
+        seq.extractionId = resultSet.getString("assembly.extraction_id");
+        seq.progress = resultSet.getString("progress");
+        seq.consensus = resultSet.getString("consensus");
+        seq.workflowId = resultSet.getInt("workflow");
+        seq.assemblyNotes = resultSet.getString("assembly.notes");
+        seq.sampleId = resultSet.getString("sampleId");
+        seq.coverage = resultSet.getDouble("assembly.coverage");
+        seq.numberOfDisagreements = resultSet.getInt("assembly.disagreements");
+        seq.numOfEdits = resultSet.getInt("assembly.edits");
+        seq.forwardTrimParameters = resultSet.getString("assembly.trim_params_fwd");
+        seq.reverseTrimParameters = resultSet.getString("assembly.trim_params_rev");
+        seq.limsId = resultSet.getInt("assembly.id");
+        seq.technician = resultSet.getString("assembly.technician");
+        seq.bin = resultSet.getString("assembly.bin");
+        seq.numberOfAmbiguities = resultSet.getInt("assembly.ambiguities");
+        seq.assemblyParameters = resultSet.getString("assembly.params");
+        seq.submitted = resultSet.getBoolean("assembly.submitted");
+        seq.editRecord = resultSet.getString("assembly.editrecord");
+        seq.extractionId = resultSet.getString("extraction.extractionId");
+        seq.extractionBarcode = resultSet.getString("extraction.extractionBarcode");
+        java.sql.Date created = resultSet.getDate("date");
+        if(created != null) {
+            seq.date = created.getTime();
         }
-        String name = resultSet.getString("assembly.extraction_id") + " " + resultSet.getString("workflow.locus");
-        if (qualities == null || resultSet.getString("progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
-            String consensus = resultSet.getString("consensus");
-            String description = "Assembly consensus sequence for " + name;
-            java.sql.Date created = resultSet.getDate("date");
-            if (consensus == null || created == null) {
-                consensus = "";
-            } else if (resultSet.getString("assembly.progress") == null || resultSet.getString("progress").toLowerCase().contains("failed")) {
-                consensus = "";
-                description = "Sequencing failed for this well";
-            }
-            consensus = consensus.replace("-", "");
-            sequence = new DefaultNucleotideSequence(name, description, consensus, new Date(created.getTime()), urn);
-        } else {
-            String sequenceString = resultSet.getString("assembly.consensus");
-            sequenceString = sequenceString.replace("-", "");
-            NucleotideGraph graph = DefaultNucleotideGraph.createNucleotideGraph(null, null, qualitiesFromString(qualities), sequenceString.length(), 0);
-            Date dateMarked = new Date(resultSet.getDate("date").getTime());
-            sequence = new DefaultNucleotideGraphSequence(name, "Assembly consensus sequence for " + name, sequenceString, dateMarked, graph, urn);
-            sequence.setFieldValue(PluginDocument.MODIFIED_DATE_FIELD, dateMarked);
-        }
-        AnnotatedPluginDocument doc = DocumentUtilities.createAnnotatedPluginDocument(sequence);
-        //todo: add data as fields and notes...
-        String notes = resultSet.getString("assembly.notes");
-        if (notes != null) {
-            doc.setFieldValue(AnnotateUtilities.NOTES_FIELD, notes);
-        }
-        doc.setFieldValue(WORKFLOW_LOCUS_FIELD, resultSet.getString("workflow.locus"));
-        doc.setFieldValue(AnnotateUtilities.PROGRESS_FIELD, resultSet.getString("assembly.progress"));
-        doc.setFieldValue(DocumentField.CONTIG_MEAN_COVERAGE, resultSet.getDouble("assembly.coverage"));
-        doc.setFieldValue(DocumentField.DISAGREEMENTS, resultSet.getInt("assembly.disagreements"));
-        doc.setFieldValue(AnnotateUtilities.EDITS_FIELD, resultSet.getInt("assembly.edits"));
-        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_FWD_FIELD, resultSet.getString("assembly.trim_params_fwd"));
-        doc.setFieldValue(AnnotateUtilities.TRIM_PARAMS_REV_FIELD, resultSet.getString("assembly.trim_params_rev"));
-        doc.setHiddenFieldValue(AnnotateUtilities.LIMS_ID, resultSet.getInt("assembly.id"));
-        //todo: fields that require a schema change
-        //noinspection ConstantConditions
-        doc.setFieldValue(AnnotateUtilities.TECHNICIAN_FIELD, resultSet.getString("assembly.technician"));
-        doc.setFieldValue(DocumentField.CREATED_FIELD, new Date(resultSet.getDate("assembly.date").getTime()));
-        String bin = resultSet.getString("assembly.bin");
-        doc.setFieldValue(DocumentField.BIN, bin);
-        doc.setFieldValue(AnnotateUtilities.AMBIGUITIES_FIELD, resultSet.getInt("assembly.ambiguities"));
-        doc.setFieldValue(AnnotateUtilities.ASSEMBLY_PARAMS_FIELD, resultSet.getString("assembly.params"));
-        doc.setFieldValue(SEQUENCE_ID, resultSet.getInt("id"));
-        doc.setFieldValue(LIMSConnection.SEQUENCE_SUBMISSION_PROGRESS, resultSet.getBoolean("assembly.submitted") ? "Yes" : "No");
-        doc.setFieldValue(LIMSConnection.EDIT_RECORD, resultSet.getString("assembly.editrecord"));
-        doc.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, resultSet.getString("extraction.extractionId"));
-        doc.setFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD, resultSet.getString("extraction.extractionBarcode"));
-        return doc;
-    }
-
-    private int[] qualitiesFromString(String qualString) {
-        String[] values = qualString.split(",");
-        int[] result = new int[values.length];
-        for (int i = 0; i < values.length; i++) {
-            result[i] = Integer.parseInt(values[i]);
-        }
-        return result;
+        return seq;
     }
 
     private void fillStatement(List<Object> sqlValues, PreparedStatement statement) throws SQLException {
@@ -1901,7 +1753,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 if(!BiocodeService.getInstance().deleteAllowed("gelimages")) {
                     throw new SQLException("It appears that you do not have permission to delete GEL Images.  Please contact your System Administrator for assistance");
                 }
-                PreparedStatement deleteImagesStatement = createStatement("DELETE FROM gelimages WHERE plate="+plate.getId());
+                PreparedStatement deleteImagesStatement = connection.prepareStatement("DELETE FROM gelimages WHERE plate=" + plate.getId());
                 deleteImagesStatement.execute();
                 for(GelImage image : plate.getImages()) {
                     PreparedStatement statement1 = gelToSql(connection, image);
@@ -2392,7 +2244,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                                         if(trace.getId() >= 0) {
                                             continue; //already added these...
                                         }
-                                        ReactionUtilities.MemoryFile file = trace.getFile();
+                                        MemoryFile file = trace.getFile();
                                         if(file != null) {
                                             insertTracesStatement.setInt(1, reactionId);
                                             insertTracesStatement.setString(2, file.getName());
@@ -2430,7 +2282,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
-    public Map<URN, String> addAssembly(AddAssemblyResultsToLimsOptions options, CompositeProgressListener progress, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, boolean isPass) throws DatabaseServiceException {
+    public Map<URN, String> addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, Map<URN, AddAssemblyResultsToLimsOperation.AssemblyResult> assemblyResults, CompositeProgressListener progress) throws DatabaseServiceException {
         Map<URN, String> toReturn = new HashMap<URN, String>(assemblyResults.size());
 
         PreparedStatement statement = null;
@@ -2499,11 +2351,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 statement.setNull(13, Types.LONGVARCHAR); //other_processing_fwd
                 statement.setNull(14, Types.LONGVARCHAR); //other_processing_rev
 
-                statement.setString(15, options.getNotes()); //notes
+                statement.setString(15, notes); //notes
 
 
                 //technician, date, bin, ambiguities
-                statement.setString(16, options.getTechnician());
+                statement.setString(16, technician);
 
                 if(result.bin != null) {
                     statement.setString(17, result.bin);
@@ -2518,13 +2370,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     statement.setNull(18, Types.INTEGER);
                 }
                 statement.setString(19, result.editRecord);
-                FailureReason reason = options.getFailureReason();
-                if(reason == null) {
+                if(failureReason == null) {
                     statement.setObject(20, null);
                 } else {
-                    statement.setInt(20, reason.getId());
+                    statement.setInt(20, failureReason.getId());
                 }
-                String failNotes = options.getFailureNotes();
+                String failNotes = failureNotes;
                 if(failNotes == null) {
                     statement.setObject(21, null);
                 } else {
@@ -2556,7 +2407,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 }
 
                 for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
-                    if (options.isAddChromatograms()) {
+                    if (addChromatograms) {
                         if (chromatogramExportOptions == null) {
                             chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
                             chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
@@ -2813,7 +2664,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection.beginTransaction();
             for(Thermocycle tCycle : cycles) {
                 int id = addThermoCycle(connection, tCycle);
-                PreparedStatement statement = createStatement("INSERT INTO "+type.databaseTable+" (cycle) VALUES ("+id+");\n");
+                PreparedStatement statement = connection.prepareStatement("INSERT INTO " + type.databaseTable + " (cycle) VALUES (" + id + ");\n");
                 statement.execute();
                 statement.close();
             }
@@ -3132,21 +2983,36 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public Map<Integer, List<ReactionUtilities.MemoryFile>> downloadTraces(List<String> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
+    public Map<Integer, List<MemoryFile>> downloadTraces(List<Integer> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
 
-            PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) FROM traces WHERE " + StringUtilities.join(" OR ", reactionIds));
-            if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
-                statement.setFetchSize(Integer.MIN_VALUE);
+            StringBuilder getCountQuery = new StringBuilder("SELECT COUNT(id) FROM traces WHERE reaction IN ");
+            SqlUtilities.appendSetOfQuestionMarks(getCountQuery, reactionIds.size());
+            PreparedStatement getCount = connection.prepareStatement(getCountQuery.toString());
+
+            StringBuilder getTracesQuery = new StringBuilder("SELECT * FROM traces WHERE reaction IN ");
+            SqlUtilities.appendSetOfQuestionMarks(getTracesQuery, reactionIds.size());
+            PreparedStatement getTraces = connection.prepareStatement(getTracesQuery.toString());
+            int index = 1;
+            for (int reactionId : reactionIds) {
+                getCount.setObject(index, reactionId);
+                getTraces.setObject(index++, reactionId);
             }
-            ResultSet countResultSet = statement.executeQuery();
+
+            if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+                getCount.setFetchSize(Integer.MIN_VALUE);
+            }
+            SqlUtilities.printSql(getCountQuery.toString(), reactionIds);
+            ResultSet countResultSet = getCount.executeQuery();
             countResultSet.next();
             int count = countResultSet.getInt(1);
             countResultSet.close();
-            ResultSet resultSet = statement.executeQuery("SELECT * FROM traces WHERE " + StringUtilities.join(" OR ", reactionIds));
-            Map<Integer, List<ReactionUtilities.MemoryFile>> results = new HashMap<Integer, List<ReactionUtilities.MemoryFile>>();
+
+            SqlUtilities.printSql(getTracesQuery.toString(), reactionIds);
+            ResultSet resultSet = getTraces.executeQuery();
+            Map<Integer, List<MemoryFile>> results = new HashMap<Integer, List<MemoryFile>>();
             double pos = 0;
             long bytes = 0;
             while(resultSet.next()) {
@@ -3154,12 +3020,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 progressListener.setMessage("downloaded "+BiocodeUtilities.formatSize(bytes, 2));
                 progressListener.setProgress(pos/count);
                 pos++;
-                ReactionUtilities.MemoryFile memoryFile = new ReactionUtilities.MemoryFile(resultSet.getString("name"), resultSet.getBytes("data"));
+                MemoryFile memoryFile = new MemoryFile(resultSet.getString("name"), resultSet.getBytes("data"));
                 bytes += memoryFile.getData().length;
                 int id = resultSet.getInt("reaction");
-                List<ReactionUtilities.MemoryFile> files = results.get(id);
+                List<MemoryFile> files = results.get(id);
                 if(files == null) {
-                    files = new ArrayList<ReactionUtilities.MemoryFile>();
+                    files = new ArrayList<MemoryFile>();
                     results.put(id, files);
                 }
                 files.add(memoryFile);
