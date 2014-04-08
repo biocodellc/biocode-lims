@@ -997,7 +997,7 @@ public class PlateBulkEditor {
                     }
 
                     String text = support.getTransferable().getTransferData(DataFlavor.stringFlavor).toString();
-                    String[] newLines = text.split("\\r?\\n", -1);
+                    String[] newLines = getLines(text);
 
                     String originalText = valueArea.getText();
                     int endOfLineAfterSelection = originalText.indexOf("\n", valueArea.getSelectionEnd());
@@ -1050,6 +1050,18 @@ public class PlateBulkEditor {
                     e.printStackTrace();
                     return false;
                 }
+            }
+
+            private String[] getLines(String text) throws IOException {
+                BufferedReader reader = new BufferedReader(new StringReader(text));
+
+                List<String> lines = new ArrayList<String>();
+                String current;
+                while((current = reader.readLine()) != null) {
+                    lines.add(current);
+                }
+                reader.close();
+                return lines.toArray(new String[lines.size()]);
             }
 
             private boolean displayOverwritingWarning(String[] newLines, int selectedLines, int extraNonEmptyRowsBeingOverwritten) {
