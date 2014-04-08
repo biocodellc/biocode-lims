@@ -364,7 +364,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         }
         boolean searchedForSamplesButFoundNone = tissueIdsToMatch != null && tissueIdsToMatch.isEmpty();  // samples == null when doing a browse query
-        if (searchedForSamplesButFoundNone && onlySearchingOnFIMSFields) {
+        if (searchedForSamplesButFoundNone && (operator == CompoundSearchQuery.Operator.AND ||
+                (operator == CompoundSearchQuery.Operator.OR && onlySearchingOnFIMSFields))
+        ) {
             return result;
         }
 
@@ -477,25 +479,33 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
-        /* Note: We have to use a CASE statement in the column definitions because there is a bug in HSQL which ignores
-         * the column label and always uses the column name.  This effectively means the table name is ignored when
-         * calling ResultSet.get*() and the first column with the name is returned.  Even when using AS x, the x label is ignored.
-         */
+        boolean filterOnTissues = tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty();
+
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.id, plate.id, assembly.id, assembly.date");
+                "SELECT workflow.id, plate.id, assembly.id, assembly.date FROM ");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
-        queryBuilder.append(" FROM extraction LEFT OUTER JOIN ").append("workflow ON extraction.id = workflow.extractionId");
-        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
+        if (filterOnTissues) {
             if (operator == CompoundSearchQuery.Operator.AND) {
-                conditionBuilder.append(" AND ");
+                queryBuilder.append("(SELECT * FROM extraction WHERE ");
             }
+
             String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
-            conditionBuilder.append(" (").append(sampleColumn).append(" IN ");
+            conditionBuilder.append(sampleColumn).append(" IN ");
             SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+
+            if(operator == CompoundSearchQuery.Operator.AND) {
+                queryBuilder.append(")");
+            }
+            queryBuilder.append(" extraction ");
+        } else {
+            queryBuilder.append(" extraction ");
         }
+
+        queryBuilder.append("LEFT OUTER JOIN workflow ON extraction.id = workflow.extractionId");
+
         if (workflowQueryConditions != null) {
-            if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
+            if (filterOnTissues) {
                 conditionBuilder.append(operatorString);
             } else if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
@@ -505,10 +515,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         if (extractionQueryConditions != null) {
             conditionBuilder.append(operatorString);
             conditionBuilder.append("(").append(extractionQueryConditions).append(")");
-        }
-
-        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
-            conditionBuilder.append(")");
         }
 
         queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");

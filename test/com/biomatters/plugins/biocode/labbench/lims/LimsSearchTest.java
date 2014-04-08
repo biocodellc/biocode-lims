@@ -158,6 +158,43 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
+    public void searchByTissueDoesNotReturnExtra() throws IOException, BadDataException, DatabaseServiceException {
+        String plateName = "Plate_M037";
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        String plateName2 = "Plate_M037_2";
+        String tissue2 = "MBIO24951.1";
+        String extractionId2 = "MBIO24951.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate(plateName, tissue, extractionId, service);
+        saveExtractionPlate(plateName2, tissue2, extractionId2, service);
+
+        Query query = Query.Factory.createFieldQuery(
+                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), Condition.EQUAL, new Object[]{tissue});
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        List<String> plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        assertEquals(1, plates.size());
+        assertEquals(plateName, plates.get(0));
+
+        List<AnnotatedPluginDocument> searchResults2 = service.retrieve(tissue2);
+        plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults2) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        assertEquals(1, plates.size());
+        assertEquals(plateName2, plates.get(0));
+    }
+
+    @Test
     public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, DatabaseServiceException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
@@ -437,6 +474,46 @@ public class LimsSearchTest extends Assert {
             if(TissueDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
                 assertEquals(tissue, searchResult.getName());
             }
+        }
+    }
+
+    @Test
+    public void orSearchWithWrongTissueStillReturnsPlate() throws DatabaseServiceException, BadDataException {
+        testMissingTissueSearch(false);
+    }
+
+    @Test
+    public void andSearchWithWrongTissueDoesNotReturnsPlate() throws DatabaseServiceException, BadDataException {
+        testMissingTissueSearch(true);
+    }
+
+    private void testMissingTissueSearch(boolean and) throws DatabaseServiceException, BadDataException {
+        String plateName = "Plate_M037";
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate(plateName, tissue, extractionId, service);
+
+        Query[] subQs = new Query[2];
+        subQs[0] = Query.Factory.createFieldQuery(
+                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), Condition.EQUAL, new Object[]{"abcasfa"});
+        subQs[1] = Query.Factory.createFieldQuery(
+                        LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName});
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(
+                and ? Query.Factory.createAndQuery(subQs, Collections.<String, Object>emptyMap()) :
+                        Query.Factory.createOrQuery(subQs, Collections.<String, Object>emptyMap()), ProgressListener.EMPTY);
+        List<String> plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        if(and) {
+            assertTrue(plates.isEmpty());
+        } else {
+            assertEquals(1, plates.size());
+            assertEquals(plateName, plates.get(0));
         }
     }
 }
