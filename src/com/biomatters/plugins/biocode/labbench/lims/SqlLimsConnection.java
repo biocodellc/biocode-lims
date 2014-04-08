@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
@@ -55,6 +56,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
         dataSource = connectToDb(selectedLimsOptions);
+        if(Geneious.isHeadless()) {
+            dataSource.setMaxActive(25);
+        }
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
