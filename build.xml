@@ -50,7 +50,7 @@
         <copy file="${build}/${short-plugin-name}.gplugin" todir="${build}/../../downloads"/>
     </target>
 
-    <target name="compile-server" depends="compile-plugin">
+    <target name="compile-server" depends="compile-plugin, retrieve-server-dependencies">
         <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
             <classpath refid="server-classpath"/>
             <src path="${server-src}"/>
@@ -93,7 +93,7 @@
 
     </target>
 
-    <target name="compile-plugin" depends="prepare,retrieve-build-dependencies">
+    <target name="compile-plugin" depends="prepare,retrieve-plugin-dependencies">
         <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
             <classpath refid="classpath"/>
             <src path="${src}"/>
@@ -131,7 +131,7 @@
         </javac>
     </target>
 
-    <target name="test" depends="compile-tests, retrieve-test-runtime-dependencies">
+    <target name="test" depends="compile-tests, retrieve-geneious-runtime-dependencies">
         <junit dir="GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
             <batchtest todir="${report}">
             <fileset dir="${test.classes}">
@@ -175,7 +175,7 @@
     <!-- load ivy settings -->
     <ivy:settings file="ivysettings.xml" id="biocode.ivy.config" />
 
-    <target name="retrieve-build-dependencies" description="Retrieve dependencies with ivy">
+    <target name="retrieve-plugin-dependencies" description="Retrieve dependencies with ivy">
        <ivy:retrieve conf="build" settingsref="biocode.ivy.config"/>
        <ivy:retrieve conf="server" settingsref="biocode.ivy.config" pattern="${basedir}/biocode-server/web/WEB-INF/lib/[artifact].[ext]"/>
     </target>
@@ -183,9 +183,22 @@
     <condition property="GeneiousFiles.exists">
         <available file="${GeneiousFiles}" type="dir"/>
     </condition>
-    <target name="retrieve-test-runtime-dependencies" description="Retrieve the Geneious runtime for running the tests" unless="GeneiousFiles.exists">
+    <target name="retrieve-geneious-runtime-dependencies" description="Retrieve the Geneious runtime for running the tests" unless="GeneiousFiles.exists">
        <ivy:retrieve conf="test" type="resource" settingsref="biocode.ivy.config" pattern="${basedir}/[artifact].[ext]"/>
        <unzip src="GeneiousFiles.zip" dest="."/>
+    </target>
+
+    <target name="retrieve-server-dependencies" description="Retrieve all dependencies required to build the LIMS server war file" depends="retrieve-geneious-runtime-dependencies">
+        <copy todir="${server-lib}">
+            <fileset dir="${GeneiousFiles}">
+                <include name="iSeek.jar"/>
+            </fileset>
+            <fileset dir="${GeneiousFiles}/lib">
+                <!-- We can refine this list later.  For now we'll just take all the runtime libs minus the SOAP libraries -->
+                <include name="*.jar"/>
+                <exclude name="webservices-*.jar"/>
+            </fileset>
+        </copy>
     </target>
 
     <target name="clean-ivy-cache">
