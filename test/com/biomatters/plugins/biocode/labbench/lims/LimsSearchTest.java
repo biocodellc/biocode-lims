@@ -154,6 +154,43 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
+    public void searchByTissueDoesNotReturnExtra() throws IOException, BadDataException, SQLException {
+        String plateName = "Plate_M037";
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        String plateName2 = "Plate_M037_2";
+        String tissue2 = "MBIO24951.1";
+        String extractionId2 = "MBIO24951.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate(plateName, tissue, extractionId, service);
+        saveExtractionPlate(plateName2, tissue2, extractionId2, service);
+
+        Query query = Query.Factory.createFieldQuery(
+                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), Condition.EQUAL, new Object[]{tissue});
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        List<String> plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        assertEquals(1, plates.size());
+        assertEquals(plateName, plates.get(0));
+
+        List<AnnotatedPluginDocument> searchResults2 = service.retrieve(tissue2);
+        plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults2) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        assertEquals(1, plates.size());
+        assertEquals(plateName2, plates.get(0));
+    }
+
+    @Test
     public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, SQLException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
@@ -342,4 +379,131 @@ public class LimsSearchTest extends Assert {
     // todo Search for workflow on cycle seq plate name, workflow needs to come back with all reactions not just the seq one
     // todo Search for plate on reaction property, plate needs to be full
 
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_M037", "MBIO24950.1", extractionId, service);
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, extractionId);
+
+        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, pcrPlate, extractionId);
+
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{seqFName},
+                BiocodeService.getSearchDownloadOptions(false, true, false, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(1, searchResults.size());
+        for (AnnotatedPluginDocument result : searchResults) {
+            if(WorkflowDocument.class.isAssignableFrom(result.getDocumentClass())) {
+                boolean extractionFound = false;
+                boolean pcrFound = false;
+                boolean cycleSeqFound = false;
+                for(Reaction r : ((WorkflowDocument)result.getDocumentOrNull()).getReactions()) {
+                    if(r.getType() == Reaction.Type.Extraction) {
+                        extractionFound = true;
+                    } else if(r.getType() == Reaction.Type.PCR) {
+                        pcrFound = true;
+                    } else if(r.getType() == Reaction.Type.CycleSequencing) {
+                        cycleSeqFound = true;
+                    }
+                }
+                assertTrue("Workflow doc missing extraction reaction", extractionFound);
+                assertTrue("Workflow doc missing pcr reaction", pcrFound);
+                assertTrue("Workflow doc missing cycle sequencing reaction", cycleSeqFound);
+            } else {
+                fail("Search returned " + result.getDocumentClass() + ", when all we wanted was workflows.");
+            }
+        }
+    }
+
+    @Test
+    public void searchForSingleReactionValueReturnsFullPlate() throws BadDataException, SQLException, DatabaseServiceException {
+        Map<String, String> values = new HashMap<String, String>();
+        String toSearchFor = "1";
+        values.put("MBIO24950.1", toSearchFor);
+        values.put("MBIO24951.1", "2");
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("MyPlate", service, values);
+
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_ID_FIELD, Condition.EQUAL, new Object[]{toSearchFor},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(1, searchResults.size());
+
+        Map<String, Boolean> found = new HashMap<String, Boolean>();
+        for (AnnotatedPluginDocument result : searchResults) {
+            if(PlateDocument.class.isAssignableFrom(result.getDocumentClass())) {
+                for (Reaction reaction : ((PlateDocument) result.getDocumentOrNull()).getPlate().getReactions()) {
+                    for (Map.Entry<String, String> entry : values.entrySet()) {
+                        if(reaction.getExtractionId().equals(entry.getValue())) {
+                            found.put(entry.getKey(), Boolean.TRUE);
+                        }
+                    }
+                }
+            } else {
+                fail("Search returned " + result.getDocumentClass() + ", when all we wanted was plates.");
+            }
+        }
+        for (String key : values.keySet()) {
+            assertTrue("Did not find " + key + " on plate", found.get(key));
+        }
+    }
+
+    @Test
+    public void searchByPlateReturnsTissues() throws BadDataException, SQLException, DatabaseServiceException {
+        String plateName = "Plate_M037";
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate(plateName, tissue, extractionId, service);
+
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                                BiocodeService.getSearchDownloadOptions(true, false, false, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+
+        assertEquals(1, searchResults.size());
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(TissueDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                assertEquals(tissue, searchResult.getName());
+            }
+        }
+    }
+
+    @Test
+    public void orSearchWithWrongTissueStillReturnsPlate() throws DatabaseServiceException, BadDataException {
+        testMissingTissueSearch(false);
+    }
+
+    @Test
+    public void andSearchWithWrongTissueDoesNotReturnsPlate() throws DatabaseServiceException, BadDataException {
+        testMissingTissueSearch(true);
+    }
+
+    private void testMissingTissueSearch(boolean and) throws DatabaseServiceException, BadDataException {
+        String plateName = "Plate_M037";
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate(plateName, tissue, extractionId, service);
+
+        Query[] subQs = new Query[2];
+        subQs[0] = Query.Factory.createFieldQuery(
+                BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), Condition.EQUAL, new Object[]{"abcasfa"});
+        subQs[1] = Query.Factory.createFieldQuery(
+                        LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName});
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(
+                and ? Query.Factory.createAndQuery(subQs, Collections.<String, Object>emptyMap()) :
+                        Query.Factory.createOrQuery(subQs, Collections.<String, Object>emptyMap()), ProgressListener.EMPTY);
+        List<String> plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        if(and) {
+            assertTrue(plates.isEmpty());
+        } else {
+            assertEquals(1, plates.size());
+            assertEquals(plateName, plates.get(0));
+        }
+    }
 }
