@@ -1540,10 +1540,15 @@ public abstract class LIMSConnection {
 
 
     public class LimsSearchResult {
+        List<String> tissueIds = new ArrayList<String>();
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
         List<PlateDocument> plates = new ArrayList<PlateDocument>();
         List<AnnotatedPluginDocument> traces = new ArrayList<AnnotatedPluginDocument>();
         List<Integer> sequenceIds = new ArrayList<Integer>();
+
+        public List<String> getTissueIds() {
+            return Collections.unmodifiableList(tissueIds);
+        }
 
         public List<WorkflowDocument> getWorkflows() {
             return Collections.unmodifiableList(workflows);
@@ -1766,8 +1771,8 @@ public abstract class LIMSConnection {
         } else {
             queryBuilder.append(" extraction ");
         }
-
-        queryBuilder.append("LEFT OUTER JOIN workflow ON extraction.id = workflow.extractionId");
+        queryBuilder.append(getJoinStringIncludingSpaces(operator, workflowQueryConditions));
+        queryBuilder.append("workflow ON extraction.id = workflow.extractionId");
 
         if (workflowQueryConditions != null) {
             if (filterOnTissues) {
@@ -1794,7 +1799,7 @@ public abstract class LIMSConnection {
             conditionBuilder.append("(").append(plateQueryConditions).append(")");
         }
         queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
-        queryBuilder.append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
+        queryBuilder.append(getJoinStringIncludingSpaces(operator, assemblyQueryConditions)).
                 append("assembly ON assembly.id = sequencing_result.assembly");
 
         if (assemblyQueryConditions != null) {
@@ -1809,6 +1814,10 @@ public abstract class LIMSConnection {
 
         queryBuilder.append(" ORDER BY workflow.id, assembly.date desc");
         return queryBuilder;
+    }
+
+    private String getJoinStringIncludingSpaces(CompoundSearchQuery.Operator operator, QueryPart conditions) {
+        return operator == CompoundSearchQuery.Operator.AND && conditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ";
     }
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
