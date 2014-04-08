@@ -9,7 +9,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.server.QueryUtils;
+import com.biomatters.plugins.biocode.server.RestQueryUtils;
 import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
@@ -74,10 +74,19 @@ public class ServerFimsConnection extends FIMSConnection {
             if(!serverVersion.equals("0.1")) {
                 throw new ConnectionException("Incompatible server version.  Expected 0.1 (alpha), was " + serverVersion);
             }
+            target = server.path("fims");
+            tissueField = getDocumentField("tissue");
+            latitudeField = getDocumentField("latitude");
+            longitudeField = getDocumentField("longitude");
+            plateField = getDocumentField("plate");
+            wellField = getDocumentField("well");
+
+            collectionFields = getDocumentFieldListForType("collection");
+            taxonFields = getDocumentFieldListForType("taxonomy");
+            searchFields = getDocumentFieldListForType(null);
         } catch (WebApplicationException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
-        target = server.path("fims");
     }
 
     @Override
@@ -85,9 +94,20 @@ public class ServerFimsConnection extends FIMSConnection {
         target = null;
     }
 
+    private DocumentField tissueField;
+    private DocumentField latitudeField;
+    private DocumentField longitudeField;
+    private DocumentField plateField;
+    private DocumentField wellField;
+
+    private List<DocumentField> collectionFields;
+    private List<DocumentField> taxonFields;
+    private List<DocumentField> searchFields;
+
+
     @Override
     public DocumentField getTissueSampleDocumentField() {
-        return getDocumentField("tissue");
+        return tissueField;
     }
 
     private DocumentField getDocumentField(String type) {
@@ -98,45 +118,51 @@ public class ServerFimsConnection extends FIMSConnection {
 
     @Override
     public DocumentField getLatitudeField() {
-        return getDocumentField("latitude");
+        return latitudeField;
     }
 
     @Override
     public DocumentField getLongitudeField() {
-        return getDocumentField("longitude");
+        return longitudeField;
     }
 
     @Override
     public DocumentField getPlateDocumentField() {
-        return getDocumentField("plate");
+        return plateField;
     }
 
     @Override
     public DocumentField getWellDocumentField() {
-        return getDocumentField("well");
+        return wellField;
     }
 
     @Override
     public List<DocumentField> getCollectionAttributes() {
-        Invocation.Builder request = target.path("fields").queryParam("type", "collection").request(MediaType.APPLICATION_XML_TYPE);
+        return collectionFields;
+    }
+
+    private List<DocumentField> getDocumentFieldListForType(String type) {
+        WebTarget fieldsTarget = target.path("fields");
+        if(type != null) {
+            fieldsTarget = fieldsTarget.queryParam("type", type);
+        }
+        Invocation.Builder request = fieldsTarget.request(MediaType.APPLICATION_XML_TYPE);
         return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).getList();
     }
 
     @Override
     public List<DocumentField> getTaxonomyAttributes() {
-        Invocation.Builder request = target.path("fields").queryParam("type", "taxonomy").request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).getList();
+        return taxonFields;
     }
 
     @Override
     public List<DocumentField> _getSearchAttributes() {
-        Invocation.Builder request = target.path("fields").request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).getList();
+        return searchFields;
     }
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
-        QueryUtils.Query restQuery = QueryUtils.createRestQuery(query);
+        RestQueryUtils.Query restQuery = RestQueryUtils.createRestQuery(query);
         Invocation.Builder request = target.path("samples/search").
                 queryParam("query", restQuery.getQueryString()).
                 queryParam("type", restQuery.getType()).

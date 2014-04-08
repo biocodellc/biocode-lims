@@ -54,17 +54,16 @@ public class QueryService {
                       @DefaultValue("tissues,workflows,plates")@QueryParam("include")String include) {
         // todo Consider ChunkedOutput.  Woudl need a way to separate chunks when reading back in
         try {
-            // JSON Callback
-            BiocodeService service = BiocodeService.getInstance();
             Map<String, Object> searchOptions = BiocodeService.getSearchDownloadOptions(
                     include == null || include.toLowerCase().contains("tissues"),
                     include == null || include.toLowerCase().contains("workflows"),
                     include == null || include.toLowerCase().contains("plates"),
                     include == null || include.toLowerCase().contains("sequences"));
 
-            Query query = QueryUtils.createQueryFromQueryString(
-                    type == null || type.equals(QueryUtils.QueryType.AND.name()) ?
-                            QueryUtils.QueryType.AND : QueryUtils.QueryType.OR, queryString, searchOptions);
+            Query query = RestQueryUtils.createQueryFromQueryString(
+                    type == null || type.equals(RestQueryUtils.QueryType.AND.name()) ?
+                            RestQueryUtils.QueryType.AND : RestQueryUtils.QueryType.OR, queryString, searchOptions
+            );
             final ArrayList<PluginDocument> docs = new ArrayList<PluginDocument>();
             RetrieveCallback callback = new RetrieveCallback() {
 
@@ -79,7 +78,6 @@ public class QueryService {
 
                 }
             };
-            service.retrieve(query, callback, new URN[0]);
             LimsSearchResult result = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(query, null, null, false);
             return Response.ok(result).build();
         } catch (DatabaseServiceException e) {

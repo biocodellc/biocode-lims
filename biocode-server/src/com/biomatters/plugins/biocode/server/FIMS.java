@@ -1,11 +1,13 @@
 package com.biomatters.plugins.biocode.server;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
 
 import javax.ws.rs.*;
@@ -26,16 +28,20 @@ public class FIMS {
     @GET
     @Produces("application/xml")
     public DocumentField getField(@PathParam("id") String id) {
+        FIMSConnection fims = BiocodeService.getInstance().getActiveFIMSConnection();
+        if(fims == null) {
+            throw new InternalServerErrorException("Server not connected to FIMS.  Contact your systems administrator.");
+        }
         if("tissue".equals(id)) {
-            return BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField();
+            return fims.getTissueSampleDocumentField();
         } else if("latitude".equals(id)) {
-            return BiocodeService.getInstance().getActiveFIMSConnection().getLatitudeField();
+            return fims.getLatitudeField();
         } else if("longitude".equals(id)) {
-            return BiocodeService.getInstance().getActiveFIMSConnection().getLongitudeField();
+            return fims.getLongitudeField();
         } else if("plate".equals(id)) {
-            return BiocodeService.getInstance().getActiveFIMSConnection().getPlateDocumentField();
+            return fims.getPlateDocumentField();
         } else if("well".equals(id)) {
-            return BiocodeService.getInstance().getActiveFIMSConnection().getWellDocumentField();
+            return fims.getWellDocumentField();
         } else if("null".equals(id)) {
             return null;
         } else {
@@ -76,7 +82,7 @@ public class FIMS {
     @Produces("text/plain")
     public String getMatchingSampleIds(@QueryParam("query")String queryString, @QueryParam("type")String typeString) {
         try {
-            Query query = QueryUtils.createQueryFromQueryString(QueryUtils.QueryType.forTypeString(typeString), queryString, Collections.<String, Object>emptyMap());
+            Query query = RestQueryUtils.createQueryFromQueryString(RestQueryUtils.QueryType.forTypeString(typeString), queryString, Collections.<String, Object>emptyMap());
             List<String> result = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsMatchingQuery(query);
             return StringUtilities.join(",", result);
         } catch (ConnectionException e) {

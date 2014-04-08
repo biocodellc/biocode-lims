@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.rest.client;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -22,6 +23,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.net.ConnectException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
@@ -67,7 +69,7 @@ public class ServerLimsConnetion extends LIMSConnection {
             include.add("sequences");
         }
 
-        QueryUtils.Query restQuery = QueryUtils.createRestQuery(query);
+        RestQueryUtils.Query restQuery = RestQueryUtils.createRestQuery(query);
         WebTarget target = this.target.path("search").queryParam("q", restQuery.getQueryString()).
                 queryParam("type", restQuery.getType());
         if(!include.isEmpty()) {
@@ -409,4 +411,15 @@ public class ServerLimsConnetion extends LIMSConnection {
     protected Connection getConnectionInternal() throws SQLException {
         throw new UnsupportedOperationException("Does not support getting a SQL Connection");
     }
+
+//    @Override
+//    public Condition[] getFieldConditions(Class fieldClass) {
+//        List<Condition> valid = new ArrayList<Condition>();
+//        for (Condition condition : super.getFieldConditions(fieldClass)) {
+//            if(RestQueryUtils.supportsConditionForRestQuery(condition)) {
+//                valid.add(condition);
+//            }
+//        }
+//        return valid.toArray(new Condition[valid.size()]);
+//    }
 }

@@ -323,8 +323,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             if (isCompatibleSearchQueryTerm(query)) {
                 AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) query;
                 terms.add(advancedQuery);
-
-
             }
             operator = CompoundSearchQuery.Operator.AND;
         }
