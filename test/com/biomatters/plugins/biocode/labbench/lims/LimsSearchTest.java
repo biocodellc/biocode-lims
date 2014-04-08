@@ -191,7 +191,46 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, SQLException {
+    public void searchByWorkflowDoesNotReturnExtra() throws IOException, BadDataException, DatabaseServiceException {
+        String extPlate = "Plate_M037";
+        String extractionId = "MBIO24950.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate(extPlate, "MBIO24950.1", extractionId, service);
+
+        String locus = "COI";
+        String plateName = "PCR_M037_COI";
+        savePcrPlate(plateName, locus, service, extractionId);
+
+        String locus2 = "16s";
+        String plateName2 = "PCR_M037_16s";
+        savePcrPlate(plateName2, locus2, service, extractionId);
+
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(
+                Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_LOCUS_FIELD, Condition.EQUAL, new Object[]{locus}),
+                ProgressListener.EMPTY);
+        List<String> plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        assertEquals(Arrays.asList(extPlate, plateName), plates);
+
+        List<AnnotatedPluginDocument> searchResults2 = service.retrieve(
+                        Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_LOCUS_FIELD, Condition.EQUAL, new Object[]{locus2}),
+                        ProgressListener.EMPTY);
+        plates = new ArrayList<String>();
+        for (AnnotatedPluginDocument searchResult : searchResults2) {
+            if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                plates.add(searchResult.getName());
+            }
+        }
+        assertEquals(Arrays.asList(extPlate, plateName2), plates);
+    }
+
+    @Test
+    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, DatabaseServiceException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
