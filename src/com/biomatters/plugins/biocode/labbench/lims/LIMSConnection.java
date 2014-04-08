@@ -1572,7 +1572,7 @@ public abstract class LIMSConnection {
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws SQLException, DatabaseServiceException {
         LimsSearchResult result = new LimsSearchResult();
 
-        // We test against false so that the default is to download
+        Boolean downloadTissues = BiocodeService.isDownloadTissues(query);
         Boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
         Boolean downloadPlates = BiocodeService.isDownloadPlates(query);
         Boolean downloadSequences = BiocodeService.isDownloadSequences(query);
@@ -1627,30 +1627,40 @@ public abstract class LIMSConnection {
             sqlValues.addAll(assemblyPart.parameters);
         }
 
+        boolean onlySearchingOnFIMSFields = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
+        if (!downloadWorkflows && !downloadPlates && !downloadSequences) {
+            if (!downloadTissues || onlySearchingOnFIMSFields) {
+                return result;
+            }
+        }
         boolean searchedForSamplesButFoundNone = tissueIdsToMatch != null && tissueIdsToMatch.isEmpty();  // samples == null when doing a browse query
-        boolean nothingToSearchForInLims = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
-        if (searchedForSamplesButFoundNone && nothingToSearchForInLims) {
+        if (searchedForSamplesButFoundNone && (operator == CompoundSearchQuery.Operator.AND ||
+                (operator == CompoundSearchQuery.Operator.OR && onlySearchingOnFIMSFields))
+        ) {
             return result;
         }
 
-        StringBuilder workflowQuery = constructLimsQueryString(tissueIdsToMatch, operator,
+        StringBuilder workflowQuery = constructLimsQueryString(
+                tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
         WorkflowsAndPlatesQueryResult queryResult;
         PreparedStatement preparedStatement = null;
         try {
-            System.out.println("Running LIMS search:");
+            System.out.println("Running LIMS query:");
             System.out.print("\t");
             SqlUtilities.printSql(workflowQuery.toString(), sqlValues);
 
-            preparedStatement = connection.prepareStatement(workflowQuery.toString());
+            preparedStatement = createStatement(workflowQuery.toString());
             fillStatement(sqlValues, preparedStatement);
 
             long start = System.currentTimeMillis();
             ResultSet resultSet = preparedStatement.executeQuery();
-            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
+            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
             queryResult = createPlateAndWorkflowsFromResultSet(callback, resultSet);
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(preparedStatement);
         }
@@ -1668,7 +1678,7 @@ public abstract class LIMSConnection {
         for (Plate plate : plates) {
             PlateDocument plateDocument = new PlateDocument(plate);
             if (downloadPlates && callback != null) {
-                callback.add(DocumentUtilities.createAnnotatedPluginDocument(plateDocument), Collections.<String, Object>emptyMap());
+                callback.add(plateDocument, Collections.<String, Object>emptyMap());
             }
             result.plates.add(plateDocument);
         }
@@ -1729,30 +1739,38 @@ public abstract class LIMSConnection {
      * @return A SQL string that can be used to query the MySQL LIMS
      */
     private StringBuilder constructLimsQueryString(Collection<String> tissueIdsToMatch, CompoundSearchQuery.Operator operator,
-                                                   QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
-                                                   QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
+                                                       QueryPart workflowQueryConditions, QueryPart extractionQueryConditions,
+                                                       QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         String operatorString = operator == CompoundSearchQuery.Operator.AND ? " AND " : " OR ";
         StringBuilder whereConditionForOrQuery = new StringBuilder();
 
-        /* Note: We have to use a CASE statement in the column definitions because there is a bug in HSQL which ignores
-         * the column label and always uses the column name.  This effectively means the table name is ignored when
-         * calling ResultSet.get*() and the first column with the name is returned.  Even when using AS x, the x label is ignored.
-         */
+        boolean filterOnTissues = tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty();
+
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.id, plate.id, assembly.id, assembly.date");
+                "SELECT workflow.id, plate.id, assembly.id, assembly.date FROM ");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
-        queryBuilder.append(" FROM extraction LEFT OUTER JOIN ").append("workflow ON extraction.id = workflow.extractionId");
-        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
+        if (filterOnTissues) {
             if (operator == CompoundSearchQuery.Operator.AND) {
-                conditionBuilder.append(" AND ");
+                queryBuilder.append("(SELECT * FROM extraction WHERE ");
             }
+
             String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
-            conditionBuilder.append(" (").append(sampleColumn).append(" IN ");
+            conditionBuilder.append(sampleColumn).append(" IN ");
             SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+
+            if(operator == CompoundSearchQuery.Operator.AND) {
+                queryBuilder.append(")");
+            }
+            queryBuilder.append(" extraction ");
+        } else {
+            queryBuilder.append(" extraction ");
         }
+
+        queryBuilder.append("LEFT OUTER JOIN workflow ON extraction.id = workflow.extractionId");
+
         if (workflowQueryConditions != null) {
-            if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
+            if (filterOnTissues) {
                 conditionBuilder.append(operatorString);
             } else if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
@@ -1762,10 +1780,6 @@ public abstract class LIMSConnection {
         if (extractionQueryConditions != null) {
             conditionBuilder.append(operatorString);
             conditionBuilder.append("(").append(extractionQueryConditions).append(")");
-        }
-
-        if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
-            conditionBuilder.append(")");
         }
 
         queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
