@@ -10,23 +10,22 @@ import com.biomatters.geneious.publicapi.documents.NoteTypeStorage;
 import com.biomatters.geneious.publicapi.documents.XMLSerializerImplementation;
 import com.biomatters.geneious.publicapi.implementations.ImportedFileOriginalTextImplementation;
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.FileUtilities;
-import com.biomatters.geneious.publicapi.utilities.FileUtilitiesImplementation;
-import com.biomatters.geneious.publicapi.utilities.ImportUtilitiesImplementation;
-import com.biomatters.geneious.publicapi.utilities.SequenceUtilitiesImplementation;
+import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.MySqlLIMSConnectionOptions;
+import com.sun.xml.rpc.processor.config.Configuration;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Responsible for making the various LIMS connections on start up
@@ -80,43 +79,67 @@ public class LIMSInitializationServlet extends GenericServlet {
 
             connectionConfig = new Connection("forServer");
 
-            connectionConfig.setFims("biocode");
-            PasswordOptions fimsOptions = connectionConfig.getFimsOptions();
-            String username = config.getProperty("fims.username");
-            String password = config.getProperty("fims.password");
-            if(username == null || password == null) {
-                initializationErrors.append("Must specify fims.username and fims.password in configuration file (").
-                        append(connectionPropertiesFile.getAbsoluteFile()).append(")");
-                return;
-            }
+            setFimsOptionsFromConfigFile(connectionConfig, config);
 
-            fimsOptions.setValue("username", username);
-            fimsOptions.setValue("password", password);
+            setLimsOptionsFromConfigFile(connectionConfig, config);
 
-            LimsConnectionOptions parentLimsOptions = (LimsConnectionOptions)connectionConfig.getLimsOptions();
-            parentLimsOptions.setValue(LimsConnectionOptions.CONNECTION_TYPE_CHOOSER, config.getProperty("lims.type",
-                    LIMSConnection.AvailableLimsTypes.local.name()));
-            PasswordOptions _limsOptions = parentLimsOptions.getSelectedLIMSOptions();
-            MySqlLIMSConnectionOptions limsOptions = (MySqlLIMSConnectionOptions) _limsOptions;
-
-            limsOptions.setValue("server", config.getProperty("lims.host", "darwin.berkeley.edu"));
-            //port
-            limsOptions.setValue("database", config.getProperty("lims.name", "labbench"));
-            limsOptions.setValue("username", config.getProperty("lims.username", "limsuser"));
-            limsOptions.setValue("password", config.getProperty("lims.password", "biomatters"));
-
-            // todo
+            biocodeeService.connect(connectionConfig, false);
         } catch (IOException e) {
             initializationErrors.append("Failed to load properties file from ").append(
                     connectionPropertiesFile.getAbsolutePath()).append(": ").append(e.getMessage());
-        }
-
-
-        try {
-            biocodeeService.connect(connectionConfig, false);
+        } catch(MissingPropertyException e) {
+            initializationErrors.append(e.getMessage()).append(" in configuration file (").append(
+                    connectionPropertiesFile.getAbsolutePath()).append(")");
         } catch (Exception e) {
             initializationErrors.append(e.getMessage());
         }
+    }
+
+    private void setLimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException {
+        LimsConnectionOptions parentLimsOptions = (LimsConnectionOptions)connectionConfig.getLimsOptions();
+        String limsType = config.getProperty("lims.type");
+        if(limsType == null) {
+            throw new MissingPropertyException("lims.type");
+        }
+        parentLimsOptions.setValue(LimsConnectionOptions.CONNECTION_TYPE_CHOOSER, limsType);
+        PasswordOptions _limsOptions = parentLimsOptions.getSelectedLIMSOptions();
+
+        if(limsType.equals(LIMSConnection.AvailableLimsTypes.remote.name())) {
+            MySqlLIMSConnectionOptions limsOptions = (MySqlLIMSConnectionOptions) _limsOptions;
+
+            List<String> missing = new ArrayList<String>();
+            for (String optionName : new String[]{"host", "port", "name", "username", "password"}) {
+                String propertyKey = "lims." + optionName;
+                String value = config.getProperty(propertyKey);
+                if(value == null) {
+                    missing.add(propertyKey);
+                } else {
+                    limsOptions.setValue(optionName, value);
+                }
+            }
+            if(!missing.isEmpty()) {
+                throw new MissingPropertyException(missing.toArray(new String[missing.size()]));
+            }
+        } else if(limsType.equals(LIMSConnection.AvailableLimsTypes.local.name())) {
+            LocalLIMSConnectionOptions options = (LocalLIMSConnectionOptions) _limsOptions;
+            String name = config.getProperty("lims.name", "BiocodeLIMS");  // Use a default
+            options.setValue(LocalLIMSConnectionOptions.DATABASE, name);
+        } else {
+            throw new ConfigurationException("Invalid lims.type: " + limsType);
+        }
+    }
+
+    private void setFimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException {
+        connectionConfig.setFims("biocode");
+        PasswordOptions fimsOptions = connectionConfig.getFimsOptions();
+        String username = config.getProperty("fims.username");
+        String password = config.getProperty("fims.password");
+        if(username == null || password == null) {
+            throw new MissingPropertyException("fims.username", "fims.password");
+        }
+
+        fimsOptions.setValue("username", username);
+        fimsOptions.setValue("password", password);
     }
 
     /**
@@ -165,6 +188,24 @@ public class LIMSInitializationServlet extends GenericServlet {
             return warDir;
         } else {
             throw new IllegalStateException("Context directory does not exist!");
+        }
+    }
+
+    private class ConfigurationException extends Exception {
+        private ConfigurationException(String message) {
+            super(message);
+        }
+
+        private ConfigurationException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    private class MissingPropertyException extends ConfigurationException {
+        String[] missingValues;
+        private MissingPropertyException(String... missing) {
+            super("Must specify " + StringUtilities.humanJoin(Arrays.asList(missing)));
+            missingValues = missing;
         }
     }
 }
