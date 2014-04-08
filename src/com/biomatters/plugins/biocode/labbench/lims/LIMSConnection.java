@@ -1540,15 +1540,10 @@ public abstract class LIMSConnection {
 
 
     public class LimsSearchResult {
-        List<String> tissueIds = new ArrayList<String>();
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
         List<PlateDocument> plates = new ArrayList<PlateDocument>();
         List<AnnotatedPluginDocument> traces = new ArrayList<AnnotatedPluginDocument>();
         List<Integer> sequenceIds = new ArrayList<Integer>();
-
-        public List<String> getTissueIds() {
-            return Collections.unmodifiableList(tissueIds);
-        }
 
         public List<WorkflowDocument> getWorkflows() {
             return Collections.unmodifiableList(workflows);
