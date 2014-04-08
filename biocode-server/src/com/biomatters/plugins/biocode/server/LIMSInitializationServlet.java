@@ -82,11 +82,20 @@ public class LIMSInitializationServlet extends GenericServlet {
 
             connectionConfig.setFims("biocode");
             PasswordOptions fimsOptions = connectionConfig.getFimsOptions();
-            fimsOptions.setValue("username", "limsuser");
-            fimsOptions.setValue("password", "biomatters");
+            String username = config.getProperty("fims.username");
+            String password = config.getProperty("fims.password");
+            if(username == null || password == null) {
+                initializationErrors.append("Must specify fims.username and fims.password in configuration file (").
+                        append(connectionPropertiesFile.getAbsoluteFile()).append(")");
+                return;
+            }
+
+            fimsOptions.setValue("username", username);
+            fimsOptions.setValue("password", password);
 
             LimsConnectionOptions parentLimsOptions = (LimsConnectionOptions)connectionConfig.getLimsOptions();
-            parentLimsOptions.setValue(LimsConnectionOptions.CONNECTION_TYPE_CHOOSER, LIMSConnection.AvailableLimsTypes.remote.name());
+            parentLimsOptions.setValue(LimsConnectionOptions.CONNECTION_TYPE_CHOOSER, config.getProperty("lims.type",
+                    LIMSConnection.AvailableLimsTypes.local.name()));
             PasswordOptions _limsOptions = parentLimsOptions.getSelectedLIMSOptions();
             MySqlLIMSConnectionOptions limsOptions = (MySqlLIMSConnectionOptions) _limsOptions;
 
