@@ -63,6 +63,10 @@
             <classes dir="${classes}"/>
             <lib dir="${lib}" />
             <lib dir="${server-lib}"/>
+            <fileset dir="${server-folder}/web" />
+            <fileset dir="${server-lib}/lib">
+                <include name="images/*"/>
+            </fileset>
         </war>
     </target>
 
@@ -197,6 +201,9 @@
                 <!-- We can refine this list later.  For now we'll just take all the runtime libs minus the SOAP libraries -->
                 <include name="*.jar"/>
                 <exclude name="webservices-*.jar"/>
+            </fileset>
+            <fileset dir="${GeneiousFiles}/resources">
+                <include name="images/*"/>
             </fileset>
         </copy>
     </target>
