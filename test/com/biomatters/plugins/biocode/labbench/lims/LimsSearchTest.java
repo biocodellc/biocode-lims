@@ -196,11 +196,13 @@ public class LimsSearchTest extends Assert {
 
     @Test
     public void searchByWorkflowDoesNotReturnExtra() throws IOException, BadDataException, DatabaseServiceException {
+        BiocodeService service = BiocodeService.getInstance();
         String extPlate = "Plate_M037";
         String extractionId = "MBIO24950.1.1";
+        String tissueId = "MBIO24950.1";
+        saveExtractionPlate(extPlate, tissueId, extractionId, service);
 
-        BiocodeService service = BiocodeService.getInstance();
-        saveExtractionPlate(extPlate, "MBIO24950.1", extractionId, service);
+        saveExtractionPlate("Plate_M038", "1", "1.1", service);
 
         String locus = "COI";
         String plateName = "PCR_M037_COI";
@@ -214,11 +216,15 @@ public class LimsSearchTest extends Assert {
                 Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_LOCUS_FIELD, Condition.EQUAL, new Object[]{locus}),
                 ProgressListener.EMPTY);
         List<String> plates = new ArrayList<String>();
+        List<String> tissues = new ArrayList<String>();
         for (AnnotatedPluginDocument searchResult : searchResults) {
             if(PlateDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
                 plates.add(searchResult.getName());
+            } else if(TissueDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                tissues.add(searchResult.getName());
             }
         }
+        assertEquals(Arrays.asList("MBIO24950.1"), tissues);
         assertEquals(Arrays.asList(extPlate, plateName), plates);
 
         List<AnnotatedPluginDocument> searchResults2 = service.retrieve(
