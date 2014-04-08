@@ -18,7 +18,6 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.MySqlLIMSConnectionOptions;
-import com.sun.xml.rpc.processor.config.Configuration;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
