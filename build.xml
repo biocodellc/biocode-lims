@@ -184,10 +184,13 @@
        <ivy:retrieve conf="server" settingsref="biocode.ivy.config" pattern="${basedir}/biocode-server/web/WEB-INF/lib/[artifact].[ext]"/>
     </target>
 
-    <condition property="GeneiousFiles.exists">
-        <available file="${GeneiousFiles}" type="dir"/>
-    </condition>
-    <target name="retrieve-geneious-runtime-dependencies" description="Retrieve the Geneious runtime for running the tests" unless="GeneiousFiles.exists">
+    <target name="evaluate-geneious-files-exists">
+        <condition property="GeneiousFiles.exists">
+           <available file="${GeneiousFiles}" type="dir"/>
+        </condition>
+    </target>
+
+    <target name="retrieve-geneious-runtime-dependencies" description="Retrieve the Geneious runtime for running the tests" depends="evaluate-geneious-files-exists" unless="GeneiousFiles.exists">
        <ivy:retrieve conf="test" type="resource" settingsref="biocode.ivy.config" pattern="${basedir}/[artifact].[ext]"/>
        <unzip src="GeneiousFiles.zip" dest="."/>
     </target>
