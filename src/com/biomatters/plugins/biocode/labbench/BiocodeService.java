@@ -730,7 +730,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                             for (FimsSample tissueSample : tissueSamples) {
                                 toRetrieveFromFims.remove(tissueSample.getId());
                             }
-                            tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(toRetrieveFromFims));
+                            if(!toRetrieveFromFims.isEmpty()) {
+                                tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(toRetrieveFromFims));
+                            }
 
                         } catch (ConnectionException e) {
                             throw new DatabaseServiceException(e, e.getMessage(), false);
