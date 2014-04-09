@@ -64,7 +64,7 @@
             <lib dir="${lib}" />
             <lib dir="${server-lib}"/>
             <fileset dir="${server-folder}/web" />
-            <fileset dir="${server-lib}/lib">
+            <fileset dir="${server-lib}">
                 <include name="images/*"/>
             </fileset>
         </war>
@@ -202,8 +202,11 @@
                 <include name="*.jar"/>
                 <exclude name="webservices-*.jar"/>
             </fileset>
+        </copy>
+        <copy todir="${classes}">
             <fileset dir="${GeneiousFiles}/resources">
                 <include name="images/*"/>
+                <include name="*.properties"/>
             </fileset>
         </copy>
     </target>
