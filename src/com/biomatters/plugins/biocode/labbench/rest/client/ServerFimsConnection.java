@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.server.RestQueryUtils;
 import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
+import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
@@ -65,7 +66,11 @@ public class ServerFimsConnection extends FIMSConnection {
             host = "http://" + host;
         }
 
+        HttpAuthenticationFeature authFeature = HttpAuthenticationFeature.universal(
+                connetionOptions.getUsername(),
+                connetionOptions.getPassword());
         WebTarget server = ClientBuilder.newClient().
+                register(authFeature).
                 register(XMLSerializableMessageReader.class).
                 register(XMLSerializableMessageWriter.class).
                 target(host).path("biocode");

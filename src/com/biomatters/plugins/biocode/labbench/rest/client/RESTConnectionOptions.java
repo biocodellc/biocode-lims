@@ -35,4 +35,8 @@ public class RESTConnectionOptions extends PasswordOptions {
     public String getUsername() {
         return getValueAsString(USERNAME);
     }
+
+    public String getPassword() {
+        return ((PasswordOption)getOption("password")).getPassword();
+    }
 }

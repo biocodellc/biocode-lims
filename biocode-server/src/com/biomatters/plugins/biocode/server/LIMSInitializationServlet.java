@@ -90,8 +90,15 @@ public class LIMSInitializationServlet extends GenericServlet {
 
             setLimsOptionsFromConfigFile(connectionConfig, config);
 
-            fimsConnection = connectFims(connectionConfig);
-            limsConnection = connectLims(connectionConfig);
+            biocodeeService.connect(connectionConfig, false);
+            fimsConnection = biocodeeService.getActiveFIMSConnection();
+            if(fimsConnection == null) {
+                connectFims(connectionConfig); // to get error message.  In the future BiocodeService should be changed to expose it's connection errors
+            }
+            limsConnection = biocodeeService.getActiveLIMSConnection();
+            if(limsConnection == null) {
+                connectLims(connectionConfig); // to get error message.  In the future BiocodeService should be changed to expose it's connection errors
+            }
         } catch (IOException e) {
             initializationErrors.add(new IntializationError("Configuration Error",
                     "Failed to load properties file from " + connectionPropertiesFile.getAbsolutePath() + ": " + e.getMessage()));

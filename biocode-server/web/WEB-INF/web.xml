@@ -6,8 +6,25 @@
            version="3.0">
     <servlet>
         <description>Used to initialize the LIMS</description>
-            <servlet-name>LIMSInitializationServlet</servlet-name>
-            <servlet-class>com.biomatters.plugins.biocode.server.LIMSInitializationServlet</servlet-class>
-            <load-on-startup>1</load-on-startup>
-        </servlet>
+        <servlet-name>LIMSInitializationServlet</servlet-name>
+        <servlet-class>com.biomatters.plugins.biocode.server.LIMSInitializationServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+
+    <security-constraint>
+      <web-resource-collection>
+        <web-resource-name>
+          Entire Application
+        </web-resource-name>
+        <url-pattern>/biocode/*</url-pattern>
+      </web-resource-collection>
+      <auth-constraint>
+          <role-name>lims</role-name>
+      </auth-constraint>
+    </security-constraint>
+
+    <login-config>
+        <auth-method>BASIC</auth-method>
+        <realm-name>my-default-realm</realm-name>
+    </login-config>
 </web-app>
