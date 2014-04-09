@@ -24,6 +24,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -186,6 +187,9 @@ public class ServerFimsConnection extends FIMSConnection {
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
+        if(tissueIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         try {
             Invocation.Builder request = target.path("samples").queryParam("ids", StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
             return request.get(new GenericType<XMLSerializableList<FimsSample>>(){}).getList();
