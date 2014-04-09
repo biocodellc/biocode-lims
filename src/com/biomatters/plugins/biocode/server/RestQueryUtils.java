@@ -106,7 +106,7 @@ public class RestQueryUtils {
                     throw new BadRequestException("Unknown field " + code);
                 }
 
-                subQueries.add(com.biomatters.geneious.publicapi.databaseservice.Query.Factory.createFieldQuery(field, condition, value));
+                subQueries.add(com.biomatters.geneious.publicapi.databaseservice.Query.Factory.createFieldQuery(field, condition, new Object[]{value}, searchOptions));
             } else {
                 Pattern hasConditionPattern = Pattern.compile(".+(" + possibleConditions + ").+");
                 Matcher check = hasConditionPattern.matcher(part);
