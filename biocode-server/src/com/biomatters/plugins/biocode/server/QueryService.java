@@ -64,20 +64,6 @@ public class QueryService {
                     type == null || type.equals(RestQueryUtils.QueryType.AND.name()) ?
                             RestQueryUtils.QueryType.AND : RestQueryUtils.QueryType.OR, queryString, searchOptions
             );
-            final ArrayList<PluginDocument> docs = new ArrayList<PluginDocument>();
-            RetrieveCallback callback = new RetrieveCallback() {
-
-                @Override
-                protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
-                    docs.add(document);
-                }
-
-                @Override
-                protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
-                    System.out.println("unexpected...");
-
-                }
-            };
             LimsSearchResult result = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(query, null, null, false);
             return Response.ok(result).build();
         } catch (DatabaseServiceException e) {
