@@ -67,7 +67,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 throw new ConnectionException(errorMessage);
             }
         } catch (SQLException e) {
-            throw new ConnectionException(e.getMessage());
+            throw new ConnectionException(e.getMessage(), e);
         } finally {
             returnConnection(connection);
         }

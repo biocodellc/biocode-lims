@@ -49,8 +49,8 @@ public class LIMSInitializationServlet extends GenericServlet {
     public void init() throws ServletException {
         initializeGeneiousUtilities();
 
-        BiocodeService biocodeeService = null;
-        Connection connectionConfig = null;
+        BiocodeService biocodeeService;
+        Connection connectionConfig;
         File settingsFolder = new File(System.getProperty("user.home"), settingsFolderName);
         File connectionPropertiesFile = new File(settingsFolder, propertiesFile);
         if(!connectionPropertiesFile.exists()) {
@@ -83,6 +83,12 @@ public class LIMSInitializationServlet extends GenericServlet {
             setLimsOptionsFromConfigFile(connectionConfig, config);
 
             biocodeeService.connect(connectionConfig, false);
+            if(biocodeeService.getActiveFIMSConnection() == null) {
+                initializationErrors.append("Could not establish FIMS connection");
+            }
+            if(biocodeeService.getActiveLIMSConnection() == null) {
+                initializationErrors.append("Could not establish LIMS connection");
+            }
         } catch (IOException e) {
             initializationErrors.append("Failed to load properties file from ").append(
                     connectionPropertiesFile.getAbsolutePath()).append(": ").append(e.getMessage());
@@ -107,7 +113,7 @@ public class LIMSInitializationServlet extends GenericServlet {
             MySqlLIMSConnectionOptions limsOptions = (MySqlLIMSConnectionOptions) _limsOptions;
 
             List<String> missing = new ArrayList<String>();
-            for (String optionName : new String[]{"host", "port", "name", "username", "password"}) {
+            for (String optionName : new String[]{"server", "port", "name", "username", "password"}) {
                 String propertyKey = "lims." + optionName;
                 String value = config.getProperty(propertyKey);
                 if(value == null) {
