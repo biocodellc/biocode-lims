@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.rest.client;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -167,25 +168,37 @@ public class ServerFimsConnection extends FIMSConnection {
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
-        RestQueryUtils.Query restQuery = RestQueryUtils.createRestQuery(query);
-        Invocation.Builder request = target.path("samples/search").
-                queryParam("query", restQuery.getQueryString()).
-                queryParam("type", restQuery.getType()).
-                request(MediaType.TEXT_PLAIN_TYPE);
+        try {
+            RestQueryUtils.Query restQuery = RestQueryUtils.createRestQuery(query);
+            Invocation.Builder request = target.path("samples/search").
+                    queryParam("query", restQuery.getQueryString()).
+                    queryParam("type", restQuery.getType()).
+                    request(MediaType.TEXT_PLAIN_TYPE);
 
-        return Arrays.asList(request.get(String.class).split(","));
+            return Arrays.asList(request.get(String.class).split(","));
+        } catch (WebApplicationException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
     }
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        Invocation.Builder request = target.path("samples").queryParam("ids", StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<FimsSample>>(){}).getList();
+        try {
+            Invocation.Builder request = target.path("samples").queryParam("ids", StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
+            return request.get(new GenericType<XMLSerializableList<FimsSample>>(){}).getList();
+        } catch (WebApplicationException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int getTotalNumberOfSamples() throws ConnectionException {
-        Invocation.Builder request = target.path("samples/count").request(MediaType.TEXT_PLAIN_TYPE);
-        return request.get(Integer.class);
+        try {
+            Invocation.Builder request = target.path("samples/count").request(MediaType.TEXT_PLAIN_TYPE);
+            return request.get(Integer.class);
+        } catch (WebApplicationException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        }
     }
 
     public static final String HAS_PLATE_INFO = "hasPlateAndWell";
@@ -202,8 +215,13 @@ public class ServerFimsConnection extends FIMSConnection {
     }
 
     private boolean getProperty(String name) {
-        Invocation.Builder request = target.path("property/" + name).request(MediaType.TEXT_PLAIN_TYPE);
-        return request.get(Boolean.class);
+        try {
+            Invocation.Builder request = target.path("property/" + name).request(MediaType.TEXT_PLAIN_TYPE);
+            return request.get(Boolean.class);
+        } catch (WebApplicationException e) {
+            // todo
+            return false;  // Can't do anything since we don't support throwing exception from parent method
+        }
     }
 
     @Override
