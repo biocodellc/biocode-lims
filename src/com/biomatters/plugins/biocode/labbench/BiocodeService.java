@@ -808,44 +808,19 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
 
             try {
-                if(isDownloadWorkflows(query) || isDownloadPlates(query)) {
-                    callback.setMessage("Downloading Workflows & Plates");
-                } else {
-                    callback.setMessage("Searching LIMS");
-                }
-
+                callback.setMessage("Searching LIMS...");
                 LIMSConnection.LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
                         areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
-
                 if(callback.isCanceled()) {
                     return;
                 }
 
+                callback.setMessage("Creating results...");
                 // Now add tissues that match the LIMS query
                 // FimsSamples would have been downloaded as part of plate creation.  Collect them now.
                 List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
-                for (WorkflowDocument workflowDocument : workflowList) {
-                    FimsSample sample = workflowDocument.getFimsSample();
-                    if(sample != null && !tissueSamples.contains(sample)) {
-                        if(isDownloadTissues(query)) {
-                            callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
-                        }
-                        tissueSamples.add(sample);
-                    }
-                }
-
-                for (PlateDocument plateDoc : limsResult.getPlates()) {
-                    for (Reaction reaction : plateDoc.getPlate().getReactions()) {
-                        FimsSample sample = reaction.getFimsSample();
-                        if(sample != null && !tissueSamples.contains(sample)) {
-                            if(isDownloadTissues(query)) {
-                                callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
-                            }
-                            tissueSamples.add(sample);
-                        }
-                    }
-                }
+                tissueSamples.addAll(limsResult.getTissueSamples());
 
                 if(isDownloadTissues(query)) {
                     boolean downloadAllSamplesFromFimsQuery = false;
@@ -867,13 +842,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                             List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsMatchingFimsQuery);
                             for (FimsSample sample : fimsSamples) {
                                 if(!tissueSamples.contains(sample)) {
-                                    callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
                                     tissueSamples.add(sample);
                                 }
                             }
                         } catch (ConnectionException e) {
                             throw new DatabaseServiceException(e, e.getMessage(), false);
                         }
+                    }
+
+                    for (FimsSample tissueSample : tissueSamples) {
+                        callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
                     }
                 }
 

@@ -23,6 +23,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.Cancelable;
+import jebl.util.ProgressListener;
 
 import java.sql.*;
 import java.text.DateFormat;
@@ -1048,11 +1049,13 @@ public abstract class LIMSConnection {
     }
 
     private class WorkflowsAndPlatesQueryResult {
-        Map<Integer, Plate> plates;
-        Map<Integer, WorkflowDocument> workflows;
-        List<Integer> sequenceIds;
+        private List<FimsSample> tissueSamples;
+        private Map<Integer, Plate> plates;
+        private Map<Integer, WorkflowDocument> workflows;
+        private List<Integer> sequenceIds;
 
         private WorkflowsAndPlatesQueryResult() {
+            tissueSamples = new ArrayList<FimsSample>();
             plates = new HashMap<Integer, Plate>();
             workflows = new HashMap<Integer, WorkflowDocument>();
             sequenceIds = new ArrayList<Integer>();
@@ -1060,7 +1063,7 @@ public abstract class LIMSConnection {
     }
 
     private Map<Integer, Plate> createPlateDocuments(RetrieveCallback callback, Cancelable cancelable, ResultSet resultSet) throws SQLException, DatabaseServiceException {
-        Map<Integer, Plate> plates = createPlateAndWorkflowsFromResultSet(cancelable, resultSet).plates;
+        Map<Integer, Plate> plates = createPlateAndWorkflowsFromResultSet(callback, resultSet, false, false, true).plates;
         if (callback != null) {
             for (Plate plate : plates.values()) {
                 System.out.println("Adding " + plate.getName());
@@ -1070,10 +1073,11 @@ public abstract class LIMSConnection {
         return plates;
     }
 
-    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(Cancelable cancelable, ResultSet resultSet) throws SQLException, DatabaseServiceException {
+    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(ProgressListener cancelable, ResultSet resultSet, boolean getTissues, boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
         final StringBuilder totalErrors = new StringBuilder("");
 
+        Set<String> tissueIds = new HashSet<String>();
         Set<Integer> workflowIds = new HashSet<Integer>();
         Set<Integer> plateIds = new HashSet<Integer>();
 
@@ -1085,6 +1089,11 @@ public abstract class LIMSConnection {
             }
             if (cancelable != null && cancelable.isCanceled()) {
                 return new WorkflowsAndPlatesQueryResult();
+            }
+
+            String tissue = resultSet.getString("sampleId");
+            if(tissue != null) {
+                tissueIds.add(tissue);
             }
 
             int plateId = resultSet.getInt("plate.id");
@@ -1105,7 +1114,8 @@ public abstract class LIMSConnection {
         resultSet.close();
 
         Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
-        if(!workflowIds.isEmpty()) {
+        if(!workflowIds.isEmpty() && getWorkflows) {
+            cancelable.setMessage("Downloading " + getCountString("matching workflow document", workflowIds.size()) + "...");
             // Query for full contents of plates that matched our query
             String workflowQueryString = constructWorkflowQuery(workflowIds);
             PreparedStatement selectWorkflow = null;
@@ -1162,7 +1172,8 @@ public abstract class LIMSConnection {
             }
         }
 
-        if(!plateIds.isEmpty()) {
+        if(!plateIds.isEmpty() && getPlates) {
+            cancelable.setMessage("Downloading " + getCountString("matching plate document", plateIds.size()) + "...");
             // Query for full contents of plates that matched our query
             String plateQueryString = constructPlateQuery(plateIds);
             PreparedStatement selectPlate = null;
@@ -1185,6 +1196,15 @@ public abstract class LIMSConnection {
             }
         }
 
+        if(!tissueIds.isEmpty() && getTissues) {
+            cancelable.setMessage("Checking samples that match result from LIMS...");
+            try {
+                result.tissueSamples.addAll(BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(tissueIds));
+            } catch (ConnectionException e) {
+                throw new DatabaseServiceException(e, "Unable to retrieve FIMS samples", false);
+            }
+        }
+
         if (totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
@@ -1198,6 +1218,15 @@ public abstract class LIMSConnection {
             ThreadUtilities.invokeNowOrLater(runnable);
         }
         return result;
+    }
+
+    private static String getCountString(String words, int count) {
+        String base = count + " " + words;
+        if(count > 1) {
+            return base + "s";
+        } else {
+            return base;
+        }
     }
 
     private String constructWorkflowQuery(Set<Integer> workflowIds) {
@@ -1540,10 +1569,14 @@ public abstract class LIMSConnection {
 
 
     public class LimsSearchResult {
-        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
-        List<PlateDocument> plates = new ArrayList<PlateDocument>();
-        List<AnnotatedPluginDocument> traces = new ArrayList<AnnotatedPluginDocument>();
-        List<Integer> sequenceIds = new ArrayList<Integer>();
+        private Set<FimsSample> tissueSamples = new HashSet<FimsSample>();
+        private List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
+        private List<PlateDocument> plates = new ArrayList<PlateDocument>();
+        private List<Integer> sequenceIds = new ArrayList<Integer>();
+
+        public Set<FimsSample> getTissueSamples() {
+            return Collections.unmodifiableSet(tissueSamples);
+        }
 
         public List<WorkflowDocument> getWorkflows() {
             return Collections.unmodifiableList(workflows);
@@ -1551,10 +1584,6 @@ public abstract class LIMSConnection {
 
         public List<PlateDocument> getPlates() {
             return Collections.unmodifiableList(plates);
-        }
-
-        public List<AnnotatedPluginDocument> getTraces() {
-            return Collections.unmodifiableList(traces);
         }
 
         public List<Integer> getSequenceIds() {
@@ -1658,12 +1687,16 @@ public abstract class LIMSConnection {
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
-            queryResult = createPlateAndWorkflowsFromResultSet(callback, resultSet);
+            boolean needTissues = downloadTissues || downloadSequences;
+            boolean needWorkflows = downloadWorkflows || downloadSequences;
+            queryResult = createPlateAndWorkflowsFromResultSet(callback, resultSet, needTissues, needWorkflows, downloadPlates);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(preparedStatement);
         }
+
+        result.tissueSamples.addAll(queryResult.tissueSamples);
 
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(queryResult.workflows.values());
         if (downloadWorkflows && callback != null) {
@@ -1747,7 +1780,7 @@ public abstract class LIMSConnection {
         boolean filterOnTissues = tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty();
 
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.id, plate.id, assembly.id, assembly.date FROM ");
+                "SELECT extraction.sampleId, workflow.id, plate.id, assembly.id, assembly.date FROM ");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
         if (filterOnTissues) {
