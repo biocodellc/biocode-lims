@@ -42,7 +42,7 @@ public class Sequences {
         List<Integer> ids = new ArrayList<Integer>();
         for (String idString : idsString.split(",")) {
             try {
-                ids.add(Integer.parseInt(idsString));
+                ids.add(Integer.parseInt(idString));
             } catch (NumberFormatException e) {
                 throw new BadRequestException("Bad ID in ids: " + idString + " is not a number");
             }
