@@ -955,13 +955,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         private List<FimsSample> tissueSamples;
         private Map<Integer, Plate> plates;
         private Map<Integer, WorkflowDocument> workflows;
-        private List<Integer> sequenceIds;
+        private Set<Integer> sequenceIds;
 
         private WorkflowsAndPlatesQueryResult() {
             tissueSamples = new ArrayList<FimsSample>();
             plates = new HashMap<Integer, Plate>();
             workflows = new HashMap<Integer, WorkflowDocument>();
-            sequenceIds = new ArrayList<Integer>();
+            sequenceIds = new HashSet<Integer>();
         }
     }
 
