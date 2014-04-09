@@ -16,6 +16,7 @@ import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
@@ -91,6 +92,8 @@ public class ServerFimsConnection extends FIMSConnection {
             taxonFields = getDocumentFieldListForType("taxonomy");
             searchFields = getDocumentFieldListForType(null);
         } catch (WebApplicationException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        } catch(ProcessingException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
     }
