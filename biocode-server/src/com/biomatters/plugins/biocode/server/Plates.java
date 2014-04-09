@@ -37,7 +37,7 @@ public class Plates {
     @Consumes("application/xml")
     public void savePlate(Plate plate) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().savePlate(plate, ProgressListener.EMPTY);
+            LIMSInitializationServlet.getLimsConnection().savePlate(plate, ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         } catch (BadDataException e) {
@@ -51,7 +51,7 @@ public class Plates {
     @Path("delete")
     public String deletePlate(Plate plate) {
         try {
-            Set<Integer> ids = BiocodeService.getInstance().getActiveLIMSConnection().deletePlate(plate, ProgressListener.EMPTY);
+            Set<Integer> ids = LIMSInitializationServlet.getLimsConnection().deletePlate(plate, ProgressListener.EMPTY);
             return StringUtilities.join("\n", ids);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
@@ -64,7 +64,7 @@ public class Plates {
     @Path("{id}/name")
     public void renamePlate(@PathParam("id")int id, String newName) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().renamePlate(id, newName);
+            LIMSInitializationServlet.getLimsConnection().renamePlate(id, newName);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         }
@@ -89,7 +89,7 @@ public class Plates {
         }
         try {
             return new XMLSerializableList<Plate>(Plate.class,
-                    BiocodeService.getInstance().getActiveLIMSConnection().getEmptyPlates(ids));
+                    LIMSInitializationServlet.getLimsConnection().getEmptyPlates(ids));
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -102,7 +102,7 @@ public class Plates {
         Reaction.Type reactionType = Reaction.Type.valueOf(type);
         try {
             List<Reaction> reactionList = reactions.getList();
-            BiocodeService.getInstance().getActiveLIMSConnection().saveReactions(reactionList.toArray(
+            LIMSInitializationServlet.getLimsConnection().saveReactions(reactionList.toArray(
                     new Reaction[reactionList.size()]
             ), reactionType, ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
@@ -118,7 +118,7 @@ public class Plates {
         }
         try {
             return new XMLSerializableList<ExtractionReaction>(ExtractionReaction.class,
-                    BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsForIds(
+                    LIMSInitializationServlet.getLimsConnection().getExtractionsForIds(
                     Arrays.asList(ids.split(","))
             ));
         } catch (DatabaseServiceException e) {
@@ -137,7 +137,7 @@ public class Plates {
         }
 
         try {
-            return new StringMap(BiocodeService.getInstance().getActiveLIMSConnection().getTissueIdsForExtractionIds(
+            return new StringMap(LIMSInitializationServlet.getLimsConnection().getTissueIdsForExtractionIds(
                     table, Arrays.asList(ids.split(","))));
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
@@ -149,7 +149,7 @@ public class Plates {
     @Path("{plateId}/gels")
     public List<GelImage> getGels(@PathParam("plateId")int plateId) {
         try {
-            Map<Integer, List<GelImage>> map = BiocodeService.getInstance().getActiveLIMSConnection().getGelImages(
+            Map<Integer, List<GelImage>> map = LIMSInitializationServlet.getLimsConnection().getGelImages(
                     Collections.singletonList(plateId));
             return map.get(plateId);
         } catch (DatabaseServiceException e) {

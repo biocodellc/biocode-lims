@@ -12,8 +12,10 @@ import com.biomatters.geneious.publicapi.implementations.ImportedFileOriginalTex
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnectionOptions;
@@ -21,9 +23,7 @@ import com.biomatters.plugins.biocode.labbench.lims.MySqlLIMSConnectionOptions;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -36,13 +36,24 @@ import java.util.*;
  */
 public class LIMSInitializationServlet extends GenericServlet {
 
-    private String settingsFolderName = ".biocode-lims";
-    private String defaultPropertiesFile = "default_connection.properties";
-    private String propertiesFile = "connection.properties";
+    private static final String settingsFolderName = ".biocode-lims";
+    private static final String defaultPropertiesFile = "default_connection.properties";
+    private static final String propertiesFile = "connection.properties";
 
     @Override
     public void service(ServletRequest servletRequest, ServletResponse servletResponse) throws ServletException, IOException {
         // Ignore any requests.  There shouldn't be any connections made to this servlet
+    }
+
+    // We rely on the web app server only instantiating the servlet once
+    private static LIMSConnection limsConnection;
+    public static LIMSConnection getLimsConnection() {
+        return limsConnection;
+    }
+
+    private static FIMSConnection fimsConnection;
+    public static FIMSConnection getFimsConnection() {
+        return fimsConnection;
     }
 
     @Override
@@ -50,7 +61,7 @@ public class LIMSInitializationServlet extends GenericServlet {
         initializeGeneiousUtilities();
 
         BiocodeService biocodeeService;
-        Connection connectionConfig;
+
         File settingsFolder = new File(System.getProperty("user.home"), settingsFolderName);
         File connectionPropertiesFile = new File(settingsFolder, propertiesFile);
         if(!connectionPropertiesFile.exists()) {
@@ -59,12 +70,12 @@ public class LIMSInitializationServlet extends GenericServlet {
                 try {
                     FileUtilities.copyFile(defaultFile, connectionPropertiesFile, FileUtilities.TargetExistsAction.Skip, ProgressListener.EMPTY);
                 } catch (IOException e) {
-                    initializationErrors.append("Failed to copy default properties to: ").append(
-                            connectionPropertiesFile.getAbsolutePath()).append(": ").append(e.getMessage());
+                    initializationErrors.add(new IntializationError("File Access Error",
+                            "Failed to copy default properties to " + connectionPropertiesFile.getAbsolutePath() + ": " + e.getMessage()));
                 }
             }
         }
-
+        Connection connectionConfig = new Connection("forServer");
         try {
             Properties config = new Properties();
             config.load(new FileInputStream(connectionPropertiesFile));
@@ -76,28 +87,33 @@ public class LIMSInitializationServlet extends GenericServlet {
             }
             biocodeeService.setDataDirectory(dataDir);
 
-            connectionConfig = new Connection("forServer");
-
             setFimsOptionsFromConfigFile(connectionConfig, config);
 
             setLimsOptionsFromConfigFile(connectionConfig, config);
 
-            biocodeeService.connect(connectionConfig, false);
-            if(biocodeeService.getActiveFIMSConnection() == null) {
-                initializationErrors.append("Could not establish FIMS connection");
-            }
-            if(biocodeeService.getActiveLIMSConnection() == null) {
-                initializationErrors.append("Could not establish LIMS connection");
-            }
+            fimsConnection = connectFims(connectionConfig);
+            limsConnection = connectLims(connectionConfig);
         } catch (IOException e) {
-            initializationErrors.append("Failed to load properties file from ").append(
-                    connectionPropertiesFile.getAbsolutePath()).append(": ").append(e.getMessage());
+            initializationErrors.add(new IntializationError("Configuration Error",
+                    "Failed to load properties file from " + connectionPropertiesFile.getAbsolutePath() + ": " + e.getMessage()));
         } catch(MissingPropertyException e) {
-            initializationErrors.append(e.getMessage()).append(" in configuration file (").append(
-                    connectionPropertiesFile.getAbsolutePath()).append(")");
+            initializationErrors.add(new IntializationError("Missing Configuration Property",
+                    e.getMessage() + " in configuration file (" + connectionPropertiesFile.getAbsolutePath() + ")"));
         } catch (Exception e) {
-            initializationErrors.append(e.getMessage());
+            initializationErrors.add(IntializationError.forException(e));
         }
+    }
+
+    private static LIMSConnection connectLims(Connection connectionConfig) throws ConnectionException {
+        LIMSConnection limsConnection = connectionConfig.getLIMSConnection();
+        limsConnection.connect(connectionConfig.getLimsOptions());
+        return limsConnection;
+    }
+
+    private static FIMSConnection connectFims(Connection connectionConfig) throws ConnectionException {
+        FIMSConnection fimsConnection = connectionConfig.getFimsConnection();
+        fimsConnection.connect(connectionConfig.getFimsOptions());
+        return fimsConnection;
     }
 
     private void setLimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException {
@@ -180,9 +196,62 @@ public class LIMSInitializationServlet extends GenericServlet {
 
     }
 
-    private static StringBuilder initializationErrors = new StringBuilder();
-    public static String getErrors() {
-        return initializationErrors.toString();
+    private static class IntializationError {
+        private String title;
+        private String message;
+        private String details;
+
+        private IntializationError() {
+        }
+
+        private IntializationError(String title, String message) {
+            this(title, message, null);
+        }
+
+        private IntializationError(String title, String message, String details) {
+            this.title = title;
+            this.message = message;
+            this.details = details;
+        }
+
+        static IntializationError forException(Exception e) {
+            IntializationError error = new IntializationError();
+            error.title = getExceptionCategory(e);
+            error.message = e.getMessage();
+
+            StringWriter stringWriter = new StringWriter();
+            e.printStackTrace(new PrintWriter(stringWriter));
+            error.details = stringWriter.toString();
+
+            return error;
+        }
+    }
+
+    private static List<IntializationError> initializationErrors = new ArrayList<IntializationError>();
+    public static String getErrorText() {
+        if(initializationErrors.isEmpty()) {
+            return null;
+        }
+        StringBuilder text = new StringBuilder("The server encountered the following errors starting up.<br>");
+        for (IntializationError error : initializationErrors) {
+            text.append("<b>").append(error.title).append("</b>: ");
+            text.append(error.message).append("<br>");
+            if(error.details != null) {
+                text.append("<b>Details</b>:<br>");
+                text.append(error.details).append("<br>");
+            }
+        }
+        return text.toString();
+    }
+
+    private static String getExceptionCategory(Exception e) {
+        String simpleName = e.getClass().getSimpleName();
+        int toCut = simpleName.indexOf("Exception");
+        if(toCut != -1) {
+            simpleName = simpleName.substring(0, toCut);
+        }
+        return simpleName + " Error";
+
     }
 
 
@@ -199,10 +268,6 @@ public class LIMSInitializationServlet extends GenericServlet {
     private class ConfigurationException extends Exception {
         private ConfigurationException(String message) {
             super(message);
-        }
-
-        private ConfigurationException(String message, Throwable cause) {
-            super(message, cause);
         }
     }
 

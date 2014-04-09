@@ -29,7 +29,7 @@ public class Tissues {
         }
 
         try {
-            return StringUtilities.join("\n", BiocodeService.getInstance().getActiveLIMSConnection().
+            return StringUtilities.join("\n", LIMSInitializationServlet.getLimsConnection().
                     getAllExtractionIdsForTissueIds(Arrays.asList(tissueIds.split(","))));
 
         } catch (DatabaseServiceException e) {

@@ -26,11 +26,11 @@ public class Cocktails {
             if(getType(type) == Cocktail.Type.pcr) {
                 return new XMLSerializableList<Cocktail>(Cocktail.class,
                         new ArrayList<Cocktail>(
-                        BiocodeService.getInstance().getActiveLIMSConnection().getPCRCocktailsFromDatabase()));
+                        LIMSInitializationServlet.getLimsConnection().getPCRCocktailsFromDatabase()));
             } else {
                 return new XMLSerializableList<Cocktail>(Cocktail.class,
                         new ArrayList<Cocktail>(
-                        BiocodeService.getInstance().getActiveLIMSConnection().getCycleSequencingCocktailsFromDatabase()));
+                        LIMSInitializationServlet.getLimsConnection().getCycleSequencingCocktailsFromDatabase()));
             }
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
@@ -41,7 +41,7 @@ public class Cocktails {
     @POST
     public void add(XMLSerializableList<Cocktail> toAdd) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().addCocktails(toAdd.getList());
+            LIMSInitializationServlet.getLimsConnection().addCocktails(toAdd.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -62,7 +62,7 @@ public class Cocktails {
     @Path("delete")
     public void delete(XMLSerializableList<Cocktail> toDelete) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().deleteCocktails(toDelete.getList());
+            LIMSInitializationServlet.getLimsConnection().deleteCocktails(toDelete.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -73,7 +73,7 @@ public class Cocktails {
     @Path("{type}/{id}/plates")
     public String getPlatesForCocktail(@PathParam("type")String type, @PathParam("id")int thermocycleId) {
         try {
-            Collection<String> plateNames = BiocodeService.getInstance().getActiveLIMSConnection().getPlatesUsingCocktail(Reaction.Type.valueOf(type), thermocycleId);
+            Collection<String> plateNames = LIMSInitializationServlet.getLimsConnection().getPlatesUsingCocktail(Reaction.Type.valueOf(type), thermocycleId);
             return StringUtilities.join("\n", plateNames);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);

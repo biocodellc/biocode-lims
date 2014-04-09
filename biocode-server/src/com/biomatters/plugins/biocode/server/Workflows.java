@@ -25,7 +25,7 @@ public class Workflows {
 
         try {
             return new XMLSerializableList<Workflow>(Workflow.class,
-                    BiocodeService.getInstance().getActiveLIMSConnection().getWorkflows(Arrays.asList(ids.split(","))));
+                    LIMSInitializationServlet.getLimsConnection().getWorkflows(Arrays.asList(ids.split(","))));
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -36,7 +36,7 @@ public class Workflows {
     @Path("{id}/name")
     public void renameWorkflow(@PathParam("id") int id, String newName) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().renameWorkflow(id, newName);
+            LIMSInitializationServlet.getLimsConnection().renameWorkflow(id, newName);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         }
@@ -46,7 +46,7 @@ public class Workflows {
     @Path("{workflowId}/sequences/{extractionId}")
     public void deleteSequencesForWorkflow(@PathParam("workflowId")int workflowId, @PathParam("extractionId")String extractionId) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().deleteSequencesForWorkflowId(workflowId, extractionId);
+            LIMSInitializationServlet.getLimsConnection().deleteSequencesForWorkflowId(workflowId, extractionId);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }

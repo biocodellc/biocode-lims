@@ -28,7 +28,7 @@ public class Sequences {
         List<Integer> ids = getIntegerListFromString(idsString);
 
         try {
-            return BiocodeService.getInstance().getActiveLIMSConnection().getAssemblyDocuments(ids, null, includeFailed);
+            return LIMSInitializationServlet.getLimsConnection().getAssemblyDocuments(ids, null, includeFailed);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -55,7 +55,7 @@ public class Sequences {
     @Path("{id}/submitted")
     public void setSubmitted(@PathParam("id")int id, boolean submitted) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().setSequenceStatus(submitted, Collections.singletonList(id));
+            LIMSInitializationServlet.getLimsConnection().setSequenceStatus(submitted, Collections.singletonList(id));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
         }
@@ -66,7 +66,7 @@ public class Sequences {
     @Path("deletes")
     public void delete(String idStrings) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().deleteSequences(getIntegerListFromString(idStrings));
+            LIMSInitializationServlet.getLimsConnection().deleteSequences(getIntegerListFromString(idStrings));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
         }
@@ -84,7 +84,7 @@ public class Sequences {
                            @QueryParam("reactionIds")String reactionIds
                            ) {
         try {
-            return BiocodeService.getInstance().getActiveLIMSConnection().addAssembly(isPass, notes, technician, failureReason,
+            return LIMSInitializationServlet.getLimsConnection().addAssembly(isPass, notes, technician, failureReason,
                     failureNotes, addChromatograms, seq, getIntegerListFromString(reactionIds), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);

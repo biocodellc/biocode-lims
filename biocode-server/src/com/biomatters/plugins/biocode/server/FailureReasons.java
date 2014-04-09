@@ -19,6 +19,6 @@ public class FailureReasons {
     @GET
     @Produces("application/xml")
     public List<FailureReason> list() {
-        return BiocodeService.getInstance().getActiveLIMSConnection().getPossibleFailureReasons();
+        return LIMSInitializationServlet.getLimsConnection().getPossibleFailureReasons();
     }
 }

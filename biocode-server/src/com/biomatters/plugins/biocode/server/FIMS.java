@@ -28,7 +28,7 @@ public class FIMS {
     @GET
     @Produces("application/xml")
     public DocumentField getField(@PathParam("id") String id) {
-        FIMSConnection fims = BiocodeService.getInstance().getActiveFIMSConnection();
+        FIMSConnection fims = LIMSInitializationServlet.getFimsConnection();
         if(fims == null) {
             throw new InternalServerErrorException("Server not connected to FIMS.  Contact your systems administrator.");
         }
@@ -56,13 +56,13 @@ public class FIMS {
     public XMLSerializableList<DocumentField> searchFields(@QueryParam("type")String type) {
         if("taxonomy".equals(type)) {
             return new XMLSerializableList<DocumentField>(DocumentField.class,
-                                BiocodeService.getInstance().getActiveFIMSConnection().getTaxonomyAttributes());
+                                LIMSInitializationServlet.getFimsConnection().getTaxonomyAttributes());
         } else if("collection".equals(type)) {
             return new XMLSerializableList<DocumentField>(DocumentField.class,
-                                BiocodeService.getInstance().getActiveFIMSConnection().getCollectionAttributes());
+                                LIMSInitializationServlet.getFimsConnection().getCollectionAttributes());
         } else {
             return new XMLSerializableList<DocumentField>(DocumentField.class,
-                    BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes());
+                    LIMSInitializationServlet.getFimsConnection().getSearchAttributes());
         }
     }
 
@@ -71,7 +71,7 @@ public class FIMS {
     @Produces("text/plain")
     public int getTotalNumberOfSamples() {
         try {
-            return BiocodeService.getInstance().getActiveFIMSConnection().getTotalNumberOfSamples();
+            return LIMSInitializationServlet.getFimsConnection().getTotalNumberOfSamples();
         } catch (ConnectionException e) {
             throw new InternalServerErrorException(e);
         }
@@ -83,7 +83,7 @@ public class FIMS {
     public String getMatchingSampleIds(@QueryParam("query")String queryString, @QueryParam("type")String typeString) {
         try {
             Query query = RestQueryUtils.createQueryFromQueryString(RestQueryUtils.QueryType.forTypeString(typeString), queryString, Collections.<String, Object>emptyMap());
-            List<String> result = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsMatchingQuery(query);
+            List<String> result = LIMSInitializationServlet.getFimsConnection().getTissueIdsMatchingQuery(query);
             return StringUtilities.join(",", result);
         } catch (ConnectionException e) {
             throw new InternalServerErrorException(e);
@@ -103,7 +103,7 @@ public class FIMS {
         }
         try {
 
-            List<FimsSample> fimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(
+            List<FimsSample> fimsSamples = LIMSInitializationServlet.getFimsConnection().retrieveSamplesForTissueIds(
                     toSearchFor);
 
             return new XMLSerializableList<FimsSample>(FimsSample.class, fimsSamples);
@@ -117,9 +117,9 @@ public class FIMS {
     @Produces("text/plain")
     public Boolean getProperty(@PathParam("id")String id) {
         if(ServerFimsConnection.HAS_PLATE_INFO.equals(id)) {
-            return BiocodeService.getInstance().getActiveFIMSConnection().storesPlateAndWellInformation();
+            return LIMSInitializationServlet.getFimsConnection().storesPlateAndWellInformation();
         } else if(ServerFimsConnection.HAS_PHOTOS.equals(id)) {
-            return BiocodeService.getInstance().getActiveFIMSConnection().hasPhotos();
+            return LIMSInitializationServlet.getFimsConnection().hasPhotos();
         } else {
             return null;
         }

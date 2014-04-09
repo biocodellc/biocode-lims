@@ -21,6 +21,6 @@ public class Permissions {
     @Path("delete/{table}")
     @GET
     public boolean canDelete(@PathParam("table")String table) {
-        return BiocodeService.getInstance().getActiveLIMSConnection().deleteAllowed(table);
+        return LIMSInitializationServlet.getLimsConnection().deleteAllowed(table);
     }
 }

@@ -26,7 +26,7 @@ public class Extractions {
 
         try {
             return new XMLSerializableList<ExtractionReaction>(ExtractionReaction.class,
-                    BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(Arrays.asList(barcodes.split(","))));
+                    LIMSInitializationServlet.getLimsConnection().getExtractionsFromBarcodes(Arrays.asList(barcodes.split(","))));
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -51,7 +51,7 @@ public class Extractions {
 
         try {
             return new StringMap(
-                    BiocodeService.getInstance().getActiveLIMSConnection().getWorkflowIds(
+                    LIMSInitializationServlet.getLimsConnection().getWorkflowIds(
                             Arrays.asList(extractionIds.split(",")),
                             Arrays.asList(loci.split(",")),
                             Reaction.Type.valueOf(type)

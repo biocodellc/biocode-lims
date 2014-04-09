@@ -24,7 +24,7 @@ public class Thermocycles {
         try {
             return new XMLSerializableList<Thermocycle>(
                     Thermocycle.class,
-                    BiocodeService.getInstance().getActiveLIMSConnection().getThermocyclesFromDatabase(getType(type)));
+                    LIMSInitializationServlet.getLimsConnection().getThermocyclesFromDatabase(getType(type)));
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -35,7 +35,7 @@ public class Thermocycles {
     @Path("{type}")
     public void add(XMLSerializableList<Thermocycle> toAdd, @PathParam("type")String type) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().addThermoCycles(getType(type), toAdd.getList());
+            LIMSInitializationServlet.getLimsConnection().addThermoCycles(getType(type), toAdd.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -56,7 +56,7 @@ public class Thermocycles {
     @Path("{type}/delete")
     public void delete(@PathParam("type")String type, XMLSerializableList<Thermocycle> toDelete) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().deleteThermoCycles(getType(type), toDelete.getList());
+            LIMSInitializationServlet.getLimsConnection().deleteThermoCycles(getType(type), toDelete.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -67,7 +67,7 @@ public class Thermocycles {
     @Path("{id}/plates")
     public String getPlatesForThermocycle(@PathParam("id")int thermocycleId) {
         try {
-            List<String> plateNames = BiocodeService.getInstance().getActiveLIMSConnection().getPlatesUsingThermocycle(thermocycleId);
+            List<String> plateNames = LIMSInitializationServlet.getLimsConnection().getPlatesUsingThermocycle(thermocycleId);
             return StringUtilities.join("\n", plateNames);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);

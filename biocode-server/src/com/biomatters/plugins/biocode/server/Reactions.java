@@ -26,7 +26,7 @@ public class Reactions {
     @Path("{id}/traces")
     public List<MemoryFile> getTraces(@PathParam("id")int reactionId) {
         try {
-            Map<Integer, List<MemoryFile>> traces = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(
+            Map<Integer, List<MemoryFile>> traces = LIMSInitializationServlet.getLimsConnection().downloadTraces(
                     Collections.singletonList(reactionId), ProgressListener.EMPTY);
             if(traces == null) {
                 return null;

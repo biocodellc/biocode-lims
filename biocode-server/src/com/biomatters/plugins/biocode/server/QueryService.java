@@ -64,7 +64,7 @@ public class QueryService {
                     type == null || type.equals(RestQueryUtils.QueryType.AND.name()) ?
                             RestQueryUtils.QueryType.AND : RestQueryUtils.QueryType.OR, queryString, searchOptions
             );
-            LimsSearchResult result = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(query, null, null, false);
+            LimsSearchResult result = LIMSInitializationServlet.getLimsConnection().getMatchingDocumentsFromLims(query, null, null, false);
             return Response.ok(result).build();
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException("Encountered error: " + e.getMessage());

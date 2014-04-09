@@ -36,7 +36,7 @@ public class Info {
     @Path("properties/{id}")
     public String getProperty(@PathParam("id")String id) {
         try {
-            return BiocodeService.getInstance().getActiveLIMSConnection().getProperty(id);
+            return LIMSInitializationServlet.getLimsConnection().getProperty(id);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -47,7 +47,7 @@ public class Info {
     @Path("properties/{id}")
     public void getProperty(@PathParam("id")String id, String value) {
         try {
-            BiocodeService.getInstance().getActiveLIMSConnection().setProperty(id, value);
+            LIMSInitializationServlet.getLimsConnection().setProperty(id, value);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }

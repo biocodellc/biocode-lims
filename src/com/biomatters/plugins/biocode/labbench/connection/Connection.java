@@ -447,9 +447,9 @@ public class Connection implements XMLSerializable {
         try {
             return (LIMSConnection) limsOptions.getSelectedLIMSType().getLimsClass().newInstance();
         } catch (InstantiationException e) {
-            throw new ConnectionException(e);
+            throw new ConnectionException("Could not instantiate LIMS connection: " + e.getMessage(), e);
         } catch (IllegalAccessException e) {
-            throw new ConnectionException(e);
+            throw new ConnectionException("Could not instantiate LIMS connection: " + e.getMessage(), e);
         }
     }
 
