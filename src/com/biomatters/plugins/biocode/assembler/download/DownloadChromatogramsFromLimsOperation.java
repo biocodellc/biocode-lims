@@ -26,7 +26,6 @@ import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -89,7 +88,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                 List<PlateDocument> plateDocuments;
 
                 try {
-                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null, false).getPlates();
+                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlates();
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);

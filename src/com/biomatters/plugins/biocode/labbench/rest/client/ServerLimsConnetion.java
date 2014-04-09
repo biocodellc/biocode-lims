@@ -65,8 +65,11 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback, boolean downloadTissues) throws DatabaseServiceException {
+    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException {
         List<String> include = new ArrayList<String>();
+        if (BiocodeService.isDownloadTissues(query)) {
+            include.add("tissues");
+        }
         if (BiocodeService.isDownloadWorkflows(query)) {
             include.add("workflows");
         }

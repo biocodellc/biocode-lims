@@ -271,7 +271,7 @@ public class WorkflowBuilder extends DocumentOperation {
             String extractionPlateName = plateName + "_X1";
             List<PlateDocument> existing = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
                     Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
-                            BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null, false
+                            BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
             ).getPlates();
 
             Plate extractionPlate;
@@ -324,7 +324,7 @@ public class WorkflowBuilder extends DocumentOperation {
             List<PlateDocument> plates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
                     Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
                             BiocodeService.getSearchDownloadOptions(false, false, true, false)),
-                    null, null, false
+                    null, null
             ).getPlates();
             if(plates.size() != 1) {
                 throw new DocumentOperationException("Could not find the plate "+extractionPlateName);

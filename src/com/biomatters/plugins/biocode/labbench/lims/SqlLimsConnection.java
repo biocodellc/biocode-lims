@@ -301,10 +301,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback, boolean downloadTissues) throws DatabaseServiceException {
+    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException {
         LimsSearchResult result = new LimsSearchResult();
 
-        // We test against false so that the default is to download
+        Boolean downloadTissues = BiocodeService.isDownloadTissues(query);
         Boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
         Boolean downloadPlates = BiocodeService.isDownloadPlates(query);
         Boolean downloadSequences = BiocodeService.isDownloadSequences(query);

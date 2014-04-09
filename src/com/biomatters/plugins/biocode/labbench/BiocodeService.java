@@ -6,21 +6,17 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.documents.sequence.DefaultNucleotideGraph;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraph;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
-import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
@@ -29,7 +25,6 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
-import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -702,7 +697,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             try {
                 callback.setMessage("Searching LIMS...");
                 LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
-                        areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback, isDownloadTissues(query));
+                        areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
                 if(callback.isCanceled()) {
                     return;
@@ -731,12 +726,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     if(downloadAllSamplesFromFimsQuery) {
                         callback.setMessage("Downloading Tissues");
                         try {
-                            List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsMatchingFimsQuery);
-                            for (FimsSample sample : fimsSamples) {
-                                if(!tissueSamples.contains(sample)) {
-                                    tissueSamples.add(sample);
-                                }
+                            List<String> toRetrieveFromFims = new ArrayList<String>(tissueIdsMatchingFimsQuery);
+                            for (FimsSample tissueSample : tissueSamples) {
+                                toRetrieveFromFims.remove(tissueSample.getId());
                             }
+                            tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(toRetrieveFromFims));
+
                         } catch (ConnectionException e) {
                             throw new DatabaseServiceException(e, e.getMessage(), false);
                         }
@@ -1550,7 +1545,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws DocumentOperationException, DatabaseServiceException {
         List<PlateDocument> plateList = limsConnection.getMatchingDocumentsFromLims(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null, false).getPlates();
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
+        ).getPlates();
         if(plateList.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }

@@ -272,11 +272,10 @@ public abstract class LIMSConnection {
      * @param query    The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
      * @param tissueIdsToMatch  A list of FIMS samples to match.  Or null to return all results.
      * @param callback To add results to as they are found.  Can be null.
-     * @param downloadTissues True if we are downloding tissues that match the LIMS query
      * @return {@link LimsSearchResult} with workflows and plates found.
      * @throws SQLException if there is a problem with the database
      */
-    public abstract LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback, boolean downloadTissues) throws DatabaseServiceException;
+    public abstract LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException;
 
     /**
      * Sets a database wide property.  Can be retrieved by calling {@link #getProperty(String)}

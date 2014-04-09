@@ -10,7 +10,6 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.Map;
 
 /**
@@ -64,7 +63,7 @@ public class QueryService {
                     type == null || type.equals(RestQueryUtils.QueryType.AND.name()) ?
                             RestQueryUtils.QueryType.AND : RestQueryUtils.QueryType.OR, queryString, searchOptions
             );
-            LimsSearchResult result = LIMSInitializationServlet.getLimsConnection().getMatchingDocumentsFromLims(query, null, null, false);
+            LimsSearchResult result = LIMSInitializationServlet.getLimsConnection().getMatchingDocumentsFromLims(query, null, null);
             return Response.ok(result).build();
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException("Encountered error: " + e.getMessage());
