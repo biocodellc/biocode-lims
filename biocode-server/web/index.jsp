@@ -7,8 +7,16 @@
   <body>
     <h1>Welcome to the Moorea Biocode LIMS Server</h1>
     <h2>Under Construction</h2>
-    <p>The Moorea Biocode LIMS is still under heavy development.  This is an <a href="http://en.wiktionary.org/wiki/alpha_version">alpha version</a>,
+    <p>The Moorea Biocode LIMS is still under heavy development.  This is an
+        <a href="http://en.wiktionary.org/wiki/alpha_version">alpha release</a>,
     meaning all APIs provided by the server are subject to modification and should not be relied upon.</p>
+
+    <p>The server configuration file is located at
+        <%
+            out.println(LIMSInitializationServlet.getPropertiesFile().getAbsolutePath());
+        %>
+    </p>
+
     <p>Please report any errors to support@mooreabiocode.org</p>
     <%
         String errors = LIMSInitializationServlet.getErrorText();

@@ -62,8 +62,7 @@ public class LIMSInitializationServlet extends GenericServlet {
 
         BiocodeService biocodeeService;
 
-        File settingsFolder = new File(System.getProperty("user.home"), settingsFolderName);
-        File connectionPropertiesFile = new File(settingsFolder, propertiesFile);
+        File connectionPropertiesFile = getPropertiesFile();
         if(!connectionPropertiesFile.exists()) {
             File defaultFile = new File(getWarDirectory(), defaultPropertiesFile);
             if(defaultFile.exists()) {
@@ -102,6 +101,11 @@ public class LIMSInitializationServlet extends GenericServlet {
         } catch (Exception e) {
             initializationErrors.add(IntializationError.forException(e));
         }
+    }
+
+    public static File getPropertiesFile() {
+        File settingsFolder = new File(System.getProperty("user.home"), settingsFolderName);
+        return new File(settingsFolder, propertiesFile);
     }
 
     private static LIMSConnection connectLims(Connection connectionConfig) throws ConnectionException {
