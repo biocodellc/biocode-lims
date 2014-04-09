@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.lims;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.server.XMLSerializableList;
@@ -19,11 +20,17 @@ import java.util.List;
  *          Created on 4/04/14 11:56 AM
  */
 public class LimsSearchResult implements XMLSerializable {
+    XMLSerializableList<FimsSample> tissueSamples = new XMLSerializableList<FimsSample>(
+            FimsSample.class, new ArrayList<FimsSample>());
     XMLSerializableList<WorkflowDocument> workflows = new XMLSerializableList<WorkflowDocument>(
             WorkflowDocument.class, new ArrayList<WorkflowDocument>());
     XMLSerializableList<PlateDocument> plates = new XMLSerializableList<PlateDocument>(
             PlateDocument.class, new ArrayList<PlateDocument>());
     List<Integer> sequenceIds = new ArrayList<Integer>();
+
+    public List<FimsSample> getTissueSamples() {
+        return tissueSamples.getList();
+    }
 
     public List<WorkflowDocument> getWorkflows() {
         return workflows.getList();
@@ -37,6 +44,7 @@ public class LimsSearchResult implements XMLSerializable {
         return Collections.unmodifiableList(sequenceIds);
     }
 
+    private static final String TISSUES = "tissues";
     private static final String WORKFLOWS = "workflows";
     private static final String PLATES = "plates";
     private static final String SEQUENCES = "sequenceIds";
@@ -44,6 +52,7 @@ public class LimsSearchResult implements XMLSerializable {
     @Override
     public Element toXML() {
         Element root = new Element(XMLSerializable.ROOT_ELEMENT_NAME);
+        root.addContent(XMLSerializer.classToXML(TISSUES, tissueSamples));
         root.addContent(XMLSerializer.classToXML(WORKFLOWS, workflows));
         root.addContent(XMLSerializer.classToXML(PLATES, plates));
         Element seqElement = new Element(SEQUENCES);
@@ -57,6 +66,7 @@ public class LimsSearchResult implements XMLSerializable {
     @SuppressWarnings("unchecked")
     @Override
     public void fromXML(Element element) throws XMLSerializationException {
+        tissueSamples = getListFromElement(element, TISSUES);
         workflows = getListFromElement(element, WORKFLOWS);
         plates = getListFromElement(element, PLATES);
 

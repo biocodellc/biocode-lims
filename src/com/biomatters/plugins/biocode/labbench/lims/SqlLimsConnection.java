@@ -390,14 +390,18 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
-            queryResult = createPlateAndWorkflowsFromResultSet(connection, callback, resultSet, downloadTissues || downloadWorkflows,
-                    downloadTissues || downloadPlates, downloadSequences);
+            boolean needTissues = downloadTissues || downloadSequences;
+            boolean needWorkflows = downloadWorkflows || downloadSequences;
+            queryResult = createPlateAndWorkflowsFromResultSet(connection,
+                    callback != null ? callback : ProgressListener.EMPTY, resultSet,
+                    needTissues, needWorkflows, downloadPlates);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(preparedStatement);
             returnConnection(connection);
         }
+        result.tissueSamples.addAll(queryResult.tissueSamples);
 
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(queryResult.workflows.values());
         if (downloadWorkflows && callback != null) {
@@ -482,7 +486,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         boolean filterOnTissues = tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty();
 
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT workflow.id, plate.id, assembly.id, assembly.date FROM ");
+                "SELECT extraction.sampleId, workflow.id, plate.id, assembly.id, assembly.date FROM ");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
         if (filterOnTissues) {
@@ -501,8 +505,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         } else {
             queryBuilder.append(" extraction ");
         }
-
-        queryBuilder.append("LEFT OUTER JOIN workflow ON extraction.id = workflow.extractionId");
+        queryBuilder.append(getJoinStringIncludingSpaces(operator, workflowQueryConditions));
+        queryBuilder.append("workflow ON extraction.id = workflow.extractionId");
 
         if (workflowQueryConditions != null) {
             if (filterOnTissues) {
@@ -529,7 +533,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             conditionBuilder.append("(").append(plateQueryConditions).append(")");
         }
         queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
-        queryBuilder.append(operator == CompoundSearchQuery.Operator.AND && assemblyQueryConditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ").
+        queryBuilder.append(getJoinStringIncludingSpaces(operator, assemblyQueryConditions)).
                 append("assembly ON assembly.id = sequencing_result.assembly");
 
         if (assemblyQueryConditions != null) {
@@ -544,6 +548,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
         queryBuilder.append(" ORDER BY workflow.id, assembly.date desc");
         return queryBuilder;
+    }
+
+    private String getJoinStringIncludingSpaces(CompoundSearchQuery.Operator operator, QueryPart conditions) {
+        return operator == CompoundSearchQuery.Operator.AND && conditions != null ? " INNER JOIN " : " LEFT OUTER JOIN ";
     }
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
@@ -944,11 +952,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     private class WorkflowsAndPlatesQueryResult {
-        Map<Integer, Plate> plates;
-        Map<Integer, WorkflowDocument> workflows;
-        List<Integer> sequenceIds;
+        private List<FimsSample> tissueSamples;
+        private Map<Integer, Plate> plates;
+        private Map<Integer, WorkflowDocument> workflows;
+        private List<Integer> sequenceIds;
 
         private WorkflowsAndPlatesQueryResult() {
+            tissueSamples = new ArrayList<FimsSample>();
             plates = new HashMap<Integer, Plate>();
             workflows = new HashMap<Integer, WorkflowDocument>();
             sequenceIds = new ArrayList<Integer>();
@@ -957,11 +967,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
 
     private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(
-            ConnectionWrapper connection, Cancelable cancelable, ResultSet resultSet,
-            boolean downloadWorkflows, boolean downloadPlates, boolean downloadSequences) throws SQLException, DatabaseServiceException {
+            ConnectionWrapper connection, ProgressListener cancelable, ResultSet resultSet,
+            boolean getTissues, boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
         final StringBuilder totalErrors = new StringBuilder("");
 
+        Set<String> tissueIds = new HashSet<String>();
         Set<Integer> workflowIds = new HashSet<Integer>();
         Set<Integer> plateIds = new HashSet<Integer>();
 
@@ -971,8 +982,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 resultSet.close();
                 throw new SQLException("Search cancelled due to lack of free memory");
             }
-            if (cancelable != null && cancelable.isCanceled()) {
+            if (cancelable.isCanceled()) {
                 return new WorkflowsAndPlatesQueryResult();
+            }
+
+            String tissue = resultSet.getString("sampleId");
+            if(tissue != null) {
+                tissueIds.add(tissue);
             }
 
             int plateId = resultSet.getInt("plate.id");
@@ -986,14 +1002,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             int sequenceId = resultSet.getInt("assembly.id");
-            if (downloadSequences && !resultSet.wasNull()) {
+            if (!resultSet.wasNull()) {
                 result.sequenceIds.add(sequenceId);
             }
         }
         resultSet.close();
 
         Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
-        if(downloadWorkflows && !workflowIds.isEmpty()) {
+        if(!workflowIds.isEmpty() && getWorkflows) {
+            cancelable.setMessage("Downloading " + getCountString("matching workflow document", workflowIds.size()) + "...");
             // Query for full contents of plates that matched our query
             String workflowQueryString = constructWorkflowQuery(workflowIds);
             PreparedStatement selectWorkflow = null;
@@ -1050,7 +1067,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
         }
 
-        if(downloadPlates && !plateIds.isEmpty()) {
+        if(!plateIds.isEmpty() && getPlates) {
+            cancelable.setMessage("Downloading " + getCountString("matching plate document", plateIds.size()) + "...");
             // Query for full contents of plates that matched our query
             String plateQueryString = constructPlateQuery(plateIds);
             PreparedStatement selectPlate = null;
@@ -1073,6 +1091,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
         }
 
+        if(!tissueIds.isEmpty() && getTissues) {
+            cancelable.setMessage("Checking samples that match result from LIMS...");
+            try {
+                result.tissueSamples.addAll(BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(tissueIds));
+            } catch (ConnectionException e) {
+                throw new DatabaseServiceException(e, "Unable to retrieve FIMS samples", false);
+            }
+        }
+
         if (totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
@@ -1086,6 +1113,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ThreadUtilities.invokeNowOrLater(runnable);
         }
         return result;
+    }
+
+    private static String getCountString(String words, int count) {
+        String base = count + " " + words;
+        if(count > 1) {
+            return base + "s";
+        } else {
+            return base;
+        }
     }
 
     private String constructWorkflowQuery(Set<Integer> workflowIds) {
