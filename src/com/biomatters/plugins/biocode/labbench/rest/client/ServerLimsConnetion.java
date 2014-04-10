@@ -336,8 +336,9 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             Map<Integer, List<MemoryFile>> result = new HashMap<Integer, List<MemoryFile>>();
             for (int reactionId : reactionIds) {
-                List<MemoryFile> memoryFiles = target.path("reactions").path("" + reactionId).path("traces").
-                        request(MediaType.APPLICATION_XML_TYPE).get(
+                Response response = target.path("reactions").path("" + reactionId).path("traces").
+                        request(MediaType.APPLICATION_XML_TYPE).get();
+                List<MemoryFile> memoryFiles = response.readEntity(
                         new GenericType<List<MemoryFile>>() {
                         }
                 );
