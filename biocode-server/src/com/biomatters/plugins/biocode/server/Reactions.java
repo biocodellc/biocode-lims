@@ -5,10 +5,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.MemoryFile;
 import jebl.util.ProgressListener;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.InternalServerErrorException;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import javax.ws.rs.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +26,7 @@ public class Reactions {
             Map<Integer, List<MemoryFile>> traces = LIMSInitializationServlet.getLimsConnection().downloadTraces(
                     Collections.singletonList(reactionId), ProgressListener.EMPTY);
             if(traces == null) {
-                return null;
+                throw new NotFoundException("No traces for " + reactionId);
             }
             return traces.get(reactionId);
         } catch (DatabaseServiceException e) {

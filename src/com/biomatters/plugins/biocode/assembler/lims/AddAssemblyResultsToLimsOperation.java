@@ -435,7 +435,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
 
         } catch (DatabaseServiceException e) {
-            throw new DocumentOperationException("Failed to park as pass/fail in LIMS: " + e.getMessage(), e);
+            throw new DocumentOperationException("Failed to mark as pass/fail in LIMS: " + e.getMessage(), e);
         }
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
             String savedSeqId = seqIds.get(annotatedDocument.getURN());

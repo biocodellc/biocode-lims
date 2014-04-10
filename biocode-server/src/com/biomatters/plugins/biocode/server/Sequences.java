@@ -74,17 +74,19 @@ public class Sequences {
 
     @POST
     @Consumes("application/xml")
+    @Produces("text/plain")
     public int addSequence(AssembledSequence seq,
                            @QueryParam("isPass")boolean isPass,
                            @QueryParam("notes")String notes,
                            @QueryParam("technician")String technician,
-                           @QueryParam("failureReason")FailureReason failureReason,
+                           @QueryParam("failureReason")String failureReason,
                            @QueryParam("failureNotes")String failureNotes,
                            @QueryParam("addChromatograms")boolean addChromatograms,
                            @QueryParam("reactionIds")String reactionIds
                            ) {
         try {
-            return LIMSInitializationServlet.getLimsConnection().addAssembly(isPass, notes, technician, failureReason,
+            return LIMSInitializationServlet.getLimsConnection().addAssembly(isPass, notes, technician,
+                    FailureReason.getReasonFromIdString(failureReason),
                     failureNotes, addChromatograms, seq, getIntegerListFromString(reactionIds), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);

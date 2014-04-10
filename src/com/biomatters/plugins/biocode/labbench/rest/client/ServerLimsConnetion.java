@@ -15,6 +15,7 @@ import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
@@ -160,7 +161,7 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             Invocation.Builder request = target.path("plates").path("delete").request(MediaType.TEXT_PLAIN_TYPE);
             Response response = request.post(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
-            result = response.getEntity().toString();
+            result = response.readEntity(String.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
@@ -242,26 +243,22 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
-        Object entity;
         try {
-            Response response = target.path("sequences").
+            WebTarget resource = target.path("sequences").
                     queryParam("isPass", isPass).
                     queryParam("notes", notes).
                     queryParam("technician", technician).
-                    queryParam("failureReason", failureReason).
+                    queryParam("failureReason", failureReason.getId()).
                     queryParam("addChromatograms", addChromatograms).
-                    queryParam("reactionIds", StringUtilities.join(",", reactionIds)).request(MediaType.TEXT_PLAIN_TYPE).
+                    queryParam("reactionIds", StringUtilities.join(",", reactionIds));
+            System.out.println(resource.getUri());
+            Response response = resource.request(MediaType.TEXT_PLAIN_TYPE).
                     post(Entity.entity(seq, MediaType.APPLICATION_XML_TYPE));
-            entity = response.getEntity();
+            return response.readEntity(Integer.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
-        if (entity instanceof Integer) {
-            return (Integer) entity;
-        } else {
-            throw new DatabaseServiceException("Bad result from server, expected sequence ID, received " + entity, false);
         }
     }
 
@@ -336,12 +333,17 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             Map<Integer, List<MemoryFile>> result = new HashMap<Integer, List<MemoryFile>>();
             for (int reactionId : reactionIds) {
-                Response response = target.path("reactions").path("" + reactionId).path("traces").
-                        request(MediaType.APPLICATION_XML_TYPE).get();
-                List<MemoryFile> memoryFiles = response.readEntity(
-                        new GenericType<List<MemoryFile>>() {
-                        }
-                );
+                List<MemoryFile> memoryFiles = null;
+                try {
+                    Response response = target.path("reactions").path("" + reactionId).path("traces").
+                            request(MediaType.APPLICATION_XML_TYPE).get();
+                    memoryFiles = response.readEntity(
+                            new GenericType<List<MemoryFile>>() {
+                            }
+                    );
+                } catch (NotFoundException e) {
+                    continue;
+                }
                 if (memoryFiles != null) {
                     result.put(reactionId, memoryFiles);
                 }
