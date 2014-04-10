@@ -142,12 +142,10 @@ public class ServerLimsConnetion extends LIMSConnection {
     public void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException {
 
         try {
-            Invocation.Builder request = target.path("plates").path("reactions").
-                    queryParam("reactions", new XMLSerializableList<Reaction>(Reaction.class, Arrays.asList(reactions))).
-                    queryParam("type", type.name()).
-                    request();
-            Response response = request.get();
-            System.out.println(response);
+            Invocation.Builder request = target.path("plates").path("reactions").queryParam("type", type.name()).request();
+            request.put(Entity.entity(
+                    new XMLSerializableList<Reaction>(Reaction.class, Arrays.asList(reactions)),
+                    MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
