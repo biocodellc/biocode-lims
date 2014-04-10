@@ -152,6 +152,7 @@ public class GelImage implements XMLSerializable {
 
     public void setImageBytes(byte[] imageBytes) {
         this.imageBytes = imageBytes;
+        createImage();
     }
 
     public Image getImage() {
