@@ -1,16 +1,13 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
 
-import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.*;
 import java.util.Arrays;
 import java.util.Collections;
