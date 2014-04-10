@@ -179,7 +179,12 @@ public class ServerFimsConnection extends FIMSConnection {
                     queryParam("type", restQuery.getType()).
                     request(MediaType.TEXT_PLAIN_TYPE);
 
-            return Arrays.asList(request.get(String.class).split(","));
+            String result = request.get(String.class);
+            if(result == null || result.trim().isEmpty()) {
+                return Collections.emptyList();
+            } else {
+                return Arrays.asList(result.split(","));
+            }
         } catch (WebApplicationException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
