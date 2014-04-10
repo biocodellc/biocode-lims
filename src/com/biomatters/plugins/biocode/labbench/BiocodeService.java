@@ -839,11 +839,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     if(downloadAllSamplesFromFimsQuery) {
                         callback.setMessage("Downloading Tissues");
                         try {
-                            List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsMatchingFimsQuery);
-                            for (FimsSample sample : fimsSamples) {
-                                if(!tissueSamples.contains(sample)) {
-                                    tissueSamples.add(sample);
-                                }
+                            List<String> toRetrieve = new ArrayList<String>(tissueIdsMatchingFimsQuery);
+                            for (FimsSample sample : tissueSamples) {
+                                tissueIdsMatchingFimsQuery.remove(sample.getId());
+                            }
+                            if(!toRetrieve.isEmpty()) {
+                                tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(toRetrieve));
                             }
                         } catch (ConnectionException e) {
                             throw new DatabaseServiceException(e, e.getMessage(), false);
