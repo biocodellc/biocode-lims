@@ -47,7 +47,6 @@
                <include name="${plugin-name}/**/*"/>
             </fileset>
         </zip>
-        <copy file="${build}/${short-plugin-name}.gplugin" todir="${build}/../../downloads"/>
     </target>
 
     <target name="compile-server" depends="compile-plugin, retrieve-server-dependencies">
