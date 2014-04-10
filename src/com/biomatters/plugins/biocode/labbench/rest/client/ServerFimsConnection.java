@@ -61,12 +61,12 @@ public class ServerFimsConnection extends FIMSConnection {
 
     @Override
     public void _connect(Options options) throws ConnectionException {
-        if(!(options instanceof RESTConnectionOptions)) {
+        if (!(options instanceof RESTConnectionOptions)) {
             throw new IllegalArgumentException("Expected instance of " + RESTConnectionOptions.class.getSimpleName() + " but was " + options.getClass().getName());
         }
         RESTConnectionOptions connetionOptions = (RESTConnectionOptions) options;
         String host = connetionOptions.getHost();
-        if(!host.matches("https?://.*")) {
+        if (!host.matches("https?://.*")) {
             host = "http://" + host;
         }
 
@@ -80,7 +80,7 @@ public class ServerFimsConnection extends FIMSConnection {
                 target(host).path("biocode");
         try {
             String serverVersion = server.path("info").path("version").request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
-            if(!serverVersion.equals("0.1")) {
+            if (!serverVersion.equals("0.1")) {
                 throw new ConnectionException("Incompatible server version.  Expected 0.1 (alpha), was " + serverVersion);
             }
             target = server.path("fims");
@@ -95,7 +95,7 @@ public class ServerFimsConnection extends FIMSConnection {
             searchFields = getDocumentFieldListForType(null);
         } catch (WebApplicationException e) {
             throw new ConnectionException(e.getMessage(), e);
-        } catch(ProcessingException e) {
+        } catch (ProcessingException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
     }
@@ -158,11 +158,12 @@ public class ServerFimsConnection extends FIMSConnection {
 
     private List<DocumentField> getDocumentFieldListForType(String type) {
         WebTarget fieldsTarget = target.path("fields");
-        if(type != null) {
+        if (type != null) {
             fieldsTarget = fieldsTarget.queryParam("type", type);
         }
         Invocation.Builder request = fieldsTarget.request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(new GenericType<XMLSerializableList<DocumentField>>(){}).getList();
+        return request.get(new GenericType<XMLSerializableList<DocumentField>>() {
+        }).getList();
     }
 
     @Override
@@ -185,25 +186,30 @@ public class ServerFimsConnection extends FIMSConnection {
                     request(MediaType.TEXT_PLAIN_TYPE);
 
             String result = request.get(String.class);
-            if(result == null || result.trim().isEmpty()) {
+            if (result == null || result.trim().isEmpty()) {
                 return Collections.emptyList();
             } else {
                 return Arrays.asList(result.split(","));
             }
         } catch (WebApplicationException e) {
             throw new ConnectionException(e.getMessage(), e);
+        } catch (ProcessingException e) {
+            throw new ConnectionException(e.getMessage(), e);
         }
     }
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        if(tissueIds.isEmpty()) {
+        if (tissueIds.isEmpty()) {
             return Collections.emptyList();
         }
         try {
             Invocation.Builder request = target.path("samples").queryParam("ids", StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
-            return request.get(new GenericType<XMLSerializableList<FimsSample>>(){}).getList();
+            return request.get(new GenericType<XMLSerializableList<FimsSample>>() {
+            }).getList();
         } catch (WebApplicationException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        } catch (ProcessingException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
     }
@@ -214,6 +220,8 @@ public class ServerFimsConnection extends FIMSConnection {
             Invocation.Builder request = target.path("samples/count").request(MediaType.TEXT_PLAIN_TYPE);
             return request.get(Integer.class);
         } catch (WebApplicationException e) {
+            throw new ConnectionException(e.getMessage(), e);
+        } catch (ProcessingException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
     }
@@ -236,6 +244,9 @@ public class ServerFimsConnection extends FIMSConnection {
             Invocation.Builder request = target.path("property/" + name).request(MediaType.TEXT_PLAIN_TYPE);
             return request.get(Boolean.class);
         } catch (WebApplicationException e) {
+            // todo
+            return false;
+        } catch (ProcessingException e) {
             // todo
             return false;  // Can't do anything since we don't support throwing exception from parent method
         }

@@ -15,6 +15,7 @@ import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -94,6 +95,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             result = request.get(LimsSearchResult.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
         if (BiocodeService.isDownloadPlates(query) && callback != null) {
             for (PlateDocument plateDocument : result.getPlates()) {
@@ -115,6 +118,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             request.put(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -126,6 +131,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     }
             ).getList();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -142,6 +149,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             System.out.println(response);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -153,6 +162,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             Response response = request.post(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
             result = response.getEntity().toString();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
 
@@ -181,6 +192,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             System.out.println(response);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -189,8 +202,11 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             return target.path("failureReasons").request(MediaType.APPLICATION_XML_TYPE).get(
                     new GenericType<List<FailureReason>>() {
-                    });
+                    }
+            );
         } catch (WebApplicationException e) {
+            return Collections.emptyList();
+        } catch (ProcessingException e) {
             // todo Handle this better. Perhaps cache on start up and have an updating thread
             return Collections.emptyList();
         }
@@ -201,6 +217,8 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             return target.path("permissions").path("delete").path(tableName).request(MediaType.TEXT_PLAIN_TYPE).get(Boolean.class);
         } catch (WebApplicationException e) {
+            return false;
+        } catch (ProcessingException e) {
             return false;
         }
     }
@@ -216,6 +234,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     }
             );
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -235,6 +255,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             entity = response.getEntity();
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
         if (entity instanceof Integer) {
             return (Integer) entity;
@@ -250,6 +272,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     StringUtilities.join(",", sequencesToDelete), MediaType.TEXT_PLAIN_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -261,6 +285,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             }
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -269,6 +295,8 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             target.path("workflows").path("" + workflowId).path("sequences").path(extractionId).request().delete();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -283,6 +311,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     get(StringMap.class).getMap();
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -295,6 +325,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     get(new GenericType<XMLSerializableList<ExtractionReaction>>() {
                     }).getList();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -315,6 +347,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             }
             return result;
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -353,6 +387,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             ));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -365,6 +401,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     get(new GenericType<XMLSerializableList<ExtractionReaction>>() {
                     }).getList();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -383,6 +421,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             return images;
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -392,6 +432,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             target.path("info").path("properties").path(key).request().put(Entity.entity(value, MediaType.TEXT_PLAIN_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -400,6 +442,8 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             return target.path("info").path("properties").path(key).request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -414,6 +458,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             }).getList();
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -426,6 +472,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     queryParam("type", reactionType.name()).
                     request(MediaType.APPLICATION_XML_TYPE).get(StringMap.class).getMap();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -440,6 +488,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             System.out.println(response);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -448,6 +498,8 @@ public class ServerLimsConnetion extends LIMSConnection {
         try {
             target.path("info").path("details").request(MediaType.TEXT_PLAIN_TYPE).get();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -461,6 +513,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             return Arrays.asList(platesList.split("\\n"));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -472,6 +526,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -482,6 +538,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     new XMLSerializableList<Cocktail>(Cocktail.class, new ArrayList<Cocktail>(deletedCocktails)),
                     MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -495,6 +553,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             ).getList();
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -506,6 +566,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     }
             ).getList();
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -521,6 +583,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             ).getList();
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -531,6 +595,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                     new XMLSerializableList<Thermocycle>(Thermocycle.class, cycles), MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
 
@@ -540,6 +606,8 @@ public class ServerLimsConnetion extends LIMSConnection {
             target.path(THERMOCYCLES).path(type.name()).path("delete").request().post(Entity.entity(
                     new XMLSerializableList<Thermocycle>(Thermocycle.class, cycles), MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
@@ -554,6 +622,8 @@ public class ServerLimsConnetion extends LIMSConnection {
                 return Arrays.asList(result.split("\\n"));
             }
         } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
