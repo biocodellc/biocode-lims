@@ -53,7 +53,7 @@ public class MySqlFimsConnectionOptions extends TableFimsConnectionOptions{
             connection.close();
             return results;
         } catch (SQLException e1) {
-            throw new IOException("Failed to connect to the MySQL database: "+e1.getMessage());
+            throw new IOException("Failed to connect to the MySQL database: "+e1.getMessage(), e1);
         }
     }
 
