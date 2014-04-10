@@ -417,7 +417,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 seq.numberOfAmbiguities = assemblyResult.ambiguities;
                 seq.editRecord = assemblyResult.editRecord;
 
-                String seqId = "" + limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(),
+                int seqId = limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(),
                         options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), seq, reactionIds, progress);
                 if(progress.isCanceled()) {
                     return null;

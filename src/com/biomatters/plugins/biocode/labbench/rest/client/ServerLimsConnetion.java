@@ -246,7 +246,7 @@ public class ServerLimsConnetion extends LIMSConnection {
                     queryParam("isPass", isPass).
                     queryParam("notes", notes).
                     queryParam("technician", technician).
-                    queryParam("failureReason", failureReason.getId()).
+                    queryParam("failureReason", failureReason != null ? failureReason.getId() : null).
                     queryParam("addChromatograms", addChromatograms).
                     queryParam("reactionIds", StringUtilities.join(",", reactionIds));
             System.out.println(resource.getUri());

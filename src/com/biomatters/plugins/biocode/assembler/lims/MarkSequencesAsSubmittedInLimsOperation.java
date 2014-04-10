@@ -75,7 +75,19 @@ public class MarkSequencesAsSubmittedInLimsOperation extends DocumentOperation {
         boolean submitted = options.getValueAsString("markValue").equals("Yes");
         List<Integer> ids = new ArrayList<Integer>();
         for(AnnotatedPluginDocument doc : docsToMark.keySet()) {
-            ids.add((Integer)doc.getFieldValue(LIMSConnection.SEQUENCE_ID));
+            Object fieldValue = doc.getFieldValue(LIMSConnection.SEQUENCE_ID);
+            if(fieldValue == null) {
+                continue;
+            }
+            if(fieldValue instanceof Integer) {
+                ids.add((Integer) fieldValue);
+            } else if(fieldValue instanceof String) {
+                try {
+                    ids.add(Integer.parseInt((String)fieldValue));
+                } catch (NumberFormatException e) {
+                    // Not an int, ignore
+                }
+            }
         }
 
         try {
