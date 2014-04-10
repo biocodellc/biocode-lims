@@ -191,14 +191,14 @@ public class LIMSInitializationServlet extends GenericServlet {
             if(tissueId == null || specimenId == null) {
                 throw new MissingPropertyException("fims.tissueId", "fims.specimenId");
             }
-            fimsOptions.setValue(MySqlFimsConnectionOptions.TISSUE_ID, tissueId);
-            fimsOptions.setValue(MySqlFimsConnectionOptions.SPECIMEN_ID, specimenId);
+            fimsOptions.setValue(MySqlFimsConnectionOptions.TISSUE_ID, MySQLFimsConnection.FIELD_PREFIX + tissueId);
+            fimsOptions.setValue(MySqlFimsConnectionOptions.SPECIMEN_ID, MySQLFimsConnection.FIELD_PREFIX + specimenId);
             String plate = config.getProperty("fims.plate");
             String well = config.getProperty("fims.well");
             if(plate != null && well != null) {
                 fimsOptions.setValue(MySqlFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
-                fimsOptions.setValue(MySqlFimsConnectionOptions.PLATE_NAME, plate);
-                fimsOptions.setValue(MySqlFimsConnectionOptions.PLATE_WELL, well);
+                fimsOptions.setValue(MySqlFimsConnectionOptions.PLATE_NAME, MySQLFimsConnection.FIELD_PREFIX + plate);
+                fimsOptions.setValue(MySqlFimsConnectionOptions.PLATE_WELL, MySQLFimsConnection.FIELD_PREFIX + well);
             }
             int index = 0;
             String taxonField = config.getProperty("fims.taxon." + index);
