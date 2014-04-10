@@ -16,6 +16,7 @@ import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
@@ -121,8 +122,12 @@ public class ServerFimsConnection extends FIMSConnection {
     }
 
     private DocumentField getDocumentField(String type) {
-        Invocation.Builder request = target.path("fields").path(type).request(MediaType.APPLICATION_XML_TYPE);
-        return request.get(DocumentField.class);
+        try {
+            Invocation.Builder request = target.path("fields").path(type).request(MediaType.APPLICATION_XML_TYPE);
+            return request.get(DocumentField.class);
+        } catch (NotFoundException e) {
+            return null;
+        }
     }
 
 

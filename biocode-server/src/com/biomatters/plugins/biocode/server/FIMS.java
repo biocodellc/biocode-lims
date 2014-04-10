@@ -30,20 +30,22 @@ public class FIMS {
         if(fims == null) {
             throw new InternalServerErrorException("Server not connected to FIMS.  Contact your systems administrator.");
         }
+        DocumentField field = null;
         if("tissue".equals(id)) {
-            return fims.getTissueSampleDocumentField();
+            field = fims.getTissueSampleDocumentField();
         } else if("latitude".equals(id)) {
-            return fims.getLatitudeField();
+            field = fims.getLatitudeField();
         } else if("longitude".equals(id)) {
-            return fims.getLongitudeField();
+            field = fims.getLongitudeField();
         } else if("plate".equals(id)) {
-            return fims.getPlateDocumentField();
+            field = fims.getPlateDocumentField();
         } else if("well".equals(id)) {
-            return fims.getWellDocumentField();
-        } else if("null".equals(id)) {
-            return null;
-        } else {
+            field = fims.getWellDocumentField();
+        }
+        if(field == null) {
             throw new NotFoundException("No field for \"" + id + "\"");
+        } else {
+            return field;
         }
     }
 
