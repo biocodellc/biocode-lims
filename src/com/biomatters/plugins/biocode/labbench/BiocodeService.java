@@ -841,7 +841,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         try {
                             List<String> toRetrieve = new ArrayList<String>(tissueIdsMatchingFimsQuery);
                             for (FimsSample sample : tissueSamples) {
-                                tissueIdsMatchingFimsQuery.remove(sample.getId());
+                                toRetrieve.remove(sample.getId());
                             }
                             if(!toRetrieve.isEmpty()) {
                                 tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(toRetrieve));
