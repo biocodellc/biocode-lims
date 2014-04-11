@@ -1115,7 +1115,9 @@ public abstract class LIMSConnection {
 
         Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
         if(!workflowIds.isEmpty() && getWorkflows) {
-            cancelable.setMessage("Downloading " + getCountString("matching workflow document", workflowIds.size()) + "...");
+            if(cancelable != null) {
+                cancelable.setMessage("Downloading " + getCountString("matching workflow document", workflowIds.size()) + "...");
+            }
             // Query for full contents of plates that matched our query
             String workflowQueryString = constructWorkflowQuery(workflowIds);
             PreparedStatement selectWorkflow = null;
@@ -1173,7 +1175,9 @@ public abstract class LIMSConnection {
         }
 
         if(!plateIds.isEmpty() && getPlates) {
-            cancelable.setMessage("Downloading " + getCountString("matching plate document", plateIds.size()) + "...");
+            if(cancelable != null) {
+                cancelable.setMessage("Downloading " + getCountString("matching plate document", plateIds.size()) + "...");
+            }
             // Query for full contents of plates that matched our query
             String plateQueryString = constructPlateQuery(plateIds);
             PreparedStatement selectPlate = null;
@@ -1197,7 +1201,9 @@ public abstract class LIMSConnection {
         }
 
         if(!tissueIds.isEmpty() && getTissues) {
-            cancelable.setMessage("Checking samples that match result from LIMS...");
+            if(cancelable != null) {
+                cancelable.setMessage("Checking samples that match result from LIMS...");
+            }
             try {
                 result.tissueSamples.addAll(BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(tissueIds));
             } catch (ConnectionException e) {
