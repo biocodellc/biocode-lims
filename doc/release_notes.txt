@@ -1,4 +1,4 @@
-==Biocode Plugin 2.6.0 - TBD==
+==Biocode Plugin 2.6.0 - 11 April 2014==
 * Improved LIMS search performance.
 * Greatly improved memory usage and search performance when searching on FIMS fields.
 * Fix a bug that was causing failed sequences to not be returned from searches.
@@ -6,7 +6,7 @@
 * Fix a bug that disabled the clean up method field.
 * Fix a bug that prevented traces or sequences from being deleted from plates.
 
-==Biocode Plugin 2.5.3 - 7 Jan 2014==
+==Biocode Plugin 2.5.3 - 7 January 2014==
 * Annotate from FIMS/LIMS can now use the annotated workflow name in addition to the annotated plate/well.
 * Improved plate bulk editor.  Changed wells are now highlighted.  Pasting doesn't shift existing wells down.  Pressing Enter at the end of a line no longer inserts a new row.
 * Export of original chromatograms can now be done when selecting assemblies or consensus sequences.
