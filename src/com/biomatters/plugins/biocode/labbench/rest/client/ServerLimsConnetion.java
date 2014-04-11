@@ -184,11 +184,9 @@ public class ServerLimsConnetion extends LIMSConnection {
     @Override
     public void renamePlate(int id, String newName) throws DatabaseServiceException {
         try {
-            Invocation.Builder request = target.path("plates").path(id + "/name").
-                    queryParam("name", newName).
-                    request();
-            Response response = request.get();
-            System.out.println(response);
+            Invocation.Builder request = target.path("plates").path(id + "/name").request();
+            Response response = request.put(Entity.entity(newName, MediaType.TEXT_PLAIN_TYPE));
+            response.close();
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
@@ -484,11 +482,8 @@ public class ServerLimsConnetion extends LIMSConnection {
     @Override
     public void renameWorkflow(int id, String newName) throws DatabaseServiceException {
         try {
-            Invocation.Builder request = target.path(WORKFLOWS).path(id + "/name").
-                    queryParam("name", newName).
-                    request();
-            Response response = request.get();
-            System.out.println(response);
+            Invocation.Builder request = target.path(WORKFLOWS).path(id + "/name").request();
+            request.put(Entity.entity(newName, MediaType.TEXT_PLAIN_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
