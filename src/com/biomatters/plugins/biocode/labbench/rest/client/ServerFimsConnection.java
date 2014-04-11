@@ -186,7 +186,7 @@ public class ServerFimsConnection extends FIMSConnection {
                     request(MediaType.TEXT_PLAIN_TYPE);
 
             String result = request.get(String.class);
-            if (result == null || result.trim().isEmpty()) {
+            if (result == null || result.trim().isEmpty() || result.contains("<html>")) {
                 return Collections.emptyList();
             } else {
                 return Arrays.asList(result.split(","));
@@ -204,7 +204,8 @@ public class ServerFimsConnection extends FIMSConnection {
             return Collections.emptyList();
         }
         try {
-            Invocation.Builder request = target.path("samples").queryParam("ids", StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
+            Invocation.Builder request = target.path("samples").queryParam("ids",
+                    StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
             return request.get(new GenericType<XMLSerializableList<FimsSample>>() {
             }).getList();
         } catch (WebApplicationException e) {
