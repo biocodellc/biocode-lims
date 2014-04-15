@@ -22,7 +22,7 @@ public class BiocodeFIMSUtils {
 
     static WebTarget getWebTarget(String project, String graph) {
         WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
-        target = target.path("biocode-fims/query/json").
+        target = target.path("biocode-fims/rest/query/json").
                 queryParam("project_id", project);
         if(graph != null) {
             target = target.queryParam("graphs", graph);
@@ -40,7 +40,7 @@ public class BiocodeFIMSUtils {
     static List<Project> getProjects() throws DatabaseServiceException {
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
-            Invocation.Builder request = target.path("id/projectService/list").request(MediaType.APPLICATION_JSON_TYPE);
+            Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
             ProjectList projectList = request.get(ProjectList.class);
             return projectList.getProjects();
         } catch(WebApplicationException e) {
