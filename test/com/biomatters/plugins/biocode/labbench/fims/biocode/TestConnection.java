@@ -27,4 +27,10 @@ public class TestConnection extends Assert {
         System.out.println(data.header);
         assertFalse(data.header.isEmpty());
     }
+
+    @Test
+    public void getProjects() throws DatabaseServiceException {
+        List<Project> projects = BiocodeFIMSUtils.getProjects();
+        assertFalse("There should be some projects", projects.isEmpty());
+    }
 }

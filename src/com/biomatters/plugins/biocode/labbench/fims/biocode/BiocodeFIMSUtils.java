@@ -8,6 +8,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -41,8 +42,7 @@ public class BiocodeFIMSUtils {
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
             Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
-            ProjectList projectList = request.get(ProjectList.class);
-            return projectList.getProjects();
+            return request.get(new GenericType<List<Project>>(){});
         } catch(WebApplicationException e) {
             throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
         } catch(ProcessingException e) {
@@ -54,8 +54,7 @@ public class BiocodeFIMSUtils {
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
             Invocation.Builder request = target.path("id/projectService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
-            GraphList graphs = request.get(GraphList.class);
-            return graphs.data;
+            return request.get(new GenericType<List<Graph>>(){});
         } catch(WebApplicationException e) {
             throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
         } catch(ProcessingException e) {
