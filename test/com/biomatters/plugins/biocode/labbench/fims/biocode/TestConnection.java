@@ -1,9 +1,11 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.MalformedURLException;
 import java.util.List;
 
 /**
@@ -32,5 +34,26 @@ public class TestConnection extends Assert {
     public void getProjects() throws DatabaseServiceException {
         List<Project> projects = BiocodeFIMSUtils.getProjects();
         assertFalse("There should be some projects", projects.isEmpty());
+        for (Project project : projects) {
+            assertNotNull(project.code);
+            assertNotNull(project.id);
+            assertNotNull(project.title);
+            assertNotNull(project.xmlLocation);
+        }
+    }
+
+    @Test
+    public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException {
+        String host = "biscicol.org";
+        SharedCookieHandler.registerHost(host);
+        assertTrue(BiocodeFIMSUtils.login("http://" + host, "demo", "demo"));
+        for (Project project : BiocodeFIMSUtils.getProjects()) {
+            System.out.println(project);
+        }
+    }
+
+    @Test(expected = DatabaseServiceException.class)
+    public void checkProjectRetrievalWhenNotLoggedIn() throws DatabaseServiceException {
+        BiocodeFIMSUtils.getProjects();
     }
 }

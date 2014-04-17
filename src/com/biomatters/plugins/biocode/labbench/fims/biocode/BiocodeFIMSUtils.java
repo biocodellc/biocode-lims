@@ -1,25 +1,50 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.FusionTableUtils;
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.java6.auth.oauth2.FileCredentialStore;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.fusiontables.FusiontablesScopes;
+import org.glassfish.jersey.client.oauth2.ClientIdentifier;
+import org.glassfish.jersey.client.oauth2.OAuth2ClientSupport;
+import org.glassfish.jersey.client.oauth2.OAuth2CodeGrantFlow;
+import org.glassfish.jersey.client.oauth2.TokenResult;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.MediaType;
+import javax.ws.rs.client.*;
+import javax.ws.rs.core.*;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Matthew Cheung
  *         Created on 7/02/14 5:51 AM
  */
 public class BiocodeFIMSUtils {
+
+    static boolean login(String hostname, String username, String password) throws MalformedURLException {
+        WebTarget path = ClientBuilder.newClient().target(hostname).path("id/authenticationService/login");
+
+        Invocation.Builder request = path
+                .request(MediaType.TEXT_HTML_TYPE);
+        Response response = request.post(
+                Entity.entity(new Form().param("username", username).param("password", password), MediaType.TEXT_PLAIN_TYPE));
+        response.close();  // Unfortunately the login service doesn't provide any meaningful response.  It just redirects to the main page.
+        return true;  // So we'll have to assume the login worked for now
+    }
 
     static WebTarget getWebTarget(String project, String graph) {
         WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
@@ -37,16 +62,33 @@ public class BiocodeFIMSUtils {
             System.out.println(expedition.title);
         }
     }
-
     static List<Project> getProjects() throws DatabaseServiceException {
+
+        WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
+        Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
         try {
-            WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
-            Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
-            return request.get(new GenericType<List<Project>>(){});
+            ProjectList fromService = request.get(ProjectList.class);
+            List<Project> returnList = new ArrayList<Project>();
+            for (Project project : fromService.getProjects()) {
+                if(project.code != null) {
+                    returnList.add(project);
+                }
+            }
+            return returnList;
         } catch(WebApplicationException e) {
             throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
         } catch(ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), true);  // todo
+            // Unfortunately the BCID service doesn't use HTTP error codes and reports errors by returning JSON in a
+            // different format than the regular result.  So we have to do some special parsing.
+            List<String> errors = request.get(new GenericType<List<String>>() { });
+            if(errors != null && !errors.isEmpty()) {
+                if(errors.size() == 1) {
+                    throw new DatabaseServiceException(errors.get(0), false);
+                } else {
+                    throw new DatabaseServiceException("Service returned: " + StringUtilities.join("\n", errors), false);
+                }
+            }
+            throw new DatabaseServiceException(e, e.getMessage(), true);
         }
     }
 
@@ -54,7 +96,7 @@ public class BiocodeFIMSUtils {
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
             Invocation.Builder request = target.path("id/projectService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
-            return request.get(new GenericType<List<Graph>>(){});
+            return request.get(GraphList.class).getData();
         } catch(WebApplicationException e) {
             throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
         } catch(ProcessingException e) {
@@ -95,6 +137,10 @@ public class BiocodeFIMSUtils {
                 row.rowItems.add(0,g.getExpeditionTitle());
                 data.data.add(row);
             }
+        }
+        if(graphsToSearch.isEmpty()) {
+            data.header = Collections.emptyList();
+            data.data = Collections.emptyList();
         }
 
         return data;

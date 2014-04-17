@@ -1,60 +1,102 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
+import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 
 import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 /**
- * Created by matthew on 1/02/14.
- */
-public class BiocodeFIMSConnectionOptions extends PasswordOptions {
+ * @author Matthew Cheung
+ * @version $Id$
+ *       <p />
+ *       Created on 1/02/14 10:50 AM
+ */public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
     ComboBoxOption<ProjectOptionValue> projectOption;
 
+    private static final String DEFAULT_HOST = "http://biscicol.org";
+
     public BiocodeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
+        final StringOption hostOption = addStringOption("host", "Host:", DEFAULT_HOST);
+        final StringOption usernameOption = addStringOption("username", "Username:", "");
+        final StringOption passwordOption = addStringOption("password", "Password:", "");
+        addButtonOption("authenticate", "", "Authenticate").addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                final ProgressFrame progressFrame = new ProgressFrame("Authenticating...", "", Dialogs.getCurrentModalDialog());
+                progressFrame.setCancelable(false);
+                progressFrame.setIndeterminateProgress();
+                Thread thread = new Thread() {
+                    public void run() {
+                        ThreadUtilities.sleep(2000);
+                        try {
+                            URL url = new URL(hostOption.getValue());
+                            SharedCookieHandler.registerHost(url.getHost());
+                            BiocodeFIMSUtils.login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
+                            update();
+                        } catch (MalformedURLException e1) {
+                            Dialogs.showMessageDialog("Bad URL: " + e1.getMessage());
+                        } catch (ConnectionException e1) {
+                            Dialogs.showMessageDialog("Failed to login: " + e1.getMessage());
+                        }
+                        progressFrame.setComplete();
+                    }
+                };
+                thread.start();
+            }
+        });
+        addDivider(" ");
 
         final List<ProjectOptionValue> projectOptions = new ArrayList<ProjectOptionValue>();
         List<Project> projectCache = getProjectCache();
         if(projectCache == null) {
-            projectOptions.add(new ProjectOptionValue(new Project(1, "IndoP",
-                    "IndoPacific Database", "https://biocode-fims.googlecode.com/svn/trunk/Documents/IndoPacific/indoPacificConfiguration.xml")));
+            projectOptions.add(ProjectOptionValue.NO_VALUE);
         } else {
             for (Project project : projectCache) {
                 projectOptions.add(new ProjectOptionValue(project));
             }
         }
         projectOption = addComboBoxOption("project", "Project:", projectOptions, projectOptions.get(0));
+    }
 
-        new Thread() {
-            public void run() {
-                try {
-                    List<Project> projects = BiocodeFIMSUtils.getProjects();
-                    cacheProjects(projects);
+    private void loadProjectsFromServer() {
+        try {
+            List<Project> projects = BiocodeFIMSUtils.getProjects();
+            cacheProjects(projects);
 
-                    final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();
-                    for (Project project : projects) {
-                        optionValues.add(new ProjectOptionValue(project));
-                    }
-
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            projectOption.setPossibleValues(optionValues);
-                        }
-                    });
-                } catch (DatabaseServiceException e) {
-                    Dialogs.showMessageDialog("Failed to load expedition list from " + BiocodeFIMSConnection.HOST);
-                }
+            final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();
+            for (Project project : projects) {
+                optionValues.add(new ProjectOptionValue(project));
             }
-        }.start();
+
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    projectOption.setPossibleValues(optionValues);
+                }
+            });
+
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
+            Dialogs.showMessageDialog("Failed to load project list from " + BiocodeFIMSConnection.HOST);
+        }
     }
 
     private static final String CACHE_NAME = "cachedProjects";
@@ -125,15 +167,22 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
         Project project;
 
         ProjectOptionValue(Project project) {
-            super(project.code, project.title);
+            super(project == null ? "noValue" :  project.code,
+                    project == null ? "Please login to retrieve projects " : project.title);
             this.project = project;
         }
+
+        static final ProjectOptionValue NO_VALUE = new ProjectOptionValue(null);
     }
 
-
+    private static final List<OptionValue> NO_FIELDS = Arrays.asList(new Options.OptionValue("None", "None"));
     public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
         List<OptionValue> fields = new ArrayList<OptionValue>();
-        for (Project.Field field : projectOption.getValue().project.getFields()) {
+        Project project = projectOption.getValue().project;
+        if(project == null) {
+            return NO_FIELDS;
+        }
+        for (Project.Field field : project.getFields()) {
             // todo Should we be using the uri of the column.  ie darwin core term
             fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.name, field.name));
         }
@@ -144,5 +193,10 @@ public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
     public Project getExpedition() {
         return projectOption.getValue().project;
+    }
+
+    @Override
+    public void update() throws ConnectionException {
+        loadProjectsFromServer();
     }
 }

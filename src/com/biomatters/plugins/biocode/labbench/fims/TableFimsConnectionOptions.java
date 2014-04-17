@@ -250,7 +250,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
             newCols = NO_FIELDS;
             throw new ConnectionException(e.getMessage(), e);
         }
-        if(newCols == null) {
+        if(newCols == null || newCols.isEmpty()) {
             newCols = NO_FIELDS;
         }
         tissueId.setPossibleValues(newCols);
