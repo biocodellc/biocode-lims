@@ -32,7 +32,7 @@ public class BiocodeFIMSOptions extends TableFimsConnectionOptions {
 
     @Override
     protected boolean updateAutomatically() {
-        return false;
+        return true;
     }
 
     @Override

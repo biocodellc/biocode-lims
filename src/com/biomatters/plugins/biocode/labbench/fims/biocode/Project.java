@@ -51,6 +51,7 @@ public class Project {
     private List<Project.Field> retrieveFieldsFromXmlConfigurationFile() throws DatabaseServiceException {
         List<Project.Field> fromXml = new ArrayList<Field>();
         String expeditionXmlLocation = xmlLocation;
+        //noinspection ProhibitedExceptionCaught
         try {
             URL url = new URL(expeditionXmlLocation);
             InputStream inputStream = url.openStream();
@@ -76,6 +77,8 @@ public class Project {
         } catch (IOException e) {
             throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title, true);
         } catch (JDOMException e) {
+            throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title, false);
+        } catch(ArrayIndexOutOfBoundsException e) {
             throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title, false);
         }
         return fromXml;

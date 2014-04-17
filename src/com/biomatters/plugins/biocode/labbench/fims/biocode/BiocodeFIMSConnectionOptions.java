@@ -10,6 +10,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -51,11 +52,9 @@ import java.util.prefs.Preferences;
                             URL url = new URL(hostOption.getValue());
                             SharedCookieHandler.registerHost(url.getHost());
                             BiocodeFIMSUtils.login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
-                            update();
+                            loadProjectsFromServer();
                         } catch (MalformedURLException e1) {
                             Dialogs.showMessageDialog("Bad URL: " + e1.getMessage());
-                        } catch (ConnectionException e1) {
-                            Dialogs.showMessageDialog("Failed to login: " + e1.getMessage());
                         }
                         progressFrame.setComplete();
                     }
@@ -94,8 +93,7 @@ import java.util.prefs.Preferences;
             });
 
         } catch (DatabaseServiceException e) {
-            e.printStackTrace();
-            Dialogs.showMessageDialog("Failed to load project list from " + BiocodeFIMSConnection.HOST);
+            Dialogs.showMessageDialog("Failed to load project list from " + BiocodeFIMSConnection.HOST + ": " + e.getMessage());
         }
     }
 
@@ -193,10 +191,5 @@ import java.util.prefs.Preferences;
 
     public Project getExpedition() {
         return projectOption.getValue().project;
-    }
-
-    @Override
-    public void update() throws ConnectionException {
-        loadProjectsFromServer();
     }
 }
