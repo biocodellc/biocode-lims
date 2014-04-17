@@ -97,10 +97,15 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     }
 
     private TableFimsSample getFimsSampleForRow(List<String> header, Row row) {
+        Set<String> codes = new HashSet<String>();
+        for (DocumentField documentField : getSearchAttributes()) {
+            codes.add(documentField.getCode());
+        }
         Map<String, Object> values = new HashMap<String, Object>();
         for(int i=0; i<header.size(); i++) {
-            if(i < row.rowItems.size()) {  // todo should we error out?
-                values.put(TableFimsConnection.CODE_PREFIX + header.get(i), row.rowItems.get(i));
+            String code = TableFimsConnection.CODE_PREFIX + header.get(i);
+            if(codes.contains(code) && i < row.rowItems.size()) {  // todo should we error out when items don't match?
+                values.put(code, row.rowItems.get(i));
             }
         }
         return new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField(), getSpecimenDocumentField());
