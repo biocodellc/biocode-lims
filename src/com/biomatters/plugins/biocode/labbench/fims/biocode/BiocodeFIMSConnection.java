@@ -179,10 +179,16 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptiions()");
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
-        project = fimsOptions.getExpedition();
+        project = fimsOptions.getProject();
+        if(project == null) {
+            throw new ConnectionException("You must select a project");
+        }
         graphs = new HashMap<String, Graph>();
         try {
             List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForProject("" + project.id);
+            if(graphsForExpedition.isEmpty()) {
+                throw new ConnectionException("Project has no expeditions");
+            }
             for (Graph graph : graphsForExpedition) {
                 graphs.put(graph.getExpeditionTitle(), graph);
             }

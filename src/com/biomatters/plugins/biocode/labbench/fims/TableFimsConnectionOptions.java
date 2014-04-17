@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -132,11 +133,19 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         if(updateAutomatically()) {
             connectionOptions.addChangeListener(new SimpleListener() {
                 public void objectChanged() {
-                    try {
-                        update();
-                    } catch (ConnectionException e) {
-                        Dialogs.showMessageDialog(e.getMessage());
-                    }
+                    final ProgressFrame progress = new ProgressFrame("Updating Fields...", "", 1000, true, Dialogs.getCurrentModalDialog());
+                    progress.setCancelable(false);
+                    progress.setIndeterminateProgress();
+                    new Thread() {
+                        public void run() {
+                            try {
+                                update();
+                            } catch (ConnectionException e) {
+                                Dialogs.showMessageDialog(e.getMessage());
+                            }
+                            progress.setComplete();
+                        }
+                    }.start();
                 }
             });
         }
@@ -232,42 +241,49 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         pOptions.setPasswordsFromOptions(enterPasswordOptions);
     }
 
-    @SuppressWarnings({"unchecked"})
     @Override
     public void update() throws ConnectionException {
-        final ComboBoxOption<OptionValue> tissueId = (ComboBoxOption<OptionValue>)getOption(TISSUE_ID);
-        final ComboBoxOption<OptionValue> specimenId = (ComboBoxOption<OptionValue>)getOption(SPECIMEN_ID);
-        final ComboBoxOption<OptionValue> plateName = (ComboBoxOption<OptionValue>)getOption(PLATE_NAME);
-        final ComboBoxOption<OptionValue> plateWell = (ComboBoxOption<OptionValue>)getOption(PLATE_WELL);
-        final MultipleOptions taxOptions = getMultipleOptions(TAX_FIELDS);
-
-
-        List<OptionValue> newCols = null;
+        List<OptionValue> newCols;
         try {
             newCols = getTableColumns();
         } catch (IOException e) {
             e.printStackTrace();
-            newCols = NO_FIELDS;
             throw new ConnectionException(e.getMessage(), e);
         }
         if(newCols == null || newCols.isEmpty()) {
             newCols = NO_FIELDS;
         }
-        tissueId.setPossibleValues(newCols);
-        specimenId.setPossibleValues(newCols);
-        plateName.setPossibleValues(newCols);
-        plateWell.setPossibleValues(newCols);
-        for(Option option : taxOptions.getMasterOptions().getOptions()) {
-            if(option instanceof ComboBoxOption) {
-                ((ComboBoxOption)option).setPossibleValues(newCols);
-            }
-        }
-        for(Options options : taxOptions.getValues()) {
-            for(Option option : options.getOptions()) {
-                if(option instanceof ComboBoxOption) {
-                    ((ComboBoxOption)option).setPossibleValues(newCols);
+
+        ThreadUtilities.invokeNowOrLater(getUpdateFieldsRunnable(newCols));
+    }
+
+    private Runnable getUpdateFieldsRunnable(final List<OptionValue> newCols) {
+        return new Runnable() {
+            @SuppressWarnings("unchecked")
+            public void run() {
+                final ComboBoxOption<OptionValue> tissueId = (ComboBoxOption<OptionValue>)getOption(TISSUE_ID);
+                final ComboBoxOption<OptionValue> specimenId = (ComboBoxOption<OptionValue>)getOption(SPECIMEN_ID);
+                final ComboBoxOption<OptionValue> plateName = (ComboBoxOption<OptionValue>)getOption(PLATE_NAME);
+                final ComboBoxOption<OptionValue> plateWell = (ComboBoxOption<OptionValue>)getOption(PLATE_WELL);
+                final MultipleOptions taxOptions = getMultipleOptions(TAX_FIELDS);
+
+                tissueId.setPossibleValues(newCols);
+                specimenId.setPossibleValues(newCols);
+                plateName.setPossibleValues(newCols);
+                plateWell.setPossibleValues(newCols);
+                for(Option option : taxOptions.getMasterOptions().getOptions()) {
+                    if(option instanceof ComboBoxOption) {
+                        ((ComboBoxOption)option).setPossibleValues(newCols);
+                    }
+                }
+                for(Options options : taxOptions.getValues()) {
+                    for(Option option : options.getOptions()) {
+                        if(option instanceof ComboBoxOption) {
+                            ((ComboBoxOption)option).setPossibleValues(newCols);
+                        }
+                    }
                 }
             }
-        }
+        };
     }
 }

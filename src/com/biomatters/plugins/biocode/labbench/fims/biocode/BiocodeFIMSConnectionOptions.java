@@ -189,7 +189,7 @@ import java.util.prefs.Preferences;
 
 
 
-    public Project getExpedition() {
+    public Project getProject() {
         return projectOption.getValue().project;
     }
 }

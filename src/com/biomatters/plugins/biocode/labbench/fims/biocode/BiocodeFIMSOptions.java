@@ -40,7 +40,7 @@ public class BiocodeFIMSOptions extends TableFimsConnectionOptions {
         return super.linkPhotos();
     }
 
-    public Project getExpedition() {
-        return connectionOptions.getExpedition();
+    public Project getProject() {
+        return connectionOptions.getProject();
     }
 }
