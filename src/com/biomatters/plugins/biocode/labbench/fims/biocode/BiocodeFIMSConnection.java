@@ -42,6 +42,19 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+        // Ideally we wouldn't want to pull down the full sample straight away.  But the new Biocode FIMS always returns
+        // every column for a sample.  So we'll cache the samples so at least we might not need to download it again.
+        List<FimsSample> samples = getSamplesForQuery(query);
+        List<String> ids = new ArrayList<String>();
+        for (FimsSample sample : samples) {
+            String id = sample.getId();
+            ids.add(id);
+            cachedSamples.put(id, new SoftReference<FimsSample>(sample));
+        }
+        return ids;
+    }
+
+    private List<FimsSample> getSamplesForQuery(Query query) throws ConnectionException {
         StringBuilder filterText = new StringBuilder();
         String expeditionToSearch = null;
         if(query instanceof BasicSearchQuery) {
@@ -70,20 +83,17 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             }
         }
 
+        List<FimsSample> samples = new ArrayList<FimsSample>();
         try {
-            BiocodeFimsData data = BiocodeFIMSUtils.getData(""+ project.id, graphs.get(expeditionToSearch),
+            BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graphs.get(expeditionToSearch),
                     filterText.length() > 0 ? filterText.toString() : null);
-            List<String> ids = new ArrayList<String>();
             for (Row row : data.data) {
-                TableFimsSample sample = getFimsSampleForRow(data.header, row);
-                String id = sample.getId();
-                ids.add(id);
-                cachedSamples.put(id, new SoftReference<FimsSample>(sample));
+                samples.add(getFimsSampleForRow(data.header, row));
             }
-            return ids;
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
+        return samples;
     }
 
     private TableFimsSample getFimsSampleForRow(List<String> header, Row row) {
@@ -152,12 +162,14 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        // todo
+        for (FimsSample fimsSample : getSamplesForQuery(Query.Factory.createBrowseQuery())) {
+            callback.add(new TissueDocument(fimsSample), Collections.<String, Object>emptyMap());
+        }
     }
 
     @Override
     public int getTotalNumberOfSamples() throws ConnectionException {
-        return 0;
+        return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery()).size();
     }
 
     @Override
