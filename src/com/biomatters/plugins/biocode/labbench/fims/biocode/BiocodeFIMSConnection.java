@@ -11,7 +11,7 @@ import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 import java.util.*;
 
 /**
@@ -38,7 +38,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return "Connection to the new Biocode FIMS (https://code.google.com/p/biocode-fims/)";
     }
 
-    private Map<String, WeakReference<FimsSample>> cachedSamples = new HashMap<String, WeakReference<FimsSample>>();
+    private Map<String, SoftReference<FimsSample>> cachedSamples = new HashMap<String, SoftReference<FimsSample>>();
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
@@ -78,7 +78,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 TableFimsSample sample = getFimsSampleForRow(data.header, row);
                 String id = sample.getId();
                 ids.add(id);
-                cachedSamples.put(id, new WeakReference<FimsSample>(sample));
+                cachedSamples.put(id, new SoftReference<FimsSample>(sample));
             }
             return ids;
         } catch (DatabaseServiceException e) {
@@ -102,7 +102,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         List<String> toRetrieve = new ArrayList<String>();
         for (String tissueId : tissueIds) {
             FimsSample sample = null;
-            WeakReference<FimsSample> cachedResult = cachedSamples.get(tissueId);
+            SoftReference<FimsSample> cachedResult = cachedSamples.get(tissueId);
             if(cachedResult != null) {
                 sample = cachedResult.get();
             }
