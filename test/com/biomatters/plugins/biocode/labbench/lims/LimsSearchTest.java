@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
@@ -35,7 +36,7 @@ public class LimsSearchTest extends Assert {
     private static final String DATABASE_NAME = "testLimsForSearchTest";
 
     @Before
-    public void createDatabaseAndInitializeConnections() throws IOException, SQLException {
+    public void createDatabaseAndInitializeConnections() throws IOException, SQLException, ConnectionException {
         TestGeneious.initialize();
 
         File temp = FileUtilities.createTempDir(true);
@@ -49,6 +50,7 @@ public class LimsSearchTest extends Assert {
                 _fimsOptions instanceof ExcelFimsConnectionOptions);
         ExcelFimsConnectionOptions fimsOptions = (ExcelFimsConnectionOptions) _fimsOptions;
         fimsOptions.setValue(ExcelFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, getPathToDemoFIMSExcel());
+        ThreadUtilities.sleep(1000);  // Allow time for fields to update
         fimsOptions.setValue(TableFimsConnectionOptions.TISSUE_ID, "tissue_id");
         fimsOptions.setValue(TableFimsConnectionOptions.SPECIMEN_ID, "Specimen No.");
         fimsOptions.setValue(TableFimsConnectionOptions.STORE_PLATES, Boolean.TRUE.toString());
