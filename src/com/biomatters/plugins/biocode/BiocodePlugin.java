@@ -38,7 +38,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     private static GeneiousActionOptions superBiocodeAction;
-    public static final String PLUGIN_VERSION = "2.6.90";
+    public static final String PLUGIN_VERSION = "2.6.1";
 
     public static GeneiousActionOptions getSuperBiocodeAction() {
         if (superBiocodeAction == null) {
