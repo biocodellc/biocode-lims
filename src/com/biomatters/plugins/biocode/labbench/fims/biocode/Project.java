@@ -1,13 +1,14 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.xml.FastSaxBuilder;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 
 import javax.xml.bind.annotation.XmlElement;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -37,12 +38,13 @@ public class Project {
         this.xmlLocation = xmlLocation;
     }
 
-    public List<Field> getFields() {
+    public synchronized List<Field> getFields() {
         if(fields == null) {
             try {
                 fields = retrieveFieldsFromXmlConfigurationFile();
             } catch (DatabaseServiceException e) {
-                return Collections.emptyList();  // todo  Should the user be alerted?
+                BiocodeUtilities.displayExceptionDialog("Failed to Load FIMS Fields", e.getMessage(), e, null);
+                return Collections.emptyList();
             }
         }
         return fields;
@@ -55,8 +57,12 @@ public class Project {
         try {
             URL url = new URL(expeditionXmlLocation);
             InputStream inputStream = url.openStream();
+
             FastSaxBuilder builder = new FastSaxBuilder();
-            Element element = builder.build(inputStream).getRootElement();
+            InputStreamReader reader = new InputStreamReader(inputStream);
+            Element element = builder.build(reader).getRootElement();
+            reader.close();
+
             Element mappingElement = element.getChild("mapping");
             if(mappingElement == null) {
                 throw new DatabaseServiceException("Invalid configuration for " + title + ". " +
@@ -75,11 +81,11 @@ public class Project {
             throw new DatabaseServiceException(e, "Configuration file location for " + title
                     + " is an invalid URL (" + expeditionXmlLocation + ")", false);
         } catch (IOException e) {
-            throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title, true);
+            throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title + " from " + xmlLocation + ": " + e.getMessage(), false);
         } catch (JDOMException e) {
-            throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title, false);
+            throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title + " from " + xmlLocation + ": " + e.getMessage(), false);
         } catch(ArrayIndexOutOfBoundsException e) {
-            throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title, false);
+            throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title + " from " + xmlLocation + ": " + e.getMessage(), false);
         }
         return fromXml;
     }
