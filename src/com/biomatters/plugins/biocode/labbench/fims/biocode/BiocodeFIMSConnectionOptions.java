@@ -47,7 +47,6 @@ import java.util.prefs.Preferences;
                 progressFrame.setIndeterminateProgress();
                 Thread thread = new Thread() {
                     public void run() {
-                        ThreadUtilities.sleep(2000);
                         try {
                             URL url = new URL(hostOption.getValue());
                             SharedCookieHandler.registerHost(url.getHost());
