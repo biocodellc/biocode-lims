@@ -34,6 +34,8 @@ import java.util.*;
 public class LimsSearchTest extends Assert {
 
     private static final String DATABASE_NAME = "testLimsForSearchTest";
+    private static final long MAX_TIME_TO_WAIT_FOR_OPTIONS_UPDATE = 10 * 1000;
+    private static final long WAIT_INCREMENT = 200;
 
     @Before
     public void createDatabaseAndInitializeConnections() throws IOException, SQLException, ConnectionException {
@@ -50,7 +52,13 @@ public class LimsSearchTest extends Assert {
                 _fimsOptions instanceof ExcelFimsConnectionOptions);
         ExcelFimsConnectionOptions fimsOptions = (ExcelFimsConnectionOptions) _fimsOptions;
         fimsOptions.setValue(ExcelFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, getPathToDemoFIMSExcel());
-        ThreadUtilities.sleep(1000);  // Allow time for fields to update
+        long timeWaited = 0;
+        while("None".equals(fimsOptions.getTissueColumn())) {
+            ThreadUtilities.sleep(WAIT_INCREMENT);
+            timeWaited += WAIT_INCREMENT;
+            assertTrue("Waited " + timeWaited + "ms for Options to update and gave up.", timeWaited < MAX_TIME_TO_WAIT_FOR_OPTIONS_UPDATE);
+        }
+        System.out.println("Slept " + timeWaited + " ms");
         fimsOptions.setValue(TableFimsConnectionOptions.TISSUE_ID, "tissue_id");
         fimsOptions.setValue(TableFimsConnectionOptions.SPECIMEN_ID, "Specimen No.");
         fimsOptions.setValue(TableFimsConnectionOptions.STORE_PLATES, Boolean.TRUE.toString());
