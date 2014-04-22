@@ -37,8 +37,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
     public DocumentSelectionSignature[] getSelectionSignatures() {
         return new DocumentSelectionSignature[]{
                 new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[0]),
-                new DocumentSelectionSignature(PlateDocument.class,1,4),
-                new DocumentSelectionSignature(TissueDocument.class, 1, Integer.MAX_VALUE)
+                new DocumentSelectionSignature(PlateDocument.class,1,4)
         };
     }
 
