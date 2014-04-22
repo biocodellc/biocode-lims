@@ -39,17 +39,18 @@ public class ExcelFimsConnectionOptions extends TableFimsConnectionOptions{
 
     protected List<OptionValue> _getTableColumns() throws IOException {
         FileSelectionOption location = (FileSelectionOption)getChildOptions().get(CONNECTION_OPTIONS_KEY).getOption(FILE_LOCATION);
-        return getTableColumns(location.getValue().length() > 0 ? new File(location.getValue()) : null, getPanel());
+        return getTableColumns(location.getValue().length() > 0 ? new File(location.getValue()) : null);
     }
 
     protected boolean updateAutomatically() {
         return true;
     }
 
-    private List<Options.OptionValue> getTableColumns(File excelFile, final Component owner) {
+    private List<Options.OptionValue> getTableColumns(File excelFile) {
         List<Options.OptionValue> values = new ArrayList<OptionValue>();
 
         if(excelFile != null && excelFile.exists()) {
+            Component owner = Dialogs.getCurrentModalDialog();
             //noinspection CatchGenericClass
             try {
                 Workbook workbook = Workbook.getWorkbook(excelFile);
