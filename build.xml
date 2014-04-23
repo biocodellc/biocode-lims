@@ -9,6 +9,7 @@
             </linecontainsregexp>
             <replaceregex pattern="${version-regex-pattern}" replace="\1"/>
             <replacestring from="." to="_"/>
+            <striplinebreaks/>
         </filterchain>
     </loadfile>
 
