@@ -108,7 +108,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void pcrAndWorkflowSearch() throws BadDataException, DatabaseServiceException {
+    public void pcrAndWorkflowSearch() throws BadDataException, DatabaseServiceException, SQLException {
         String tissue = "MBIO24950.1";
         String extractionId = "MBIO24950.1.1";
 
@@ -135,7 +135,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void cyclesequencingSearch() throws BadDataException, DatabaseServiceException, DocumentOperationException {
+    public void cyclesequencingSearch() throws BadDataException, DatabaseServiceException, DocumentOperationException, SQLException {
         String extractionId = "MBIO24950.1.1";
         String seqFName = "SeqF_M037";
         String seqRName = "SeqR_M037";
@@ -288,7 +288,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, SQLException, DocumentOperationException {
+    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, SQLException, DocumentOperationException, DatabaseServiceException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
@@ -392,7 +392,7 @@ public class LimsSearchTest extends Assert {
         service.savePlate(extractionPlate, ProgressListener.EMPTY);
     }
 
-    private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws SQLException, BadDataException {
+    private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws SQLException, BadDataException, DatabaseServiceException {
         Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
         pcrPlate.setName(plateName);
         List<Thermocycle> thermocycle = BiocodeService.getInstance().getPCRThermocycles();
@@ -406,7 +406,7 @@ public class LimsSearchTest extends Assert {
             reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
         }
 
-        service.saveReactions(ProgressListener.EMPTY, pcrPlate);
+        service.savePlate(pcrPlate, ProgressListener.EMPTY);
         return pcrPlate;
     }
 

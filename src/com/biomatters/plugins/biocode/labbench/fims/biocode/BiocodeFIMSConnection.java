@@ -166,13 +166,6 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     }
 
     @Override
-    public void getAllSamples(RetrieveCallback callback) throws ConnectionException {
-        for (FimsSample fimsSample : getSamplesForQuery(Query.Factory.createBrowseQuery())) {
-            callback.add(new TissueDocument(fimsSample), Collections.<String, Object>emptyMap());
-        }
-    }
-
-    @Override
     public int getTotalNumberOfSamples() throws ConnectionException {
         return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery()).size();
     }
