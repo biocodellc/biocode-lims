@@ -20,6 +20,7 @@ import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -284,7 +285,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 new FusionTablesFimsConnection(),
                 new MySQLFimsConnection(),
                 new MooreaFimsConnection(),
-                new TAPIRFimsConnection()
+                new TAPIRFimsConnection(),
+                new BiocodeFIMSConnection()
         };
     }
 
@@ -737,6 +739,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         } catch (ConnectionException e) {
                             throw new DatabaseServiceException(e, e.getMessage(), false);
                         }
+                    }
+
+                    for (FimsSample tissueSample : tissueSamples) {
+                        callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
                     }
 
                     for (FimsSample tissueSample : tissueSamples) {

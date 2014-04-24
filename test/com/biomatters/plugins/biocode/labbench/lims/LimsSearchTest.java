@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.ExcelFimsConnectionOptions;
@@ -34,9 +35,11 @@ import java.util.*;
 public class LimsSearchTest extends Assert {
 
     private static final String DATABASE_NAME = "testLimsForSearchTest";
+    private static final long MAX_TIME_TO_WAIT_FOR_OPTIONS_UPDATE = 10 * 1000;
+    private static final long WAIT_INCREMENT = 200;
 
     @Before
-    public void createDatabaseAndInitializeConnections() throws IOException, SQLException {
+    public void createDatabaseAndInitializeConnections() throws IOException, SQLException, ConnectionException {
         TestGeneious.initialize();
 
         File temp = FileUtilities.createTempDir(true);
@@ -50,6 +53,13 @@ public class LimsSearchTest extends Assert {
                 _fimsOptions instanceof ExcelFimsConnectionOptions);
         ExcelFimsConnectionOptions fimsOptions = (ExcelFimsConnectionOptions) _fimsOptions;
         fimsOptions.setValue(ExcelFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, getPathToDemoFIMSExcel());
+        long timeWaited = 0;
+        while("None".equals(fimsOptions.getTissueColumn())) {
+            ThreadUtilities.sleep(WAIT_INCREMENT);
+            timeWaited += WAIT_INCREMENT;
+            assertTrue("Waited " + timeWaited + "ms for Options to update and gave up.", timeWaited < MAX_TIME_TO_WAIT_FOR_OPTIONS_UPDATE);
+        }
+        System.out.println("Slept " + timeWaited + " ms");
         fimsOptions.setValue(TableFimsConnectionOptions.TISSUE_ID, "tissue_id");
         fimsOptions.setValue(TableFimsConnectionOptions.SPECIMEN_ID, "Specimen No.");
         fimsOptions.setValue(TableFimsConnectionOptions.STORE_PLATES, Boolean.TRUE.toString());
@@ -158,7 +168,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchByTissueDoesNotReturnExtra() throws IOException, BadDataException, DatabaseServiceException {
+    public void searchByTissueDoesNotReturnExtra() throws IOException, BadDataException, SQLException, DatabaseServiceException {
         String plateName = "Plate_M037";
         String tissue = "MBIO24950.1";
         String extractionId = "MBIO24950.1.1";
@@ -195,7 +205,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchByWorkflowDoesNotReturnExtra() throws IOException, BadDataException, DatabaseServiceException {
+    public void searchByWorkflowDoesNotReturnExtra() throws IOException, BadDataException, DatabaseServiceException, SQLException {
         BiocodeService service = BiocodeService.getInstance();
         String extPlate = "Plate_M037";
         String extractionId = "MBIO24950.1.1";
@@ -240,7 +250,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, DatabaseServiceException {
+    public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, DatabaseServiceException, SQLException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
@@ -278,7 +288,7 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
-    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, DatabaseServiceException, DocumentOperationException {
+    public void searchReturnsPcrAndSeqReactionsWithoutWorkflow() throws BadDataException, SQLException, DocumentOperationException {
         Map<String, String> values = new HashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
@@ -382,7 +392,7 @@ public class LimsSearchTest extends Assert {
         service.savePlate(extractionPlate, ProgressListener.EMPTY);
     }
 
-    private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws DatabaseServiceException, BadDataException {
+    private Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws SQLException, BadDataException {
         Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
         pcrPlate.setName(plateName);
         List<Thermocycle> thermocycle = BiocodeService.getInstance().getPCRThermocycles();
@@ -396,7 +406,7 @@ public class LimsSearchTest extends Assert {
             reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
         }
 
-        service.savePlate(pcrPlate, ProgressListener.EMPTY);
+        service.saveReactions(ProgressListener.EMPTY, pcrPlate);
         return pcrPlate;
     }
 
