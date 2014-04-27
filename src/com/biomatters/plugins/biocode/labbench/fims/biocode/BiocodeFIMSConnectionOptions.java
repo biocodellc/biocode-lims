@@ -17,9 +17,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -179,9 +177,12 @@ import java.util.prefs.Preferences;
         if(project == null) {
             return NO_FIELDS;
         }
+        Set<String> urisSeen = new HashSet<String>();
         for (Project.Field field : project.getFields()) {
-            // todo Should we be using the uri of the column.  ie darwin core term
-            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.name, field.name));
+            if(!urisSeen.contains(field.uri)) {
+                fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.name));
+                urisSeen.add(field.uri);
+            }  // Ignore duplicate URIs for now until we know if it is valid or not.  Waiting on confirmation from John Deck the (author of the FIMS)
         }
         return fields;
     }
