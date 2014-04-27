@@ -10,6 +10,7 @@ import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
 
+import javax.ws.rs.core.Form;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.util.*;
@@ -56,27 +57,22 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     private List<FimsSample> getSamplesForQuery(Query query) throws ConnectionException {
         StringBuilder filterText = new StringBuilder();
+        Form form = new Form();
         String expeditionToSearch = null;
         if(query instanceof BasicSearchQuery) {
             filterText.append(((BasicSearchQuery) query).getSearchText());
         } else if(query instanceof AdvancedSearchQueryTerm) {
             AdvancedSearchQueryTerm termQuery = (AdvancedSearchQueryTerm) query;
-            expeditionToSearch = getExpeditionOrAppendToFilterText(filterText, null, termQuery);
+            expeditionToSearch = getExpeditionOrAddToForm(form, null, termQuery);
         } else if(query instanceof CompoundSearchQuery) {
             CompoundSearchQuery compound = (CompoundSearchQuery) query;
             if(compound.getOperator() == CompoundSearchQuery.Operator.OR) {
                 throw new ConnectionException("The Biocode FIMS does not support using the \"any\" operator");
             }
 
-            boolean first = true;
             for (Query inner : compound.getChildren()) {
-                if(first) {
-                    first = false;
-                } else {
-                    filterText.append(",");
-                }
                 if(inner instanceof AdvancedSearchQueryTerm) {
-                    expeditionToSearch = getExpeditionOrAppendToFilterText(filterText, expeditionToSearch, (AdvancedSearchQueryTerm) inner);
+                    expeditionToSearch = getExpeditionOrAddToForm(form, expeditionToSearch, (AdvancedSearchQueryTerm) inner);
                 } else {
                     throw new ConnectionException("Unexpected type.  Contact support@mooreabiocode.org");
                 }
@@ -86,7 +82,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         List<FimsSample> samples = new ArrayList<FimsSample>();
         try {
             BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graphs.get(expeditionToSearch),
-                    filterText.length() > 0 ? filterText.toString() : null);
+                    form, filterText.length() > 0 ? filterText.toString() : null);
             for (Row row : data.data) {
                 samples.add(getFimsSampleForRow(data.header, row));
             }
@@ -97,15 +93,15 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     }
 
     private TableFimsSample getFimsSampleForRow(List<String> header, Row row) {
-        Set<String> codes = new HashSet<String>();
+        Map<String, DocumentField> possibleColumns = new HashMap<String, DocumentField>();
         for (DocumentField documentField : getSearchAttributes()) {
-            codes.add(documentField.getCode());
+            possibleColumns.put(documentField.getName(), documentField);
         }
         Map<String, Object> values = new HashMap<String, Object>();
         for(int i=0; i<header.size(); i++) {
-            String code = TableFimsConnection.CODE_PREFIX + header.get(i);
-            if(codes.contains(code) && i < row.rowItems.size()) {  // todo should we error out when items don't match?
-                values.put(code, row.rowItems.get(i));
+            DocumentField field = possibleColumns.get(header.get(i));
+            if(field != null && i < row.rowItems.size()) {  // todo should we error out when items don't match?
+                values.put(field.getCode(), row.rowItems.get(i));
             }
         }
         return new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField(), getSpecimenDocumentField());
@@ -134,7 +130,9 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
         try {
             for (String id : toRetrieve) {
-                BiocodeFimsData data = BiocodeFIMSUtils.getData(""+ project.id, null, getTissueCol() + ":" + id); // todo
+                Form form = new Form();
+                form.param(getTissueCol(), id);
+                BiocodeFimsData data = BiocodeFIMSUtils.getData(""+ project.id, null, form, null);
                 for (Row row : data.data) {
                     TableFimsSample sample = getFimsSampleForRow(data.header, row);
                     TissueDocument tissueDoc = new TissueDocument(sample);
@@ -151,16 +149,17 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return results;
     }
 
-    private String getExpeditionOrAppendToFilterText(StringBuilder filterText, String projectToSearch, AdvancedSearchQueryTerm termQuery) throws ConnectionException {
-        if(termQuery.getValues().length == 1 && termQuery.getCondition() == Condition.EQUAL) {
+    private String getExpeditionOrAddToForm(Form form, String projectToSearch, AdvancedSearchQueryTerm termQuery) throws ConnectionException {
+        List<Condition> supportedConditions = Arrays.asList(Condition.CONTAINS);
+        if(termQuery.getValues().length == 1 && supportedConditions.contains(termQuery.getCondition())) {
             String columnName = termQuery.getField().getCode().replace(CODE_PREFIX, "");
             if(columnName.equals(BiocodeFIMSUtils.EXPEDITION_NAME)) {
                 projectToSearch = termQuery.getValues()[0].toString();
             } else {
-                filterText.append(columnName).append(":").append(termQuery.getValues()[0].toString());
+                form.param(columnName, termQuery.getValues()[0].toString());
             }
         } else {
-            throw new ConnectionException("Unsupported query");
+            throw new ConnectionException("Unsupported query.  Only contains searches are supported.");
         }
         return projectToSearch;
     }
@@ -224,7 +223,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         List<DocumentField> fields = new ArrayList<DocumentField>();
         fields.add(new DocumentField(BiocodeFIMSUtils.EXPEDITION_NAME, "", CODE_PREFIX + BiocodeFIMSUtils.EXPEDITION_NAME, String.class, true, false));
         for (Project.Field field : project.getFields()) {
-            fields.add(new DocumentField(field.name, field.name + "(" + field.uri + ")", CODE_PREFIX + field.name, String.class, true, false));
+            fields.add(new DocumentField(field.name, field.name + "(" + field.uri + ")", CODE_PREFIX + field.uri, String.class, true, false));
         }
         return fields;
     }
