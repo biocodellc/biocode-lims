@@ -22,7 +22,6 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -52,7 +51,7 @@ public class LimsSearchTest extends Assert {
         assertTrue("First FIMS option has changed from Excel FIMS.  Test needs updating",
                 _fimsOptions instanceof ExcelFimsConnectionOptions);
         ExcelFimsConnectionOptions fimsOptions = (ExcelFimsConnectionOptions) _fimsOptions;
-        fimsOptions.setValue(ExcelFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, getPathToDemoFIMSExcel());
+        fimsOptions.setValue(ExcelFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, TestUtilities.getPathToDemoFIMSExcel(LimsSearchTest.class, "demo video FIMS.xls"));
         long timeWaited = 0;
         while("None".equals(fimsOptions.getTissueColumn())) {
             ThreadUtilities.sleep(WAIT_INCREMENT);
@@ -431,14 +430,6 @@ public class LimsSearchTest extends Assert {
         service.savePlate(plate, ProgressListener.EMPTY);
     }
 
-    private String getPathToDemoFIMSExcel() {
-        final URL resource = getClass().getResource("demo video FIMS.xls");
-        if (resource == null) {
-            throw new IllegalArgumentException("Couldn't find spreadsheet");
-        }
-        return resource.getFile().replace("%20", " ");
-    }
-
     @Test
     public void plateNameSearchReturnsCompleteWorkflows() throws BadDataException, SQLException, DatabaseServiceException, DocumentOperationException {
         String extractionId = "MBIO24950.1.1";
@@ -571,4 +562,6 @@ public class LimsSearchTest extends Assert {
             assertEquals(plateName, plates.get(0));
         }
     }
+
+
 }
