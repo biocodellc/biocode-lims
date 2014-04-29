@@ -46,7 +46,7 @@ public class TestConnection extends Assert {
     public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException {
         String host = "biscicol.org";
         SharedCookieHandler.registerHost(host);
-        assertTrue(BiocodeFIMSUtils.login("http://" + host, "demo", "demo"));
+        assertNotNull(BiocodeFIMSUtils.login("http://" + host, "demo", "demo"));
         for (Project project : BiocodeFIMSUtils.getProjects()) {
             System.out.println(project);
         }

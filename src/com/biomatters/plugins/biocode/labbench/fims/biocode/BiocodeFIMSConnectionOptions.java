@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import javax.ws.rs.ProcessingException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.MalformedURLException;
@@ -48,8 +49,12 @@ import java.util.prefs.Preferences;
                         try {
                             URL url = new URL(hostOption.getValue());
                             SharedCookieHandler.registerHost(url.getHost());
-                            BiocodeFIMSUtils.login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
-                            loadProjectsFromServer();
+                            String result = BiocodeFIMSUtils.login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
+                            if (result != null) {
+                                Dialogs.showMessageDialog("");
+                            } else {
+                                loadProjectsFromServer();
+                            }
                         } catch (MalformedURLException e1) {
                             Dialogs.showMessageDialog("Bad URL: " + e1.getMessage());
                         }
