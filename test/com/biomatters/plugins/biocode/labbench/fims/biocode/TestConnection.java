@@ -24,7 +24,7 @@ public class TestConnection extends Assert {
     @Test
     public void getFimsData() throws DatabaseServiceException {
         BiocodeFimsData data = BiocodeFIMSUtils.getData(
-                "1", null, null);
+                "1", null, null, null);
 
         System.out.println(data.header);
         assertFalse(data.header.isEmpty());

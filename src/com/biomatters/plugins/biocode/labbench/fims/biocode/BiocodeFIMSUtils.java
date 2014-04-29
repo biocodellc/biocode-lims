@@ -30,13 +30,9 @@ public class BiocodeFIMSUtils {
         return true;  // So we'll have to assume the login worked for now
     }
 
-    static WebTarget getWebTarget(String project, String graph) {
+    static WebTarget getQueryTarget() {
         WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
-        target = target.path("biocode-fims/rest/query/json").
-                queryParam("project_id", project);
-        if(graph != null) {
-            target = target.queryParam("graphs", graph);
-        }
+        target = target.path("biocode-fims/rest/query/json");
         return target;
     }
 
@@ -90,7 +86,7 @@ public class BiocodeFIMSUtils {
 
     static final String EXPEDITION_NAME = "Expedition";
 
-    static BiocodeFimsData getData(String project, Graph graph, String filter) throws DatabaseServiceException {
+    static BiocodeFimsData getData(String project, Graph graph, Form searchTerms, String filter) throws DatabaseServiceException {
         if(filter != null && filter.contains(",")) {
             try {
                 filter = URLEncoder.encode(filter, "UTF-8");
@@ -110,8 +106,11 @@ public class BiocodeFIMSUtils {
         }
 
         BiocodeFimsData data = new BiocodeFimsData();
+        int resultCount = 0;
         for (Graph g : graphsToSearch) {
-            BiocodeFimsData toAdd = getBiocodeFimsData(project, g.getGraphId(), filter);
+            BiocodeFimsData toAdd = getBiocodeFimsData(project, g.getGraphId(), searchTerms, filter);
+            if(toAdd == null) continue;
+            resultCount++;
             if(data.header == null || data.header.isEmpty()) {
                 data.header = toAdd.header;
                 data.header.add(0, EXPEDITION_NAME);
@@ -122,7 +121,7 @@ public class BiocodeFIMSUtils {
                 data.data.add(row);
             }
         }
-        if(graphsToSearch.isEmpty()) {
+        if(resultCount == 0) {
             data.header = Collections.emptyList();
             data.data = Collections.emptyList();
         }
@@ -130,16 +129,35 @@ public class BiocodeFIMSUtils {
         return data;
     }
 
-    private static BiocodeFimsData getBiocodeFimsData(String project, String graph, String filter) throws DatabaseServiceException {
+    private static BiocodeFimsData getBiocodeFimsData(String project, String graph, Form searchTerms, String filter) throws DatabaseServiceException {
         try {
-            WebTarget target = getWebTarget(project, graph);
-            if(filter != null) {
-                target = target.queryParam("filter", filter);
+            WebTarget target = getQueryTarget();
+
+            if(searchTerms == null || searchTerms.asMap().isEmpty()) {
+                target = target.queryParam("project_id", project);
+                if(filter != null) {
+                    target = target.queryParam("filter", filter);
+                }
+                if(graph != null) {
+                    target = target.queryParam("graphs", graph);
+                }
+                System.out.println(target.getUri());
+                Invocation.Builder request = target.
+                        request(MediaType.APPLICATION_JSON_TYPE);
+                return request.get(BiocodeFimsData.class);
+            } else {
+                System.out.println(target.getUri());
+                Invocation.Builder request = target.
+                        request(MediaType.APPLICATION_JSON_TYPE);
+                Form form = new Form(searchTerms.asMap());
+                form.param("project_id", project);
+                if(graph != null) {
+                    form.param("graphs", graph);
+                }
+                Response response = request.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+//                System.out.println(response.readEntity(String.class));
+                return response.readEntity(BiocodeFimsData.class);
             }
-            System.out.println(target.getUri());
-            Invocation.Builder request = target.
-                    request(MediaType.APPLICATION_JSON_TYPE);
-            return request.get(BiocodeFimsData.class);
         } catch (NotFoundException e) {
             throw new DatabaseServiceException("No data found.", false);
         } catch (WebApplicationException e) {
