@@ -73,13 +73,18 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
+    private Connection legacyConnection;
     @Override
-    protected Connection getConnectionInternal() throws SQLException {
-        return getConnection().connection;
+    protected synchronized Connection getConnectionInternal() throws SQLException {
+        if(legacyConnection == null) {
+            // By pass the new way of getting connections.  Get one directly from the pool.
+            legacyConnection = dataSource.getConnection();
+        }
+        return legacyConnection;
     }
 
 
-    final ThreadLocal<ConnectionWrapper> connectionForThread = new ThreadLocal<ConnectionWrapper>();
+    ThreadLocal<ConnectionWrapper> connectionForThread = new ThreadLocal<ConnectionWrapper>();
 
     /**
      * @return A {@link com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection.ConnectionWrapper} from the
@@ -88,13 +93,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      * @throws SQLException if the connection could not be established
      */
     protected ConnectionWrapper getConnection() throws SQLException {
-        ConnectionWrapper toReturn;
-        synchronized (connectionForThread) {
-            toReturn = connectionForThread.get();
-            if (toReturn == null || toReturn.isClosed()) {
-                toReturn = new ConnectionWrapper(dataSource.getConnection());
-                connectionForThread.set(toReturn);
-            }
+        ConnectionWrapper toReturn = connectionForThread.get();
+        if (toReturn == null || toReturn.isClosed()) {
+            toReturn = new ConnectionWrapper(dataSource.getConnection());
+            connectionForThread.set(toReturn);
         }
         synchronized (connectionCounts) {
             Integer current = connectionCounts.get(toReturn);
@@ -117,7 +119,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             } else {
                 current = current - 1;
                 if (current <= 0) {
+                    connectionCounts.put(connection, null);
                     ConnectionWrapper.closeConnection(connection);
+                } else {
+                    connectionCounts.put(connection, current);
                 }
             }
         }
@@ -126,6 +131,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     public void disconnect() {
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
+        if(legacyConnection != null) {
+            legacyConnection = null;
+        }
         dataSource = null;
         serverUrn = null;
     }

@@ -305,7 +305,21 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return driver;
     }
 
-    public Driver getLocalDriver() {
+    public synchronized Driver getLocalDriver() throws ConnectionException {
+        if(localDriver == null) {
+            try {
+                Class driverClass = getClass().getClassLoader().loadClass("org.hsqldb.jdbc.JDBCDriver");
+                localDriver = (Driver) driverClass.newInstance();
+            } catch (ClassNotFoundException e) {
+                throw new ConnectionException("Could not find HSQL driver class", e);
+            } catch (IllegalAccessException e1) {
+                throw new ConnectionException("Could not access HSQL driver class");
+            } catch (InstantiationException e) {
+                throw new ConnectionException("Could not instantiate HSQL driver class");
+            } catch (ClassCastException e) {
+                throw new ConnectionException("HSQL Driver class exists, but is not an SQL driver");
+            }
+        }
         return localDriver;
     }
 
@@ -458,16 +472,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         if(error == null) {
             try {
-                Class driverClass = getClass().getClassLoader().loadClass("org.hsqldb.jdbc.JDBCDriver");
-                localDriver = (Driver) driverClass.newInstance();
-            } catch (ClassNotFoundException e1) {
-                error = "Could not find HSQL driver class";
-            } catch (IllegalAccessException e1) {
-                error = "Could not access HSQL driver class";
-            } catch (InstantiationException e1) {
-                error = "Could not instantiate HSQL driver class";
-            } catch (ClassCastException e1) {
-                error = "HSQL Driver class exists, but is not an SQL driver";
+
+                localDriver = getLocalDriver();
+            } catch (ConnectionException e) {
+                error = e.getMessage();
             }
         }
 
