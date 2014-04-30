@@ -170,7 +170,7 @@ public class LimsSearchTest extends Assert {
             if(seqF != null) {
                 foundSeqF = true;
                 assertEquals(CycleSequencingOptions.FORWARD_VALUE,
-                                        seqF.getReactions()[0].getOptions().getValueAsString(CycleSequencingOptions.DIRECTION));
+                        seqF.getReactions()[0].getOptions().getValueAsString(CycleSequencingOptions.DIRECTION));
             } else if(seqR != null) {
                 foundSeqR = true;
                 assertEquals(CycleSequencingOptions.REVERSE_VALUE,
@@ -387,17 +387,17 @@ public class LimsSearchTest extends Assert {
         return null;
     }
 
-    private void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service, Date lastModified) throws SQLException, BadDataException {
-        Map<String,String> values = Collections.singletonMap(tissue, extractionId);
-        saveExtractionPlate(plateName, service, values, lastModified);
-    }
-
     private void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service) throws SQLException, BadDataException {
         Map<String,String> values = Collections.singletonMap(tissue, extractionId);
         saveExtractionPlate(plateName, service, values, new Date());
     }
 
-    private void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values, Date lastModified) throws SQLException, BadDataException {
+    private void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service, Date lastModified) throws BadDataException, SQLException {
+        Map<String,String> values = Collections.singletonMap(tissue, extractionId);
+        saveExtractionPlate(plateName, service, values, lastModified);
+    }
+
+    private void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values, Date lastModified) throws BadDataException, SQLException {
         Plate extractionPlate = new Plate(Plate.Size.w96, Reaction.Type.Extraction, lastModified);
         extractionPlate.setName(plateName);
 
@@ -685,5 +685,126 @@ public class LimsSearchTest extends Assert {
             assertEquals(1, plates.size());
             assertEquals(plateName, plates.get(0));
         }
+    }
+
+    @Test
+    public void searchPlatesLastModifiedBeforeDate() throws DatabaseServiceException, BadDataException, SQLException {
+        BiocodeService service = BiocodeService.getInstance();
+
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        saveExtractionPlate("Plate_M037", tissue, extractionId, service);
+
+        String plateName = "PCR_M037";
+        String locus = "COI";
+        savePcrPlate(plateName, locus, service, extractionId);
+
+        Calendar cal = new GregorianCalendar();
+        cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.LESS_THAN, new Object[] { cal.getTime() },
+                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(2, searchResults.size());
+    }
+
+    @Test
+    public void searchPlatesLastModifiedBeforeOrOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+        BiocodeService service = BiocodeService.getInstance();
+
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        saveExtractionPlate("Plate_M037", tissue, extractionId, service);
+
+        String tissue2 = "MBIO24950.2";
+        String extractionId2 = "MBIO24950.2.2";
+
+        Calendar cal = new GregorianCalendar();
+        cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
+
+        saveExtractionPlate("Plate_M038", tissue2, extractionId2, service, cal.getTime());
+
+        cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.LESS_THAN_OR_EQUAL_TO, new Object[] { cal.getTime() },
+                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(2, searchResults.size());
+    }
+
+    private void searchPlatesLastModifiedOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+
+    }
+
+    @Test
+    public void searchPlatesLastModifiedAfterOrOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+        BiocodeService service = BiocodeService.getInstance();
+
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        saveExtractionPlate("Plate_M037", tissue, extractionId, service);
+
+        String tissue2 = "MBIO24950.2";
+        String extractionId2 = "MBIO24950.2.2";
+
+        Calendar cal = new GregorianCalendar();
+        cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
+
+        saveExtractionPlate("Plate_M038", tissue2, extractionId2, service, cal.getTime());
+
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.GREATER_THAN_OR_EQUAL_TO, new Object[] { cal.getTime() },
+                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(2, searchResults.size());
+    }
+
+    @Test
+    public void searchPlatesLastModifiedAfterDate() throws DatabaseServiceException, BadDataException, SQLException {
+        BiocodeService service = BiocodeService.getInstance();
+
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        saveExtractionPlate("Plate_M037", tissue, extractionId, service);
+
+        String plateName = "PCR_M037";
+        String locus = "COI";
+        savePcrPlate(plateName, locus, service, extractionId);
+
+        Calendar cal = new GregorianCalendar();
+        cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.GREATER_THAN, new Object[] { cal.getTime() },
+                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
+        assertEquals(2, searchResults.size());
+    }
+
+    private void searchPlatesLastModifiedNotOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+
+    }
+
+    public void searchWorkflowsLastModifiedBeforeDate() throws DatabaseServiceException, BadDataException, SQLException {
+
+    }
+
+    private void searchWorkflowsLastModifiedBeforeOrOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+
+    }
+
+    private void searchWorkflowsLastModifiedOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+
+    }
+
+    private void searchWorkflowsLastModifiedAfterOrOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+
+    }
+
+    public void searchWorkflowsLastModifiedAfterDate() throws DatabaseServiceException, BadDataException, SQLException {
+
+    }
+
+    private void searchWorkflowsLastModifiedNotOnDate() throws DatabaseServiceException, BadDataException, SQLException {
+
     }
 }

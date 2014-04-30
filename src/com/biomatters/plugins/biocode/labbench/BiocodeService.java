@@ -1569,7 +1569,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         Query masterQuery = Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap());
 
         List<FimsSample> list = BiocodeService.getInstance().getActiveFIMSConnection().getMatchingSamples(masterQuery);
-        
+
         Map<String, String> result = new HashMap<String, String>();
         for(FimsSample sample : list) {
             result.put( ""+sample.getFimsAttributeValue("biocode.Specimen_Num_Collector"), sample.getId());

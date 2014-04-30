@@ -121,10 +121,9 @@ public class Plate implements XMLSerializable {
     }
 
     private void init(int numberOfWells, Reaction.Type type, boolean initializeReactions) {
-        if(numberOfWells % 8 == 0) {
-            init(8, numberOfWells/8, type, initializeReactions);
-        }
-        else {
+        if (numberOfWells % 8 == 0) {
+            init(8, numberOfWells / 8, type, initializeReactions);
+        } else {
             init(1, numberOfWells, type, initializeReactions);
         }
     }
