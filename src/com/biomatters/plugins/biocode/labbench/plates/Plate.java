@@ -121,18 +121,23 @@ public class Plate implements XMLSerializable {
     }
 
     private void init(int numberOfWells, Reaction.Type type, boolean initializeReactions) {
-        if(numberOfWells % 8 == 0) {
-            init(8, numberOfWells/8, type, initializeReactions);
-        }
-        else {
+        if (numberOfWells % 8 == 0) {
+            init(8, numberOfWells / 8, type, initializeReactions);
+        } else {
             init(1, numberOfWells, type, initializeReactions);
         }
     }
 
-
     public Plate(Plate.Size size, Reaction.Type type) {
         this.type = type;
         this.plateSize = size;
+        init(size, type, true);
+    }
+
+    public Plate(Plate.Size size, Reaction.Type type, Date lastModified) {
+        this.type = type;
+        this.plateSize = size;
+        this.lastModified = lastModified;
         init(size, type, true);
     }
 

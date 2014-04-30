@@ -91,7 +91,7 @@ public class RestQueryUtils {
                         condition = entry.getKey();
                     }
                 }
-                if(condition == null) {
+                if (condition == null) {
                     throw new BadRequestException("Unsupported condition " + conditionString);
                 }
                 Object value = matcher.group(3);

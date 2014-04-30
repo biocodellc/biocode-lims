@@ -382,7 +382,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             System.out.println("Running LIMS query:");
             System.out.print("\t");
             SqlUtilities.printSql(workflowQuery.toString(), sqlValues);
-
             preparedStatement = connection.prepareStatement(workflowQuery.toString());
             fillStatement(sqlValues, preparedStatement);
 
@@ -1654,8 +1653,28 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, QueryTermSurrounder termSurrounder, Object value, Condition condition) {
         String valueString = valueToString(value);
         //valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
-        if (Date.class.isAssignableFrom(value.getClass()) && (condition == Condition.LESS_THAN_OR_EQUAL_TO || condition == Condition.GREATER_THAN)) { //hack to make these conditions work...
-            value = new Date(((Date) value).getTime() + 86300000);
+        if (Date.class.isAssignableFrom(value.getClass())) { // New hack
+            GregorianCalendar date = new GregorianCalendar();
+            date.setTime((Date)value);
+            switch (condition) {
+                case LESS_THAN:
+                case GREATER_THAN_OR_EQUAL_TO:
+                    date.set(GregorianCalendar.HOUR_OF_DAY, 0);
+                    date.set(GregorianCalendar.MINUTE, 0);
+                    date.set(GregorianCalendar.SECOND, 0);
+                    date.set(GregorianCalendar.MILLISECOND, 0);
+                    break;
+                case LESS_THAN_OR_EQUAL_TO:
+                case GREATER_THAN:
+                    date.set(GregorianCalendar.HOUR_OF_DAY, 23);
+                    date.set(GregorianCalendar.MINUTE, 59);
+                    date.set(GregorianCalendar.SECOND, 59);
+                    date.set(GregorianCalendar.MILLISECOND, 999);
+                    break;
+                default:
+                    break;
+            }
+            value = (Object)date.getTime();
         }
         if (value instanceof String) {
             inserts.add(termSurrounder.getPrepend() + valueString + termSurrounder.getAppend());
