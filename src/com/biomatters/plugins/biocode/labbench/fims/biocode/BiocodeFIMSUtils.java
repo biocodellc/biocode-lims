@@ -19,15 +19,20 @@ import java.util.*;
  */
 public class BiocodeFIMSUtils {
 
-    static boolean login(String hostname, String username, String password) throws MalformedURLException {
-        WebTarget path = ClientBuilder.newClient().target(hostname).path("id/authenticationService/login");
+    static String login(String hostname, String username, String password) throws MalformedURLException {
+        try {
+            WebTarget path = ClientBuilder.newClient().target(hostname).path("id/authenticationService/login");
 
-        Invocation.Builder request = path
-                .request(MediaType.TEXT_HTML_TYPE);
-        Response response = request.post(
-                Entity.entity(new Form().param("username", username).param("password", password), MediaType.TEXT_PLAIN_TYPE));
-        response.close();  // Unfortunately the login service doesn't provide any meaningful response.  It just redirects to the main page.
-        return true;  // So we'll have to assume the login worked for now
+            Invocation.Builder request = path
+                    .request(MediaType.TEXT_HTML_TYPE);
+            Form formToPost = new Form().param("username", username).param("password", password);
+            Response response = request.post(
+                    Entity.entity(formToPost, MediaType.TEXT_PLAIN_TYPE));
+            response.close();  // Unfortunately the login service doesn't provide any meaningful response.  It just redirects to the main page.
+            return null;  // So we'll have to assume the login worked for now
+        } catch (ProcessingException e) {
+            return e.getMessage();
+        }
     }
 
     static WebTarget getQueryTarget() {
@@ -162,6 +167,8 @@ public class BiocodeFIMSUtils {
             throw new DatabaseServiceException("No data found.", false);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, "Encountered an error communicating with " + BiocodeFIMSConnection.HOST, false);
+        } catch(ProcessingException e) {
+            throw new DatabaseServiceException(e, "Encountered an error connecting to server: " + e.getMessage(), true);
         }
     }
 }
