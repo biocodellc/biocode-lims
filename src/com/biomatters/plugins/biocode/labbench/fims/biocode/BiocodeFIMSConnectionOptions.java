@@ -51,7 +51,7 @@ import java.util.prefs.Preferences;
                             SharedCookieHandler.registerHost(url.getHost());
                             String result = BiocodeFIMSUtils.login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
                             if (result != null) {
-                                Dialogs.showMessageDialog("");
+                                Dialogs.showMessageDialog("Error: " + result);
                             } else {
                                 loadProjectsFromServer();
                             }
