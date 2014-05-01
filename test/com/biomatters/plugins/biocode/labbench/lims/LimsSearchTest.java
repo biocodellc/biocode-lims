@@ -627,10 +627,6 @@ public class LimsSearchTest extends Assert {
         assertEquals(2, searchResults.size());
     }
 
-    private void searchPlatesLastModifiedOnDate() throws DatabaseServiceException, BadDataException, SQLException {
-
-    }
-
     @Test
     public void searchPlatesLastModifiedAfterOrOnDate() throws DatabaseServiceException, BadDataException, SQLException {
         BiocodeService service = BiocodeService.getInstance();
@@ -673,33 +669,5 @@ public class LimsSearchTest extends Assert {
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
-    }
-
-    private void searchPlatesLastModifiedNotOnDate() throws DatabaseServiceException, BadDataException, SQLException {
-
-    }
-
-    public void searchWorkflowsLastModifiedBeforeDate() throws DatabaseServiceException, BadDataException, SQLException {
-
-    }
-
-    private void searchWorkflowsLastModifiedBeforeOrOnDate() throws DatabaseServiceException, BadDataException, SQLException {
-
-    }
-
-    private void searchWorkflowsLastModifiedOnDate() throws DatabaseServiceException, BadDataException, SQLException {
-
-    }
-
-    private void searchWorkflowsLastModifiedAfterOrOnDate() throws DatabaseServiceException, BadDataException, SQLException {
-
-    }
-
-    public void searchWorkflowsLastModifiedAfterDate() throws DatabaseServiceException, BadDataException, SQLException {
-
-    }
-
-    private void searchWorkflowsLastModifiedNotOnDate() throws DatabaseServiceException, BadDataException, SQLException {
-
     }
 }
