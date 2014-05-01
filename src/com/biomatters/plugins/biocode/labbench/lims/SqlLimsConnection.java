@@ -1968,7 +1968,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
-    private void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException{
+    private void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
@@ -1990,7 +1990,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     reactionsWithoutWorkflows.add(reaction);
                 }
             }
-            if(reactionsWithoutWorkflows.size() > 0) {
+            if (reactionsWithoutWorkflows.size() > 0) {
                 List<Workflow> workflowList = addWorkflows(reactionsWithoutWorkflows, progress);
                 for (int i = 0; i < reactionsWithoutWorkflows.size(); i++) {
                     Reaction reaction = reactionsWithoutWorkflows.get(i);

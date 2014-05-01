@@ -1436,11 +1436,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         List<String> workflowIdStrings = new ArrayList<String>();
         for(Reaction reaction : plate.getReactions()) {
 
+            if (reaction.getLocus().equals("None")) {
+                throw new BadDataException("Locus is not specified for reaction with extraction id " + reaction.getExtractionId());
+            }
+
             Object workflowId = reaction.getFieldValue("workflowId");
             Object tissueId = reaction.getFieldValue("sampleId");
             String extractionId = reaction.getExtractionId();
 
-            if(!reaction.isEmpty()) {
+            if (!reaction.isEmpty()) {
                 reactionsToSave.add(reaction);
                 if(extractionId != null && tissueId != null && tissueId.toString().length() > 0) {
                     if(reaction.getWorkflow() != null && workflowId.toString().length() > 0){
