@@ -51,12 +51,15 @@ import java.util.prefs.Preferences;
                             SharedCookieHandler.registerHost(url.getHost());
                             String result = BiocodeFIMSUtils.login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
                             if (result != null) {
-                                Dialogs.showMessageDialog("Error: " + result);
+                                Dialogs.showMessageDialog(
+                                        "There was a problem communicating with the server: " + result,
+                                        "Connection Error"
+                                );
                             } else {
                                 loadProjectsFromServer();
                             }
                         } catch (MalformedURLException e1) {
-                            Dialogs.showMessageDialog("Bad URL: " + e1.getMessage());
+                            Dialogs.showMessageDialog("Could not connect to server.  Invalid URL: " + e1.getMessage(), "Invalid URL");
                         }
                         progressFrame.setComplete();
                     }
