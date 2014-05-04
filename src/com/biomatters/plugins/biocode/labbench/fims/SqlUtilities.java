@@ -285,6 +285,12 @@ public class SqlUtilities {
         return toPrint;
     }
 
+    /**
+     * Appends set of question marks separated by commas and enclosed by parentheses to the end of a StringBuilder,
+     * e.g. (?, ?, ?) is appended for count of 3.
+     * @param builder StringBuilder to append to.
+     * @param count number of question marks.
+     */
     public static void appendSetOfQuestionMarks(StringBuilder builder, int count) {
             String[] qMarks = new String[count];
             Arrays.fill(qMarks, "?");
