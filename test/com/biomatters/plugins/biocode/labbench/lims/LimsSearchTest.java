@@ -689,7 +689,7 @@ public class LimsSearchTest extends Assert {
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.GREATER_THAN, new Object[] { cal.getTime() },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
 
-        for (int i = 0; i != 30; i++) {
+        for (int i = 0; i < 30; i++) {
             List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
             assertEquals(2, searchResults.size());
         }

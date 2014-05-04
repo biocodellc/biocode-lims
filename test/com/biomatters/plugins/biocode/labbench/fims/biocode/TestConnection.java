@@ -5,6 +5,7 @@ import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.ws.rs.ProcessingException;
 import java.net.MalformedURLException;
 import java.util.List;
 
@@ -46,7 +47,7 @@ public class TestConnection extends Assert {
     public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException {
         String host = "biscicol.org";
         SharedCookieHandler.registerHost(host);
-        assertNotNull(BiocodeFIMSUtils.login("http://" + host, "demo", "demo"));
+        BiocodeFIMSUtils.login("http://" + host, "demo", "demo");
         for (Project project : BiocodeFIMSUtils.getProjects()) {
             System.out.println(project);
         }

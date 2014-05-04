@@ -109,7 +109,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
                     }
                 }
             }
-
         } catch(IOException e) {
             Dialogs.showMessageDialog("Geneious could not read your excel file: "+e.getMessage(), "Could not read Excel file", null, Dialogs.DialogIcon.WARNING);
             return;

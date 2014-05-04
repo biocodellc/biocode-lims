@@ -18,21 +18,14 @@ import java.util.*;
  *         Created on 7/02/14 5:51 AM
  */
 public class BiocodeFIMSUtils {
-
-    static String login(String hostname, String username, String password) throws MalformedURLException {
-        try {
+    static void login(String hostname, String username, String password) throws MalformedURLException, ProcessingException {
             WebTarget path = ClientBuilder.newClient().target(hostname).path("id/authenticationService/login");
-
             Invocation.Builder request = path
                     .request(MediaType.TEXT_HTML_TYPE);
             Form formToPost = new Form().param("username", username).param("password", password);
             Response response = request.post(
-                    Entity.entity(formToPost, MediaType.TEXT_PLAIN_TYPE));
+                        Entity.entity(formToPost, MediaType.TEXT_PLAIN_TYPE));
             response.close();  // Unfortunately the login service doesn't provide any meaningful response.  It just redirects to the main page.
-            return null;  // So we'll have to assume the login worked for now
-        } catch (ProcessingException e) {
-            return e.getMessage();
-        }
     }
 
     static WebTarget getQueryTarget() {

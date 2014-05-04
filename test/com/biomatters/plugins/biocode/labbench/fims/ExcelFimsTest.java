@@ -3,7 +3,9 @@ package com.biomatters.plugins.biocode.labbench.fims;
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.TestUtilities;
-import com.biomatters.plugins.biocode.labbench.lims.LimsSearchTest;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSOptions;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
