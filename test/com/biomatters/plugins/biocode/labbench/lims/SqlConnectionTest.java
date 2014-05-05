@@ -58,7 +58,7 @@ public class SqlConnectionTest extends Assert {
             try {
                 SqlLimsConnection.ConnectionWrapper conn = null;
 
-                for(int i=0; i<5; i++) {
+                for(int i=1; i<5; i++) {
                     for(int j=0; j<i; j++) {
                         conn = sql.getConnection();
                     }

@@ -118,11 +118,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 ConnectionWrapper.closeConnection(connection);
             } else {
                 current = current - 1;
+                connectionCounts.put(connection, current);
                 if (current <= 0) {
-                    connectionCounts.put(connection, null);
                     ConnectionWrapper.closeConnection(connection);
-                } else {
-                    connectionCounts.put(connection, current);
                 }
             }
         }
