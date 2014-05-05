@@ -1659,7 +1659,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, QueryTermSurrounder termSurrounder, Object value, Condition condition) {
         String valueString = valueToString(value);
         //valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
-        if (Date.class.isAssignableFrom(value.getClass())) { // New hack
+        /* The time of day of date values used as search constraints should not be considered (the day of the month is
+         * the most granular unit for date values used as search constraints). Date values are modified accordingly to
+         * help create this behaviour.
+         */
+        if (Date.class.isAssignableFrom(value.getClass())) {
             GregorianCalendar date = new GregorianCalendar();
             date.setTime((Date)value);
             switch (condition) {
