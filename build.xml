@@ -30,7 +30,7 @@
     <property name="server-folder" value="biocode-server"/>
     <property name="server-lib" value="${server-folder}/web/WEB-INF/lib"/>
     <property name="server-src" value="${server-folder}/src"/>
-    <property name="warfile" value="BiocodeLIMS.war"/>
+    <property name="warfile" value="BiocodeLIMS_${plugin.version}.war"/>
 
     <path id="classpath">
         <fileset dir="${lib}"/>
