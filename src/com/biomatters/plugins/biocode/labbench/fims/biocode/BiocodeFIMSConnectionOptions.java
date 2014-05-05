@@ -51,7 +51,6 @@ import java.util.prefs.Preferences;
                             SharedCookieHandler.registerHost(url.getHost());
                             BiocodeFIMSUtils.login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
                             loadProjectsFromServer();
-                            throw new ProcessingException("test");
                         } catch (MalformedURLException e1) {
                             Dialogs.showMessageDialog("Could not connect to server.  Invalid URL: " + e1.getMessage(), "Invalid URL");
                         } catch (ProcessingException e) {
