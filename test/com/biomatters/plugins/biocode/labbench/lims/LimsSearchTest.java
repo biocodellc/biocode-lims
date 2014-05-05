@@ -670,28 +670,4 @@ public class LimsSearchTest extends Assert {
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
     }
-
-    @Test
-    public void multipleSearchesNoExhaustSQLConnectionPool() throws DatabaseServiceException, BadDataException, SQLException {
-        BiocodeService service = BiocodeService.getInstance();
-
-        String tissue = "MBIO24950.1";
-        String extractionId = "MBIO24950.1.1";
-
-        saveExtractionPlate("Plate_M037", tissue, extractionId, service);
-
-        String plateName = "PCR_M037";
-        String locus = "COI";
-        savePcrPlate(plateName, locus, service, extractionId);
-
-        Calendar cal = new GregorianCalendar();
-        cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
-        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_DATE_FIELD, Condition.GREATER_THAN, new Object[] { cal.getTime() },
-                BiocodeService.getSearchDownloadOptions(false, false, true, false));
-
-        for (int i = 0; i < 30; i++) {
-            List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
-            assertEquals(2, searchResults.size());
-        }
-    }
 }
