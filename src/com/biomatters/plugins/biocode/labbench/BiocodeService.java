@@ -1431,7 +1431,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void savePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException, BadDataException {
-
         //set workflows for reactions that have id's
         List<Reaction> reactionsToSave = new ArrayList<Reaction>();
         List<String> workflowIdStrings = new ArrayList<String>();
@@ -1485,7 +1484,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
         }
-
         limsConnection.savePlate(plate, progress);
     }
 

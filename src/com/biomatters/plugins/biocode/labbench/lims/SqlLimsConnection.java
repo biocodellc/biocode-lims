@@ -1840,17 +1840,52 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             saveReactions(plate.getReactions(), plate.getReactionType(), progress);
+            Map<String, Set<Integer>> workflowLoci = new HashMap<String, Set<Integer>>();
+            for (Reaction reaction : plate.getReactions()) {
+                Set<Integer> ids = workflowLoci.get(reaction.getLocus());
+                if (ids == null) {
+                    ids = new HashSet<Integer>();
+                    workflowLoci.put(reaction.getLocus(), ids);
+                }
+                Workflow workflow = reaction.getWorkflow();
+                if (workflow != null) {
+                    ids.add(workflow.getId());
+                }
+            }
+
+            for (Map.Entry<String, Set<Integer>> stringSetEntry : workflowLoci.entrySet()) {
+                if (stringSetEntry.getValue().isEmpty()) {
+                    continue;
+                }
+                StringBuilder updateLociSql = new StringBuilder();
+                updateLociSql.append("UPDATE workflow SET workflow.locus = ? WHERE id IN ");
+                SqlUtilities.appendSetOfQuestionMarks(updateLociSql, stringSetEntry.getValue().size());
+                PreparedStatement updateLociStatement = connection.prepareStatement(updateLociSql.toString());
+                int i = 2;
+                updateLociStatement.setObject(1, stringSetEntry.getKey());
+                for (Integer id : stringSetEntry.getValue()) {
+                    updateLociStatement.setObject(i++, id);
+                }
+
+                int numberOfUpdatedWorkflows = updateLociStatement.executeUpdate();
+
+                if (numberOfUpdatedWorkflows != stringSetEntry.getValue().size()) {
+                    throw new DatabaseServiceException("Incorrect number of workflows updated, expected: " +
+                            stringSetEntry.getValue().size() + ", actual: " + numberOfUpdatedWorkflows, false);
+                }
+            }
 
             //update the last-modified on the workflows associated with this plate...
             String sql;
-            if(plate.getReactionType() == Reaction.Type.Extraction) {
+            if (plate.getReactionType() == Reaction.Type.Extraction) {
                 sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
             }
             else if(plate.getReactionType() == Reaction.Type.PCR){
-                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
             }
             else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
-                sql="UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
+
             }
             else {
                 throw new SQLException("There is no reaction type "+plate.getReactionType());
@@ -1858,7 +1893,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection.executeUpdate(sql);
 
             connection.endTransaction();
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             returnConnection(connection);
@@ -2163,6 +2198,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                             if(cocktailId < 0) {
                                 throw new SQLException("The reaction " + reaction.getPosition() + " does not have a valid cocktail ("+cocktailValue.getName()+").");
                             }
+
                             statement.setInt(6, cocktailId);
                             statement.setString(7, ((Options.OptionValue)options.getValue(ReactionOptions.RUN_STATUS)).getLabel());
                             if(reaction.getThermocycle() != null) {
@@ -2187,7 +2223,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                                 }
                                 resultSet.close();
                             }
-
                             saveCount++;
                         }
                     }

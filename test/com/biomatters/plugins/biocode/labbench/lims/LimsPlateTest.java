@@ -80,7 +80,7 @@ public class LimsPlateTest extends Assert {
     }
 
     @Test
-    public void locusSuccessfullySaved() throws DatabaseServiceException, BadDataException, java.sql.SQLException, DocumentOperationException {
+    public void locusSuccessfullySaved() throws DatabaseServiceException, BadDataException, SQLException, DocumentOperationException {
         String extractionID = "123";
         String locus = "abc";
 
@@ -92,15 +92,42 @@ public class LimsPlateTest extends Assert {
     }
 
     @Test
-    public void locusSuccessfullyChanged() throws DatabaseServiceException, BadDataException, SQLException, DocumentOperationException {
+    public void locusSuccessfullyChanged() throws DatabaseServiceException, BadDataException, java.sql.SQLException, DocumentOperationException {
         String extractionID = "123";
-        String locus = "abc";
+        String initialLocus = "abc";
+        String finalLocusOne = "def";
+        String finalLocusTwo = "ghi";
 
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate("EP", "tissueID", extractionID, service);
-        savePcrPlate("PP", locus, service, extractionID);
+        String[] extractionIDs = new String[96];
+        for (int i = 0; i < extractionIDs.length; i++) {
+            extractionIDs[i] = extractionID;
+        }
+        Plate pcrPlate = savePcrPlate("PP", initialLocus, service, extractionIDs);
 
-        assertEquals(locus, ((PlateDocument)service.retrieve(extractionID).get(2).getDocument()).getPlate().getReaction(0, 0).getLocus());
+        for (Reaction reaction : pcrPlate.getReactions()) {
+            assertEquals(initialLocus, reaction.getLocus());
+        }
+
+        int i = 0;
+        for (Reaction reaction : pcrPlate.getReactions()) {
+            if (i++ % 2 == 0) {
+                reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), finalLocusOne);
+            } else {
+                reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), finalLocusTwo);
+            }
+        }
+
+        service.savePlate(pcrPlate, ProgressListener.EMPTY);
+        i = 0;
+        for (Reaction reaction : pcrPlate.getReactions()) {
+            if (i++ % 2 == 0) {
+                assertEquals(finalLocusOne, reaction.getLocus());
+            } else {
+                assertEquals(finalLocusTwo, reaction.getLocus());
+            }
+        }
     }
 
     /**
@@ -177,7 +204,9 @@ public class LimsPlateTest extends Assert {
         List<Thermocycle> thermocycle = BiocodeService.getInstance().getPCRThermocycles();
         assertFalse("No default thermocycles in the system", thermocycle.isEmpty());
         pcrPlate.setThermocycle(thermocycle.get(0));
-
+        for (Reaction reaction : pcrPlate.getReactions()) {
+            System.out.println(reaction.getLocus());
+        }
         int index = 0;
         for (String extractionId : extractionIds) {
             PCRReaction reaction = (PCRReaction)pcrPlate.getReaction(0, index++);
