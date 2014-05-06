@@ -14,7 +14,7 @@
     <security-constraint>
       <web-resource-collection>
         <web-resource-name>
-          Entire Application
+          Biocode LIMS Server
         </web-resource-name>
         <url-pattern>/biocode/*</url-pattern>
       </web-resource-collection>
@@ -25,6 +25,6 @@
 
     <login-config>
         <auth-method>BASIC</auth-method>
-        <realm-name>my-default-realm</realm-name>
+        <realm-name>BiocodeLIMS</realm-name>
     </login-config>
 </web-app>
