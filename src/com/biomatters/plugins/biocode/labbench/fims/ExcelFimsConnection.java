@@ -92,6 +92,14 @@ public class ExcelFimsConnection extends TableFimsConnection{
         try {
             workbook = Workbook.getWorkbook(excelFile);
             Sheet sheet = workbook.getSheet(0);
+            Cell[] keys = sheet.getColumn(0);
+            HashSet<String> keySet = new HashSet<String>();
+            for (Cell c : keys) {
+                if (keySet.contains(c.getContents())) {
+                    throw new ConnectionException(null, "Invalid spreadsheet. Multiple rows with same tissue id: " + c.getContents());
+                }
+                keySet.add(c.getContents());
+            }
             for(int i=0; i < sheet.getColumns(); i++) {
                 Cell cell = sheet.getCell(i,0);
                 String cellContents = cell.getContents();
@@ -102,11 +110,13 @@ public class ExcelFimsConnection extends TableFimsConnection{
                     }
                 }
             }
-
         } catch(IOException e) {
             Dialogs.showMessageDialog("Geneious could not read your excel file: "+e.getMessage(), "Could not read Excel file", null, Dialogs.DialogIcon.WARNING);
             return;
         } catch(Exception e) {
+            if (e instanceof ConnectionException) {
+                throw (ConnectionException)e;
+            }
             handleCorruptedExcelFile(null, e);
             throw ConnectionException.NO_DIALOG;
         }
