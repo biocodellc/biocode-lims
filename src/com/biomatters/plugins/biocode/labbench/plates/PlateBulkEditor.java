@@ -90,7 +90,7 @@ public class PlateBulkEditor {
                 }
                 isAdjusting.set(true);
                 for(DocumentFieldEditor editor : editors) {
-                    //editor.setScrollPosition(e.getValue());
+                    editor.setScrollPosition(e.getValue());
                 }
                 isAdjusting.set(false);
             }
@@ -504,12 +504,7 @@ public class PlateBulkEditor {
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
         //swapAction.actionPerformed(null);
-        Object result = Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate"), holderPanel);
-        editors.get(0).setScrollPosition(0); // Moves the scrollbars to the top as the position of the workflows scrollbar
-                                             // (and those of the other scrollbars by implication) goes through a period
-                                             // of fluctuation before stopping at the bottom during the inner logic flow
-                                             // of the dialog display statement.
-        if (result.equals("Cancel")) {
+        if (Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate"), holderPanel).equals("Cancel")) {
             return false;
         }
 
