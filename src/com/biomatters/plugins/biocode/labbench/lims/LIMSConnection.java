@@ -61,40 +61,36 @@ public abstract class LIMSConnection {
     Connection connection2;
     private PasswordOptions limsOptions;
 
-    public static final DocumentField DATE_FIELD = new DocumentField("Last Modified (LIMS)", "", "date", Date.class, true, false);
-
     private static final Map<String, List<DocumentField>> TABLE_TO_FIELDS = new HashMap<String, List<DocumentField>>();
 
-    public static final DocumentField WORKFLOW_NAME_FIELD = new DocumentField("Workflow Name", "", "workflow.name", String.class, true, false);
-    public static final DocumentField WORKFLOW_DATE_FIELD = new DocumentField("Last Modified (LIMS workflow)", "", "workflow.date", Date.class, false, false);
-    public static final DocumentField WORKFLOW_LOCUS_FIELD = new DocumentField("Locus", "The locus of the workflow", "workflow.locus", String.class, true, false);
-
+    public static final DocumentField WORKFLOW_NAME_FIELD = DocumentField.createStringField("Workflow Name", "", "workflow.name", true, false);
+    public static final DocumentField WORKFLOW_DATE_FIELD = DocumentField.createDateField("Last Modified (LIMS workflow)", "", "workflow.date", false, false);
+    public static final DocumentField WORKFLOW_LOCUS_FIELD = DocumentField.createStringField("Locus", "The locus of the workflow", "workflow.locus", true, false);
     static {
         TABLE_TO_FIELDS.put("workflow", Arrays.asList(WORKFLOW_NAME_FIELD, WORKFLOW_DATE_FIELD, WORKFLOW_LOCUS_FIELD));
     }
 
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[]{"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
-    public static final DocumentField PLATE_NAME_FIELD = new DocumentField("Plate Name (LIMS)", "", "plate.name", String.class, true, false);
-    public static final DocumentField PLATE_DATE_FIELD = new DocumentField("Last Modified (LIMS plate)", "", "plate.date", Date.class, false, false);
-
+    public static final DocumentField PLATE_NAME_FIELD = DocumentField.createStringField("Plate Name (LIMS)", "", "plate.name", true, false);
+    public static final DocumentField PLATE_DATE_FIELD = DocumentField.createDateField("Last Modified (LIMS plate)", "", "plate.date", false, false);
     static {
         TABLE_TO_FIELDS.put("plate", Arrays.asList(PLATE_TYPE_FIELD, PLATE_NAME_FIELD, PLATE_DATE_FIELD));
     }
 
-    public static final DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction ID", "The Extraction ID", "extraction.extractionId", String.class, true, false);
-    public static final DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", String.class, true, false);
-
+    public static final DocumentField EXTRACTION_ID_FIELD = DocumentField.createStringField("Extraction ID", "The Extraction ID", "extraction.extractionId", true, false);
+    public static final DocumentField EXTRACTION_BARCODE_FIELD = DocumentField.createStringField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", true, false);
+    public static final DocumentField EXTRACTION_DATE_FIELD = DocumentField.createDateField("Extraction Date", "The Date of Extraction", "extraction.date", true, false);
     static {
-        TABLE_TO_FIELDS.put("extraction", Arrays.asList(EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, DATE_FIELD));
+        TABLE_TO_FIELDS.put("extraction", Arrays.asList(EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, EXTRACTION_DATE_FIELD));
     }
 
     public static final DocumentField SEQUENCE_PROGRESS = DocumentField.createEnumeratedField(new String[]{"passed", "failed"}, "Sequence Progress", "Whether the sequence passed or failed sequencing and assembly", "assembly.progress", true, false);
     public static final DocumentField SEQUENCE_SUBMISSION_PROGRESS = DocumentField.createEnumeratedField(new String[]{"Yes", "No"}, "Sequence Submitted", "Indicates whether this sequence has been submitte to a sequence database (e.g. Genbank)", "assembly.submitted", false, false);
     public static final DocumentField EDIT_RECORD = DocumentField.createStringField("Edit Record", "A record of edits made to this sequence", "assembly.editRecord", false, false);
     public static final DocumentField ASSEMBLY_TECHNICIAN = DocumentField.createStringField("Assembly Technician", "", "assembly.technician", false, false);
-
+    public static final DocumentField ASSEMBLY_DATE_FIELD = DocumentField.createDateField("Sequence Pass/Fail Date", "The Date at which a Sequence Passed/Failed", "assembly.date", true, false);
     static {
-        TABLE_TO_FIELDS.put("assembly", Arrays.asList(SEQUENCE_PROGRESS, SEQUENCE_SUBMISSION_PROGRESS, EDIT_RECORD, ASSEMBLY_TECHNICIAN, DATE_FIELD));
+        TABLE_TO_FIELDS.put("assembly", Arrays.asList(SEQUENCE_PROGRESS, SEQUENCE_SUBMISSION_PROGRESS, EDIT_RECORD, ASSEMBLY_TECHNICIAN, ASSEMBLY_DATE_FIELD));
     }
 
     public static final DocumentField SEQUENCE_ID = DocumentField.createIntegerField("LIMS Sequence ID", "The Unique ID of this sequence in LIMS", "LimsSequenceId", false, false);
@@ -518,14 +514,15 @@ public abstract class LIMSConnection {
                 PLATE_NAME_FIELD,
                 WORKFLOW_NAME_FIELD,
                 PLATE_TYPE_FIELD,
-                DATE_FIELD,
                 PLATE_DATE_FIELD,
                 WORKFLOW_DATE_FIELD,
                 WORKFLOW_LOCUS_FIELD,
                 EXTRACTION_ID_FIELD,
                 EXTRACTION_BARCODE_FIELD,
+                EXTRACTION_DATE_FIELD,
                 SEQUENCE_PROGRESS,
                 SEQUENCE_SUBMISSION_PROGRESS,
+                ASSEMBLY_DATE_FIELD,
                 ASSEMBLY_TECHNICIAN
         );
     }

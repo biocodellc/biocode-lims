@@ -31,7 +31,6 @@ import java.util.*;
  *          Created on 4/03/14 3:36 PM
  */
 public class LimsSearchTest extends Assert {
-
     private static final String DATABASE_NAME = "testLimsForSearchTest";
     private static final long MAX_TIME_TO_WAIT_FOR_OPTIONS_UPDATE = 10 * 1000;
     private static final long WAIT_INCREMENT = 200;
@@ -562,6 +561,4 @@ public class LimsSearchTest extends Assert {
             assertEquals(plateName, plates.get(0));
         }
     }
-
-
 }
