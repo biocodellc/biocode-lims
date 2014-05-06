@@ -41,16 +41,16 @@ public class LimsPlateTest extends LimsTest {
         for (int i = 0; i < extractionIDs.length; i++) {
             extractionIDs[i] = extractionID;
         }
-        Plate pcrPlate = savePcrPlate("PP", initialLocus, service, extractionIDs);
-
-        for (Reaction reaction : pcrPlate.getReactions()) {
-            assertEquals(initialLocus, reaction.getLocus());
-        }
+        savePcrPlate("PP", initialLocus, service, extractionIDs);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_ID_FIELD, Condition.EQUAL, new Object[] { extractionID },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
 
-        pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(1).getDocument()).getPlate();
+        Plate pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(1).getDocument()).getPlate();
+
+        for (Reaction reaction : pcrPlate.getReactions()) {
+            assertEquals(initialLocus, reaction.getLocus());
+        }
 
         int i = 0;
         for (Reaction reaction : pcrPlate.getReactions()) {
@@ -62,6 +62,9 @@ public class LimsPlateTest extends LimsTest {
         }
 
         service.savePlate(pcrPlate, ProgressListener.EMPTY);
+
+        pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(1).getDocument()).getPlate();
+
         i = 0;
         for (Reaction reaction : pcrPlate.getReactions()) {
             if (i++ % 2 == 0) {
