@@ -90,7 +90,7 @@ public class PlateBulkEditor {
                 }
                 isAdjusting.set(true);
                 for(DocumentFieldEditor editor : editors) {
-                    editor.setScrollPosition(e.getValue());
+                    //editor.setScrollPosition(e.getValue());
                 }
                 isAdjusting.set(false);
             }
@@ -504,7 +504,12 @@ public class PlateBulkEditor {
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
         //swapAction.actionPerformed(null);
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
+        Object result = Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate"), holderPanel);
+        editors.get(0).setScrollPosition(0); // Moves the scrollbars to the top as the position of the workflows scrollbar
+                                             // (and those of the other scrollbars by implication) goes through a period
+                                             // of fluctuation before stopping at the bottom during the inner logic flow
+                                             // of the dialog display statement.
+        if (result.equals("Cancel")) {
             return false;
         }
 
@@ -532,7 +537,6 @@ public class PlateBulkEditor {
                 autodetectAction.actionPerformed(null);
             }
         }
-
         //get the workflows out of the database (mainly to check for validity in what the user's entered)
         for(DocumentFieldEditor editor : editors) {
             if(editor.getField().getCode().equals(workflowField.getCode())) {
@@ -553,7 +557,6 @@ public class PlateBulkEditor {
                 Dialogs.showMessageDialog("Could not get the workflows from the database: "+e.getMessage());
             }
         }
-
         //put the values back in the reactions
         StringBuilder badWorkflows = new StringBuilder();
         for(int row=0; row < plate.getRows(); row++) {
@@ -589,7 +592,6 @@ public class PlateBulkEditor {
         }
         return true;
     }
-
 
     private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){
         if(ids.size() != 4) {
@@ -1201,7 +1203,6 @@ public class PlateBulkEditor {
         }
     }
 
-
     private static class SwapAction extends GeneiousAction{
         private List<DocumentFieldEditor> editors;
         private Direction direction = Direction.ACROSS_AND_DOWN;
@@ -1300,8 +1301,6 @@ public class PlateBulkEditor {
                 return;
             }
         }
-
-
     }
 }
 
