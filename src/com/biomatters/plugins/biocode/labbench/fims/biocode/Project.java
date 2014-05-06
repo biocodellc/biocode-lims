@@ -14,6 +14,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
  * @author Matthew Cheung
@@ -51,32 +53,14 @@ public class Project {
     }
 
     private List<Project.Field> retrieveFieldsFromXmlConfigurationFile() throws DatabaseServiceException {
-        List<Project.Field> fromXml = new ArrayList<Field>();
         String expeditionXmlLocation = xmlLocation;
         //noinspection ProhibitedExceptionCaught
         try {
             URL url = new URL(expeditionXmlLocation);
             InputStream inputStream = url.openStream();
-
-            FastSaxBuilder builder = new FastSaxBuilder();
-            InputStreamReader reader = new InputStreamReader(inputStream);
-            Element element = builder.build(reader).getRootElement();
-            reader.close();
-
-            Element mappingElement = element.getChild("mapping");
-            if(mappingElement == null) {
-                throw new DatabaseServiceException("Invalid configuration for " + title + ". " +
-                        "Missing mapping element", false);
-            }
-            Element entityElement = mappingElement.getChild("entity");
-            if(entityElement == null) {
-                throw new DatabaseServiceException("Invalid configuration for " + title + ". " +
-                        "Missing mapping/entity element", false);
-            }
-            List<Element> children = entityElement.getChildren("attribute");
-            for (Element child : children) {
-                fromXml.add(new Project.Field(child.getAttributeValue("uri"), child.getAttributeValue("column")));
-            }
+            List<Field> fields = getProjectFieldsFromXmlElement(title, inputStream);
+            inputStream.close();
+            return fields;
         } catch (MalformedURLException e) {
             throw new DatabaseServiceException(e, "Configuration file location for " + title
                     + " is an invalid URL (" + expeditionXmlLocation + ")", false);
@@ -86,6 +70,34 @@ public class Project {
             throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title + " from " + xmlLocation + ": " + e.getMessage(), false);
         } catch(ArrayIndexOutOfBoundsException e) {
             throw new DatabaseServiceException(e, "Failed to load fields for expedition " + title + " from " + xmlLocation + ": " + e.getMessage(), false);
+        }
+    }
+
+    public static List<Field> getProjectFieldsFromXmlElement(String projectTitle, InputStream inputStream) throws DatabaseServiceException, IOException, JDOMException {
+        FastSaxBuilder builder = new FastSaxBuilder();
+        InputStreamReader reader = new InputStreamReader(inputStream);
+        Element element = builder.build(reader).getRootElement();
+        reader.close();
+
+        List<Field> fromXml = new ArrayList<Field>();
+        Element mappingElement = element.getChild("mapping");
+        if(mappingElement == null) {
+            throw new DatabaseServiceException("Invalid configuration for " + projectTitle + ". " +
+                    "Missing mapping element", false);
+        }
+        Element entityElement = mappingElement.getChild("entity");
+        if(entityElement == null) {
+            throw new DatabaseServiceException("Invalid configuration for " + projectTitle + ". " +
+                    "Missing mapping/entity element", false);
+        }
+        List<Element> children = entityElement.getChildren("attribute");
+        Set<String> urisSeen = new HashSet<String>();
+        for (Element child : children) {
+            String uri = child.getAttributeValue("uri");
+            if (!urisSeen.contains(uri)) {
+                fromXml.add(new Field(uri, child.getAttributeValue("column")));
+                urisSeen.add(uri);
+            }
         }
         return fromXml;
     }
@@ -121,6 +133,14 @@ public class Project {
         public Field(String uri, String name) {
             this.uri = uri;
             this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getURI() {
+            return uri;
         }
     }
 }

@@ -18,7 +18,6 @@ import java.util.*;
  *         Created on 7/02/14 5:51 AM
  */
 public class BiocodeFIMSUtils {
-
     static String login(String hostname, String username, String password) throws MalformedURLException {
         try {
             WebTarget path = ClientBuilder.newClient().target(hostname).path("id/authenticationService/login");

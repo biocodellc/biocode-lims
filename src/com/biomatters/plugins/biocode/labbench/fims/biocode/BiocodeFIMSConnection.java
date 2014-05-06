@@ -274,6 +274,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     public List<DocumentField> getTableColumns() throws IOException {
         List<DocumentField> fields = new ArrayList<DocumentField>();
         fields.add(new DocumentField(BiocodeFIMSUtils.EXPEDITION_NAME, "", CODE_PREFIX + BiocodeFIMSUtils.EXPEDITION_NAME, String.class, true, false));
+        Set<String> urisSeen = new HashSet<String>();
         for (Project.Field field : project.getFields()) {
             fields.add(new DocumentField(field.name, field.name + "(" + field.uri + ")", CODE_PREFIX + field.uri, String.class, true, false));
         }
