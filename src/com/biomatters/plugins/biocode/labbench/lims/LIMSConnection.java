@@ -1639,14 +1639,15 @@ public abstract class LIMSConnection {
         if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             sqlValues.addAll(tissueIdsToMatch);
         }
-        QueryPart workflowPart = getQueryForTable("workflow", tableToTerms, operator);
-        if (workflowPart != null) {
-            sqlValues.addAll(workflowPart.parameters);
-        }
 
         QueryPart extractionPart = getQueryForTable("extraction", tableToTerms, operator);
         if (extractionPart != null) {
             sqlValues.addAll(extractionPart.parameters);
+        }
+
+        QueryPart workflowPart = getQueryForTable("workflow", tableToTerms, operator);
+        if (workflowPart != null) {
+            sqlValues.addAll(workflowPart.parameters);
         }
 
         QueryPart platePart = getQueryForTable("plate", tableToTerms, operator);
@@ -1786,14 +1787,23 @@ public abstract class LIMSConnection {
                 "SELECT extraction.sampleId, workflow.id, plate.id, assembly.id, assembly.date FROM ");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
-        if (filterOnTissues) {
+        boolean searchExtractionTable = filterOnTissues || extractionQueryConditions != null;
+        if (searchExtractionTable) {
             if (operator == CompoundSearchQuery.Operator.AND) {
                 queryBuilder.append("(SELECT * FROM extraction WHERE ");
             }
 
-            String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
-            conditionBuilder.append(sampleColumn).append(" IN ");
-            SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+            if(filterOnTissues) {
+                String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
+                conditionBuilder.append(sampleColumn).append(" IN ");
+                SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+            }
+            if(filterOnTissues && extractionQueryConditions != null) {
+                conditionBuilder.append(operatorString);
+            }
+            if(extractionQueryConditions != null) {
+                conditionBuilder.append("(").append(extractionQueryConditions).append(")");
+            }
 
             if(operator == CompoundSearchQuery.Operator.AND) {
                 queryBuilder.append(")");
@@ -1804,18 +1814,13 @@ public abstract class LIMSConnection {
         }
         queryBuilder.append(getJoinStringIncludingSpaces(operator, workflowQueryConditions));
         queryBuilder.append("workflow ON extraction.id = workflow.extractionId");
-
         if (workflowQueryConditions != null) {
-            if (filterOnTissues) {
+            if (searchExtractionTable) {
                 conditionBuilder.append(operatorString);
             } else if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
             }
             conditionBuilder.append("(").append(workflowQueryConditions).append(")");
-        }
-        if (extractionQueryConditions != null) {
-            conditionBuilder.append(operatorString);
-            conditionBuilder.append("(").append(extractionQueryConditions).append(")");
         }
 
         queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");

@@ -105,6 +105,23 @@ public class LimsSearchTest extends Assert {
     }
 
     @Test
+    public void extractionIdSearch() throws BadDataException, SQLException, DatabaseServiceException, DocumentOperationException {
+        String extractionIdToFind = "2.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_01", "1", "1.1", service);
+        saveExtractionPlate("Plate_02", "2", extractionIdToFind, service);
+
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(Query.Factory.createFieldQuery(
+                LIMSConnection.EXTRACTION_ID_FIELD, Condition.EQUAL, new Object[]{extractionIdToFind},
+                BiocodeService.getSearchDownloadOptions(false, false, true, false)
+        ), ProgressListener.EMPTY);
+        assertEquals(1, searchResults.size());
+        AnnotatedPluginDocument doc = searchResults.get(0);
+        assertEquals(extractionIdToFind, ((PlateDocument)doc.getDocument()).getPlate().getReactions()[0].getExtractionId());
+    }
+
+    @Test
     public void pcrAndWorkflowSearch() throws BadDataException, SQLException {
         String tissue = "MBIO24950.1";
         String extractionId = "MBIO24950.1.1";
