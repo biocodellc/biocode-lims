@@ -118,7 +118,50 @@ public class LimsSearchTest extends Assert {
         ), ProgressListener.EMPTY);
         assertEquals(1, searchResults.size());
         AnnotatedPluginDocument doc = searchResults.get(0);
-        assertEquals(extractionIdToFind, ((PlateDocument)doc.getDocument()).getPlate().getReactions()[0].getExtractionId());
+        assertEquals(extractionIdToFind, ((PlateDocument) doc.getDocument()).getPlate().getReactions()[0].getExtractionId());
+    }
+
+    @Test
+    public void extractionDateSearch() throws BadDataException, SQLException, DatabaseServiceException, DocumentOperationException {
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_01", "1", "1.1", service);
+
+        GregorianCalendar cal = new GregorianCalendar();
+        Date today = cal.getTime();
+
+        cal.add(Calendar.WEEK_OF_MONTH, -1);
+        Date lastWeek = cal.getTime();
+
+        cal.add(Calendar.WEEK_OF_MONTH, 1);
+        Date nextWeek = cal.getTime();
+
+        assertEquals(1,
+            service.retrieve(Query.Factory.createFieldQuery(
+                    LIMSConnection.EXTRACTION_DATE_FIELD, Condition.GREATER_THAN, new Object[]{lastWeek},
+                    BiocodeService.getSearchDownloadOptions(false, false, true, false)
+            ), ProgressListener.EMPTY).size()
+        );
+
+        assertEquals(0,
+            service.retrieve(Query.Factory.createFieldQuery(
+                    LIMSConnection.EXTRACTION_DATE_FIELD, Condition.LESS_THAN, new Object[]{lastWeek},
+                    BiocodeService.getSearchDownloadOptions(false, false, true, false)
+            ), ProgressListener.EMPTY).size()
+        );
+
+        assertEquals(0,
+            service.retrieve(Query.Factory.createFieldQuery(
+                    LIMSConnection.EXTRACTION_DATE_FIELD, Condition.GREATER_THAN, new Object[]{nextWeek},
+                    BiocodeService.getSearchDownloadOptions(false, false, true, false)
+            ), ProgressListener.EMPTY).size()
+        );
+
+        assertEquals(1,
+            service.retrieve(Query.Factory.createFieldQuery(
+                    LIMSConnection.EXTRACTION_DATE_FIELD, Condition.LESS_THAN, new Object[]{nextWeek},
+                    BiocodeService.getSearchDownloadOptions(false, false, true, false)
+            ), ProgressListener.EMPTY).size()
+        );
     }
 
     @Test
