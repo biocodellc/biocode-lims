@@ -80,8 +80,9 @@ public class ServerFimsConnection extends FIMSConnection {
                 target(host).path("biocode");
         try {
             String serverVersion = server.path("info").path("version").request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
-            if (!serverVersion.equals("0.2")) {
-                throw new ConnectionException("Incompatible server version.  Expected 0.1 (alpha), was " + serverVersion);
+            String expectedVersion = "0.2";
+            if (!serverVersion.equals(expectedVersion)) {
+                throw new ConnectionException("Incompatible server version.  Expected " + expectedVersion + " (alpha), was " + serverVersion);
             }
             target = server.path("fims");
             tissueField = getDocumentField("tissue");
