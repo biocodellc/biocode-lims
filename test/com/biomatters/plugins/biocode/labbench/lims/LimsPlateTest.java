@@ -16,37 +16,42 @@ import java.sql.SQLException;
  * Created Gen Li on 2/05/14.
  */
 public class LimsPlateTest extends LimsTest {
+    final String extractionPlateName = "EP";
+    final String pcrPlateName = "PP";
+    final String extractionID = "123";
+    final String initialLocus = "abc";
+
     @Test
     public void locusSuccessfullySaved() throws DatabaseServiceException, BadDataException, SQLException, DocumentOperationException {
-        String extractionID = "123";
-        String locus = "abc";
-
         BiocodeService service = BiocodeService.getInstance();
-        saveExtractionPlate("EP", "tissueID", extractionID, service);
-        savePcrPlate("PP", locus, service, extractionID);
+        saveExtractionPlate(extractionPlateName, "tissueID", extractionID, service);
+        savePcrPlate(pcrPlateName, initialLocus, service, extractionID);
 
-        assertEquals(locus, ((PlateDocument)service.retrieve(extractionID).get(2).getDocument()).getPlate().getReaction(0, 0).getLocus());
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[] { pcrPlateName },
+                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+
+        Plate pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(0).getDocument()).getPlate();
+
+        assertEquals(initialLocus, pcrPlate.getReaction(0, 0).getLocus());
     }
 
     @Test
     public void locusSuccessfullyChanged() throws DatabaseServiceException, BadDataException, java.sql.SQLException, DocumentOperationException {
-        String extractionID = "123";
-        String initialLocus = "abc";
         String finalLocusOne = "def";
         String finalLocusTwo = "ghi";
 
         BiocodeService service = BiocodeService.getInstance();
-        saveExtractionPlate("EP", "tissueID", extractionID, service);
+        saveExtractionPlate(extractionPlateName, "tissueID", extractionID, service);
         String[] extractionIDs = new String[96];
         for (int i = 0; i < extractionIDs.length; i++) {
             extractionIDs[i] = extractionID;
         }
-        savePcrPlate("PP", initialLocus, service, extractionIDs);
+        savePcrPlate(pcrPlateName, initialLocus, service, extractionIDs);
 
-        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_ID_FIELD, Condition.EQUAL, new Object[] { extractionID },
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[] { pcrPlateName },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
 
-        Plate pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(1).getDocument()).getPlate();
+        Plate pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(0).getDocument()).getPlate();
 
         for (Reaction reaction : pcrPlate.getReactions()) {
             assertEquals(initialLocus, reaction.getLocus());
@@ -63,7 +68,7 @@ public class LimsPlateTest extends LimsTest {
 
         service.savePlate(pcrPlate, ProgressListener.EMPTY);
 
-        pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(1).getDocument()).getPlate();
+        pcrPlate = ((PlateDocument)service.retrieve(query, ProgressListener.EMPTY).get(0).getDocument()).getPlate();
 
         i = 0;
         for (Reaction reaction : pcrPlate.getReactions()) {
