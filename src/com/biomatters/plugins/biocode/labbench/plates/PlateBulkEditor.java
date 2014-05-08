@@ -85,6 +85,11 @@ public class PlateBulkEditor {
         final AtomicBoolean isAdjusting = new AtomicBoolean(false);
         AdjustmentListener listener = new AdjustmentListener(){
             public void adjustmentValueChanged(AdjustmentEvent e) {
+                System.err.println(e.getValue());
+                System.err.println("=========");
+                Thread.dumpStack();
+                System.err.println("");
+                System.err.println("");
                 if(isAdjusting.get()) {
                     return;
                 }
@@ -504,7 +509,8 @@ public class PlateBulkEditor {
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
         //swapAction.actionPerformed(null);
-        if(Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
+        System.out.println("Get scroll position: " + editors.get(0).getScrollPosition());
+        if (Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
             return false;
         }
 
@@ -590,7 +596,6 @@ public class PlateBulkEditor {
         return true;
     }
 
-
     private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){
         if(ids.size() != 4) {
             throw new IllegalArgumentException("You must have 4 maps!");
@@ -617,7 +622,6 @@ public class PlateBulkEditor {
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
-
     }
 
     private static void populateWells96(final Map<String, String> ids, final DocumentFieldEditor editorField, Plate p, String plateId) {
@@ -754,8 +758,6 @@ public class PlateBulkEditor {
         }
     }
 
-
-
     static class DocumentFieldEditor extends JPanel {
         private DocumentField field;
         private Plate plate;
@@ -801,6 +803,7 @@ public class PlateBulkEditor {
 
             scroller = new JScrollPane(valueArea);
             scroller.setRowHeaderView(lineNumbers);
+
             textViewFromValues();
             setLayout(new BorderLayout());
             add(scroller, BorderLayout.CENTER);
@@ -881,6 +884,7 @@ public class PlateBulkEditor {
                 public void run() {
                     valueArea.setText(valuesBuilder.toString());
                     scroller.getVerticalScrollBar().setValue(scrollPosition);
+                    System.out.println("Scroll position: " + scrollPosition);
                     for (int i = 0; i < lineNumbersBuilder.size(); i++) {
                         lineNumbers.setValue(i, lineNumbersBuilder.get(i));
                     }
@@ -1201,7 +1205,6 @@ public class PlateBulkEditor {
         }
     }
 
-
     private static class SwapAction extends GeneiousAction{
         private List<DocumentFieldEditor> editors;
         private Direction direction = Direction.ACROSS_AND_DOWN;
@@ -1296,8 +1299,6 @@ public class PlateBulkEditor {
                 return;
             }
         }
-
-
     }
 }
 
