@@ -10,7 +10,8 @@ import java.util.List;
 import java.io.FileInputStream;
 
 /**
- * Created by Gen Li on 8/05/14.
+ * @author Gen Li
+ * Created on 8/05/14.
  */
 public class DuplicateURIsTest extends Assert {
     String configurationFileNormalPath = ExcelFimsTest.class.getResource("bwp_config.xml").getFile().replace("%20", " ");
