@@ -12,7 +12,7 @@ import java.util.List;
  * @author Matthew Cheung
  *         Created on 3/02/14 3:10 PM
  */
-public class TestConnection extends Assert {
+public class ConnectionTest extends Assert {
 
     @Test
     public void getGraphs() throws DatabaseServiceException {
