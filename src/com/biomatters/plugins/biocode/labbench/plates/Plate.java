@@ -30,7 +30,7 @@ public class Plate implements XMLSerializable {
     private int id=-1;
     private int rows;
     private int cols;
-    private Date lastModified;
+    private Date lastModified = new Date();
     private String name = "";
     private Reaction[] reactions;
     private Reaction.Type type;
@@ -129,6 +129,10 @@ public class Plate implements XMLSerializable {
         }
     }
 
+    public Plate(Plate.Size size, Reaction.Type type, Date lastModified) {
+        this(size, type);
+        this.lastModified = lastModified;
+    }
 
     public Plate(Plate.Size size, Reaction.Type type) {
         this.type = type;
