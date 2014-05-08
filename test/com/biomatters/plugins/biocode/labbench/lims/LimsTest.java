@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Gen Li on 6/05/14.
+ * @author Gen Li
+ * Created on 6/05/14.
  */
 public abstract class LimsTest extends Assert {
     private static final String DATABASE_NAME = "testLimsForSearchTest";

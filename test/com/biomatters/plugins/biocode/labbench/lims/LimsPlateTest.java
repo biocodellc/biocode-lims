@@ -13,7 +13,8 @@ import org.junit.Test;
 import java.sql.SQLException;
 
 /**
- * Created Gen Li on 2/05/14.
+ * @author Gen Li
+ * Created on 2/05/14.
  */
 public class LimsPlateTest extends LimsTest {
     final String extractionPlateName = "EP";
