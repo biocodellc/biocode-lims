@@ -39,6 +39,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 
 /**
@@ -591,7 +592,7 @@ public class ReactionUtilities {
         return -1;
     }
 
-    public static boolean editReactions(List<Reaction> reactions, JComponent owner, boolean creating) {
+    public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating) {
         if(reactions == null || reactions.size() == 0) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -607,7 +608,7 @@ public class ReactionUtilities {
             throw new RuntimeException(e);
         }
 
-        Map<String, Boolean> haveAllSameValues = new HashMap<String, Boolean>();
+        final Map<String, Boolean> haveAllSameValues = new HashMap<String, Boolean>();
         //fill in the master options based on the values in all the reactions
         for(Options.Option option : options.getOptions()) {
             haveAllSameValues.put(option.getName(), true);
@@ -620,14 +621,22 @@ public class ReactionUtilities {
             }
         }
 
-        OptionsPanel displayPanel = getReactionPanel(options, haveAllSameValues, reactions.size() > 1, creating);
+        final ReactionOptions optionsToShow = options;
+        final AtomicReference<Object> choice = new AtomicReference<Object>();
+        ThreadUtilities.invokeNowOrWait(new Runnable() {
+            @Override
+            public void run() {
+                OptionsPanel displayPanel = getReactionPanel(optionsToShow, haveAllSameValues, reactions.size() > 1, creating);
 
-        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Wells", owner, Dialogs.DialogIcon.NO_ICON);
-        dialogOptions.setMaxWidth(800);
-        dialogOptions.setMaxHeight(800);
-        Object choice = Dialogs.showDialog(dialogOptions, displayPanel);
+                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Wells", owner, Dialogs.DialogIcon.NO_ICON);
+                dialogOptions.setMaxWidth(800);
+                dialogOptions.setMaxHeight(800);
+                choice.set(Dialogs.showDialog(dialogOptions, displayPanel));
+            }
+        });
+
         boolean hasChanges = false;
-        if(choice.equals("OK")) {
+        if(choice.get().equals("OK")) {
             int changedOptionCount = 0;
             hasChanges = true; //todo: check if options actually have changed...
             Element optionsElement = XMLSerializer.classToXML("options", options);
