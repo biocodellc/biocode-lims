@@ -29,7 +29,7 @@ import java.util.Map;
  * @author Gen Li
  * Created on 6/05/14.
  */
-public abstract class LimsTest extends Assert {
+public abstract class LimsTestCase extends Assert {
     private static final String DATABASE_NAME = "testLimsForSearchTest";
     private static final long MAX_TIME_TO_WAIT_FOR_OPTIONS_UPDATE = 10 * 1000;
     private static final long WAIT_INCREMENT = 200;
