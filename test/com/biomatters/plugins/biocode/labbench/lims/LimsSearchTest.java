@@ -21,7 +21,7 @@ import java.util.*;
  *          <p/>
  *          Created on 4/03/14 3:36 PM
  */
-public class LimsSearchTest extends LimsTest {
+public class LimsSearchTest extends LimsTestCase {
     @Test
     public void basicExtractionSearch() throws IOException, BadDataException, DatabaseServiceException {
         String plateName = "Plate_M037";

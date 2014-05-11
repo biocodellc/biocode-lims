@@ -16,7 +16,7 @@ import java.sql.SQLException;
  * @author Gen Li
  * Created on 2/05/14.
  */
-public class LimsPlateTest extends LimsTest {
+public class LimsPlateTest extends LimsTestCase {
     final String extractionPlateName = "EP";
     final String pcrPlateName = "PP";
     final String extractionID = "123";
