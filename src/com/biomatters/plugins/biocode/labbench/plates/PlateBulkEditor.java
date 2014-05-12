@@ -1038,7 +1038,7 @@ public class PlateBulkEditor {
                         }
                     }
                     valueArea.setText(newText.toString());
-                    valueArea.setCaretPosition(pasteStart + text.length());
+                    valueArea.setCaretPosition(newText.toString().length());
                     return true;
                 } catch (UnsupportedFlavorException e) {
                     e.printStackTrace();
