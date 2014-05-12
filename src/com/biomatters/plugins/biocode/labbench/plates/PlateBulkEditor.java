@@ -85,11 +85,6 @@ public class PlateBulkEditor {
         final AtomicBoolean isAdjusting = new AtomicBoolean(false);
         AdjustmentListener listener = new AdjustmentListener(){
             public void adjustmentValueChanged(AdjustmentEvent e) {
-                System.err.println(e.getValue());
-                System.err.println("=========");
-                Thread.dumpStack();
-                System.err.println("");
-                System.err.println("");
                 if(isAdjusting.get()) {
                     return;
                 }
@@ -509,7 +504,13 @@ public class PlateBulkEditor {
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
         //swapAction.actionPerformed(null);
-        System.out.println("Get scroll position: " + editors.get(0).getScrollPosition());
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                for (DocumentFieldEditor editor : editors) {
+                    editor.setCaretPosition(0);
+                }
+            }
+        });
         if (Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
             return false;
         }
@@ -884,7 +885,6 @@ public class PlateBulkEditor {
                 public void run() {
                     valueArea.setText(valuesBuilder.toString());
                     scroller.getVerticalScrollBar().setValue(scrollPosition);
-                    System.out.println("Scroll position: " + scrollPosition);
                     for (int i = 0; i < lineNumbersBuilder.size(); i++) {
                         lineNumbers.setValue(i, lineNumbersBuilder.get(i));
                     }
@@ -982,6 +982,18 @@ public class PlateBulkEditor {
             scroller.getVerticalScrollBar().addAdjustmentListener(al);
         }
 
+        /**
+         * newPos must be between 0 and the length of text inclusive.
+         * @param newPos
+         */
+        public void setCaretPosition(int newPos) {
+            valueArea.setCaretPosition(newPos);
+        }
+
+        public int getCaretPosition() {
+            return valueArea.getCaretPosition();
+        }
+
         private class PasteHandler extends TransferHandler {
             private TransferHandler original;
             public PasteHandler(TransferHandler transferHandler) {
@@ -1045,7 +1057,7 @@ public class PlateBulkEditor {
                         }
                     }
                     valueArea.setText(newText.toString());
-                    valueArea.setCaretPosition(pasteStart + text.length());
+                    valueArea.setCaretPosition(newText.toString().length());
                     return true;
                 } catch (UnsupportedFlavorException e) {
                     e.printStackTrace();
@@ -1301,5 +1313,3 @@ public class PlateBulkEditor {
         }
     }
 }
-
-
