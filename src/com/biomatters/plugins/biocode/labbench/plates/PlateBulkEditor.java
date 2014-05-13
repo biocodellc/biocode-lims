@@ -1057,7 +1057,12 @@ public class PlateBulkEditor {
                         }
                     }
                     valueArea.setText(newText.toString());
-                    valueArea.setCaretPosition(newText.toString().length());
+                    int position = pasteStart + text.length();
+                    if(position > newText.length()) {
+                        position = newText.length();
+                    }
+                    valueArea.setCaretPosition(position);
+
                     return true;
                 } catch (UnsupportedFlavorException e) {
                     e.printStackTrace();
