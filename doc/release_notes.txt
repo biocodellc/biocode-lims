@@ -1,3 +1,8 @@
+==Biocode Plugin 2.6.4 - TBD==
+* Plate bulk editor now starts at the top rather than the bottom.
+* Fix searching issues with Biocode FIMS connector.
+* Other minor fixes and improvements.
+
 ==Biocode Plugin 2.6.2 - 24 April 2014==
 * Support for the new Biocode FIMS (https://code.google.com/p/biocode-fims)
 
