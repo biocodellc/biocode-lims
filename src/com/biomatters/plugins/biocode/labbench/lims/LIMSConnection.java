@@ -15,7 +15,7 @@ import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
@@ -552,10 +552,10 @@ public abstract class LIMSConnection {
             return new Condition[]{
                     Condition.EQUAL,
                     Condition.NOT_EQUAL,
-                    Condition.GREATER_THAN,
-                    Condition.GREATER_THAN_OR_EQUAL_TO,
-                    Condition.LESS_THAN,
-                    Condition.LESS_THAN_OR_EQUAL_TO
+                    Condition.DATE_AFTER,
+                    Condition.DATE_AFTER_OR_ON,
+                    Condition.DATE_BEFORE,
+                    Condition.DATE_BEFORE_OR_ON
             };
         } else {
             return new Condition[]{
@@ -861,7 +861,7 @@ public abstract class LIMSConnection {
         for (int i = 0; i < queries.size(); i++) {
             if (queries.get(i) instanceof AdvancedSearchQueryTerm) {
                 AdvancedSearchQueryTerm q = (AdvancedSearchQueryTerm) queries.get(i);
-                QueryTermSurrounder termSurrounder = getQueryTermSurrounder(q);
+                SqlUtilities.QueryTermSurrounder termSurrounder = SqlUtilities.getQueryTermSurrounder(q);
                 String code = q.getField().getCode();
                 boolean isBooleanQuery = false;
                 if ("date".equals(code)) {
@@ -897,7 +897,7 @@ public abstract class LIMSConnection {
         return sql.toString();
     }
 
-    private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, QueryTermSurrounder termSurrounder, Object value, Condition condition) {
+    private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, SqlUtilities.QueryTermSurrounder termSurrounder, Object value, Condition condition) {
         String valueString = valueToString(value);
         //valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
         /* The time of day of date values used as search constraints should not be considered (the day of the month is
@@ -908,15 +908,15 @@ public abstract class LIMSConnection {
             GregorianCalendar date = new GregorianCalendar();
             date.setTime((Date)value);
             switch (condition) {
-                case LESS_THAN:
-                case GREATER_THAN_OR_EQUAL_TO:
+                case DATE_BEFORE:
+                case DATE_AFTER_OR_ON:
                     date.set(GregorianCalendar.HOUR_OF_DAY, 0);
                     date.set(GregorianCalendar.MINUTE, 0);
                     date.set(GregorianCalendar.SECOND, 0);
                     date.set(GregorianCalendar.MILLISECOND, 0);
                     break;
-                case LESS_THAN_OR_EQUAL_TO:
-                case GREATER_THAN:
+                case DATE_BEFORE_OR_ON:
+                case DATE_AFTER:
                     date.set(GregorianCalendar.HOUR_OF_DAY, 23);
                     date.set(GregorianCalendar.MINUTE, 59);
                     date.set(GregorianCalendar.SECOND, 59);
@@ -1455,57 +1455,6 @@ public abstract class LIMSConnection {
         return map;
     }
 
-    private static QueryTermSurrounder getQueryTermSurrounder(AdvancedSearchQueryTerm query) {
-        String join = "";
-        String append = "";
-        String prepend = "";
-        switch (query.getCondition()) {
-            case EQUAL:
-                join = "=";
-                break;
-            case APPROXIMATELY_EQUAL:
-                join = "LIKE";
-                break;
-            case BEGINS_WITH:
-                join = "LIKE";
-                append = "%";
-                break;
-            case ENDS_WITH:
-                join = "LIKE";
-                prepend = "%";
-                break;
-            case CONTAINS:
-                join = "LIKE";
-                append = "%";
-                prepend = "%";
-                break;
-            case GREATER_THAN:
-                join = ">";
-                break;
-            case GREATER_THAN_OR_EQUAL_TO:
-                join = ">=";
-                break;
-            case LESS_THAN:
-                join = "<";
-                break;
-            case LESS_THAN_OR_EQUAL_TO:
-                join = "<=";
-                break;
-            case NOT_CONTAINS:
-                join = "NOT LIKE";
-                append = "%";
-                prepend = "%";
-                break;
-            case NOT_EQUAL:
-                join = "!=";
-                break;
-            case IN_RANGE:
-                join = "BETWEEN";
-                break;
-        }
-        return new QueryTermSurrounder(prepend, append, join);
-    }
-
     public Set<String> getAllExtractionIdsStartingWith(List<String> tissueIds) throws SQLException {
         if(tissueIds.isEmpty()) {
             return Collections.emptySet();
@@ -1569,29 +1518,6 @@ public abstract class LIMSConnection {
         }
 
         return results;
-    }
-
-
-    private static class QueryTermSurrounder {
-        private final String prepend, append, join;
-
-        private QueryTermSurrounder(String prepend, String append, String join) {
-            this.prepend = prepend;
-            this.append = append;
-            this.join = join;
-        }
-
-        public String getPrepend() {
-            return prepend;
-        }
-
-        public String getAppend() {
-            return append;
-        }
-
-        public String getJoin() {
-            return join;
-        }
     }
 
 

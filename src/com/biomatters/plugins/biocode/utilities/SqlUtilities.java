@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.labbench.fims;
+package com.biomatters.plugins.biocode.utilities;
 
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 
 import java.sql.*;
 import java.util.*;
@@ -17,11 +18,11 @@ import java.util.Date;
  * @version $Id$
  */
 public class SqlUtilities {
-    static String getQuerySQLString(Query query, List<DocumentField> searchAttributes, boolean specialCaseForBiocode) {
+    public static String getQuerySQLString(Query query, List<DocumentField> searchAttributes, boolean specialCaseForBiocode) {
         return getQuerySQLString(query, searchAttributes, "", specialCaseForBiocode);    
     }
 
-    static String getQuerySQLString(Query query, List<DocumentField> searchAttributes, String prefixToRemoveFromFields, boolean specialCaseForBiocode) {
+    public static String getQuerySQLString(Query query, List<DocumentField> searchAttributes, String prefixToRemoveFromFields, boolean specialCaseForBiocode) {
         String join = "";
         String prepend = "";
         String append = "";
@@ -58,51 +59,10 @@ public class SqlUtilities {
                 return "LEN("+fieldCode+") < "+aquery.getValues()[0];
             }
 
-
-            switch(aquery.getCondition()) {
-                case EQUAL:
-                    join = "=";
-                    break;
-                case APPROXIMATELY_EQUAL:
-                    join = "LIKE";
-                    break;
-                case BEGINS_WITH:
-                    join = "LIKE";
-                    append="%";
-                    break;
-                case ENDS_WITH:
-                    join = "LIKE";
-                    prepend = "%";
-                    break;
-                case CONTAINS:
-                    join = "LIKE";
-                    append = "%";
-                    prepend = "%";
-                    break;
-                case GREATER_THAN:
-                    join = ">";
-                    break;
-                case GREATER_THAN_OR_EQUAL_TO:
-                    join = ">=";
-                    break;
-                case LESS_THAN:
-                    join = "<";
-                    break;
-                case LESS_THAN_OR_EQUAL_TO:
-                    join = "<=";
-                    break;
-                case NOT_CONTAINS:
-                    join = "NOT LIKE";
-                    append = "%";
-                    prepend = "%";
-                    break;
-                case NOT_EQUAL:
-                    join = "!=";
-                    break;
-                case IN_RANGE:
-                    join = "BETWEEN";
-                    break;
-            }
+            QueryTermSurrounder surrounder = getQueryTermSurrounder(aquery);
+            join = surrounder.getJoin();
+            prepend = surrounder.getPrepend();
+            append = surrounder.getAppend();
 
             Object testSearchText = aquery.getValues()[0];
             if(testSearchText == null || testSearchText.toString().trim().length() == 0) {
@@ -296,4 +256,81 @@ public class SqlUtilities {
             Arrays.fill(qMarks, "?");
             builder.append("(").append(StringUtilities.join(",", Arrays.asList(qMarks))).append(")");
         }
+
+    public static QueryTermSurrounder getQueryTermSurrounder(AdvancedSearchQueryTerm query) {
+        String join = "";
+        String append = "";
+        String prepend = "";
+        switch(query.getCondition()) {
+            case EQUAL:
+                join = "=";
+                break;
+            case APPROXIMATELY_EQUAL:
+                join = "LIKE";
+                break;
+            case BEGINS_WITH:
+                join = "LIKE";
+                append="%";
+                break;
+            case ENDS_WITH:
+                join = "LIKE";
+                prepend = "%";
+                break;
+            case CONTAINS:
+                join = "LIKE";
+                append = "%";
+                prepend = "%";
+                break;
+            case GREATER_THAN:
+            case DATE_AFTER:
+                join = ">";
+                break;
+            case GREATER_THAN_OR_EQUAL_TO:
+            case DATE_AFTER_OR_ON:
+                join = ">=";
+                break;
+            case LESS_THAN:
+            case DATE_BEFORE:
+                join = "<";
+                break;
+            case LESS_THAN_OR_EQUAL_TO:
+            case DATE_BEFORE_OR_ON:
+                join = "<=";
+                break;
+            case NOT_CONTAINS:
+                join = "NOT LIKE";
+                append = "%";
+                prepend = "%";
+                break;
+            case NOT_EQUAL:
+                join = "!=";
+                break;
+            case IN_RANGE:
+                join = "BETWEEN";
+                break;
+        }
+        return new QueryTermSurrounder(prepend, append, join);
+    }
+
+    public static class QueryTermSurrounder {
+        private final String prepend, append, join;
+
+        private QueryTermSurrounder(String prepend, String append, String join) {
+            this.prepend = prepend;
+            this.append = append;
+            this.join = join;
+        }
+
+        public String getPrepend() {
+            return prepend;
+        }
+
+        public String getAppend() {
+            return append;
+        }
+
+        public String getJoin() {
+            return join;
+        }
+    }
 }

@@ -583,7 +583,7 @@ public class LimsSearchTest extends Assert {
 
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
-        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.LESS_THAN, new Object[] { cal.getTime() },
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_BEFORE, new Object[] { cal.getTime() },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
@@ -607,7 +607,7 @@ public class LimsSearchTest extends Assert {
         saveExtractionPlate("Plate_M038", tissue2, extractionId2, service, cal.getTime());
 
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
-        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.LESS_THAN_OR_EQUAL_TO, new Object[] { cal.getTime() },
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_BEFORE_OR_ON, new Object[] { cal.getTime() },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
@@ -630,7 +630,7 @@ public class LimsSearchTest extends Assert {
 
         saveExtractionPlate("Plate_M038", tissue2, extractionId2, service, cal.getTime());
 
-        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.GREATER_THAN_OR_EQUAL_TO, new Object[] { cal.getTime() },
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_AFTER_OR_ON, new Object[] { cal.getTime() },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
@@ -651,7 +651,7 @@ public class LimsSearchTest extends Assert {
 
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
-        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.GREATER_THAN, new Object[] { cal.getTime() },
+        Query query = Query.Factory.createFieldQuery(LIMSConnection.EXTRACTION_DATE_FIELD, Condition.DATE_AFTER, new Object[] { cal.getTime() },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         List<AnnotatedPluginDocument> searchResults = service.retrieve(query, ProgressListener.EMPTY);
         assertEquals(2, searchResults.size());
