@@ -1073,6 +1073,4 @@ public class ReactionUtilities {
         private List<ChangeListener> changeListeners;
 
     }
-
-
 }
