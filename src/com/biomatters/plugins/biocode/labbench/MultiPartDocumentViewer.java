@@ -70,7 +70,7 @@ public class MultiPartDocumentViewer extends DocumentViewer {
             }
         };
         saveAction.setProOnly(true);
-        updateToolbar();
+        saveAction.setEnabled(false);
 
         for(int i=0; i < doc.getNumberOfParts(); i++) {
             doc.getPart(i).addModifiedStateChangedListener(new SimpleListener(){
@@ -82,7 +82,13 @@ public class MultiPartDocumentViewer extends DocumentViewer {
     }
 
     private void updateToolbar() {
-        saveAction.setEnabled(doc.hasChanges());
+        SwingUtilities.invokeLater(
+            new Runnable() {
+               public void run() {
+                   saveAction.setEnabled(doc.hasChanges());
+               }
+           }
+        );
     }
 
     public boolean isLocal() {
