@@ -40,16 +40,24 @@ public class Project {
         this.xmlLocation = xmlLocation;
     }
 
-    public synchronized List<Field> getFields() {
-        if(fields == null) {
-            try {
-                fields = retrieveFieldsFromXmlConfigurationFile();
-            } catch (DatabaseServiceException e) {
-                BiocodeUtilities.displayExceptionDialog("Failed to Load FIMS Fields", e.getMessage(), e, null);
-                return Collections.emptyList();
+    private final Object fieldLock = new Object();
+    public List<Field> getFields() {
+        DatabaseServiceException exception = null;
+        synchronized (fieldLock) {
+            if (fields == null) {
+                try {
+                    fields = retrieveFieldsFromXmlConfigurationFile();
+                } catch (DatabaseServiceException e) {
+                    exception = e;
+                }
             }
         }
-        return fields;
+        if(exception != null) {
+            BiocodeUtilities.displayExceptionDialog("Failed to Load FIMS Fields", exception.getMessage(), exception, null);
+            return Collections.emptyList();
+        } else {
+            return fields;
+        }
     }
 
     private List<Project.Field> retrieveFieldsFromXmlConfigurationFile() throws DatabaseServiceException {
