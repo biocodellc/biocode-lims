@@ -181,7 +181,6 @@
 
     <target name="retrieve-plugin-dependencies" description="Retrieve dependencies with ivy">
        <ivy:retrieve conf="build" settingsref="biocode.ivy.config"/>
-       <ivy:retrieve conf="server" settingsref="biocode.ivy.config" pattern="${basedir}/biocode-server/web/WEB-INF/lib/[artifact].[ext]"/>
     </target>
 
     <target name="evaluate-geneious-files-exists">
@@ -195,7 +194,8 @@
        <unzip src="GeneiousFiles.zip" dest="."/>
     </target>
 
-    <target name="retrieve-server-dependencies" description="Retrieve all dependencies required to build the LIMS server war file" depends="retrieve-geneious-runtime-dependencies">
+    <target name="retrieve-server-dependencies" description="Retrieve all dependencies required to build the LIMS server war file" depends="retrieve-plugin-dependencies,retrieve-geneious-runtime-dependencies">
+        <ivy:retrieve conf="server" settingsref="biocode.ivy.config" pattern="${basedir}/biocode-server/web/WEB-INF/lib/[artifact].[ext]"/>
         <copy todir="${server-lib}">
             <fileset dir="${GeneiousFiles}">
                 <include name="iSeek.jar"/>
