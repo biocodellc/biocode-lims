@@ -2407,7 +2407,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
             updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
 
-            statement2 = isLocal() ? createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
+            statement2 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
 
             if (cancelable.isCanceled()) {
                 return -1;
