@@ -540,6 +540,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             disconnectCheckingThread = getDisconnectCheckingThread();
             disconnectCheckingThread.start();
         } catch (ConnectionException e1) {
+            // todo Surface exception in server.  The current error handling swallows the exception when there is no GUI.  ie Server mode
             progressListener.setProgress(1.0);
             logOut();
             if(e1 == ConnectionException.NO_DIALOG) {

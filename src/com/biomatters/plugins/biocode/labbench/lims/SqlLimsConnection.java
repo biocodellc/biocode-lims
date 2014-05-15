@@ -51,6 +51,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     abstract BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException;
 
     private BasicDataSource dataSource;
+
+    public BasicDataSource getDataSource() {
+        return dataSource;
+    }
+
     @Override
     protected void _connect(PasswordOptions options) throws ConnectionException {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;

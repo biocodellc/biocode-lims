@@ -1,7 +1,8 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.inject.Singleton;
 import javax.ws.rs.*;
@@ -52,4 +53,18 @@ public class Info {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
+
+    @Produces("text/plain")
+    @GET
+    @Path("profile")
+    public String getUserProfile() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if(principal instanceof UserDetails) {
+            UserDetails user = (UserDetails) principal;
+            return "Username: " + user.getUsername() + "\nRoles: " + user.getAuthorities();
+        } else {
+            return principal.toString();
+        }
+    }
+
 }
