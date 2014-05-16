@@ -5,6 +5,7 @@ import com.biomatters.geneious.privateApi.PrivateApiUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.components.ComponentUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.databaseservice.QueryFactoryImplementation;
 import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseServiceActions;
+import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.documents.NoteTypeStorage;
 import com.biomatters.geneious.publicapi.documents.XMLSerializerImplementation;
@@ -232,25 +233,10 @@ public class LIMSInitializationServlet implements ServletContextListener {
         TestGeneious.setNotRunningTest();
         TestGeneious.setRunningApplication();
 
-        XMLSerializerImplementation.setImplementation();
-        ImportedFileOriginalTextImplementation.setImplementation();
-
         DocumentUtilitiesImplementation.setImplementation();
-        PrivateApiUtilitiesImplementation.setImplementation();
-
-        if (NoteTypeStorage.getNoteTypeStorage()==null)
-            NoteTypeStorage.setImplementation ();
-        ExtendedPrintableFactoryImplementation.initialise();
-
-        PluginUtilitiesImplementation.setImplementation();
-        FileUtilitiesImplementation.setImplementation();
-        SequenceUtilitiesImplementation.setImplementation();
-        ImportUtilitiesImplementation.setImplementation();
+        XMLSerializerImplementation.setImplementation();
         QueryFactoryImplementation.setImplementation();
-        ComponentUtilitiesImplementation.setImplementation();
-        PrivateUtilitiesImplementation.setImplementation();
-        WritableDatabaseServiceActions.setImplemtation();
-
+        PluginUtilitiesImplementation.setImplementation();
     }
 
     private static class IntializationError {
