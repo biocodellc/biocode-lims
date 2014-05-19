@@ -1601,10 +1601,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
-        if(workflowIds.size() == 0) {
-            return Collections.emptyMap();
-        }
-
         List<Workflow> list = limsConnection.getWorkflows(workflowIds);
         Map<String, Workflow> result = new HashMap<String, Workflow>();
         for (Workflow workflow : list) {

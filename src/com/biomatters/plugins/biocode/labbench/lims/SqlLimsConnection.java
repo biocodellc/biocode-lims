@@ -1388,6 +1388,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     @Override
     public List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
+        if(workflowIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         ConnectionWrapper connection = null;
 
         try {
