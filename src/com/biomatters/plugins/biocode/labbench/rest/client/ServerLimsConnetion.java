@@ -88,7 +88,7 @@ public class ServerLimsConnetion extends LIMSConnection {
             WebTarget target = this.target.path("search")
                     .queryParam("q", restQuery.getQueryString())
                     .queryParam("type", restQuery.getType());
-            if(!tissueIdsToMatch.isEmpty()) {
+            if(tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
                 target = target.queryParam("tissueIds", StringUtilities.join(",", tissueIdsToMatch));
             }
             if (!include.isEmpty()) {
