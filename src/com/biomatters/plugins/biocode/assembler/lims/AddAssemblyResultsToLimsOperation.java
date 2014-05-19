@@ -391,7 +391,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 //            ((ProgressFrame)progress.getRootProgressListener()).setCancelButtonLabel("Stop");
 //        }
 
-        Map<URN, String> seqIds = new HashMap<URN, String>();
+        Map<URN, Integer> seqIds = new HashMap<URN, Integer>();
         try {
             for (Map.Entry<URN, AssemblyResult> entry : assemblyResults.entrySet()) {
                 progress.beginSubtask();
@@ -426,7 +426,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 if(progress.isCanceled()) {
                     return null;
                 }
-                seqIds.put(entry.getKey(), ""+seqId);
+                seqIds.put(entry.getKey(), seqId);
 
                 for (List<AnnotatedPluginDocument> docs : assemblyResult.getReactions().values()) {
                     for (AnnotatedPluginDocument doc : docs) {
@@ -442,7 +442,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             throw new DocumentOperationException("Failed to mark as pass/fail in LIMS: " + e.getMessage(), e);
         }
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-            String savedSeqId = seqIds.get(annotatedDocument.getURN());
+            int savedSeqId = seqIds.get(annotatedDocument.getURN());
             annotatedDocument.setFieldValue(LIMSConnection.SEQUENCE_ID, savedSeqId);
             annotatedDocument.save();
         }
