@@ -411,7 +411,11 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 seq.numOfEdits = assemblyResult.edits;
                 seq.assemblyParameters = assemblyResult.assemblyOptionValues;
                 if(assemblyResult.qualities != null) {
-                    seq.confidenceScore = StringUtilities.join(",", Arrays.asList(assemblyResult.qualities));
+                    List<Integer> qualities = new ArrayList<Integer>();
+                    for (int qualityValue : assemblyResult.qualities) {
+                        qualities.add(qualityValue);
+                    }
+                    seq.confidenceScore = StringUtilities.join(",", qualities);
                 }
                 seq.bin = assemblyResult.bin;
                 seq.numberOfAmbiguities = assemblyResult.ambiguities;
