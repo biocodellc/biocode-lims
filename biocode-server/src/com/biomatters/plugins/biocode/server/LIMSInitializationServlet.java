@@ -1,15 +1,9 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.privateApi.PrivateApiUtilities;
-import com.biomatters.geneious.privateApi.PrivateApiUtilitiesImplementation;
-import com.biomatters.geneious.publicapi.components.ComponentUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.databaseservice.QueryFactoryImplementation;
-import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseServiceActions;
-import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilitiesImplementation;
-import com.biomatters.geneious.publicapi.documents.NoteTypeStorage;
 import com.biomatters.geneious.publicapi.documents.XMLSerializerImplementation;
-import com.biomatters.geneious.publicapi.implementations.ImportedFileOriginalTextImplementation;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
