@@ -5,6 +5,6 @@
 		  http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
            version="3.0">
     <listener>
-        <listener-class>com.biomatters.plugins.biocode.server.LIMSInitializationServlet</listener-class>
+        <listener-class>com.biomatters.plugins.biocode.server.LIMSInitializationListener</listener-class>
     </listener>
 </web-app>

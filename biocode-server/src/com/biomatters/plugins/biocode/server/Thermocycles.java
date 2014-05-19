@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.Thermocycle;
 
 import javax.ws.rs.*;
@@ -24,7 +23,7 @@ public class Thermocycles {
         try {
             return new XMLSerializableList<Thermocycle>(
                     Thermocycle.class,
-                    LIMSInitializationServlet.getLimsConnection().getThermocyclesFromDatabase(getType(type)));
+                    LIMSInitializationListener.getLimsConnection().getThermocyclesFromDatabase(getType(type)));
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -35,7 +34,7 @@ public class Thermocycles {
     @Path("{type}")
     public void add(XMLSerializableList<Thermocycle> toAdd, @PathParam("type")String type) {
         try {
-            LIMSInitializationServlet.getLimsConnection().addThermoCycles(getType(type), toAdd.getList());
+            LIMSInitializationListener.getLimsConnection().addThermoCycles(getType(type), toAdd.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -56,7 +55,7 @@ public class Thermocycles {
     @Path("{type}/delete")
     public void delete(@PathParam("type")String type, XMLSerializableList<Thermocycle> toDelete) {
         try {
-            LIMSInitializationServlet.getLimsConnection().deleteThermoCycles(getType(type), toDelete.getList());
+            LIMSInitializationListener.getLimsConnection().deleteThermoCycles(getType(type), toDelete.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -67,7 +66,7 @@ public class Thermocycles {
     @Path("{id}/plates")
     public String getPlatesForThermocycle(@PathParam("id")int thermocycleId) {
         try {
-            List<String> plateNames = LIMSInitializationServlet.getLimsConnection().getPlatesUsingThermocycle(thermocycleId);
+            List<String> plateNames = LIMSInitializationListener.getLimsConnection().getPlatesUsingThermocycle(thermocycleId);
             return StringUtilities.join("\n", plateNames);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);

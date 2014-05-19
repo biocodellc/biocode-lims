@@ -2,7 +2,7 @@ package com.biomatters.plugins.biocode.server.security;
 
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
-import com.biomatters.plugins.biocode.server.LIMSInitializationServlet;
+import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +28,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        LIMSConnection limsConnection = LIMSInitializationServlet.getLimsConnection();
+        LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
         if(limsConnection instanceof SqlLimsConnection) {
             BasicDataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
 

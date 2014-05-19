@@ -68,7 +68,7 @@ public class QueryService {
                     type == null || type.equals(RestQueryUtils.QueryType.AND.name()) ?
                             RestQueryUtils.QueryType.AND : RestQueryUtils.QueryType.OR, queryString, searchOptions
             );
-            LimsSearchResult result = LIMSInitializationServlet.getLimsConnection().getMatchingDocumentsFromLims(query, tissuesToMatch, null);
+            LimsSearchResult result = LIMSInitializationListener.getLimsConnection().getMatchingDocumentsFromLims(query, tissuesToMatch, null);
             return Response.ok(result).build();
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException("Encountered error: " + e.getMessage());

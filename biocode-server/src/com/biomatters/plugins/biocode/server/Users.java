@@ -34,7 +34,7 @@ public class Users {
 
     private synchronized void createManager() {
         JdbcUserDetailsManager manager = new JdbcUserDetailsManager();
-        manager.setDataSource(LIMSInitializationServlet.getDataSource());
+        manager.setDataSource(LIMSInitializationListener.getDataSource());
     }
 
     @GET
@@ -43,7 +43,7 @@ public class Users {
         // todo better way?  Does Spring Security provide a way to list all users?
         Connection connection = null;
         try {
-            connection = LIMSInitializationServlet.getDataSource().getConnection();
+            connection = LIMSInitializationListener.getDataSource().getConnection();
             PreparedStatement statement = connection.prepareStatement("SELECT username FROM users");
             ResultSet resultSet = statement.executeQuery();
             List<String> usernames = new ArrayList<String>();

@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.AssembledSequence;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 import jebl.util.ProgressListener;
 
@@ -28,7 +27,7 @@ public class Sequences {
         List<Integer> ids = getIntegerListFromString(idsString);
 
         try {
-            return LIMSInitializationServlet.getLimsConnection().getAssemblyDocuments(ids, null, includeFailed);
+            return LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(ids, null, includeFailed);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -55,7 +54,7 @@ public class Sequences {
     @Path("{id}/submitted")
     public void setSubmitted(@PathParam("id")int id, boolean submitted) {
         try {
-            LIMSInitializationServlet.getLimsConnection().setSequenceStatus(submitted, Collections.singletonList(id));
+            LIMSInitializationListener.getLimsConnection().setSequenceStatus(submitted, Collections.singletonList(id));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
         }
@@ -66,7 +65,7 @@ public class Sequences {
     @Path("deletes")
     public void delete(String idStrings) {
         try {
-            LIMSInitializationServlet.getLimsConnection().deleteSequences(getIntegerListFromString(idStrings));
+            LIMSInitializationListener.getLimsConnection().deleteSequences(getIntegerListFromString(idStrings));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
         }
@@ -85,7 +84,7 @@ public class Sequences {
                            @QueryParam("reactionIds")String reactionIds
                            ) {
         try {
-            return LIMSInitializationServlet.getLimsConnection().addAssembly(isPass, notes, technician,
+            return LIMSInitializationListener.getLimsConnection().addAssembly(isPass, notes, technician,
                     FailureReason.getReasonFromIdString(failureReason),
                     failureNotes, addChromatograms, seq, getIntegerListFromString(reactionIds), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {

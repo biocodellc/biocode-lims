@@ -37,7 +37,7 @@ public class Info {
     @Path("properties/{id}")
     public String getProperty(@PathParam("id")String id) {
         try {
-            return LIMSInitializationServlet.getLimsConnection().getProperty(id);
+            return LIMSInitializationListener.getLimsConnection().getProperty(id);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -48,7 +48,7 @@ public class Info {
     @Path("properties/{id}")
     public void getProperty(@PathParam("id")String id, String value) {
         try {
-            LIMSInitializationServlet.getLimsConnection().setProperty(id, value);
+            LIMSInitializationListener.getLimsConnection().setProperty(id, value);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }

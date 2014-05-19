@@ -1,7 +1,5 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -21,6 +19,6 @@ public class Permissions {
     @Path("delete/{table}")
     @GET
     public boolean canDelete(@PathParam("table")String table) {
-        return LIMSInitializationServlet.getLimsConnection().deleteAllowed(table);
+        return LIMSInitializationListener.getLimsConnection().deleteAllowed(table);
     }
 }

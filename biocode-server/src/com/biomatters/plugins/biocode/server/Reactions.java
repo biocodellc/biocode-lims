@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.MemoryFile;
 import jebl.util.ProgressListener;
 
@@ -23,7 +22,7 @@ public class Reactions {
     @Path("{id}/traces")
     public List<MemoryFile> getTraces(@PathParam("id")int reactionId) {
         try {
-            Map<Integer, List<MemoryFile>> traces = LIMSInitializationServlet.getLimsConnection().downloadTraces(
+            Map<Integer, List<MemoryFile>> traces = LIMSInitializationListener.getLimsConnection().downloadTraces(
                     Collections.singletonList(reactionId), ProgressListener.EMPTY);
             if(traces == null) {
                 throw new NotFoundException("No traces for " + reactionId);

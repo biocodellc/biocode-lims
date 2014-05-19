@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 
@@ -26,7 +25,7 @@ public class Extractions {
 
         try {
             return new XMLSerializableList<ExtractionReaction>(ExtractionReaction.class,
-                    LIMSInitializationServlet.getLimsConnection().getExtractionsFromBarcodes(Arrays.asList(barcodes.split(","))));
+                    LIMSInitializationListener.getLimsConnection().getExtractionsFromBarcodes(Arrays.asList(barcodes.split(","))));
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -51,7 +50,7 @@ public class Extractions {
 
         try {
             return new StringMap(
-                    LIMSInitializationServlet.getLimsConnection().getWorkflowIds(
+                    LIMSInitializationListener.getLimsConnection().getWorkflowIds(
                             Arrays.asList(extractionIds.split(",")),
                             Arrays.asList(loci.split(",")),
                             Reaction.Type.valueOf(type)

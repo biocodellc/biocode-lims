@@ -30,7 +30,7 @@ import java.util.*;
  *          <p/>
  *          Created on 20/03/14 3:18 PM
  */
-public class LIMSInitializationServlet implements ServletContextListener {
+public class LIMSInitializationListener implements ServletContextListener {
 
     private static final String settingsFolderName = ".biocode-lims";
     private static final String defaultPropertiesFile = "default_connection.properties";
