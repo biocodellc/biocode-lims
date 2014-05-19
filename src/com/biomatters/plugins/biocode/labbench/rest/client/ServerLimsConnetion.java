@@ -11,7 +11,6 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.server.*;
-import jcommon.StringUtil;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
@@ -338,10 +337,7 @@ public class ServerLimsConnetion extends LIMSConnection {
                 try {
                     Response response = target.path("reactions").path("" + reactionId).path("traces").
                             request(MediaType.APPLICATION_XML_TYPE).get();
-                    memoryFiles = response.readEntity(
-                            new GenericType<List<MemoryFile>>() {
-                            }
-                    );
+                    memoryFiles = getListFromResponse(response, new GenericType<List<MemoryFile>>() { });
                 } catch (NotFoundException e) {
                     continue;
                 }
@@ -418,11 +414,10 @@ public class ServerLimsConnetion extends LIMSConnection {
             for (Integer plateId : plateIds) {
                 Response response = target.path("plates").path(String.valueOf(plateId)).path("gels").
                         request(MediaType.APPLICATION_XML_TYPE).get();
-                List<GelImage> gelImages = response.readEntity(
-                        new GenericType<List<GelImage>>() {
-                        }
-                );
-                images.put(plateId, gelImages);
+                if(response.getStatus() == 204) {
+                    return Collections.emptyMap();
+                }
+                images.put(plateId, getListFromResponse(response, new GenericType<List<GelImage>>() { }));
             }
             return images;
         } catch (WebApplicationException e) {
@@ -654,4 +649,11 @@ public class ServerLimsConnetion extends LIMSConnection {
 //        }
 //        return valid.toArray(new Condition[valid.size()]);
 //    }
+
+    public static <T> List<T> getListFromResponse(Response response, GenericType<List<T>> type) {
+        if(response.getStatus() == 204) {  // HTTP 204 is No Content
+            return Collections.emptyList();
+        }
+        return response.readEntity(type);
+    }
 }
