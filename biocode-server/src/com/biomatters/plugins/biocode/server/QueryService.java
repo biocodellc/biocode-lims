@@ -10,6 +10,8 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,9 +51,12 @@ public class QueryService {
     @GET
     @Produces("application/xml")
     public Response search(@QueryParam("q")String queryString,
+                            @QueryParam("tissueIds")String tissueIds,
                            @QueryParam("type")String type,
                       @DefaultValue("tissues,workflows,plates")@QueryParam("include")String include) {
         // todo Consider ChunkedOutput.  Woudl need a way to separate chunks when reading back in
+
+        List<String> tissuesToMatch = tissueIds == null ? null : Arrays.asList(tissueIds.split(","));
         try {
             Map<String, Object> searchOptions = BiocodeService.getSearchDownloadOptions(
                     include == null || include.toLowerCase().contains("tissues"),
@@ -63,7 +68,7 @@ public class QueryService {
                     type == null || type.equals(RestQueryUtils.QueryType.AND.name()) ?
                             RestQueryUtils.QueryType.AND : RestQueryUtils.QueryType.OR, queryString, searchOptions
             );
-            LimsSearchResult result = LIMSInitializationServlet.getLimsConnection().getMatchingDocumentsFromLims(query, null, null);
+            LimsSearchResult result = LIMSInitializationServlet.getLimsConnection().getMatchingDocumentsFromLims(query, tissuesToMatch, null);
             return Response.ok(result).build();
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException("Encountered error: " + e.getMessage());

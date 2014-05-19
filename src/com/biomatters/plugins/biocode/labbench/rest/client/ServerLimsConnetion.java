@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.server.*;
+import jcommon.StringUtil;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
@@ -85,8 +86,12 @@ public class ServerLimsConnetion extends LIMSConnection {
         LimsSearchResult result;
         try {
             RestQueryUtils.Query restQuery = RestQueryUtils.createRestQuery(query);
-            WebTarget target = this.target.path("search").queryParam("q", restQuery.getQueryString()).
-                    queryParam("type", restQuery.getType());
+            WebTarget target = this.target.path("search")
+                    .queryParam("q", restQuery.getQueryString())
+                    .queryParam("type", restQuery.getType());
+            if(!tissueIdsToMatch.isEmpty()) {
+                target = target.queryParam("tissueIds", StringUtilities.join(",", tissueIdsToMatch));
+            }
             if (!include.isEmpty()) {
                 target = target.queryParam("include", StringUtilities.join(",", include));
             }
