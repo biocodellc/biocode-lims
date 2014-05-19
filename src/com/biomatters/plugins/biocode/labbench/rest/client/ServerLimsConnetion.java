@@ -458,6 +458,9 @@ public class ServerLimsConnetion extends LIMSConnection {
 
     @Override
     public List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
+        if(workflowIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         try {
             return target.path(WORKFLOWS).queryParam("ids", StringUtilities.join(",", workflowIds)).
                     request(MediaType.APPLICATION_XML_TYPE).get(new GenericType<XMLSerializableList<Workflow>>() {
