@@ -1,7 +1,9 @@
 ==Biocode Plugin 2.6.4 - TBD==
 * Plate bulk editor now starts at the top rather than the bottom.
-* Fix searching issues with Biocode FIMS connector.
 * Changed date search conditions "Less/Greater Than" to "Before/After".
+* Replaced Last Modified (LIMS) search field with Sequencing Pass/Fail Date and Extraction Date search fields.
+* Fixed bug that was causing date searches to be off by one day.
+* Fix searching issues with Biocode FIMS connector.
 * Other minor fixes and improvements.
 
 ==Biocode Plugin 2.6.2 - 24 April 2014==
