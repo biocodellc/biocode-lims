@@ -504,7 +504,14 @@ public class PlateBulkEditor {
         holderPanel.add(platePanel, BorderLayout.CENTER);
         holderPanel.add(toolbar, BorderLayout.NORTH);
         //swapAction.actionPerformed(null);
-        if (Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate"), holderPanel).equals("Cancel")) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                for (DocumentFieldEditor editor : editors) {
+                    editor.setCaretPosition(0);
+                }
+            }
+        });
+        if (Dialogs.showDialog(new Dialogs.DialogOptions(new String[] {"OK", "Cancel"}, "Edit Plate", owner), holderPanel).equals("Cancel")) {
             return false;
         }
 
@@ -614,7 +621,6 @@ public class PlateBulkEditor {
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
-
     }
 
     private static void populateWells96(final Map<String, String> ids, final DocumentFieldEditor editorField, Plate p, String plateId) {
@@ -751,8 +757,6 @@ public class PlateBulkEditor {
         }
     }
 
-
-
     static class DocumentFieldEditor extends JPanel {
         private DocumentField field;
         private Plate plate;
@@ -798,6 +802,7 @@ public class PlateBulkEditor {
 
             scroller = new JScrollPane(valueArea);
             scroller.setRowHeaderView(lineNumbers);
+
             textViewFromValues();
             setLayout(new BorderLayout());
             add(scroller, BorderLayout.CENTER);
@@ -975,6 +980,18 @@ public class PlateBulkEditor {
             scroller.getVerticalScrollBar().addAdjustmentListener(al);
         }
 
+        /**
+         * newPos must be between 0 and the length of text inclusive.
+         * @param newPos
+         */
+        public void setCaretPosition(int newPos) {
+            valueArea.setCaretPosition(newPos);
+        }
+
+        public int getCaretPosition() {
+            return valueArea.getCaretPosition();
+        }
+
         private class PasteHandler extends TransferHandler {
             private TransferHandler original;
             public PasteHandler(TransferHandler transferHandler) {
@@ -1038,7 +1055,12 @@ public class PlateBulkEditor {
                         }
                     }
                     valueArea.setText(newText.toString());
-                    valueArea.setCaretPosition(newText.toString().length());
+                    int position = pasteStart + text.length();
+                    if(position > newText.length()) {
+                        position = newText.length();
+                    }
+                    valueArea.setCaretPosition(position);
+
                     return true;
                 } catch (UnsupportedFlavorException e) {
                     e.printStackTrace();
@@ -1298,5 +1320,3 @@ public class PlateBulkEditor {
         }
     }
 }
-
-

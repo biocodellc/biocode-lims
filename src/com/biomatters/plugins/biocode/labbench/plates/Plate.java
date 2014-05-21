@@ -128,6 +128,7 @@ public class Plate implements XMLSerializable {
         }
     }
 
+
     public Plate(Plate.Size size, Reaction.Type type) {
         this.type = type;
         this.plateSize = size;

@@ -1,6 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.plates;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 
@@ -12,6 +16,7 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.virion.jam.util.SimpleListener;
 
@@ -182,18 +187,34 @@ public class PlateView extends JPanel {
                     }
                 }
                 if(e.getClickCount() == 2) {
-                    List<Reaction> selectedReactions = getSelectedReactions();
-                    if(selectedReactions.size() > 0) {
-                        if(ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), selfReference, creating)) {
-                            fireEditListeners();
+                    final AtomicBoolean editResult = new AtomicBoolean();
+                    final ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Making changes...", selfReference);
+                    new Thread() {
+                        public void run() {
+                            progressFrame.setIndeterminateProgress();
+                            final List<Reaction> selectedReactions = getSelectedReactions();
+                            if(selectedReactions.size()>0)
+                            {
+                                editResult.set(ReactionUtilities.editReactions(Arrays.asList(selectedReactions.toArray(new Reaction[selectedReactions.size()])), selfReference, creating));
+
+                            }
+                            progressFrame.setComplete();
+                            ThreadUtilities.invokeNowOrLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (editResult.get()) {
+                                        fireEditListeners();
+                                    }
+                                    for (Reaction r : selectedReactions) {
+                                        r.invalidateFieldWidthCache();
+                                    }
+                                    repaint();
+                                    revalidate();
+                                    repaint();
+                                }
+                            });
                         }
-                        for(Reaction r : selectedReactions) {
-                            r.invalidateFieldWidthCache();
-                        }
-                    }
-                    repaint();
-                    revalidate();
-                    repaint();
+                    }.start();
                 }
                 fireSelectionListeners();
                 repaint();

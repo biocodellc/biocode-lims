@@ -12,7 +12,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.PCRCocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;

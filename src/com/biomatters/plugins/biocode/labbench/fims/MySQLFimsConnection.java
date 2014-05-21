@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 
 import java.util.*;
 import java.util.Date;

@@ -13,7 +13,7 @@ import java.util.List;
  * @author Matthew Cheung
  *         Created on 3/02/14 3:10 PM
  */
-public class TestConnection extends Assert {
+public class ConnectionTest extends Assert {
 
     @Test
     public void getGraphs() throws DatabaseServiceException {
@@ -24,8 +24,7 @@ public class TestConnection extends Assert {
 
     @Test
     public void getFimsData() throws DatabaseServiceException {
-        BiocodeFimsData data = BiocodeFIMSUtils.getData(
-                "1", null, null, null);
+        BiocodeFimsData data = BiocodeFIMSUtils.getData("1", null, null, null);
 
         System.out.println(data.header);
         assertFalse(data.header.isEmpty());

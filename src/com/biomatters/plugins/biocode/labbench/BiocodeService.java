@@ -754,11 +754,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
                     }
                 }
-
                 if(callback.isCanceled()) {
                     return;
                 }
-
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading Sequences");
                     getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, true);
@@ -786,7 +784,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 throw new DatabaseServiceException(e, message, isNetwork);
             }
-
         }
         finally {
             if(callback != null) {

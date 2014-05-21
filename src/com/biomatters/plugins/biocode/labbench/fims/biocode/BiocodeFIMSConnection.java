@@ -126,7 +126,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
-        Pattern withExpeditionPattern = Pattern.compile("\\[(.+)\\](.+)");
+        Pattern withExpeditionPattern = Pattern.compile("\\[(.+)\\](.*)");
 
         List<FimsSample> results = new ArrayList<FimsSample>();
         HashSet<String> idsWithoutDupes = new HashSet<String>(tissueIds);
@@ -136,6 +136,9 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             if (matcher.matches()) {
                 expeditionTitle = matcher.group(1);
                 tissueId = matcher.group(2);
+            }
+            if(tissueId == null || tissueId.isEmpty()) {
+                continue;
             }
 
             boolean found = false;

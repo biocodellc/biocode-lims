@@ -185,15 +185,10 @@ import java.util.prefs.Preferences;
         }
         Set<String> urisSeen = new HashSet<String>();
         for (Project.Field field : project.getFields()) {
-            if(!urisSeen.contains(field.uri)) {
-                fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.name));
-                urisSeen.add(field.uri);
-            }  // Ignore duplicate URIs for now until we know if it is valid or not.  Waiting on confirmation from John Deck the (author of the FIMS)
+            fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.name));
         }
         return fields;
     }
-
-
 
     public Project getProject() {
         return projectOption.getValue().project;
