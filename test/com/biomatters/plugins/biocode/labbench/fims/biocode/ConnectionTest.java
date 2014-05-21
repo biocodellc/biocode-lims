@@ -2,10 +2,11 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
-import javax.ws.rs.ProcessingException;
 import java.net.MalformedURLException;
 import java.util.List;
 
@@ -31,7 +32,16 @@ public class ConnectionTest extends Assert {
     }
 
     @Test
-    public void getProjects() throws DatabaseServiceException {
+    public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException {
+        BiocodeFIMSUtils.login("http://" + HOST, "demo", "demo");
+        for (Project project : BiocodeFIMSUtils.getProjects()) {
+            System.out.println(project);
+        }
+    }
+
+    @Test
+    public void getProjects() throws DatabaseServiceException, MalformedURLException {
+        BiocodeFIMSUtils.login("http://" + HOST, "demo", "demo");
         List<Project> projects = BiocodeFIMSUtils.getProjects();
         assertFalse("There should be some projects", projects.isEmpty());
         for (Project project : projects) {
@@ -42,18 +52,19 @@ public class ConnectionTest extends Assert {
         }
     }
 
-    @Test
-    public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException {
-        String host = "biscicol.org";
-        SharedCookieHandler.registerHost(host);
-        BiocodeFIMSUtils.login("http://" + host, "demo", "demo");
-        for (Project project : BiocodeFIMSUtils.getProjects()) {
-            System.out.println(project);
-        }
-    }
-
     @Test(expected = DatabaseServiceException.class)
     public void checkProjectRetrievalWhenNotLoggedIn() throws DatabaseServiceException {
         BiocodeFIMSUtils.getProjects();
+    }
+
+    private static final String HOST = "biscicol.org";
+    @Before
+    public void shareSessionsForBiSciCol() {
+        SharedCookieHandler.registerHost(HOST);
+    }
+
+    @After
+    public void logoutAfterTestDone() {
+        SharedCookieHandler.unregisterHost(HOST);
     }
 }
