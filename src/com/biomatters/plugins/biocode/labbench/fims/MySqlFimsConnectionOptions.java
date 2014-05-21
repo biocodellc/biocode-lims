@@ -5,6 +5,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 
 import java.util.List;
 import java.util.Properties;

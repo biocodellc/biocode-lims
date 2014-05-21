@@ -1,4 +1,4 @@
-<%@ page import="com.biomatters.plugins.biocode.server.LIMSInitializationServlet" %>
+<%@ page import="com.biomatters.plugins.biocode.server.LIMSInitializationListener" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <html>
   <head>
@@ -13,13 +13,13 @@
 
     <p>The server configuration file is located at
         <%
-            out.println(LIMSInitializationServlet.getPropertiesFile().getAbsolutePath());
+            out.println(LIMSInitializationListener.getPropertiesFile().getAbsolutePath());
         %>
     </p>
 
     <p>Please report any errors to support@mooreabiocode.org</p>
     <%
-        String errors = LIMSInitializationServlet.getErrorText();
+        String errors = LIMSInitializationListener.getErrorText();
         if(errors != null && !errors.isEmpty()) {
             out.println("<h2>Initialization Errors</h2>");
             out.println(errors);

@@ -58,7 +58,14 @@ public class BiocodeFIMSUtils {
         } catch(ProcessingException e) {
             // Unfortunately the BCID service doesn't use HTTP error codes and reports errors by returning JSON in a
             // different format than the regular result.  So we have to do some special parsing.
-            List<String> errors = request.get(new GenericType<List<String>>() { });
+            List<String> errors;
+            try {
+                errors = request.get(new GenericType<List<String>>() { });
+            } catch (ProcessingException ex) {
+                throw new DatabaseServiceException(ex.getMessage(), false);
+            } catch (WebApplicationException ex) {
+                throw new DatabaseServiceException(ex.getMessage(), false);
+            }
             if(errors != null && !errors.isEmpty()) {
                 if(errors.size() == 1) {
                     throw new DatabaseServiceException(errors.get(0), false);
@@ -139,12 +146,10 @@ public class BiocodeFIMSUtils {
                 if(graph != null) {
                     target = target.queryParam("graphs", graph);
                 }
-                System.out.println(target.getUri());
                 Invocation.Builder request = target.
                         request(MediaType.APPLICATION_JSON_TYPE);
                 return request.get(BiocodeFimsData.class);
             } else {
-                System.out.println(target.getUri());
                 Invocation.Builder request = target.
                         request(MediaType.APPLICATION_JSON_TYPE);
                 Form form = new Form(searchTerms.asMap());

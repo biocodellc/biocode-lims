@@ -1,7 +1,8 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.inject.Singleton;
 import javax.ws.rs.*;
@@ -36,7 +37,7 @@ public class Info {
     @Path("properties/{id}")
     public String getProperty(@PathParam("id")String id) {
         try {
-            return LIMSInitializationServlet.getLimsConnection().getProperty(id);
+            return LIMSInitializationListener.getLimsConnection().getProperty(id);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -47,9 +48,23 @@ public class Info {
     @Path("properties/{id}")
     public void getProperty(@PathParam("id")String id, String value) {
         try {
-            LIMSInitializationServlet.getLimsConnection().setProperty(id, value);
+            LIMSInitializationListener.getLimsConnection().setProperty(id, value);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
+
+    @Produces("text/plain")
+    @GET
+    @Path("profile")
+    public String getUserProfile() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if(principal instanceof UserDetails) {
+            UserDetails user = (UserDetails) principal;
+            return "Username: " + user.getUsername() + "\nRoles: " + user.getAuthorities();
+        } else {
+            return principal.toString();
+        }
+    }
+
 }

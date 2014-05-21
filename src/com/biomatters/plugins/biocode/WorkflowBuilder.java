@@ -402,6 +402,7 @@ public class WorkflowBuilder extends DocumentOperation {
             WritableDatabaseService workingDir = (WritableDatabaseService) plateEntry.getValue().get(0).getDatabase().getParentService().getParentService();
             Map<String, AnnotatedPluginDocument> biocodeIdToSeq = new HashMap<String, AnnotatedPluginDocument>();
             Map<String, AnnotatedPluginDocument> biocodeIdToAssembly = new HashMap<String, AnnotatedPluginDocument>();
+            Set<String> idsWithDuplicates = new HashSet<String>();
             for (AnnotatedPluginDocument seq : plateEntry.getValue()) {
                 Matcher matcher = BIOCODE_ID_PATTERN.matcher(seq.getName());
                 if(!matcher.matches()) {
@@ -413,7 +414,7 @@ public class WorkflowBuilder extends DocumentOperation {
                 for (AnnotatedPluginDocument document : docsMatchingId) {
                     if(SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass()) && document.getName().startsWith(id)) {
                         if(biocodeIdToAssembly.get(id) != null) {
-                            throw new DocumentOperationException("Duplicate assemblies for " + id);
+                            idsWithDuplicates.add(id);
                         }
                         biocodeIdToAssembly.put(id, document);
                     }
@@ -423,6 +424,9 @@ public class WorkflowBuilder extends DocumentOperation {
                 } else {
                     biocodeIdToSeq.put(id, seq);
                 }
+            }
+            if(!idsWithDuplicates.isEmpty()) {
+                throw new DocumentOperationException("Duplicate assemblies for:\n" + StringUtilities.join("\n", idsWithDuplicates));
             }
 
             for (Map.Entry<String, AnnotatedPluginDocument> entry : biocodeIdToAssembly.entrySet()) {

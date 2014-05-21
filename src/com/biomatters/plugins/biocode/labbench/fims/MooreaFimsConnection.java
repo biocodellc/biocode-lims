@@ -14,6 +14,7 @@ import java.net.URLEncoder;
 import java.io.InputStream;
 import java.io.IOException;
 
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.jdom.input.SAXBuilder;
 import org.jdom.Element;
 import org.jdom.JDOMException;

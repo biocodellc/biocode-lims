@@ -44,6 +44,11 @@ public class SharedCookieHandler extends java.net.CookieHandler {
     public static void registerHost(String host) {
         get().hostsWeShouldUseSameCookieFor.add(host);
     }
+    public static void unregisterHost(String host) {
+        get().hostsWeShouldUseSameCookieFor.remove(host);
+        get().cookies.remove(host);
+
+    }
 
     Map<String, List<String>> cookies = new HashMap<String, List<String>>();
 

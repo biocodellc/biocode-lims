@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 
 import javax.ws.rs.GET;
@@ -19,6 +18,6 @@ public class FailureReasons {
     @GET
     @Produces("application/xml")
     public List<FailureReason> list() {
-        return LIMSInitializationServlet.getLimsConnection().getPossibleFailureReasons();
+        return LIMSInitializationListener.getLimsConnection().getPossibleFailureReasons();
     }
 }

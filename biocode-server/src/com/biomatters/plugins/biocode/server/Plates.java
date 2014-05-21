@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
@@ -37,7 +36,7 @@ public class Plates {
     @Consumes("application/xml")
     public void savePlate(Plate plate) {
         try {
-            LIMSInitializationServlet.getLimsConnection().savePlate(plate, ProgressListener.EMPTY);
+            LIMSInitializationListener.getLimsConnection().savePlate(plate, ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         } catch (BadDataException e) {
@@ -51,7 +50,7 @@ public class Plates {
     @Path("delete")
     public String deletePlate(Plate plate) {
         try {
-            Set<Integer> ids = LIMSInitializationServlet.getLimsConnection().deletePlate(plate, ProgressListener.EMPTY);
+            Set<Integer> ids = LIMSInitializationListener.getLimsConnection().deletePlate(plate, ProgressListener.EMPTY);
             return StringUtilities.join("\n", ids);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
@@ -64,7 +63,7 @@ public class Plates {
     @Path("{id}/name")
     public void renamePlate(@PathParam("id")int id, String newName) {
         try {
-            LIMSInitializationServlet.getLimsConnection().renamePlate(id, newName);
+            LIMSInitializationListener.getLimsConnection().renamePlate(id, newName);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         }
@@ -89,7 +88,7 @@ public class Plates {
         }
         try {
             return new XMLSerializableList<Plate>(Plate.class,
-                    LIMSInitializationServlet.getLimsConnection().getEmptyPlates(ids));
+                    LIMSInitializationListener.getLimsConnection().getEmptyPlates(ids));
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -102,7 +101,7 @@ public class Plates {
         Reaction.Type reactionType = Reaction.Type.valueOf(type);
         try {
             List<Reaction> reactionList = reactions.getList();
-            LIMSInitializationServlet.getLimsConnection().saveReactions(reactionList.toArray(
+            LIMSInitializationListener.getLimsConnection().saveReactions(reactionList.toArray(
                     new Reaction[reactionList.size()]
             ), reactionType, ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
@@ -118,7 +117,7 @@ public class Plates {
         }
         try {
             return new XMLSerializableList<ExtractionReaction>(ExtractionReaction.class,
-                    LIMSInitializationServlet.getLimsConnection().getExtractionsForIds(
+                    LIMSInitializationListener.getLimsConnection().getExtractionsForIds(
                     Arrays.asList(ids.split(","))
             ));
         } catch (DatabaseServiceException e) {
@@ -137,7 +136,7 @@ public class Plates {
         }
 
         try {
-            return new StringMap(LIMSInitializationServlet.getLimsConnection().getTissueIdsForExtractionIds(
+            return new StringMap(LIMSInitializationListener.getLimsConnection().getTissueIdsForExtractionIds(
                     table, Arrays.asList(ids.split(","))));
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
@@ -149,7 +148,7 @@ public class Plates {
     @Path("{plateId}/gels")
     public List<GelImage> getGels(@PathParam("plateId")int plateId) {
         try {
-            Map<Integer, List<GelImage>> map = LIMSInitializationServlet.getLimsConnection().getGelImages(
+            Map<Integer, List<GelImage>> map = LIMSInitializationListener.getLimsConnection().getGelImages(
                     Collections.singletonList(plateId));
             return map.get(plateId);
         } catch (DatabaseServiceException e) {

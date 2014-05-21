@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import javax.ws.rs.*;
@@ -26,11 +25,11 @@ public class Cocktails {
             if(getType(type) == Cocktail.Type.pcr) {
                 return new XMLSerializableList<Cocktail>(Cocktail.class,
                         new ArrayList<Cocktail>(
-                        LIMSInitializationServlet.getLimsConnection().getPCRCocktailsFromDatabase()));
+                        LIMSInitializationListener.getLimsConnection().getPCRCocktailsFromDatabase()));
             } else {
                 return new XMLSerializableList<Cocktail>(Cocktail.class,
                         new ArrayList<Cocktail>(
-                        LIMSInitializationServlet.getLimsConnection().getCycleSequencingCocktailsFromDatabase()));
+                        LIMSInitializationListener.getLimsConnection().getCycleSequencingCocktailsFromDatabase()));
             }
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
@@ -41,7 +40,7 @@ public class Cocktails {
     @POST
     public void add(XMLSerializableList<Cocktail> toAdd) {
         try {
-            LIMSInitializationServlet.getLimsConnection().addCocktails(toAdd.getList());
+            LIMSInitializationListener.getLimsConnection().addCocktails(toAdd.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -62,7 +61,7 @@ public class Cocktails {
     @Path("delete")
     public void delete(XMLSerializableList<Cocktail> toDelete) {
         try {
-            LIMSInitializationServlet.getLimsConnection().deleteCocktails(toDelete.getList());
+            LIMSInitializationListener.getLimsConnection().deleteCocktails(toDelete.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -73,7 +72,7 @@ public class Cocktails {
     @Path("{type}/{id}/plates")
     public String getPlatesForCocktail(@PathParam("type")String type, @PathParam("id")int thermocycleId) {
         try {
-            Collection<String> plateNames = LIMSInitializationServlet.getLimsConnection().getPlatesUsingCocktail(Reaction.Type.valueOf(type), thermocycleId);
+            Collection<String> plateNames = LIMSInitializationListener.getLimsConnection().getPlatesUsingCocktail(Reaction.Type.valueOf(type), thermocycleId);
             return StringUtilities.join("\n", plateNames);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);

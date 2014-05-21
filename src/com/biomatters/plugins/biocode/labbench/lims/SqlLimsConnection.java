@@ -12,10 +12,10 @@ import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.fims.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.apache.commons.dbcp.*;
@@ -51,6 +51,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     abstract BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException;
 
     private BasicDataSource dataSource;
+
+    public BasicDataSource getDataSource() {
+        return dataSource;
+    }
+
     @Override
     protected void _connect(PasswordOptions options) throws ConnectionException {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;
@@ -343,15 +348,17 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             sqlValues.addAll(tissueIdsToMatch);
         }
-        QueryPart workflowPart = getQueryForTable("workflow", tableToTerms, operator);
-        if (workflowPart != null) {
-            sqlValues.addAll(workflowPart.parameters);
-        }
 
         QueryPart extractionPart = getQueryForTable("extraction", tableToTerms, operator);
         if (extractionPart != null) {
             sqlValues.addAll(extractionPart.parameters);
         }
+
+        QueryPart workflowPart = getQueryForTable("workflow", tableToTerms, operator);
+        if (workflowPart != null) {
+            sqlValues.addAll(workflowPart.parameters);
+        }
+
 
         QueryPart platePart = getQueryForTable("plate", tableToTerms, operator);
         if (platePart != null) {
@@ -494,14 +501,23 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 "SELECT extraction.sampleId, workflow.id, plate.id, assembly.id, assembly.date FROM ");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
-        if (filterOnTissues) {
+        boolean searchExtractionTable = filterOnTissues || extractionQueryConditions != null;
+        if (searchExtractionTable) {
             if (operator == CompoundSearchQuery.Operator.AND) {
                 queryBuilder.append("(SELECT * FROM extraction WHERE ");
             }
 
-            String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
-            conditionBuilder.append(sampleColumn).append(" IN ");
-            SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+            if(filterOnTissues) {
+                String sampleColumn = isLocal() ? "LOWER(sampleId)" : "sampleId";  // MySQL is case insensitive by default
+                conditionBuilder.append(sampleColumn).append(" IN ");
+                SqlUtilities.appendSetOfQuestionMarks(conditionBuilder, tissueIdsToMatch.size());
+            }
+            if(filterOnTissues && extractionQueryConditions != null) {
+                conditionBuilder.append(operatorString);
+            }
+            if(extractionQueryConditions != null) {
+                conditionBuilder.append("(").append(extractionQueryConditions).append(")");
+            }
 
             if(operator == CompoundSearchQuery.Operator.AND) {
                 queryBuilder.append(")");
@@ -512,18 +528,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
         queryBuilder.append(getJoinStringIncludingSpaces(operator, workflowQueryConditions));
         queryBuilder.append("workflow ON extraction.id = workflow.extractionId");
-
         if (workflowQueryConditions != null) {
-            if (filterOnTissues) {
+            if (searchExtractionTable) {
                 conditionBuilder.append(operatorString);
             } else if (operator == CompoundSearchQuery.Operator.AND) {
                 conditionBuilder.append(" AND ");
             }
             conditionBuilder.append("(").append(workflowQueryConditions).append(")");
-        }
-        if (extractionQueryConditions != null) {
-            conditionBuilder.append(operatorString);
-            conditionBuilder.append("(").append(extractionQueryConditions).append(")");
         }
 
         queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
@@ -921,14 +932,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return false;
     }
 
-    private static final Map<String, List<DocumentField>> TABLE_TO_FIELDS = new HashMap<String, List<DocumentField>>();
-
-    static {
-        TABLE_TO_FIELDS.put("workflow", Arrays.asList(WORKFLOW_NAME_FIELD, WORKFLOW_DATE_FIELD, WORKFLOW_LOCUS_FIELD));
-        TABLE_TO_FIELDS.put("plate", Arrays.asList(PLATE_TYPE_FIELD, PLATE_NAME_FIELD, PLATE_DATE_FIELD));
-        TABLE_TO_FIELDS.put("extraction", Arrays.asList(EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, DATE_FIELD));
-        TABLE_TO_FIELDS.put("assembly", Arrays.asList(SEQUENCE_PROGRESS, SEQUENCE_SUBMISSION_PROGRESS, EDIT_RECORD, ASSEMBLY_TECHNICIAN, DATE_FIELD));
-    }
 
     /**
      * Filters a list of search terms by which table they apply to.
@@ -1383,6 +1386,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     @Override
     public List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
+        if(workflowIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         ConnectionWrapper connection = null;
 
         try {
@@ -1620,7 +1626,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         for (int i = 0; i < queries.size(); i++) {
             if (queries.get(i) instanceof AdvancedSearchQueryTerm) {
                 AdvancedSearchQueryTerm q = (AdvancedSearchQueryTerm) queries.get(i);
-                QueryTermSurrounder termSurrounder = getQueryTermSurrounder(q);
+                SqlUtilities.QueryTermSurrounder termSurrounder = SqlUtilities.getQueryTermSurrounder(q);
                 String code = q.getField().getCode();
                 boolean isBooleanQuery = false;
                 if ("date".equals(code)) {
@@ -1656,7 +1662,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return sql.toString();
     }
 
-    private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, QueryTermSurrounder termSurrounder, Object value, Condition condition) {
+    private void appendValue(List<Object> inserts, StringBuilder sql, boolean appendAnd, SqlUtilities.QueryTermSurrounder termSurrounder, Object value, Condition condition) {
         String valueString = valueToString(value);
         //valueString = termSurrounder.getPrepend()+valueString+termSurrounder.getAppend();
         /* The time of day of date values used as search constraints should not be considered (the day of the month is
@@ -1667,15 +1673,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             GregorianCalendar date = new GregorianCalendar();
             date.setTime((Date)value);
             switch (condition) {
-                case LESS_THAN:
-                case GREATER_THAN_OR_EQUAL_TO:
+                case DATE_BEFORE:
+                case DATE_AFTER_OR_ON:
                     date.set(GregorianCalendar.HOUR_OF_DAY, 0);
                     date.set(GregorianCalendar.MINUTE, 0);
                     date.set(GregorianCalendar.SECOND, 0);
                     date.set(GregorianCalendar.MILLISECOND, 0);
                     break;
-                case LESS_THAN_OR_EQUAL_TO:
-                case GREATER_THAN:
+                case DATE_BEFORE_OR_ON:
+                case DATE_AFTER:
                     date.set(GregorianCalendar.HOUR_OF_DAY, 23);
                     date.set(GregorianCalendar.MINUTE, 59);
                     date.set(GregorianCalendar.SECOND, 59);
@@ -1727,79 +1733,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
         query = Query.Factory.createOrQuery(queryTerms.toArray(new Query[queryTerms.size()]), Collections.<String, Object>emptyMap());
         return query;
-    }
-
-    private static class QueryTermSurrounder {
-        private final String prepend, append, join;
-
-        private QueryTermSurrounder(String prepend, String append, String join) {
-            this.prepend = prepend;
-            this.append = append;
-            this.join = join;
-        }
-
-        public String getPrepend() {
-            return prepend;
-        }
-
-        public String getAppend() {
-            return append;
-        }
-
-        public String getJoin() {
-            return join;
-        }
-    }
-
-    private static QueryTermSurrounder getQueryTermSurrounder(AdvancedSearchQueryTerm query) {
-        String join = "";
-        String append = "";
-        String prepend = "";
-        switch (query.getCondition()) {
-            case EQUAL:
-                join = "=";
-                break;
-            case APPROXIMATELY_EQUAL:
-                join = "LIKE";
-                break;
-            case BEGINS_WITH:
-                join = "LIKE";
-                append = "%";
-                break;
-            case ENDS_WITH:
-                join = "LIKE";
-                prepend = "%";
-                break;
-            case CONTAINS:
-                join = "LIKE";
-                append = "%";
-                prepend = "%";
-                break;
-            case GREATER_THAN:
-                join = ">";
-                break;
-            case GREATER_THAN_OR_EQUAL_TO:
-                join = ">=";
-                break;
-            case LESS_THAN:
-                join = "<";
-                break;
-            case LESS_THAN_OR_EQUAL_TO:
-                join = "<=";
-                break;
-            case NOT_CONTAINS:
-                join = "NOT LIKE";
-                append = "%";
-                prepend = "%";
-                break;
-            case NOT_EQUAL:
-                join = "!=";
-                break;
-            case IN_RANGE:
-                join = "BETWEEN";
-                break;
-        }
-        return new QueryTermSurrounder(prepend, append, join);
     }
 
     public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
@@ -2407,7 +2340,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 "coverage, disagreements, trim_params_fwd, trim_params_rev, edits, params, reference_seq_id, confidence_scores, other_processing_fwd, other_processing_rev, notes, technician, bin, ambiguities, editrecord, failure_reason, failure_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)");
             updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
 
-            statement2 = isLocal() ? createStatement("CALL IDENTITY();") : createStatement("SELECT last_insert_id()");
+            statement2 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
 
             if (cancelable.isCanceled()) {
                 return -1;

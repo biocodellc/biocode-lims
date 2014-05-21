@@ -1,14 +1,9 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.privateApi.PrivateApiUtilities;
-import com.biomatters.geneious.privateApi.PrivateApiUtilitiesImplementation;
-import com.biomatters.geneious.publicapi.components.ComponentUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.databaseservice.QueryFactoryImplementation;
-import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseServiceActions;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilitiesImplementation;
-import com.biomatters.geneious.publicapi.documents.NoteTypeStorage;
 import com.biomatters.geneious.publicapi.documents.XMLSerializerImplementation;
-import com.biomatters.geneious.publicapi.implementations.ImportedFileOriginalTextImplementation;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -19,13 +14,11 @@ import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MySqlFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.lims.LocalLIMSConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.lims.MySqlLIMSConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.lims.*;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
+import javax.sql.DataSource;
 import java.io.*;
 import java.util.*;
 
@@ -37,18 +30,12 @@ import java.util.*;
  *          <p/>
  *          Created on 20/03/14 3:18 PM
  */
-public class LIMSInitializationServlet extends GenericServlet {
+public class LIMSInitializationListener implements ServletContextListener {
 
     private static final String settingsFolderName = ".biocode-lims";
     private static final String defaultPropertiesFile = "default_connection.properties";
     private static final String propertiesFile = "connection.properties";
 
-    @Override
-    public void service(ServletRequest servletRequest, ServletResponse servletResponse) throws ServletException, IOException {
-        // Ignore any requests.  There shouldn't be any connections made to this servlet
-    }
-
-    // We rely on the web app server only instantiating the servlet once
     private static LIMSConnection limsConnection;
     public static LIMSConnection getLimsConnection() {
         return limsConnection;
@@ -59,15 +46,21 @@ public class LIMSInitializationServlet extends GenericServlet {
         return fimsConnection;
     }
 
+    private static DataSource dataSource;
+
+    public static DataSource getDataSource() {
+        return dataSource;
+    }
+
     @Override
-    public void init() throws ServletException {
+    public void contextInitialized(ServletContextEvent servletContextEvent) {
         initializeGeneiousUtilities();
 
         BiocodeService biocodeeService;
 
         File connectionPropertiesFile = getPropertiesFile();
         if(!connectionPropertiesFile.exists()) {
-            File defaultFile = new File(getWarDirectory(), defaultPropertiesFile);
+            File defaultFile = new File(getWarDirectory(servletContextEvent.getServletContext()), defaultPropertiesFile);
             if(defaultFile.exists()) {
                 try {
                     FileUtilities.copyFile(defaultFile, connectionPropertiesFile, FileUtilities.TargetExistsAction.Skip, ProgressListener.EMPTY);
@@ -101,6 +94,10 @@ public class LIMSInitializationServlet extends GenericServlet {
             limsConnection = biocodeeService.getActiveLIMSConnection();
             if(limsConnection == null) {
                 connectLims(connectionConfig); // to get error message.  In the future BiocodeService should be changed to expose it's connection errors
+            } else if(limsConnection instanceof SqlLimsConnection) {
+                dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
+            } else {
+                throw new IllegalStateException("LIMSConnection was not a SqlLimsConnection.  Was " + limsConnection.getClass());
             }
         } catch (IOException e) {
             initializationErrors.add(new IntializationError("Configuration Error",
@@ -111,6 +108,11 @@ public class LIMSInitializationServlet extends GenericServlet {
         } catch (Exception e) {
             initializationErrors.add(IntializationError.forException(e));
         }
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent servletContextEvent) {
+        // todo
     }
 
     public static File getPropertiesFile() {
@@ -225,25 +227,10 @@ public class LIMSInitializationServlet extends GenericServlet {
         TestGeneious.setNotRunningTest();
         TestGeneious.setRunningApplication();
 
-        XMLSerializerImplementation.setImplementation();
-        ImportedFileOriginalTextImplementation.setImplementation();
-
         DocumentUtilitiesImplementation.setImplementation();
-        PrivateApiUtilitiesImplementation.setImplementation();
-
-        if (NoteTypeStorage.getNoteTypeStorage()==null)
-            NoteTypeStorage.setImplementation ();
-        ExtendedPrintableFactoryImplementation.initialise();
-
-        PluginUtilitiesImplementation.setImplementation();
-        FileUtilitiesImplementation.setImplementation();
-        SequenceUtilitiesImplementation.setImplementation();
-        ImportUtilitiesImplementation.setImplementation();
+        XMLSerializerImplementation.setImplementation();
         QueryFactoryImplementation.setImplementation();
-        ComponentUtilitiesImplementation.setImplementation();
-        PrivateUtilitiesImplementation.setImplementation();
-        WritableDatabaseServiceActions.setImplemtation();
-
+        PluginUtilitiesImplementation.setImplementation();
     }
 
     private static class IntializationError {
@@ -305,8 +292,7 @@ public class LIMSInitializationServlet extends GenericServlet {
     }
 
 
-    public File getWarDirectory() {
-        ServletContext context = getServletContext();
+    public File getWarDirectory(ServletContext context) {
         File warDir = new File(context.getRealPath("."));
         if(warDir.isDirectory()) {
             return warDir;
