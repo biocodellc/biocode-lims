@@ -58,14 +58,6 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         if(sequences) {
             validateSequenceDocuments(documents);
         }
-        else {
-            for(AnnotatedPluginDocument doc : documents) {
-                PlateDocument plateDoc = (PlateDocument)doc.getDocument();
-                if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                    throw new DocumentOperationException("You must select either PCR or Cycle Sequencing plates");
-                }
-            }
-        }
 
         Options options = new Options(this.getClass());
 
