@@ -479,7 +479,7 @@ public class ReactionUtilities {
         return s;
     }
 
-    public static void showDisplayDialog(Plate plate, JComponent owner) {
+    public static boolean showDisplayDialog(Plate plate, JComponent owner) {
 
         List<Reaction> reactions = Arrays.asList(plate.getReactions());
 
@@ -575,6 +575,7 @@ public class ReactionUtilities {
                 r.setBackgroundColorer(colorPanel.getColorer());
             }
         }
+        return templateSelectorPanel.defaultTemplateSet;
     }
 
     public static boolean documentFieldsAreEqual(DocumentField a, DocumentField b) {
@@ -963,6 +964,7 @@ public class ReactionUtilities {
     private static class TemplateSelector extends JPanel {
         private DisplayFieldsTemplate selectedTemplate;
         GeneiousAction.SubMenu templateSelectorDropdown;
+        public boolean defaultTemplateSet = false;
 
         public TemplateSelector(final SplitPaneListSelector listSelector, final ColoringPanel colorer, final Reaction.Type type) {
             changeListeners = new ArrayList<ChangeListener>();
@@ -996,6 +998,7 @@ public class ReactionUtilities {
                         newTemplate = selectedTemplate;
                     }
                     if (newTemplate != null) {
+                        defaultTemplateSet = true;
                         BiocodeService.getInstance().setDefaultDisplayedFieldsTemplate(newTemplate);
                         templateSelectorDropdown.setSubMenuActions(getTemplateActions(BiocodeService.getInstance().getDisplayedFieldTemplates(type), listSelector, newTemplateRunnable, type));
                     }
@@ -1047,6 +1050,5 @@ public class ReactionUtilities {
         }
 
         private List<ChangeListener> changeListeners;
-
     }
 }
