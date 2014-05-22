@@ -28,20 +28,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        JdbcUserDetailsManagerConfigurer<AuthenticationManagerBuilder> authentication = null;
         LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
         if(limsConnection instanceof SqlLimsConnection) {
             BasicDataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
-
-            JdbcUserDetailsManagerConfigurer<AuthenticationManagerBuilder> authentication =
-                    auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder);
-
-            // todo Init users group etc if first time
-            authentication.and().inMemoryAuthentication().withUser("admin").password("admin").roles("admin");
-
+            auth = auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
         } else {
             // todo Handle no SQL connection
             // No authentication if not setup correctly
         }
+        // todo Init users group etc if first time
+        auth.inMemoryAuthentication().withUser("admin").password("admin").roles("admin");
     }
 
     @Override

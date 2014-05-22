@@ -59,6 +59,14 @@ public class LIMSInitializationListener implements ServletContextListener {
         BiocodeService biocodeeService;
 
         File connectionPropertiesFile = getPropertiesFile();
+        File dataDir = connectionPropertiesFile.getParentFile();
+        if(!dataDir.exists()) {
+            boolean created = dataDir.mkdirs();
+            if(!created) {
+                initializationErrors.add(new IntializationError("Failed to create config directory", "Failed to create directory " + dataDir.getAbsolutePath()));
+                return;
+            }
+        }
         if(!connectionPropertiesFile.exists()) {
             File defaultFile = new File(getWarDirectory(servletContextEvent.getServletContext()), defaultPropertiesFile);
             if(defaultFile.exists()) {
@@ -76,10 +84,6 @@ public class LIMSInitializationListener implements ServletContextListener {
             config.load(new FileInputStream(connectionPropertiesFile));
 
             biocodeeService = BiocodeService.getInstance();
-            File dataDir = new File(settingsFolderName, "data");
-            if(!dataDir.exists()) {
-                dataDir.mkdirs();
-            }
             biocodeeService.setDataDirectory(dataDir);
 
             setFimsOptionsFromConfigFile(connectionConfig, config);
@@ -116,8 +120,12 @@ public class LIMSInitializationListener implements ServletContextListener {
     }
 
     public static File getPropertiesFile() {
-        File settingsFolder = new File(System.getProperty("user.home"), settingsFolderName);
+        File settingsFolder = getSettingsFolder();
         return new File(settingsFolder, propertiesFile);
+    }
+
+    private static File getSettingsFolder() {
+        return new File(System.getProperty("user.home"), settingsFolderName);
     }
 
     private static LIMSConnection connectLims(Connection connectionConfig) throws ConnectionException {
