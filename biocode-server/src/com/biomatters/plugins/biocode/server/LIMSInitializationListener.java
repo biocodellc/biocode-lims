@@ -10,10 +10,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
-import com.biomatters.plugins.biocode.labbench.fims.MySqlFimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
+import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.lims.*;
 import jebl.util.ProgressListener;
 
@@ -176,11 +173,12 @@ public class LIMSInitializationListener implements ServletContextListener {
 
     private void setFimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException, ConnectionException {
         String type = config.getProperty("fims.type", "biocode");
+        boolean isExcel = type.equals("excel");
         connectionConfig.setFims(type);
         PasswordOptions fimsOptions = connectionConfig.getFimsOptions();
         String username = config.getProperty("fims.username");
         String password = config.getProperty("fims.password");
-        if(username == null || password == null) {
+        if(!isExcel && (username == null || password == null)) {
             throw new MissingPropertyException("fims.username", "fims.password");
         }
         if(type.equals("biocode")) {
@@ -194,32 +192,60 @@ public class LIMSInitializationListener implements ServletContextListener {
             fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".database", config.getProperty("fims.database"));
             fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".table", config.getProperty("fims.table"));
 
-            fimsOptions.update();
-            ((TableFimsConnectionOptions)fimsOptions).autodetectTaxonFields();
-            String tissueId = config.getProperty("fims.tissueId");
-            String specimenId = config.getProperty("fims.specimenId");
-            if(tissueId == null || specimenId == null) {
-                throw new MissingPropertyException("fims.tissueId", "fims.specimenId");
+            setupTableFims(config, fimsOptions, MySQLFimsConnection.FIELD_PREFIX);
+        } else if (isExcel) {
+            if (!(fimsOptions instanceof ExcelFimsConnectionOptions)) {
+                throw new IllegalStateException("expected: ExcelFimsConnectionOptions, actual: " + fimsOptions.getClass().getSimpleName());
             }
-            fimsOptions.setValue(MySqlFimsConnectionOptions.TISSUE_ID, MySQLFimsConnection.FIELD_PREFIX + tissueId);
-            fimsOptions.setValue(MySqlFimsConnectionOptions.SPECIMEN_ID, MySQLFimsConnection.FIELD_PREFIX + specimenId);
-            String plate = config.getProperty("fims.plate");
-            String well = config.getProperty("fims.well");
-            if(plate != null && well != null) {
-                fimsOptions.setValue(MySqlFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
-                fimsOptions.setValue(MySqlFimsConnectionOptions.PLATE_NAME, MySQLFimsConnection.FIELD_PREFIX + plate);
-                fimsOptions.setValue(MySqlFimsConnectionOptions.PLATE_WELL, MySQLFimsConnection.FIELD_PREFIX + well);
-            }
-            int index = 0;
-            String taxonField = config.getProperty("fims.taxon." + index);
-            while(taxonField != null) {
-                fimsOptions.setValue(MySqlFimsConnectionOptions.TAX_FIELDS + "." + index + "." +
-                        MySqlFimsConnectionOptions.TAX_COL, MySQLFimsConnection.FIELD_PREFIX + taxonField);
-                index++;
-                taxonField = config.getProperty("fims.taxon." + index);
-            }
+            ExcelFimsConnectionOptions excelFimsConnectionOptions = (ExcelFimsConnectionOptions) fimsOptions;
+            excelFimsConnectionOptions.setStringValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, config.getProperty("fims.excelpath"));
+            setupTableFims(config, fimsOptions, "");
         } else {
             throw new ConfigurationException("fims.type = " + type + " is unsupported for the alpha");
+        }
+    }
+
+    private void setupTableFims(Properties config, PasswordOptions fimsOptions, String prefix) throws ConnectionException, MissingPropertyException {
+        fimsOptions.update();
+        ((TableFimsConnectionOptions) fimsOptions).autodetectTaxonFields();
+        String tissueId = config.getProperty("fims.tissueId");
+        String specimenId = config.getProperty("fims.specimenId");
+        if (tissueId == null || specimenId == null) {
+            throw new MissingPropertyException("fims.tissueId", "fims.specimenId");
+        }
+
+        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TISSUE_ID, prefix + tissueId);
+        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.SPECIMEN_ID, prefix + specimenId);
+        String plate = config.getProperty("fims.plate");
+        String well = config.getProperty("fims.well");
+        if (plate != null && well != null) {
+            fimsOptions.setValue(MySqlFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
+            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_WELL, prefix + well);
+            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_NAME, prefix + plate);
+        }
+        int index = 0;
+        String taxonField = config.getProperty("fims.taxon." + index);
+        while (taxonField != null) {
+            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TAX_FIELDS + "." + index + "." +
+                    MySqlFimsConnectionOptions.TAX_COL, prefix + taxonField);
+            index++;
+            taxonField = config.getProperty("fims.taxon." + index);
+        }
+    }
+
+    private void setFimsOptionBasedOnLabel(PasswordOptions fimsOptions, String optionName, String labelToLookFor) {
+        Options.Option option = fimsOptions.getOption(optionName);
+        if (option == null) {
+            return;
+        }
+        if (!(option instanceof Options.ComboBoxOption)) {
+            throw new IllegalStateException("Unexpected Option, expected ComboBoxOption but was " + option.getClass().getSimpleName());
+        }
+        Options.ComboBoxOption<Options.OptionValue> comboBoxOption = (Options.ComboBoxOption<Options.OptionValue>) option;
+        for (Options.OptionValue optionValue : comboBoxOption.getPossibleOptionValues()) {
+            if (optionValue.getLabel().equals(labelToLookFor)) {
+                fimsOptions.setValue(optionName, optionValue);
+            }
         }
     }
 

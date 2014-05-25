@@ -131,7 +131,7 @@ public class LocalLIMSConnectionOptions extends PasswordOptions {
         });
     }
 
-    static void createDatabase(String newDbName) throws SQLException {
+    public static void createDatabase(String newDbName) throws SQLException {
         try {
             InputStream scriptStream = LocalLIMSConnection.class.getResourceAsStream(SCRIPT_NAME);
             if(scriptStream == null) {

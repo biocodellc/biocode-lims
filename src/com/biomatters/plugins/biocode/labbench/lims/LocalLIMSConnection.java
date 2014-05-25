@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -36,18 +37,23 @@ public class LocalLIMSConnection extends SqlLimsConnection {
 
     @Override
     public BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException {
+        String dbName = connectionOptions.getValueAsString("database");
 
         BasicDataSource dataSource = new BasicDataSource();
-        String dbName = connectionOptions.getValueAsString("database");
 
         dataSource.setDriverClassName(BiocodeService.getInstance().getLocalDriver().getClass().getName());
 
         String path;
         try {
             path = getDbPath(dbName);
+            if (Geneious.isHeadless() && !new File(path).exists()) {
+                LocalLIMSConnectionOptions.createDatabase(dbName); //creates Biocode Lims Database if it does not exist (server only)
+            }
         } catch (IOException e) {
             e.printStackTrace();
             throw new ConnectionException("Could not create path to database "+BiocodeService.getInstance().getDataDirectory().getAbsolutePath()+ File.separator + dbName + ".db", e);
+        } catch (SQLException e) {
+            throw new ConnectionException(e.getMessage(), e);
         }
         dataSource.setUrl("jdbc:hsqldb:file:" + path + ";shutdown=true");
         return dataSource;
