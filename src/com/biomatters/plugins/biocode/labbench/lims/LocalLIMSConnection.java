@@ -46,15 +46,16 @@ public class LocalLIMSConnection extends SqlLimsConnection {
         String path;
         try {
             path = getDbPath(dbName);
-            if (Geneious.isHeadless() && !new File(path).exists()) {
-                LocalLIMSConnectionOptions.createDatabase(dbName); //creates Biocode Lims Database if it does not exist (server only)
-            }
+            // todo why is this trying to recreate the database.  File should exist
+//            if (Geneious.isHeadless() && !new File(path).exists()) {
+//                LocalLIMSConnectionOptions.createDatabase(dbName); //creates Biocode Lims Database if it does not exist (server only)
+//            }
         } catch (IOException e) {
             e.printStackTrace();
             throw new ConnectionException("Could not create path to database "+BiocodeService.getInstance().getDataDirectory().getAbsolutePath()+ File.separator + dbName + ".db", e);
-        } catch (SQLException e) {
-            throw new ConnectionException(e.getMessage(), e);
-        }
+        }// catch (SQLException e) {
+         //   throw new ConnectionException(e.getMessage(), e);
+        //}
         dataSource.setUrl("jdbc:hsqldb:file:" + path + ";shutdown=true");
         return dataSource;
     }

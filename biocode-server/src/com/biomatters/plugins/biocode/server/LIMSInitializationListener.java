@@ -11,12 +11,15 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.*;
+import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.*;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
 import javax.sql.DataSource;
+import javax.ws.rs.ProcessingException;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.util.*;
 
 /**
@@ -185,27 +188,48 @@ public class LIMSInitializationListener implements ServletContextListener {
             fimsOptions.setValue("username", username);
             fimsOptions.setValue("password", password);
         } else if(type.equals("MySql")) {
-            fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".username", username);
-            fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".password", password);
-            fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverUrl", config.getProperty("fims.server"));
-            fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverPort", config.getProperty("fims.port"));
-            fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".database", config.getProperty("fims.database"));
-            fimsOptions.setValue(MySqlFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".table", config.getProperty("fims.table"));
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".username", username);
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".password", password);
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverUrl", config.getProperty("fims.server"));
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverPort", config.getProperty("fims.port"));
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".database", config.getProperty("fims.database"));
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".table", config.getProperty("fims.table"));
 
-            setupTableFims(config, fimsOptions, MySQLFimsConnection.FIELD_PREFIX);
+            setupTableFims(config, fimsOptions);
         } else if (isExcel) {
             if (!(fimsOptions instanceof ExcelFimsConnectionOptions)) {
                 throw new IllegalStateException("expected: ExcelFimsConnectionOptions, actual: " + fimsOptions.getClass().getSimpleName());
             }
             ExcelFimsConnectionOptions excelFimsConnectionOptions = (ExcelFimsConnectionOptions) fimsOptions;
-            excelFimsConnectionOptions.setStringValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, config.getProperty("fims.excelpath"));
-            setupTableFims(config, fimsOptions, "");
+            excelFimsConnectionOptions.setStringValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, config.getProperty("fims.excelPath"));
+            setupTableFims(config, fimsOptions);
+        } else if (type.equals("tapir")) {
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".accessPoint", config.getProperty("fims.accessPoint"));
+            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".schema", config.getProperty("fims.dataSharingStandard"));
+        } else if (type.equals("biocode-fims")) {
+            Options childOptions = fimsOptions.getChildOptions().get(
+                    TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
+            if (childOptions == null || !(childOptions instanceof BiocodeFIMSConnectionOptions)) {
+                throw new IllegalStateException(childOptions == null ?
+                        "No child options for key " + TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY :
+                        "expected: BiocodeFIMSConnectionOptions, actual: " + fimsOptions.getClass().getSimpleName());
+            }
+            BiocodeFIMSConnectionOptions biocodeFimsConnectionOptions = (BiocodeFIMSConnectionOptions) childOptions;
+            try {
+                biocodeFimsConnectionOptions.login(config.getProperty("fims.host", "http://biscicol.org"), username, password);
+            } catch (MalformedURLException e1) {
+                throw new ConfigurationException("Could not connect to server.  Invalid URL: " + e1.getMessage());
+            } catch (ProcessingException e) {
+                throw new ConfigurationException("There was a problem communicating with the server: " + e.getMessage());
+            }
+            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".project", config.getProperty("fims.project"));
+            setupTableFims(config, fimsOptions);
         } else {
             throw new ConfigurationException("fims.type = " + type + " is unsupported for the alpha");
         }
     }
 
-    private void setupTableFims(Properties config, PasswordOptions fimsOptions, String prefix) throws ConnectionException, MissingPropertyException {
+    private void setupTableFims(Properties config, PasswordOptions fimsOptions) throws ConnectionException, MissingPropertyException {
         fimsOptions.update();
         ((TableFimsConnectionOptions) fimsOptions).autodetectTaxonFields();
         String tissueId = config.getProperty("fims.tissueId");
@@ -214,20 +238,20 @@ public class LIMSInitializationListener implements ServletContextListener {
             throw new MissingPropertyException("fims.tissueId", "fims.specimenId");
         }
 
-        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TISSUE_ID, prefix + tissueId);
-        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.SPECIMEN_ID, prefix + specimenId);
+        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TISSUE_ID, tissueId);
+        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.SPECIMEN_ID, specimenId);
         String plate = config.getProperty("fims.plate");
         String well = config.getProperty("fims.well");
         if (plate != null && well != null) {
             fimsOptions.setValue(MySqlFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_WELL, prefix + well);
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_NAME, prefix + plate);
+            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_WELL, well);
+            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_NAME, plate);
         }
         int index = 0;
         String taxonField = config.getProperty("fims.taxon." + index);
         while (taxonField != null) {
             setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TAX_FIELDS + "." + index + "." +
-                    MySqlFimsConnectionOptions.TAX_COL, prefix + taxonField);
+                    MySqlFimsConnectionOptions.TAX_COL, taxonField);
             index++;
             taxonField = config.getProperty("fims.taxon." + index);
         }

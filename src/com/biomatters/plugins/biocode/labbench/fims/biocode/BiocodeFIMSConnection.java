@@ -240,7 +240,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     @Override
     public void _connect(TableFimsConnectionOptions options) throws ConnectionException {
         if (!(options instanceof BiocodeFIMSOptions)) {
-            throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptiions()");
+            throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptions()");
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
         project = fimsOptions.getProject();
