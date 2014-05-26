@@ -177,11 +177,12 @@ public class LIMSInitializationListener implements ServletContextListener {
     private void setFimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException, ConnectionException {
         String type = config.getProperty("fims.type", "biocode");
         boolean isExcel = type.equals("excel");
+        boolean isTapir = type.equals("tapir");
         connectionConfig.setFims(type);
         PasswordOptions fimsOptions = connectionConfig.getFimsOptions();
         String username = config.getProperty("fims.username");
         String password = config.getProperty("fims.password");
-        if(!isExcel && (username == null || password == null)) {
+        if(!isExcel &&!isTapir && (username == null || password == null)) {
             throw new MissingPropertyException("fims.username", "fims.password");
         }
         if(type.equals("biocode")) {
@@ -203,7 +204,7 @@ public class LIMSInitializationListener implements ServletContextListener {
             ExcelFimsConnectionOptions excelFimsConnectionOptions = (ExcelFimsConnectionOptions) fimsOptions;
             excelFimsConnectionOptions.setStringValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." + ExcelFimsConnectionOptions.FILE_LOCATION, config.getProperty("fims.excelPath"));
             setupTableFims(config, fimsOptions);
-        } else if (type.equals("tapir")) {
+        } else if (isTapir) {
             fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".accessPoint", config.getProperty("fims.accessPoint"));
             fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".schema", config.getProperty("fims.dataSharingStandard"));
         } else if (type.equals("biocode-fims")) {
