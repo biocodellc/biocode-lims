@@ -66,5 +66,4 @@ public class Info {
             return principal.toString();
         }
     }
-
 }
