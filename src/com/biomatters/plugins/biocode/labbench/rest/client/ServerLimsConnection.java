@@ -35,7 +35,7 @@ import java.util.*;
  *          <p/>
  *          Created on 4/04/14 11:14 AM
  */
-public class ServerLimsConnetion extends LIMSConnection {
+public class ServerLimsConnection extends LIMSConnection {
 
     private String username;
     WebTarget target;
@@ -45,15 +45,15 @@ public class ServerLimsConnetion extends LIMSConnection {
         if (!(options instanceof RESTConnectionOptions)) {
             throw new IllegalArgumentException("Expected instance of " + RESTConnectionOptions.class.getSimpleName() + " but was " + options.getClass().getName());
         }
-        RESTConnectionOptions connetionOptions = (RESTConnectionOptions) options;
-        this.username = connetionOptions.getUsername();
-        String host = connetionOptions.getHost();
+        RESTConnectionOptions connectionOptions = (RESTConnectionOptions) options;
+        this.username = connectionOptions.getUsername();
+        String host = connectionOptions.getHost();
         if (!host.matches("https?://.*")) {
             host = "http://" + host;
         }
 
         HttpAuthenticationFeature authFeature = HttpAuthenticationFeature.universal(
-                connetionOptions.getUsername(), connetionOptions.getPassword());
+                connectionOptions.getUsername(), connectionOptions.getPassword());
         target = ClientBuilder.newClient().
                 register(authFeature).
                 register(XMLSerializableMessageReader.class).
@@ -117,10 +117,10 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    public void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
+    public void savePlates(List<Plate> plates, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         try {
             Invocation.Builder request = target.path("plates").request();
-            request.put(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
+            request.put(Entity.entity(plates, MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
@@ -158,11 +158,11 @@ public class ServerLimsConnetion extends LIMSConnection {
     }
 
     @Override
-    public Set<Integer> deletePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
+    public Set<Integer> deletePlates(List<Plate> plates, ProgressListener progress) throws DatabaseServiceException {
         String result;
         try {
             Invocation.Builder request = target.path("plates").path("delete").request(MediaType.TEXT_PLAIN_TYPE);
-            Response response = request.post(Entity.entity(plate, MediaType.APPLICATION_XML_TYPE));
+            Response response = request.post(Entity.entity(plates, MediaType.APPLICATION_XML_TYPE));
             result = response.readEntity(String.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);

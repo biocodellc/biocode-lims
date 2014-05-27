@@ -14,7 +14,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.rest.client.RESTConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
-import com.biomatters.plugins.biocode.labbench.rest.client.ServerLimsConnetion;
+import com.biomatters.plugins.biocode.labbench.rest.client.ServerLimsConnection;
 import org.jdom.Attribute;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -439,7 +439,7 @@ public class Connection implements XMLSerializable {
 
     public LIMSConnection getLIMSConnection() throws ConnectionException {
         if(type == ConnectionType.server) {
-            return new ServerLimsConnetion();
+            return new ServerLimsConnection();
         }
 
         LimsConnectionOptions limsOptions = (LimsConnectionOptions) getLimsOptions();

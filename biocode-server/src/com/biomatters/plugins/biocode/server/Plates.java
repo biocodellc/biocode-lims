@@ -27,16 +27,16 @@ public class Plates {
     }
 
     @GET
-    @Path("{plateId}")
-    public String getTissue(@PathParam("plateId")String plateId) {
-        throw new NotFoundException("No plates for " + plateId);
+    @Path("{plateName}")
+    public String getTissue(@PathParam("plateName")String plateName) {
+        throw new InternalServerErrorException("Not implemented, please use /search.");
     }
 
     @PUT
     @Consumes("application/xml")
-    public void savePlate(Plate plate) {
+    public void add(XMLSerializableList<Plate> plates) {
         try {
-            LIMSInitializationListener.getLimsConnection().savePlate(plate, ProgressListener.EMPTY);
+            LIMSInitializationListener.getLimsConnection().savePlates(plates.getList(), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         } catch (BadDataException e) {
@@ -48,15 +48,14 @@ public class Plates {
     @Consumes("application/xml")
     @Produces("text/plain")
     @Path("delete")
-    public String deletePlate(Plate plate) {
+    public String delete(XMLSerializableList<Plate> plates) {
         try {
-            Set<Integer> ids = LIMSInitializationListener.getLimsConnection().deletePlate(plate, ProgressListener.EMPTY);
+            Set<Integer> ids = LIMSInitializationListener.getLimsConnection().deletePlates(plates.getList(), ProgressListener.EMPTY);
             return StringUtilities.join("\n", ids);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         }
     }
-
 
     @PUT
     @Consumes("text/plain")

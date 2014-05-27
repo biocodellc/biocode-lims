@@ -83,9 +83,9 @@ public abstract class LIMSConnection {
 
     public abstract int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException;
 
-    public abstract void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException;
+    public abstract void savePlates(List<Plate> plates, ProgressListener progress) throws BadDataException, DatabaseServiceException;
     public abstract void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException;
-    public abstract Set<Integer> deletePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException;
+    public abstract Set<Integer> deletePlates(List<Plate> plates, ProgressListener progress) throws DatabaseServiceException;
     public abstract void renamePlate(int id, String newName) throws DatabaseServiceException;
 
     public abstract List<FailureReason> getPossibleFailureReasons();

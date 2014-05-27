@@ -38,9 +38,9 @@ public class Cocktails {
 
     @Consumes("application/xml")
     @POST
-    public void add(XMLSerializableList<Cocktail> toAdd) {
+    public void add(XMLSerializableList<Cocktail> cocktails) {
         try {
-            LIMSInitializationListener.getLimsConnection().addCocktails(toAdd.getList());
+            LIMSInitializationListener.getLimsConnection().addCocktails(cocktails.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -59,15 +59,14 @@ public class Cocktails {
     @Consumes("application/xml")
     @POST
     @Path("delete")
-    public void delete(XMLSerializableList<Cocktail> toDelete) {
+    public void delete(XMLSerializableList<Cocktail> cocktails) {
         try {
-            LIMSInitializationListener.getLimsConnection().deleteCocktails(toDelete.getList());
+            LIMSInitializationListener.getLimsConnection().deleteCocktails(cocktails.getList());
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
 
-    @Consumes("application/xml")
     @GET
     @Path("{type}/{id}/plates")
     public String getPlatesForCocktail(@PathParam("type")String type, @PathParam("id")int thermocycleId) {

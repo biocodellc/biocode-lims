@@ -24,11 +24,9 @@ public class Tissues {
         if(tissueIds == null || tissueIds.trim().isEmpty()) {
             throw new BadRequestException("Must specify tissues");
         }
-
         try {
             return StringUtilities.join("\n", LIMSInitializationListener.getLimsConnection().
                     getAllExtractionIdsForTissueIds(Arrays.asList(tissueIds.split(","))));
-
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
