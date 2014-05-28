@@ -18,7 +18,7 @@ public class Extractions {
 
     @GET
     @Produces("application/xml")
-    public XMLSerializableList<ExtractionReaction> getForBarcodes(@QueryParam("barcodes")String barcodes) {
+    public XMLSerializableList<ExtractionReaction> getForBarcodes(@QueryParam("barcodes")String barcodes) { // todo: Migrate logic to QueryService?
         if(barcodes == null || barcodes.trim().isEmpty()) {
             throw new BadRequestException("Must specify barcodes");
         }
@@ -35,7 +35,7 @@ public class Extractions {
     @Produces("application/xml")
     @Path("workflows")
     public StringMap getWorkflowsForExtractionIds(@QueryParam("extractionIds")String extractionIds,
-                                                  @QueryParam("loci")String loci, @QueryParam("type")String type) {
+                                                  @QueryParam("loci")String loci, @QueryParam("type")String type) { // todo: Migrate logic to QueryService?
         if(extractionIds == null || extractionIds.trim().isEmpty()) {
             throw new BadRequestException("Must specify extractionIds");
         }

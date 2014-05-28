@@ -1899,7 +1899,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             return Collections.emptyList();
         }
 
-        String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN (select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
+        String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN " +
+                "(select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
 
 
         List<String> idMatches = new ArrayList<String>();

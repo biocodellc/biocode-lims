@@ -20,7 +20,7 @@ public class Tissues {
     @GET
     @Produces("text/plain")
     @Path("extractions")
-    public String getForBarcodes(@QueryParam("tissues")String tissueIds) {
+    public String getForBarcodes(@QueryParam("tissues")String tissueIds) { // todo: Migrate logic to QueryService?
         if(tissueIds == null || tissueIds.trim().isEmpty()) {
             throw new BadRequestException("Must specify tissues");
         }
