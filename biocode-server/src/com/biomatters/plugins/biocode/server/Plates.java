@@ -21,22 +21,11 @@ import java.util.*;
 @Path("plates")
 public class Plates {
 
-    @GET
-    public String list() {
-        return "There are no plates here yet";
-    }
-
-    @GET
-    @Path("{plateId}")
-    public String getTissue(@PathParam("plateId")String plateId) {
-        throw new NotFoundException("No plates for " + plateId);
-    }
-
     @PUT
     @Consumes("application/xml")
-    public void savePlate(Plate plate) {
+    public void add(XMLSerializableList<Plate> plates) {
         try {
-            LIMSInitializationListener.getLimsConnection().savePlate(plate, ProgressListener.EMPTY);
+            LIMSInitializationListener.getLimsConnection().savePlates(plates.getList(), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         } catch (BadDataException e) {
@@ -48,15 +37,14 @@ public class Plates {
     @Consumes("application/xml")
     @Produces("text/plain")
     @Path("delete")
-    public String deletePlate(Plate plate) {
+    public String delete(XMLSerializableList<Plate> plates) {
         try {
-            Set<Integer> ids = LIMSInitializationListener.getLimsConnection().deletePlate(plate, ProgressListener.EMPTY);
+            Set<Integer> ids = LIMSInitializationListener.getLimsConnection().deletePlates(plates.getList(), ProgressListener.EMPTY);
             return StringUtilities.join("\n", ids);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         }
     }
-
 
     @PUT
     @Consumes("text/plain")
@@ -72,7 +60,7 @@ public class Plates {
     @GET
     @Produces("application/xml")
     @Path("empty")
-    public XMLSerializableList<Plate> getEmptyPlates(@QueryParam("platesToCheck")String platesToCheck) {
+    public XMLSerializableList<Plate> getEmptyPlates(@QueryParam("platesToCheck")String platesToCheck) { // todo: Confirm if required.
         if(platesToCheck == null || platesToCheck.trim().isEmpty()) {
             return null;
         }
@@ -111,7 +99,7 @@ public class Plates {
 
     @GET
     @Path("extractions")
-    public XMLSerializableList<ExtractionReaction> getExtractionsForIds(@QueryParam("ids")String ids) {
+    public XMLSerializableList<ExtractionReaction> getExtractionsForIds(@QueryParam("ids")String ids) { // todo: Migrate logic to QueryService?
         if(ids == null) {
             throw new BadRequestException("Must specify ids");
         }
@@ -127,7 +115,7 @@ public class Plates {
 
     @GET
     @Path("tissues")
-    public StringMap getTissueIdsForExtractionIds(@QueryParam("type")String table, @QueryParam("extractionIds")String ids) {
+    public StringMap getTissueIdsForExtractionIds(@QueryParam("type")String table, @QueryParam("extractionIds")String ids) { // todo: Migrate logic to QueryService.
         if(ids == null) {
             throw new BadRequestException("Must specify extractionIds");
         }

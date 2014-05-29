@@ -4,7 +4,9 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.plugins.biocode.labbench.Workflow;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.NoContentException;
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * @author Matthew Cheung
@@ -15,15 +17,14 @@ import java.util.Arrays;
 @Path("workflows")
 public class Workflows {
     @GET
+    @Path("{id}")
     @Produces("application/xml")
-    public XMLSerializableList<Workflow> get(@QueryParam("ids")String ids) {
-        if(ids == null || ids.trim().isEmpty()) {
+    public Workflow get(@PathParam("id")String id) throws NoContentException {
+        if(id == null || id.trim().isEmpty()) {
             throw new BadRequestException("Must specify ids");
         }
-
         try {
-            return new XMLSerializableList<Workflow>(Workflow.class,
-                    LIMSInitializationListener.getLimsConnection().getWorkflows(Arrays.asList(ids.split(","))));
+            return RestUtilities.getOnlyItemFromList(LIMSInitializationListener.getLimsConnection().getWorkflows(Collections.singletonList(id)), "No workflow for id: " + id);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }

@@ -662,7 +662,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         List<String> queries = new ArrayList<String>();
         //noinspection UnusedDeclaration
         for (String s : tissueIds) {
-            queries.add("extractionId LIKE ?");
+            queries.add("sampleId LIKE ?");
         }
 
         String sql = "SELECT extractionId FROM extraction WHERE " + StringUtilities.join(" OR ", queries);
@@ -804,26 +804,26 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public Set<Integer> deletePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
+    public Set<Integer> deletePlates(List<Plate> plates, ProgressListener progress) throws DatabaseServiceException {
         Set<Integer> plateIds = new HashSet<Integer>();
+        for (Plate plate : plates) {
+            //delete the reactions...
+            if (plate.getReactionType() == Reaction.Type.Extraction) {
+                plateIds.addAll(deleteWorkflows(progress, plate));
+            } else {
+                deleteReactions(progress, plate);
+            }
 
-        //delete the reactions...
-        if(plate.getReactionType() == Reaction.Type.Extraction) {
-            plateIds.addAll(deleteWorkflows(progress, plate));
+
+            //delete the images...
+            progress.setMessage("Deleting GEL images");
+            deleteRecords("gelimages", "plate", Arrays.asList(plate.getId()));
+
+            //delete the plate...
+            progress.setMessage("deleting the plate");
+
+            deleteRecords("plate", "id", Arrays.asList(plate.getId()));
         }
-        else {
-            deleteReactions(progress, plate);
-        }
-
-
-        //delete the images...
-        progress.setMessage("Deleting GEL images");
-        deleteRecords("gelimages", "plate", Arrays.asList(plate.getId()));
-
-        //delete the plate...
-        progress.setMessage("deleting the plate");
-
-        deleteRecords("plate", "id", Arrays.asList(plate.getId()));
         return plateIds;
     }
 
@@ -1899,7 +1899,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             return Collections.emptyList();
         }
 
-        String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN (select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
+        String sql = "SELECT * FROM plate WHERE (plate.id NOT IN (select plate from extraction)) AND (plate.id NOT IN " +
+                "(select plate from pcr)) AND (plate.id NOT IN (select plate from cyclesequencing))";
 
 
         List<String> idMatches = new ArrayList<String>();
@@ -1930,11 +1931,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
-    public void savePlate(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
-        if(plate.getReactionType() == Reaction.Type.Extraction) {
-            saveExtractions(plate, progress);
-        } else {
-            saveReactions(plate, progress);
+    public void savePlates(List<Plate> plates, ProgressListener progress) throws BadDataException, DatabaseServiceException {
+        for (Plate plate : plates) {
+            if (plate.getReactionType() == Reaction.Type.Extraction) {
+                saveExtractions(plate, progress);
+            } else {
+                saveReactions(plate, progress);
+            }
         }
     }
 

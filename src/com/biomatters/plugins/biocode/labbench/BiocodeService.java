@@ -1482,12 +1482,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
         }
-        limsConnection.savePlate(plate, progress);
+        limsConnection.savePlates(Collections.singletonList(plate), progress);
     }
 
     public void deletePlate(ProgressListener progress, Plate plate) throws DatabaseServiceException {
 
-        Set<Integer> plateIds = limsConnection.deletePlate(plate, progress);
+        Set<Integer> plateIds = limsConnection.deletePlates(Collections.singletonList(plate), progress);
 
         if(plate.getReactionType() == Reaction.Type.Extraction) {
             List<Plate> emptyPlates = limsConnection.getEmptyPlates(plateIds);

@@ -20,15 +20,13 @@ public class Tissues {
     @GET
     @Produces("text/plain")
     @Path("extractions")
-    public String getForBarcodes(@QueryParam("tissues")String tissueIds) {
+    public String getForBarcodes(@QueryParam("tissues")String tissueIds) { // todo: Migrate logic to QueryService?
         if(tissueIds == null || tissueIds.trim().isEmpty()) {
             throw new BadRequestException("Must specify tissues");
         }
-
         try {
             return StringUtilities.join("\n", LIMSInitializationListener.getLimsConnection().
                     getAllExtractionIdsForTissueIds(Arrays.asList(tissueIds.split(","))));
-
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }

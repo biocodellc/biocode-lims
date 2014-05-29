@@ -6,6 +6,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.NoContentException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,14 +21,14 @@ import java.util.List;
 public class Sequences {
 
     @Produces("application/xml")
+    @Path("{id}")
     @GET
-    public List<AssembledSequence> getForIds(@QueryParam("ids")String idsString,
-        @DefaultValue("false")@QueryParam("includeFailed")Boolean includeFailed) {
-
-        List<Integer> ids = getIntegerListFromString(idsString);
+    public AssembledSequence getForIds(@PathParam("id")String idsString,
+        @DefaultValue("false")@QueryParam("includeFailed")Boolean includeFailed) throws NoContentException {
 
         try {
-            return LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(ids, null, includeFailed);
+            List<AssembledSequence> data = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(getIntegerListFromString(idsString), null, includeFailed);
+            return RestUtilities.getOnlyItemFromList(data,"No sequence for id: " + idsString);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -57,17 +58,23 @@ public class Sequences {
             LIMSInitializationListener.getLimsConnection().setSequenceStatus(submitted, Collections.singletonList(id));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
+            throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
 
-    @POST
+    @DELETE
     @Consumes("text/plain")
-    @Path("deletes")
-    public void delete(String idStrings) {
+    @Path("{id}")
+    public void delete(@PathParam("id")String id) {
         try {
-            LIMSInitializationListener.getLimsConnection().deleteSequences(getIntegerListFromString(idStrings));
+            List<Integer> integerListFromString = getIntegerListFromString(id);
+            if (integerListFromString.size() != 1) {
+                throw new BadRequestException("Invalid id: " + id);
+            }
+            LIMSInitializationListener.getLimsConnection().deleteSequences(integerListFromString);
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
+            throw new InternalServerErrorException(e.getMessage(), e);
         }
     }
 
