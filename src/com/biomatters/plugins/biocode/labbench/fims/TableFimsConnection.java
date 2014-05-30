@@ -101,14 +101,14 @@ public abstract class TableFimsConnection extends FIMSConnection{
             StringBuilder error = new StringBuilder("You have listed your tissue sample field (" + tissueCol + ") as also being a taxonomy field.  This is not allowed.");
             error.append("\n\nTaxonomy Fields:\n\n");
             for(DocumentField field : taxonomyFields) {
-                error.append(field.getCode()+": "+field.getName()+"\n");
+                error.append(field.getCode()).append(": ").append(field.getName()).append("\n");
             }
             error.append("\n\nOther Fields:\n\n");
             for(DocumentField field : fields) {
-                error.append(field.getCode()+": "+field.getName()+"\n");
+                error.append(field.getCode()).append(": ").append(field.getName()).append("\n");
             }
             
-            throw new ConnectionException(null, error.toString());
+            throw new ConnectionException(error.toString(), error.toString());
         }
         if(getTableCol(specimenCol) == null) {
             throw new ConnectionException(null, "You have listed your specimen field ("+tissueCol+") as also being a taxonomy field.  This is not allowed.");
