@@ -486,7 +486,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     GeneiousAction displayAction = new GeneiousAction("Display Options", null, IconUtilities.getIcons("monitor16.png")) {
         public void actionPerformed(ActionEvent e) {
             if (ReactionUtilities.showDisplayDialog(plateView.getPlate(), plateView)) {
-                saveAction.actionPerformed(null);
+                plateDoc.setPlate(plateView.getPlate());
             }
             updatePanel();
         }
