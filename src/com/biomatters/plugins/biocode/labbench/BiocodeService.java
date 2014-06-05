@@ -46,6 +46,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.List;
+import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 /**
@@ -1295,7 +1296,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void setDefaultDisplayedFieldsTemplate(DisplayFieldsTemplate template) {
-        getPreferencesForService().put(template.getReactionType()+"_defaultFieldsTemplate", template.getName());
+        Preferences prefs = getPreferencesForService();
+        prefs.put(template.getReactionType() + "_defaultFieldsTemplate", template.getName());
+        try {
+            prefs.flush();
+        } catch (BackingStoreException e) {
+            // Ignore.  Not much we can do if the backing store is failing.
+        }
     }
 
     public List<Thermocycle> getPCRThermocycles() {

@@ -479,7 +479,7 @@ public class ReactionUtilities {
         return s;
     }
 
-    public static boolean showDisplayDialog(Plate plate, JComponent owner) {
+    public static void showDisplayDialog(Plate plate, JComponent owner) {
 
         List<Reaction> reactions = Arrays.asList(plate.getReactions());
 
@@ -575,7 +575,6 @@ public class ReactionUtilities {
                 r.setBackgroundColorer(colorPanel.getColorer());
             }
         }
-        return templateSelectorPanel.defaultTemplateSet;
     }
 
     public static boolean documentFieldsAreEqual(DocumentField a, DocumentField b) {

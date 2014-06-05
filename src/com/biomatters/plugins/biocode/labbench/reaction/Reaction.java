@@ -120,7 +120,6 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private String locationString = "";
 
     public Reaction() {
-        setFieldsToDisplay(BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType()).getDisplayedFields());
     }
 
     public void setFimsSample(FimsSample sample) {
@@ -282,7 +281,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             if(displayableFields != null && displayableFields.contains(GEL_IMAGE_DOCUMENT_FIELD)) {
                 return Arrays.asList(GEL_IMAGE_DOCUMENT_FIELD);
             }
-            DisplayFieldsTemplate displayFieldsTemplate = getDefaultDisplayedFieldsTemplate();
+            DisplayFieldsTemplate displayFieldsTemplate = BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType());
             if(displayFieldsTemplate != null) {
                 List<DocumentField> fields = displayFieldsTemplate.getDisplayedFields();
                 if(fields.contains(GEL_IMAGE_DOCUMENT_FIELD)) {
@@ -294,19 +293,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(displayableFields != null) {
             return displayableFields;
         }
-        DisplayFieldsTemplate displayFieldsTemplate = getDefaultDisplayedFieldsTemplate();
+        DisplayFieldsTemplate displayFieldsTemplate = BiocodeService.getInstance().getDefaultDisplayedFieldsTemplate(getType());
         if(displayFieldsTemplate != null) {
             return displayFieldsTemplate.getDisplayedFields();
         }
         return Collections.emptyList();
-    }
-
-    public DisplayFieldsTemplate getDefaultDisplayedFieldsTemplate() {
-        final String templateName = getPreferences().get(getType() + "_fields", null);
-        if(templateName == null) {
-            return BiocodeService.getInstance().getDisplayedFieldTemplate(getType(), templateName);
-        }
-        return null;
     }
 
     public void setFieldsToDisplay(List<DocumentField> fields) {
@@ -481,9 +472,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         if(backgroundColorerElement != null) {
             backgroundColorer = XMLSerializer.classFromXML(backgroundColorerElement, BackgroundColorer.class);
         }
-        displayableFields = new ArrayList<DocumentField>();
-        for(Element e : element.getChildren("displayableField")) {
-            displayableFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
+        List<Element> displayableFieldElements = element.getChildren("displayableField");
+        if(!displayableFieldElements.isEmpty()) {
+            displayableFields = new ArrayList<DocumentField>();
+            for(Element e : displayableFieldElements) {
+                displayableFields.add(XMLSerializer.classFromXML(e, DocumentField.class));
+            }
         }
         Options options = getOptions();
         options.valuesFromXML(element.getChild("options"));

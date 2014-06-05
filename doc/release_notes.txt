@@ -1,3 +1,6 @@
+==Biocode Plugin 3.0.0 - TBD ==
+* Fixed issues with template system occasionally not saving or displaying templates correctly.
+
 ==Biocode Plugin 2.6.4 - 20 May 2014==
 * Plate bulk editor now starts at the top rather than the bottom.
 * Changed date search conditions "Less/Greater Than" to "Before/After".
