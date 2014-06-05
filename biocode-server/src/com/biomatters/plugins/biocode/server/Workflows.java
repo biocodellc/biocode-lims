@@ -2,10 +2,10 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.NoContentException;
-import java.util.Arrays;
 import java.util.Collections;
 
 /**

@@ -529,7 +529,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             buildCaches();
 
             progressListener.setMessage("Performing Further Initialization");
-            limsConnection.doAnyExtraInitialziation();
+            limsConnection.doAnyExtraInitialization();
 
             synchronized (this) {
                 isLoggedIn = true;

@@ -377,7 +377,7 @@ public class ServerLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public void doAnyExtraInitialziation() throws DatabaseServiceException {
+    public void doAnyExtraInitialization() throws DatabaseServiceException {
         // Nothing required on the client side
     }
 

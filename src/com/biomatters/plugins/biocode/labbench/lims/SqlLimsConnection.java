@@ -147,7 +147,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return failureReasons;
     }
 
-    public void doAnyExtraInitialziation() throws DatabaseServiceException {
+    public void doAnyExtraInitialization() throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();

@@ -165,7 +165,7 @@ public abstract class LIMSConnection {
         connect(limsOptions);
     }
 
-    public abstract void doAnyExtraInitialziation() throws DatabaseServiceException;
+    public abstract void doAnyExtraInitialization() throws DatabaseServiceException;
 
     // todo We want to get rid of all of these so we can just call a web method from the GUI in addition to the SQL method
 

@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
+import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
@@ -28,7 +29,7 @@ public class Sequences {
 
         try {
             List<AssembledSequence> data = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(getIntegerListFromString(idsString), null, includeFailed);
-            return RestUtilities.getOnlyItemFromList(data,"No sequence for id: " + idsString);
+            return RestUtilities.getOnlyItemFromList(data, "No sequence for id: " + idsString);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }

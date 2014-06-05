@@ -10,6 +10,7 @@ import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import org.jdom.Element;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,6 +43,38 @@ public class LimsSearchResult implements XMLSerializable {
 
     public List<Integer> getSequenceIds() {
         return Collections.unmodifiableList(sequenceIds);
+    }
+
+    public void addTissueSample(FimsSample tissueSample) {
+        tissueSamples.add(tissueSample);
+    }
+
+    public void addAllTissueSamples(Collection<? extends FimsSample> tissueSamples) {
+        this.tissueSamples.addAll(tissueSamples);
+    }
+
+    public void addWorkflow(WorkflowDocument workflow) {
+        workflows.add(workflow);
+    }
+
+    public void addAllWorkflows(Collection<? extends WorkflowDocument> workflows) {
+        this.workflows.addAll(workflows);
+    }
+
+    public void addPlate(PlateDocument plate) {
+        plates.add(plate);
+    }
+
+    public void addAllPlates(Collection<? extends PlateDocument> plates) {
+        this.plates.addAll(plates);
+    }
+
+    public void addSequenceID(Integer sequenceId) {
+        sequenceIds.add(sequenceId);
+    }
+
+    public void addAllSequenceIDs(Collection<? extends Integer> sequenceIds) {
+        this.sequenceIds.addAll(sequenceIds);
     }
 
     private static final String TISSUES = "tissues";
