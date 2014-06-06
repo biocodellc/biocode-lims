@@ -1,10 +1,6 @@
 package com.biomatters.plugins.biocode.server.utilities;
 
-import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
-import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
-import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
-
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -18,62 +14,20 @@ class XorQuery extends CompoundQuery {
         super(LHS, RHS);
     }
 
-    @Override
-    LimsSearchResult combineResults(List<FimsSample> LHSTissueSamples,
-                                    List<FimsSample> RHSTissueSamples,
-                                    List<WorkflowDocument> LHSWorkflows,
-                                    List<WorkflowDocument> RHSWorkflows,
-                                    List<PlateDocument> LHSPlates,
-                                    List<PlateDocument> RHSPlates,
-                                    List<Integer> LHSSequenceIds,
-                                    List<Integer> RHSSequenceIds) {
+    <T> List<T> combineLists(List<T> one, List<T> two) {
+        List<T> result = new ArrayList<T>();
 
-        LimsSearchResult combinedResult = new LimsSearchResult();
-
-        for (FimsSample tissueSample : LHSTissueSamples) {
-            if (!RHSTissueSamples.contains(tissueSample)) {
-                combinedResult.addTissueSample(tissueSample);
+        for (T item : one) {
+            if (!two.contains(item)) {
+                result.add(item);
             }
         }
-        for (FimsSample tissueSample : RHSTissueSamples) {
-            if (!LHSTissueSamples.contains(tissueSample)) {
-                combinedResult.addTissueSample(tissueSample);
+        for (T item : two) {
+            if (!one.contains(item)) {
+                result.add(item);
             }
         }
 
-        for (WorkflowDocument workflow : LHSWorkflows) {
-            if (!RHSWorkflows.contains(workflow)) {
-                combinedResult.addWorkflow(workflow);
-            }
-        }
-        for (WorkflowDocument workflow : RHSWorkflows) {
-            if (!LHSWorkflows.contains(workflow)) {
-                combinedResult.addWorkflow(workflow);
-            }
-        }
-
-        for (PlateDocument plate : LHSPlates) {
-            if (!RHSPlates.contains(plate)) {
-                combinedResult.addPlate(plate);
-            }
-        }
-        for (PlateDocument plate : RHSPlates) {
-            if (!LHSPlates.contains(plate)) {
-                combinedResult.addPlate(plate);
-            }
-        }
-
-        for (Integer sequenceId : LHSSequenceIds) {
-            if (!RHSSequenceIds.contains(sequenceId)) {
-                combinedResult.addSequenceID(sequenceId);
-            }
-        }
-        for (Integer plate : RHSSequenceIds) {
-            if (!LHSSequenceIds.contains(plate)) {
-                combinedResult.addSequenceID(plate);
-            }
-        }
-
-        return combinedResult;
+        return result;
     }
 }

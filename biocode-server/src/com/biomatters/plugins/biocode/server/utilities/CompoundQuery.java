@@ -37,12 +37,23 @@ abstract class CompoundQuery extends Query {
                               RHSResult.getSequenceIds());
     }
 
-    abstract LimsSearchResult combineResults(List<FimsSample> LHSTissueSamples,
+    final LimsSearchResult combineResults(List<FimsSample> LHSTissueSamples,
                                              List<FimsSample> RHSTissueSamples,
                                              List<WorkflowDocument> LHSWorkflows,
                                              List<WorkflowDocument> RHSWorkflows,
                                              List<PlateDocument> LHSPlates,
                                              List<PlateDocument> RHSPlates,
                                              List<Integer> LHSSequenceIds,
-                                             List<Integer> RHSSequenceIds);
+                                             List<Integer> RHSSequenceIds) {
+        LimsSearchResult combinedResult = new LimsSearchResult();
+
+        combinedResult.addAllTissueSamples(combineLists(LHSTissueSamples, RHSTissueSamples));
+        combinedResult.addAllWorkflows(combineLists(LHSWorkflows, RHSWorkflows));
+        combinedResult.addAllPlates(combineLists(LHSPlates, RHSPlates));
+        combinedResult.addAllSequenceIDs(combineLists(LHSSequenceIds, RHSSequenceIds));
+
+        return combinedResult;
+    }
+
+    abstract <T> List<T> combineLists(List<T> one, List<T> two);
 }

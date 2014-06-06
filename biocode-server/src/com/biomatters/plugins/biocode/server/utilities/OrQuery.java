@@ -1,10 +1,6 @@
 package com.biomatters.plugins.biocode.server.utilities;
 
-import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
-import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
-import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
-
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,40 +15,16 @@ class OrQuery extends CompoundQuery {
         super(LHS, RHS);
     }
 
-    @Override
-    LimsSearchResult combineResults(List<FimsSample> LHSTissueSamples,
-                                    List<FimsSample> RHSTissueSamples,
-                                    List<WorkflowDocument> LHSWorkflows,
-                                    List<WorkflowDocument> RHSWorkflows,
-                                    List<PlateDocument> LHSPlates,
-                                    List<PlateDocument> RHSPlates,
-                                    List<Integer> LHSSequenceIds,
-                                    List<Integer> RHSSequenceIds) {
+    <T> List<T> combineLists(List<T> one, List<T> two) {
+        Set<T> filterSet = new HashSet<T>();
 
-        LimsSearchResult combinedResult = new LimsSearchResult();
+        filterSet.addAll(one);
+        filterSet.addAll(two);
 
-        Set<FimsSample> combinedSampleTissues = new HashSet<FimsSample>();
-        Set<WorkflowDocument> combinedWorkflowDocuments = new HashSet<WorkflowDocument>();
-        Set<PlateDocument> combinedPlateDocuments = new HashSet<PlateDocument>();
-        Set<Integer> combinedSequenceIds = new HashSet<Integer>();
+        List<T> result = new ArrayList<T>();
 
-        combinedSampleTissues.addAll(LHSTissueSamples);
-        combinedSampleTissues.addAll(RHSTissueSamples);
+        result.addAll(filterSet);
 
-        combinedWorkflowDocuments.addAll(LHSWorkflows);
-        combinedWorkflowDocuments.addAll(RHSWorkflows);
-
-        combinedPlateDocuments.addAll(LHSPlates);
-        combinedPlateDocuments.addAll(RHSPlates);
-
-        combinedSequenceIds.addAll(LHSSequenceIds);
-        combinedSequenceIds.addAll(RHSSequenceIds);
-
-        combinedResult.addAllTissueSamples(combinedSampleTissues);
-        combinedResult.addAllWorkflows(combinedWorkflowDocuments);
-        combinedResult.addAllPlates(combinedPlateDocuments);
-        combinedResult.addAllSequenceIDs(combinedSequenceIds);
-
-        return combinedResult;
+        return result;
     }
 }
