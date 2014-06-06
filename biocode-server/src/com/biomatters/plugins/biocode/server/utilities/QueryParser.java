@@ -88,15 +88,15 @@ class QueryParser {
         Stack<Query> queryQueue = new Stack<Query>();
         while (!queryPostfix.isEmpty()) {
             String element = queryPostfix.remove();
-            if (element.equals("&")) {
+            if (element.equals("AND")) {
                 Query one = queryQueue.pop();
                 Query two = queryQueue.pop();
                 queryQueue.push(new AndQuery(one, two));
-            } else if (element.equals("^")) {
+            } else if (element.equals("XOR")) {
                 Query one = queryQueue.pop();
                 Query two = queryQueue.pop();
                 queryQueue.push(new XorQuery(one, two));
-            } else if (element.equals("|")) {
+            } else if (element.equals("OR")) {
                 Query one = queryQueue.pop();
                 Query two = queryQueue.pop();
                 queryQueue.push(new OrQuery(one, two));
@@ -186,27 +186,41 @@ class QueryParser {
                         queryPostfix.add(popped);
                     }
                     break;
-                case '&':
-                    while (!stack.empty() && stack.peek().equals("&")) {
+                case 'A':
+                    if (query.charAt(position + 1) != 'N' || query.charAt(position + 2) != 'D') {
+                        throw new BadRequestException("Invalid query: " + query);
+                    }
+                    position = position + 2;
+                    while (!stack.empty() && stack.peek().equals("AND")) {
                         queryPostfix.add(stack.pop());
                     }
-                    stack.push(Character.toString(query.charAt(position)));
+                    stack.push("AND");
                     break;
-                case '^':
-                    while (!stack.empty() && (stack.peek().equals("&") ||
-                            stack.peek().equals("^"))) {
+                case 'X':
+                    if (query.charAt(position + 1) != 'O' || query.charAt(position + 2) != 'R') {
+                        throw new BadRequestException("Invalid query: " + query);
+                    }
+                    position = position + 2;
+                    while (!stack.empty() && (stack.peek().equals("AND") ||
+                                              stack.peek().equals("XOR"))) {
                         queryPostfix.add(stack.pop());
                     }
-                    stack.push(Character.toString(query.charAt(position)));
+                    stack.push("XOR");
                     break;
-                case '|':
-                    while (!stack.empty() && (stack.peek().equals("&") ||
-                            stack.peek().equals("^") ||
-                            stack.peek().equals("|"))) {
+                case 'O':
+                    if (query.charAt(position + 1) != 'R') {
+                        throw new BadRequestException("Invalid query: " + query);
+                    }
+                    position++;
+                    while (!stack.empty() && (stack.peek().equals("AND") ||
+                                              stack.peek().equals("XOR") ||
+                                              stack.peek().equals("OR"))) {
                         queryPostfix.add(stack.pop());
                     }
-                    stack.push(Character.toString(query.charAt(position)));
+                    stack.push("OR");
                     break;
+                default:
+                    throw new BadRequestException("Invalid query: " + query);
             }
             position++;
         }

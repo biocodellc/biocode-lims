@@ -28,13 +28,13 @@ public class RestUtilities {
                                                     boolean retrieveTissues,
                                                     boolean retrieveWorkflows,
                                                     boolean retrievePlates,
-                                                    boolean retrieveSequences,
+                                                    boolean retrieveSequenceIds,
                                                     Set<String> tissuesToMatch) throws DatabaseServiceException {
 
         Map<String, Object> TISSUES_WORKFLOWS_PLATES_SEQUENCES = BiocodeService.getSearchDownloadOptions(retrieveTissues,
                                                                                                          retrieveWorkflows,
                                                                                                          retrievePlates,
-                                                                                                         retrieveSequences);
+                                                                                                         retrieveSequenceIds);
 
         Query q = new QueryParser().parseQuery(query);
         return q.execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
