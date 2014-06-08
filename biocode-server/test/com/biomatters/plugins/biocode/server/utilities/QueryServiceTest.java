@@ -113,7 +113,7 @@ public class QueryServiceTest extends Assert {
     }
     @Test(expected=BadRequestException.class)
     public void testParseInvalidDateQueryValueFormat() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=02-02-2004]");
+        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=2004/02/02]");
     }
 
     private <T extends Comparable> void testSameContentsUnordered(List<T> oneOrTwoAsList, List<T> result) {
