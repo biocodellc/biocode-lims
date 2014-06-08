@@ -14,19 +14,19 @@ import java.util.Set;
  *         Created on 5/06/14 12:01 PM
  */
 class BasicQuery extends Query {
-    private DocumentField field;
+    private DocumentField searchAttribute;
     private Condition condition;
     private Object value;
 
-    BasicQuery(DocumentField field, Condition condition, Object value) {
-        this.field = field;
+    BasicQuery(DocumentField searchAttribute, Condition condition, Object value) {
+        this.searchAttribute = searchAttribute;
         this.condition = condition;
         this.value = value;
     }
 
     @Override
     LimsSearchResult execute(Map<String, Object> tissuesWorkflowsPlatesSequences, Set<String> tissuesToMatch) throws DatabaseServiceException {
-        com.biomatters.geneious.publicapi.databaseservice.Query query = com.biomatters.geneious.publicapi.databaseservice.Query.Factory.createFieldQuery(field, condition, new Object[]{ value }, tissuesWorkflowsPlatesSequences);
+        com.biomatters.geneious.publicapi.databaseservice.Query query = com.biomatters.geneious.publicapi.databaseservice.Query.Factory.createFieldQuery(searchAttribute, condition, new Object[]{ value }, tissuesWorkflowsPlatesSequences);
         return BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(query, tissuesToMatch, null);
     }
 }

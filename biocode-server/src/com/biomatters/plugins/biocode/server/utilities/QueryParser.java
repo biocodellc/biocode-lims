@@ -2,8 +2,6 @@ package com.biomatters.plugins.biocode.server.utilities;
 
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 
 import javax.ws.rs.BadRequestException;
 import java.text.DateFormat;
@@ -21,6 +19,11 @@ import java.util.regex.Pattern;
  *         Parses String query to com.biomatters.plugins.biocode.server.utilities.Query tree.
  */
 class QueryParser {
+    List<DocumentField> searchAttributes;
+
+    public QueryParser(List<DocumentField> validFields) {
+        searchAttributes = validFields;
+    }
 
     private static Map<Class, Map<String, Condition>> stringSymbolToConditionMaps = new HashMap<Class, Map<String, Condition>>();
 
@@ -113,8 +116,7 @@ class QueryParser {
             throw new BadRequestException("Invalid condition: " + query);
         }
 
-        List<DocumentField> searchAttributes = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
-        searchAttributes.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
+        /* Extract query field. */
         DocumentField field = null;
         for (DocumentField searchAttribute : searchAttributes) {
             if (searchAttribute.getCode().equals(queryParts[0])) {
@@ -126,6 +128,7 @@ class QueryParser {
             throw new BadRequestException("Invalid search attribute: " + queryParts[0]);
         }
 
+        /* Extract query condition. */
         Pattern conditionSymbolRegexPattern = Pattern.compile(conditionSymbolsGroupRegex);
         Matcher matcher = conditionSymbolRegexPattern.matcher(query);
         matcher.find();
@@ -139,6 +142,7 @@ class QueryParser {
 
         Class fieldClassType = field.getValueType();
 
+        /* Extract query value. */
         Object value = null;
         if (fieldClassType.equals(Integer.class)) {
             try {
@@ -158,6 +162,58 @@ class QueryParser {
         }
 
         return new BasicQuery(field, condition, value);
+    }
+
+    /* Unsupported field values grayed out. */
+    private Object parseQueryValue(Class queryValueType, String stringValue) {
+        Object result;
+
+        if (queryValueType.equals(Integer.class)) {
+            try {
+                result = new Integer(stringValue);
+            } catch (NumberFormatException e) {
+                throw new BadRequestException("Invalid integer value: " + stringValue, e);
+            }
+        } else if (queryValueType.equals(String.class)) {
+            result = stringValue;
+        } else if (queryValueType.equals(Date.class)) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            try {
+                result = dateFormat.parse(stringValue);
+            } catch (ParseException e) {
+                throw new BadRequestException("Invalid date value: " + stringValue, e);
+            }
+        }
+//        else if (queryValueType.equals(Boolean.class)) {
+//            if (stringValue.toLowerCase().equals("true") || stringValue.toLowerCase().equals("false")) {
+//                result = new Boolean(stringValue);
+//            } else {
+//                throw new BadRequestException("Invalid boolean value: " + stringValue);
+//            }
+//        } else if (queryValueType.equals(Long.class)) {
+//            try {
+//                result = new Long(stringValue);
+//            } catch (NumberFormatException e) {
+//                throw new BadRequestException("Invalid long value: " + stringValue, e);
+//            }
+//        } else if (queryValueType.equals(Double.class)) {
+//            try {
+//                result = new Double(stringValue);
+//            } catch (NumberFormatException e) {
+//                throw new BadRequestException("Invalid double value: " + stringValue, e);
+//            }
+//        }  else if (queryValueType.equals(URL.class)) {
+//            try {
+//                result = new URL(stringValue);
+//            } catch (MalformedURLException e) {
+//                throw new BadRequestException("Invalid url value: " + stringValue, e);
+//            }
+//        }
+        else {
+            throw new BadRequestException("Unsupported query value type.");
+        }
+
+        return result;
     }
 
     /* Converts String queries to postfix notation. */
