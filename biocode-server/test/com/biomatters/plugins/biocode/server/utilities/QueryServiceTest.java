@@ -1,8 +1,11 @@
 package com.biomatters.plugins.biocode.server.utilities;
 
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
+import javax.ws.rs.BadRequestException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,49 +17,103 @@ import java.util.List;
  */
 public class QueryServiceTest extends Assert {
 
+    List<DocumentField> searchAttributes;
+
+    @Before
+    public void init() {
+        searchAttributes = Arrays.asList(
+                /* Not yet supported. */
+                // DocumentField.createBooleanField("BooleanField", "Boolean field", "booleanField", false, false),
+                // DocumentField.createLongField("LongField", "Long field", "longField", false, false),
+                // DocumentField.createDoubleField("DoubleField", "Double field", "doubleField"),
+                // DocumentField.createURLField("URLField", "URL field", "urlField"),
+                DocumentField.createIntegerField("IntegerField", "Integer field", "integerField"),
+                DocumentField.createStringField("StringField", "String field", "stringField"),
+                DocumentField.createDateField("DateField", "Date field", "dateField")
+        );
+    }
+
     @Test
-    public void testAndAllOverlap() {
+    public void testParseBasicQuery() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=value]");
+        assertTrue(query instanceof BasicQuery);
+    }
+    @Test
+    public void testParseAndQuery() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]AND[stringField=valueTwo]");
+        assertTrue(query instanceof AndQuery);
+    }
+    @Test
+    public void testParseXorQuery() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]XOR[stringField=valueTwo]");
+        assertTrue(query instanceof XorQuery);
+    }
+    @Test
+    public void testParseOrQuery() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]OR[stringField=valueTwo]");
+        assertTrue(query instanceof OrQuery);
+    }
+
+    @Test
+    public void testAndFunctionOnAllOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("one", "two", "three"), Arrays.asList("one", "two", "three"), new AndQuery(null, null));
     }
-
     @Test
-    public void testANDPartialOverlap() {
+    public void testAndFunctionOnPartialOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("three", "four", "five"), Arrays.asList("three"), new AndQuery(null, null));
     }
-
     @Test
-    public void testANDNoOverlap() {
+    public void testAndFunctionOnNoOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("four", "five", "six"), new ArrayList<String>(), new AndQuery(null, null));
     }
-
     @Test
-    public void testXORAllOverlap() {
+    public void testXorFunctionOnAllOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("one", "two", "three"), new ArrayList<String>(), new XorQuery(null, null));
     }
-
     @Test
-    public void testXORPartialOverlap() {
+    public void testXorFunctionOnPartialOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("three", "four", "five"), Arrays.asList("one", "two", "four", "five"), new XorQuery(null, null));
     }
-
     @Test
-    public void testXORNoOverlap() {
+    public void testXorFunctionOnNoOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("four", "five", "six"), Arrays.asList("one", "two", "three", "four", "five", "six"), new XorQuery(null, null));
     }
-
     @Test
-    public void testORAllOverlap() {
+    public void testOrFunctionOnAllOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("one", "two", "three"), Arrays.asList("one", "two", "three"), new OrQuery(null, null));
     }
-
     @Test
-    public void testORPartialOverlap() {
+    public void testOrFunctionOnPartialOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("three", "four", "five"), Arrays.asList("one", "two", "three", "four", "five"), new OrQuery(null, null));
     }
-
     @Test
-    public void testORNoneOverlap() {
+    public void testOrFunctionOnNoOverlappingValues() {
         testCompoundQuery(Arrays.asList("one", "two", "three"), Arrays.asList("four", "five", "six"), Arrays.asList("one", "two", "three", "four", "five", "six"), new OrQuery(null, null));
+    }
+
+    @Test(expected=BadRequestException.class)
+    public void testParseInvalidQuerySearchAttribute() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[invalidField=value]");
+    }
+    @Test(expected=BadRequestException.class)
+    public void testParseInvalidQueryCondition() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[stringField*value]");
+    }
+    @Test
+    public void testParseValidIntegerQueryValue() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[integerField=0]");
+    }
+    @Test(expected=BadRequestException.class)
+    public void testParseInvalidIntegerQueryValue() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[integerField=nonIntegerValue]");
+    }
+    @Test
+    public void testParseValidDateQueryValueFormat() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=2004-02-02]");
+    }
+    @Test(expected=BadRequestException.class)
+    public void testParseInvalidDateQueryValueFormat() {
+        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=02-02-2004]");
     }
 
     private <T extends Comparable> void testSameContentsUnordered(List<T> oneOrTwoAsList, List<T> result) {
