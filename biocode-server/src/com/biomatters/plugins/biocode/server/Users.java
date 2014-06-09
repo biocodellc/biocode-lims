@@ -40,7 +40,6 @@ public class Users {
     @GET
     @Produces("text/plain")
     public String list() {
-        // todo better way?  Does Spring Security provide a way to list all users?
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
