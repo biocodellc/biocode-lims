@@ -237,12 +237,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return activeFIMSConnection;
     }
 
-    public LIMSConnection getActiveLIMSConnection() throws ConnectionException {
-        if (limsConnection == null) {
-            throw new ConnectionException("No active lims connection");
-        }
-        return limsConnection;
-    }
+    public LIMSConnection getActiveLIMSConnection() { return limsConnection; }
 
     public synchronized boolean isLoggedIn() {
         return isLoggedIn;
