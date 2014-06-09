@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -8,6 +7,8 @@ import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.provisioning.UserDetailsManager;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.GenericEntity;
+import javax.ws.rs.core.Response;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -38,19 +39,23 @@ public class Users {
     }
 
     @GET
-    @Produces("text/plain")
-    public String list() {
+    @Produces({"application/xml", "application/json"})
+    public Response list() {
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
             PreparedStatement statement = connection.prepareStatement("SELECT username FROM users");
             ResultSet resultSet = statement.executeQuery();
-            List<String> usernames = new ArrayList<String>();
+            List<User> users = new ArrayList<User>();
             while(resultSet.next()) {
-                usernames.add(resultSet.getString(1));
+                User user = new User();
+                user.username = resultSet.getString(1);
+                users.add(user);
             }
             resultSet.close();
-            return StringUtilities.join(",", usernames);
+
+            return Response.ok(new GenericEntity<List<User>>(users){}).build();
+
         } catch (SQLException e) {
             throw new InternalServerErrorException("Failed to list users", e);
         } finally {
@@ -65,17 +70,23 @@ public class Users {
     }
 
     @PUT
-    public void addUser(@QueryParam("username")String username, @QueryParam("password")String password) {
-        User user = new User(username, password);
-        manager.createUser(user);
+    @Consumes("application/xml")
+    public void addUser(com.biomatters.plugins.biocode.server.User user) {
+        UserAccount account = new UserAccount(user.username, user.password);
+        manager.createUser(account);
+    }
+
+    @DELETE
+    public void deleteUser(com.biomatters.plugins.biocode.server.User user) {
+        // todo
     }
 
     private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    private static class User implements UserDetails {
+    private static class UserAccount implements UserDetails {
 
         private String username;
         private String passwordHash;
-        public User(String username, String password) {
+        public UserAccount(String username, String password) {
             this.username = username;
             this.passwordHash = encoder.encode(password);
         }
