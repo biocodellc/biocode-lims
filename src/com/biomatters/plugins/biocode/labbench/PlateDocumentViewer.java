@@ -1133,6 +1133,4 @@ public class PlateDocumentViewer extends DocumentViewer{
             mainPanel.addSpanningComponent(imagePanel, false, GridBagConstraints.WEST);
         }
     }
-
-
 }

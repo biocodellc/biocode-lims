@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.Execution;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -236,7 +237,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return activeFIMSConnection;
     }
 
-    public LIMSConnection getActiveLIMSConnection() {
+    public LIMSConnection getActiveLIMSConnection() throws ConnectionException {
+        if (limsConnection == null) {
+            throw new ConnectionException("No active lims connection");
+        }
         return limsConnection;
     }
 
@@ -636,8 +640,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         };
     }
 
-
-
     @Override
     public void addDatabaseServiceListener(DatabaseServiceListener listener) {
         super.addDatabaseServiceListener(listener);
@@ -733,7 +735,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                                 fimsQueries.size() == compoundQuery.getChildren().size() ||
                                 compoundQuery.getOperator() == CompoundSearchQuery.Operator.OR
                         );
-
                     }
                     if(downloadAllSamplesFromFimsQuery) {
                         callback.setMessage("Downloading Tissues");
@@ -745,7 +746,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                             if(!toRetrieveFromFims.isEmpty()) {
                                 tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(toRetrieveFromFims));
                             }
-
                         } catch (ConnectionException e) {
                             throw new DatabaseServiceException(e, e.getMessage(), false);
                         }
