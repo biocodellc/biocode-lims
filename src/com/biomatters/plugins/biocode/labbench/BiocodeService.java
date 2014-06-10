@@ -238,7 +238,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public LIMSConnection getActiveLIMSConnection() throws DatabaseServiceException {
         if (limsConnection == null) {
-            throw new DatabaseServiceException("No active Lims connection.", false);
+            throw new DatabaseServiceException("No active Lims connection", false);
         }
         return limsConnection;
     }
@@ -464,8 +464,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             System.out.println();
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (DatabaseServiceException e) {
-            e.printStackTrace();
         }
 
         String error = null;
@@ -474,8 +472,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             limsConnection = connection.getLIMSConnection();
         } catch (ConnectionException e) {
             error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: " + e.getMessage();
-        } catch (DatabaseServiceException e) {
-            error = e.getMessage();
         }
 
         if(error == null) {
@@ -510,12 +506,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     Dialogs.showMessageDialog(message, "Error connecting to FIMS");
                 }
             }
-            logOut();
-            progressListener.setProgress(1.0);
-            return;
-        } catch (DatabaseServiceException ex) {
-            progressListener.setProgress(1.0);
-            Dialogs.showMessageDialog(ex.getMessage(), "Error connecting to FIMS");
             logOut();
             progressListener.setProgress(1.0);
             return;
