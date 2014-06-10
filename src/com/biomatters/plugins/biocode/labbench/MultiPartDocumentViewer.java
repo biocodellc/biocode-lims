@@ -41,8 +41,9 @@ public class MultiPartDocumentViewer extends DocumentViewer {
                 Runnable runnable = new Runnable() {
                     public void run() {
                         Savepoint savepoint = null;
-                        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+                        LIMSConnection limsConnection;
                         try {
+                            limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
                             for (int i = 0; i < doc.getNumberOfParts(); i++) {
                                 MuitiPartDocument.Part p = doc.getPart(i);
                                 progressFrame.setMessage("Saving " + p.getName());

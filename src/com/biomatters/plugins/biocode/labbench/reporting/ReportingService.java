@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.reporting;
 
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -49,6 +50,9 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
             } catch (SQLException e) {
                 e.printStackTrace();
                 Dialogs.showMessageDialog("Error connecting the reporting module: "+e.getMessage());  //todo: add the stacktrace
+            } catch (DatabaseServiceException e) {
+                e.printStackTrace();
+                Dialogs.showMessageDialog(e.getMessage());
             }
             panel.revalidate();
         }
@@ -102,6 +106,9 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
                     message = "Could not connect to server.  Please check your network connection, and reconnect.";
                 }
                 Dialogs.showMessageDialog(message);  //todo: add the stacktrace
+            } catch (DatabaseServiceException e) {
+                e.printStackTrace();
+                Dialogs.showMessageDialog(e.getMessage());
             }
         }
         return panel;
@@ -129,7 +136,7 @@ public class ReportingService extends GeneiousServiceWithPanel implements Charta
         };
     }
 
-    private void fillPanel() throws SQLException {
+    private void fillPanel() throws SQLException, DatabaseServiceException {
         panel.removeAll();
 
         if(!BiocodeService.getInstance().isLoggedIn() || reportGenerator == null) {

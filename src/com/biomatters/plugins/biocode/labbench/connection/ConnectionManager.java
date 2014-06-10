@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.connection;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
@@ -99,7 +100,12 @@ public class ConnectionManager implements XMLSerializable{
         loginOptions.addChildOptions("fims", null, null, fimsOptions);
         loginOptions.addChildOptions("lims", null, null, limsOptions);
         loginOptions.restorePreferences();
-        return Connection.forOld("My Default Connection", loginOptions.valuesToXML("root"));
+        try {
+            return Connection.forOld("My Default Connection", loginOptions.valuesToXML("root"));
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private static Preferences getPreferencesFromPreviousVersion() {
@@ -277,37 +283,37 @@ public class ConnectionManager implements XMLSerializable{
     public boolean checkIfWeCanLogIn() {
         if(selectedConnection >= 0 && selectedConnection < connections.size()) {
             final Connection conn = connections.get(selectedConnection);
-            final Options passwordOptions = conn.getEnterPasswordOptions();
-            if(passwordOptions != null) {
-                final AtomicBoolean dialogResult = new AtomicBoolean();
-                Runnable runnable = new Runnable() {
-                    public void run() {
-                        dialogResult.set(Dialogs.showOptionsDialog(passwordOptions, "Biocode Plugin", false));
-                    }
-                };
-                ThreadUtilities.invokeNowOrWait(runnable);
-                if(!dialogResult.get()) {
-                    return false;
-                }
-                conn.setPasswordsFromOptions(passwordOptions);
-                final AtomicReference<Exception> error = new AtomicReference<Exception>();
-                Runnable r = new Runnable() {
-                    public void run() {
-                        try {
-                            conn.updateNowThatWeHaveAPassword();
-                        } catch (ConnectionException e) {
-                            Dialogs.showMessageDialog("Could not log in: "+e.getMessage());
-                            error.set(e);
+                final Options passwordOptions = conn.getEnterPasswordOptions();
+                if (passwordOptions != null) {
+                    final AtomicBoolean dialogResult = new AtomicBoolean();
+                    Runnable runnable = new Runnable() {
+                        public void run() {
+                            dialogResult.set(Dialogs.showOptionsDialog(passwordOptions, "Biocode Plugin", false));
                         }
+                    };
+                    ThreadUtilities.invokeNowOrWait(runnable);
+                    if (!dialogResult.get()) {
+                        return false;
                     }
-                };
-                ThreadUtilities.invokeNowOrWait(r);
-                if(error.get() != null) {
-                    return false;
+                    conn.setPasswordsFromOptions(passwordOptions);
+                    final AtomicReference<Exception> error = new AtomicReference<Exception>();
+                    Runnable r = new Runnable() {
+                        public void run() {
+                            try {
+                                conn.updateNowThatWeHaveAPassword();
+                            } catch (ConnectionException e) {
+                                Dialogs.showMessageDialog("Could not log in: " + e.getMessage());
+                                error.set(e);
+                            }
+                        }
+                    };
+                    ThreadUtilities.invokeNowOrWait(r);
+                    if (error.get() != null) {
+                        return false;
+                    }
                 }
+                return true;
             }
-            return true;
-        }
         return false;
     }
 
@@ -337,10 +343,15 @@ public class ConnectionManager implements XMLSerializable{
         }
     }
 
-    public Element toXML() {
+    public Element toXML() { // todo: handle null returns at point of calls
         Element root = new Element("ConnectionManager");
-        for(int i=0; i < connections.size(); i++) {
-            root.addContent(connections.get(i).getXml(i == selectedConnection)); //reserialize just the new connections, and the one that we have selected
+        try {
+            for (int i = 0; i < connections.size(); i++) {
+                root.addContent(connections.get(i).getXml(i == selectedConnection)); //reserialize just the new connections, and the one that we have selected
+            }
+        } catch(DatabaseServiceException e) {
+            e.printStackTrace();
+            return null;
         }
         root.addContent(new Element("SelectedConnection").setText(""+selectedConnection));
         if(connectOnStartup) {

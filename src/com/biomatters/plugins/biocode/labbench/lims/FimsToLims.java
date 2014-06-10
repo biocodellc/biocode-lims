@@ -53,7 +53,7 @@ public class FimsToLims {
     private List<PrimerSet> sequencingPrimers;
     private List<PrimerSet> sequencingRevPrimers;
 
-    public FimsToLims(BiocodeService service) throws SQLException{
+    public FimsToLims(BiocodeService service) throws SQLException, DatabaseServiceException {
         this.fims = service.getActiveFIMSConnection();
         this.lims = service.getActiveLIMSConnection();
         populateHasFimsLimsValues();

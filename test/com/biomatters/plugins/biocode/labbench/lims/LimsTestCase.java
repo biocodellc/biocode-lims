@@ -35,7 +35,7 @@ public abstract class LimsTestCase extends Assert {
     private static final long WAIT_INCREMENT = 200;
 
     @Before
-    public void createDatabaseAndInitializeConnections() throws IOException, SQLException, ConnectionException {
+    public void createDatabaseAndInitializeConnections() throws IOException, SQLException, ConnectionException, DatabaseServiceException {
         TestGeneious.initialize();
 
         File temp = FileUtilities.createTempDir(true);

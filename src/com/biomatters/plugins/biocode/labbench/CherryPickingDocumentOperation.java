@@ -67,7 +67,12 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 new Options.OptionValue(Plate.Size.w384.name(), Plate.Size.w384.toString())
         );
 
-        CherryPickingOptions cherryPickingConditionsOptions = new CherryPickingOptions(this.getClass());
+        CherryPickingOptions cherryPickingConditionsOptions;
+        try {
+            cherryPickingConditionsOptions = new CherryPickingOptions(this.getClass());
+        } catch (DatabaseServiceException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
+        }
 
         final Options.RadioOption<Options.OptionValue> plateSizeOption = options.addRadioOption("plateSize", "Plate Size", sizeValues, sizeValues.get(0), Options.Alignment.HORIZONTAL_ALIGN);
 
@@ -121,7 +126,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                 new OptionValue(FailureReason.getOptionName(), "Failure Reason")
         };
 
-        public CherryPickingOptions(Class sourceClass) throws DocumentOperationException {
+        public CherryPickingOptions(Class sourceClass) throws DocumentOperationException, DatabaseServiceException {
             super(sourceClass);
             beginAlignHorizontally("", false);
 

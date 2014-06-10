@@ -78,10 +78,14 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
-        return new AddAssemblyResultsToLimsOptions(documents, isPass);
+        try {
+            return new AddAssemblyResultsToLimsOptions(documents, isPass);
+        } catch (DatabaseServiceException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
+        }
     }
 
-    public Map<URN, AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options, SequenceSelection selection) throws DocumentOperationException {
+    public Map<URN, AssemblyResult> getAssemblyResults(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, AddAssemblyResultsToLimsOptions options, SequenceSelection selection) throws DocumentOperationException, DatabaseServiceException {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             throw new DocumentOperationException(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
         }
@@ -377,14 +381,21 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         AddAssemblyResultsToLimsOptions options = (AddAssemblyResultsToLimsOptions) o;
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, 0.4, 0.2);
         progress.beginSubtask("Checking results");
-        Map<URN, AssemblyResult> assemblyResults = getAssemblyResults(annotatedDocuments, progress, options, selection);
+        LIMSConnection limsConnection;
+        Map<URN, AssemblyResult> assemblyResults;
+        try {
+            assemblyResults = getAssemblyResults(annotatedDocuments, progress, options, selection);
 
-        if(assemblyResults == null) {
-            return null;
+            if(assemblyResults == null) {
+                return null;
+            }
+
+            progress.beginSubtask("Saving to LIMS");
+
+            limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+        } catch (DatabaseServiceException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
         }
-
-        progress.beginSubtask("Saving to LIMS");
-        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
 
         progress = new CompositeProgressListener(progress, assemblyResults.size());
 //        if (progress.getRootProgressListener() instanceof ProgressFrame) {

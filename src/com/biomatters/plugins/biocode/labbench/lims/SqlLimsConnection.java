@@ -878,7 +878,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
-    private int getLastInsertId() throws SQLException {
+    private int getLastInsertId() throws SQLException, DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
@@ -2678,7 +2678,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
-    public static int addThermoCycle(ConnectionWrapper connection, Thermocycle thermocycle) throws SQLException{
+    public static int addThermoCycle(ConnectionWrapper connection, Thermocycle thermocycle) throws SQLException, DatabaseServiceException {
         //create the thermocycle record
         PreparedStatement statement1 = connection.prepareStatement("INSERT INTO thermocycle (name, notes) VALUES (?, ?);\n");
         statement1.setString(1, thermocycle.getName());
