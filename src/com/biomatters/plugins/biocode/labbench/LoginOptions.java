@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 
 import java.util.Collections;
@@ -19,24 +20,24 @@ public class LoginOptions extends Options {
         init();
     }
 
-    public LoginOptions(Class cl) throws DatabaseServiceException {
+    public LoginOptions(Class cl) {
         super(cl);
         init();
     }
 
-    public LoginOptions(Class cl, String preferenceNameSuffix) throws DatabaseServiceException {
+    public LoginOptions(Class cl, String preferenceNameSuffix) {
         super(cl, preferenceNameSuffix);
         init();
     }
 
-    private void init() throws DatabaseServiceException {
+    private void init() {
         Options fimsOptions = new Options(ConnectionManager.class);
         for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
             fimsOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new PasswordOptions(BiocodeService.class));
         }
         Option chooser = fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), PageChooserType.COMBO_BOX, false);
 
-        PasswordOptions limsOptions = BiocodeService.getInstance().getActiveLIMSConnection().createConnectionOptions();
+        PasswordOptions limsOptions = LIMSConnection.createConnectionOptions();
 
         addChildOptions("fims", null, null, fimsOptions);
         addChildOptions("lims", null, null, limsOptions);

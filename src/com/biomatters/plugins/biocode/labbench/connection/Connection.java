@@ -85,7 +85,7 @@ public class Connection implements XMLSerializable {
      * @param oldFormatElement The {@link Element} to restore from
      * @return A Connection
      */
-    public static Connection forOld(String name, Element oldFormatElement) throws DatabaseServiceException {
+    public static Connection forOld(String name, Element oldFormatElement) {
         if (oldFormatElement == null) {
             throw new IllegalArgumentException("Connection options are null");
         }
@@ -194,32 +194,28 @@ public class Connection implements XMLSerializable {
     }
 
     public Options getEnterPasswordOptions() {
-        try {
-            if (directOptions == null) {
-                createLoginOptions();
-            }
-            int count = 0;
+        if (directOptions == null) {
+            createLoginOptions();
+        }
+        int count = 0;
 
-            Options passwordOptions = new Options(this.getClass());
-            passwordOptions.addLabel("Please enter your credentials for " + getName());
-            PasswordOptions fimsOptions = getFimsOptions();
-            Options fimsEnterPasswordOptions = fimsOptions.getEnterPasswordOptions();
-            if (fimsEnterPasswordOptions != null) {
-                passwordOptions.addChildOptions("fimsOptions", "FIMS account", "The connection options for your FIMS account", fimsEnterPasswordOptions);
-                count++;
-            }
-            PasswordOptions limsOptions = getLimsOptions();
-            Options limsEnterPasswordOptions = limsOptions.getEnterPasswordOptions();
-            if (limsEnterPasswordOptions != null) {
-                passwordOptions.addChildOptions("limsOptions", "LIMS account", "The connection options for your LIMS account", limsEnterPasswordOptions);
-                count++;
-            }
+        Options passwordOptions = new Options(this.getClass());
+        passwordOptions.addLabel("Please enter your credentials for " + getName());
+        PasswordOptions fimsOptions = getFimsOptions();
+        Options fimsEnterPasswordOptions = fimsOptions.getEnterPasswordOptions();
+        if (fimsEnterPasswordOptions != null) {
+            passwordOptions.addChildOptions("fimsOptions", "FIMS account", "The connection options for your FIMS account", fimsEnterPasswordOptions);
+            count++;
+        }
+        PasswordOptions limsOptions = getLimsOptions();
+        Options limsEnterPasswordOptions = limsOptions.getEnterPasswordOptions();
+        if (limsEnterPasswordOptions != null) {
+            passwordOptions.addChildOptions("limsOptions", "LIMS account", "The connection options for your LIMS account", limsEnterPasswordOptions);
+            count++;
+        }
 
-            if (count > 0) {
-                return passwordOptions;
-            }
-        } catch (DatabaseServiceException e) {
-            e.printStackTrace();
+        if (count > 0) {
+            return passwordOptions;
         }
         return null;
     }
@@ -230,15 +226,11 @@ public class Connection implements XMLSerializable {
                 directOptions.getPanel(); //we need to create the panel first so that password options keep their save/don't save status
                 Options fimsOptions = enterPasswordOptions.getChildOptions().get("fimsOptions");
                 Options limsOptions = enterPasswordOptions.getChildOptions().get("limsOptions");
-                try {
-                    if (fimsOptions != null) {
-                        getFimsOptions().setPasswordsFromOptions(fimsOptions);
-                    }
-                    if (limsOptions != null) {
-                        getLimsOptions().setPasswordsFromOptions(limsOptions);
-                    }
-                } catch (DatabaseServiceException e) {
-                    e.printStackTrace();
+                if (fimsOptions != null) {
+                    getFimsOptions().setPasswordsFromOptions(fimsOptions);
+                }
+                if (limsOptions != null) {
+                    getLimsOptions().setPasswordsFromOptions(limsOptions);
                 }
             }
         };
@@ -301,21 +293,11 @@ public class Connection implements XMLSerializable {
             Runnable runnable = new Runnable() {
                 public void run() {
                     ThreadUtilities.sleep(100); //let's give the UI a chance to update before we use up all the CPU
-                    try {
-                        createLoginOptions();
-                    } catch (DatabaseServiceException e) {
-                        e.printStackTrace();
-                        return;
-                    }
+                    createLoginOptions();
                     Runnable runnable = new Runnable() {
                         public void run() {
                             if(originalDirectOptionsXml != null) {
-                                try {
-                                    createLoginOptions();
-                                } catch (DatabaseServiceException e) {
-                                    e.printStackTrace();
-                                    return;
-                                }
+                                createLoginOptions();
                             }
                             panel.removeAll();
                             panel.add(overallOptions.getPanel(), BorderLayout.NORTH);
@@ -349,18 +331,13 @@ public class Connection implements XMLSerializable {
     }
 
     public Element toXML() { // todo: handle null returns at point of calls
-        try {
-            return getXml(true);
-        } catch (DatabaseServiceException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return getXml(true);
     }
 
     private static final String CONN_NAME = "Name";
     private static final String CONN_TYPE = "Type";
 
-    public Element getXml(boolean reserializeOptionsIfTheyExist) throws DatabaseServiceException {
+    public Element getXml(boolean reserializeOptionsIfTheyExist) {
         Element connectionElement = new Element("Connection");
 
         if(directOptions == null) {
@@ -392,7 +369,7 @@ public class Connection implements XMLSerializable {
         throw new UnsupportedOperationException("Call the constructor");
     }
 
-    public FIMSConnection getFimsConnection() throws DatabaseServiceException {
+    public FIMSConnection getFimsConnection() {
         if(type == ConnectionType.server) {
             return new ServerFimsConnection();
         }
@@ -417,7 +394,7 @@ public class Connection implements XMLSerializable {
      * Return the Options for the currently selected FIMS
      * @return
      */
-    public PasswordOptions getFimsOptions() throws DatabaseServiceException {
+    public PasswordOptions getFimsOptions() {
         if(type == ConnectionType.server) {
             return serverOptions;
         }
@@ -430,14 +407,14 @@ public class Connection implements XMLSerializable {
         return (PasswordOptions)fimsOptions.getChildOptions().get(selectedFimsServiceName);
     }
 
-    public void setFims(String name) throws DatabaseServiceException {
+    public void setFims(String name) {
         if(directOptions == null) {
             createLoginOptions();
         }
         directOptions.setValue("fims.fims", name);
     }
 
-    private void createLoginOptions() throws DatabaseServiceException {
+    private void createLoginOptions() {
         directOptions = new LoginOptions(ConnectionManager.class);
         if(originalDirectOptionsXml != null) {
             final Element loginOptionsValuesLocal = originalDirectOptionsXml;
@@ -456,7 +433,7 @@ public class Connection implements XMLSerializable {
         }
     }
 
-    public LIMSConnection getLIMSConnection() throws ConnectionException, DatabaseServiceException {
+    public LIMSConnection getLIMSConnection() throws ConnectionException {
         if(type == ConnectionType.server) {
             return new ServerLimsConnection();
         }
@@ -476,7 +453,7 @@ public class Connection implements XMLSerializable {
      *
      * @return the parent Options that contains all the child LIMSOptions
      */
-    public PasswordOptions getLimsOptions() throws DatabaseServiceException {
+    public PasswordOptions getLimsOptions() {
         if(type == ConnectionType.server) {
             return serverOptions;
         }

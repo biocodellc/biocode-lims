@@ -100,12 +100,7 @@ public class ConnectionManager implements XMLSerializable{
         loginOptions.addChildOptions("fims", null, null, fimsOptions);
         loginOptions.addChildOptions("lims", null, null, limsOptions);
         loginOptions.restorePreferences();
-        try {
-            return Connection.forOld("My Default Connection", loginOptions.valuesToXML("root"));
-        } catch (DatabaseServiceException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return Connection.forOld("My Default Connection", loginOptions.valuesToXML("root"));
     }
 
     private static Preferences getPreferencesFromPreviousVersion() {
@@ -345,13 +340,8 @@ public class ConnectionManager implements XMLSerializable{
 
     public Element toXML() { // todo: handle null returns at point of calls
         Element root = new Element("ConnectionManager");
-        try {
-            for (int i = 0; i < connections.size(); i++) {
-                root.addContent(connections.get(i).getXml(i == selectedConnection)); //reserialize just the new connections, and the one that we have selected
-            }
-        } catch(DatabaseServiceException e) {
-            e.printStackTrace();
-            return null;
+        for (int i = 0; i < connections.size(); i++) {
+            root.addContent(connections.get(i).getXml(i == selectedConnection)); //reserialize just the new connections, and the one that we have selected
         }
         root.addContent(new Element("SelectedConnection").setText(""+selectedConnection));
         if(connectOnStartup) {
