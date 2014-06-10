@@ -201,7 +201,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
 
         SimpleListener labelListener = new SimpleListener() {
             public void objectChanged() {
-                int sum = 0;
+                double sum = 0;
                 for (Option o : getOptions()) {
 //                    if (o instanceof IntegerOption) {
 //                        sum += (Integer) o.getValue();
