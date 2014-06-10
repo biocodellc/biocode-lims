@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
@@ -14,21 +15,21 @@ import java.util.Collections;
  */
 public class LoginOptions extends Options {
 
-    public LoginOptions() {
+    public LoginOptions() throws DatabaseServiceException {
         init();
     }
 
-    public LoginOptions(Class cl) {
+    public LoginOptions(Class cl) throws DatabaseServiceException {
         super(cl);
         init();
     }
 
-    public LoginOptions(Class cl, String preferenceNameSuffix) {
+    public LoginOptions(Class cl, String preferenceNameSuffix) throws DatabaseServiceException {
         super(cl, preferenceNameSuffix);
         init();
     }
 
-    private void init() {
+    private void init() throws DatabaseServiceException {
         Options fimsOptions = new Options(ConnectionManager.class);
         for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
             fimsOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new PasswordOptions(BiocodeService.class));

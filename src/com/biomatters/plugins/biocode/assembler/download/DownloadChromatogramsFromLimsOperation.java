@@ -196,6 +196,9 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             }
             if (progress.isCanceled()) return null;
             return chromatogramDocuments;
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
+            throw new DocumentOperationException("Could not retrieve active LIMS connection: " + e.getMessage(), e);
         }
         finally {
             BiocodeService.getInstance().unregisterCallback(callback);

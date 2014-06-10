@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.privateApi.PrivateApiUtilities;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.QueryFactoryImplementation;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilitiesImplementation;
 import com.biomatters.geneious.publicapi.documents.XMLSerializerImplementation;
@@ -128,19 +129,19 @@ public class LIMSInitializationListener implements ServletContextListener {
         return new File(System.getProperty("user.home"), settingsFolderName);
     }
 
-    private static LIMSConnection connectLims(Connection connectionConfig) throws ConnectionException {
+    private static LIMSConnection connectLims(Connection connectionConfig) throws ConnectionException, DatabaseServiceException {
         LIMSConnection limsConnection = connectionConfig.getLIMSConnection();
         limsConnection.connect(connectionConfig.getLimsOptions());
         return limsConnection;
     }
 
-    private static FIMSConnection connectFims(Connection connectionConfig) throws ConnectionException {
+    private static FIMSConnection connectFims(Connection connectionConfig) throws ConnectionException, DatabaseServiceException {
         FIMSConnection fimsConnection = connectionConfig.getFimsConnection();
         fimsConnection.connect(connectionConfig.getFimsOptions());
         return fimsConnection;
     }
 
-    private void setLimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException {
+    private void setLimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException, DatabaseServiceException {
         LimsConnectionOptions parentLimsOptions = (LimsConnectionOptions)connectionConfig.getLimsOptions();
         String limsType = config.getProperty("lims.type");
         if(limsType == null) {
@@ -174,7 +175,7 @@ public class LIMSInitializationListener implements ServletContextListener {
         }
     }
 
-    private void setFimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException, ConnectionException {
+    private void setFimsOptionsFromConfigFile(Connection connectionConfig, Properties config) throws ConfigurationException, ConnectionException, DatabaseServiceException {
         String type = config.getProperty("fims.type", "biocode");
         boolean isExcel = type.equals("excel");
         boolean isTapir = type.equals("tapir");

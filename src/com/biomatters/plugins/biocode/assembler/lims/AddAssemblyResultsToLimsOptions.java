@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.assembler.lims;
 
 import com.biomatters.geneious.publicapi.components.GLabel;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
@@ -24,7 +25,7 @@ public class AddAssemblyResultsToLimsOptions extends Options {
 
     private InputType inputType;
 
-    public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents, boolean passed) throws DocumentOperationException {
+    public AddAssemblyResultsToLimsOptions(AnnotatedPluginDocument[] documents, boolean passed) throws DocumentOperationException, DatabaseServiceException {
         inputType = InputType.determineInputType(documents);
         if(inputType == InputType.MIXED) {
             throw new DocumentOperationException("This operation only works on documents of the same type.  " +

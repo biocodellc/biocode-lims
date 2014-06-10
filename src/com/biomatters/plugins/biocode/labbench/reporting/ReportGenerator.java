@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reporting;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
@@ -57,7 +58,7 @@ public class ReportGenerator {
     private Chartable chartable;
     private Report.ReportChart currentReportChart;
 
-    public ReportGenerator(Chartable chartable, File userDataDirectory) throws SQLException{
+    public ReportGenerator(Chartable chartable, File userDataDirectory) throws SQLException, DatabaseServiceException {
         this.chartable = chartable;
         fimsToLims = new FimsToLims(BiocodeService.getInstance());
         reportManager = new ReportManager(userDataDirectory);
@@ -613,6 +614,9 @@ public class ReportGenerator {
             int result = resultSet.getInt(1);
             return result;
         } catch (SQLException e) {
+            e.printStackTrace();
+            assert false : e.getMessage();
+        } catch (DatabaseServiceException e) {
             e.printStackTrace();
             assert false : e.getMessage();
         }

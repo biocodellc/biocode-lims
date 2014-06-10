@@ -10,7 +10,6 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.Execution;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
@@ -237,7 +236,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return activeFIMSConnection;
     }
 
-    public LIMSConnection getActiveLIMSConnection() { return limsConnection; }
+    public LIMSConnection getActiveLIMSConnection() throws DatabaseServiceException {
+        if (limsConnection == null) {
+            throw new DatabaseServiceException("No active Lims connection.", false);
+        }
+        return limsConnection;
+    }
 
     public synchronized boolean isLoggedIn() {
         return isLoggedIn;
@@ -460,6 +464,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             System.out.println();
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
         }
 
         String error = null;
@@ -467,12 +473,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         try {
             limsConnection = connection.getLIMSConnection();
         } catch (ConnectionException e) {
-            error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: "+e.getMessage();
+            error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: " + e.getMessage();
+        } catch (DatabaseServiceException e) {
+            error = e.getMessage();
         }
 
         if(error == null) {
             try {
-
                 localDriver = getLocalDriver();
             } catch (ConnectionException e) {
                 error = e.getMessage();
@@ -488,13 +495,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             return;
         }
 
-        //get the selected fims service.
-        activeFIMSConnection = connection.getFimsConnection();
-        progressListener.setMessage("Connecting to the FIMS");
         try {
+            //get the selected fims service.
+            activeFIMSConnection = connection.getFimsConnection();
+            progressListener.setMessage("Connecting to the FIMS");
             activeFIMSConnection.connect(connection.getFimsOptions());
-        }
-        catch (ConnectionException ex) {
+        } catch (ConnectionException ex) {
             progressListener.setProgress(1.0);
             if (ex != ConnectionException.NO_DIALOG) {
                 String message = ex.getMainMessage() == null ? "There was an error connecting to " + activeFIMSConnection.getLabel() : ex.getMainMessage();
@@ -504,6 +510,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     Dialogs.showMessageDialog(message, "Error connecting to FIMS");
                 }
             }
+            logOut();
+            progressListener.setProgress(1.0);
+            return;
+        } catch (DatabaseServiceException ex) {
+            progressListener.setProgress(1.0);
+            Dialogs.showMessageDialog(ex.getMessage(), "Error connecting to FIMS");
             logOut();
             progressListener.setProgress(1.0);
             return;

@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -66,11 +67,10 @@ public class FailureReason {
     }
 
     private static final String NO_REASON = "Unspecified";
-    public static Options.ComboBoxOption<Options.OptionValue> addToOptions(Options toAddTo) throws DocumentOperationException {
+    public static Options.ComboBoxOption<Options.OptionValue> addToOptions(Options toAddTo) throws DocumentOperationException, DatabaseServiceException {
         List<Options.OptionValue> possibleValues = new ArrayList<Options.OptionValue>();
         Options.OptionValue defaultValue = new Options.OptionValue(NO_REASON, NO_REASON);
         possibleValues.add(defaultValue);
-
         LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         if(limsConnection != null) {
             List<FailureReason> possibleFailureReasons = limsConnection.getPossibleFailureReasons();
@@ -116,10 +116,14 @@ public class FailureReason {
         if(reasonId == null) {
             return null;
         }
-        for (FailureReason possible : BiocodeService.getInstance().getActiveLIMSConnection().getPossibleFailureReasons()) {
-            if(reasonId.equals(""+possible.getId())) {
-                return possible;
+        try {
+            for (FailureReason possible : BiocodeService.getInstance().getActiveLIMSConnection().getPossibleFailureReasons()) {
+                if (reasonId.equals("" + possible.getId())) {
+                    return possible;
+                }
             }
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
         }
         return null;
     }
