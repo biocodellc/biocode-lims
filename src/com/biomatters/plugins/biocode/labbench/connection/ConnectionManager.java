@@ -338,7 +338,7 @@ public class ConnectionManager implements XMLSerializable{
         }
     }
 
-    public Element toXML() { // todo: handle null returns at point of calls
+    public Element toXML() {
         Element root = new Element("ConnectionManager");
         for (int i = 0; i < connections.size(); i++) {
             root.addContent(connections.get(i).getXml(i == selectedConnection)); //reserialize just the new connections, and the one that we have selected
