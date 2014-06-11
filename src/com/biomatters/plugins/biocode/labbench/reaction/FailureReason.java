@@ -122,7 +122,7 @@ public class FailureReason {
                     return possible;
                 }
             }
-        } catch (DatabaseServiceException e) {
+        } catch (DatabaseServiceException e) { // If there is no active LIMS connection, then print the message of the error indicating so, and return null.
             e.printStackTrace();
         }
         return null;
