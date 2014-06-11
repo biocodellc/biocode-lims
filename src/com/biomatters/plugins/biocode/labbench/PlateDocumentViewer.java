@@ -581,7 +581,7 @@ public class PlateDocumentViewer extends DocumentViewer{
 
                 String optionLabel = doubleOption.getName();
                 if(option.getName().equals("extraItemAmount")) {
-                    if(extraItem == null || extraItem.length() == 0) {
+                    if(extraItem == null || extraItem.isEmpty()) {
                         continue;
                     }
                     optionLabel = extraItem;
