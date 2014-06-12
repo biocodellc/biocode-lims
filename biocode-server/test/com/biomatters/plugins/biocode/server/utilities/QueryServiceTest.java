@@ -93,27 +93,27 @@ public class QueryServiceTest extends Assert {
 
     @Test(expected=BadRequestException.class)
     public void testParseInvalidQuerySearchAttribute() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[invalidField=value]");
+        new QueryParser(searchAttributes).parseQuery("[invalidField=value]");
     }
     @Test(expected=BadRequestException.class)
     public void testParseInvalidQueryCondition() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField*value]");
+        new QueryParser(searchAttributes).parseQuery("[stringField*value]");
     }
     @Test
     public void testParseValidIntegerQueryValue() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[integerField=0]");
+        new QueryParser(searchAttributes).parseQuery("[integerField=0]");
     }
     @Test(expected=BadRequestException.class)
     public void testParseInvalidIntegerQueryValue() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[integerField=nonIntegerValue]");
+        new QueryParser(searchAttributes).parseQuery("[integerField=nonIntegerValue]");
     }
     @Test
     public void testParseValidDateQueryValueFormat() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=2004-02-02]");
+        new QueryParser(searchAttributes).parseQuery("[dateField=2004-02-02]");
     }
     @Test(expected=BadRequestException.class)
     public void testParseInvalidDateQueryValueFormat() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=2004/02/02]");
+        new QueryParser(searchAttributes).parseQuery("[dateField=2004/02/02]");
     }
 
     private <T extends Comparable> void testSameContentsUnordered(List<T> oneOrTwoAsList, List<T> result) {

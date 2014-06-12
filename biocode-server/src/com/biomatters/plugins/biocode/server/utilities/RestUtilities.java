@@ -14,19 +14,18 @@ import java.util.*;
  *         Created on 28/05/14 11:59 AM
  */
 public class RestUtilities {
-
     private RestUtilities() {
         // Can't instantiate
     }
 
-    public static <T> T getOnlyItemFromList(List<T> list, String noItemErrorMessage) throws NoContentException {
+    static <T> T getOnlyItemFromList(List<T> list, String noItemErrorMessage) throws NoContentException {
         if (list.isEmpty()) {
             throw new NoContentException(noItemErrorMessage);
         }
         return list.get(0);
     }
 
-    public static LimsSearchResult getSearchResults(String query,
+    static LimsSearchResult getSearchResults(String query,
                                                     boolean retrieveTissues,
                                                     boolean retrieveWorkflows,
                                                     boolean retrievePlates,
@@ -41,6 +40,8 @@ public class RestUtilities {
         List<DocumentField> searchAttributes = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
         searchAttributes.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
         Query q = new QueryParser(searchAttributes).parseQuery(query);
+
+
         return q.execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
     }
 }

@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 class QueryParser {
     List<DocumentField> searchAttributes;
 
-    public QueryParser(List<DocumentField> validFields) {
+    QueryParser(List<DocumentField> validFields) {
         searchAttributes = validFields;
     }
 
@@ -88,6 +88,7 @@ class QueryParser {
     Query parseQuery(String query) { return constructQueryFromPostfix(infixToPostfix(query)); }
 
     private Query constructQueryFromPostfix(Queue<String> queryPostfix) throws BadRequestException {
+
         Stack<Query> queryQueue = new Stack<Query>();
         while (!queryPostfix.isEmpty()) {
             String element = queryPostfix.remove();
@@ -104,13 +105,13 @@ class QueryParser {
                 Query two = queryQueue.pop();
                 queryQueue.push(new OrQuery(one, two));
             } else {
-                queryQueue.push(stringToBasicQuery(element));
+                queryQueue.push(stringToSingleQuery(element));
             }
         }
         return queryQueue.pop();
     }
 
-    private Query stringToBasicQuery(String query) {
+    private Query stringToSingleQuery(String query) {
         String[] queryParts = query.split(conditionSymbolsGroupRegex);
         if (queryParts.length != 2) {
             throw new BadRequestException("Invalid condition: " + query);
@@ -161,7 +162,7 @@ class QueryParser {
             }
         }
 
-        return new BasicQuery(field, condition, value);
+        return new SingleQuery(QueryValues.createQueryValues(field, condition, value));
     }
 
     /* Unsupported field values grayed out. */
