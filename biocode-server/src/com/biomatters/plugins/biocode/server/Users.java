@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.server;
 
+import com.biomatters.plugins.biocode.server.security.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -36,6 +37,7 @@ public class Users {
     private synchronized void createManager() {
         JdbcUserDetailsManager manager = new JdbcUserDetailsManager();
         manager.setDataSource(LIMSInitializationListener.getDataSource());
+        this.manager = manager;
     }
 
     @GET
@@ -69,24 +71,50 @@ public class Users {
         }
     }
 
-    @PUT
-    @Consumes("application/xml")
-    public void addUser(com.biomatters.plugins.biocode.server.User user) {
-        UserAccount account = new UserAccount(user.username, user.password);
-        manager.createUser(account);
+    @GET
+    @Produces("application/xml")
+    @Path("{username}")
+    public User getUser(@PathParam("username")String username) {
+        return User.get();  // todo
     }
 
-    @DELETE
-    public void deleteUser(com.biomatters.plugins.biocode.server.User user) {
+    @POST
+    @Consumes("application/xml")
+    public void addUser(User user) {
+        UserAccountToAdd account = new UserAccountToAdd(user.username, user.password);
+        getManager().createUser(account);
+    }
+
+    @PUT
+    @Path("{username}")
+    @Consumes("application/xml")
+    public void updateUser(@PathParam("username")String username, User user) {
         // todo
     }
 
+    @GET
+    @Path("createTest/{username}")
+    public User test(@PathParam("username")String username, @QueryParam("password")String password) {
+        if(password == null) {
+            password = "helix8";
+        }
+        getManager().createUser(new UserAccountToAdd(username, password));
+        return new User(username);
+    }
+
+    @DELETE
+    @Path("{username}")
+    public void deleteUser(@PathParam("username")String username) {
+        User.get().checkIsAdmin();
+        getManager().deleteUser(username);
+    }
+
     private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    private static class UserAccount implements UserDetails {
+    private static class UserAccountToAdd implements UserDetails {
 
         private String username;
         private String passwordHash;
-        public UserAccount(String username, String password) {
+        public UserAccountToAdd(String username, String password) {
             this.username = username;
             this.passwordHash = encoder.encode(password);
         }

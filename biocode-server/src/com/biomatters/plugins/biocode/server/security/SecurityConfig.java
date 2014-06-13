@@ -28,7 +28,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        JdbcUserDetailsManagerConfigurer<AuthenticationManagerBuilder> authentication = null;
         LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
         if(limsConnection instanceof SqlLimsConnection) {
             BasicDataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
