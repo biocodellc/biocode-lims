@@ -35,10 +35,6 @@ public class User {
         }
     }
 
-    public static void addUser(User user) {
-        // todo
-    }
-
     public void checkIsAdmin() throws ForbiddenException {
         if(!username.equals("admin")) {
             throw new ForbiddenException("User is not an admin");

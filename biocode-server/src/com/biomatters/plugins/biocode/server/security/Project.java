@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.server.security;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,8 +15,7 @@ public class Project {
 
     public Project parent;
 
-    public Map<User, Role> userRoles;
-    private static Project forId;
+    public Map<User, Role> userRoles = new HashMap<User, Role>();
 
     public Project() {
     }
@@ -27,7 +27,7 @@ public class Project {
         userRoles = new HashMap<User, Role>();
     }
 
-    public static Project getForExtractionId() {
+    public static Project getForExtractionId(String extractionId) {
         return TEST;
     }
 
@@ -35,8 +35,30 @@ public class Project {
         return TEST;
     }
 
+    public static Collection<Project> getListReadableByUser() {
+        return Collections.singletonList(TEST);
+    }
+
     private static Project TEST = new Project(0, "Test Project");
     static {
-        TEST.userRoles = Collections.singletonMap(new User("matthew"), Role.ADMIN);
+        TEST.userRoles.put(new User("admin"), Role.ADMIN);
+        TEST.userRoles.put(new User("test"), Role.READER);
+    }
+
+    /**
+     *
+     * @return The role the current user has in the project.  Will fetch from parent groups if the user is not
+     * part of the current project.
+     */
+    public Role getRoleForUser() {
+        User currentUser = User.get();
+        Role role = userRoles.get(currentUser);
+        if(role != null) {
+            return role;
+        } else if(parent != null) {
+            return parent.getRoleForUser();
+        } else {
+            return null;
+        }
     }
 }

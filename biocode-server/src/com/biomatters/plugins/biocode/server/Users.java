@@ -92,16 +92,6 @@ public class Users {
         // todo
     }
 
-    @GET
-    @Path("createTest/{username}")
-    public User test(@PathParam("username")String username, @QueryParam("password")String password) {
-        if(password == null) {
-            password = "helix8";
-        }
-        getManager().createUser(new UserAccountToAdd(username, password));
-        return new User(username);
-    }
-
     @DELETE
     @Path("{username}")
     public void deleteUser(@PathParam("username")String username) {

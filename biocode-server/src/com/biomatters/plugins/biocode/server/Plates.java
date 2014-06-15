@@ -7,7 +7,10 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.server.security.Project;
+import com.biomatters.plugins.biocode.server.security.Role;
 import jebl.util.ProgressListener;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.ws.rs.*;
 import java.util.*;
@@ -24,6 +27,8 @@ public class Plates {
     @PUT
     @Consumes("application/xml")
     public void add(XMLSerializableList<Plate> plates) {
+        checkCanEditPlate(plates.getList());
+
         try {
             LIMSInitializationListener.getLimsConnection().savePlates(plates.getList(), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
@@ -33,11 +38,13 @@ public class Plates {
         }
     }
 
+
     @POST
     @Consumes("application/xml")
     @Produces("text/plain")
     @Path("delete")
     public String delete(XMLSerializableList<Plate> plates) {
+        checkCanEditPlate(plates.getList());
         try {
             Set<Integer> ids = LIMSInitializationListener.getLimsConnection().deletePlates(plates.getList(), ProgressListener.EMPTY);
             return StringUtilities.join("\n", ids);
@@ -50,6 +57,7 @@ public class Plates {
     @Consumes("text/plain")
     @Path("{id}/name")
     public void renamePlate(@PathParam("id")int id, String newName) {
+        // todo access check
         try {
             LIMSInitializationListener.getLimsConnection().renamePlate(id, newName);
         } catch (DatabaseServiceException e) {
@@ -86,9 +94,10 @@ public class Plates {
     @Consumes("application/xml")
     @Path("reactions")
     public void saveReactions(XMLSerializableList<Reaction> reactions, @QueryParam("type") String type) {
+        List<Reaction> reactionList = reactions.getList();
+        checkCanEditReactions(reactionList);
         Reaction.Type reactionType = Reaction.Type.valueOf(type);
         try {
-            List<Reaction> reactionList = reactions.getList();
             LIMSInitializationListener.getLimsConnection().saveReactions(reactionList.toArray(
                     new Reaction[reactionList.size()]
             ), reactionType, ProgressListener.EMPTY);
@@ -141,6 +150,27 @@ public class Plates {
             return map.get(plateId);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Throws a {@link javax.ws.rs.ForbiddenException} if the current logged in user cannot edit the plates specified
+     * @param plates a list of {@link Plate}s to check
+     */
+    private void checkCanEditPlate(List<Plate> plates) {
+        throw new NotImplementedException();
+    }
+
+    /**
+     * Throws a {@link javax.ws.rs.ForbiddenException} if the current logged in user cannot edit the plates specified
+     * @param reactionList a list of {@link Reaction}s to check
+     */
+    private void checkCanEditReactions(List<Reaction> reactionList) {
+        for (Reaction reaction : reactionList) {
+            Project project = Project.getForExtractionId(reaction.getExtractionId());
+            if(project.getRoleForUser().isAtLeast(Role.WRITER)) {
+                throw new ForbiddenException();
+            }
         }
     }
 }
