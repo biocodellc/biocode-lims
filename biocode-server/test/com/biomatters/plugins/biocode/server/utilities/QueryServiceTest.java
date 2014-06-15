@@ -35,23 +35,27 @@ public class QueryServiceTest extends Assert {
 
     @Test
     public void testParseBasicQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=value]");
-        assertTrue(query instanceof BasicQuery);
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=value]") instanceof BasicQuery);
     }
     @Test
     public void testParseAndQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]AND[stringField=valueTwo]");
-        assertTrue(query instanceof AndQuery);
+        assertTrue(((CompoundQuery)new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]AND[stringField=valueTwo]OR[stringField=valueThree]")).getLHS() instanceof AndQuery);
     }
     @Test
     public void testParseXorQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]XOR[stringField=valueTwo]");
-        assertTrue(query instanceof XorQuery);
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]XOR[stringField=valueTwo]") instanceof XorQuery);
     }
     @Test
     public void testParseOrQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]OR[stringField=valueTwo]");
-        assertTrue(query instanceof OrQuery);
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]OR[stringField=valueTwo]AND[stringField=valueThree]") instanceof OrQuery);
+    }
+    @Test
+    public void testParseMultipleAndQuery() {
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]AND[stringField=valueTwo]") instanceof MultipleAndQuery);
+    }
+    @Test
+    public void testParseMultipleOrQuery() {
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]OR[stringField=valueTwo]") instanceof MultipleOrQuery);
     }
 
     @Test
@@ -93,27 +97,27 @@ public class QueryServiceTest extends Assert {
 
     @Test(expected=BadRequestException.class)
     public void testParseInvalidQuerySearchAttribute() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[invalidField=value]");
+        new QueryParser(searchAttributes).parseQuery("[invalidField=value]");
     }
     @Test(expected=BadRequestException.class)
     public void testParseInvalidQueryCondition() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField*value]");
+        new QueryParser(searchAttributes).parseQuery("[stringField*value]");
     }
     @Test
     public void testParseValidIntegerQueryValue() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[integerField=0]");
+        new QueryParser(searchAttributes).parseQuery("[integerField=0]");
     }
     @Test(expected=BadRequestException.class)
     public void testParseInvalidIntegerQueryValue() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[integerField=nonIntegerValue]");
+        new QueryParser(searchAttributes).parseQuery("[integerField=nonIntegerValue]");
     }
     @Test
     public void testParseValidDateQueryValueFormat() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=2004-02-02]");
+        new QueryParser(searchAttributes).parseQuery("[dateField=2004-02-02]");
     }
     @Test(expected=BadRequestException.class)
     public void testParseInvalidDateQueryValueFormat() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[dateField=2004/02/02]");
+        new QueryParser(searchAttributes).parseQuery("[dateField=2004/02/02]");
     }
 
     private <T extends Comparable> void testSameContentsUnordered(List<T> oneOrTwoAsList, List<T> result) {

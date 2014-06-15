@@ -8,10 +8,7 @@ import java.util.List;
  *         Created on 5/06/14 12:01 PM
  */
 class AndQuery extends CompoundQuery {
-
-    AndQuery(Query LHS, Query RHS) {
-        super(LHS, RHS);
-    }
+    AndQuery(Query LHS, Query RHS) { super(LHS, RHS); }
 
     <T> List<T> combineLists(List<T> one, List<T> two) {
         List<T> shorter;

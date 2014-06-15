@@ -10,7 +10,6 @@ import java.util.Set;
  *         Created on 5/06/14 12:02 PM
  */
 class OrQuery extends CompoundQuery {
-
     OrQuery(Query LHS, Query RHS) {
         super(LHS, RHS);
     }

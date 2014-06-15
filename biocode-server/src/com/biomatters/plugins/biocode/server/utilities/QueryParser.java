@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 class QueryParser {
     List<DocumentField> searchAttributes;
 
-    public QueryParser(List<DocumentField> validFields) {
+    QueryParser(List<DocumentField> validFields) {
         searchAttributes = validFields;
     }
 
@@ -88,29 +88,58 @@ class QueryParser {
     Query parseQuery(String query) { return constructQueryFromPostfix(infixToPostfix(query)); }
 
     private Query constructQueryFromPostfix(Queue<String> queryPostfix) throws BadRequestException {
-        Stack<Query> queryQueue = new Stack<Query>();
-        while (!queryPostfix.isEmpty()) {
-            String element = queryPostfix.remove();
+        int numAnd = 0, numXor = 0, numOr = 0;
+        for (String element : queryPostfix) {
             if (element.equals("AND")) {
-                Query one = queryQueue.pop();
-                Query two = queryQueue.pop();
-                queryQueue.push(new AndQuery(one, two));
+                numAnd++;
             } else if (element.equals("XOR")) {
-                Query one = queryQueue.pop();
-                Query two = queryQueue.pop();
-                queryQueue.push(new XorQuery(one, two));
+                numXor++;
             } else if (element.equals("OR")) {
-                Query one = queryQueue.pop();
-                Query two = queryQueue.pop();
-                queryQueue.push(new OrQuery(one, two));
-            } else {
-                queryQueue.push(stringToBasicQuery(element));
+                numOr++;
             }
         }
-        return queryQueue.pop();
+
+        if (numAnd != 0 && numXor == 0 && numOr == 0) {
+            List<QueryValues> queryValueses = new ArrayList<QueryValues>();
+            for (String element : queryPostfix) {
+                if (!element.equals("AND") && !element.equals("XOR") && !element.equals("OR")) {
+                    queryValueses.add(stringToQueryValues(element));
+                }
+            }
+            return new MultipleAndQuery(queryValueses.toArray(new QueryValues[queryValueses.size()]));
+        } else if (numAnd == 0 && numXor == 0 && numOr != 0) {
+            List<QueryValues> queryValueses = new ArrayList<QueryValues>();
+            for (String element : queryPostfix) {
+                if (!element.equals("AND") && !element.equals("XOR") && !element.equals("OR")) {
+                    queryValueses.add(stringToQueryValues(element));
+                }
+            }
+            return new MultipleOrQuery(queryValueses.toArray(new QueryValues[queryValueses.size()]));
+        } else {
+            Stack<Query> queryQueue = new Stack<Query>();
+            while (!queryPostfix.isEmpty()) {
+                String element = queryPostfix.remove();
+                if (element.equals("AND")) {
+                    Query RHS = queryQueue.pop();
+                    Query LHS = queryQueue.pop();
+                    queryQueue.push(new AndQuery(LHS, RHS));
+                } else if (element.equals("XOR")) {
+                    Query RHS = queryQueue.pop();
+                    Query LHS = queryQueue.pop();
+                    queryQueue.push(new XorQuery(LHS, RHS));
+                } else if (element.equals("OR")) {
+                    Query RHS = queryQueue.pop();
+                    Query LHS = queryQueue.pop();
+                    queryQueue.push(new OrQuery(LHS, RHS));
+                } else {
+                    queryQueue.push(new SingleQuery(stringToQueryValues(element)));
+                }
+            }
+            return queryQueue.pop();
+        }
     }
 
-    private Query stringToBasicQuery(String query) {
+    private QueryValues stringToQueryValues(String query) {
         String[] queryParts = query.split(conditionSymbolsGroupRegex);
         if (queryParts.length != 2) {
             throw new BadRequestException("Invalid condition: " + query);
@@ -161,7 +190,7 @@ class QueryParser {
             }
         }
 
-        return new BasicQuery(field, condition, value);
+        return QueryValues.createQueryValues(field, condition, value);
     }
 
     /* Unsupported field values grayed out. */
@@ -218,7 +247,6 @@ class QueryParser {
 
     /* Converts String queries to postfix notation. */
     private Queue<String> infixToPostfix(String query) {
-
         Stack<String> stack = new Stack<String>();
         Queue<String> queryPostfix = new ConcurrentLinkedQueue<String>();
 

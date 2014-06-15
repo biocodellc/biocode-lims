@@ -14,7 +14,6 @@ import java.util.Set;
  * @author Gen Li
  *         Created on 5/06/14 12:02 PM
  */
-
 abstract class CompoundQuery extends Query {
     Query LHS, RHS;
 
@@ -37,14 +36,18 @@ abstract class CompoundQuery extends Query {
                               RHSResult.getSequenceIds());
     }
 
-    final LimsSearchResult combineResults(List<FimsSample> LHSTissueSamples,
-                                             List<FimsSample> RHSTissueSamples,
-                                             List<WorkflowDocument> LHSWorkflows,
-                                             List<WorkflowDocument> RHSWorkflows,
-                                             List<PlateDocument> LHSPlates,
-                                             List<PlateDocument> RHSPlates,
-                                             List<Integer> LHSSequenceIds,
-                                             List<Integer> RHSSequenceIds) {
+    public Query getLHS() { return LHS; }
+
+    public Query getRHS() { return RHS; }
+
+    final LimsSearchResult combineResults(List<FimsSample>       LHSTissueSamples,
+                                          List<FimsSample>       RHSTissueSamples,
+                                          List<WorkflowDocument> LHSWorkflows,
+                                          List<WorkflowDocument> RHSWorkflows,
+                                          List<PlateDocument>    LHSPlates,
+                                          List<PlateDocument>    RHSPlates,
+                                          List<Integer>          LHSSequenceIds,
+                                          List<Integer>          RHSSequenceIds) {
         LimsSearchResult combinedResult = new LimsSearchResult();
 
         combinedResult.addAllTissueSamples(combineLists(LHSTissueSamples, RHSTissueSamples));

@@ -14,7 +14,6 @@ import java.util.*;
  *         Created on 28/05/14 11:59 AM
  */
 public class RestUtilities {
-
     private RestUtilities() {
         // Can't instantiate
     }
@@ -39,8 +38,9 @@ public class RestUtilities {
                                                                                                          retrieveSequenceIds);
 
         List<DocumentField> searchAttributes = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
+
         searchAttributes.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
-        Query q = new QueryParser(searchAttributes).parseQuery(query);
-        return q.execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
+
+        return new QueryParser(searchAttributes).parseQuery(query).execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
     }
 }
