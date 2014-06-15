@@ -35,23 +35,27 @@ public class QueryServiceTest extends Assert {
 
     @Test
     public void testParseBasicQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=value]");
-        assertTrue(query instanceof BasicQuery);
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=value]") instanceof BasicQuery);
     }
     @Test
     public void testParseAndQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]AND[stringField=valueTwo]");
-        assertTrue(query instanceof AndQuery);
+        assertTrue(((CompoundQuery)new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]AND[stringField=valueTwo]OR[stringField=valueThree]")).getLHS() instanceof AndQuery);
     }
     @Test
     public void testParseXorQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]XOR[stringField=valueTwo]");
-        assertTrue(query instanceof XorQuery);
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]XOR[stringField=valueTwo]") instanceof XorQuery);
     }
     @Test
     public void testParseOrQuery() {
-        Query query = new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]OR[stringField=valueTwo]");
-        assertTrue(query instanceof OrQuery);
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]OR[stringField=valueTwo]AND[stringField=valueThree]") instanceof OrQuery);
+    }
+    @Test
+    public void testParseMultipleAndQuery() {
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]AND[stringField=valueTwo]") instanceof MultipleAndQuery);
+    }
+    @Test
+    public void testParseMultipleOrQuery() {
+        assertTrue(new QueryParser(searchAttributes).parseQuery("[stringField=valueOne]OR[stringField=valueTwo]") instanceof MultipleOrQuery);
     }
 
     @Test

@@ -36,6 +36,10 @@ abstract class CompoundQuery extends Query {
                               RHSResult.getSequenceIds());
     }
 
+    public Query getLHS() { return LHS; }
+
+    public Query getRHS() { return RHS; }
+
     final LimsSearchResult combineResults(List<FimsSample>       LHSTissueSamples,
                                           List<FimsSample>       RHSTissueSamples,
                                           List<WorkflowDocument> LHSWorkflows,

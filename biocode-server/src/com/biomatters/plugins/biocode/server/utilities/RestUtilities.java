@@ -18,14 +18,14 @@ public class RestUtilities {
         // Can't instantiate
     }
 
-    static <T> T getOnlyItemFromList(List<T> list, String noItemErrorMessage) throws NoContentException {
+    public static <T> T getOnlyItemFromList(List<T> list, String noItemErrorMessage) throws NoContentException {
         if (list.isEmpty()) {
             throw new NoContentException(noItemErrorMessage);
         }
         return list.get(0);
     }
 
-    static LimsSearchResult getSearchResults(String query,
+    public static LimsSearchResult getSearchResults(String query,
                                                     boolean retrieveTissues,
                                                     boolean retrieveWorkflows,
                                                     boolean retrievePlates,
@@ -38,10 +38,9 @@ public class RestUtilities {
                                                                                                          retrieveSequenceIds);
 
         List<DocumentField> searchAttributes = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
+
         searchAttributes.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
-        Query q = new QueryParser(searchAttributes).parseQuery(query);
 
-
-        return q.execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
+        return new QueryParser(searchAttributes).parseQuery(query).execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
     }
 }
