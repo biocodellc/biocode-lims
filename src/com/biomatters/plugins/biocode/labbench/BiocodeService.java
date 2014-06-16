@@ -733,7 +733,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                                 compoundQuery.getOperator() == CompoundSearchQuery.Operator.OR
                         );
                     }
-                    if(downloadAllSamplesFromFimsQuery) {
+                    if(downloadAllSamplesFromFimsQuery && tissueIdsMatchingFimsQuery != null) {
                         callback.setMessage("Downloading Tissues");
                         try {
                             List<String> toRetrieveFromFims = new ArrayList<String>(tissueIdsMatchingFimsQuery);
