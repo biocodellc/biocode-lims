@@ -46,16 +46,6 @@ public class QueryService {
     // Could marshall to a stream that is read by SAXBuilder?  Is that too inefficient?
     // JAXB can marshall to a  org.jdom2.transform.JDOMResult!!!
 
-
-    // /search?q=basicquery
-    // /search?q=[field.name]=fieldvalue
-    // /search?q=[field.name]=fieldvalue+[field.name.2]=fieldvalue2&type=AND/OR
-    // /search?q=[plate.name]~MBIO&type=AND&includes=plates
-
-    // /search?field.name=blah&field.name2=blah
-
-    // /search?q=!([a]={1}&[b]<{3})^[c]~{5}
-
     @GET
     @Produces("application/xml")
     public Response search(@QueryParam("q") String query,
@@ -68,33 +58,6 @@ public class QueryService {
         Set<String> tissuesToMatchSet = tissuesToMatch == null ? null : new HashSet<String>(Arrays.asList(tissuesToMatch.split(",")));
         return Response.ok(RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissuesToMatchSet)).build();
     }
-
-    /*@GET
-    @Produces("application/xml")
-    public Response search(@QueryParam("q")String queryString,
-                            @QueryParam("tissueIds")String tissueIds,
-                           @QueryParam("type")String type,
-                      @DefaultValue("tissues,workflows,plates")@QueryParam("include")String include) {
-        // todo Consider ChunkedOutput. Would need a way to separate chunks when reading back in
-
-        List<String> tissuesToMatch = tissueIds == null ? null : Arrays.asList(tissueIds.split(","));
-        try {
-            Map<String, Object> searchOptions = BiocodeService.getSearchDownloadOptions(
-                    include == null || include.toLowerCase().contains("tissues"),
-                    include == null || include.toLowerCase().contains("workflows"),
-                    include == null || include.toLowerCase().contains("plates"),
-                    include == null || include.toLowerCase().contains("sequences"));
-
-            Query query = RestQueryUtils.createQueryFromQueryString(
-                    type == null || type.equals(RestQueryUtils.QueryType.AND.name()) ?
-                            RestQueryUtils.QueryType.AND : RestQueryUtils.QueryType.OR, queryString, searchOptions
-            );
-            LimsSearchResult result = LIMSInitializationListener.getLimsConnection().getMatchingDocumentsFromLims(query, tissuesToMatch, null);
-            return Response.ok(result).build();
-        } catch (DatabaseServiceException e) {
-            throw new InternalServerErrorException("Encountered error: " + e.getMessage());
-        }
-    }*/
 
     @GET
     @Path("{id}")

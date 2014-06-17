@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.server.utilities;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.server.utilities.query.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -118,6 +120,10 @@ public class QueryServiceTest extends Assert {
     @Test(expected=BadRequestException.class)
     public void testParseInvalidDateQueryValueFormat() {
         new QueryParser(searchAttributes).parseQuery("[dateField=2004/02/02]");
+    }
+    @Test
+    public void testBracketPrecedence() {
+        assertTrue(new QueryParser(searchAttributes).parseQuery("([stringField=valueOne]OR[stringField=valueTwo])AND[stringField=valueThree]") instanceof AndQuery);
     }
 
     private <T extends Comparable> void testSameContentsUnordered(List<T> oneOrTwoAsList, List<T> result) {

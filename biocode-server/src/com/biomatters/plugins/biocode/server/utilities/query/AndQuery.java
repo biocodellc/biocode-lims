@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.server.utilities;
+package com.biomatters.plugins.biocode.server.utilities.query;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,10 +7,10 @@ import java.util.List;
  * @author Gen Li
  *         Created on 5/06/14 12:01 PM
  */
-class AndQuery extends CompoundQuery {
-    AndQuery(Query LHS, Query RHS) { super(LHS, RHS); }
+public class AndQuery extends CompoundQuery {
+    public AndQuery(Query LHS, Query RHS) { super(LHS, RHS); }
 
-    <T> List<T> combineLists(List<T> one, List<T> two) {
+    public <T> List<T> combineLists(List<T> one, List<T> two) {
         List<T> shorter;
         List<T> longer;
 

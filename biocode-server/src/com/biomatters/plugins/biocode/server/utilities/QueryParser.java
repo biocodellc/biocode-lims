@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.server.utilities;
 
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.plugins.biocode.server.utilities.query.QueryValues;
+import com.biomatters.plugins.biocode.server.utilities.query.*;
 
 import javax.ws.rs.BadRequestException;
 import java.text.DateFormat;
@@ -16,7 +18,7 @@ import java.util.regex.Pattern;
  * @author Gen Li
  *         Created on 5/06/14 12:02 PM
  *
- *         Parses String query to com.biomatters.plugins.biocode.server.utilities.Query tree.
+ *         Parses String query to com.biomatters.plugins.biocode.server.utilities.query.Query tree.
  */
 class QueryParser {
     List<DocumentField> searchAttributes;
@@ -75,7 +77,7 @@ class QueryParser {
         StringBuilder conditionSymbolsGroupRegexBuilder = new StringBuilder();
         conditionSymbolsGroupRegexBuilder.append("(");
         for (String symbol : conditionSymbols) {
-            conditionSymbolsGroupRegexBuilder.append(symbol + "|");
+            conditionSymbolsGroupRegexBuilder.append(symbol).append("|");
         }
         if (conditionSymbolsGroupRegexBuilder.length() > 0) {
             conditionSymbolsGroupRegexBuilder.deleteCharAt(conditionSymbolsGroupRegexBuilder.length() - 1);
@@ -169,26 +171,8 @@ class QueryParser {
             throw new BadRequestException("Invalid condition: " + conditionSymbol + " for field type: " + field.getCode());
         }
 
-        Class fieldClassType = field.getValueType();
-
         /* Extract query value. */
-        Object value = null;
-        if (fieldClassType.equals(Integer.class)) {
-            try {
-                value = new Integer(queryParts[1]);
-            } catch (NumberFormatException e) {
-                throw new BadRequestException("Invalid integer value: " + queryParts[1], e);
-            }
-        } else if (fieldClassType.equals(String.class)) {
-            value = queryParts[1];
-        } else if (fieldClassType.equals(Date.class)) {
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            try {
-                value = dateFormat.parse(queryParts[1]);
-            } catch (ParseException e) {
-                throw new BadRequestException("Invalid date value: " + queryParts[1], e);
-            }
-        }
+        Object value = parseQueryValue(field.getValueType(), queryParts[1]);
 
         return QueryValues.createQueryValues(field, condition, value);
     }
@@ -266,8 +250,9 @@ class QueryParser {
                     break;
                 case ')':
                     String popped = stack.pop();
-                    while (popped != "(") {
+                    while (!popped.equals("(")) {
                         queryPostfix.add(popped);
+                        popped = stack.pop();
                     }
                     break;
                 case 'A':

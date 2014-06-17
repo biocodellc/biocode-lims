@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.server.utilities;
+package com.biomatters.plugins.biocode.server.utilities.query;
 
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -7,7 +7,7 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
  * @author Gen Li
  *         Created on 12/06/14 2:17 PM
  */
-class QueryValues {
+public class QueryValues {
     private DocumentField searchAttribute;
     private Condition condition;
     private Object value;
@@ -18,13 +18,13 @@ class QueryValues {
         this.value = value;
     }
 
-    DocumentField getSearchAttribute() { return searchAttribute; }
+    public DocumentField getSearchAttribute() { return searchAttribute; }
 
-    Condition getCondition() { return condition; }
+    public Condition getCondition() { return condition; }
 
-    Object getValue() { return value; }
+    public Object getValue() { return value; }
 
-    static QueryValues createQueryValues(DocumentField searchAttribute, Condition condition, Object value) {
+    public static QueryValues createQueryValues(DocumentField searchAttribute, Condition condition, Object value) {
         return new QueryValues(searchAttribute, condition, value);
     }
 }
