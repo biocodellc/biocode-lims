@@ -29,6 +29,8 @@ class QueryParser {
 
     private static Map<Class, Map<String, Condition>> stringSymbolToConditionMaps = new HashMap<Class, Map<String, Condition>>();
 
+    final String advancedQueryStructure = "String s = \"(\\\\[.+=.+\\\\])((AND|OR|XOR)\\\\[.+=.+\\\\])*\";";
+
     private static String conditionSymbolsGroupRegex;
 
     static {
@@ -87,7 +89,13 @@ class QueryParser {
     }
 
     /* Primary parse method. */
-    Query parseQuery(String query) { return constructQueryFromPostfix(infixToPostfix(query)); }
+    public Query parseQuery(String query) {
+        if (query.matches(advancedQueryStructure)) {
+            return constructQueryFromPostfix(infixToPostfix(query));
+        } else {
+            return new GeneralQuery(query);
+        }
+    }
 
     private Query constructQueryFromPostfix(Queue<String> queryPostfix) throws BadRequestException {
         int numAnd = 0, numXor = 0, numOr = 0;
