@@ -1,12 +1,8 @@
 package com.biomatters.plugins.biocode.server;
 
-
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 
 import javax.ws.rs.*;
@@ -53,10 +49,10 @@ public class QueryService {
                            @DefaultValue("true")  @QueryParam("showWorkflows") boolean showWorkflows,
                            @DefaultValue("true")  @QueryParam("showPlates") boolean showPlates,
                            @DefaultValue("false") @QueryParam("showSequenceIds") boolean showSequenceIds,
-                                                  @QueryParam("tissuesToMatch") String tissuesToMatch) throws DatabaseServiceException {
+                                                  @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException {
 
-        Set<String> tissuesToMatchSet = tissuesToMatch == null ? null : new HashSet<String>(Arrays.asList(tissuesToMatch.split(",")));
-        return Response.ok(RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissuesToMatchSet)).build();
+        Set<String> tissueIdsToMatchSet = tissueIdsToMatch == null ? null : new HashSet<String>(Arrays.asList(tissueIdsToMatch.split(",")));
+        return Response.ok(RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatchSet)).build();
     }
 
     @GET
