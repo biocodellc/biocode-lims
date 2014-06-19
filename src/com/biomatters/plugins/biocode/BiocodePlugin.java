@@ -100,13 +100,11 @@ public class BiocodePlugin extends GeneiousPlugin {
                                          String latestVersionURL,
                                          String releaseNotes,
                                          String extraInformation) throws IOException, JDOMException {
-            SAXBuilder builder = new SAXBuilder();
-            Document document = builder.build(new URL(pluginVersionsXmlURL));
 
-            latestVersion = document.getRootElement().getChildText("LatestVersion");
-            latestVersionURL = document.getRootElement().getChildText("LatestVersionURL");
-            releaseNotes = document.getRootElement().getChildText("ReleaseNotes");
-            extraInformation = document.getRootElement().getChildText("ExtraInformation");
+            this.latestVersion = latestVersion;
+            this.latestVersionURL = latestVersionURL;
+            this.releaseNotes = releaseNotes;
+            this.extraInformation = extraInformation;
 
             addLabel("<html>There is a new version of the Biocode plugin available (" + latestVersion + "). " +
                      "You are<br> " +
