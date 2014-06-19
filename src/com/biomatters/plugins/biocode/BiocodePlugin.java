@@ -96,7 +96,10 @@ public class BiocodePlugin extends GeneiousPlugin {
 
         private MultipleLineStringOption releaseNotesDisplay;
 
-        NewVersionAvailableDialogOptions(String pluginVersionsXmlURL) throws IOException, JDOMException {
+        NewVersionAvailableDialogOptions(String latestVersion,
+                                         String latestVersionURL,
+                                         String releaseNotes,
+                                         String extraInformation) throws IOException, JDOMException {
             SAXBuilder builder = new SAXBuilder();
             Document document = builder.build(new URL(pluginVersionsXmlURL));
 
@@ -132,10 +135,10 @@ public class BiocodePlugin extends GeneiousPlugin {
     public void initialize(File pluginUserDirectory, File pluginDirectory) {
 
         final String pluginVersionsXmlURL = "http://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?" +
-                                      "Version=" + getVersion() +
-                                      "&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" +
-                                      System.getProperty("os.version", "").replace(" ", "_") +
-                                      "&OSArch=" + System.getProperty("os.arch").replace(" ", "_");
+                                            "Version=" + getVersion() +
+                                            "&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" +
+                                            System.getProperty("os.version", "").replace(" ", "_") +
+                                            "&OSArch=" + System.getProperty("os.arch").replace(" ", "_");
 
         this.pluginUserDirectory = pluginUserDirectory;
         Runnable r = new Runnable(){
@@ -150,8 +153,13 @@ public class BiocodePlugin extends GeneiousPlugin {
                 try {
                     SAXBuilder builder = new SAXBuilder();
                     Document document = builder.build(new URL(pluginVersionsXmlURL));
-                    String latestVersion = document.getRootElement().getChildText("LatestVersion");
-                    if (latestVersion != null && compareVersions(getVersion(), latestVersion) < 0) {
+
+                    final String latestVersion = document.getRootElement().getChildText("LatestVersion");
+                    final String latestVersionURL = document.getRootElement().getChildText("LatestVersionURL");
+                    final String releaseNotes = document.getRootElement().getChildText("ReleaseNotes");
+                    final String extraInformation = document.getRootElement().getChildText("ExtraInformation");
+
+                    if (latestVersion != null && compareVersions("1", latestVersion) < 0) {
                         ThreadUtilities.invokeAndWait(new Runnable() {
                             public void run() {
                                 try {
@@ -159,7 +167,7 @@ public class BiocodePlugin extends GeneiousPlugin {
                                     dialogOptions.setMaxHeight(500);
                                     dialogOptions.setMaxWidth(500);
                                     NewVersionAvailableDialogOptions newVersionAvailableDialogOptions =
-                                            new NewVersionAvailableDialogOptions(pluginVersionsXmlURL);
+                                            new NewVersionAvailableDialogOptions(latestVersion, latestVersionURL, releaseNotes, extraInformation);
                                     Dialogs.showDialog(dialogOptions, newVersionAvailableDialogOptions.getPanel());
                                 } catch (JDOMException e) {
                                     e.printStackTrace();
@@ -171,20 +179,25 @@ public class BiocodePlugin extends GeneiousPlugin {
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    return;
                 } catch (InvocationTargetException e) {
                     e.printStackTrace();
+                    return;
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
+                    return;
                 } catch (JDOMException e) {
                     e.printStackTrace();
+                    return;
                 } catch (IOException e) {
                     e.printStackTrace();
+                    return;
                 }
             }
         };
         long lastRun = Preferences.userNodeForPackage(BiocodePlugin.class).getLong("LastUpgradeCheck", 0);
 
-        if(System.currentTimeMillis() - lastRun > 1000 * 60 * 60 * 24) {
+        if(System.currentTimeMillis() - lastRun > 0) {
             Preferences.userNodeForPackage(BiocodePlugin.class).putLong("LastUpgradeCheck", System.currentTimeMillis());
             new Thread(r2, "Checking for update versions of the biocode plugin").start();
         }

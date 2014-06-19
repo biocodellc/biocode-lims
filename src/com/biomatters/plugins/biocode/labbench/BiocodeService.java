@@ -500,7 +500,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         final ProgressListener finalReferenceToProgressListener = progressListener;
         final AtomicBoolean fimsSuccessfullyConnected = new AtomicBoolean(false);
         final AtomicBoolean timedOutOrExceptionMet = new AtomicBoolean(false);
-        final Object unsuccessfulFimsConnectAttemptHandlerLock = new Object();
+
 
         Thread connectToFimsThread = new Thread(new Runnable() {
             @Override
@@ -509,19 +509,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     finalReferenceToActiveFimsConnection.connect(fimsOptions);
                     fimsSuccessfullyConnected.set(true);
                 } catch (ConnectionException e) {
-                    synchronized (unsuccessfulFimsConnectAttemptHandlerLock) {
-                        if (!timedOutOrExceptionMet.get()) {
-                            if (e != ConnectionException.NO_DIALOG) {
-                                String message = e.getMainMessage() == null ? "There was an error connecting to " + activeFIMSConnection.getLabel() : e.getMainMessage();
-                                if (e.getMessage() != null) {
-                                    Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Error connecting to FIMS"), message, e.getMessage());
-                                } else {
-                                    Dialogs.showMessageDialog(message, "Error connecting to FIMS");
-                                }
+                    if (!timedOutOrExceptionMet.getAndSet(true)) {
+                        if (e != ConnectionException.NO_DIALOG) {
+                            String message = e.getMainMessage() == null ? "There was an error connecting to " + activeFIMSConnection.getLabel() : e.getMainMessage();
+                            if (e.getMessage() != null) {
+                                Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Error connecting to FIMS"), message, e.getMessage());
+                            } else {
+                                Dialogs.showMessageDialog(message, "Error connecting to FIMS");
                             }
-                            logOut();
-                            finalReferenceToProgressListener.setProgress(1.0);
                         }
+                        logOut();
+                        finalReferenceToProgressListener.setProgress(1.0);
                     }
                 }
             }
@@ -533,15 +531,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         connectToFimsThread.start();
         while (connectToFimsThread.isAlive()) {
             if (System.currentTimeMillis() > timeoutPoint) {
-                synchronized (unsuccessfulFimsConnectAttemptHandlerLock) {
-                    if (timedOutOrExceptionMet.get()) {
-                        timedOutOrExceptionMet.set(true);
-                        logOut();
-                        Dialogs.showMessageDialog("Connection attempt timed out", "Error connecting to FIMS");
-                    }
+                if (!timedOutOrExceptionMet.getAndSet(true)) {
+                    logOut();
+                    Dialogs.showMessageDialog("Connection attempt timed out", "Error connecting to FIMS");
                 }
-                break;
+                return;
             }
+            ThreadUtilities.sleep(1000);
         }
 
         if (!fimsSuccessfullyConnected.get()) {
