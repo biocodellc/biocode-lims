@@ -1,14 +1,15 @@
 package com.biomatters.plugins.biocode.server.security;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+
+import javax.xml.bind.annotation.XmlRootElement;
+import java.util.*;
 
 /**
  * @author Matthew Cheung
  *         Created on 13/06/14 1:51 PM
  */
+@XmlRootElement
 public class Project {
     public int id;
     public String name;
@@ -40,9 +41,11 @@ public class Project {
     }
 
     private static Project TEST = new Project(0, "Test Project");
+    public static List<Project> list = new ArrayList<Project>();
     static {
         TEST.userRoles.put(new User("admin"), Role.ADMIN);
         TEST.userRoles.put(new User("test"), Role.READER);
+        list.add(TEST);
     }
 
     /**
@@ -60,5 +63,15 @@ public class Project {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Populate projects based on the contents of FIMS fields.
+     *
+     * @param fims A connection to the FIMS
+     * @param columnNames
+     */
+    public void populateFromFimsField(FIMSConnection fims, List<String> columnNames) {
+
     }
 }
