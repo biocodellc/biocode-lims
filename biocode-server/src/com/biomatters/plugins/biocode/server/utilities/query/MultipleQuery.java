@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.server.utilities;
+package com.biomatters.plugins.biocode.server.utilities.query;
 
 import com.biomatters.core.documents.SearchQuery;
 import com.biomatters.geneious.publicapi.databaseservice.*;
@@ -12,15 +12,15 @@ import java.util.Map;
  * @author Gen Li
  *         Created on 12/06/14 3:16 PM
  */
-abstract class MultipleQuery extends BasicQuery {
+public abstract class MultipleQuery extends BasicQuery {
     protected QueryValues[] queryValueses;
 
-    MultipleQuery(QueryValues[] queryValueses) {
+    public MultipleQuery(QueryValues[] queryValueses) {
         this.queryValueses = queryValueses;
     }
 
     @Override
-    com.biomatters.geneious.publicapi.databaseservice.Query createGeneiousQuery(Map<String, Object> tissuesWorkflowsPlatesSequences) {
+    protected com.biomatters.geneious.publicapi.databaseservice.Query createGeneiousQuery(Map<String, Object> tissuesWorkflowsPlatesSequences) {
         List<com.biomatters.geneious.publicapi.databaseservice.Query> geneiousQueries = new ArrayList<Query>();
 
         for (QueryValues queryValues : queryValueses) {
@@ -35,5 +35,5 @@ abstract class MultipleQuery extends BasicQuery {
                                                                 getOperator());
     }
 
-    abstract CompoundSearchQuery.Operator getOperator();
+    protected abstract CompoundSearchQuery.Operator getOperator();
 }

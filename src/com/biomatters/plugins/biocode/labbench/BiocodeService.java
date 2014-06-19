@@ -46,6 +46,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -71,6 +72,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private static BiocodeService instance = null;
     public final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
+    private static final long FIMS_CONNECTION_TIMEOUT_THRESHOLD_MILLISECONDS = 60000;
 
     private static Preferences getPreferencesForService() {
         return Preferences.userNodeForPackage(BiocodeService.class);
@@ -491,23 +493,54 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             return;
         }
 
-        try {
-            //get the selected fims service.
-            activeFIMSConnection = connection.getFimsConnection();
-            progressListener.setMessage("Connecting to the FIMS");
-            activeFIMSConnection.connect(connection.getFimsOptions());
-        } catch (ConnectionException ex) {
-            progressListener.setProgress(1.0);
-            if (ex != ConnectionException.NO_DIALOG) {
-                String message = ex.getMainMessage() == null ? "There was an error connecting to " + activeFIMSConnection.getLabel() : ex.getMainMessage();
-                if (ex.getMessage() != null) {
-                    Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Error connecting to FIMS"), message, ex.getMessage());
-                } else {
-                    Dialogs.showMessageDialog(message, "Error connecting to FIMS");
+        //get the selected fims service.
+        activeFIMSConnection = connection.getFimsConnection();
+        final FIMSConnection finalReferenceToActiveFimsConnection = activeFIMSConnection;
+        final PasswordOptions fimsOptions = connection.getFimsOptions();
+        final ProgressListener finalReferenceToProgressListener = progressListener;
+        final AtomicBoolean fimsSuccessfullyConnected = new AtomicBoolean(false);
+        final AtomicBoolean timedOutOrExceptionMet = new AtomicBoolean(false);
+
+
+        Thread connectToFimsThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    finalReferenceToActiveFimsConnection.connect(fimsOptions);
+                    fimsSuccessfullyConnected.set(true);
+                } catch (ConnectionException e) {
+                    if (!timedOutOrExceptionMet.getAndSet(true)) {
+                        if (e != ConnectionException.NO_DIALOG) {
+                            String message = e.getMainMessage() == null ? "There was an error connecting to " + activeFIMSConnection.getLabel() : e.getMainMessage();
+                            if (e.getMessage() != null) {
+                                Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Error connecting to FIMS"), message, e.getMessage());
+                            } else {
+                                Dialogs.showMessageDialog(message, "Error connecting to FIMS");
+                            }
+                        }
+                        logOut();
+                        finalReferenceToProgressListener.setProgress(1.0);
+                    }
                 }
             }
-            logOut();
-            progressListener.setProgress(1.0);
+        });
+
+        long timeoutPoint = System.currentTimeMillis() + FIMS_CONNECTION_TIMEOUT_THRESHOLD_MILLISECONDS;
+
+        progressListener.setMessage("Connecting to the FIMS");
+        connectToFimsThread.start();
+        while (connectToFimsThread.isAlive()) {
+            if (System.currentTimeMillis() > timeoutPoint) {
+                if (!timedOutOrExceptionMet.getAndSet(true)) {
+                    logOut();
+                    Dialogs.showMessageDialog("Connection attempt timed out", "Error connecting to FIMS");
+                }
+                return;
+            }
+            ThreadUtilities.sleep(1000);
+        }
+
+        if (!fimsSuccessfullyConnected.get()) {
             return;
         }
 

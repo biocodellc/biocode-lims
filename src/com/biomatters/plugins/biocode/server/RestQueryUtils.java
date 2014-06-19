@@ -7,6 +7,8 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 
 import javax.ws.rs.BadRequestException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +36,55 @@ public class RestQueryUtils {
 
         public String getQueryString() {
             return queryString;
+        }
+    }
+
+    public static String geneiousQueryToRestQueryString(com.biomatters.geneious.publicapi.databaseservice.Query query) {
+        if (query instanceof BasicSearchQuery) {
+            return ((BasicSearchQuery) query).getSearchText();
+        } else if (query instanceof AdvancedSearchQueryTerm) {
+            return parseAdvancedSearchQueryTerm((AdvancedSearchQueryTerm) query);
+        } else if (query instanceof CompoundSearchQuery) {
+            StringBuilder stringQueryBuilder = new StringBuilder();
+            CompoundSearchQuery queryCastToCompoundSearchQuery = (CompoundSearchQuery)query;
+            String compoundSearchQueryType = null;
+            if (queryCastToCompoundSearchQuery.getOperator() == CompoundSearchQuery.Operator.AND) {
+                compoundSearchQueryType = "AND";
+            } else if (queryCastToCompoundSearchQuery.getOperator() == CompoundSearchQuery.Operator.OR) {
+                compoundSearchQueryType = "OR";
+            }
+            List<? extends com.biomatters.geneious.publicapi.databaseservice.Query> childQueries = queryCastToCompoundSearchQuery.getChildren();
+            if (childQueries.isEmpty()) {
+                return null;
+            }
+            stringQueryBuilder.append(childQueries.get(0));
+            for (int i = 1; i < childQueries.size(); i++) {
+                stringQueryBuilder.append(compoundSearchQueryType).append(parseAdvancedSearchQueryTerm((AdvancedSearchQueryTerm) childQueries.get(i)));
+            }
+            return stringQueryBuilder.toString();
+        }
+        return null;
+    }
+
+    private static String parseAdvancedSearchQueryTerm(AdvancedSearchQueryTerm query) {
+        return "[" +
+                query.getField().getCode() +
+                getConditionSymbol(query.getField().getValueType(), query.getCondition()) +
+                queryValueObjectToString(query.getValues()[0]) +
+                "]";
+    }
+
+    private static String queryValueObjectToString(Object value) {
+        if (value instanceof String) {
+            return (String)value;
+        } else if (value instanceof Integer) {
+            return ((Integer)value).toString();
+        } else if (value instanceof Date) {
+            Date valueCastToDate = (Date)value;
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            return dateFormat.format(valueCastToDate);
+        } else {
+            return null;
         }
     }
 
@@ -165,5 +216,54 @@ public class RestQueryUtils {
 
     public static boolean supportsConditionForRestQuery(Condition condition) {
         return conditionMap.containsKey(condition);
+    }
+
+    private static Map<Class, Map<String, Condition>> stringSymbolToConditionMaps = new HashMap<Class, Map<String, Condition>>();
+
+    static {
+        /* Build individual string symbol to condition maps. */
+        Map<String, Condition> stringSymbolToIntegerConditionMap = new HashMap<String, Condition>();
+
+        stringSymbolToIntegerConditionMap.put("<=", Condition.LESS_THAN_OR_EQUAL_TO);
+        stringSymbolToIntegerConditionMap.put("<", Condition.LESS_THAN_OR_EQUAL_TO);
+        stringSymbolToIntegerConditionMap.put("=", Condition.EQUAL);
+        stringSymbolToIntegerConditionMap.put(">=", Condition.GREATER_THAN_OR_EQUAL_TO);
+        stringSymbolToIntegerConditionMap.put(">", Condition.GREATER_THAN);
+        stringSymbolToIntegerConditionMap.put("!=", Condition.NOT_EQUAL);
+
+        Map<String, Condition> stringSymbolToStringConditionMap = new HashMap<String, Condition>();
+
+        stringSymbolToStringConditionMap.put("=", Condition.EQUAL);
+        stringSymbolToStringConditionMap.put("!=", Condition.NOT_EQUAL);
+        stringSymbolToStringConditionMap.put("~", Condition.CONTAINS);
+        stringSymbolToStringConditionMap.put("!~", Condition.NOT_CONTAINS);
+        stringSymbolToStringConditionMap.put("<", Condition.STRING_LENGTH_LESS_THAN);
+        stringSymbolToStringConditionMap.put(">", Condition.STRING_LENGTH_GREATER_THAN);
+        stringSymbolToStringConditionMap.put("<:", Condition.BEGINS_WITH);
+        stringSymbolToStringConditionMap.put(":>", Condition.ENDS_WITH);
+
+        Map<String, Condition> stringSymbolToDateConditionMap = new HashMap<String, Condition>();
+
+        stringSymbolToDateConditionMap.put(">", Condition.DATE_AFTER);
+        stringSymbolToDateConditionMap.put("<=", Condition.DATE_AFTER_OR_ON);
+        stringSymbolToDateConditionMap.put("=", Condition.EQUAL);
+        stringSymbolToDateConditionMap.put(">", Condition.DATE_BEFORE_OR_ON);
+        stringSymbolToDateConditionMap.put("<", Condition.DATE_BEFORE);
+        stringSymbolToDateConditionMap.put("!=", Condition.NOT_EQUAL);
+
+        /* Build string symbol to condition map. */
+        stringSymbolToConditionMaps.put(Integer.class, stringSymbolToIntegerConditionMap);
+        stringSymbolToConditionMaps.put(String.class, stringSymbolToStringConditionMap);
+        stringSymbolToConditionMaps.put(Date.class, stringSymbolToDateConditionMap);
+    }
+
+    private static String getConditionSymbol(Class fieldType, Condition condition) {
+        Map<String, Condition> stringSymbolToConditionMap = stringSymbolToConditionMaps.get(fieldType);
+        for (Map.Entry<String, Condition> entry : stringSymbolToConditionMap.entrySet()) {
+            if (entry.getValue() == condition) {
+                return entry.getKey();
+            }
+        }
+        return "";
     }
 }
