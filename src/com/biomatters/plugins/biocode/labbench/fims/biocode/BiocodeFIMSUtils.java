@@ -101,16 +101,16 @@ public class BiocodeFIMSUtils {
             }
         }
 
-        List<Graph> graphsToSearch = new ArrayList<Graph>();
+        List<String> graphsToSearch = new ArrayList<String>();
         if(graph != null) {
-            graphsToSearch.add(graph);
+            graphsToSearch.add(graph.getGraphId());
         } else {
             for (Graph g : getGraphsForProject(project)) {
-                graphsToSearch.add(g);
+                graphsToSearch.add(g.getGraphId());
             }
         }
 
-        BiocodeFimsData data = getBiocodeFimsData(project, buildGraphIds(graphsToSearch), searchTerms, filter);
+        BiocodeFimsData data = getBiocodeFimsData(project, graphsToSearch, searchTerms, filter);
         if(data.header == null)
             data.header = Collections.emptyList();
 
@@ -120,22 +120,7 @@ public class BiocodeFIMSUtils {
         return data;
     }
 
-    private static String buildGraphIds(List<Graph> graphsToSearch) {
-        StringBuilder sb = new StringBuilder();
-        int num = 0;
-        if (graphsToSearch != null && graphsToSearch.size() > 0) {
-            for (Graph graph : graphsToSearch) {
-                if (num > 0)
-                    sb.append(",");
-
-                sb.append(graph.getGraphId());
-                num++;
-            }
-        }
-        return sb.toString();
-    }
-
-    private static BiocodeFimsData getBiocodeFimsData(String project, String graph, Form searchTerms, String filter) throws DatabaseServiceException {
+    private static BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
         try {
             WebTarget target = getQueryTarget();
 
@@ -144,8 +129,8 @@ public class BiocodeFIMSUtils {
                 if(filter != null) {
                     target = target.queryParam("filter", filter);
                 }
-                if(graph != null) {
-                    target = target.queryParam("graphs", graph);
+                if(graphs != null) {
+                    target = target.queryParam("graphs", StringUtilities.join(",", graphs));
                 }
                 Invocation.Builder request = target.
                         request(MediaType.APPLICATION_JSON_TYPE);
@@ -155,8 +140,10 @@ public class BiocodeFIMSUtils {
                         request(MediaType.APPLICATION_JSON_TYPE);
                 Form form = new Form(searchTerms.asMap());
                 form.param("project_id", project);
-                if(graph != null) {
-                    form.param("graphs", graph);
+                if(graphs != null) {
+                    for (String graph : graphs) {
+                        form.param("graphs", graph);
+                    }
                 }
                 Response response = request.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 //                System.out.println(response.readEntity(String.class));

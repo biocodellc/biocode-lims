@@ -41,33 +41,24 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return "Connection to the new Biocode FIMS (https://code.google.com/p/biocode-fims/)";
     }
 
-    private Map<String, Map<String, SoftReference<FimsSample>>> cachedSamples = new HashMap<String, Map<String, SoftReference<FimsSample>>>();
+    private Map<String, SoftReference<FimsSample>> cachedSamples = new HashMap<String, SoftReference<FimsSample>>();
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
         // Ideally we wouldn't want to pull down the full sample straight away.  But the new Biocode FIMS always returns
         // every column for a sample.  So we'll cache the samples so at least we might not need to download it again.
+
+        // We cache the samples by ID.  Unfortunately this means that if their are samples across expeditions with the
+        // same ID then they will be treated as one and only the last will be taken.  There is currently no way to
+        // tell these samples apart.  However the author of the Biocode FIMS, John Deck is working on an update that
+        // will add globally unique IDs to the returned dataset.  Once that is released we should update this code to
+        // cache by expedition.
         List<FimsSample> samples = getSamplesForQuery(query);
         List<String> ids = new ArrayList<String>();
         for (FimsSample sample : samples) {
             String id = sample.getId();
-            Object expedition = sample.getFimsAttributeValue(TableFimsConnection.CODE_PREFIX + BiocodeFIMSUtils.EXPEDITION_NAME);
-            if (expedition != null) {
-                Map<String, SoftReference<FimsSample>> forExpedition = cachedSamples.get(expedition.toString());
-                if (forExpedition == null) {
-                    forExpedition = new HashMap<String, SoftReference<FimsSample>>();
-                    cachedSamples.put(expedition.toString(), forExpedition);
-                }
-                forExpedition.put(id, new SoftReference<FimsSample>(sample));
-                ids.add("[" + expedition + "]" + id);
-            } else {
-                ids.add(id);
-                // We don't know the expedition so add to cache for all
-                for (Graph graph : graphs.values()) {
-                    Map<String, SoftReference<FimsSample>> forExpedition = cachedSamples.get(graph.getExpeditionTitle());
-                    forExpedition.put(id, new SoftReference<FimsSample>(sample));
-                }
-            }
+            ids.add(id);
+            cachedSamples.put(id, new SoftReference<FimsSample>(sample));
         }
         return ids;
     }
@@ -141,33 +132,22 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 continue;
             }
 
-            boolean found = false;
-            for (Map.Entry<String, Map<String, SoftReference<FimsSample>>> entry : cachedSamples.entrySet()) {
-                if (expeditionTitle == null || expeditionTitle.equals(entry.getKey())) {
-                    Map<String, SoftReference<FimsSample>> cache = entry.getValue();
-                    SoftReference<FimsSample> cachedResult = cache.get(tissueId);
-                    FimsSample sample = null;
-                    if (cachedResult != null) {
-                        sample = cachedResult.get();
-                    }
-                    if (sample != null) {
-                        TissueDocument tissueDoc = new TissueDocument(sample);
-                        if (callback != null) {
-                            callback.add(tissueDoc, Collections.<String, Object>emptyMap());
-                        }
-                        results.add(tissueDoc);
-                        found = true;
-                    }
-                }
+            SoftReference<FimsSample> cachedResult = cachedSamples.get(tissueId);
+            FimsSample sample = null;
+            if (cachedResult != null) {
+                sample = cachedResult.get();
             }
-            if (!found) {
-                TissueDocument tissueDoc = downloadTissueDocument(expeditionTitle, tissueId);
-                if(tissueDoc != null) {
-                    if (callback != null) {
-                        callback.add(tissueDoc, Collections.<String, Object>emptyMap());
-                    }
-                    results.add(tissueDoc);
+            TissueDocument tissueDoc;
+            if (sample != null) {
+                tissueDoc = new TissueDocument(sample);
+            } else {
+                tissueDoc = downloadTissueDocument(expeditionTitle, tissueId);
+            }
+            if(tissueDoc != null) {
+                if (callback != null) {
+                    callback.add(tissueDoc, Collections.<String, Object>emptyMap());
                 }
+                results.add(tissueDoc);
             }
         }
         return results;
