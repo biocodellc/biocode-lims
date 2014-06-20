@@ -56,9 +56,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         List<FimsSample> samples = getSamplesForQuery(query);
         List<String> ids = new ArrayList<String>();
         for (FimsSample sample : samples) {
-            String id = sample.getId();
-            ids.add(id);
-            cachedSamples.put(id, new SoftReference<FimsSample>(sample));
+            ids.add(sample.getId());
         }
         return ids;
     }
@@ -87,12 +85,18 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             }
         }
 
+        return getFimsSamplesBySearch(graphs.get(expeditionToSearch), form, filterText);
+    }
+
+    private List<FimsSample> getFimsSamplesBySearch(Graph graph, Form form, StringBuilder filterText) throws ConnectionException {
         List<FimsSample> samples = new ArrayList<FimsSample>();
         try {
-            BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graphs.get(expeditionToSearch),
-                    form, filterText.length() > 0 ? filterText.toString() : null);
+            BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graph,
+                    form, filterText == null || filterText.length() == 0 ? null : filterText.toString());
             for (Row row : data.data) {
-                samples.add(getFimsSampleForRow(data.header, row));
+                TableFimsSample sample = getFimsSampleForRow(data.header, row);
+                samples.add(sample);
+                cachedSamples.put(sample.getId(), new SoftReference<FimsSample>(sample));
             }
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e.getMessage(), e);
@@ -161,27 +165,19 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
      * @throws ConnectionException if there was a problem communicating with the server
      */
     private TissueDocument downloadTissueDocument(String expeditionTitle, String tissueId) throws ConnectionException {
-        TissueDocument tissueDoc = null;
-        try {
-            Form form = new Form();
-            form.param(getTissueCol(), tissueId);
-            Graph graph = null;
-            for (Graph g : graphs.values()) {
-                if(g.getExpeditionTitle().equals(expeditionTitle)) {
-                    graph = g;
-                    break;
-                }
+        Form form = new Form();
+        form.param(getTissueCol(), tissueId);
+        Graph graph = null;
+        for (Graph g : graphs.values()) {
+            if(g.getExpeditionTitle().equals(expeditionTitle)) {
+                graph = g;
+                break;
             }
-
-            BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graph, form, null);
-            for (Row row : data.data) {
-                TableFimsSample sample = getFimsSampleForRow(data.header, row);
-                tissueDoc = new TissueDocument(sample);
-            }
-        } catch (DatabaseServiceException e) {
-            throw new ConnectionException(e.getMessage(), e);
         }
-        return tissueDoc;
+
+        List<FimsSample> samples = getFimsSamplesBySearch(graph, form, null);
+        assert(samples.size() <= 1);
+        return samples.isEmpty() ? null : new TissueDocument(samples.get(0));
     }
 
     private String getExpeditionOrAddToForm(Form form, String projectToSearch, AdvancedSearchQueryTerm termQuery) throws ConnectionException {
