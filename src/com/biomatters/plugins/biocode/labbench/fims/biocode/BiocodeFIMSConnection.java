@@ -189,6 +189,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             for (Graph g : graphs.values()) {
                 if(g.getExpeditionTitle().equals(expeditionTitle)) {
                     graph = g;
+                    break;
                 }
             }
 

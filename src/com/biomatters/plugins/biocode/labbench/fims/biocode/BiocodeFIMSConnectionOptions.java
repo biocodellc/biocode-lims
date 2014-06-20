@@ -9,6 +9,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
+import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 import org.virion.jam.util.SimpleListener;
 
@@ -37,7 +38,7 @@ import java.util.prefs.Preferences;
         super(BiocodePlugin.class);
         final StringOption hostOption = addStringOption("host", "Host:", DEFAULT_HOST);
         final StringOption usernameOption = addStringOption("username", "Username:", "");
-        final StringOption passwordOption = addStringOption("password", "Password:", "");
+        final PasswordOption passwordOption = addCustomOption(new PasswordOption("password", "Password:", true));
         addButtonOption("authenticate", "", "Authenticate").addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -47,7 +48,7 @@ import java.util.prefs.Preferences;
                 Thread thread = new Thread() {
                     public void run() {
                         try {
-                            login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getValue());
+                            login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getPassword());
                         } catch (MalformedURLException e1) {
                             Dialogs.showMessageDialog("Could not connect to server.  Invalid URL: " + e1.getMessage(), "Invalid URL");
                         } catch (ProcessingException e) {

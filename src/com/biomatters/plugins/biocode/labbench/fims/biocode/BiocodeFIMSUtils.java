@@ -110,28 +110,29 @@ public class BiocodeFIMSUtils {
             }
         }
 
-        BiocodeFimsData data = new BiocodeFimsData();
-        int resultCount = 0;
-        for (Graph g : graphsToSearch) {
-            BiocodeFimsData toAdd = getBiocodeFimsData(project, g.getGraphId(), searchTerms, filter);
-            if(toAdd == null) continue;
-            resultCount++;
-            if(data.header == null || data.header.isEmpty()) {
-                data.header = toAdd.header;
-                data.header.add(0, EXPEDITION_NAME);
-                data.data = new ArrayList<Row>();
-            }
-            for (Row row : toAdd.data) {
-                row.rowItems.add(0,g.getExpeditionTitle());
-                data.data.add(row);
-            }
-        }
-        if(resultCount == 0) {
+        BiocodeFimsData data = getBiocodeFimsData(project, buildGraphIds(graphsToSearch), searchTerms, filter);
+        if(data.header == null)
             data.header = Collections.emptyList();
+
+        if (data.data == null)
             data.data = Collections.emptyList();
-        }
 
         return data;
+    }
+
+    private static String buildGraphIds(List<Graph> graphsToSearch) {
+        StringBuilder sb = new StringBuilder();
+        int num = 0;
+        if (graphsToSearch != null && graphsToSearch.size() > 0) {
+            for (Graph graph : graphsToSearch) {
+                if (num > 0)
+                    sb.append(",");
+
+                sb.append(graph.getGraphId());
+                num++;
+            }
+        }
+        return sb.toString();
     }
 
     private static BiocodeFimsData getBiocodeFimsData(String project, String graph, Form searchTerms, String filter) throws DatabaseServiceException {
