@@ -1,6 +1,6 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.server.security.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -8,6 +8,8 @@ import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.provisioning.UserDetailsManager;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.GenericEntity;
+import javax.ws.rs.core.Response;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -35,23 +37,27 @@ public class Users {
     private synchronized void createManager() {
         JdbcUserDetailsManager manager = new JdbcUserDetailsManager();
         manager.setDataSource(LIMSInitializationListener.getDataSource());
+        this.manager = manager;
     }
 
     @GET
-    @Produces("text/plain")
-    public String list() {
-        // todo better way?  Does Spring Security provide a way to list all users?
+    @Produces({"application/xml", "application/json"})
+    public Response list() {
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
             PreparedStatement statement = connection.prepareStatement("SELECT username FROM users");
             ResultSet resultSet = statement.executeQuery();
-            List<String> usernames = new ArrayList<String>();
+            List<User> users = new ArrayList<User>();
             while(resultSet.next()) {
-                usernames.add(resultSet.getString(1));
+                User user = new User();
+                user.username = resultSet.getString(1);
+                users.add(user);
             }
             resultSet.close();
-            return StringUtilities.join(",", usernames);
+
+            return Response.ok(new GenericEntity<List<User>>(users){}).build();
+
         } catch (SQLException e) {
             throw new InternalServerErrorException("Failed to list users", e);
         } finally {
@@ -65,18 +71,40 @@ public class Users {
         }
     }
 
+    @GET
+    @Produces("application/xml")
+    @Path("{username}")
+    public User getUser(@PathParam("username")String username) {
+        return User.get();  // todo
+    }
+
+    @POST
+    @Consumes("application/xml")
+    public void addUser(User user) {
+        UserAccountToAdd account = new UserAccountToAdd(user.username, user.password);
+        getManager().createUser(account);
+    }
+
     @PUT
-    public void addUser(@QueryParam("username")String username, @QueryParam("password")String password) {
-        User user = new User(username, password);
-        manager.createUser(user);
+    @Path("{username}")
+    @Consumes("application/xml")
+    public void updateUser(@PathParam("username")String username, User user) {
+        // todo
+    }
+
+    @DELETE
+    @Path("{username}")
+    public void deleteUser(@PathParam("username")String username) {
+        User.get().checkIsAdmin();
+        getManager().deleteUser(username);
     }
 
     private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    private static class User implements UserDetails {
+    private static class UserAccountToAdd implements UserDetails {
 
         private String username;
         private String passwordHash;
-        public User(String username, String password) {
+        public UserAccountToAdd(String username, String password) {
             this.username = username;
             this.passwordHash = encoder.encode(password);
         }

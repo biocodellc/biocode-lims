@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.server.utilities;
+package com.biomatters.plugins.biocode.server.utilities.query;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -14,16 +14,15 @@ import java.util.Set;
  * @author Gen Li
  *         Created on 5/06/14 12:02 PM
  */
+public abstract class CompoundQuery extends Query {
+    private Query LHS, RHS;
 
-abstract class CompoundQuery extends Query {
-    Query LHS, RHS;
-
-    CompoundQuery(Query LHS, Query RHS) {
+    public CompoundQuery(Query LHS, Query RHS) {
         this.LHS = LHS;
         this.RHS = RHS;
     }
 
-    LimsSearchResult execute(Map<String, Object> tissuesWorkflowsPlatesSequences, Set<String> tissuesToMatch) throws DatabaseServiceException {
+    public LimsSearchResult execute(Map<String, Object> tissuesWorkflowsPlatesSequences, Set<String> tissuesToMatch) throws DatabaseServiceException {
         LimsSearchResult LHSResult = LHS.execute(tissuesWorkflowsPlatesSequences, tissuesToMatch),
                          RHSResult = RHS.execute(tissuesWorkflowsPlatesSequences, tissuesToMatch);
 
@@ -37,14 +36,18 @@ abstract class CompoundQuery extends Query {
                               RHSResult.getSequenceIds());
     }
 
-    final LimsSearchResult combineResults(List<FimsSample> LHSTissueSamples,
-                                             List<FimsSample> RHSTissueSamples,
-                                             List<WorkflowDocument> LHSWorkflows,
-                                             List<WorkflowDocument> RHSWorkflows,
-                                             List<PlateDocument> LHSPlates,
-                                             List<PlateDocument> RHSPlates,
-                                             List<Integer> LHSSequenceIds,
-                                             List<Integer> RHSSequenceIds) {
+    public Query getLHS() { return LHS; }
+
+    public Query getRHS() { return RHS; }
+
+    protected final LimsSearchResult combineResults(List<FimsSample>       LHSTissueSamples,
+                                          List<FimsSample>       RHSTissueSamples,
+                                          List<WorkflowDocument> LHSWorkflows,
+                                          List<WorkflowDocument> RHSWorkflows,
+                                          List<PlateDocument>    LHSPlates,
+                                          List<PlateDocument>    RHSPlates,
+                                          List<Integer>          LHSSequenceIds,
+                                          List<Integer>          RHSSequenceIds) {
         LimsSearchResult combinedResult = new LimsSearchResult();
 
         combinedResult.addAllTissueSamples(combineLists(LHSTissueSamples, RHSTissueSamples));
@@ -55,5 +58,5 @@ abstract class CompoundQuery extends Query {
         return combinedResult;
     }
 
-    abstract <T> List<T> combineLists(List<T> one, List<T> two);
+    public abstract <T> List<T> combineLists(List<T> one, List<T> two);
 }

@@ -68,50 +68,40 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException {
-        List<String> include = new ArrayList<String>();
+        String showTissues = "false";
+        String showWorkflows = "false";
+        String showPlates = "false";
+        String showSequences = "false";
         if (BiocodeService.isDownloadTissues(query)) {
-            include.add("tissues");
+            showTissues = "true";
         }
         if (BiocodeService.isDownloadWorkflows(query)) {
-            include.add("workflows");
+            showWorkflows = "true";
         }
         if (BiocodeService.isDownloadPlates(query)) {
-            include.add("plates");
+            showPlates = "true";
         }
         if (BiocodeService.isDownloadSequences(query)) {
-            include.add("sequences");
+            showSequences = "true";
         }
+
+        String tissueIdsToMatchString = tissueIdsToMatch == null ? null : StringUtilities.join(",", tissueIdsToMatch);
 
         LimsSearchResult result;
         try {
-            RestQueryUtils.Query restQuery = RestQueryUtils.createRestQuery(query);
             WebTarget target = this.target.path("search")
-                    .queryParam("q", restQuery.getQueryString())
-                    .queryParam("type", restQuery.getType());
-            if(tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
-                target = target.queryParam("tissueIds", StringUtilities.join(",", tissueIdsToMatch));
-            }
-            if (!include.isEmpty()) {
-                target = target.queryParam("include", StringUtilities.join(",", include));
-            }
-
-            System.out.println(target.getUri().toString());
+                    .queryParam("q", RestQueryUtils.geneiousQueryToRestQueryString(query))
+                    .queryParam("showTissues", showTissues)
+                    .queryParam("showWorkflows", showWorkflows)
+                    .queryParam("showPlates", showPlates)
+                    .queryParam("showSequences", showSequences)
+                    .queryParam("tissuesToMatch", tissueIdsToMatchString);
             Invocation.Builder request = target.request(MediaType.APPLICATION_XML_TYPE);
             result = request.get(LimsSearchResult.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
-        if (BiocodeService.isDownloadPlates(query) && callback != null) {
-            for (PlateDocument plateDocument : result.getPlates()) {
-                callback.add(plateDocument, Collections.<String, Object>emptyMap());
-            }
-        }
-        if (BiocodeService.isDownloadWorkflows(query) && callback != null) {
-            for (WorkflowDocument workflow : result.getWorkflows()) {
-                callback.add(workflow, Collections.<String, Object>emptyMap());
-            }
         }
         return result;
     }

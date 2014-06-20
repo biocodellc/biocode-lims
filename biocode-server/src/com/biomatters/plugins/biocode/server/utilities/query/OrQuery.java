@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.server.utilities;
+package com.biomatters.plugins.biocode.server.utilities.query;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -9,13 +9,12 @@ import java.util.Set;
  * @author Gen Li
  *         Created on 5/06/14 12:02 PM
  */
-class OrQuery extends CompoundQuery {
-
-    OrQuery(Query LHS, Query RHS) {
+public class OrQuery extends CompoundQuery {
+    public OrQuery(Query LHS, Query RHS) {
         super(LHS, RHS);
     }
 
-    <T> List<T> combineLists(List<T> one, List<T> two) {
+    public <T> List<T> combineLists(List<T> one, List<T> two) {
         Set<T> filterSet = new HashSet<T>();
 
         filterSet.addAll(one);

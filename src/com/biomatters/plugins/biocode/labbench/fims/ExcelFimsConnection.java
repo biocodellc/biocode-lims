@@ -91,7 +91,15 @@ public class ExcelFimsConnection extends TableFimsConnection{
         try {
             workbook = Workbook.getWorkbook(excelFile);
             Sheet sheet = workbook.getSheet(0);
-            Cell[] keys = sheet.getColumn(0);
+            Cell[] rows = sheet.getRow(0);
+            int tissueIdColumnIndex = 0;
+            while (tissueIdColumnIndex < rows.length && !rows[tissueIdColumnIndex].getContents().equals("tissue_id")) {
+                tissueIdColumnIndex++;
+            }
+            if (tissueIdColumnIndex == rows.length) {
+                throw new ConnectionException(null, "Invalid spreadsheet: Tissue id column was not found");
+            }
+            Cell[] keys = sheet.getColumn(tissueIdColumnIndex);
             HashSet<String> keySet = new HashSet<String>();
             for (Cell c : keys) {
                 if (keySet.contains(c.getContents())) {

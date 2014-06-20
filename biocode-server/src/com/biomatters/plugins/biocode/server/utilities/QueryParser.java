@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.server.utilities;
 
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.plugins.biocode.server.utilities.query.QueryValues;
+import com.biomatters.plugins.biocode.server.utilities.query.*;
 
 import javax.ws.rs.BadRequestException;
 import java.text.DateFormat;
@@ -16,16 +18,18 @@ import java.util.regex.Pattern;
  * @author Gen Li
  *         Created on 5/06/14 12:02 PM
  *
- *         Parses String query to com.biomatters.plugins.biocode.server.utilities.Query tree.
+ *         Parses String query to com.biomatters.plugins.biocode.server.utilities.query.Query tree.
  */
 class QueryParser {
     List<DocumentField> searchAttributes;
 
-    public QueryParser(List<DocumentField> validFields) {
+    QueryParser(List<DocumentField> validFields) {
         searchAttributes = validFields;
     }
 
     private static Map<Class, Map<String, Condition>> stringSymbolToConditionMaps = new HashMap<Class, Map<String, Condition>>();
+
+    final String advancedQueryStructure = "String s = \"(\\\\[.+=.+\\\\])((AND|OR|XOR)\\\\[.+=.+\\\\])*\";";
 
     private static String conditionSymbolsGroupRegex;
 
@@ -75,7 +79,7 @@ class QueryParser {
         StringBuilder conditionSymbolsGroupRegexBuilder = new StringBuilder();
         conditionSymbolsGroupRegexBuilder.append("(");
         for (String symbol : conditionSymbols) {
-            conditionSymbolsGroupRegexBuilder.append(symbol + "|");
+            conditionSymbolsGroupRegexBuilder.append(symbol).append("|");
         }
         if (conditionSymbolsGroupRegexBuilder.length() > 0) {
             conditionSymbolsGroupRegexBuilder.deleteCharAt(conditionSymbolsGroupRegexBuilder.length() - 1);
@@ -85,32 +89,67 @@ class QueryParser {
     }
 
     /* Primary parse method. */
-    Query parseQuery(String query) { return constructQueryFromPostfix(infixToPostfix(query)); }
-
-    private Query constructQueryFromPostfix(Queue<String> queryPostfix) throws BadRequestException {
-        Stack<Query> queryQueue = new Stack<Query>();
-        while (!queryPostfix.isEmpty()) {
-            String element = queryPostfix.remove();
-            if (element.equals("AND")) {
-                Query one = queryQueue.pop();
-                Query two = queryQueue.pop();
-                queryQueue.push(new AndQuery(one, two));
-            } else if (element.equals("XOR")) {
-                Query one = queryQueue.pop();
-                Query two = queryQueue.pop();
-                queryQueue.push(new XorQuery(one, two));
-            } else if (element.equals("OR")) {
-                Query one = queryQueue.pop();
-                Query two = queryQueue.pop();
-                queryQueue.push(new OrQuery(one, two));
-            } else {
-                queryQueue.push(stringToBasicQuery(element));
-            }
+    public Query parseQuery(String query) {
+        if (query.matches(advancedQueryStructure)) {
+            return constructQueryFromPostfix(infixToPostfix(query));
+        } else {
+            return new GeneralQuery(query);
         }
-        return queryQueue.pop();
     }
 
-    private Query stringToBasicQuery(String query) {
+    private Query constructQueryFromPostfix(Queue<String> queryPostfix) throws BadRequestException {
+        int numAnd = 0, numXor = 0, numOr = 0;
+        for (String element : queryPostfix) {
+            if (element.equals("AND")) {
+                numAnd++;
+            } else if (element.equals("XOR")) {
+                numXor++;
+            } else if (element.equals("OR")) {
+                numOr++;
+            }
+        }
+
+        if (numAnd != 0 && numXor == 0 && numOr == 0) {
+            List<QueryValues> queryValueses = new ArrayList<QueryValues>();
+            for (String element : queryPostfix) {
+                if (!element.equals("AND") && !element.equals("XOR") && !element.equals("OR")) {
+                    queryValueses.add(stringToQueryValues(element));
+                }
+            }
+            return new MultipleAndQuery(queryValueses.toArray(new QueryValues[queryValueses.size()]));
+        } else if (numAnd == 0 && numXor == 0 && numOr != 0) {
+            List<QueryValues> queryValueses = new ArrayList<QueryValues>();
+            for (String element : queryPostfix) {
+                if (!element.equals("AND") && !element.equals("XOR") && !element.equals("OR")) {
+                    queryValueses.add(stringToQueryValues(element));
+                }
+            }
+            return new MultipleOrQuery(queryValueses.toArray(new QueryValues[queryValueses.size()]));
+        } else {
+            Stack<Query> queryQueue = new Stack<Query>();
+            while (!queryPostfix.isEmpty()) {
+                String element = queryPostfix.remove();
+                if (element.equals("AND")) {
+                    Query RHS = queryQueue.pop();
+                    Query LHS = queryQueue.pop();
+                    queryQueue.push(new AndQuery(LHS, RHS));
+                } else if (element.equals("XOR")) {
+                    Query RHS = queryQueue.pop();
+                    Query LHS = queryQueue.pop();
+                    queryQueue.push(new XorQuery(LHS, RHS));
+                } else if (element.equals("OR")) {
+                    Query RHS = queryQueue.pop();
+                    Query LHS = queryQueue.pop();
+                    queryQueue.push(new OrQuery(LHS, RHS));
+                } else {
+                    queryQueue.push(new SingleQuery(stringToQueryValues(element)));
+                }
+            }
+            return queryQueue.pop();
+        }
+    }
+
+    private QueryValues stringToQueryValues(String query) {
         String[] queryParts = query.split(conditionSymbolsGroupRegex);
         if (queryParts.length != 2) {
             throw new BadRequestException("Invalid condition: " + query);
@@ -140,28 +179,10 @@ class QueryParser {
             throw new BadRequestException("Invalid condition: " + conditionSymbol + " for field type: " + field.getCode());
         }
 
-        Class fieldClassType = field.getValueType();
-
         /* Extract query value. */
-        Object value = null;
-        if (fieldClassType.equals(Integer.class)) {
-            try {
-                value = new Integer(queryParts[1]);
-            } catch (NumberFormatException e) {
-                throw new BadRequestException("Invalid integer value: " + queryParts[1], e);
-            }
-        } else if (fieldClassType.equals(String.class)) {
-            value = queryParts[1];
-        } else if (fieldClassType.equals(Date.class)) {
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            try {
-                value = dateFormat.parse(queryParts[1]);
-            } catch (ParseException e) {
-                throw new BadRequestException("Invalid date value: " + queryParts[1], e);
-            }
-        }
+        Object value = parseQueryValue(field.getValueType(), queryParts[1]);
 
-        return new BasicQuery(field, condition, value);
+        return QueryValues.createQueryValues(field, condition, value);
     }
 
     /* Unsupported field values grayed out. */
@@ -218,7 +239,6 @@ class QueryParser {
 
     /* Converts String queries to postfix notation. */
     private Queue<String> infixToPostfix(String query) {
-
         Stack<String> stack = new Stack<String>();
         Queue<String> queryPostfix = new ConcurrentLinkedQueue<String>();
 
@@ -238,8 +258,9 @@ class QueryParser {
                     break;
                 case ')':
                     String popped = stack.pop();
-                    while (popped != "(") {
+                    while (!popped.equals("(")) {
                         queryPostfix.add(popped);
+                        popped = stack.pop();
                     }
                     break;
                 case 'A':
