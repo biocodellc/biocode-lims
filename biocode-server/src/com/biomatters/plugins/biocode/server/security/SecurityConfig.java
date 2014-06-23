@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
@@ -35,7 +36,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         if(hasDatabaseConnection) {
             BasicDataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
             needMemoryUsers = createUserTablesIfNecessary(dataSource);
-            auth = auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
+            auth = auth.jdbcAuthentication().dataSource(dataSource).and();
         } else {
             needMemoryUsers = true;
         }
@@ -53,16 +54,48 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      * @return true if there are currently no user accounts
      * @throws SQLException
      */
-    private synchronized boolean createUserTablesIfNecessary(BasicDataSource dataSource) throws SQLException {
+    public synchronized boolean createUserTablesIfNecessary(BasicDataSource dataSource) {
         Connection connection = null;
         try {
             connection = dataSource.getConnection();
-            // todo Run SQL script if tables not present
-            // todo Insert admin account
+
+            String createUsersTableQuery = "CREATE TABLE IF NOT EXISTS " + LimsDatabaseConstants.USERS_TABLE_NAME + "(" +
+                                               LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE +" VARCHAR(50) NOT NULL, " +
+                                               LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
+                                               LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
+                                               LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
+                                               LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + " VARCHAR(320) NOT NULL, " +
+                                               LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + " BIT NOT NULL, " +
+                                               "PRIMARY KEY(" + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "))";
+
+            PreparedStatement statement = connection.prepareStatement(createUsersTableQuery);
+
+            statement.executeUpdate();
+
+            String createAuthoritiesTableQuery = "CREATE TABLE IF NOT EXISTS " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + "(" +
+                                                     LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
+                                                     LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " VARCHAR(50) NOT NULL, " +
+                                                     "PRIMARY KEY (authority)," +
+                                                     "UNIQUE KEY (username, authority)," +
+                                                     "FOREIGN KEY (username) " +
+                                                        "REFERENCES users(username) " +
+                                                        "ON DELETE CASCADE)";
+
+            statement = connection.prepareStatement(createAuthoritiesTableQuery);
+
+            statement.executeUpdate();
+
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
             return true;
         } finally {
-            if(connection != null) {
-                connection.close();
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
     }

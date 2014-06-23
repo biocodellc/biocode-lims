@@ -13,6 +13,7 @@ import jebl.util.ProgressListener;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.ws.rs.*;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -93,7 +94,7 @@ public class Plates {
     @PUT
     @Consumes("application/xml")
     @Path("reactions")
-    public void saveReactions(XMLSerializableList<Reaction> reactions, @QueryParam("type") String type) {
+    public void saveReactions(XMLSerializableList<Reaction> reactions, @QueryParam("type") String type) throws SQLException {
         List<Reaction> reactionList = reactions.getList();
         checkCanEditReactions(reactionList);
         Reaction.Type reactionType = Reaction.Type.valueOf(type);
@@ -165,7 +166,7 @@ public class Plates {
      * Throws a {@link javax.ws.rs.ForbiddenException} if the current logged in user cannot edit the plates specified
      * @param reactionList a list of {@link Reaction}s to check
      */
-    private void checkCanEditReactions(List<Reaction> reactionList) {
+    private void checkCanEditReactions(List<Reaction> reactionList) throws SQLException {
         for (Reaction reaction : reactionList) {
             Project project = Project.getForExtractionId(reaction.getExtractionId());
             if(project.getRoleForUser().isAtLeast(Role.WRITER)) {

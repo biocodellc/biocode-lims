@@ -2,10 +2,7 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.plugins.biocode.server.security.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.server.security.User;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
-import org.springframework.security.provisioning.UserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
@@ -15,8 +12,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -25,20 +20,7 @@ import java.util.List;
  */
 @Path("users")
 public class Users {
-    UserDetailsManager manager;
-
-    private UserDetailsManager getManager() {
-        if (manager == null) {
-            createManager();
-        }
-        return manager;
-    }
-
-    private synchronized void createManager() {
-        JdbcUserDetailsManager manager = new JdbcUserDetailsManager();
-        manager.setDataSource(LIMSInitializationListener.getDataSource());
-        this.manager = manager;
-    }
+    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @GET
     @Produces({"application/xml", "application/json"})
@@ -48,10 +30,11 @@ public class Users {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
             String query = "SELECT " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                       LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + " "  +
+                                       LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", "  +
+                                       LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + " " +
                            "FROM " + LimsDatabaseConstants.USERS_TABLE_NAME;
 
             PreparedStatement statement = connection.prepareStatement(query);
@@ -61,10 +44,11 @@ public class Users {
             List<User> users = new ArrayList<User>();
             while(resultSet.next()) {
                 User user = new User(resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE),
+                                     resultSet.getString(LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE),
                                      resultSet.getString(LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE),
                                      resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
-                                     resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE),
-                                     resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE));
+                                     resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE),
+                                     resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE));
 
                 users.add(user);
             }
@@ -94,10 +78,11 @@ public class Users {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
             String query = "SELECT " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                       LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + " "  +
+                                       LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", "  +
+                                       LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + " " +
                            "FROM " + LimsDatabaseConstants.USERS_TABLE_NAME + " "  +
                            "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?";
 
@@ -112,10 +97,11 @@ public class Users {
             }
 
             return new User(resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE),
+                            resultSet.getString(LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE),
                             resultSet.getString(LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE),
                             resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
-                            resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE),
-                            resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE));
+                            resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE),
+                            resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE));
         } catch (SQLException e) {
             throw new InternalServerErrorException("Failed to retrieve user account '" + username + "'", e);
         } finally {
@@ -137,15 +123,16 @@ public class Users {
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
-            String query = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?)";
+            String query = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?)";
 
             PreparedStatement statement = connection.prepareStatement(query);
 
-            statement.setObject(1, user.getUserName());
-            statement.setObject(2, user.getFirstName());
-            statement.setObject(3, user.getLastName());
-            statement.setObject(4, user.getEnabled());
-            statement.setObject(5, user.getEmail());
+            statement.setObject(1, user.username);
+            statement.setObject(2, user.password);
+            statement.setObject(3, user.firstname);
+            statement.setObject(4, user.lastname);
+            statement.setObject(5, user.email);
+            statement.setObject(6, user.enabled);
 
             if (statement.executeUpdate() > 0) {
                 return "User added.";
@@ -174,22 +161,24 @@ public class Users {
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
-            String query = "UPDATE " + LimsDatabaseConstants.USERS_TABLE_NAME +
+            String query = "UPDATE " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
                            "SET " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
+                                    LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + "=?, " +
                                     LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
                                     LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
-                                    LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + "=?, " +
-                                    LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + "=? "  +
+                                    LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + "=?, "  +
+                                    LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + "=? " +
                            "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?";
 
             PreparedStatement statement = connection.prepareStatement(query);
 
-            statement.setObject(1, user.getUserName());
-            statement.setObject(2, user.getFirstName());
-            statement.setObject(3, user.getLastName());
-            statement.setObject(4, user.getEnabled());
-            statement.setObject(5, user.getEmail());
-            statement.setObject(6, username);
+            statement.setObject(1, user.username);
+            statement.setObject(2, user.password);
+            statement.setObject(3, user.firstname);
+            statement.setObject(4, user.lastname);
+            statement.setObject(5, user.email);
+            statement.setObject(6, user.enabled);
+            statement.setObject(7, username);
 
             if (statement.executeUpdate() > 0) {
                 return "User account '" + username + "' updated.";
@@ -211,7 +200,7 @@ public class Users {
 
     @DELETE
     @Path("{username}")
-    @Produces("")
+    @Produces("text/plain")
     public String deleteUser(@PathParam("username")String username) {
         Connection connection = null;
         try {

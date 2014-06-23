@@ -17,18 +17,20 @@ import java.sql.SQLException;
  */
 @XmlRootElement
 public class User {
-    public String userName;
-    private String firstName;
-    private String lastName;
-    private boolean enabled;
-    private String email;
+    public String username;
+    public String password;
+    public String firstname;
+    public String lastname;
+    public String email;
+    public boolean enabled;
 
-    public User(String userName, String firstName, String lastName, boolean enabled, String email) {
-        this.userName = userName;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.enabled = enabled;
+    public User(String username, String password, String firstname, String lastname, String email, boolean enabled) {
+        this.username = username;
+        this.password = password;
+        this.firstname = firstname;
+        this.lastname = lastname;
         this.email = email;
+        this.enabled = enabled;
     }
 
     public User() {
@@ -37,71 +39,92 @@ public class User {
     /**
      * @return The current logged in {@link com.biomatters.plugins.biocode.server.security.User}
      */
-    public static User getLoggedInUser() throws SQLException, InternalServerErrorException {
+    public static User getLoggedInUser() throws InternalServerErrorException {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         UserDetails user = (UserDetails) principal;
 
+        Connection connection = null;
+
         if (principal instanceof UserDetails) {
-            Connection connection = new LIMSInitializationListener().getDataSource().getConnection();
+            try {
+                connection = new LIMSInitializationListener().getDataSource().getConnection();
 
-            String query = "SELECT " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE +
-                           "FROM " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
-                           "WHERE " + LimsDatabaseConstants.USERS_TABLE_NAME + "." + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?";
+                String query = "SELECT " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                           LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + ", " +
+                                           LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                           LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                           LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", " +
+                                           LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + " " +
+                               "FROM " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
+                               "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?";
 
-            PreparedStatement statement = connection.prepareStatement(query);
+                PreparedStatement statement = connection.prepareStatement(query);
 
-            statement.setObject(1, user.getUsername());
+                statement.setObject(1, user.getUsername());
 
-            ResultSet resultSet = statement.executeQuery();
+                ResultSet resultSet = statement.executeQuery();
 
-            if (!resultSet.next()) {
-                throw new InternalServerErrorException("Logged in user not found in database.");
+                if (!resultSet.next()) {
+                    throw new InternalServerErrorException("Logged in user not found in database.");
+                }
+
+                return new User(resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE),
+                                resultSet.getString(LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE),
+                                resultSet.getString(LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE),
+                                resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
+                                resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE),
+                                resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE));
+            } catch (SQLException e) {
+                throw new InternalServerErrorException("Error ", e);
+            } finally {
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
-
-            return new User(resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE),
-                            resultSet.getString(LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE),
-                            resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
-                            resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE),
-                            resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE));
         } else {
             return null;
         }
     }
 
-    public boolean isAdmin() throws SQLException {
-        Connection connection = new LIMSInitializationListener().getDataSource().getConnection();
+    public boolean isAdmin() throws InternalServerErrorException {
+        Connection connection = null;
+        try {
+            connection = new LIMSInitializationListener().getDataSource().getConnection();
 
-        String query = "SELECT " + LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " " +
-                       "FROM " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " " +
-                       "WHERE " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + "." + LimsDatabaseConstants.USERNAME_COLUMN_NAME_AUTHORITIES_TABLE + "=" + userName;
+            String query = "SELECT " + LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " " +
+                           "FROM " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " " +
+                           "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_AUTHORITIES_TABLE + "=?";
 
-        PreparedStatement statement = connection.prepareStatement(query);
+            PreparedStatement statement = connection.prepareStatement(query);
 
-        ResultSet resultSet = statement.executeQuery();
+            statement.setObject(1, username);
 
-        if (!resultSet.next()) {
-            throw new InternalServerErrorException("No authority associated with user account '" + userName + "'.");
-        }
+            ResultSet resultSet = statement.executeQuery();
 
-        if (resultSet.getString("authority").equals("admin")) {
-            return true;
-        } else {
-            return false;
+            if (!resultSet.next()) {
+                throw new InternalServerErrorException("No authority associated with user account '" + username + "'.");
+            }
+
+            if (resultSet.getString("authority").equals(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (SQLException e) {
+            throw new InternalServerErrorException("Error verifying account " + username + " authority.", e);
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
-
-    public String getUserName() { return userName; }
-
-    public String getFirstName() { return firstName; }
-
-    public String getLastName() { return lastName; }
-
-    public boolean getEnabled() { return enabled; }
-
-    public String getEmail() { return email; }
 }

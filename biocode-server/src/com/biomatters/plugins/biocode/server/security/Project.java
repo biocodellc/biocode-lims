@@ -43,8 +43,8 @@ public class Project {
 
     private static Project TEST = new Project(0, "Test Project");
     static {
-        TEST.userRoles.put(new User("admin", "admin", "admin", true, "admin@admin.co.nz"), Role.ADMIN);
-        TEST.userRoles.put(new User("test", "test", "test", true, "test@test.co.nz"), Role.READER);
+        TEST.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true), Role.ADMIN);
+        TEST.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true), Role.READER);
     }
 
     /**
