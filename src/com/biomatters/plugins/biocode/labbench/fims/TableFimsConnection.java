@@ -136,10 +136,6 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     public final void disconnect() {
         connected = false;
-        tissueCol = specimenCol = null;
-        fields = null;
-        taxonomyFields = null;
-        columns = null;
         _disconnect();
     }
 
