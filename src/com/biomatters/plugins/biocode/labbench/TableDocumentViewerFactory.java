@@ -193,6 +193,9 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                         int preferredWidth = getColumnWidth(model.getInternalModel(), visibleCols[i]);
                         table.getColumnModel().getColumn(i).setPreferredWidth(preferredWidth);    
                     }
+
+                    //dragged Column still points to old column which causes problem
+                    table.getTableHeader().setDraggedColumn(null);
                 }
             });
             items.add(item);
