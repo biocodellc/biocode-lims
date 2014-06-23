@@ -87,17 +87,19 @@ public class ExcelFimsConnection extends TableFimsConnection{
 
         Set<String> columnNamesSet = new LinkedHashSet<String>();
         columnNames = new ArrayList<String>();
+
         //noinspection CatchGenericClass
         try {
             workbook = Workbook.getWorkbook(excelFile);
             Sheet sheet = workbook.getSheet(0);
             Cell[] rows = sheet.getRow(0);
             int tissueIdColumnIndex = 0;
-            while (tissueIdColumnIndex < rows.length && !rows[tissueIdColumnIndex].getContents().equalsIgnoreCase(getTissueCol())) {
+            String tissueColumnName = options.getTissueColumn();
+            while (tissueIdColumnIndex < rows.length && !rows[tissueIdColumnIndex].getContents().equalsIgnoreCase(tissueColumnName)) {
                 tissueIdColumnIndex++;
             }
             if (tissueIdColumnIndex == rows.length) {
-                throw new ConnectionException(null, "Invalid spreadsheet: Tissue id column (" + getTissueCol() + ") was not found");
+                throw new ConnectionException(null, "Invalid spreadsheet: Tissue id column (" + tissueColumnName + ") was not found");
             }
             Cell[] keys = sheet.getColumn(tissueIdColumnIndex);
             HashSet<String> keySet = new HashSet<String>();
