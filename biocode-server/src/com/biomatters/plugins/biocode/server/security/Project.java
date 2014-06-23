@@ -1,5 +1,10 @@
 package com.biomatters.plugins.biocode.server.security;
 
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 
 import javax.xml.bind.annotation.XmlRootElement;
@@ -42,9 +47,9 @@ public class Project {
 
     private static Project TEST = new Project(0, "Test Project");
     public static List<Project> list = new ArrayList<Project>();
-    static {
-        TEST.userRoles.put(new User("admin"), Role.ADMIN);
-        TEST.userRoles.put(new User("test"), Role.READER);
+    static {        
+        TEST.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true), Role.ADMIN);
+        TEST.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true), Role.READER);
         list.add(TEST);
     }
 
@@ -53,8 +58,8 @@ public class Project {
      * @return The role the current user has in the project.  Will fetch from parent groups if the user is not
      * part of the current project.
      */
-    public Role getRoleForUser() {
-        User currentUser = User.get();
+    public Role getRoleForUser() throws SQLException {
+        User currentUser = User.getLoggedInUser();
         Role role = userRoles.get(currentUser);
         if(role != null) {
             return role;
