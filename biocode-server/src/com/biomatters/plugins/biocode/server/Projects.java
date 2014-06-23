@@ -47,6 +47,13 @@ public class Projects {
 
     }
 
+    @PUT
+    @Consumes("application/xml")
+    @Path("{id}")
+    public void updateProject(@PathParam("id")int id, Project project) {
+
+    }
+
     private Project getProjectForId(int id) {
         for (Project p : new ArrayList<Project>(Project.list)) {
             if(p.id == id) {
@@ -68,10 +75,18 @@ public class Projects {
         return Response.ok(new GenericEntity<Map<User, Role>>(project.userRoles){}).build();
     }
 
+    @GET
+    @Produces("application/xml")
+    @Path("{id}/roles/{username}")
+    public Role listRolesForUser(@PathParam("id")int projectId, @PathParam("username")String username) {
+        return Role.ADMIN; // todo
+    }
+
     @PUT
-    @Consumes("text/plain")
-    @Path("{id}/roles/{username}/role")
-    public void addRole(@PathParam("id")int projectId, @PathParam("username")String username, String rolename) {
+    @Consumes("application/xml")
+    @Path("{id}/roles/{username}")
+    public void addRole(@PathParam("id")int projectId, @PathParam("username")String username, Role role) {
+        // todo
         Project project = getProjectForId(projectId);
         if(project == null) {
             throw new NotFoundException("No project for id " + projectId);
@@ -80,10 +95,15 @@ public class Projects {
         if(user == null) {
             throw new NotFoundException("No user for username " + username);
         }
-        try {
-            project.userRoles.put(user, Role.valueOf(rolename));
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("No role " + rolename);
+        if(role == null) {
+            throw new BadRequestException("Must specify role");
         }
+        project.userRoles.put(user, role);
+    }
+
+    @DELETE
+    @Path("{id}/roles/{username}")
+    public void deleteRole(@PathParam("id")int projectId, @PathParam("username")String username) {
+        // todo
     }
 }
