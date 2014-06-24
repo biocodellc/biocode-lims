@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.server.Users;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.*;
@@ -48,8 +49,8 @@ public class Project {
     private static Project TEST = new Project(0, "Test Project");
     public static List<Project> list = new ArrayList<Project>();
     static {        
-        TEST.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true), Role.ADMIN);
-        TEST.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true), Role.READER);
+        TEST.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true, true), Role.ADMIN);
+        TEST.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true, false), Role.READER);
         list.add(TEST);
     }
 
@@ -59,7 +60,7 @@ public class Project {
      * part of the current project.
      */
     public Role getRoleForUser() throws SQLException {
-        User currentUser = User.getLoggedInUser();
+        User currentUser = Users.getLoggedInUser();
         Role role = userRoles.get(currentUser);
         if(role != null) {
             return role;

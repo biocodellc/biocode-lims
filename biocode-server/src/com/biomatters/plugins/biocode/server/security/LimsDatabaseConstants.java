@@ -5,8 +5,6 @@ package com.biomatters.plugins.biocode.server.security;
  *         Created on 20/06/14 5:42 PM
  */
 public class LimsDatabaseConstants {
-    public static final String DATABASE_NAME = "matthew_lims";
-
     public static final String USERS_TABLE_NAME       = "users";
     public static final String AUTHORITIES_TABLE_NAME = "authorities";
 

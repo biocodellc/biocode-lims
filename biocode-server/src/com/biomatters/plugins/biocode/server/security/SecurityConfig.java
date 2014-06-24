@@ -3,6 +3,8 @@ package com.biomatters.plugins.biocode.server.security;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
+import com.biomatters.plugins.biocode.server.Users;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * @author Matthew Cheung
@@ -36,7 +39,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         if(hasDatabaseConnection) {
             BasicDataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
             needMemoryUsers = createUserTablesIfNecessary(dataSource);
-            auth = auth.jdbcAuthentication().dataSource(dataSource).and();
+            auth = auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
+            initializeAdminUserIfNecessary(dataSource);
         } else {
             needMemoryUsers = true;
         }
@@ -45,6 +49,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             // If the database connection isn't set up or users haven't been added yet then we need to also use memory
             // auth with test users.
             auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name());
+        }
+    }
+
+    private void initializeAdminUserIfNecessary(BasicDataSource dataSource) throws SQLException {
+        Connection connection = null;
+        try {
+            connection = dataSource.getConnection();
+            List<User> users = Users.getUserList(connection);
+            Users usersResource = new Users();
+            if(users.isEmpty()) {
+                User newAdmin = new User("admin", "admin", "admin", "", "", true, true);
+                usersResource.addUser(newAdmin);
+            }
+        } finally {
+            SqlUtilities.closeConnection(connection);
         }
     }
 
@@ -60,10 +79,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             connection = dataSource.getConnection();
 
             String createUsersTableQuery = "CREATE TABLE IF NOT EXISTS " + LimsDatabaseConstants.USERS_TABLE_NAME + "(" +
-                                               LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE +" VARCHAR(50) NOT NULL, " +
-                                               LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
-                                               LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
-                                               LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
+                                               LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE +" VARCHAR(255) NOT NULL, " +
+                                               LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
+                                               LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
+                                               LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
                                                LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + " VARCHAR(320) NOT NULL, " +
                                                LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + " BIT NOT NULL, " +
                                                "PRIMARY KEY(" + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "))";
@@ -73,19 +92,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             statement.executeUpdate();
 
             String createAuthoritiesTableQuery = "CREATE TABLE IF NOT EXISTS " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + "(" +
-                                                     LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(50) NOT NULL, " +
+                                                     LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
                                                      LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " VARCHAR(50) NOT NULL, " +
-                                                     "PRIMARY KEY (authority)," +
-                                                     "UNIQUE KEY (username, authority)," +
+                                                     "PRIMARY KEY (username)," +
                                                      "FOREIGN KEY (username) " +
                                                         "REFERENCES users(username) " +
                                                         "ON DELETE CASCADE)";
 
             statement = connection.prepareStatement(createAuthoritiesTableQuery);
-
             statement.executeUpdate();
 
-            return true;
+            return false;
         } catch (SQLException e) {
             e.printStackTrace();
             return true;
