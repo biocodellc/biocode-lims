@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
@@ -177,7 +178,15 @@ public class MySQLFimsConnection extends TableFimsConnection {
                         assert false : "Unrecognised field type: "+f.toString();
                     }
                 }
-                TableFimsSample sample = new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), data, getTissueSampleDocumentField(), getSpecimenDocumentField());
+
+                if (getTissueSampleDocumentField() == null) {
+                    throw new ConnectionException("Tissue Sample Document Field not set.");
+                }
+                if (getSpecimenDocumentField() == null) {
+                    throw new ConnectionException("Specimen Document Field not set.");
+                }
+
+                TableFimsSample sample = new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), data, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
                 if(callback != null) {
                     callback.add(new TissueDocument(sample), Collections.<String, Object>emptyMap());
                 }

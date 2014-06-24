@@ -60,12 +60,12 @@ public class TableFimsSample implements FimsSample {
         return -1;
     }
 
-    public TableFimsSample(List<DocumentField> fimsAttributes, List<DocumentField> taxonomyAttributes, Map<String, Object> fieldValues, DocumentField tissueIdCol, DocumentField specimenIdCol) {
+    public TableFimsSample(List<DocumentField> fimsAttributes, List<DocumentField> taxonomyAttributes, Map<String, Object> fieldValues, String tissueCol, String specimenCol) {
         this.values = fieldValues;
         this.fields = fimsAttributes;
         this.taxFields = taxonomyAttributes;
-        this.tissueCol = tissueIdCol.getCode();
-        this.specimenCol = specimenIdCol.getCode();
+        this.tissueCol = tissueCol;
+        this.specimenCol = specimenCol;
     }
 
     public TableFimsSample(Element e) throws XMLSerializationException {

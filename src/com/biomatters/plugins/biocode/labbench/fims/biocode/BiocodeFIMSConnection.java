@@ -104,7 +104,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return samples;
     }
 
-    private TableFimsSample getFimsSampleForRow(List<String> header, Row row) {
+    private TableFimsSample getFimsSampleForRow(List<String> header, Row row) throws DatabaseServiceException {
         Map<String, DocumentField> possibleColumns = new HashMap<String, DocumentField>();
         for (DocumentField documentField : getSearchAttributes()) {
             possibleColumns.put(documentField.getName(), documentField);
@@ -116,7 +116,15 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 values.put(field.getCode(), row.rowItems.get(i));
             }
         }
-        return new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField(), getSpecimenDocumentField());
+
+        if (getTissueSampleDocumentField() == null) {
+            throw new DatabaseServiceException("Tissue Sample Document Field not set.", false);
+        }
+        if (getSpecimenDocumentField() == null) {
+            throw new DatabaseServiceException("Specimen Document Field not set.", false);
+        }
+
+        return new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
     }
 
     @Override

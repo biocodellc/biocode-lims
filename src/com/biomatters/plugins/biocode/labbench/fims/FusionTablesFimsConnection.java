@@ -390,7 +390,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         }
     }
 
-    private void getFimsSamples(String sql, RetrieveCallback callback) throws IOException {
+    private void getFimsSamples(String sql, RetrieveCallback callback) throws IOException, ConnectionException {
         DocumentField tissueCol = getTissueSampleDocumentField();
         DocumentField specimenCol = getSpecimenDocumentField();
 
@@ -409,7 +409,15 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                 String decoded = getRowValue(row, i);
                 values.put(colHeaders.get(i), convertValue(colHeaders.get(i), decoded));
             }
-            callback.add(new TissueDocument(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, tissueCol, specimenCol)), Collections.<String, Object>emptyMap());
+
+            if (getTissueSampleDocumentField() == null) {
+                throw new ConnectionException("Tissue Sample Document Field not set.");
+            }
+            if (getSpecimenDocumentField() == null) {
+                throw new ConnectionException("Specimen Document Field not set.");
+            }
+
+            callback.add(new TissueDocument(new TableFimsSample(getCollectionAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode())), Collections.<String, Object>emptyMap());
         }
     }
 
