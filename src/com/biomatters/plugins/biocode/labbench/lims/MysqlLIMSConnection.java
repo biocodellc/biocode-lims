@@ -32,7 +32,6 @@ public class MysqlLIMSConnection extends SqlLimsConnection {
         BasicDataSource dataSource = new BasicDataSource();
         Driver driver = BiocodeService.getInstance().getDriver();
         dataSource.setDriverClassName(driver.getClass().getName());
-        dataSource.setDriverClassLoader(getClass().getClassLoader());
         username = LIMSOptions.getValueAsString("username");
         dataSource.setUsername(username);
         dataSource.setPassword(((PasswordOption)LIMSOptions.getOption("password")).getPassword());
