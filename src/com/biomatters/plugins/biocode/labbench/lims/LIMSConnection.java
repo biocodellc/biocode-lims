@@ -283,7 +283,7 @@ public abstract class LIMSConnection {
      *
      * @param query    The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
      * @param tissueIdsToMatch  A list of FIMS samples to match.  Or null to return all results.
-     * @param callback To add results to as they are found.  Can be null.
+     * @param callback To add results to as they are found.  Can be null.  If it is not null, then workflows and plates will be added to the callback.
      * @return {@link LimsSearchResult} with workflows and plates found.
      * @throws SQLException if there is a problem with the database
      */

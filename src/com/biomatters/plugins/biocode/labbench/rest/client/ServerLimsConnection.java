@@ -68,40 +68,36 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException {
-        String showTissues = "false";
-        String showWorkflows = "false";
-        String showPlates = "false";
-        String showSequences = "false";
-        if (BiocodeService.isDownloadTissues(query)) {
-            showTissues = "true";
-        }
-        if (BiocodeService.isDownloadWorkflows(query)) {
-            showWorkflows = "true";
-        }
-        if (BiocodeService.isDownloadPlates(query)) {
-            showPlates = "true";
-        }
-        if (BiocodeService.isDownloadSequences(query)) {
-            showSequences = "true";
-        }
-
         String tissueIdsToMatchString = tissueIdsToMatch == null ? null : StringUtilities.join(",", tissueIdsToMatch);
 
+        boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
+        boolean downloadPlates = BiocodeService.isDownloadPlates(query);
         LimsSearchResult result;
         try {
             WebTarget target = this.target.path("search")
                     .queryParam("q", RestQueryUtils.geneiousQueryToRestQueryString(query))
-                    .queryParam("showTissues", showTissues)
-                    .queryParam("showWorkflows", showWorkflows)
-                    .queryParam("showPlates", showPlates)
-                    .queryParam("showSequences", showSequences)
-                    .queryParam("tissuesToMatch", tissueIdsToMatchString);
+                    .queryParam("showTissues", BiocodeService.isDownloadTissues(query))
+                    .queryParam("showWorkflows", downloadWorkflows)
+                    .queryParam("showPlates", downloadPlates)
+                    .queryParam("showSequences", BiocodeService.isDownloadSequences(query))
+                    .queryParam("tissueIdsToMatch", tissueIdsToMatchString);
             Invocation.Builder request = target.request(MediaType.APPLICATION_XML_TYPE);
             result = request.get(LimsSearchResult.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+
+        if (downloadWorkflows && callback != null) {
+            for (WorkflowDocument workflow : result.getWorkflows()) {
+                callback.add(workflow, Collections.<String, Object>emptyMap());
+            }
+        }
+        if (downloadPlates && callback != null) {
+            for (PlateDocument plateDocument : result.getPlates()) {
+                callback.add(plateDocument, Collections.<String, Object>emptyMap());
+            }
         }
         return result;
     }
