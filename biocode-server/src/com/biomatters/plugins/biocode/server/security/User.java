@@ -1,9 +1,5 @@
 package com.biomatters.plugins.biocode.server.security;
 
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import javax.ws.rs.ForbiddenException;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
@@ -14,30 +10,24 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class User {
     public String username;
     public String password;
+    public String firstname;
+    public String lastname;
+    public String email;
+    public boolean enabled = true;
+    public boolean isAdministrator = false;
 
-    public User(String username) {
+    public User(String username, String password, String firstname, String lastname, String email, boolean enabled, boolean isAdministrator) {
         this.username = username;
+        this.password = password;
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.email = email;
+        this.enabled = enabled;
+        this.isAdministrator = isAdministrator;
     }
 
     public User() {
+        // Empty constructor required for automagic construction from JSON or XML
     }
 
-    /**
-     * @return The current logged in {@link com.biomatters.plugins.biocode.server.security.User}
-     */
-    public static User get() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if(principal instanceof UserDetails) {
-            UserDetails user = (UserDetails) principal;
-            return new User(user.getUsername());
-        } else {
-            return null;
-        }
-    }
-
-    public void checkIsAdmin() throws ForbiddenException {
-        if(!username.equals("admin")) {
-            throw new ForbiddenException("User is not an admin");
-        }
-    }
 }

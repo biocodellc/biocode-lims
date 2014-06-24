@@ -1,11 +1,11 @@
 package com.biomatters.plugins.biocode.server;
 
+import com.biomatters.plugins.biocode.server.security.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.server.security.User;
-import org.springframework.security.core.GrantedAuthority;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
-import org.springframework.security.provisioning.UserDetailsManager;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
@@ -15,8 +15,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -25,19 +23,19 @@ import java.util.List;
  */
 @Path("users")
 public class Users {
+    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    UserDetailsManager manager;
-    private UserDetailsManager getManager() {
-        if(manager == null) {
-            createManager();
+    /**
+     * @return The current logged in {@link com.biomatters.plugins.biocode.server.security.User}
+     */
+    public static User getLoggedInUser() throws InternalServerErrorException {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            UserDetails user = (UserDetails) principal;
+            return getUserForUsername(user.getUsername());
+        } else {
+            return null;
         }
-        return manager;
-    }
-
-    private synchronized void createManager() {
-        JdbcUserDetailsManager manager = new JdbcUserDetailsManager();
-        manager.setDataSource(LIMSInitializationListener.getDataSource());
-        this.manager = manager;
     }
 
     @GET
@@ -46,102 +44,268 @@ public class Users {
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
-            PreparedStatement statement = connection.prepareStatement("SELECT username FROM users");
-            ResultSet resultSet = statement.executeQuery();
-            List<User> users = new ArrayList<User>();
-            while(resultSet.next()) {
-                User user = new User();
-                user.username = resultSet.getString(1);
-                users.add(user);
-            }
-            resultSet.close();
+
+            List<User> users = getUserList(connection);
 
             return Response.ok(new GenericEntity<List<User>>(users){}).build();
-
         } catch (SQLException e) {
             throw new InternalServerErrorException("Failed to list users", e);
         } finally {
-            if(connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+            SqlUtilities.closeConnection(connection);
         }
+    }
+
+    public static List<User> getUserList(Connection connection) throws SQLException {
+        String query = "SELECT " + LimsDatabaseConstants.USERS_TABLE_NAME + "." +
+                                   LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                   LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + ", " +
+                                   LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                   LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                                   LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", "  +
+                                   LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + ", " +
+                                   LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " " +
+                       "FROM " + getUserTableJoinedWithAuthTable();
+
+        PreparedStatement statement = connection.prepareStatement(query);
+
+        ResultSet resultSet = statement.executeQuery();
+
+        List<User> users = new ArrayList<User>();
+        while(resultSet.next()) {
+            users.add(createUserFromResultSetRow(resultSet));
+        }
+
+        resultSet.close();
+        return users;
     }
 
     @GET
     @Produces("application/xml")
     @Path("{username}")
     public User getUser(@PathParam("username")String username) {
-        return User.get();  // todo
+        return getUserForUsername(username);
+    }
+
+    private static User getUserForUsername(String username) {
+        Connection connection = null;
+        try {
+            connection = LIMSInitializationListener.getDataSource().getConnection();
+
+            String usernameUserTable = LimsDatabaseConstants.USERS_TABLE_NAME + "." +
+                    LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE;
+            String query = "SELECT " +
+                    usernameUserTable + ", " +
+                    LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + ", " +
+                    LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                    LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
+                    LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", " +
+                    LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + ", " +
+                    LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " " +
+                    "FROM " + getUserTableJoinedWithAuthTable() + " " +
+                    "WHERE " + usernameUserTable + "=?";
+
+            PreparedStatement statement = connection.prepareStatement(query);
+
+            statement.setObject(1, username);
+
+            ResultSet resultSet = statement.executeQuery();
+
+            if (!resultSet.next()) {
+                throw new NotFoundException("User account '" + username + "' not found.");
+            }
+
+            return createUserFromResultSetRow(resultSet);
+        } catch (SQLException e) {
+            throw new InternalServerErrorException("Failed to retrieve user account '" + username + "'", e);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
+    }
+
+    private static User createUserFromResultSetRow(ResultSet resultSet) throws SQLException {
+        String authority = resultSet.getString(LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE);
+        return new User(resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE),
+                        null,
+                        resultSet.getString(LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE),
+                        resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
+                        resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE),
+                        resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE),
+                        LimsDatabaseConstants.AUTHORITY_ADMIN_CODE.equals(authority)
+                );
+    }
+
+    private static String getUserTableJoinedWithAuthTable() {
+        return LimsDatabaseConstants.USERS_TABLE_NAME + " INNER JOIN " +
+                LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " ON " +
+                LimsDatabaseConstants.USERS_TABLE_NAME + "." +
+                LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + " = " +
+                LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + "." +
+                LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE;
     }
 
     @POST
+    @Produces("text/plain")
     @Consumes("application/xml")
-    public void addUser(User user) {
-        UserAccountToAdd account = new UserAccountToAdd(user.username, user.password);
-        getManager().createUser(account);
+    public String addUser(User user) {
+        Connection connection = null;
+        try {
+            connection = LIMSInitializationListener.getDataSource().getConnection();
+            SqlUtilities.beginTransaction(connection);
+
+            String query = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?)";
+
+            PreparedStatement statement = connection.prepareStatement(query);
+
+            statement.setObject(1, user.username);
+            statement.setObject(2, encoder.encode(user.password));
+            statement.setObject(3, user.firstname);
+            statement.setObject(4, user.lastname);
+            statement.setObject(5, user.email);
+            statement.setObject(6, true);
+
+            int inserted = statement.executeUpdate();
+            if (inserted == 1) {
+                PreparedStatement insertAuth = connection.prepareStatement("INSERT INTO " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " VALUES (?,?)");
+                insertAuth.setObject(1, user.username);
+                insertAuth.setObject(2, user.isAdministrator ?
+                        LimsDatabaseConstants.AUTHORITY_ADMIN_CODE :
+                        LimsDatabaseConstants.AUTHORITY_WRITER_CODE);
+                int insertedAuth = insertAuth.executeUpdate();
+                if(insertedAuth == 1) {
+                    SqlUtilities.commitTransaction(connection);
+                    return "User added.";
+                } else {
+                    throw new InternalServerErrorException("Failed to add user.  Inserted " + insertedAuth + " rows into database, expected 1.");
+                }
+            } else {
+                throw new InternalServerErrorException("Failed to add user.  Inserted " + inserted + " rows into database, expected 1.");
+            }
+        } catch (SQLException e) {
+            throw new InternalServerErrorException("Failed to add user.", e);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
     }
 
     @PUT
     @Path("{username}")
+    @Produces("text/plain")
     @Consumes("application/xml")
-    public void updateUser(@PathParam("username")String username, User user) {
-        // todo
+    public String updateUser(@PathParam("username")String username, User user) {
+        Connection connection = null;
+        try {
+            connection = LIMSInitializationListener.getDataSource().getConnection();
+            SqlUtilities.beginTransaction(connection);
+
+            String query = "UPDATE " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
+                           "SET " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
+                                    LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + "=?, " +
+                                    LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
+                                    LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
+                                    LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + "=?, "  +
+                                    LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + "=? " +
+                           "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?";
+
+            PreparedStatement statement = connection.prepareStatement(query);
+
+            statement.setObject(1, user.username);
+            statement.setObject(2, user.password);
+            statement.setObject(3, user.firstname);
+            statement.setObject(4, user.lastname);
+            statement.setObject(5, user.email);
+            statement.setObject(6, user.enabled);
+            statement.setObject(7, username);
+
+            int updated = statement.executeUpdate();
+            if (updated == 1) {
+                PreparedStatement updateAuth = connection.prepareStatement(
+                        "UPDATE " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " SET " +
+                                LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " = ? " +
+                                "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_AUTHORITIES_TABLE + "=?");
+                updateAuth.setObject(1, user.isAdministrator ?
+                        LimsDatabaseConstants.AUTHORITY_ADMIN_CODE :
+                        LimsDatabaseConstants.AUTHORITY_WRITER_CODE);
+                updateAuth.setObject(2, user.username);
+                int updatedAuth = updateAuth.executeUpdate();
+                if(updatedAuth == 1) {
+                    SqlUtilities.commitTransaction(connection);
+                    return "User account '" + username + "' updated.";
+                } else {
+                    throw new InternalServerErrorException("Failed to update user account '" + username + "'. Updated " + updatedAuth + " rows in database, expected 1.");
+                }
+            } else {
+                throw new InternalServerErrorException("Failed to update user account '" + username + "'. Updated " + updated + " rows in database, expected 1.");
+            }
+        } catch (SQLException e) {
+            throw new InternalServerErrorException("Failed to update user account '" + username + "'.", e);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
     }
 
     @DELETE
     @Path("{username}")
-    public void deleteUser(@PathParam("username")String username) {
-        User.get().checkIsAdmin();
-        getManager().deleteUser(username);
+    @Produces("text/plain")
+    public String deleteUser(@PathParam("username")String username) {
+        Connection connection = null;
+        try {
+            if (!isAdmin(getLoggedInUser())) {
+                throw new ForbiddenException("Action denied: insufficient permissions.");
+            }
+
+            connection = LIMSInitializationListener.getDataSource().getConnection();
+            SqlUtilities.beginTransaction(connection);
+
+            String query = "DELETE FROM " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
+                           "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?";
+
+            PreparedStatement statement = connection.prepareStatement(query);
+
+            statement.setObject(1, username);
+
+            int deleted = statement.executeUpdate();
+            if (deleted == 1) {
+                SqlUtilities.commitTransaction(connection);
+                return "User account '" + username + "' deleted.";
+            } else {
+                throw new InternalServerErrorException("Failed to delete user account '" + username + "'. Deleted " + deleted + " rows from database, but expected 1." );
+            }
+        } catch (SQLException e) {
+            throw new InternalServerErrorException("Failed to delete user account '" + username + "'.", e);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
     }
 
-    private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    private static class UserAccountToAdd implements UserDetails {
+    public boolean isAdmin(User user) throws InternalServerErrorException {
+        String username = user.username;
+        Connection connection = null;
+        try {
+            connection = LIMSInitializationListener.getDataSource().getConnection();
 
-        private String username;
-        private String passwordHash;
-        public UserAccountToAdd(String username, String password) {
-            this.username = username;
-            this.passwordHash = encoder.encode(password);
-        }
+            String query = "SELECT " + LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " " +
+                           "FROM " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " " +
+                           "WHERE " + LimsDatabaseConstants.USERNAME_COLUMN_NAME_AUTHORITIES_TABLE + "=?";
 
-        @Override
-        public Collection<? extends GrantedAuthority> getAuthorities() {
-            return Collections.emptyList();
-        }
+            PreparedStatement statement = connection.prepareStatement(query);
 
-        @Override
-        public String getPassword() {
-            return passwordHash;
-        }
+            statement.setObject(1, username);
 
-        @Override
-        public String getUsername() {
-            return username;
-        }
+            ResultSet resultSet = statement.executeQuery();
 
-        @Override
-        public boolean isAccountNonExpired() {
-            return true;
-        }
+            if (!resultSet.next()) {
+                throw new InternalServerErrorException("No authority associated with user account '" + username + "'.");
+            }
 
-        @Override
-        public boolean isAccountNonLocked() {
-            return true;
-        }
-
-        @Override
-        public boolean isCredentialsNonExpired() {
-            return true;
-        }
-
-        @Override
-        public boolean isEnabled() {
-            return true;
+            if (resultSet.getString("authority").equals(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (SQLException e) {
+            throw new InternalServerErrorException("Error verifying account " + username + " authority.", e);
+        } finally {
+            SqlUtilities.closeConnection(connection);
         }
     }
 }

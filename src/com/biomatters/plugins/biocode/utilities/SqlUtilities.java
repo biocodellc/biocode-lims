@@ -221,6 +221,15 @@ public class SqlUtilities {
         }
     }
 
+    public static void beginTransaction(Connection connection) throws SQLException {
+        connection.setAutoCommit(false);
+    }
+
+    public static void commitTransaction(Connection connection) throws SQLException {
+        connection.commit();
+        connection.setAutoCommit(true);
+    }
+
     public static void printSql(String sql, Collection sqlValues) {
         sql = sql.replace("\n", "\n\t");
         if(sqlValues.isEmpty()) {
