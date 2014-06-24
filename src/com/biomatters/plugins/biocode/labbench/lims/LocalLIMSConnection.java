@@ -36,7 +36,7 @@ public class LocalLIMSConnection extends SqlLimsConnection {
     }
 
     @Override
-    public BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException {
+    public javax.sql.DataSource connectToDb(Options connectionOptions) throws ConnectionException {
         String dbName = connectionOptions.getValueAsString("database");
 
         BasicDataSource dataSource = new BasicDataSource();

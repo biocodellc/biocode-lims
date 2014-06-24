@@ -20,6 +20,7 @@ import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.apache.commons.dbcp.*;
 
+import javax.sql.DataSource;
 import java.sql.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -48,11 +49,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     public abstract String getSchema();
 
-    abstract BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException;
+    abstract javax.sql.DataSource connectToDb(Options connectionOptions) throws ConnectionException;
 
-    private BasicDataSource dataSource;
+    private DataSource dataSource;
 
-    public BasicDataSource getDataSource() {
+    public DataSource getDataSource() {
         return dataSource;
     }
 
@@ -61,9 +62,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
         dataSource = connectToDb(selectedLimsOptions);
-        if(Geneious.isHeadless()) {
-            dataSource.setMaxActive(25);
-        }
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
