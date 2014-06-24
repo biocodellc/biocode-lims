@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -28,18 +29,23 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
-
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Autowired
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
         LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
-        boolean hasDatabaseConnection = limsConnection instanceof SqlLimsConnection;
+
         boolean needMemoryUsers;
-        if(hasDatabaseConnection) {
+
+        boolean hasDatabaseConnection = limsConnection instanceof SqlLimsConnection;
+
+        if (hasDatabaseConnection) {
             BasicDataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
+
             needMemoryUsers = createUserTablesIfNecessary(dataSource);
+
             auth = auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
+
             initializeAdminUserIfNecessary(dataSource);
         } else {
             needMemoryUsers = true;
@@ -56,10 +62,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         Connection connection = null;
         try {
             connection = dataSource.getConnection();
+
             List<User> users = Users.getUserList(connection);
+
             Users usersResource = new Users();
-            if(users.isEmpty()) {
+            if (users.isEmpty()) {
                 User newAdmin = new User("admin", "admin", "admin", "", "", true, true);
+
                 usersResource.addUser(newAdmin);
             }
         } finally {
@@ -100,6 +109,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                                                         "ON DELETE CASCADE)";
 
             statement = connection.prepareStatement(createAuthoritiesTableQuery);
+
             statement.executeUpdate();
 
             return false;
@@ -107,13 +117,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             e.printStackTrace();
             return true;
         } finally {
-            try {
-                if (connection != null) {
-                    connection.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            SqlUtilities.closeConnection(connection);
         }
     }
 
