@@ -6,7 +6,6 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import org.apache.commons.dbcp.BasicDataSource;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -39,10 +38,6 @@ public class LocalLIMSConnection extends SqlLimsConnection {
     public javax.sql.DataSource connectToDb(Options connectionOptions) throws ConnectionException {
         String dbName = connectionOptions.getValueAsString("database");
 
-        BasicDataSource dataSource = new BasicDataSource();
-
-        dataSource.setDriverClassName(BiocodeService.getInstance().getLocalDriver().getClass().getName());
-
         String path;
         try {
             path = getDbPath(dbName);
@@ -63,8 +58,8 @@ public class LocalLIMSConnection extends SqlLimsConnection {
         } catch (SQLException e) {
             throw new ConnectionException(e.getMessage(), e);
         }
-        dataSource.setUrl("jdbc:hsqldb:file:" + path + ";shutdown=true");
-        return dataSource;
+        String connectionString = "jdbc:hsqldb:file:" + path + ";shutdown=true";
+        return createBasicDataSource(connectionString, BiocodeService.getInstance().getLocalDriver(), null, null);
     }
 
     static String getDbPath(String newDbName) throws IOException {
