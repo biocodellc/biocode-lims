@@ -130,7 +130,6 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public void saveReactions(Reaction[] reactions, Reaction.Type type, ProgressListener progress) throws DatabaseServiceException {
-
         try {
             Invocation.Builder request = target.path("plates").path("reactions").queryParam("type", type.name()).request();
             request.put(Entity.entity(
