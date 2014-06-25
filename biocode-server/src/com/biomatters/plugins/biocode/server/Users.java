@@ -39,7 +39,7 @@ public class Users {
     }
 
     @GET
-    @Produces({"application/xml", "application/json"})
+    @Produces("application/json")
     public Response list() {
         Connection connection = null;
         try {
@@ -82,7 +82,7 @@ public class Users {
     }
 
     @GET
-    @Produces("application/xml")
+    @Produces("application/json")
     @Path("{username}")
     public User getUser(@PathParam("username")String username) {
         return getUserForUsername(username);
@@ -144,7 +144,7 @@ public class Users {
 
     @POST
     @Produces("text/plain")
-    @Consumes("application/xml")
+    @Consumes("application/json")
     public String addUser(User user) {
         Connection connection = null;
         try {
@@ -196,7 +196,7 @@ public class Users {
     @PUT
     @Path("{username}")
     @Produces("text/plain")
-    @Consumes("application/xml")
+    @Consumes("application/json")
     public String updateUser(@PathParam("username")String username, User user) {
         Connection connection = null;
         try {

@@ -54,7 +54,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         if(!hasDatabaseConnection || needMemoryUsers) {
             // If the database connection isn't set up or users haven't been added yet then we need to also use memory
             // auth with test users.
-            auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name());
+            auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name);
         }
     }
 

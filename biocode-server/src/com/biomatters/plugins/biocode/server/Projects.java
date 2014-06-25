@@ -19,14 +19,14 @@ import java.util.Map;
 public class Projects {
 
     @GET
-    @Produces("application/xml")
+    @Produces("application/json")
     public Response list() {
         List<Project> projList = new ArrayList<Project>(Project.getListReadableByUser());
         return Response.ok(new GenericEntity<List<Project>>(projList){}).build();
     }
 
     @GET
-    @Produces("application/xml")
+    @Produces("application/json")
     @Path("{id}")
     public Project getForId(@PathParam("id")int id) {
         return Project.getForId(id);
@@ -48,7 +48,7 @@ public class Projects {
     }
 
     @PUT
-    @Consumes("application/xml")
+    @Consumes("application/json")
     @Path("{id}")
     public void updateProject(@PathParam("id")int id, Project project) {
 
@@ -64,7 +64,7 @@ public class Projects {
     }
 
     @GET
-    @Produces("application/xml")
+    @Produces("application/json")
     @Path("{projectId}/roles")
     public Response listRoles(@PathParam("projectId")int projectId) {
         // todo can't use map?
@@ -76,14 +76,14 @@ public class Projects {
     }
 
     @GET
-    @Produces("application/xml")
+    @Produces("application/json")
     @Path("{id}/roles/{username}")
     public Role listRolesForUser(@PathParam("id")int projectId, @PathParam("username")String username) {
         return Role.ADMIN; // todo
     }
 
     @PUT
-    @Consumes("application/xml")
+    @Consumes("application/json")
     @Path("{id}/roles/{username}")
     public void addRole(@PathParam("id")int projectId, @PathParam("username")String username, Role role) {
         // todo

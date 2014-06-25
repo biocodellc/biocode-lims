@@ -1,14 +1,10 @@
 package com.biomatters.plugins.biocode.server.security;
 
-import java.sql.SQLException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.server.Users;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -19,8 +15,8 @@ import java.util.*;
 public class Project {
     public int id;
     public String name;
-
-    public Project parent;
+    public String description = "";
+    public int parentProjectId = -1;
 
     public Map<User, Role> userRoles = new HashMap<User, Role>();
 
@@ -34,6 +30,11 @@ public class Project {
         userRoles = new HashMap<User, Role>();
     }
 
+    public Project(int id, String name, String description) {
+        this(id, name);
+        this.description = description;
+    }
+
     public static Project getForExtractionId(String extractionId) {
         return TEST;
     }
@@ -43,7 +44,7 @@ public class Project {
     }
 
     public static Collection<Project> getListReadableByUser() {
-        return Collections.singletonList(TEST);
+        return list;
     }
 
     private static Project TEST = new Project(0, "Test Project");
@@ -52,6 +53,17 @@ public class Project {
         TEST.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true, true), Role.ADMIN);
         TEST.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true, false), Role.READER);
         list.add(TEST);
+
+        Project test2 = new Project(2, "test proj2", "this is a description");
+        test2.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true, true), Role.ADMIN);
+        test2.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true, false), Role.READER);
+        list.add(test2);
+
+        Project test3 = new Project(3, "test proj3", "ok, just for test");
+        test3.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true, true), Role.ADMIN);
+        test3.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true, false), Role.READER);
+        test3.parentProjectId = test2.id;
+        list.add(test3);
     }
 
     /**
@@ -64,8 +76,8 @@ public class Project {
         Role role = userRoles.get(currentUser);
         if(role != null) {
             return role;
-        } else if(parent != null) {
-            return parent.getRoleForUser();
+        } else if(parentProjectId != -1) {
+            return getForId(parentProjectId).getRoleForUser();
         } else {
             return null;
         }
