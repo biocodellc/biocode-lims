@@ -29,8 +29,6 @@ class QueryParser {
 
     private static Map<Class, Map<String, Condition>> stringSymbolToConditionMaps = new HashMap<Class, Map<String, Condition>>();
 
-    final String advancedQueryStructure = "String s = \"(\\\\[.+=.+\\\\])((AND|OR|XOR)\\\\[.+=.+\\\\])*\";";
-
     private static String conditionSymbolsGroupRegex;
 
     static {
@@ -38,7 +36,7 @@ class QueryParser {
         Map<String, Condition> stringSymbolToIntegerConditionMap = new HashMap<String, Condition>();
 
         stringSymbolToIntegerConditionMap.put("<=", Condition.LESS_THAN_OR_EQUAL_TO);
-        stringSymbolToIntegerConditionMap.put("<",  Condition.LESS_THAN_OR_EQUAL_TO);
+        stringSymbolToIntegerConditionMap.put("<",  Condition.LESS_THAN);
         stringSymbolToIntegerConditionMap.put("=",  Condition.EQUAL);
         stringSymbolToIntegerConditionMap.put(">=", Condition.GREATER_THAN_OR_EQUAL_TO);
         stringSymbolToIntegerConditionMap.put(">",  Condition.GREATER_THAN);
@@ -57,11 +55,11 @@ class QueryParser {
 
         Map<String, Condition> stringSymbolToDateConditionMap = new HashMap<String, Condition>();
 
-        stringSymbolToDateConditionMap.put(">",  Condition.DATE_AFTER);
-        stringSymbolToDateConditionMap.put("<=", Condition.DATE_AFTER_OR_ON);
-        stringSymbolToDateConditionMap.put("=",  Condition.EQUAL);
-        stringSymbolToDateConditionMap.put(">",  Condition.DATE_BEFORE_OR_ON);
         stringSymbolToDateConditionMap.put("<",  Condition.DATE_BEFORE);
+        stringSymbolToDateConditionMap.put("<=", Condition.DATE_BEFORE_OR_ON);
+        stringSymbolToDateConditionMap.put("=",  Condition.EQUAL);
+        stringSymbolToDateConditionMap.put(">",  Condition.DATE_AFTER);
+        stringSymbolToDateConditionMap.put(">=", Condition.DATE_AFTER_OR_ON);
         stringSymbolToDateConditionMap.put("!=", Condition.NOT_EQUAL);
 
         /* Build string symbol to condition map. */
@@ -87,6 +85,8 @@ class QueryParser {
         conditionSymbolsGroupRegexBuilder.append(")");
         conditionSymbolsGroupRegex = conditionSymbolsGroupRegexBuilder.toString();
     }
+
+    final String advancedQueryStructure = "(\\[[^\\]]+" + conditionSymbolsGroupRegex + "[^\\]]+\\])((AND|OR|XOR)\\[[^\\]]+" + conditionSymbolsGroupRegex + "[^\\]]+\\])*";
 
     /* Primary parse method. */
     public Query parseQuery(String query) {

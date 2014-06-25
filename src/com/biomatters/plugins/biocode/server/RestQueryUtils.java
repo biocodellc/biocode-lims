@@ -57,7 +57,7 @@ public class RestQueryUtils {
             if (childQueries.isEmpty()) {
                 return null;
             }
-            stringQueryBuilder.append(childQueries.get(0));
+            stringQueryBuilder.append(parseAdvancedSearchQueryTerm((AdvancedSearchQueryTerm)childQueries.get(0)));
             for (int i = 1; i < childQueries.size(); i++) {
                 stringQueryBuilder.append(compoundSearchQueryType).append(parseAdvancedSearchQueryTerm((AdvancedSearchQueryTerm) childQueries.get(i)));
             }
