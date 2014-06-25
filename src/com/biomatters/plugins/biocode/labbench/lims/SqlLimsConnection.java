@@ -227,15 +227,25 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     urlsOfJar.add(url);
                 }
             }
-            URLClassLoader classLoaderForPluginLibsOnly = new URLClassLoader(urlsOfJar.toArray(new URL[1]), ClassLoader.getSystemClassLoader().getParent());
+            ClassLoader bootstrapClassLoader = ClassLoader.getSystemClassLoader().getParent();
+            if(bootstrapClassLoader == null) {
+                throw new IllegalStateException("Expected system class loader to have a parent");
+            }
+            // We specify the parent class loader of our new one as the bootstrap classloader so it wont' be able to load
+            // Geneious core classes.
+            URLClassLoader classLoaderForPluginLibsOnly = new URLClassLoader(urlsOfJar.toArray(new URL[1]), bootstrapClassLoader);
             try {
                 Class<?> dataSourceClass = classLoaderForPluginLibsOnly.loadClass("org.apache.commons.dbcp.BasicDataSource");
                 DataSource dataSource = (DataSource)dataSourceClass.newInstance();
                 // We have to use reflection here because we can't cast the class we created to the one loaded by Geneious core
                 dataSourceClass.getDeclaredMethod("setDriverClassName", String.class).invoke(dataSource, driver.getClass().getName());
                 dataSourceClass.getDeclaredMethod("setUrl", String.class).invoke(dataSource, connectionUrl);
-                dataSourceClass.getDeclaredMethod("setUsername", String.class).invoke(dataSource, username);
-                dataSourceClass.getDeclaredMethod("setPassword", String.class).invoke(dataSource, password);
+                if(username != null) {
+                    dataSourceClass.getDeclaredMethod("setUsername", String.class).invoke(dataSource, username);
+                }
+                if(password != null) {
+                    dataSourceClass.getDeclaredMethod("setPassword", String.class).invoke(dataSource, password);
+                }
 
                 if(Geneious.isHeadless()) {
                     dataSourceClass.getDeclaredMethod("setMaxActive", Integer.class).invoke(dataSource, 25);
