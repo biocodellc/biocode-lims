@@ -353,4 +353,31 @@ public class SqlUtilities {
             return join;
         }
     }
+
+    public static Set<String> getDatabaseTableNamesLowerCase(Connection connection) throws SQLException {
+        Set<String> namesOfTablesExistingInDatabase = new HashSet<String>();
+
+        DatabaseMetaData metaData = connection.getMetaData();
+        boolean hasTableType = false;
+        ResultSet typesSet = metaData.getTableTypes();
+        while(typesSet.next()) {
+            String type = typesSet.getString(1);
+            if("TABLE".equals(type)) {
+                hasTableType = true;
+                break;
+            }
+        }
+        typesSet.close();
+
+        ResultSet tables = metaData.getTables(
+                null,
+                null,
+                "%",
+                hasTableType ? new String[]{"TABLE"} : null);
+        while(tables.next()) {
+            namesOfTablesExistingInDatabase.add(tables.getString("TABLE_NAME").toLowerCase());
+        }
+        tables.close();
+        return namesOfTablesExistingInDatabase;
+    }
 }

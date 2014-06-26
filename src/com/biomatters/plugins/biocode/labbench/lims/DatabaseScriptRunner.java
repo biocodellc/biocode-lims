@@ -14,7 +14,7 @@ import java.util.List;
  * @author Matthew Cheung
  * @version $Id: DatabaseScriptRunner.java 18038 2008-03-11 03:20:44Z matthew $
  */
-class DatabaseScriptRunner {
+public class DatabaseScriptRunner {
 
     private DatabaseScriptRunner() {
         // Cannot instantiate, this is a utility class
