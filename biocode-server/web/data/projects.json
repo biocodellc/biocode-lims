@@ -1,0 +1,128 @@
+[
+    {
+        "id": 0,
+        "name": "Test Project",
+        "description": "",
+        "parentProjectId": -1,
+        "userRoles": {
+            "entry": [
+                {
+                    "key": {
+                        "username": "admin",
+                        "password": "admin",
+                        "firstname": "admin",
+                        "lastname": "admin",
+                        "email": "admin@admin.co.nz",
+                        "enabled": true,
+                        "isAdministrator": true
+                    },
+                    "value": {
+                        "id": 0,
+                        "name": "ADMIN",
+                        "description": "The admin of this project"
+                    }
+                },
+                {
+                    "key": {
+                        "username": "test",
+                        "password": "test",
+                        "firstname": "test",
+                        "lastname": "test",
+                        "email": "test@test.co.nz",
+                        "enabled": true,
+                        "isAdministrator": false
+                    },
+                    "value": {
+                        "id": 2,
+                        "name": "READER",
+                        "description": "Can only read"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": 2,
+        "name": "test proj2",
+        "description": "this is a description",
+        "parentProjectId": -1,
+        "userRoles": {
+            "entry": [
+                {
+                    "key": {
+                        "username": "admin",
+                        "password": "admin",
+                        "firstname": "admin",
+                        "lastname": "admin",
+                        "email": "admin@admin.co.nz",
+                        "enabled": true,
+                        "isAdministrator": true
+                    },
+                    "value": {
+                        "id": 0,
+                        "name": "ADMIN",
+                        "description": "The admin of this project"
+                    }
+                },
+                {
+                    "key": {
+                        "username": "test",
+                        "password": "test",
+                        "firstname": "test",
+                        "lastname": "test",
+                        "email": "test@test.co.nz",
+                        "enabled": true,
+                        "isAdministrator": false
+                    },
+                    "value": {
+                        "id": 2,
+                        "name": "READER",
+                        "description": "Can only read"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "id": 3,
+        "name": "test proj3",
+        "description": "ok, just for test",
+        "parentProjectId": 2,
+        "userRoles": {
+            "entry": [
+                {
+                    "key": {
+                        "username": "test",
+                        "password": "test",
+                        "firstname": "test",
+                        "lastname": "test",
+                        "email": "test@test.co.nz",
+                        "enabled": true,
+                        "isAdministrator": false
+                    },
+                    "value": {
+                        "id": 2,
+                        "name": "READER",
+                        "description": "Can only read"
+                    }
+                },
+                {
+                    "key": {
+                        "username": "admin",
+                        "password": "admin",
+                        "firstname": "admin",
+                        "lastname": "admin",
+                        "email": "admin@admin.co.nz",
+                        "enabled": true,
+                        "isAdministrator": true
+                    },
+                    "value": {
+                        "id": 0,
+                        "name": "ADMIN",
+                        "description": "The admin of this project"
+                    }
+                }
+            ]
+        }
+    }
+]
