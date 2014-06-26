@@ -3,9 +3,12 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.plugins.biocode.server.security.Project;
 import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.security.User;
+import com.biomatters.plugins.biocode.server.security.UserRole;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,12 +70,12 @@ public class Projects {
     @Produces("application/json")
     @Path("{projectId}/roles")
     public Response listRoles(@PathParam("projectId")int projectId) {
-        // todo can't use map?
         Project project = getProjectForId(projectId);
         if(project == null) {
             throw new NotFoundException("No project for id " + projectId);
         }
-        return Response.ok(new GenericEntity<Map<User, Role>>(project.userRoles){}).build();
+        return Response.ok(new GenericEntity<List<UserRole>>(
+                UserRole.forMap(project.userRoles)){}).build();
     }
 
     @GET
