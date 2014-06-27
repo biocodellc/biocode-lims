@@ -29,7 +29,17 @@ biocodeApp.config(['$routeProvider',
                 templateUrl: 'partials/user-detail.html',
                 controller: 'userDetailCtrl'
             }).
+            when('/create-user', {
+                templateUrl: 'partials/create-user.html',
+                controller: 'createuserCtrl'
+            }).
+            when('/about', {
+                templateUrl: 'partials/about.html'
+            }).
+            when('/contact', {
+                templateUrl: 'partials/contact.html'
+            }).
             otherwise({
-                redirectTo: '/users'
+                redirectTo: '/projects'
             });
     }]);

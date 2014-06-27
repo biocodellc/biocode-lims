@@ -1,0 +1,29 @@
+<div class="container">
+    <div class="row userinforow">
+        <table class="table" border="0">
+            <tbody>
+            <tr>
+                <td>Name</td>
+                <td><input type="text" id="username" ng-model="user.username"></td>
+            </tr>
+            <tr>
+                <td>First Name</td>
+                <td><input type="text" id="firstname" ng-model="user.firstname"></td>
+            </tr>
+            <tr>
+                <td>Last Name</td>
+                <td><input type="text" id="lastname" ng-model="user.lastname"></td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td><input type="text" id="email" ng-model="user.email"></td>
+            </tr>
+            <tr>
+                <td>Password</td>
+                <td><input type="text" id="password" ng-model="user.password"></td>
+            </tr>
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-primary btn-lg" ng-click="onCreateUser()">Create</button>
+    </div>
+</div>
