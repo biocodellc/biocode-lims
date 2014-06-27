@@ -1,4 +1,4 @@
-==Biocode Plugin 2.7.0 - 27 May 2014==
+==Biocode Plugin 2.7.0 - 27 June 2014==
 * Enable cherry-picking from extraction plates.
 * The MySQL JDBC driver is now bundled with the plugin.
 * Fixed issues with template system occasionally not saving or displaying templates correctly.
