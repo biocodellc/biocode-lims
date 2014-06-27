@@ -1,5 +1,6 @@
-package com.biomatters.plugins.biocode.server;
+package com.biomatters.plugins.biocode.server.security;
 
+import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.server.security.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.server.security.User;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
@@ -123,7 +124,7 @@ public class Users {
         }
     }
 
-    private static User createUserFromResultSetRow(ResultSet resultSet) throws SQLException {
+    static User createUserFromResultSetRow(ResultSet resultSet) throws SQLException {
         String authority = resultSet.getString(LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE);
         return new User(resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE),
                         null,

@@ -167,11 +167,11 @@ public class Plates {
      * @param reactionList a list of {@link Reaction}s to check
      */
     private void checkCanEditReactions(List<Reaction> reactionList) throws SQLException {
-        for (Reaction reaction : reactionList) {
-            Project project = Project.getForExtractionId(reaction.getExtractionId());
-            if(project.getRoleForUser().isAtLeast(Role.WRITER)) {
-                throw new ForbiddenException();
-            }
-        }
+//        for (Reaction reaction : reactionList) {
+//            Project project = Project.getForExtractionId(reaction.getExtractionId());
+//            if(project.getRoleForUser().isAtLeast(Role.WRITER)) {
+//                throw new ForbiddenException();
+//            }
+//        }
     }
 }
