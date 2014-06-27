@@ -1,13 +1,12 @@
 <PluginVersions>
-    <LatestVersion>2.6.4</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_6_4.gplugin</LatestVersionURL>
-    <ReleaseNotes>Biocode Plugin 2.6.4 (20 May 2014) - Release Notes
+    <LatestVersion>2.7.0</LatestVersion>
+    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_7_0.gplugin</LatestVersionURL>
+    <ReleaseNotes>Biocode Plugin 2.7.0 (27 June 2014) - Release Notes
 
-- Plate bulk editor now starts at the top rather than the bottom.
-- Changed date search conditions "Less/Greater Than" to "Before/After".
-- Replaced Last Modified (LIMS) search field with Sequencing Pass/Fail Date and Extraction Date search fields.
-- Fixed bug that was causing date searches to be off by one day.
-- Fix searching issues with Biocode FIMS connector.
+- Enable cherry-picking from extraction plates.
+- The MySQL JDBC driver is now bundled with the plugin.
+- Fixed issues with template system occasionally not saving or displaying templates correctly.
+- Fix incorrect cyclesequencing cocktail calculations.
 - Other minor fixes and improvements.
     </ReleaseNotes>
     <ExtraInformation>Extra information</ExtraInformation>
