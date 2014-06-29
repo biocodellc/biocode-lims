@@ -7,6 +7,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import org.apache.commons.dbcp.*;
 
+import javax.sql.DataSource;
 import java.sql.*;
 
 /**
@@ -28,20 +29,17 @@ public class MysqlLIMSConnection extends SqlLimsConnection {
     }
 
     @Override
-    public BasicDataSource connectToDb(Options LIMSOptions) throws ConnectionException {
-        BasicDataSource dataSource = new BasicDataSource();
-        Driver driver = BiocodeService.getInstance().getDriver();
-        dataSource.setDriverClassName(driver.getClass().getName());
+    public DataSource connectToDb(Options LIMSOptions) throws ConnectionException {
         username = LIMSOptions.getValueAsString("username");
-        dataSource.setUsername(username);
-        dataSource.setPassword(((PasswordOption)LIMSOptions.getOption("password")).getPassword());
         DriverManager.setLoginTimeout(20);
         serverUrn = LIMSOptions.getValueAsString("server") + ":" + LIMSOptions.getValueAsString("port");
         schema = LIMSOptions.getValueAsString("database");
-        dataSource.setUrl("jdbc:mysql://" + serverUrn + "/" + schema);
+        String connectionString = "jdbc:mysql://" + serverUrn + "/" + schema;
         serverUrn += "/"+ schema;
-        return dataSource;
+        String password = ((PasswordOption) LIMSOptions.getOption("password")).getPassword();
+        return createBasicDataSource(connectionString, BiocodeService.getInstance().getDriver(), username, password);
     }
+
 
     @Override
     protected boolean canUpgradeDatabase() {
