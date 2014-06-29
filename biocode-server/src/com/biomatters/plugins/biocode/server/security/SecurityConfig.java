@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
@@ -84,18 +85,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      * @return true if there are currently no user accounts
      * @throws SQLException
      */
-    public synchronized boolean createUserTablesIfNecessary(BasicDataSource dataSource) {
+    private synchronized boolean createUserTablesIfNecessary(DataSource dataSource) {
         Connection connection = null;
         try {
             connection = dataSource.getConnection();
             Set<String> tables = SqlUtilities.getDatabaseTableNamesLowerCase(connection);
             if(!tables.contains(LimsDatabaseConstants.USERS_TABLE_NAME.toLowerCase())) {
-                String scriptName = "add_access_control.sql";
-                InputStream script = getClass().getResourceAsStream(scriptName);
-                if(script == null) {
-                    throw new IllegalStateException("Missing " + scriptName + ".  Cannot set up security.");
-                }
-                DatabaseScriptRunner.runScript(connection, script, false, false);
+                setupTables(connection);
             }
             return false;
         } catch (SQLException e) {
@@ -107,6 +103,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         } finally {
             SqlUtilities.closeConnection(connection);
         }
+    }
+
+    public static void setupTables(Connection connection) throws SQLException, IOException {
+        String scriptName = "add_access_control.sql";
+        InputStream script = SecurityConfig.class.getResourceAsStream(scriptName);
+        if(script == null) {
+            throw new IllegalStateException("Missing " + scriptName + ".  Cannot set up security.");
+        }
+        DatabaseScriptRunner.runScript(connection, script, false, false);
     }
 
     @Override

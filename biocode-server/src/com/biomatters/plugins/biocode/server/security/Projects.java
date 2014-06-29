@@ -21,7 +21,7 @@ import java.util.*;
 public class Projects {
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     public Response list() {
         List<Project> projectList = getProjectsForId();
         return Response.ok(new GenericEntity<List<Project>>(projectList) { }).build();
@@ -38,12 +38,13 @@ public class Projects {
                     "LEFT OUTER JOIN users ON users.username = project_role.username " +
                     "LEFT OUTER JOIN authorities ON users.username = authorities.username ";
             if(ids.length > 0) {
-                queryString += "WHERE project.id IN (" +  StringUtilities.join(",", Arrays.asList(ids)) + ") ";
+                String questionMarkString = getQuestionMarkString(ids.length);
+                queryString += "WHERE project.id IN (" + questionMarkString + ") ";
             }
 
             PreparedStatement select = connection.prepareStatement(queryString + "ORDER BY project.id");
             for(int i=0; i<ids.length; i++) {
-                select.setObject(i, ids[i]);
+                select.setObject(i+1, ids[i]);
             }
             ResultSet resultSet = select.executeQuery();
             projectList = getProjectsForResultSet(resultSet);
@@ -54,6 +55,12 @@ public class Projects {
             SqlUtilities.closeConnection(connection);
         }
         return projectList;
+    }
+
+    private static String getQuestionMarkString(int count) {
+        String[] questionMarks = new String[count];
+        Arrays.fill(questionMarks, "?");
+        return StringUtilities.join(",", Arrays.asList(questionMarks));
     }
 
     private static List<Project> getProjectsForResultSet(ResultSet resultSet) throws SQLException {
@@ -76,7 +83,7 @@ public class Projects {
     }
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     @Path("{id}")
     public Project getForId(@PathParam("id")int id) {
         return getProjectForId(id);
@@ -93,11 +100,24 @@ public class Projects {
     }
 
     @POST
+    @Consumes({"application/json", "application/xml"})
     public void add(Project project) {
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
             SqlUtilities.beginTransaction(connection);
+
+            if(project.id == null) {
+                PreparedStatement getNextId = connection.prepareStatement("SELECT Max(id)+1 FROM project");
+                ResultSet resultSet = getNextId.executeQuery();
+                if(resultSet.next()) {
+                    project.id = resultSet.getInt(1);
+                } else {
+                    project.id = 1;
+                }
+                resultSet.close();
+            }
+
             PreparedStatement insert = connection.prepareStatement("INSERT INTO project(id,name,description,parent) VALUES(?,?,?,?)");
             insert.setObject(1, project.id);
             insert.setObject(2, project.name);
@@ -156,9 +176,15 @@ public class Projects {
     }
 
     @PUT
-    @Consumes("application/json")
+    @Consumes({"application/json", "application/xml"})
     @Path("{id}")
     public void updateProject(@PathParam("id")int id, Project project) {
+        if(project.id != null && project.id != id) {
+            throw new BadRequestException("Cannot change project ID");
+        }
+        if(project.id == null) {
+            project.id = id;
+        }
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
@@ -169,13 +195,13 @@ public class Projects {
             update.setObject(1, project.name);
             update.setObject(2, project.description);
             update.setObject(3, project.parentProjectId);
-            update.setObject(4, project.id);
+            update.setObject(4, id);
             int updated = update.executeUpdate();
             if(updated > 1) {
                 throw new InternalServerErrorException("Updated " + updated + " projects instead of just 1.  Transaction rolled back");
             }
 
-            clearProjectRoles(connection, project.id);
+            clearProjectRoles(connection, id);
             addRolesForProject(connection, project);
 
             SqlUtilities.commitTransaction(connection);
@@ -189,18 +215,18 @@ public class Projects {
     private void clearProjectRoles(Connection connection, int projectId, String... usernames) throws SQLException {
         String statement = "DELETE FROM project_role WHERE project_id = ?";
         if(usernames.length > 0) {
-            statement += " AND username IN (" + StringUtilities.join(",", Arrays.asList(usernames)) + ")";
+            statement += " AND username IN (" + getQuestionMarkString(usernames.length) + ")";
         }
         PreparedStatement clearProjectRoles = connection.prepareStatement(statement);
         clearProjectRoles.setObject(1, projectId);
         for(int i=0; i<usernames.length; i++) {
-            clearProjectRoles.setObject(i, usernames[i]);
+            clearProjectRoles.setObject(i+2, usernames[i]);
         }
         clearProjectRoles.executeUpdate();
     }
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     @Path("{projectId}/roles")
     public Response listRoles(@PathParam("projectId")int projectId) {
         Project project = getForId(projectId);
@@ -212,7 +238,7 @@ public class Projects {
     }
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     @Path("{id}/roles/{username}")
     public Role listRolesForUser(@PathParam("id")int projectId, @PathParam("username")String username) {
         Project project = getForId(projectId);
@@ -230,7 +256,7 @@ public class Projects {
     }
 
     @PUT
-    @Consumes("application/json")
+    @Consumes({"application/json", "application/xml"})
     @Path("{id}/roles/{username}")
     public void setRole(@PathParam("id") int projectId, @PathParam("username") String username, Role role) {
         Project project = getForId(projectId);
@@ -245,15 +271,18 @@ public class Projects {
         }
         String sql;
         if(current == null) {
-            sql = "INSERT INTO project_role (role, username, project) VALUES (?,?,?)";
+            sql = "INSERT INTO project_role (role, username, project_id) VALUES (?,?,?)";
         } else {
-            sql = "UPDATE project_role SET role = ? WHERE username = ? AND project = ?";
+            sql = "UPDATE project_role SET role = ? WHERE username = ? AND project_id = ?";
         }
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
             SqlUtilities.beginTransaction(connection);
             PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setObject(1, role.id);
+            statement.setObject(2, username);
+            statement.setObject(3, projectId);
             int numRows = statement.executeUpdate();
             if(numRows != 1) {
                 throw new InternalServerErrorException("Updated " + numRows + " project roles instead of just 1.  Transaction rolled back");
@@ -272,6 +301,7 @@ public class Projects {
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
+            SqlUtilities.beginTransaction(connection);
             clearProjectRoles(connection, projectId, username);
             SqlUtilities.commitTransaction(connection);
         } catch (SQLException e) {

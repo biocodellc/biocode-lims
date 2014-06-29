@@ -12,10 +12,10 @@ import java.util.*;
  */
 @XmlRootElement
 public class Project {
-    public int id;
+    public Integer id;
     public String name;
     public String description = "";
-    public int parentProjectId = -1;
+    public Integer parentProjectId;
 
     public Map<User, Role> userRoles = new HashMap<User, Role>();
 

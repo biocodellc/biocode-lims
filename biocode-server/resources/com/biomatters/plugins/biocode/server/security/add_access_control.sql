@@ -20,14 +20,17 @@ CREATE TABLE project (
   name VARCHAR(255) NOT NULL,
   external_id VARCHAR(255),
   description VARCHAR(255),
-  parent INT REFERENCES project(id) ON DELETE CASCADE
+  parent INT,
+  FOREIGN KEY (parent) REFERENCES project(id) ON DELETE CASCADE
 ) ENGINE=INNODB;
 
 CREATE TABLE project_role (
-  project_id INT NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-  username VARCHAR(255) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+  project_id INT NOT NULL,
+  username VARCHAR(255) NOT NULL,
   role INT,
-  PRIMARY KEY(project_id, username)
+  PRIMARY KEY(project_id, username),
+  FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE CASCADE,
+  FOREIGN KEY(username) REFERENCES users(username) ON DELETE CASCADE
 ) ENGINE=INNODB;
 
 
