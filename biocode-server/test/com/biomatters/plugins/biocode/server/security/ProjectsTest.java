@@ -55,6 +55,7 @@ public class ProjectsTest extends Assert {
         List<Project> inDatabase = Projects.getProjectsForId(dataSource);
         assertEquals(1, inDatabase.size());
         assertEquals(p.name, inDatabase.get(0).name);
+        assertTrue(p.userRoles.isEmpty());
 
         Projects.addProject(dataSource, p2);
         Projects.addProject(dataSource, p3);
