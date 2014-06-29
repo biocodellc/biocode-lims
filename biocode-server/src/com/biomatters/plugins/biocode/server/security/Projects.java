@@ -78,7 +78,9 @@ public class Projects {
                 projects.put(projectId, project);
             }
             User user = Users.createUserFromResultSetRow(resultSet);
-            project.userRoles.put(user, Role.forId(resultSet.getInt("role")));
+            if(user != null) {
+                project.userRoles.put(user, Role.forId(resultSet.getInt("role")));
+            }
         }
         return new ArrayList<Project>(projects.values());
     }
