@@ -18,8 +18,11 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
-import org.apache.commons.dbcp.*;
 
+import javax.sql.DataSource;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.sql.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -48,11 +51,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     public abstract String getSchema();
 
-    abstract BasicDataSource connectToDb(Options connectionOptions) throws ConnectionException;
+    abstract javax.sql.DataSource connectToDb(Options connectionOptions) throws ConnectionException;
 
-    private BasicDataSource dataSource;
+    private DataSource dataSource;
 
-    public BasicDataSource getDataSource() {
+    public DataSource getDataSource() {
         return dataSource;
     }
 
@@ -61,9 +64,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
         dataSource = connectToDb(selectedLimsOptions);
-        if(Geneious.isHeadless()) {
-            dataSource.setMaxActive(25);
-        }
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
@@ -198,6 +198,72 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, "Failed to initialize database: " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
+        }
+    }
+
+    /**
+     * Creates a {@link org.apache.commons.dbcp.BasicDataSource} using a custom ClassLoader.
+     * <p/>
+     * <b>Note</b>:This method is required because there is an older version of commons-dbcp in Geneious core class loader.  This
+     * means the class uses that class loader when looking for the JDBC driver class and cannot access the MySQL driver
+     * bundled in the Biocode plugin.
+     * <p/>
+     * We are unable to make use of {@link org.apache.commons.dbcp.BasicDataSource#setDriverClassLoader(ClassLoader)}
+     * because the version that is part of Geneious core is version 1.1 and does not have that method.
+     * </p>
+     * So we are forced to create a custom class loader that only has access to the plugin classes and libraries.
+     *
+     * @param connectionUrl The URL to connect to
+     * @param username
+     *@param password @return A {@link javax.sql.DataSource} for the specified parameters.
+     * @throws com.biomatters.plugins.biocode.labbench.ConnectionException
+     */
+    DataSource createBasicDataSource(String connectionUrl, Driver driver, String username, String password) throws ConnectionException {
+        ClassLoader pluginClassLoader = getClass().getClassLoader();
+        if(pluginClassLoader instanceof URLClassLoader) {
+            List<URL> urlsOfJar = new ArrayList<URL>();
+            for (URL url : ((URLClassLoader) pluginClassLoader).getURLs()) {
+                if(url.toString().contains("biocode")) {
+                    urlsOfJar.add(url);
+                }
+            }
+            ClassLoader bootstrapClassLoader = ClassLoader.getSystemClassLoader().getParent();
+            if(bootstrapClassLoader == null) {
+                throw new IllegalStateException("Expected system class loader to have a parent");
+            }
+            // We specify the parent class loader of our new one as the bootstrap classloader so it wont' be able to load
+            // Geneious core classes.
+            URLClassLoader classLoaderForPluginLibsOnly = new URLClassLoader(urlsOfJar.toArray(new URL[1]), bootstrapClassLoader);
+            try {
+                Class<?> dataSourceClass = classLoaderForPluginLibsOnly.loadClass("org.apache.commons.dbcp.BasicDataSource");
+                DataSource dataSource = (DataSource)dataSourceClass.newInstance();
+                // We have to use reflection here because we can't cast the class we created to the one loaded by Geneious core
+                dataSourceClass.getDeclaredMethod("setDriverClassName", String.class).invoke(dataSource, driver.getClass().getName());
+                dataSourceClass.getDeclaredMethod("setUrl", String.class).invoke(dataSource, connectionUrl);
+                if(username != null) {
+                    dataSourceClass.getDeclaredMethod("setUsername", String.class).invoke(dataSource, username);
+                }
+                if(password != null) {
+                    dataSourceClass.getDeclaredMethod("setPassword", String.class).invoke(dataSource, password);
+                }
+
+                if(Geneious.isHeadless()) {
+                    dataSourceClass.getDeclaredMethod("setMaxActive", Integer.class).invoke(dataSource, 25);
+                }
+                return dataSource;
+            } catch (ClassNotFoundException e) {
+                throw new ConnectionException("Failed to load data source. Missing library.", e);
+            } catch (InstantiationException e) {
+                throw new ConnectionException("Cannot construct BasicDataSource", e);
+            } catch (IllegalAccessException e) {
+                throw new ConnectionException("Failed to load data source.", e);
+            } catch (NoSuchMethodException e) {
+                throw new ConnectionException("Failed to load data source.", e);
+            } catch (InvocationTargetException e) {
+                throw new ConnectionException("Failed to load data source.", e);
+            }
+        } else {
+            throw new IllegalStateException("Expected plugin class loader to be a URLClassLoader, was " + pluginClassLoader.getClass().getSimpleName());
         }
     }
 

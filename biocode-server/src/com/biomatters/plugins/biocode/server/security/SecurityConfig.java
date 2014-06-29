@@ -43,7 +43,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         boolean hasDatabaseConnection = limsConnection instanceof SqlLimsConnection;
 
         if (hasDatabaseConnection) {
-            BasicDataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
+            DataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
 
             needMemoryUsers = createUserTablesIfNecessary(dataSource);
 
@@ -61,7 +61,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         }
     }
 
-    private void initializeAdminUserIfNecessary(BasicDataSource dataSource) throws SQLException {
+    private void initializeAdminUserIfNecessary(DataSource dataSource) throws SQLException {
         Connection connection = null;
         try {
             connection = dataSource.getConnection();
@@ -85,7 +85,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      * @return true if there are currently no user accounts
      * @throws SQLException
      */
-    private synchronized boolean createUserTablesIfNecessary(DataSource dataSource) {
+    public synchronized boolean createUserTablesIfNecessary(DataSource dataSource) {
         Connection connection = null;
         try {
             connection = dataSource.getConnection();
