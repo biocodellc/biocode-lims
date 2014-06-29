@@ -1,9 +1,9 @@
 package com.biomatters.plugins.biocode.server.security;
 
+import com.biomatters.plugins.biocode.labbench.lims.DatabaseScriptRunner;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
-import com.biomatters.plugins.biocode.server.Users;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +16,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Matthew Cheung
@@ -83,43 +85,33 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      * @return true if there are currently no user accounts
      * @throws SQLException
      */
-    public synchronized boolean createUserTablesIfNecessary(DataSource dataSource) {
+    public static boolean createUserTablesIfNecessary(DataSource dataSource) {
         Connection connection = null;
         try {
             connection = dataSource.getConnection();
-
-            String createUsersTableQuery = "CREATE TABLE IF NOT EXISTS " + LimsDatabaseConstants.USERS_TABLE_NAME + "(" +
-                                               LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE +" VARCHAR(255) NOT NULL, " +
-                                               LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
-                                               LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
-                                               LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
-                                               LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + " VARCHAR(320) NOT NULL, " +
-                                               LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + " BIT NOT NULL, " +
-                                               "PRIMARY KEY(" + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "))";
-
-            PreparedStatement statement = connection.prepareStatement(createUsersTableQuery);
-
-            statement.executeUpdate();
-
-            String createAuthoritiesTableQuery = "CREATE TABLE IF NOT EXISTS " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + "(" +
-                                                     LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + " VARCHAR(255) NOT NULL, " +
-                                                     LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " VARCHAR(50) NOT NULL, " +
-                                                     "PRIMARY KEY (username)," +
-                                                     "FOREIGN KEY (username) " +
-                                                        "REFERENCES users(username) " +
-                                                        "ON DELETE CASCADE)";
-
-            statement = connection.prepareStatement(createAuthoritiesTableQuery);
-
-            statement.executeUpdate();
-
+            Set<String> tables = SqlUtilities.getDatabaseTableNamesLowerCase(connection);
+            if(!tables.contains(LimsDatabaseConstants.USERS_TABLE_NAME.toLowerCase())) {
+                setupTables(connection);
+            }
             return false;
         } catch (SQLException e) {
+            e.printStackTrace();
+            return true;
+        } catch (IOException e) {
             e.printStackTrace();
             return true;
         } finally {
             SqlUtilities.closeConnection(connection);
         }
+    }
+
+    private static void setupTables(Connection connection) throws SQLException, IOException {
+        String scriptName = "add_access_control.sql";
+        InputStream script = SecurityConfig.class.getResourceAsStream(scriptName);
+        if(script == null) {
+            throw new IllegalStateException("Missing " + scriptName + ".  Cannot set up security.");
+        }
+        DatabaseScriptRunner.runScript(connection, script, false, false);
     }
 
     @Override

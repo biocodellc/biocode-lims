@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.server.security;
 
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.server.Users;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.sql.SQLException;
@@ -13,10 +12,10 @@ import java.util.*;
  */
 @XmlRootElement
 public class Project {
-    public int id;
+    public Integer id;
     public String name;
     public String description = "";
-    public int parentProjectId = -1;
+    public Integer parentProjectId;
 
     public Map<User, Role> userRoles = new HashMap<User, Role>();
 
@@ -35,37 +34,6 @@ public class Project {
         this.description = description;
     }
 
-    public static Project getForExtractionId(String extractionId) {
-        return TEST;
-    }
-
-    public static Project getForId(int id) {
-        return TEST;
-    }
-
-    public static Collection<Project> getListReadableByUser() {
-        return list;
-    }
-
-    private static Project TEST = new Project(0, "Test Project");
-    public static List<Project> list = new ArrayList<Project>();
-    static {        
-        TEST.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true, true), Role.ADMIN);
-        TEST.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true, false), Role.READER);
-        list.add(TEST);
-
-        Project test2 = new Project(2, "test proj2", "this is a description");
-        test2.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true, true), Role.ADMIN);
-        test2.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true, false), Role.READER);
-        list.add(test2);
-
-        Project test3 = new Project(3, "test proj3", "ok, just for test");
-        test3.userRoles.put(new User("admin", "admin", "admin", "admin", "admin@admin.co.nz", true, true), Role.ADMIN);
-        test3.userRoles.put(new User("test", "test", "test", "test", "test@test.co.nz", true, false), Role.READER);
-        test3.parentProjectId = test2.id;
-        list.add(test3);
-    }
-
     /**
      *
      * @return The role the current user has in the project.  Will fetch from parent groups if the user is not
@@ -77,7 +45,7 @@ public class Project {
         if(role != null) {
             return role;
         } else if(parentProjectId != -1) {
-            return getForId(parentProjectId).getRoleForUser();
+            return Projects.getProjectForId(parentProjectId).getRoleForUser();
         } else {
             return null;
         }

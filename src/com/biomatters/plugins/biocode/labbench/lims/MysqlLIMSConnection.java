@@ -5,7 +5,6 @@ import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import org.apache.commons.dbcp.*;
 
 import javax.sql.DataSource;
 import java.sql.*;

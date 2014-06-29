@@ -19,10 +19,19 @@ public class Role {
     public Role() {
     }
 
-    public Role(int id, String name, String description) {
+    private Role(int id, String name, String description) {
         this.id = id;
         this.name = name;
         this.description = description;
+    }
+
+    static Role forId(int id) {
+        for (Role role  : new Role[]{ADMIN, WRITER, READER}) {
+            if(role.id == id) {
+                return role;
+            }
+        }
+        return null;
     }
 
     public boolean isAtLeast(Role role) {
