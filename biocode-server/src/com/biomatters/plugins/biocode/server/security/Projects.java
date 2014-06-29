@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 
+import javax.sql.DataSource;
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
@@ -23,15 +24,15 @@ public class Projects {
     @GET
     @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     public Response list() {
-        List<Project> projectList = getProjectsForId();
+        List<Project> projectList = getProjectsForId(LIMSInitializationListener.getDataSource());
         return Response.ok(new GenericEntity<List<Project>>(projectList) { }).build();
     }
 
-    private static List<Project> getProjectsForId(Integer... ids) {
+    static List<Project> getProjectsForId(DataSource dataSource, Integer... ids) {
         List<Project> projectList;
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
 
             String queryString = "SELECT * FROM project " +
                     "LEFT OUTER JOIN project_role ON project.id = project_role.project_id " +
@@ -90,7 +91,7 @@ public class Projects {
     }
 
     static Project getProjectForId(int id) {
-        List<Project> projectList = getProjectsForId(id);
+        List<Project> projectList = getProjectsForId(LIMSInitializationListener.getDataSource(), id);
         if(projectList.isEmpty()) {
             throw new NotFoundException("No project for id " + id);
         } else {
@@ -101,10 +102,15 @@ public class Projects {
 
     @POST
     @Consumes({"application/json", "application/xml"})
-    public void add(Project project) {
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
+    public Project add(Project project) {
+        return addProject(LIMSInitializationListener.getDataSource(), project);
+    }
+
+    static Project addProject(DataSource dataSource, Project project) {
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
             SqlUtilities.beginTransaction(connection);
 
             if(project.id == null) {
@@ -131,6 +137,7 @@ public class Projects {
             addRolesForProject(connection, project);
 
             SqlUtilities.commitTransaction(connection);
+            return project;
         } catch (SQLException e) {
             throw new InternalServerErrorException("Encountered an error accessing the database: " + e.getMessage(), e);
         } finally {
@@ -138,7 +145,10 @@ public class Projects {
         }
     }
 
-    private void addRolesForProject(Connection connection, Project project) throws SQLException {
+    private static void addRolesForProject(Connection connection, Project project) throws SQLException {
+        if(project.userRoles.isEmpty()) {
+            return;
+        }
         PreparedStatement assignRole = connection.prepareStatement("INSERT INTO project_role(project_id, username, role) VALUES(?,?,?)");
         assignRole.setObject(1, project.id);
         for (Map.Entry<User, Role> entry : project.userRoles.entrySet()) {
@@ -157,9 +167,13 @@ public class Projects {
     @DELETE
     @Path("{id}")
     public void delete(@PathParam("id")int id) {
+        deleteProject(LIMSInitializationListener.getDataSource(), id);
+    }
+
+    static void deleteProject(DataSource dataSource, int id) {
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
             SqlUtilities.beginTransaction(connection);
             PreparedStatement delete = connection.prepareStatement("DELETE FROM project WHERE id = ?");
             delete.setObject(1, id);
@@ -185,9 +199,14 @@ public class Projects {
         if(project.id == null) {
             project.id = id;
         }
+        DataSource dataSource = LIMSInitializationListener.getDataSource();
+        updateProject(dataSource, project);
+    }
+
+    static void updateProject(DataSource dataSource, Project project) {
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
             SqlUtilities.beginTransaction(connection);
             PreparedStatement update = connection.prepareStatement("UPDATE project SET " +
                     "name = ?, description = ?, parent = ? WHERE id = ?"
@@ -195,13 +214,13 @@ public class Projects {
             update.setObject(1, project.name);
             update.setObject(2, project.description);
             update.setObject(3, project.parentProjectId);
-            update.setObject(4, id);
+            update.setObject(4, project.id);
             int updated = update.executeUpdate();
             if(updated > 1) {
                 throw new InternalServerErrorException("Updated " + updated + " projects instead of just 1.  Transaction rolled back");
             }
 
-            clearProjectRoles(connection, id);
+            clearProjectRoles(connection, project.id);
             addRolesForProject(connection, project);
 
             SqlUtilities.commitTransaction(connection);
@@ -212,7 +231,7 @@ public class Projects {
         }
     }
 
-    private void clearProjectRoles(Connection connection, int projectId, String... usernames) throws SQLException {
+    static void clearProjectRoles(Connection connection, int projectId, String... usernames) throws SQLException {
         String statement = "DELETE FROM project_role WHERE project_id = ?";
         if(usernames.length > 0) {
             statement += " AND username IN (" + getQuestionMarkString(usernames.length) + ")";

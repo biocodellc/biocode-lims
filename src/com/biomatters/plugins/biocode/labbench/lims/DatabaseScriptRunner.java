@@ -32,12 +32,16 @@ public class DatabaseScriptRunner {
      * @throws IOException if a problem occurs reading the script file.  This is a FileNotFoundException if the script file did not exist.
      */
     public static void runScript(Connection connection, InputStream scriptFile, boolean allowDrops, boolean ignoreErrors) throws SQLException, IOException {
+        boolean isMySQL = connection.getMetaData().getDatabaseProductName().toLowerCase().contains("mysql");
         List<String> commands = getCommandsFromScript(scriptFile);
 
         Statement statement = connection.createStatement();
         for(String command : commands) {
             // Do not run the drop lines; As at 2007-11-20, this code is only called when a database is empty.
             if (allowDrops || !command.toUpperCase().startsWith("DROP ")) {
+                if(isMySQL && command.trim().startsWith("CREATE TABLE")) {
+                    command += " ENGINE=INNODB";  // Ensure all MySQL tables are created as InnoDB
+                }
                 System.out.println(command);
                 try {
                     statement.executeUpdate(command);

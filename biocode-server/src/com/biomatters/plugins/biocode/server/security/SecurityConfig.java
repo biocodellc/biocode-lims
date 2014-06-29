@@ -85,7 +85,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      * @return true if there are currently no user accounts
      * @throws SQLException
      */
-    public synchronized boolean createUserTablesIfNecessary(DataSource dataSource) {
+    public static boolean createUserTablesIfNecessary(DataSource dataSource) {
         Connection connection = null;
         try {
             connection = dataSource.getConnection();
@@ -105,7 +105,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         }
     }
 
-    public static void setupTables(Connection connection) throws SQLException, IOException {
+    private static void setupTables(Connection connection) throws SQLException, IOException {
         String scriptName = "add_access_control.sql";
         InputStream script = SecurityConfig.class.getResourceAsStream(scriptName);
         if(script == null) {

@@ -6,14 +6,14 @@ CREATE TABLE users (
   email VARCHAR(320) NOT NULL,
   enabled BIT NOT NULL,
   PRIMARY KEY(username)
-) ENGINE = INNODB;
+);
 
 CREATE TABLE authorities (
   username  VARCHAR(255) NOT NULL,
   authority VARCHAR(50)  NOT NULL,
   PRIMARY KEY (username),
   FOREIGN KEY (username) REFERENCES users (username) ON DELETE CASCADE
-) ENGINE = INNODB;
+);
 
 CREATE TABLE project (
   id INT NOT NULL PRIMARY KEY,
@@ -22,7 +22,7 @@ CREATE TABLE project (
   description VARCHAR(255),
   parent INT,
   FOREIGN KEY (parent) REFERENCES project(id) ON DELETE CASCADE
-) ENGINE=INNODB;
+);
 
 CREATE TABLE project_role (
   project_id INT NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE project_role (
   PRIMARY KEY(project_id, username),
   FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE CASCADE,
   FOREIGN KEY(username) REFERENCES users(username) ON DELETE CASCADE
-) ENGINE=INNODB;
+);
 
 
 

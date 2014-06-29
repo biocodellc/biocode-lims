@@ -18,6 +18,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
+import org.apache.commons.dbcp.BasicDataSource;
 
 import javax.sql.DataSource;
 import java.lang.reflect.InvocationTargetException;
@@ -218,8 +219,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      *@param password @return A {@link javax.sql.DataSource} for the specified parameters.
      * @throws com.biomatters.plugins.biocode.labbench.ConnectionException
      */
-    DataSource createBasicDataSource(String connectionUrl, Driver driver, String username, String password) throws ConnectionException {
-        ClassLoader pluginClassLoader = getClass().getClassLoader();
+    public static DataSource createBasicDataSource(String connectionUrl, Driver driver, String username, String password) throws ConnectionException {
+        ClassLoader pluginClassLoader = SqlLimsConnection.class.getClassLoader();
         if(pluginClassLoader instanceof URLClassLoader) {
             List<URL> urlsOfJar = new ArrayList<URL>();
             for (URL url : ((URLClassLoader) pluginClassLoader).getURLs()) {
