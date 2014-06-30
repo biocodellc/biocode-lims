@@ -2,16 +2,18 @@
     <div class="header">
         <h1>{{user.username}}</h1>
         <button type="button" class="btn btn-primary btn-lg" ng-click="onUpdateUser()">Update</button>
-        <button type="button" class="btn btn-primary btn-lg">Change Password</button>
+        <button type="button" class="btn btn-primary btn-lg" ng-click="toggleModal()">Change Password</button>
         <button type="button" class="btn btn-primary btn-lg delBtn" ng-click="onDeleteUser()">Delete</button>
+        <div class="pass-dialog">
+            <modal-dialog show='myData.modalShown' width='400px' dialog-title="{{user.username}}'s New Password" on-close='logClose()'>
+                <input type='text' name='passinput' id="passinput"/>
+                <button type="button" class="btn btn-primary" ng-click="submitPass()">Submit</button>
+            </modal-dialog>
+        </div>
     </div>
     <div class="row userinforow">
         <table class="table" border="0">
             <tbody>
-            <tr>
-                <td>Name</td>
-                <td><input type="text" id="username" ng-model="user.username"></td>
-            </tr>
             <tr>
                 <td>First Name</td>
                 <td><input type="text" id="firstname" ng-model="user.firstname"></td>
@@ -34,7 +36,7 @@
             </option>
         </select>
         <select class="form-control" ng-model="roleId">
-            <option ng-repeat="role in assignedRoles" value="{{role.id}}">{{role.name}}
+            <option ng-repeat="role in projectRoles" value="{{role.id}}">{{role.name}}
             </option>
         </select>
         <button type="button" class="btn btn-primary" ng-click="onAssignRole()">Assign Role</button>
@@ -52,10 +54,10 @@
             </thead>
             <tbody>
             <tr ng-repeat="role in roles">
-                <td><a href="#/projects/{{role.projectId}}">{{role.projectName}}</a></td>
+                <td><a href="#/projects/{{role.projectId}}" value="{{role.projectId}}">{{role.projectName}}</a></td>
                 <td>{{role.roleName}}</td>
                 <td>{{role.description}}</td>
-                <td><input type="checkbox"></td>
+                <td><input type="checkbox" class="checkbox"></td>
             </tr>
             </tbody>
         </table>

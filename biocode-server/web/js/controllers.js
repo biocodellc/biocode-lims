@@ -3,6 +3,7 @@
  */
 var projectsUrl = "/BiocodeLims/biocode/projects";
 var usersUrl = "/BiocodeLims/biocode/users";
+var rolesUrl = "/BiocodeLims/biocode/roles";
 var usersPage = "#/users"
 var projectMap = null;
 var projects = null;
@@ -33,7 +34,22 @@ biocodeControllers.controller('projectListCtrl', ['$scope', '$http',
                 p.cls = p.cls + ' treegrid-expanded'
             }
 
-            $scope.projects = data;
+            $scope.projects = new Array();
+            for(var i = 0; i < data.length; i++) {
+                var proj = data[i];
+                var parentId = proj.parentProjectId;
+                if (parentId == -1) {
+                    $scope.projects[i] = proj;
+                } else {
+                    for (var j = 0; j < i; j++) {
+                        if ($scope.projects[j].id == parentId) {
+                            $scope.projects.splice(j + 1, 0, proj);
+                            break;
+                        }
+                    }
+                }
+            }
+
             projects = $scope.projects;
             projectMap = $scope.projectMap;
         });
@@ -47,7 +63,16 @@ biocodeControllers.controller('projectListCtrl', ['$scope', '$http',
                     expanderCollapsedClass: 'glyphicon glyphicon-plus'
                 });
 
-                var trNode = $('#' + nodeId);
+                var trNode = $('.tree tr');
+                if (trNode.treegrid('isExpanded')) {
+                    trNode.treegrid('collapse');
+                    trNode.treegrid('expand');
+                } else if (trNode.treegrid('isCollapsed')) {
+                    trNode.treegrid('expand');
+                    trNode.treegrid('collapse');
+                }
+
+                trNode = $('#' + nodeId);
                 if (trNode.treegrid('isExpanded'))
                     trNode.treegrid('collapse');
                 else if (trNode.treegrid('isCollapsed'))
@@ -85,6 +110,10 @@ biocodeControllers.controller('projectDetailCtrl', ['$scope', '$http', '$routePa
             projects = data;
             $scope.project = projectMap[$routeParams.projectId];
             $scope.userRoles = $scope.project.userRoles.entry;
+        });
+
+        $http.get(rolesUrl).success(function (data) {
+            $scope.roles = data;
         });
 
         $scope.onAllCheckBox = function(target) {
@@ -143,6 +172,7 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
     function($scope, $http, $routeParams) {
         $('li#users').attr('class', 'active');
         $('li#projects').attr('class', '');
+        $scope.newPass = '';
         $http.get(usersUrl + '/' + $routeParams.userId).success(function (data) {
             $scope.user = data;
             initProjects();
@@ -192,6 +222,15 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
                 projects = $scope.projects;
                 projectMap = $scope.projectMap;
             });
+
+            $http.get(rolesUrl).success(function (data) {
+                $scope.projectRoles = data;
+                $scope.projectRolesMap = new Object();
+
+                for (var i = 0; i < data.length; i++) {
+                    $scope.projectRolesMap[data[i].id] = data[i];
+                }
+            });
         }
 
         $scope.onAllCheckBox = function(target) {
@@ -206,32 +245,56 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
 
         $scope.onUpdateUser = function() {
             $http.put(usersUrl + '/' + $scope.user.username, $scope.user).success(function(){
+                $scope.myData.modalShown = !$scope.myData.modalShown;
+            });
+        }
+
+        $scope.submitPass = function() {
+            var tmpUser = $scope.user;
+            tmpUser.password = $('#passinput')[0].value;
+            $http.put(usersUrl + '/' + $scope.user.username, tmpUser).success(function(){
                 alert('update sucessfull');
             });
         }
 
         $scope.onDeleteRole = function() {
-            alert('backend has not implement this feature now');
-//            $http.delete(projectsUrl + '/' + $scope.project.id + '/roles/' + username).success(function(){
-//
-//            });
+            var inputs = $(".checkbox") ;
+            for (var i = 0; i < inputs.size(); i++) {
+                var input = inputs[i];
+                if (input.checked === true) {
+                    var projectId = input.parentNode.parentNode.firstElementChild.firstElementChild.getAttribute('value');
+
+                    var url = projectsUrl + '/' + projectId + '/roles/' + $scope.user.username;
+                    $http.delete(url).success(function(){
+                        initProjects();
+                    });
+                }
+            }
         }
 
         $scope.onProjectChange = function(projId) {
             $scope.assignedRoles = $scope.projectMap[projId].roles;
         }
 
-        $scope.onAssignRole = function(projId) {
+        $scope.onAssignRole = function() {
             var url = projectsUrl + '/' + $scope.projId + '/roles/' + $scope.user.username;
-            $http.put(url, $scope.projectMap[$scope.projId].rolesMap[$scope.roleId]).success(function (data, status, headers) {
-                var project = $scope.projectMap[$scope.projId];
-                var addedRole = {projectId : project.id,
-                            projectName : project.name,
-                            roleName : project.rolesMap[$scope.roleId].name,
-                            description : project.rolesMap[$scope.roleId].description};
-                $scope.roles.push(addedRole);
+            $http.put(url, $scope.projectRolesMap[$scope.roleId]).success(function (data, status, headers) {
+                initProjects();
             });
         }
+
+        $scope.myData = {
+            link: "http://google.com",
+            modalShown: false,
+            hello: 'world',
+            foo: 'bar'
+        }
+        $scope.logClose = function() {
+            console.log('close!');
+        };
+        $scope.toggleModal = function() {
+            $scope.myData.modalShown = !$scope.myData.modalShown;
+        };
     }]);
 
 biocodeControllers.controller('createuserCtrl', ['$scope', '$http',

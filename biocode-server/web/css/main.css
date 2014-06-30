@@ -78,5 +78,13 @@
     float: left;
 }
 
+.pass-dialog input {
+    width: 80%;
+}
+
+.pass-dialog button {
+    margin: 0;
+}
+
 
 

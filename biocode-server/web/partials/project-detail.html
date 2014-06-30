@@ -12,7 +12,7 @@
         <div class="filter-role">
             <select class="form-control" ng-model="keyRole">
                 <option value="">All</option>
-                <option ng-repeat="userRole in userRoles" value="{{userRole.value.name}}">{{userRole.value.name}}
+                <option ng-repeat="role in roles" value="{{role.name}}">{{role.name}}
                 </option>
             </select>
         </div>
