@@ -75,6 +75,9 @@ public class Projects {
                 project.description = resultSet.getString("description");
                 project.name = resultSet.getString("name");
                 project.parentProjectId = resultSet.getInt("parent");
+                if(resultSet.wasNull()) {
+                    project.parentProjectId = -1;
+                }
                 projects.put(projectId, project);
             }
             User user = Users.createUserFromResultSetRow(resultSet);
