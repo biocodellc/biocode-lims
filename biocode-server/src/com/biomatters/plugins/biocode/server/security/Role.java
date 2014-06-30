@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.server.security;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Matthew Cheung
@@ -26,12 +28,16 @@ public class Role {
     }
 
     static Role forId(int id) {
-        for (Role role  : new Role[]{ADMIN, WRITER, READER}) {
+        for (Role role  : values()) {
             if(role.id == id) {
                 return role;
             }
         }
         return null;
+    }
+
+    static List<Role> values() {
+        return Arrays.asList(ADMIN, WRITER, READER);
     }
 
     public boolean isAtLeast(Role role) {
