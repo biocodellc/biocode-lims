@@ -64,10 +64,10 @@
             <lib dir="${lib}" />
             <lib dir="${server-lib}"/>
             <fileset dir="${server-folder}/web" />
-            <fileset dir="${server-folder}/resources" />
             <fileset dir="${server-lib}">
                 <include name="images/*"/>
             </fileset>
+            <classes dir="${server-folder}/resources"/>
         </war>
     </target>
 
