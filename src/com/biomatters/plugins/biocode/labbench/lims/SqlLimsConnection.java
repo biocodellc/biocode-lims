@@ -249,7 +249,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 }
 
                 if(Geneious.isHeadless()) {
-                    dataSourceClass.getDeclaredMethod("setMaxActive", Integer.class).invoke(dataSource, 25);
+                    dataSourceClass.getDeclaredMethod("setMaxActive", int.class).invoke(dataSource, 25);
                 }
                 return dataSource;
             } catch (ClassNotFoundException e) {
