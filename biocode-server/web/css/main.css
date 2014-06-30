@@ -1,0 +1,82 @@
+.row {
+    margin-right: 0;
+    margin-left: 0;
+    margin-top: 30px;
+}
+
+.filter-lable {
+    float: left;
+    margin-right: 20px;
+    margin-top: 6px;
+}
+
+.filter-role,
+.filter-text {
+    float: left;
+    margin-right: 30px;
+}
+
+.header button {
+    margin-top: 17px;
+    margin-left: 45px;
+}
+
+.header h1 {
+    float: left;
+}
+
+.userKeyword {
+    width: 300px;
+    margin-top: 40px;
+    margin-bottom: -10px;
+}
+
+.userinforow {
+    width: 40%;
+    margin-top: 45px;
+    text-align: right;
+}
+
+.userinforow .table > tbody > tr > td:first-child {
+    border-top: none;
+    width: 100px;
+    text-align: right;
+}
+
+.userinforow .table > tbody > tr > td:last-child {
+    border-top: none;
+    text-align: left;
+}
+
+.userinforow .table > tbody > tr > td:last-child >input {
+    text-align: center;
+    margin-left: 10px;
+    width: 92%;
+}
+
+.userinforow button {
+    margin-right: 24px;
+}
+
+.projectHeader h1{
+    float: none;
+}
+
+.project-list-row {
+    margin-top: 100px;
+}
+
+#user-role-row h3 {
+    float: left;
+    margin-top: 5px;
+}
+
+#user-role-row button,
+#user-role-row select{
+    margin-left: 15px;
+    width: inherit;
+    float: left;
+}
+
+
+

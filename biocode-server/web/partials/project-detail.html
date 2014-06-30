@@ -1,0 +1,46 @@
+<div class="container">
+    <div class="header projectHeader">
+        <h1>{{project.name}}</h1>
+    </div>
+    <div class="row">
+        <h2>Users</h2>
+    </div>
+    <div class="row">
+        <div class="filter-lable">
+            <label>Filter by role : </label>
+        </div>
+        <div class="filter-role">
+            <select class="form-control" ng-model="keyRole">
+                <option value="">All</option>
+                <option ng-repeat="userRole in userRoles" value="{{userRole.value.name}}">{{userRole.value.name}}
+                </option>
+            </select>
+        </div>
+        <div class="form-group filter-text">
+            <input type="text" class="form-control" ng-model="keyword" placeholder="Search">
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary" ng-click="onDeleteUsers()">Delete Selected Users</button>
+        </div>
+    </div>
+    <div class="row">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th><input type="checkbox" id="all-project-roles" ng-click="onAllCheckBox($event.target)"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="userRole in userRoles | filter : {key : keyword, value : keyRole}">
+                <td><a href="#/users/{{userRole.key.username}}">{{userRole.key.username}}</a></td>
+                <td>{{userRole.key.email}}</td>
+                <td>{{userRole.value.name}}</td>
+                <td><input type="checkbox" class="checkbox"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

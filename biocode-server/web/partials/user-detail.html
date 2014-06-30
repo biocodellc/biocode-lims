@@ -1,0 +1,63 @@
+<div class="container">
+    <div class="header">
+        <h1>{{user.username}}</h1>
+        <button type="button" class="btn btn-primary btn-lg" ng-click="onUpdateUser()">Update</button>
+        <button type="button" class="btn btn-primary btn-lg">Change Password</button>
+        <button type="button" class="btn btn-primary btn-lg delBtn" ng-click="onDeleteUser()">Delete</button>
+    </div>
+    <div class="row userinforow">
+        <table class="table" border="0">
+            <tbody>
+            <tr>
+                <td>Name</td>
+                <td><input type="text" id="username" ng-model="user.username"></td>
+            </tr>
+            <tr>
+                <td>First Name</td>
+                <td><input type="text" id="firstname" ng-model="user.firstname"></td>
+            </tr>
+            <tr>
+                <td>Last Name</td>
+                <td><input type="text" id="lastname" ng-model="user.lastname"></td>
+            </tr>
+            <tr>
+                <td>Email</td>
+                <td><input type="text" id="email" ng-model="user.email"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="row" id="user-role-row">
+        <h3>Roles</h3>
+        <select class="form-control" ng-change="onProjectChange(projId)" ng-model="projId">
+            <option ng-repeat="project in projects" value="{{project.id}}">{{project.name}}
+            </option>
+        </select>
+        <select class="form-control" ng-model="roleId">
+            <option ng-repeat="role in assignedRoles" value="{{role.id}}">{{role.name}}
+            </option>
+        </select>
+        <button type="button" class="btn btn-primary" ng-click="onAssignRole()">Assign Role</button>
+        <button type="button" class="btn btn-primary" ng-click="onDeleteRole()">Delete selected roles</button>
+    </div>
+    <div class="row">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Project</th>
+                <th>Role</th>
+                <th>Description</th>
+                <th><input type="checkbox" ng-click="onAllCheckBox($event.target)"></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="role in roles">
+                <td><a href="#/projects/{{role.projectId}}">{{role.projectName}}</a></td>
+                <td>{{role.roleName}}</td>
+                <td>{{role.description}}</td>
+                <td><input type="checkbox"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,18 @@
+[
+    {
+        "username": "admin",
+        "firstname": "admin",
+        "lastname": "",
+        "email": "",
+        "enabled": true,
+        "isAdministrator": true
+    },
+    {
+        "username": "test",
+        "firstname": "test",
+        "lastname": "last",
+        "email": "abc@abc.com",
+        "enabled": true,
+        "isAdministrator": false
+    }
+]

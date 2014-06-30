@@ -1,0 +1,22 @@
+<div class="container">
+    <div class="header">
+        <h1>Project List</h1>
+    </div>
+    <div class="row project-list-row">
+        <table class="table tree table-bordered table-striped">
+            <tbody>
+                <tr ng-repeat="project in projects" class="{{project.cls}}" id="{{project.id}}">
+                    <td>
+                        <span ng-repeat="n in [] | range:project.level" class="treegrid-indent"></span>
+                        <span class="treegrid-expander" ng-if="project.hasChild === 'false'"></span>
+                        <span class="treegrid-expander glyphicon glyphicon-minus" ng-if="project.hasChild === 'true'" ng-click="collapseOrExpend($event.target)"></span>
+                        <a href="#/projects/{{project.id}}">{{project.name}}</a>
+                    </td>
+                    <td>
+                        {{project.description}}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

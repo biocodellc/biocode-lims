@@ -224,7 +224,7 @@ public class Users {
 
             String updateUserQuery = "UPDATE " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
                                      "SET "    + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
-                                                 LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + "=?, " +
+                                                (user.password == null ? "" : LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + "=?, ") +
                                                  LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
                                                  LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
                                                  LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + "=?, "  +
@@ -233,13 +233,16 @@ public class Users {
 
             PreparedStatement statement = connection.prepareStatement(updateUserQuery);
 
-            statement.setObject(1, user.username);
-            statement.setObject(2, user.password);
-            statement.setObject(3, user.firstname);
-            statement.setObject(4, user.lastname);
-            statement.setObject(5, user.email);
-            statement.setObject(6, user.enabled);
-            statement.setObject(7, username);
+            int i = 1;
+            statement.setObject(i++, user.username);
+            if (user.password != null)
+                statement.setObject(i++, encoder.encode(user.password));
+
+            statement.setObject(i++, user.firstname);
+            statement.setObject(i++, user.lastname);
+            statement.setObject(i++, user.email);
+            statement.setObject(i++, user.enabled);
+            statement.setObject(i++, username);
 
             int updated = statement.executeUpdate();
 
