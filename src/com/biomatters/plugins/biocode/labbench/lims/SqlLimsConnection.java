@@ -222,10 +222,22 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     public static DataSource createBasicDataSource(String connectionUrl, Driver driver, String username, String password) throws ConnectionException {
         ClassLoader pluginClassLoader = SqlLimsConnection.class.getClassLoader();
         if(pluginClassLoader instanceof URLClassLoader) {
+            // We need DBCP including dependencies as well as the two JDBC drivers.
+            // See http://commons.apache.org/proper/commons-dbcp/dependencies.html for dependencies.
+            List<String> required = Arrays.asList(
+                    "commons-dbcp-1.4",
+                    "commons-logging-1.1.1",
+                    "commons-pool-1.6",
+                    "geronimo-jta_1.1_spec",
+                    "mysql-connector-java-5.1.6",
+                    "hsqldb-2.3.0"
+            );
             List<URL> urlsOfJar = new ArrayList<URL>();
             for (URL url : ((URLClassLoader) pluginClassLoader).getURLs()) {
-                if(url.toString().contains("biocode")) {
-                    urlsOfJar.add(url);
+                for (String toCheckAgainst : required) {
+                    if(url.toString().contains(toCheckAgainst)) {
+                        urlsOfJar.add(url);
+                    }
                 }
             }
             ClassLoader bootstrapClassLoader = ClassLoader.getSystemClassLoader().getParent();
@@ -249,7 +261,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 }
 
                 if(Geneious.isHeadless()) {
-                    dataSourceClass.getDeclaredMethod("setMaxActive", Integer.class).invoke(dataSource, 25);
+                    dataSourceClass.getDeclaredMethod("setMaxActive", int.class).invoke(dataSource, 25);
                 }
                 return dataSource;
             } catch (ClassNotFoundException e) {

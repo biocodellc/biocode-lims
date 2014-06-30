@@ -74,7 +74,10 @@ public class Users {
         List<User> users = new ArrayList<User>();
 
         while (resultSet.next()) {
-            users.add(createUserFromResultSetRow(resultSet));
+            User user = createUserFromResultSetRow(resultSet);
+            if(user != null) {
+                users.add(user);
+            }
         }
 
         resultSet.close();
@@ -86,7 +89,11 @@ public class Users {
     @Produces("application/json")
     @Path("{username}")
     public User getUser(@PathParam("username")String username) {
-        return getUserForUsername(username);
+        User user = getUserForUsername(username);
+        if(user == null) {
+            throw new NotFoundException("No user for " + username);
+        }
+        return user;
     }
 
     private static User getUserForUsername(String username) {
@@ -124,9 +131,19 @@ public class Users {
         }
     }
 
+    /**
+     *
+     * @param resultSet The resultSet to create a user from.
+     * @return A user representing the current row in the result set.  Or null if there is no user account.
+     * @throws SQLException if a problem occurs communicating with the database
+     */
     static User createUserFromResultSetRow(ResultSet resultSet) throws SQLException {
+        String username = resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE);
+        if(username == null) {
+            return null;
+        }
         String authority = resultSet.getString(LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE);
-        return new User(resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE),
+        return new User(username,
                         null,
                         resultSet.getString(LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE),
                         resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
