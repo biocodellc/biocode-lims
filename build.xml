@@ -67,6 +67,7 @@
             <fileset dir="${server-lib}">
                 <include name="images/*"/>
             </fileset>
+            <classes dir="${server-folder}/resources"/>
         </war>
     </target>
 
