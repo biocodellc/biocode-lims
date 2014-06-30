@@ -106,7 +106,8 @@ public class ServerLimsConnection extends LIMSConnection {
     public void savePlates(List<Plate> plates, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         try {
             Invocation.Builder request = target.path("plates").request();
-            request.put(Entity.entity(plates, MediaType.APPLICATION_XML_TYPE));
+            request.put(Entity.entity(new XMLSerializableList<Plate>(Plate.class, plates),
+                    MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
@@ -447,6 +448,9 @@ public class ServerLimsConnection extends LIMSConnection {
         List<Workflow> data = new ArrayList<Workflow>();
         try {
             for (String id : workflowIds) {
+                if (id.isEmpty()) {
+                    continue;
+                }
                 data.add(target.path(WORKFLOWS).path(id).request(MediaType.APPLICATION_XML_TYPE).get(Workflow.class));
             }
         } catch (WebApplicationException e) {

@@ -5,7 +5,6 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
-import org.apache.commons.dbcp.BasicDataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
