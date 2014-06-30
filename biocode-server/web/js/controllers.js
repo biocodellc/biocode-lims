@@ -12,7 +12,7 @@ var biocodeControllers = angular.module('biocodeControllers', []);
 
 biocodeControllers.controller('projectListCtrl', ['$scope', '$http',
     function($scope, $http) {
-        $('li#users').attr('class', '');
+        $('.navbar-nav li').attr('class', '');
         $('li#projects').attr('class', 'active');
         $http.get(projectsUrl).success(function (data) {
             $scope.projectMap = new Object();
@@ -85,32 +85,36 @@ biocodeControllers.controller('projectListCtrl', ['$scope', '$http',
 
 biocodeControllers.controller('projectDetailCtrl', ['$scope', '$http', '$routeParams',
     function($scope, $http, $routeParams) {
-        $('li#users').attr('class', '');
+        $('.navbar-nav li').attr('class', '');
         $('li#projects').attr('class', 'active');
-        $http.get(projectsUrl).success(function (data) {
-            projectMap = new Object();
-            for (var i = 0; i < data.length; i++) {
-                projectMap[data[i].id] = data[i];
-                data[i].parentRoles = new Array();
-                data[i].level = 0;
-                data[i].hasChild = 'false';
-                data[i].cls = 'treegrid-' + data[i].id;
+        initProject();
 
-                if (data[i].parentProjectId == -1) {
-                    continue;
+        function initProject() {
+            $http.get(projectsUrl).success(function (data) {
+                projectMap = new Object();
+                for (var i = 0; i < data.length; i++) {
+                    projectMap[data[i].id] = data[i];
+                    data[i].parentRoles = new Array();
+                    data[i].level = 0;
+                    data[i].hasChild = 'false';
+                    data[i].cls = 'treegrid-' + data[i].id;
+
+                    if (data[i].parentProjectId == -1) {
+                        continue;
+                    }
+
+                    var p = projectMap[data[i].parentProjectId];
+                    data[i].level = p.level + 1;
+                    data[i].cls = data[i].cls + ' treegrid-parent-' + p.id;
+                    p.hasChild = 'true';
+                    p.cls = p.cls + ' treegrid-expanded'
                 }
 
-                var p = projectMap[data[i].parentProjectId];
-                data[i].level = p.level + 1;
-                data[i].cls = data[i].cls + ' treegrid-parent-' + p.id;
-                p.hasChild = 'true';
-                p.cls = p.cls + ' treegrid-expanded'
-            }
-
-            projects = data;
-            $scope.project = projectMap[$routeParams.projectId];
-            $scope.userRoles = $scope.project.userRoles.entry;
-        });
+                projects = data;
+                $scope.project = projectMap[$routeParams.projectId];
+                $scope.userRoles = $scope.project.userRoles.entry;
+            });
+        }
 
         $http.get(rolesUrl).success(function (data) {
             $scope.roles = data;
@@ -128,7 +132,7 @@ biocodeControllers.controller('projectDetailCtrl', ['$scope', '$http', '$routePa
                     var username = input.parentNode.parentNode.firstElementChild.firstElementChild.innerHTML;
 
                     $http.delete(projectsUrl + '/' + $scope.project.id + '/roles/' + username).success(function(){
-                        alert('backend has not implement this feature now');
+                        initProject();
                     });
                 }
             }
@@ -137,11 +141,15 @@ biocodeControllers.controller('projectDetailCtrl', ['$scope', '$http', '$routePa
 
 biocodeControllers.controller('userListCtrl', ['$scope', '$http',
     function($scope, $http) {
+        $('.navbar-nav li').attr('class', '');
         $('li#users').attr('class', 'active');
-        $('li#projects').attr('class', '');
-        $http.get(usersUrl).success(function (data) {
-            $scope.users = data;
-        });
+        init();
+
+        function init() {
+            $http.get(usersUrl).success(function (data) {
+                $scope.users = data;
+            });
+        }
 
         $scope.onAllCheckBox = function(target) {
             $('td input').prop('checked', target.checked);
@@ -149,29 +157,32 @@ biocodeControllers.controller('userListCtrl', ['$scope', '$http',
 
         $scope.onDeleteUser = function() {
             var inputs = $(":checked") ;
+            var delUsers = new Object();
             for (var i = 0; i < inputs.size(); i++) {
                 var input = inputs[i];
                 if (input.id === 'all-project-roles')
                     continue;
 
                 var username = input.parentNode.parentNode.firstElementChild.firstElementChild.innerHTML;
-
+                delUsers[username] = true;
                 $http.delete(usersUrl + '/' + username).success(function(){
-                    for(var i = 0; i < $scope.users.length; i++) {
-                        if($scope.users[i].username === username) {
-                            $scope.users.splice(i, 1);
-                            break;
-                        }
-                    }
                 });
+            }
+
+            var tmp = $scope.users;
+            $scope.users = new Array();
+            for (var i = 0; i < tmp.length; i++) {
+                if (delUsers[tmp[i].username])
+                    continue;
+                $scope.users.push(tmp[i]);
             }
         }
     }]);
 
 biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParams',
     function($scope, $http, $routeParams) {
+        $('.navbar-nav li').attr('class', '');
         $('li#users').attr('class', 'active');
-        $('li#projects').attr('class', '');
         $scope.newPass = '';
         $http.get(usersUrl + '/' + $routeParams.userId).success(function (data) {
             $scope.user = data;
@@ -234,7 +245,7 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
         }
 
         $scope.onAllCheckBox = function(target) {
-            $('td input').prop('checked', target.checked);
+            $('td input.checkbox').prop('checked', target.checked);
         }
 
         $scope.onDeleteUser = function() {
@@ -245,7 +256,7 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
 
         $scope.onUpdateUser = function() {
             $http.put(usersUrl + '/' + $scope.user.username, $scope.user).success(function(){
-                $scope.myData.modalShown = !$scope.myData.modalShown;
+                alert('update sucessfull');
             });
         }
 
@@ -299,12 +310,24 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
 
 biocodeControllers.controller('createuserCtrl', ['$scope', '$http',
     function($scope, $http) {
+        $('.navbar-nav li').attr('class', '');
         $('li#users').attr('class', 'active');
-        $('li#projects').attr('class', '');
 
         $scope.onCreateUser = function() {
             $http.post(usersUrl, $scope.user).success(function (data, status, headers) {
                 window.location = usersPage + '/' + $scope.user.username;
             });
         }
+    }]);
+
+biocodeControllers.controller('aboutCtrl', ['$scope',
+    function($scope) {
+        $('.navbar-nav li').attr('class', '');
+        $('li#about').attr('class', 'active');
+    }]);
+
+biocodeControllers.controller('contactCtrl', ['$scope',
+    function($scope) {
+        $('.navbar-nav li').attr('class', '');
+        $('li#contact').attr('class', 'active');
     }]);

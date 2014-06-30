@@ -104,10 +104,12 @@ biocodeApp.config(['$routeProvider', 'ngModalDefaultsProvider',
                 controller: 'createuserCtrl'
             }).
             when('/about', {
-                templateUrl: 'partials/about.html'
+                templateUrl: 'partials/about.html',
+                controller: 'aboutCtrl'
             }).
             when('/contact', {
-                templateUrl: 'partials/contact.html'
+                templateUrl: 'partials/contact.html',
+                controller: 'contactCtrl'
             }).
             otherwise({
                 redirectTo: '/projects'

@@ -22,6 +22,10 @@
                 <td>Password</td>
                 <td><input type="text" id="password" ng-model="user.password"></td>
             </tr>
+            <tr>
+                <td>Is Admin</td>
+                <td><input type="checkbox" ng-model="user.isAdministrator"></td>
+            </tr>
             </tbody>
         </table>
         <button type="button" class="btn btn-primary btn-lg" ng-click="onCreateUser()">Create</button>
