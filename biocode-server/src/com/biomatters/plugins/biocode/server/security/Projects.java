@@ -8,10 +8,7 @@ import javax.sql.DataSource;
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 /**
@@ -133,7 +130,11 @@ public class Projects {
             insert.setObject(1, project.id);
             insert.setObject(2, project.name);
             insert.setObject(3, project.description);
-            insert.setObject(4, project.parentProjectId == -1 ? null : project.parentProjectId);
+            if(project.parentProjectId == null) {
+                insert.setNull(4, Types.INTEGER);
+            } else {
+                insert.setObject(4, project.parentProjectId);
+            }
             int inserted = insert.executeUpdate();
             if(inserted > 1) {
                 throw new InternalServerErrorException("Inserted " + inserted + " projects instead of just 1.  Transaction rolled back");
