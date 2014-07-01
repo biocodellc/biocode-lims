@@ -8,7 +8,10 @@
     </configurations>
 
     <dependencies>
-        <dependency org="com.biomatters" name="geneious.publicapi" rev="7.0.5" conf="build->api; test->runtime"/>
+        <!-- Build against 6.1.1 since that is the minimum API version. -->
+        <dependency org="com.biomatters" name="geneious.publicapi" rev="6.1.1" conf="build->api"/>
+        <!-- Test against 7.0.5 because that is what users are using -->
+        <dependency org="com.biomatters" name="geneious.publicapi" rev="7.0.5" conf="test->runtime"/>
 
         <dependency org="com.google.guava" name="guava" rev="15.0" conf="build,test->default"/>
         <dependency org="org.hsqldb" name="hsqldb" rev="2.3.0" conf="build,test->default"/>
