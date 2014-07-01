@@ -237,7 +237,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 for (String toCheckAgainst : required) {
                     if(url.toString().contains(toCheckAgainst)) {
                         urlsOfJar.add(url);
-                        System.out.println("XXXXXXXXXXXXXXXX" + url + "XXXXXXXXXXXXXXXXX");
                     }
                 }
             }
