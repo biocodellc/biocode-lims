@@ -1,8 +1,6 @@
 package com.biomatters.plugins.biocode.server.security;
 
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
-import com.biomatters.plugins.biocode.server.security.LimsDatabaseConstants;
-import com.biomatters.plugins.biocode.server.security.User;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -40,7 +38,7 @@ public class Users {
     }
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     public Response list() {
         Connection connection = null;
         try {
@@ -86,7 +84,7 @@ public class Users {
     }
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     @Path("{username}")
     public User getUser(@PathParam("username")String username) {
         User user = getUserForUsername(username);
@@ -162,7 +160,7 @@ public class Users {
 
     @POST
     @Produces("text/plain")
-    @Consumes("application/json")
+    @Consumes({"application/json", "application/xml"})
     public String addUser(User user) {
         Connection connection = null;
         try {
@@ -214,7 +212,7 @@ public class Users {
     @PUT
     @Path("{username}")
     @Produces("text/plain")
-    @Consumes("application/json")
+    @Consumes({"application/json", "application/xml"})
     public String updateUser(@PathParam("username")String username, User user) {
         Connection connection = null;
         try {
