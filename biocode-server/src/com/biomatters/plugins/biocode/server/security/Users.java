@@ -6,6 +6,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import javax.sql.DataSource;
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
@@ -22,7 +23,7 @@ import java.util.List;
  */
 @Path("users")
 public class Users {
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     /**
      * @return The current logged in {@link com.biomatters.plugins.biocode.server.security.User}
@@ -162,9 +163,13 @@ public class Users {
     @Produces("text/plain")
     @Consumes({"application/json", "application/xml"})
     public String addUser(User user) {
+        return addUser(LIMSInitializationListener.getDataSource(), user);
+    }
+
+    static String addUser(DataSource dataSource, User user) {
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
 
             SqlUtilities.beginTransaction(connection);
 

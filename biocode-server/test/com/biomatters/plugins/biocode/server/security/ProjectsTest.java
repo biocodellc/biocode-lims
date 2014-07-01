@@ -92,4 +92,40 @@ public class ProjectsTest extends Assert {
         assertEquals(1, inDatabase.size());
         assertEquals(newName, inDatabase.get(0).name);
     }
+
+    @Test
+    public void canListRoles() {
+        User user1 = new User("user1", "password", "", "", "test@test.com", true, false);
+        Users.addUser(dataSource, user1);
+
+        Project p = new Project();
+        p.name = "Test";
+        p.userRoles.put(user1, Role.WRITER);
+        Project added = Projects.addProject(dataSource, p);
+
+        Project inDatabase = Projects.getProjectForId(dataSource, added.id);
+        assertEquals(1, inDatabase.userRoles.size());
+        assertEquals(Role.WRITER, inDatabase.userRoles.get(user1));
+    }
+
+    @Test
+    public void canSetRole() {
+        User user1 = new User("user1", "password", "", "", "test@test.com", true, false);
+        Users.addUser(dataSource, user1);
+
+        Project p = new Project();
+        p.name = "Test";
+        p.userRoles.put(user1, Role.WRITER);
+        Project added = Projects.addProject(dataSource, p);
+
+        Projects.setProjectRoleForUsername(dataSource, p.id, user1.username, Role.ADMIN);
+
+        Project inDatabase = Projects.getProjectForId(dataSource, added.id);
+        assertEquals(1, inDatabase.userRoles.size());
+        assertEquals(Role.ADMIN, inDatabase.userRoles.get(user1));
+
+        Projects.removeUserFromProject(dataSource, added.id, user1.username);
+        inDatabase = Projects.getProjectForId(dataSource, added.id);
+        assertTrue(inDatabase.userRoles.isEmpty());
+    }
 }

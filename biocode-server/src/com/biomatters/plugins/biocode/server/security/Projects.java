@@ -89,11 +89,11 @@ public class Projects {
     @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     @Path("{id}")
     public Project getForId(@PathParam("id")int id) {
-        return getProjectForId(id);
+        return getProjectForId(LIMSInitializationListener.getDataSource(), id);
     }
 
-    static Project getProjectForId(int id) {
-        List<Project> projectList = getProjectsForId(LIMSInitializationListener.getDataSource(), id);
+    static Project getProjectForId(DataSource dataSource, int id) {
+        List<Project> projectList = getProjectsForId(dataSource, id);
         if(projectList.isEmpty()) {
             throw new NotFoundException("No project for id " + id);
         } else {
@@ -284,7 +284,11 @@ public class Projects {
     @Consumes({"application/json", "application/xml"})
     @Path("{id}/roles/{username}")
     public void setRole(@PathParam("id") int projectId, @PathParam("username") String username, Role role) {
-        Project project = getForId(projectId);
+        setProjectRoleForUsername(LIMSInitializationListener.getDataSource(), projectId, username, role);
+    }
+
+    static void setProjectRoleForUsername(DataSource dataSource, int projectId, String username, Role role) {
+        Project project = getProjectForId(dataSource, projectId);
         Role current = null;
         for (Map.Entry<User, Role> entry : project.userRoles.entrySet()) {
             if(entry.getKey().username.equals(username)) {
@@ -302,7 +306,7 @@ public class Projects {
         }
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
             SqlUtilities.beginTransaction(connection);
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setObject(1, role.id);
@@ -323,9 +327,14 @@ public class Projects {
     @DELETE
     @Path("{id}/roles/{username}")
     public void deleteRole(@PathParam("id")int projectId, @PathParam("username")String username) {
+        DataSource dataSource = LIMSInitializationListener.getDataSource();
+        removeUserFromProject(dataSource, projectId, username);
+    }
+
+    static void removeUserFromProject(DataSource dataSource, int projectId, String username) {
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
             SqlUtilities.beginTransaction(connection);
             clearProjectRoles(connection, projectId, username);
             SqlUtilities.commitTransaction(connection);

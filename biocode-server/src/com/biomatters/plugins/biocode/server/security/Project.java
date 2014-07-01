@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.server.security;
 
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 
 import javax.xml.bind.annotation.XmlRootElement;
 import java.sql.SQLException;
@@ -45,7 +46,7 @@ public class Project {
         if(role != null) {
             return role;
         } else if(parentProjectId != -1) {
-            return Projects.getProjectForId(parentProjectId).getRoleForUser();
+            return Projects.getProjectForId(LIMSInitializationListener.getDataSource(), parentProjectId).getRoleForUser();
         } else {
             return null;
         }
@@ -59,5 +60,25 @@ public class Project {
      */
     public void populateFromFimsField(FIMSConnection fims, List<String> columnNames) {
 
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Project project = (Project) o;
+
+        if (id != null ? !id.equals(project.id) : project.id != null) return false;
+        if (!name.equals(project.name)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + name.hashCode();
+        return result;
     }
 }
