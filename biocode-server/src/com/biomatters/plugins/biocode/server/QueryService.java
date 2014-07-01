@@ -1,8 +1,6 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
-import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 
 import javax.ws.rs.*;
@@ -44,25 +42,5 @@ public class QueryService {
 
         // Do we need this method for POST
         return id;
-    }
-
-    private class WebCallback extends RetrieveCallback {
-
-        @Override
-        protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
-            //  Write to response
-        }
-
-        @Override
-        protected void _add(AnnotatedPluginDocument document, Map<String, Object> searchResultProperties) {
-            // todo Do sequences HAVE to go through here because they are annotated?
-            throw new UnsupportedOperationException("Callback does not support AnnotatedPluginDocuments");
-        }
-
-        @Override
-        protected boolean _isCanceled() {
-            // todo Need to get this from request/response
-            return super._isCanceled();
-        }
     }
 }
