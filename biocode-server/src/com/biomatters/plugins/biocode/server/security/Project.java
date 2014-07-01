@@ -18,21 +18,11 @@ public class Project {
     public String description = "";
     public Integer parentProjectId = null;
 
+    String globalId;
+
     public Map<User, Role> userRoles = new HashMap<User, Role>();
 
     public Project() {
-    }
-
-    public Project(int id, String name) {
-        this.id = id;
-        this.name = name;
-
-        userRoles = new HashMap<User, Role>();
-    }
-
-    public Project(int id, String name, String description) {
-        this(id, name);
-        this.description = description;
     }
 
     /**
@@ -50,16 +40,6 @@ public class Project {
         } else {
             return null;
         }
-    }
-
-    /**
-     * Populate projects based on the contents of FIMS fields.
-     *
-     * @param fims A connection to the FIMS
-     * @param columnNames
-     */
-    public void populateFromFimsField(FIMSConnection fims, List<String> columnNames) {
-
     }
 
     @Override

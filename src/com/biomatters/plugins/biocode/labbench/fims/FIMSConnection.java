@@ -94,7 +94,7 @@ public abstract class FIMSConnection {
     /**
      * @return A list of all projects in the system.
      */
-    public List<Project> getProjects() {
+    public List<FimsProject> getProjects() {
         return Collections.emptyList();
     }
 

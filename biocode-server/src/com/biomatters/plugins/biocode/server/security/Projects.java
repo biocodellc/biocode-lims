@@ -1,8 +1,12 @@
 package com.biomatters.plugins.biocode.server.security;
 
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 import javax.sql.DataSource;
 import javax.ws.rs.*;
@@ -69,6 +73,7 @@ public class Projects {
             if(project == null) {
                 project = new Project();
                 project.id = projectId;
+                project.globalId = resultSet.getString("external_id");
                 project.description = resultSet.getString("description");
                 project.name = resultSet.getString("name");
                 project.parentProjectId = resultSet.getInt("parent");
@@ -119,14 +124,15 @@ public class Projects {
                 resultSet.close();
             }
 
-            PreparedStatement insert = connection.prepareStatement("INSERT INTO project(id,name,description,parent) VALUES(?,?,?,?)");
+            PreparedStatement insert = connection.prepareStatement("INSERT INTO project(id,external_id,name,description,parent) VALUES(?,?,?,?,?)");
             insert.setObject(1, project.id);
-            insert.setObject(2, project.name);
-            insert.setObject(3, project.description);
+            insert.setObject(2, project.globalId);
+            insert.setObject(3, project.name);
+            insert.setObject(4, project.description);
             if(project.parentProjectId == null) {
-                insert.setNull(4, Types.INTEGER);
+                insert.setNull(5, Types.INTEGER);
             } else {
-                insert.setObject(4, project.parentProjectId);
+                insert.setObject(5, project.parentProjectId);
             }
             int inserted = insert.executeUpdate();
             if(inserted > 1) {
@@ -329,6 +335,42 @@ public class Projects {
             throw new InternalServerErrorException("Encountered an error accessing the database: " + e.getMessage(), e);
         } finally {
             SqlUtilities.closeConnection(connection);
+        }
+    }
+
+    public static void addNewProjectsFromFims(DataSource dataSource, FIMSConnection fimsConnection) {
+        Multimap<String, String> parentToChildren = ArrayListMultimap.create();
+        Map<String, Project> toAddToLims = new HashMap<String, Project>();
+        List<FimsProject> fromFims = fimsConnection.getProjects();
+        for (FimsProject toAdd : fromFims) {
+            Project limsProjectToAdd = new Project();
+            limsProjectToAdd.name = toAdd.getName();
+            limsProjectToAdd.globalId = toAdd.getId();
+            toAddToLims.put(limsProjectToAdd.globalId, limsProjectToAdd);
+            FimsProject parent = toAdd.getParent();
+            parentToChildren.put(parent == null ? null : parent.getId(), toAdd.getId());
+        }
+
+        List<Project> projectsInDatabase = getProjectsForId(dataSource);
+        Map<String, Project> projects = new HashMap<String, Project>();
+        for (Project project : projectsInDatabase) {
+            projects.put(project.globalId, project);
+        }
+        addProjectHierarchy(null, dataSource, projects, toAddToLims, parentToChildren.asMap());
+    }
+
+    private static void addProjectHierarchy(String parentId, DataSource dataSource, Map<String, Project> projectsInLims, Map<String, Project> projectsToAddFromFims, Map<String, Collection<String>> parentsToChildren) {
+        Collection<String> toAdd = parentsToChildren.get(parentId);
+        if(toAdd == null) {
+            return;
+        }
+        for (String id : toAdd) {
+            Project inDatabase = projectsInLims.get(id);
+            if(inDatabase == null) {
+                inDatabase = Projects.addProject(dataSource, projectsToAddFromFims.get(id));
+            }
+            String projectId = inDatabase.globalId;
+            addProjectHierarchy(projectId, dataSource, projectsInLims, projectsToAddFromFims, parentsToChildren);
         }
     }
 }

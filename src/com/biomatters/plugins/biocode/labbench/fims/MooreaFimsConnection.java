@@ -386,7 +386,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public List<Project> getProjects() {
+    public List<FimsProject> getProjects() {
         // todo
 
         return super.getProjects();

@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.*;
+import com.biomatters.plugins.biocode.server.security.Projects;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
@@ -22,6 +23,7 @@ import javax.ws.rs.ProcessingException;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Responsible for making the various LIMS connections on start up
@@ -117,7 +119,20 @@ public class LIMSInitializationListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
-        // todo
+        BiocodeService.getInstance().logOut();
+    }
+
+    private long TIME_BETWEEN_NEW_PROJECT_CHECK = 60 * 1000;
+    private AtomicBoolean updatingProjects = new AtomicBoolean();
+    public Runnable getProjectPopulatingThread() {
+        return new Runnable() {
+            public void run() {
+                while(updatingProjects.get()) {
+                    Projects.addNewProjectsFromFims(dataSource, fimsConnection);
+                    ThreadUtilities.sleep(TIME_BETWEEN_NEW_PROJECT_CHECK);
+                }
+            }
+        };
     }
 
     public static File getPropertiesFile() {
