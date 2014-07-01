@@ -106,6 +106,8 @@ public class LIMSInitializationListener implements ServletContextListener {
             } else {
                 throw new IllegalStateException("LIMSConnection was not a SqlLimsConnection.  Was " + limsConnection.getClass());
             }
+
+            startProjectPopulatingThread();
         } catch (IOException e) {
             initializationErrors.add(new IntializationError("Configuration Error",
                     "Failed to load properties file from " + connectionPropertiesFile.getAbsolutePath() + ": " + e.getMessage()));
@@ -119,20 +121,26 @@ public class LIMSInitializationListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
+        stopProjectPopulatingThread();
         BiocodeService.getInstance().logOut();
     }
 
     private long TIME_BETWEEN_NEW_PROJECT_CHECK = 60 * 1000;
     private AtomicBoolean updatingProjects = new AtomicBoolean();
-    public Runnable getProjectPopulatingThread() {
-        return new Runnable() {
+    private void startProjectPopulatingThread() {
+        Runnable runnable = new Runnable() {
             public void run() {
-                while(updatingProjects.get()) {
+                while (updatingProjects.get()) {
                     Projects.addNewProjectsFromFims(dataSource, fimsConnection);
                     ThreadUtilities.sleep(TIME_BETWEEN_NEW_PROJECT_CHECK);
                 }
             }
         };
+        new Thread(runnable).start();
+    }
+
+    private void stopProjectPopulatingThread() {
+        updatingProjects.set(false);
     }
 
     public static File getPropertiesFile() {
