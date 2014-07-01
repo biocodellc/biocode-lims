@@ -133,6 +133,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     public void disconnect() {
+        try {
+            Class dataSourceClass = dataSource.getClass();
+            dataSourceClass.getDeclaredMethod("close").invoke(dataSource);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
         if(legacyConnection != null) {
