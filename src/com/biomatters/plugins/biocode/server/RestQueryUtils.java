@@ -225,7 +225,7 @@ public class RestQueryUtils {
         Map<String, Condition> stringSymbolToIntegerConditionMap = new HashMap<String, Condition>();
 
         stringSymbolToIntegerConditionMap.put("<=", Condition.LESS_THAN_OR_EQUAL_TO);
-        stringSymbolToIntegerConditionMap.put("<", Condition.LESS_THAN_OR_EQUAL_TO);
+        stringSymbolToIntegerConditionMap.put("<", Condition.LESS_THAN);
         stringSymbolToIntegerConditionMap.put("=", Condition.EQUAL);
         stringSymbolToIntegerConditionMap.put(">=", Condition.GREATER_THAN_OR_EQUAL_TO);
         stringSymbolToIntegerConditionMap.put(">", Condition.GREATER_THAN);
@@ -245,9 +245,9 @@ public class RestQueryUtils {
         Map<String, Condition> stringSymbolToDateConditionMap = new HashMap<String, Condition>();
 
         stringSymbolToDateConditionMap.put(">", Condition.DATE_AFTER);
-        stringSymbolToDateConditionMap.put("<=", Condition.DATE_AFTER_OR_ON);
+        stringSymbolToDateConditionMap.put(">=", Condition.DATE_AFTER_OR_ON);
         stringSymbolToDateConditionMap.put("=", Condition.EQUAL);
-        stringSymbolToDateConditionMap.put(">", Condition.DATE_BEFORE_OR_ON);
+        stringSymbolToDateConditionMap.put("<=", Condition.DATE_BEFORE_OR_ON);
         stringSymbolToDateConditionMap.put("<", Condition.DATE_BEFORE);
         stringSymbolToDateConditionMap.put("!=", Condition.NOT_EQUAL);
 
