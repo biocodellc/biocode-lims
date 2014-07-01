@@ -722,7 +722,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(toSearchFimsWith != null) {
                 try {
                     callback.setMessage("Searching FIMS");
-                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
+                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null || !isLoggedIn) {
                         return;
                     }
 
@@ -1686,5 +1686,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException {
         return limsConnection.getPlatesUsingCocktail(cocktail.getReactionType(), cocktail.getId());
+    }
+
+    public boolean isQueryCancled() {
+        if (!isLoggedIn())
+            return true;
+
+        for(BiocodeCallback callback : activeCallbacks) {
+            if(callback.isCanceled())
+                return true;
+        }
+
+        return false;
     }
 }
