@@ -1,9 +1,9 @@
 /**
  * Created by frank on 24/06/14.
  */
-var projectsUrl = "/BiocodeLims/biocode/projects";
-var usersUrl = "/BiocodeLims/biocode/users";
-var rolesUrl = "/BiocodeLims/biocode/roles";
+var projectsUrl = "biocode/projects";
+var usersUrl = "biocode/users";
+var rolesUrl = "biocode/roles";
 var usersPage = "#/users"
 var projectMap = null;
 var projects = null;
