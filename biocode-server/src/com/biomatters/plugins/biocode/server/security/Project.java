@@ -15,7 +15,7 @@ public class Project {
     public Integer id;
     public String name;
     public String description = "";
-    public int parentProjectId = -1;
+    public Integer parentProjectId = null;
 
     public Map<User, Role> userRoles = new HashMap<User, Role>();
 

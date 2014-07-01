@@ -133,7 +133,7 @@ public class Projects {
             insert.setObject(1, project.id);
             insert.setObject(2, project.name);
             insert.setObject(3, project.description);
-            insert.setObject(4, project.parentProjectId);
+            insert.setObject(4, project.parentProjectId == -1 ? null : project.parentProjectId);
             int inserted = insert.executeUpdate();
             if(inserted > 1) {
                 throw new InternalServerErrorException("Inserted " + inserted + " projects instead of just 1.  Transaction rolled back");
