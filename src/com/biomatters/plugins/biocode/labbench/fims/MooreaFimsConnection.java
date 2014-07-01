@@ -386,10 +386,26 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public List<FimsProject> getProjects() {
-        // todo
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
+        List<FimsProject> projects = new ArrayList<FimsProject>();
 
-        return super.getProjects();
+        PreparedStatement select = null;
+        try {
+            select = prepareStatement("SELECT DISTINCT(" + PROJECT_FIELD.getCode() + ") FROM biocode_collecting_event");
+            ResultSet resultSet = select.executeQuery();
+            while(resultSet.next()) {
+                String name = resultSet.getString(1).trim();
+                if(name.length() > 0) {
+                    projects.add(new FimsProject(name, name, null));
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, "Could not retrieve projects from FIMS: " + e.getMessage(), false);
+        } finally {
+            SqlUtilities.cleanUpStatements(select);
+        }
+
+        return projects;
     }
 
     @Override

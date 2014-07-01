@@ -222,7 +222,7 @@ public class ProjectsTest extends Assert {
         }
 
         @Override
-        public List<FimsProject> getProjects() {
+        public List<FimsProject> getProjects() throws DatabaseServiceException {
             return fimsProjects;
         }
 

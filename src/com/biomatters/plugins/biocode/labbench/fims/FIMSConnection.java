@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
@@ -94,7 +95,7 @@ public abstract class FIMSConnection {
     /**
      * @return A list of all projects in the system.
      */
-    public List<FimsProject> getProjects() {
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
         return Collections.emptyList();
     }
 
