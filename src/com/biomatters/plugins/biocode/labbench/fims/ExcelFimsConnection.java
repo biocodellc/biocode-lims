@@ -47,10 +47,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
         return "Excel";
     }
 
-    public boolean requiresMySql() {
-        return false;
-    }
-
     public TableFimsConnectionOptions _getConnectionOptions() {
         return new ExcelFimsConnectionOptions();
     }

@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.labbench.rest.client;
 
-import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -254,8 +253,4 @@ public class ServerFimsConnection extends FIMSConnection {
         }
     }
 
-    @Override
-    public boolean requiresMySql() {
-        return false;
-    }
 }

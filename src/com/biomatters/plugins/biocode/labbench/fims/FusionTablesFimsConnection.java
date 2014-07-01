@@ -421,8 +421,4 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         }
     }
 
-    public boolean requiresMySql() {
-        return false;
-    }
-
 }

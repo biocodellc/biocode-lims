@@ -102,13 +102,6 @@ public class Projects {
         }
     }
 
-    @POST
-    @Consumes({"application/json", "application/xml"})
-    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
-    public Project add(Project project) {
-        return addProject(LIMSInitializationListener.getDataSource(), project);
-    }
-
     static Project addProject(DataSource dataSource, Project project) {
         Connection connection = null;
         try {
@@ -168,12 +161,6 @@ public class Projects {
                 throw new InternalServerErrorException("Failed to insert project roles.");
             }
         }
-    }
-
-    @DELETE
-    @Path("{id}")
-    public void delete(@PathParam("id")int id) {
-        deleteProject(LIMSInitializationListener.getDataSource(), id);
     }
 
     static void deleteProject(DataSource dataSource, int id) {

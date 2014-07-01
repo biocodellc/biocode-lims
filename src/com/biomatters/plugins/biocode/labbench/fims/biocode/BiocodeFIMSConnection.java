@@ -208,11 +208,6 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery()).size();
     }
 
-    @Override
-    public boolean requiresMySql() {
-        return false;
-    }
-
 
     @Override
     public TableFimsConnectionOptions _getConnectionOptions() {

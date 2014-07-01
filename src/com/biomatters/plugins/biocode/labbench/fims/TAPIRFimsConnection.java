@@ -41,10 +41,6 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return "TAPIR";
     }
 
-    public boolean requiresMySql() {
-        return false;
-    }
-
     @SuppressWarnings({"UnusedDeclaration"})
     private enum DataStandard {
         DARWIN_CORE("DarwinCore", TapirSchema.DarwinCore),

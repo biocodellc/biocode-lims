@@ -82,6 +82,23 @@ public abstract class FIMSConnection {
     public abstract DocumentField getTissueSampleDocumentField();
 
     /**
+     * Get the list of projects the specified samples belong to.  Use the result of {@link #getProjects()} to match up
+     * the name to the project hierarchy.
+     *
+     * @return The names of the projects for the specified samples.
+     */
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyList();
+    }
+
+    /**
+     * @return A list of all projects in the system.
+     */
+    public List<Project> getProjects() {
+        return Collections.emptyList();
+    }
+
+    /**
      * @return list of non-taxonomy fields
      */
     public abstract List<DocumentField> getCollectionAttributes();
@@ -266,8 +283,6 @@ public abstract class FIMSConnection {
         }
         return Collections.emptyMap();
     }
-
-    public abstract boolean requiresMySql();
 
     public abstract boolean hasPhotos();
 
