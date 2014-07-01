@@ -16,7 +16,7 @@ public class Project {
     public Integer id;
     public String name;
     public String description = "";
-    public Integer parentProjectId = null;
+    public int parentProjectId = -1;
 
     String globalId;
 

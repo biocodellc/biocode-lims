@@ -126,12 +126,23 @@ public class LIMSInitializationListener implements ServletContextListener {
     }
 
     private long TIME_BETWEEN_NEW_PROJECT_CHECK = 60 * 1000;
-    private AtomicBoolean updatingProjects = new AtomicBoolean();
+    private AtomicBoolean updatingProjects = new AtomicBoolean(false);
     private void startProjectPopulatingThread() {
+        updatingProjects.set(true);
         Runnable runnable = new Runnable() {
             public void run() {
+                int failureCount = 0;
                 while (updatingProjects.get()) {
-                    Projects.addNewProjectsFromFims(dataSource, fimsConnection);
+                    try {
+                        Projects.updateProjectsFromFims(dataSource, fimsConnection);
+                    } catch (DatabaseServiceException e) {
+                        System.err.println(e.getMessage());
+                        e.printStackTrace();
+                        failureCount++;
+                        if(failureCount > 10) {
+                            updatingProjects.set(false);
+                        }
+                    }
                     ThreadUtilities.sleep(TIME_BETWEEN_NEW_PROJECT_CHECK);
                 }
             }

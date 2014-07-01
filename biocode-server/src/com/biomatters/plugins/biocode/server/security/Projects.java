@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.server.security;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
@@ -129,7 +130,7 @@ public class Projects {
             insert.setObject(2, project.globalId);
             insert.setObject(3, project.name);
             insert.setObject(4, project.description);
-            if(project.parentProjectId == null) {
+            if(project.parentProjectId == -1) {
                 insert.setNull(5, Types.INTEGER);
             } else {
                 insert.setObject(5, project.parentProjectId);
@@ -212,7 +213,11 @@ public class Projects {
             );
             update.setObject(1, project.name);
             update.setObject(2, project.description);
-            update.setObject(3, project.parentProjectId);
+            if(project.parentProjectId == -1) {
+                update.setNull(3, Types.INTEGER);
+            } else {
+                update.setObject(3, project.parentProjectId);
+            }
             update.setObject(4, project.id);
             int updated = update.executeUpdate();
             if(updated > 1) {
@@ -338,7 +343,7 @@ public class Projects {
         }
     }
 
-    public static void addNewProjectsFromFims(DataSource dataSource, FIMSConnection fimsConnection) {
+    public static void updateProjectsFromFims(DataSource dataSource, FIMSConnection fimsConnection) throws DatabaseServiceException {
         Multimap<String, String> parentToChildren = ArrayListMultimap.create();
         Map<String, Project> toAddToLims = new HashMap<String, Project>();
         List<FimsProject> fromFims = fimsConnection.getProjects();
@@ -356,21 +361,47 @@ public class Projects {
         for (Project project : projectsInDatabase) {
             projects.put(project.globalId, project);
         }
-        addProjectHierarchy(null, dataSource, projects, toAddToLims, parentToChildren.asMap());
+        try {
+            updateProjectHierarchy(null, dataSource, projects, toAddToLims, parentToChildren.asMap());
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, "Failed to update projects: " + e.getMessage(), false);
+        }
     }
 
-    private static void addProjectHierarchy(String parentId, DataSource dataSource, Map<String, Project> projectsInLims, Map<String, Project> projectsToAddFromFims, Map<String, Collection<String>> parentsToChildren) {
-        Collection<String> toAdd = parentsToChildren.get(parentId);
+    private static void updateProjectHierarchy(Project parent, DataSource dataSource, Map<String, Project> projectsInLims, Map<String, Project> projectsToAddFromFims, Map<String, Collection<String>> parentsToChildren) {
+        Collection<String> toAdd = parentsToChildren.get(parent == null ? null : parent.globalId);
         if(toAdd == null) {
             return;
         }
+
+        int idOfParent = parent == null ? -1 : parent.id;
         for (String id : toAdd) {
+            Project child = projectsToAddFromFims.get(id);
             Project inDatabase = projectsInLims.get(id);
             if(inDatabase == null) {
-                inDatabase = Projects.addProject(dataSource, projectsToAddFromFims.get(id));
+                child.parentProjectId = idOfParent;
+                inDatabase = Projects.addProject(dataSource, child);
+            } else {
+                boolean needsUpdating = false;
+                if(idOfParent != inDatabase.parentProjectId) {
+                    inDatabase.parentProjectId = idOfParent;
+                    needsUpdating = true;
+                }
+                if(!child.name.equals(inDatabase.name)) {
+                    inDatabase.name = child.name;
+                    needsUpdating = true;
+                }
+                if(needsUpdating) {
+                    Projects.updateProject(dataSource, inDatabase);
+                }
             }
-            String projectId = inDatabase.globalId;
-            addProjectHierarchy(projectId, dataSource, projectsInLims, projectsToAddFromFims, parentsToChildren);
+            updateProjectHierarchy(inDatabase, dataSource, projectsInLims, projectsToAddFromFims, parentsToChildren);
+        }
+
+        for (Map.Entry<String, Project> entry : projectsInLims.entrySet()) {
+            if(!projectsToAddFromFims.containsKey(entry.getKey())) {
+                Projects.deleteProject(dataSource, entry.getValue().id);
+            }
         }
     }
 }

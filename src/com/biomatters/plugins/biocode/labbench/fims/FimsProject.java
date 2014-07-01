@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 /**
+ * Represents a project in the FIMS
+ *
  * @author Matthew Cheung
  *         Created on 1/07/14 5:36 PM
  */
@@ -17,7 +19,7 @@ public class FimsProject {
     }
 
     /**
-     * @return A unique id for the project in the FIMS
+     * @return An identifier that is unique for the project within the FIMS
      */
     public String getId() {
         return id;

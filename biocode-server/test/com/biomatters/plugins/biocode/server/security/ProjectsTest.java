@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.server.security;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -138,7 +139,7 @@ public class ProjectsTest extends Assert {
     }
 
     @Test
-    public void canAddHierarchy() {
+    public void canAddHierarchy() throws DatabaseServiceException {
         FimsProject root = new FimsProject("1", "root", null);
 
         FimsProject root2 = new FimsProject("2", "root2", null);
@@ -157,8 +158,34 @@ public class ProjectsTest extends Assert {
         checkDatabaseMatchesList(dataSource, withChildren);
     }
 
-    private void checkDatabaseMatchesList(DataSource dataSource, List<FimsProject> expected) {
-        Projects.addNewProjectsFromFims(dataSource, new FimsWithProjects(expected));
+    @Test
+    public void canUpdateProjectHierarchy() throws DatabaseServiceException {
+        FimsProject root = new FimsProject("1", "root", null);
+        FimsProject rootChild = new FimsProject("2", "rootChild", root);
+        FimsProject rootChildChild = new FimsProject("3", "rootChildChild", rootChild);
+        FimsProject rootChildChildMoved = new FimsProject("3", "rootChildChild", root);
+        FimsProject rootChildChildRenamed = new FimsProject("3", "sub", root);
+        FimsProject rootChildChildNotAChild = new FimsProject("3", "sub", null);
+
+        checkDatabaseMatchesList(dataSource, Arrays.asList(root, rootChild, rootChildChild));
+        checkDatabaseMatchesList(dataSource, Arrays.asList(root, rootChild, rootChildChildMoved));
+        checkDatabaseMatchesList(dataSource, Arrays.asList(root, rootChild, rootChildChildRenamed));
+        checkDatabaseMatchesList(dataSource, Arrays.asList(root, rootChild, rootChildChildNotAChild));
+    }
+
+    @Test
+    public void deletesOldProjects() throws DatabaseServiceException {
+        FimsProject root = new FimsProject("1", "root", null);
+        FimsProject rootChild = new FimsProject("2", "rootChild", root);
+        FimsProject rootChildChild = new FimsProject("3", "rootChildChild", rootChild);
+
+        checkDatabaseMatchesList(dataSource, Arrays.asList(root, rootChild, rootChildChild));
+        checkDatabaseMatchesList(dataSource, Arrays.asList(root, rootChild));
+        checkDatabaseMatchesList(dataSource, Arrays.asList(root));
+    }
+
+    private void checkDatabaseMatchesList(DataSource dataSource, List<FimsProject> expected) throws DatabaseServiceException {
+        Projects.updateProjectsFromFims(dataSource, new FimsWithProjects(expected));
         List<Project> inDatabase = Projects.getProjectsForId(dataSource);
         assertEquals(expected.size(), inDatabase.size());
 
@@ -178,6 +205,7 @@ public class ProjectsTest extends Assert {
             FimsProject parent = fimsProject.getParent();
             if(parent != null) {
                 Project parentInDatabase = inDatabaseByKey.get(parent.getId());
+                assertTrue(parentInDatabase.id == toCompare.parentProjectId);
                 assertNotNull(parentInDatabase);
                 assertEquals(parent.getName(), parentInDatabase.name);
             } else {
