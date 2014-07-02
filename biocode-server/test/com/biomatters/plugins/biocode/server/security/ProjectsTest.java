@@ -262,6 +262,11 @@ public class ProjectsTest extends Assert {
         }
 
         @Override
+        public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+            return Collections.emptyList();
+        }
+
+        @Override
         public List<DocumentField> getCollectionAttributes() {
             return null;
         }
