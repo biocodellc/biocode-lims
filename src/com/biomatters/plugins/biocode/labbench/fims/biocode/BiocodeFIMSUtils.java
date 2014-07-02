@@ -50,9 +50,6 @@ public class BiocodeFIMSUtils {
         }
     }
     static List<Project> getProjects() throws DatabaseServiceException {
-        if (BiocodeService.getInstance().isQueryCancled())
-            return new ArrayList<Project>();
-
         WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
         Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
         try {
@@ -89,9 +86,6 @@ public class BiocodeFIMSUtils {
     }
 
     static List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
-        if (BiocodeService.getInstance().isQueryCancled())
-            return new ArrayList<Graph>();
-
         try {
             WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
             Invocation.Builder request = target.path("id/projectService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
