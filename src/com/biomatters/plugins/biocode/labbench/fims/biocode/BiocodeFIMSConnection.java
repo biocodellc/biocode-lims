@@ -256,6 +256,9 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return fields;
     }
 
+    // Projects are not implemented for the new Biocode FIMS yet because we can't identify which project or expedition a sample comes from.
+    // In a future update the author, John Deck, plans to add this information.  At that time we can implement it.
+
     @Override
     public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
         return Collections.emptyList();  // Currently can't identify projects from samples?  What are we doing about expedition name?
