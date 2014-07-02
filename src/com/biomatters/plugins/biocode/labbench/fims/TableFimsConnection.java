@@ -245,6 +245,9 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     @Override
     public List<FimsProject> getProjects() throws DatabaseServiceException {
+        if(getProjectFields().isEmpty()) {
+            return Collections.emptyList();
+        }
         Map<String, FimsProject> projects = new HashMap<String, FimsProject>();
 
         List<List<String>> projectCombinations = getProjectLists();

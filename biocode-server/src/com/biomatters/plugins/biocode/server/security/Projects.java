@@ -370,32 +370,31 @@ public class Projects {
 
     private static void updateProjectHierarchy(Project parent, DataSource dataSource, Map<String, Project> projectsInLims, Map<String, Project> projectsToAddFromFims, Map<String, Collection<String>> parentsToChildren) {
         Collection<String> toAdd = parentsToChildren.get(parent == null ? null : parent.globalId);
-        if(toAdd == null) {
-            return;
-        }
 
-        int idOfParent = parent == null ? -1 : parent.id;
-        for (String id : toAdd) {
-            Project child = projectsToAddFromFims.get(id);
-            Project inDatabase = projectsInLims.get(id);
-            if(inDatabase == null) {
-                child.parentProjectId = idOfParent;
-                inDatabase = Projects.addProject(dataSource, child);
-            } else {
-                boolean needsUpdating = false;
-                if(idOfParent != inDatabase.parentProjectId) {
-                    inDatabase.parentProjectId = idOfParent;
-                    needsUpdating = true;
+        if(toAdd != null) {
+            int idOfParent = parent == null ? -1 : parent.id;
+            for (String id : toAdd) {
+                Project child = projectsToAddFromFims.get(id);
+                Project inDatabase = projectsInLims.get(id);
+                if (inDatabase == null) {
+                    child.parentProjectId = idOfParent;
+                    inDatabase = Projects.addProject(dataSource, child);
+                } else {
+                    boolean needsUpdating = false;
+                    if (idOfParent != inDatabase.parentProjectId) {
+                        inDatabase.parentProjectId = idOfParent;
+                        needsUpdating = true;
+                    }
+                    if (!child.name.equals(inDatabase.name)) {
+                        inDatabase.name = child.name;
+                        needsUpdating = true;
+                    }
+                    if (needsUpdating) {
+                        Projects.updateProject(dataSource, inDatabase);
+                    }
                 }
-                if(!child.name.equals(inDatabase.name)) {
-                    inDatabase.name = child.name;
-                    needsUpdating = true;
-                }
-                if(needsUpdating) {
-                    Projects.updateProject(dataSource, inDatabase);
-                }
+                updateProjectHierarchy(inDatabase, dataSource, projectsInLims, projectsToAddFromFims, parentsToChildren);
             }
-            updateProjectHierarchy(inDatabase, dataSource, projectsInLims, projectsToAddFromFims, parentsToChildren);
         }
 
         for (Map.Entry<String, Project> entry : projectsInLims.entrySet()) {
