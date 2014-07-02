@@ -82,7 +82,11 @@ public abstract class TableFimsConnection extends FIMSConnection{
             }
         }
 
-        projectFields = getFieldsFromMultipleOptions(options, TableFimsConnectionOptions.PROJECT_FIELDS, TableFimsConnectionOptions.PROJECT_COLUMN);
+        if(Boolean.TRUE.equals(options.getValue(TableFimsConnectionOptions.STORE_PROJECTS))) {
+            projectFields = getFieldsFromMultipleOptions(options, TableFimsConnectionOptions.PROJECT_FIELDS, TableFimsConnectionOptions.PROJECT_COLUMN);
+        } else {
+            projectFields = Collections.emptyList();
+        }
 
 
         //if the tissue or specimen id is also a taxonomy field, it won't be in the fields list, and will cause problems later on
