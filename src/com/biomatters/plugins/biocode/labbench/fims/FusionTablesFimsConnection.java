@@ -421,8 +421,33 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         }
     }
 
-    public boolean requiresMySql() {
-        return false;
-    }
+    @Override
+    protected List<List<String>> getProjectLists() throws DatabaseServiceException {
+        List<String> projectColumns = new ArrayList<String>();
+        for (DocumentField field : getProjectFields()) {
+            projectColumns.add(field.getCode().replace(TableFimsConnection.CODE_PREFIX, ""));
+        }
 
+        List<List<String>> lists = new ArrayList<List<String>>();
+        try {
+            String columnList = StringUtilities.join(",", projectColumns);
+            String sql = "SELECT " + columnList + " FROM " + tableId + " GROUP BY " + columnList;
+            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+            List<List<Object>> rows = sqlresponse.getRows();
+            if(rows == null) {
+                return Collections.emptyList();
+            }
+            for (List<Object> row : rows) {
+                List<String> forRow = new ArrayList<String>(row.size());
+                for (int i=0; i<row.size(); i++) {
+                    forRow.add(getRowValue(row, i));
+                }
+                lists.add(forRow);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new DatabaseServiceException(e, "Could not retrieve projects: " + e.getMessage(), false);
+        }
+        return lists;
+    }
 }

@@ -38,6 +38,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     private static final DocumentField MOOREA_TISSUE_BARCODE_FIELD = new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false);
     private static final DocumentField LONGITUDE_FIELD = new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Double.class, false, false);
     private static final DocumentField LATITUDE_FIELD = new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Double.class, false, false);
+    private static final DocumentField PROJECT_FIELD = new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false);
 
     public String getLabel() {
         return "Moorea FIMS";
@@ -49,10 +50,6 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     public String getDescription() {
         return "A connection to the Moorea FIMS database";
-    }
-
-    public boolean requiresMySql() {
-        return true;
     }
 
     public PasswordOptions getConnectionOptions() {
@@ -161,7 +158,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         fields.add(new DocumentField("BOLD ProcessID", "", "biocode_tissue.molecular_id", String.class, true, false));
 
         fields.add(new DocumentField("Collector's Event ID", "", "biocode_collecting_event.Coll_EventID_collector", String.class, false, false));
-        fields.add(new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false));
+        fields.add(PROJECT_FIELD);
         fields.add(new DocumentField("Taxa Team", "", "biocode_collecting_event.TaxTeam", String.class, true, false));
         fields.add(new DocumentField("Collector", "", "biocode_collecting_event.Collector", String.class, true, false));
         fields.add(new DocumentField("Collector List", "", "biocode_collecting_event.Collector_List", String.class, true, false));
@@ -361,25 +358,6 @@ public class MooreaFimsConnection extends FIMSConnection{
         }
     }
 
-    private Map<String, String> getFimsPlateData(String andQuery, String colToUseForKey) throws ConnectionException {
-        String query = "SELECT biocode_extract.extract_barcode, biocode_tissue.bnhm_id, biocode_tissue.tissue_num, biocode_extract.format_name96, biocode_extract.well_number96, biocode_tissue.well_number96 FROM biocode_extract, biocode_tissue WHERE biocode_extract.from_tissue_seq_num = biocode_tissue.seq_num  AND "+andQuery;
-
-        try {
-            PreparedStatement statement = prepareStatement(query);
-            ResultSet resultSet = statement.executeQuery();
-            Map<String, String> result = new HashMap<String, String>();
-            while(resultSet.next()) {
-                result.put(resultSet.getString(colToUseForKey), resultSet.getString("biocode_tissue.bnhm_id")+"."+resultSet.getString("biocode_tissue.tissue_num"));
-            }
-            statement.close();
-            return result;
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new ConnectionException("Error fetching tissue data from FIMS", e);
-        }
-    }
-
     public boolean hasPhotos() {
         return true;
     }
@@ -389,7 +367,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         URL xmlUrl = new URL("http://calphotos.berkeley.edu/cgi-bin/img_query?getthumbinfo=1&specimen_no="+ URLEncoder.encode(fimsSample.getSpecimenId(), "UTF-8")+"&format=xml&num=all&query_src=lims");
         InputStream in = xmlUrl.openStream();
         SAXBuilder builder = new SAXBuilder();
-        Element root = null;
+        Element root;
         try {
             root = builder.build(in).detachRootElement();
         } catch (JDOMException e) {
@@ -405,5 +383,40 @@ public class MooreaFimsConnection extends FIMSConnection{
             result.add(e.getText());
         }
         return result;
+    }
+
+    @Override
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
+        List<FimsProject> projects = new ArrayList<FimsProject>();
+
+        PreparedStatement select = null;
+        try {
+            select = prepareStatement("SELECT DISTINCT(" + PROJECT_FIELD.getCode() + ") FROM biocode_collecting_event");
+            ResultSet resultSet = select.executeQuery();
+            while(resultSet.next()) {
+                String name = resultSet.getString(1).trim();
+                if(name.length() > 0) {
+                    projects.add(new FimsProject(name, name, null));
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, "Could not retrieve projects from FIMS: " + e.getMessage(), false);
+        } finally {
+            SqlUtilities.cleanUpStatements(select);
+        }
+
+        return projects;
+    }
+
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        Set<String> projects = new HashSet<String>();
+        for (FimsSample sample : samples) {
+            Object projectName = sample.getFimsAttributeValue(PROJECT_FIELD.getCode());
+            if(projectName != null) {
+                projects.add(projectName.toString());
+            }
+        }
+        return new ArrayList<String>(projects);
     }
 }

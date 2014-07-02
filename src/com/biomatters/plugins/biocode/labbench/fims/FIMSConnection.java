@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
@@ -80,6 +81,19 @@ public abstract class FIMSConnection {
     public abstract void disconnect();
 
     public abstract DocumentField getTissueSampleDocumentField();
+
+    /**
+     * Get the list of projects the specified samples belong to.  Use the result of {@link #getProjects()} to match up
+     * the name to the project hierarchy.
+     *
+     * @return The names of the projects for the specified samples.
+     */
+    public abstract List<String> getProjectsForSamples(Collection<FimsSample> samples);
+
+    /**
+     * @return A list of all projects in the system.
+     */
+    public abstract List<FimsProject> getProjects() throws DatabaseServiceException;
 
     /**
      * @return list of non-taxonomy fields
@@ -266,8 +280,6 @@ public abstract class FIMSConnection {
         }
         return Collections.emptyMap();
     }
-
-    public abstract boolean requiresMySql();
 
     public abstract boolean hasPhotos();
 

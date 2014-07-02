@@ -41,10 +41,6 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return "TAPIR";
     }
 
-    public boolean requiresMySql() {
-        return false;
-    }
-
     @SuppressWarnings({"UnusedDeclaration"})
     private enum DataStandard {
         DARWIN_CORE("DarwinCore", TapirSchema.DarwinCore),
@@ -271,5 +267,18 @@ public class TAPIRFimsConnection extends FIMSConnection{
 
     public boolean hasPhotos() {
         return false;
+    }
+
+
+    // Projects are currently unsupported in Tapir connections.  Have to check with John Deck if the DarwinCore standard
+    // has a field for Project.
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
+        return Collections.emptyList();
     }
 }

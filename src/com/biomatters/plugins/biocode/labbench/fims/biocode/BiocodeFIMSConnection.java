@@ -208,11 +208,6 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery()).size();
     }
 
-    @Override
-    public boolean requiresMySql() {
-        return false;
-    }
-
 
     @Override
     public TableFimsConnectionOptions _getConnectionOptions() {
@@ -259,5 +254,23 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             fields.add(new DocumentField(field.name, field.name + "(" + field.uri + ")", CODE_PREFIX + field.uri, String.class, true, false));
         }
         return fields;
+    }
+
+    // Projects are not implemented for the new Biocode FIMS yet because we can't identify which project or expedition a sample comes from.
+    // In a future update the author, John Deck, plans to add this information.  At that time we can implement it.
+
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyList();  // Currently can't identify projects from samples?  What are we doing about expedition name?
+    }
+
+    @Override
+    protected List<List<String>> getProjectLists() throws DatabaseServiceException {
+        // What should we do here?  Ask John Deck?
+        // Project
+        //  |- Expedition
+        // OR
+        // Expedition
+        return Collections.emptyList();  // We can probably get this from the service
     }
 }

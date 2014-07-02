@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
@@ -218,7 +219,36 @@ public class MySQLFimsConnection extends TableFimsConnection {
         }
     }
 
-    public boolean requiresMySql() {
-        return true;
+    @Override
+    protected List<List<String>> getProjectLists() throws DatabaseServiceException {
+        List<String> projectColumns = new ArrayList<String>();
+        for (DocumentField field : getProjectFields()) {
+            projectColumns.add(field.getCode().replace(FIELD_PREFIX, ""));
+        }
+
+        List<List<String>> lists = new ArrayList<List<String>>();
+        Statement select = null;
+        try {
+            select = createStatement();
+            String columnList = StringUtilities.join(",", projectColumns);
+            ResultSet resultSet = select.executeQuery("SELECT " + columnList + " FROM " + tableName + " GROUP BY " + columnList);
+            List<String> forRow = new ArrayList<String>();
+            while(resultSet.next()) {
+                for (String columnName : projectColumns) {
+                    String projectName = resultSet.getString(columnName);
+                    if(projectName.trim().length() == 0) {
+                        continue;
+                    }
+                    forRow.add(projectName);
+                }
+                lists.add(forRow);
+            }
+            resultSet.close();
+            return lists;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, "Failed to get list of projects: " + e.getMessage(), false);
+        } finally {
+            SqlUtilities.cleanUpStatements(select);
+        }
     }
 }

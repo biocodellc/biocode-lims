@@ -719,7 +719,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(toSearchFimsWith != null) {
                 try {
                     callback.setMessage("Searching FIMS");
-                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null || !isLoggedIn) {
+                    if((callback != null && callback.isCanceled()) || activeFIMSConnection == null) {
                         return;
                     }
 
