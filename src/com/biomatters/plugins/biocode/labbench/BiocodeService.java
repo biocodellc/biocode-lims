@@ -69,7 +69,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     private Driver driver;
     private Driver localDriver;
-    private static BiocodeService instance = null;
+    private static BiocodeService instance = new BiocodeService();;
     public final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
     private static final long FIMS_CONNECTION_TIMEOUT_THRESHOLD_MILLISECONDS = 60000;
@@ -228,9 +228,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public static BiocodeService getInstance() {
-        if(instance == null) {
-            instance = new BiocodeService();
-        }
         return instance;
     }
 
