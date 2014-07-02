@@ -148,7 +148,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         addHiddenProjectOptions(cols);
     }
 
-    private static final boolean SHOW_HIDDEN_PROJECT_OPTIONS = true;  // Set to true for debugging via plugin
+    private static final boolean SHOW_HIDDEN_PROJECT_OPTIONS = false;  // Set to true for debugging via plugin
     private void addHiddenProjectOptions(List<OptionValue> availableColumns) {
         BooleanOption storeProjects = addBooleanOption(STORE_PROJECTS, "The FIMS database contains project information", false);
         storeProjects.setVisible(SHOW_HIDDEN_PROJECT_OPTIONS);
