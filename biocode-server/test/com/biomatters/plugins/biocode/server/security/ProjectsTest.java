@@ -87,6 +87,22 @@ public class ProjectsTest extends Assert {
     }
 
     @Test
+    public void deletingParentDeletesChild() {
+        Project p = new Project();
+        p.name = "parent";
+        Project parent = Projects.addProject(dataSource, p);
+
+        Project p2 = new Project();
+        p2.name = "child";
+        p2.parentProjectId = parent.id;
+        Projects.addProject(dataSource, p2);
+
+        Projects.deleteProject(dataSource, parent.id);
+        List<Project> projectList = Projects.getProjectsForId(dataSource);
+        assertTrue(projectList.isEmpty());
+    }
+
+    @Test
     public void canUpdateProject() {
         String oldName = "Test";
         String newName = "Test2";

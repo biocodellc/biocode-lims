@@ -140,6 +140,7 @@ public class LIMSInitializationListener implements ServletContextListener {
                         e.printStackTrace();
                         failureCount++;
                         if(failureCount > 10) {
+                            System.err.println("Made 10 failed attempts to update projects.  Giving up.");
                             updatingProjects.set(false);
                         }
                     }
