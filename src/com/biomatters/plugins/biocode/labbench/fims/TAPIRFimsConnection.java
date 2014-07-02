@@ -268,4 +268,15 @@ public class TAPIRFimsConnection extends FIMSConnection{
     public boolean hasPhotos() {
         return false;
     }
+
+    // todo Projects currently unsupported for Tapir.
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
+        return Collections.emptyList();
+    }
 }

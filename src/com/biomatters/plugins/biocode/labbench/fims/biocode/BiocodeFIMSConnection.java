@@ -255,4 +255,19 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         }
         return fields;
     }
+
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyList();  // Currently can't identify projects from samples?  What are we doing about expedition name?
+    }
+
+    @Override
+    protected List<List<String>> getProjectLists() throws DatabaseServiceException {
+        // What should we do here?  Ask John Deck?
+        // Project
+        //  |- Expedition
+        // OR
+        // Expedition
+        return Collections.emptyList();  // We can probably get this from the service
+    }
 }

@@ -274,23 +274,35 @@ public class LIMSInitializationListener implements ServletContextListener {
             throw new MissingPropertyException("fims.tissueId", "fims.specimenId");
         }
 
-        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TISSUE_ID, tissueId);
-        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.SPECIMEN_ID, specimenId);
+        setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.TISSUE_ID, tissueId);
+        setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.SPECIMEN_ID, specimenId);
         String plate = config.getProperty("fims.plate");
         String well = config.getProperty("fims.well");
         if (plate != null && well != null) {
-            fimsOptions.setValue(MySqlFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_WELL, well);
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_NAME, plate);
+            fimsOptions.setValue(TableFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
+            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PLATE_WELL, well);
+            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PLATE_NAME, plate);
         }
-        int index = 0;
-        String taxonField = config.getProperty("fims.taxon." + index);
+        int taxonIndex = 0;
+        String taxonField = config.getProperty("fims.taxon." + taxonIndex);
         while (taxonField != null) {
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TAX_FIELDS + "." + index + "." +
-                    MySqlFimsConnectionOptions.TAX_COL, taxonField);
-            index++;
-            taxonField = config.getProperty("fims.taxon." + index);
+            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.TAX_FIELDS + "." + taxonIndex + "." +
+                    TableFimsConnectionOptions.TAX_COL, taxonField);
+            taxonIndex++;
+            taxonField = config.getProperty("fims.taxon." + taxonIndex);
         }
+
+        int projectIndex = 0;
+        String projectField = config.getProperty("fims.project." + projectIndex);
+        boolean enableProjects = false;
+        while (projectField != null) {
+            enableProjects = true;
+            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PROJECT_FIELDS + "." + projectIndex + "." +
+                    TableFimsConnectionOptions.PROJECT_COLUMN, projectField);
+            projectIndex++;
+            projectField = config.getProperty("fims.project." + taxonIndex);
+        }
+        fimsOptions.setValue(TableFimsConnectionOptions.STORE_PROJECTS, enableProjects);
     }
 
     private void setFimsOptionBasedOnLabel(PasswordOptions fimsOptions, String optionName, String labelToLookFor) {

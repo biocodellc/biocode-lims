@@ -88,16 +88,12 @@ public abstract class FIMSConnection {
      *
      * @return The names of the projects for the specified samples.
      */
-    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
-        return Collections.emptyList();
-    }
+    public abstract List<String> getProjectsForSamples(Collection<FimsSample> samples);
 
     /**
      * @return A list of all projects in the system.
      */
-    public List<FimsProject> getProjects() throws DatabaseServiceException {
-        return Collections.emptyList();
-    }
+    public abstract List<FimsProject> getProjects() throws DatabaseServiceException;
 
     /**
      * @return list of non-taxonomy fields

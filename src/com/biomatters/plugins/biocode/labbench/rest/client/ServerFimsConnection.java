@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.rest.client;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
@@ -9,6 +10,7 @@ import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.server.RestQueryUtils;
 import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
@@ -24,6 +26,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -253,4 +256,13 @@ public class ServerFimsConnection extends FIMSConnection {
         }
     }
 
+    @Override
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
+        throw new UnsupportedOperationException("This method should only be used in the Biocode Server");
+    }
+
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        throw new UnsupportedOperationException("This method should only be used in the Biocode Server");
+    }
 }
