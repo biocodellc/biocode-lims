@@ -144,7 +144,6 @@
             </fileset>
             </batchtest>
             <classpath>
-                <path refid="classpath"/>
                 <file file="${GeneiousFiles}/iSeek.jar"/>
                 <fileset dir="${GeneiousFiles}/lib"/>
                 <pathelement location="${classes}"/>
@@ -153,6 +152,7 @@
                 <pathelement location="${test.data}"/>
                 <pathelement location="${GeneiousFiles}/resources"/>
                 <pathelement location="${GeneiousFiles}/bundledPlugins"/>
+                <path refid="classpath"/>
             </classpath>
             <env key="DISPLAY" value=":0.0"/>
             <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>
