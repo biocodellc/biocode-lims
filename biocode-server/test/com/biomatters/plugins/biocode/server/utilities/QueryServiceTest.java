@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.server.utilities;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.server.utilities.query.*;
 import org.junit.Assert;
 import org.junit.Before;
@@ -109,6 +108,7 @@ public class QueryServiceTest extends Assert {
     public void testParseValidIntegerQueryValue() {
         new QueryParser(searchAttributes).parseQuery("[integerField=0]");
     }
+
     @Test(expected=BadRequestException.class)
     public void testParseInvalidIntegerQueryValue() {
         new QueryParser(searchAttributes).parseQuery("[integerField=nonIntegerValue]");

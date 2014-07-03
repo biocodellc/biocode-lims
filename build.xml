@@ -28,8 +28,11 @@
     <property name="GeneiousFiles" location="GeneiousFiles"/>
 
     <property name="server-folder" value="biocode-server"/>
-    <property name="server-lib" value="${server-folder}/web/WEB-INF/lib"/>
     <property name="server-src" value="${server-folder}/src"/>
+    <property name="server-lib" value="${server-folder}/web/WEB-INF/lib"/>
+    <property name="server-resources" value="${server-folder}/resources"/>
+    <property name="server-test" value="${server-folder}/test"/>
+    <property name="server-test.classes" value="${server-folder}/testclasses"/>
     <property name="warfile" value="BiocodeLIMS.war"/>
 
     <path id="classpath">
@@ -42,7 +45,7 @@
         <fileset dir="${server-lib}"/>
     </path>
 
-    <target name= "create-plugin" depends="build-plugin">
+    <target name="create-plugin" depends="build-plugin">
         <zip zipfile="${build}/${short-plugin-name}.gplugin">
             <fileset dir="${build}">
                <include name="${plugin-name}/**/*"/>
@@ -57,13 +60,13 @@
         </javac>
     </target>
 
-    <target name="create-war" depends="clean,compile-server">
+    <target name="create-war" depends="clean, compile-server">
         <war destfile="${warfile}" webxml="${server-folder}/web/WEB-INF/web.xml">
             <webinf dir="${server-folder}/web/WEB-INF"/>
             <classes dir="${classes}"/>
-            <lib dir="${lib}" />
+            <lib dir="${lib}"/>
             <lib dir="${server-lib}"/>
-            <fileset dir="${server-folder}/web" />
+            <fileset dir="${server-folder}/web"/>
             <fileset dir="${server-lib}">
                 <include name="images/*"/>
             </fileset>
@@ -95,7 +98,6 @@
                 <include name="readme.html"/>
             </fileset>
         </copy>
-
     </target>
 
     <target name="compile-plugin" depends="prepare,retrieve-plugin-dependencies">
@@ -112,6 +114,7 @@
         <mkdir dir="${report}"/>
         <mkdir dir="${lib}"/>
         <mkdir dir="${server-lib}"/>
+        <mkdir dir="${server-test.classes}"/>
     </target>
 
     <target name="clean">
@@ -168,17 +171,58 @@
         </junit>
     </target>
 
+    <target name="compile-server-tests" depends="compile-server">
+        <javac target="1.6" source="1.6" destdir="${server-test.classes}" debug="true">
+            <classpath>
+                <path refid="server-classpath"/>
+                <pathelement location="${classes}"/>
+            </classpath>
+            <src path="${server-test}"/>
+        </javac>
+    </target>
+
+    <target name="server-test" depends="compile-server-tests, retrieve-server-dependencies">
+        <junit dir="GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
+            <batchtest todir="${report}">
+                <fileset dir="${server-test.classes}">
+                    <include name="**/*Test.class"/>
+                </fileset>
+            </batchtest>
+            <classpath>
+                <file file="{GeneiousFiles}/iSeek.jar"/>
+                <fileset dir="${GeneiousFiles}/lib"/>
+                <pathelement location="${classes}"/>
+                <pathelement location="${server-resources}"/>
+                <pathelement location="${server-test}"/>
+                <pathelement location="${server-test.classes}"/>
+                <pathelement location="${GeneiousFiles}/resources"/>
+                <pathelement location="${GeneiousFiles}/bundledPlugins"/>
+                <path refid="classpath"/>
+            </classpath>
+            <env key="DISPLAY" value="0.0"/>
+            <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>
+            <formatter type="xml"/>
+            <jvmarg value="-Xms256M"/>
+            <jvmarg value="-ea"/>
+            <jvmarg value="-XX:MaxNewSize=40M"/>
+            <jvmarg value="-XX:MaxPermSize=256M"/>
+            <jvmarg value="-XX:ReservedCodeCacheSize=128m"/>
+            <jvmarg value="-Xss512K"/>
+            <sysproperty key="report.dir" value="${report}"/>
+            <sysproperty key="user.dir" value="${build}"/>
+        </junit>
+    </target>
 
     <!-- setup reference to the Ivy Ant tasks library -->
     <path id="ivy.lib.path">
-        <fileset dir="tools" includes="ivy*.jar" />
+        <fileset dir="tools" includes="ivy*.jar"/>
     </path>
 
 
-    <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path" />
+    <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
 
     <!-- load ivy settings -->
-    <ivy:settings file="ivysettings.xml" id="biocode.ivy.config" />
+    <ivy:settings file="ivysettings.xml" id="biocode.ivy.config"/>
 
     <target name="retrieve-plugin-dependencies" description="Retrieve dependencies with ivy">
        <ivy:retrieve conf="build" settingsref="biocode.ivy.config"/>
