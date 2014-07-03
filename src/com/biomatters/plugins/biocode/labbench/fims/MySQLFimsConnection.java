@@ -49,6 +49,15 @@ public class MySQLFimsConnection extends TableFimsConnection {
         return statement;
     }
 
+    private PreparedStatement prepareStatement(String query) throws SQLException{
+        if(connection == null) {
+            throw new SQLException("You are not connected to the FIMS database");
+        }
+        PreparedStatement statement = connection.prepareStatement(query);
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
     public void _connect(TableFimsConnectionOptions optionsa) throws ConnectionException {
         MooreaFimsConnectionOptions connectionOptions = (MooreaFimsConnectionOptions)optionsa.getChildOptions().get(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
 
@@ -108,18 +117,40 @@ public class MySQLFimsConnection extends TableFimsConnection {
         StringBuilder queryBuilder = new StringBuilder();
         queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName);
 
+        List<Object> parameters = new ArrayList<Object>();
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), FIELD_PREFIX, false);
+        if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
+            StringBuilder projectCondition = new StringBuilder();
+            projectCondition.append(" AND (");
+            boolean first = true;
+            for (Map.Entry<DocumentField, Collection<FimsProject>> entry : getFieldsToProjects(projectsToMatch).entrySet()) {
+                if(first) {
+                    first = false;
+                } else {
+                    projectCondition.append(" AND ");
+                }
+                projectCondition.append(entry.getKey().getCode()).append(" IN ");
+                SqlUtilities.appendSetOfQuestionMarks(projectCondition, entry.getValue().size());
+                for (FimsProject project : entry.getValue()) {
+                    parameters.add(project.getId());
+                }
+            }
+            projectCondition.append(")");
+            sqlString += projectCondition.toString();
+        }
+
         if(sqlString != null) {
             queryBuilder.append(" WHERE ");
             queryBuilder.append(sqlString);
         }
 
-        System.out.println(queryBuilder.toString());
         List<String> results = new ArrayList<String>();
-        Statement select = null;
+        PreparedStatement select = null;
         try {
-            select = createStatement();
-            ResultSet resultSet = select.executeQuery(queryBuilder.toString());
+            select = prepareStatement(queryBuilder.toString());
+            SqlUtilities.fillStatement(parameters, select);
+            SqlUtilities.printSql(queryBuilder.toString(), parameters);
+            ResultSet resultSet = select.executeQuery();
             while(resultSet.next()) {
                 results.add(resultSet.getString(1));
             }
@@ -144,7 +175,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
         String queryString = query.toString();
         SqlUtilities.printSql(queryString, tissueIds);
         try {
-            PreparedStatement statement = connection.prepareStatement(queryString);
+            PreparedStatement statement = prepareStatement(queryString);
             int index = 1;
             for (String tissueId : tissueIds) {
                 statement.setObject(index++, tissueId);
@@ -231,8 +262,8 @@ public class MySQLFimsConnection extends TableFimsConnection {
             select = createStatement();
             String columnList = StringUtilities.join(",", projectColumns);
             ResultSet resultSet = select.executeQuery("SELECT " + columnList + " FROM " + tableName + " GROUP BY " + columnList);
-            List<String> forRow = new ArrayList<String>();
             while(resultSet.next()) {
+                List<String> forRow = new ArrayList<String>();
                 for (String columnName : projectColumns) {
                     String projectName = resultSet.getString(columnName);
                     if(projectName.trim().length() == 0) {
