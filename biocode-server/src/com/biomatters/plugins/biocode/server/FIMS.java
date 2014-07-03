@@ -1,12 +1,17 @@
 package com.biomatters.plugins.biocode.server;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
+import com.biomatters.plugins.biocode.server.security.Projects;
+import com.biomatters.plugins.biocode.server.security.Role;
+import com.biomatters.plugins.biocode.server.security.Users;
 
 import javax.ws.rs.*;
 import java.util.Arrays;
@@ -82,10 +87,16 @@ public class FIMS {
     @Produces("text/plain")
     public String getMatchingSampleIds(@QueryParam("query")String queryString, @QueryParam("type")String typeString) {
         try {
+            List<FimsProject> projectsUserHasAccessTo = Projects.getFimsProjectsUserHasAtLeastRole(
+                    LIMSInitializationListener.getDataSource(),
+                    LIMSInitializationListener.getFimsConnection(),
+                    Users.getLoggedInUser(), Role.READER);
             Query query = RestQueryUtils.createQueryFromQueryString(RestQueryUtils.QueryType.forTypeString(typeString), queryString, Collections.<String, Object>emptyMap());
-            List<String> result = LIMSInitializationListener.getFimsConnection().getTissueIdsMatchingQuery(query);
+            List<String> result = LIMSInitializationListener.getFimsConnection().getTissueIdsMatchingQuery(query, projectsUserHasAccessTo);
             return StringUtilities.join(",", result);
         } catch (ConnectionException e) {
+            throw new InternalServerErrorException(e);
+        } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e);
         }
     }

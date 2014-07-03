@@ -104,7 +104,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
         queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName).append(" WHERE ");
 

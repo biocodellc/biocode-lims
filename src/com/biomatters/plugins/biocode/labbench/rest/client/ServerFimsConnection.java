@@ -180,7 +180,7 @@ public class ServerFimsConnection extends FIMSConnection {
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         try {
             RestQueryUtils.Query restQuery = RestQueryUtils.createRestQuery(query);
             Invocation.Builder request = target.path("samples/search").
