@@ -25,10 +25,7 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Matthew Cheung
@@ -206,16 +203,26 @@ public class ServerFimsConnection extends FIMSConnection {
         if (tissueIds.isEmpty()) {
             return Collections.emptyList();
         }
-        try {
-            Invocation.Builder request = target.path("samples").queryParam("ids",
-                    StringUtilities.join(",", tissueIds)).request(MediaType.APPLICATION_XML_TYPE);
-            return request.get(new GenericType<XMLSerializableList<FimsSample>>() {
-            }).getList();
-        } catch (WebApplicationException e) {
-            throw new ConnectionException(e.getMessage(), e);
-        } catch (ProcessingException e) {
-            throw new ConnectionException(e.getMessage(), e);
+        List<FimsSample> result = new ArrayList<FimsSample>();
+        int index = 0;
+        int batchSize = 200;
+        for(;index<tissueIds.size(); index+=batchSize) {
+            int last = index + batchSize;
+            List<String> toFetch = tissueIds.subList(index, Math.min(last, tissueIds.size()));
+            try {
+                Invocation.Builder request = target.path("samples").queryParam("ids",
+                        StringUtilities.join(",", toFetch)).request(MediaType.APPLICATION_XML_TYPE);
+                result.addAll(
+                        request.get(new GenericType<XMLSerializableList<FimsSample>>() {
+                        }).getList()
+                );
+            } catch (WebApplicationException e) {
+                throw new ConnectionException(e.getMessage(), e);
+            } catch (ProcessingException e) {
+                throw new ConnectionException(e.getMessage(), e);
+            }
         }
+        return result;
     }
 
     @Override

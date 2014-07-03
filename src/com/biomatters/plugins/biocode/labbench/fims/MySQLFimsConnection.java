@@ -121,7 +121,10 @@ public class MySQLFimsConnection extends TableFimsConnection {
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), FIELD_PREFIX, false);
         if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
             StringBuilder projectCondition = new StringBuilder();
-            projectCondition.append(" AND (");
+            if(sqlString != null) {
+                projectCondition.append(sqlString);
+                projectCondition.append(" AND (");
+            }
             boolean first = true;
             for (Map.Entry<DocumentField, Collection<FimsProject>> entry : getFieldsToProjects(projectsToMatch).entrySet()) {
                 if(first) {
@@ -129,14 +132,16 @@ public class MySQLFimsConnection extends TableFimsConnection {
                 } else {
                     projectCondition.append(" AND ");
                 }
-                projectCondition.append(entry.getKey().getCode()).append(" IN ");
+                projectCondition.append(entry.getKey().getCode().replace(FIELD_PREFIX, "")).append(" IN ");
                 SqlUtilities.appendSetOfQuestionMarks(projectCondition, entry.getValue().size());
                 for (FimsProject project : entry.getValue()) {
                     parameters.add(project.getId());
                 }
             }
-            projectCondition.append(")");
-            sqlString += projectCondition.toString();
+            if(sqlString != null) {
+                projectCondition.append(")");
+            }
+            sqlString = projectCondition.toString();
         }
 
         if(sqlString != null) {

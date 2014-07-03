@@ -337,7 +337,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
         FimsProject parent = project.getParent();
         while(parent != null) {
             parent = parent.getParent();
-            level--;
+            level++;
         }
         return level;
     }
