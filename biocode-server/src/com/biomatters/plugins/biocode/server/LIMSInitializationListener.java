@@ -301,7 +301,7 @@ public class LIMSInitializationListener implements ServletContextListener {
             setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PROJECT_FIELDS + "." + projectIndex + "." +
                     TableFimsConnectionOptions.PROJECT_COLUMN, projectField);
             projectIndex++;
-            projectField = config.getProperty("fims.project." + taxonIndex);
+            projectField = config.getProperty("fims.project." + projectIndex);
         }
         fimsOptions.setValue(TableFimsConnectionOptions.STORE_PROJECTS, enableProjects);
     }
