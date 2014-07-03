@@ -259,7 +259,6 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public void _disconnect() {
-        project = null;
     }
 
     @Override
