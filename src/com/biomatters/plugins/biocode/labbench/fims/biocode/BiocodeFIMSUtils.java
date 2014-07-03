@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
@@ -129,9 +128,6 @@ public class BiocodeFIMSUtils {
     }
 
     private static BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
-        if (BiocodeService.getInstance().isQueryCancled())
-            return new BiocodeFimsData();
-
         try {
             WebTarget target = getQueryTarget();
 
