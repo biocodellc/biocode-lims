@@ -106,14 +106,13 @@ public class MySQLFimsConnection extends TableFimsConnection {
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName).append(" WHERE ");
+        queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName);
 
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), FIELD_PREFIX, false);
-        if(sqlString == null) {
-            // todo Make this handle browse queries?
-            return Collections.emptyList();
+        if(sqlString != null) {
+            queryBuilder.append(" WHERE ");
+            queryBuilder.append(sqlString);
         }
-        queryBuilder.append(sqlString);
 
         System.out.println(queryBuilder.toString());
         List<String> results = new ArrayList<String>();
