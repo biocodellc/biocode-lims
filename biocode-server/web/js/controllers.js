@@ -261,10 +261,13 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
         }
 
         $scope.submitPass = function() {
+            if ($('#verify')[0].value != $('#passinput')[0].value)
+                return;
+
             var tmpUser = $scope.user;
             tmpUser.password = $('#passinput')[0].value;
             $http.put(usersUrl + '/' + $scope.user.username, tmpUser).success(function(){
-                alert('update sucessfull');
+                alert('password update sucessfull');
             });
         }
 
@@ -314,6 +317,9 @@ biocodeControllers.controller('createuserCtrl', ['$scope', '$http',
         $('li#users').attr('class', 'active');
 
         $scope.onCreateUser = function() {
+            if($scope.user.password != $scope.verify)
+                return;
+
             $http.post(usersUrl, $scope.user).success(function (data, status, headers) {
                 window.location = usersPage + '/' + $scope.user.username;
             });

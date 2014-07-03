@@ -5,9 +5,35 @@
         <button type="button" class="btn btn-primary btn-lg" ng-click="toggleModal()">Change Password</button>
         <button type="button" class="btn btn-primary btn-lg delBtn" ng-click="onDeleteUser()">Delete</button>
         <div class="pass-dialog">
-            <modal-dialog show='myData.modalShown' width='400px' dialog-title="{{user.username}}'s New Password" on-close='logClose()'>
-                <input type='text' name='passinput' id="passinput"/>
-                <button type="button" class="btn btn-primary" ng-click="submitPass()">Submit</button>
+            <modal-dialog show='myData.modalShown' width='400px' dialog-title="{{user.username}}'s New Password"
+                          on-close='logClose()'>
+                <div class="password-row">
+                    <table class="table" border="0">
+                        <tbody>
+                        <tr>
+                            <td>Password</td>
+                            <td><input type="password" id="passinput" ng-model="password"></td>
+                        </tr>
+                        <tr>
+                            <td>Confirm password</td>
+                            <td><input type="password" id="verify" ng-model="verify"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <label style="color: red" ng-show="verify != password">These passwords don't match. Try
+                                    again?</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>
+                                <button style="" type="button" class="btn btn-primary" ng-click="submitPass()">Submit
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </modal-dialog>
         </div>
     </div>
