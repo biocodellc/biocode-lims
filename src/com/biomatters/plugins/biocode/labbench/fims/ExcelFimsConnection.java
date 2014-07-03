@@ -267,6 +267,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         List<String> tissueIds = new ArrayList<String>();
+        // todo add in project
         for (Integer row : getListOfRowsMatchingQuery(query)) {
 
             int index = getTableIndex(getTissueSampleDocumentField());
