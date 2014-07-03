@@ -236,6 +236,12 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         queryBuilder.append("SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID AND ");
 
+        if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
+            queryBuilder.append(PROJECT_FIELD.getCode()).append(" IN ");
+            SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
+            queryBuilder.append(" AND ");
+        }
+
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), true);
         if(sqlString == null) {
             return Collections.emptyList();
@@ -244,12 +250,18 @@ public class MooreaFimsConnection extends FIMSConnection{
 
 
         String queryString = queryBuilder.toString();
-
-        Statement statement = null;
-        System.out.println(queryString);
+        PreparedStatement statement = null;
         try {
-            statement = createStatement();
-            ResultSet resultSet = statement.executeQuery(queryString);
+            statement = prepareStatement(queryString);
+            List<Object> projectNames = new ArrayList<Object>();
+            if(projectsToMatch != null) {
+                for (FimsProject fimsProject : projectsToMatch) {
+                    projectNames.add(fimsProject.getName());
+                }
+            }
+            SqlUtilities.printSql(queryString, projectNames);
+            SqlUtilities.fillStatement(projectNames, statement);
+            ResultSet resultSet = statement.executeQuery();
             List<String> tissueIds = new ArrayList<String>();
             while(resultSet.next()){
                 tissueIds.add(resultSet.getString("biocode_tissue.bnhm_id") + "." + resultSet.getInt("biocode_tissue.tissue_num"));
