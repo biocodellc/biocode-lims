@@ -271,7 +271,9 @@ public class MySQLFimsConnection extends TableFimsConnection {
                     }
                     forRow.add(projectName);
                 }
-                lists.add(forRow);
+                if(!forRow.isEmpty()) {
+                    lists.add(forRow);
+                }
             }
             resultSet.close();
             return lists;
