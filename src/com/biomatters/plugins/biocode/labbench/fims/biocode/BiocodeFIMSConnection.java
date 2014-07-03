@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
@@ -93,6 +94,9 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     private List<FimsSample> getFimsSamplesBySearch(Graph graph, Form form, StringBuilder filterText) throws ConnectionException {
         List<FimsSample> samples = new ArrayList<FimsSample>();
+        if (BiocodeService.getInstance().isQueryCancled())
+            return samples;
+
         try {
             BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graph,
                     form, filterText == null || filterText.length() == 0 ? null : filterText.toString());
