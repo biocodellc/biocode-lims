@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
@@ -10,8 +11,10 @@ import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
+import org.jdom.Element;
 
 import javax.ws.rs.core.Form;
+import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.util.*;
@@ -94,10 +97,20 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         try {
             BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graph,
                     form, filterText == null || filterText.length() == 0 ? null : filterText.toString());
-            for (Row row : data.data) {
-                TableFimsSample sample = getFimsSampleForRow(data.header, row);
-                samples.add(sample);
-                cachedSamples.put(sample.getId(), new SoftReference<FimsSample>(sample));
+
+            if (data.data.size() == 0) {
+                if (form != null && form.asMap() != null && form.asMap().get(getTissueCol()) != null) {
+                    MultivaluedMap<String,String> map = form.asMap();
+                    for (String id : map.get(getTissueCol())) {
+                        cachedSamples.put(id, new SoftReference<FimsSample>(dummySample));
+                    }
+                }
+            } else {
+                for (Row row : data.data) {
+                    TableFimsSample sample = getFimsSampleForRow(data.header, row);
+                    samples.add(sample);
+                    cachedSamples.put(sample.getId(), new SoftReference<FimsSample>(sample));
+                }
             }
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e.getMessage(), e);
@@ -151,11 +164,14 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 sample = cachedResult.get();
             }
             TissueDocument tissueDoc;
-            if (sample != null) {
+            if (sample == dummySample) {
+                tissueDoc = null;
+            } else if (sample != null) {
                 tissueDoc = new TissueDocument(sample);
-            } else {
+            } else  {
                 tissueDoc = downloadTissueDocument(expeditionTitle, tissueId);
             }
+
             if(tissueDoc != null) {
                 if (callback != null) {
                     callback.add(tissueDoc, Collections.<String, Object>emptyMap());
@@ -244,7 +260,6 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public void _disconnect() {
-        project = null;
     }
 
     @Override
@@ -274,4 +289,41 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         // Expedition
         return Collections.emptyList();  // We can probably get this from the service
     }
+
+    private FimsSample dummySample = new FimsSample() {
+        @Override
+        public String getId() {
+            return null;
+        }
+
+        @Override
+        public String getSpecimenId() {
+            return null;
+        }
+
+        @Override
+        public List<DocumentField> getFimsAttributes() {
+            return null;
+        }
+
+        @Override
+        public List<DocumentField> getTaxonomyAttributes() {
+            return null;
+        }
+
+        @Override
+        public Object getFimsAttributeValue(String attributeName) {
+            return null;
+        }
+
+        @Override
+        public Element toXML() {
+            return null;
+        }
+
+        @Override
+        public void fromXML(Element element) throws XMLSerializationException {
+
+        }
+    };
 }
