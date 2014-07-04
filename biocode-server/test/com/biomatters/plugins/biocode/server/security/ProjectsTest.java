@@ -230,6 +230,87 @@ public class ProjectsTest extends Assert {
         }
     }
 
+    @Test
+    public void testCanGetProjectsForUser() throws DatabaseServiceException {
+        User user = new User();
+        user.username = "me";
+        user.password = "password";
+        user.firstname = "";
+        user.lastname = "";
+        user.email = "me@me.com";
+        Users.addUser(dataSource, user);
+
+        FimsProject adminOf = new FimsProject("1", "adminOf", null);
+        FimsProject writerOf = new FimsProject("2", "writerOf", null);
+        FimsProject readerOf = new FimsProject("3", "readerOf", null);
+        FimsProject noAccess = new FimsProject("4", "noAccess", null);
+
+        FimsWithProjects fimsConnection = new FimsWithProjects(Arrays.asList(
+                adminOf, writerOf, readerOf, noAccess
+        ));
+        Projects.updateProjectsFromFims(dataSource, fimsConnection);
+
+        List<Project> projects = Projects.getProjectsForId(dataSource);
+        setRoleForProjet(user, adminOf, projects, Role.ADMIN);
+        setRoleForProjet(user, writerOf, projects, Role.WRITER);
+        setRoleForProjet(user, readerOf, projects, Role.READER);
+
+        List<FimsProject> result = Projects.getFimsProjectsUserHasAtLeastRole(dataSource, fimsConnection, user, Role.ADMIN);
+        assertEquals(1, result.size());
+        assertTrue(result.contains(adminOf));
+
+        result = Projects.getFimsProjectsUserHasAtLeastRole(dataSource, fimsConnection, user, Role.WRITER);
+        assertEquals(2, result.size());
+        assertTrue(result.contains(adminOf));
+        assertTrue(result.contains(writerOf));
+
+        result = Projects.getFimsProjectsUserHasAtLeastRole(dataSource, fimsConnection, user, Role.READER);
+        assertEquals(3, result.size());
+        assertTrue(result.contains(adminOf));
+        assertTrue(result.contains(writerOf));
+        assertTrue(result.contains(readerOf));
+    }
+
+    @Test
+    public void roleInheritedFromParent() throws DatabaseServiceException {
+        User user = new User();
+        user.username = "me";
+        user.password = "password";
+        user.firstname = "";
+        user.lastname = "";
+        user.email = "me@me.com";
+        Users.addUser(dataSource, user);
+
+        FimsProject parent = new FimsProject("1", "parent", null);
+        FimsProject child = new FimsProject("2", "child", parent);
+
+        FimsWithProjects fimsConnection = new FimsWithProjects(Arrays.asList(
+                parent, child
+        ));
+        Projects.updateProjectsFromFims(dataSource, fimsConnection);
+
+        List<Project> projects = Projects.getProjectsForId(dataSource);
+        for (Role role : new Role[]{Role.ADMIN, Role.WRITER, Role.READER, null}) {
+            setRoleForProjet(user, parent, projects, role);
+            List<FimsProject> withRole = Projects.getFimsProjectsUserHasAtLeastRole(dataSource, fimsConnection, user, role);
+            assertEquals(2, withRole.size());
+            assertTrue(withRole.contains(parent));
+            assertTrue(withRole.contains(child));
+        }
+    }
+
+    void setRoleForProjet(User user, FimsProject toSetFor, List<Project> projectsInDatabase, Role role) {
+        for (Project project : projectsInDatabase) {
+            if(project.globalId.equals(toSetFor.getId())) {
+                if(role != null) {
+                    Projects.setProjectRoleForUsername(dataSource, project.id, user.username, role);
+                } else {
+                    Projects.removeUserFromProject(dataSource, project.id, user.username);
+                }
+            }
+        }
+    }
+
     private class FimsWithProjects extends FIMSConnection {
         List<FimsProject> fimsProjects;
 
@@ -298,7 +379,7 @@ public class ProjectsTest extends Assert {
         }
 
         @Override
-        public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+        public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
             return null;
         }
 

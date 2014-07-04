@@ -241,19 +241,19 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         if(query instanceof BasicSearchQuery) {
             String value = ((BasicSearchQuery)query).getSearchText();
             List<Query> queries = new ArrayList<Query>();
             for(DocumentField field : getSearchAttributes()) {
                 queries.add(Query.Factory.createFieldQuery(field, Condition.APPROXIMATELY_EQUAL, value));
             }
-            return getTissueIdsMatchingQuery(Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap()));
+            return getTissueIdsMatchingQuery(Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]), Collections.<String, Object>emptyMap()), null);
         }
         if(query instanceof CompoundSearchQuery && (((CompoundSearchQuery)query).getOperator() == CompoundSearchQuery.Operator.OR)) {
             Set<String> results = new LinkedHashSet<String>();
             for(Query q : ((CompoundSearchQuery)query).getChildren()) {
-                results.addAll(getTissueIdsMatchingQuery(q));
+                results.addAll(getTissueIdsMatchingQuery(q, null));
             }
             return new ArrayList<String>(results);
         }

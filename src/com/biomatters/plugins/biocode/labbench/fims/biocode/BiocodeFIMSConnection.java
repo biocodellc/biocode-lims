@@ -8,6 +8,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
+import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
@@ -48,7 +49,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     private Map<String, SoftReference<FimsSample>> cachedSamples = new HashMap<String, SoftReference<FimsSample>>();
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         // Ideally we wouldn't want to pull down the full sample straight away.  But the new Biocode FIMS always returns
         // every column for a sample.  So we'll cache the samples so at least we might not need to download it again.
 
@@ -225,7 +226,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public int getTotalNumberOfSamples() throws ConnectionException {
-        return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery()).size();
+        return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery(), null).size();
     }
 
 

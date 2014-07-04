@@ -180,7 +180,7 @@ public abstract class FIMSConnection {
     }
 
     public final List<FimsSample> getMatchingSamples(Query query) throws ConnectionException {
-        List<String> tissueIds = getTissueIdsMatchingQuery(query);
+        List<String> tissueIds = getTissueIdsMatchingQuery(query, null);
         return retrieveSamplesForTissueIds(tissueIds);
     }
 
@@ -188,11 +188,12 @@ public abstract class FIMSConnection {
      * Return tissue IDs for FIMS entries that match a specified {@link com.biomatters.geneious.publicapi.databaseservice.Query}
      *
      * @param query The query to match
+     * @param projectsToMatch A list of projects to restrict the search to
      * @return a list of tissue IDs
      *
      * @throws ConnectionException if there is a problem communicating with the database
      */
-    public abstract List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException;
+    public abstract List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException;
 
     /**
      * Retrieve {@link com.biomatters.plugins.biocode.labbench.FimsSample} for the specified tissue IDs

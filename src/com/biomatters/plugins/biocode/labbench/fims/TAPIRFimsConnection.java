@@ -183,7 +183,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         Element searchXml = searchTapirServer(query, true);
         List<Element> results = getRecordElementsFromSearchResultXml(searchXml);
 

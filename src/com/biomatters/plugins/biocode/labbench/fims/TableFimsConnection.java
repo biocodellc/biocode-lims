@@ -15,6 +15,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.net.HttpURLConnection;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import org.jdom.input.SAXBuilder;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -312,5 +314,31 @@ public abstract class TableFimsConnection extends FIMSConnection{
 
     protected List<DocumentField> getProjectFields() {
         return Collections.unmodifiableList(projectFields);
+    }
+
+    /**
+     * @param projects The projects to map
+     * @return A mapping from {@link com.biomatters.geneious.publicapi.documents.DocumentField} to projects
+     */
+    protected Map<DocumentField, Collection<FimsProject>> getFieldsToProjects(List<FimsProject> projects) {
+        Multimap<DocumentField, FimsProject> map = ArrayListMultimap.create();
+        List<DocumentField> fields = projectFields;
+        for (FimsProject project : projects) {
+            int index = getProjectLevelIndex(project);
+            if(index >= 0 && index < fields.size()) {
+                map.put(fields.get(index), project);
+            }
+        }
+        return map.asMap();
+    }
+
+    private int getProjectLevelIndex(FimsProject project) {
+        int level = 0;
+        FimsProject parent = project.getParent();
+        while(parent != null) {
+            parent = parent.getParent();
+            level--;
+        }
+        return level;
     }
 }

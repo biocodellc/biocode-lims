@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.server.security;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 
+import javax.sql.DataSource;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.sql.SQLException;
 import java.util.*;
@@ -30,13 +31,12 @@ public class Project {
      * @return The role the current user has in the project.  Will fetch from parent groups if the user is not
      * part of the current project.
      */
-    public Role getRoleForUser() throws SQLException {
-        User currentUser = Users.getLoggedInUser();
-        Role role = userRoles.get(currentUser);
+    public Role getRoleForUser(DataSource dataSource, User user) throws SQLException {
+        Role role = userRoles.get(user);
         if(role != null) {
             return role;
         } else if(parentProjectId != -1) {
-            return Projects.getProjectForId(LIMSInitializationListener.getDataSource(), parentProjectId).getRoleForUser();
+            return Projects.getProjectForId(dataSource, parentProjectId).getRoleForUser(dataSource, user);
         } else {
             return null;
         }

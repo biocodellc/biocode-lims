@@ -1,6 +1,10 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
+import com.biomatters.plugins.biocode.server.security.*;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 
 import javax.ws.rs.*;
@@ -29,10 +33,34 @@ public class QueryService {
                            @DefaultValue("true")  @QueryParam("showWorkflows") boolean showWorkflows,
                            @DefaultValue("true")  @QueryParam("showPlates") boolean showPlates,
                            @DefaultValue("false") @QueryParam("showSequenceIds") boolean showSequenceIds,
-                                                  @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException {
+                                                  @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException, ConnectionException {
+        try {
+            Set<String> tissueIdsToMatchSet;
+            if(tissueIdsToMatch == null) {
+                tissueIdsToMatchSet = getTissueIdsToMatchForUsersAccess();
+            } else {
+                tissueIdsToMatchSet = new HashSet<String>(Arrays.asList(tissueIdsToMatch.split(",")));
+            }
+            return Response.ok(RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatchSet)).build();
+        } catch (ConnectionException e) {
+            throw new InternalServerErrorException("Could not access FIMS: " + e.getMainMessage());
+        }
+    }
 
-        Set<String> tissueIdsToMatchSet = tissueIdsToMatch == null ? null : new HashSet<String>(Arrays.asList(tissueIdsToMatch.split(",")));
-        return Response.ok(RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatchSet)).build();
+    private Set<String> getTissueIdsToMatchForUsersAccess() throws DatabaseServiceException, ConnectionException {
+        Set<String> tissueIdsToMatchSet;List<FimsProject> projectsUserHasAccessTo = Projects.getFimsProjectsUserHasAtLeastRole(
+                LIMSInitializationListener.getDataSource(),
+                LIMSInitializationListener.getFimsConnection(),
+                Users.getLoggedInUser(), Role.READER);
+        if(projectsUserHasAccessTo == null) {
+            tissueIdsToMatchSet = null;
+        } else {
+            tissueIdsToMatchSet = new HashSet<String>(
+                    LIMSInitializationListener.getFimsConnection().getTissueIdsMatchingQuery(
+                            Query.Factory.createBrowseQuery(), projectsUserHasAccessTo)
+            );
+        }
+        return tissueIdsToMatchSet;
     }
 
     @GET

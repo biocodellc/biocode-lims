@@ -284,26 +284,37 @@ public class LIMSInitializationListener implements ServletContextListener {
             setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PLATE_WELL, well);
             setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PLATE_NAME, plate);
         }
-        int taxonIndex = 0;
-        String taxonField = config.getProperty("fims.taxon." + taxonIndex);
-        while (taxonField != null) {
-            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.TAX_FIELDS + "." + taxonIndex + "." +
-                    TableFimsConnectionOptions.TAX_COL, taxonField);
-            taxonIndex++;
-            taxonField = config.getProperty("fims.taxon." + taxonIndex);
+        setMultipleOptionsFromConfig(config, "fims.taxon.", fimsOptions, TableFimsConnectionOptions.TAX_FIELDS, TableFimsConnectionOptions.TAX_COL);
+        boolean enableProjects = setMultipleOptionsFromConfig(config, "fims.project.", fimsOptions, TableFimsConnectionOptions.PROJECT_FIELDS, TableFimsConnectionOptions.PROJECT_COLUMN);
+        fimsOptions.setValue(TableFimsConnectionOptions.STORE_PROJECTS, enableProjects);
+    }
+
+    private boolean setMultipleOptionsFromConfig(Properties config, String configKey, PasswordOptions fimsOptions, String multipleOptionsName, String optionNameToSet) {
+        // Get the refernce to the first Option in the MultipleOptions.  The rest will not have been instantiated yet.
+        Options.Option firstOption = fimsOptions.getOption(multipleOptionsName + "." + 0 + "." +
+                            optionNameToSet);
+        if (firstOption == null) {
+            return false;
+        }
+        if (!(firstOption instanceof Options.ComboBoxOption)) {
+            throw new IllegalStateException("Unexpected Option, expected ComboBoxOption but was " + firstOption.getClass().getSimpleName());
         }
 
-        int projectIndex = 0;
-        String projectField = config.getProperty("fims.project." + projectIndex);
-        boolean enableProjects = false;
-        while (projectField != null) {
-            enableProjects = true;
-            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PROJECT_FIELDS + "." + projectIndex + "." +
-                    TableFimsConnectionOptions.PROJECT_COLUMN, projectField);
-            projectIndex++;
-            projectField = config.getProperty("fims.project." + taxonIndex);
+        boolean setSomething = false;
+        int optionIndex = 0;
+        String valueToSet = config.getProperty(configKey + optionIndex);
+        while (valueToSet != null) {
+            setSomething = true;
+            @SuppressWarnings("unchecked") Options.ComboBoxOption<Options.OptionValue> comboBoxOption = (Options.ComboBoxOption<Options.OptionValue>) firstOption;
+            for (Options.OptionValue optionValue : comboBoxOption.getPossibleOptionValues()) {
+                if (optionValue.getLabel().equals(valueToSet)) {
+                    fimsOptions.setValue(multipleOptionsName + "." + optionIndex + "." + optionNameToSet, optionValue);
+                }
+            }
+            optionIndex++;
+            valueToSet = config.getProperty(configKey + optionIndex);
         }
-        fimsOptions.setValue(TableFimsConnectionOptions.STORE_PROJECTS, enableProjects);
+        return setSomething;
     }
 
     private void setFimsOptionBasedOnLabel(PasswordOptions fimsOptions, String optionName, String labelToLookFor) {

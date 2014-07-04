@@ -723,7 +723,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         return;
                     }
 
-                    tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith);
+                    tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith, null);
                 } catch (ConnectionException e) {
                     throw new DatabaseServiceException(e, e.getMessage(), false);
                 }

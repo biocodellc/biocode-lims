@@ -403,4 +403,41 @@ public class Projects {
             }
         }
     }
+
+    /**
+     *
+     * @param fimsConnection The connection to use to get {@link com.biomatters.plugins.biocode.labbench.fims.FimsProject} from.
+     * @param user The user account that is attempting to retreive data.
+     * @param role The role to check for.
+     * @return A list of {@link FimsProject}s that the specified user is allowed to view.  Or null if there are no projects in the system.
+     */
+    public static List<FimsProject> getFimsProjectsUserHasAtLeastRole(DataSource dataSource, FIMSConnection fimsConnection, User user, Role role) throws DatabaseServiceException {
+        List<FimsProject> projectsFromFims = fimsConnection.getProjects();
+        if(projectsFromFims.isEmpty()) {
+            return null;
+        }
+        if(role == null) {
+            return projectsFromFims;
+        }
+        if(user.isAdministrator) {
+            return projectsFromFims;
+        }
+        List<Project> projectsInLims = Projects.getProjectsForId(dataSource);
+        Map<String, Role> roleById = new HashMap<String, Role>();
+        for (Project p : projectsInLims) {
+            try {
+                roleById.put(p.globalId, p.getRoleForUser(dataSource, user));
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e, "Failed to retrieve project role: " + e.getMessage(), false);
+            }
+        }
+        List<FimsProject> toReturn = new ArrayList<FimsProject>();
+        for (FimsProject candidate : projectsFromFims) {
+            Role roleInProject = roleById.get(candidate.getId());
+            if(roleInProject != null && roleInProject.isAtLeast(role)) {
+                toReturn.add(candidate);
+            }
+        }
+        return toReturn;
+    }
 }
