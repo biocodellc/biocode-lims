@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.server.security.AccessUtilities;
+import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 
 import javax.ws.rs.*;
@@ -24,7 +26,9 @@ public class Workflows {
             throw new BadRequestException("Must specify ids");
         }
         try {
-            return RestUtilities.getOnlyItemFromList(LIMSInitializationListener.getLimsConnection().getWorkflows(Collections.singletonList(id)), "No workflow for id: " + id);
+            Workflow result = RestUtilities.getOnlyItemFromList(LIMSInitializationListener.getLimsConnection().getWorkflows(Collections.singletonList(id)), "No workflow for id: " + id);
+            AccessUtilities.checkUserHasRoleForSamples(Collections.singletonList(result.getFimsSample()), Role.READER);
+            return result;
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -34,6 +38,7 @@ public class Workflows {
     @Consumes("text/plain")
     @Path("{id}/name")
     public void renameWorkflow(@PathParam("id") int id, String newName) {
+        // todo get workflow and check access
         try {
             LIMSInitializationListener.getLimsConnection().renameWorkflow(id, newName);
         } catch (DatabaseServiceException e) {
@@ -44,6 +49,7 @@ public class Workflows {
     @DELETE
     @Path("{workflowId}/sequences/{extractionId}")
     public void deleteSequencesForWorkflow(@PathParam("workflowId")int workflowId, @PathParam("extractionId")String extractionId) {
+        // todo get workflow and check access
         try {
             LIMSInitializationListener.getLimsConnection().deleteSequencesForWorkflowId(workflowId, extractionId);
         } catch (DatabaseServiceException e) {
