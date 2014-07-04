@@ -242,6 +242,10 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
+        // TODO Filter out projects.  Unfortunately Google Fusion Tables doesn't suppot using AND (X OR Y OR Z).
+        // TODO However it doesn't matter at the moment since we don't suport Fusion Tables on the server.
+
+
         if(query instanceof BasicSearchQuery) {
             String value = ((BasicSearchQuery)query).getSearchText();
             List<Query> queries = new ArrayList<Query>();

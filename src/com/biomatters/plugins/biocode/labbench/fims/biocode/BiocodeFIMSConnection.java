@@ -50,6 +50,8 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
+        // TODO Filter on project once we fully support projects.  See MBP-512
+
         // Ideally we wouldn't want to pull down the full sample straight away.  But the new Biocode FIMS always returns
         // every column for a sample.  So we'll cache the samples so at least we might not need to download it again.
 
