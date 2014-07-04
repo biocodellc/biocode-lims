@@ -197,7 +197,7 @@
                 <pathelement location="${server-test.classes}"/>
                 <pathelement location="${GeneiousFiles}/resources"/>
                 <pathelement location="${GeneiousFiles}/bundledPlugins"/>
-                <path refid="classpath"/>
+                <path refid="server-classpath"/>
             </classpath>
             <env key="DISPLAY" value="0.0"/>
             <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>
