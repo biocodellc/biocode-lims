@@ -130,7 +130,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
                 if(first) {
                     first = false;
                 } else {
-                    projectCondition.append(" AND ");
+                    projectCondition.append(" OR ");
                 }
                 projectCondition.append(entry.getKey().getCode().replace(FIELD_PREFIX, "")).append(" IN ");
                 SqlUtilities.appendSetOfQuestionMarks(projectCondition, entry.getValue().size());
