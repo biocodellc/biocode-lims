@@ -91,6 +91,9 @@ public class FIMS {
                     LIMSInitializationListener.getDataSource(),
                     LIMSInitializationListener.getFimsConnection(),
                     Users.getLoggedInUser(), Role.READER);
+            if(projectsUserHasAccessTo.isEmpty()) {
+                return "";
+            }
             Query query = RestQueryUtils.createQueryFromQueryString(RestQueryUtils.QueryType.forTypeString(typeString), queryString, Collections.<String, Object>emptyMap());
             List<String> result = LIMSInitializationListener.getFimsConnection().getTissueIdsMatchingQuery(query, projectsUserHasAccessTo);
             return StringUtilities.join(",", result);
