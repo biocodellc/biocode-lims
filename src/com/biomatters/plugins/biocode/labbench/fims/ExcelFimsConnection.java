@@ -184,7 +184,9 @@ public class ExcelFimsConnection extends TableFimsConnection{
         return -1;
     }
 
-    private List<Integer> getListOfRowsMatchingQuery(Query query) throws ConnectionException {
+    private List<Integer> getListOfRowsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
+        Map<DocumentField, Collection<FimsProject>> map = projectsToMatch == null ? null : getFieldsToProjects(projectsToMatch);
+
         CompoundSearchQuery.Operator operator;
         List<AdvancedSearchQueryTerm> queries;
 
@@ -215,6 +217,11 @@ public class ExcelFimsConnection extends TableFimsConnection{
         Sheet sheet = workbook.getSheet(0);
         List<Integer> result = new ArrayList<Integer>();
         for(int i=1; i < sheet.getRows(); i++) {
+            if(map != null && !lineMatchesAProject(map, sheet, i)) {
+                continue;
+            }
+
+
             for (int i1 = 0, queriesSize = queries.size(); i1 < queriesSize; i1++) {
                 AdvancedSearchQueryTerm term = queries.get(i1);
                 DocumentField field = term.getField();
@@ -264,11 +271,24 @@ public class ExcelFimsConnection extends TableFimsConnection{
         return result;
     }
 
+    private boolean lineMatchesAProject(Map<DocumentField, Collection<FimsProject>> map, Sheet sheet, int i) {
+        boolean matchesAProject = false;
+        for (Map.Entry<DocumentField, Collection<FimsProject>> entry : map.entrySet()) {
+            int index = getTableIndex(entry.getKey());
+            String value = XmlUtilities.encodeXMLChars(sheet.getCell(index, i).getContents());
+            for (FimsProject project : entry.getValue()) {
+                if(project.getId().equals(value)) {
+                    matchesAProject = true;
+                }
+            }
+        }
+        return matchesAProject;
+    }
+
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         List<String> tissueIds = new ArrayList<String>();
-        // todo add in project
-        for (Integer row : getListOfRowsMatchingQuery(query)) {
+        for (Integer row : getListOfRowsMatchingQuery(query, null)) {
 
             int index = getTableIndex(getTissueSampleDocumentField());
             if(index == -1) {
@@ -291,7 +311,7 @@ public class ExcelFimsConnection extends TableFimsConnection{
         for (String tissueId : tissueIds) {
             queries[i++] = Query.Factory.createFieldQuery(getTissueSampleDocumentField(), Condition.EQUAL, tissueId);
         }
-        for (Integer row : getListOfRowsMatchingQuery(Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap()))) {
+        for (Integer row : getListOfRowsMatchingQuery(Query.Factory.createOrQuery(queries, Collections.<String, Object>emptyMap()), null)) {
             results.add(new TableFimsSample(sheet, row, this));
         }
         return results;
