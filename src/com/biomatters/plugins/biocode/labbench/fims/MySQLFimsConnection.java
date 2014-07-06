@@ -266,7 +266,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
                 List<String> forRow = new ArrayList<String>();
                 for (String columnName : projectColumns) {
                     String projectName = resultSet.getString(columnName);
-                    if(projectName.trim().length() == 0) {
+                    if(projectName == null || projectName.trim().length() == 0) {
                         continue;
                     }
                     forRow.add(projectName);
