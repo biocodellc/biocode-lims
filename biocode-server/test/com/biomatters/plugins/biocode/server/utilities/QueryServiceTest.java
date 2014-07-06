@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.server.utilities;
 
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.server.utilities.query.*;
 import org.junit.Assert;
 import org.junit.Before;
@@ -101,14 +100,12 @@ public class QueryServiceTest extends Assert {
     public void testParseInvalidQuerySearchAttribute() {
         new QueryParser(searchAttributes).parseQuery("[invalidField=value]");
     }
-    @Test(expected=BadRequestException.class)
-    public void testParseInvalidQueryCondition() {
-        new QueryParser(searchAttributes).parseQuery("[stringField*value]");
-    }
+
     @Test
     public void testParseValidIntegerQueryValue() {
         new QueryParser(searchAttributes).parseQuery("[integerField=0]");
     }
+
     @Test(expected=BadRequestException.class)
     public void testParseInvalidIntegerQueryValue() {
         new QueryParser(searchAttributes).parseQuery("[integerField=nonIntegerValue]");
@@ -120,10 +117,6 @@ public class QueryServiceTest extends Assert {
     @Test(expected=BadRequestException.class)
     public void testParseInvalidDateQueryValueFormat() {
         new QueryParser(searchAttributes).parseQuery("[dateField=2004/02/02]");
-    }
-    @Test
-    public void testBracketPrecedence() {
-        assertTrue(new QueryParser(searchAttributes).parseQuery("([stringField=valueOne]OR[stringField=valueTwo])AND[stringField=valueThree]") instanceof AndQuery);
     }
 
     private <T extends Comparable> void testSameContentsUnordered(List<T> oneOrTwoAsList, List<T> result) {

@@ -12,6 +12,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
@@ -203,7 +204,13 @@ public class PlateBulkEditor {
                                 try {
                                     List<Map<String, String>> tissueIds = new ArrayList<Map<String, String>>();
                                     for (String plateId : plateIds) {
-                                        tissueIds.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateId));
+                                        FIMSConnection connection = BiocodeService.getInstance().getActiveFIMSConnection();
+                                        if(connection == null) {
+                                            Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE, "FIMS Connection is unavailable", tissueEditor, Dialogs.DialogIcon.INFORMATION);
+                                            return;
+                                        }
+
+                                        tissueIds.add(connection.getTissueIdsFromFimsTissuePlate(plateId));
                                     }
 
                                     for (int i = 0; i < tissueIds.size(); i++) {

@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
@@ -44,6 +45,15 @@ public class MySQLFimsConnection extends TableFimsConnection {
             throw new SQLException("Not logged into the FIMS");
         }
         Statement statement = connection.createStatement();
+        statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+        return statement;
+    }
+
+    private PreparedStatement prepareStatement(String query) throws SQLException{
+        if(connection == null) {
+            throw new SQLException("You are not connected to the FIMS database");
+        }
+        PreparedStatement statement = connection.prepareStatement(query);
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
@@ -103,23 +113,44 @@ public class MySQLFimsConnection extends TableFimsConnection {
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
-        queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName).append(" WHERE ");
+        queryBuilder.append("SELECT ").append(getTissueCol()).append(" FROM ").append(tableName);
 
+        List<Object> parameters = new ArrayList<Object>();
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), FIELD_PREFIX, false);
-        if(sqlString == null) {
-            // todo Make this handle browse queries?
-            return Collections.emptyList();
+        if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
+            StringBuilder projectCondition = new StringBuilder();
+            projectCondition.append(" AND (");
+            boolean first = true;
+            for (Map.Entry<DocumentField, Collection<FimsProject>> entry : getFieldsToProjects(projectsToMatch).entrySet()) {
+                if(first) {
+                    first = false;
+                } else {
+                    projectCondition.append(" AND ");
+                }
+                projectCondition.append(entry.getKey().getCode()).append(" IN ");
+                SqlUtilities.appendSetOfQuestionMarks(projectCondition, entry.getValue().size());
+                for (FimsProject project : entry.getValue()) {
+                    parameters.add(project.getId());
+                }
+            }
+            projectCondition.append(")");
+            sqlString += projectCondition.toString();
         }
-        queryBuilder.append(sqlString);
 
-        System.out.println(queryBuilder.toString());
+        if(sqlString != null) {
+            queryBuilder.append(" WHERE ");
+            queryBuilder.append(sqlString);
+        }
+
         List<String> results = new ArrayList<String>();
-        Statement select = null;
+        PreparedStatement select = null;
         try {
-            select = createStatement();
-            ResultSet resultSet = select.executeQuery(queryBuilder.toString());
+            select = prepareStatement(queryBuilder.toString());
+            SqlUtilities.fillStatement(parameters, select);
+            SqlUtilities.printSql(queryBuilder.toString(), parameters);
+            ResultSet resultSet = select.executeQuery();
             while(resultSet.next()) {
                 results.add(resultSet.getString(1));
             }
@@ -144,7 +175,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
         String queryString = query.toString();
         SqlUtilities.printSql(queryString, tissueIds);
         try {
-            PreparedStatement statement = connection.prepareStatement(queryString);
+            PreparedStatement statement = prepareStatement(queryString);
             int index = 1;
             for (String tissueId : tissueIds) {
                 statement.setObject(index++, tissueId);
@@ -218,7 +249,38 @@ public class MySQLFimsConnection extends TableFimsConnection {
         }
     }
 
-    public boolean requiresMySql() {
-        return true;
+    @Override
+    protected List<List<String>> getProjectLists() throws DatabaseServiceException {
+        List<String> projectColumns = new ArrayList<String>();
+        for (DocumentField field : getProjectFields()) {
+            projectColumns.add(field.getCode().replace(FIELD_PREFIX, ""));
+        }
+
+        List<List<String>> lists = new ArrayList<List<String>>();
+        Statement select = null;
+        try {
+            select = createStatement();
+            String columnList = StringUtilities.join(",", projectColumns);
+            ResultSet resultSet = select.executeQuery("SELECT " + columnList + " FROM " + tableName + " GROUP BY " + columnList);
+            while(resultSet.next()) {
+                List<String> forRow = new ArrayList<String>();
+                for (String columnName : projectColumns) {
+                    String projectName = resultSet.getString(columnName);
+                    if(projectName == null || projectName.trim().length() == 0) {
+                        continue;
+                    }
+                    forRow.add(projectName);
+                }
+                if(!forRow.isEmpty()) {
+                    lists.add(forRow);
+                }
+            }
+            resultSet.close();
+            return lists;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, "Failed to get list of projects: " + e.getMessage(), false);
+        } finally {
+            SqlUtilities.cleanUpStatements(select);
+        }
     }
 }

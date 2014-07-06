@@ -3,6 +3,8 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
@@ -159,7 +161,18 @@ public class Plates {
      * @param plates a list of {@link Plate}s to check
      */
     private void checkCanEditPlate(List<Plate> plates) {
-        throw new NotImplementedException();
+        // todo
+        // 1. Get projects for plate - ... query fims?
+        Set<FimsSample> samples = new HashSet<FimsSample>();
+        for (Plate plate : plates) {
+            for (Reaction reaction : plate.getReactions()) {
+                samples.add(reaction.getFimsSample());  // Can this be null?
+            }
+        }
+
+        // Get projects for extraction IDs?  So we need to get tissue ids for extraction ids?
+        List<Project> projectsToCheck = new ArrayList<Project>();
+        // 2. Check user has at least WRITER to all those projects - easy
     }
 
     /**

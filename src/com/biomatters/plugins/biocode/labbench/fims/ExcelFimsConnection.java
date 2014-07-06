@@ -47,10 +47,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
         return "Excel";
     }
 
-    public boolean requiresMySql() {
-        return false;
-    }
-
     public TableFimsConnectionOptions _getConnectionOptions() {
         return new ExcelFimsConnectionOptions();
     }
@@ -269,8 +265,9 @@ public class ExcelFimsConnection extends TableFimsConnection{
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         List<String> tissueIds = new ArrayList<String>();
+        // todo add in project
         for (Integer row : getListOfRowsMatchingQuery(query)) {
 
             int index = getTableIndex(getTissueSampleDocumentField());
@@ -300,4 +297,24 @@ public class ExcelFimsConnection extends TableFimsConnection{
         return results;
     }
 
+    protected List<List<String>> getProjectLists() {
+        List<List<String>> lists = new ArrayList<List<String>>();
+        for(int i=1; i<workbook.getSheet(0).getRows(); i++) {
+            List<String> line = new ArrayList<String>();
+            for (DocumentField projectField : getProjectFields()) {
+                int projectIndex = getTableIndex(projectField);
+                if (projectIndex > 0) {
+                    Cell[] column = workbook.getSheet(0).getColumn(projectIndex);
+                    if(i < column.length) {
+                        String contents = column[i].getContents();
+                        if(contents != null && contents.trim().length() > 0) {
+                            line.add(contents.trim());
+                        }
+                    }
+                }
+            }
+            lists.add(line);
+        }
+        return lists;
+    }
 }

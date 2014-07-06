@@ -39,6 +39,10 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     public static final String TAX_COL = "taxCol";
     public static final String CONNECTION_OPTIONS_KEY = "connection";
 
+    public static final String STORE_PROJECTS = "storeProjects";
+    public static final String PROJECT_COLUMN = "projectColumn";
+    public static final String PROJECT_FIELDS = "projectFields";
+
     protected abstract PasswordOptions getConnectionOptions();
 
     final List<OptionValue> getTableColumns() throws IOException {
@@ -81,11 +85,8 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         endAlignHorizontally();
 
         final BooleanOption storePlates = addBooleanOption(STORE_PLATES, "The FIMS database contains plate information", false);
-
         final ComboBoxOption<OptionValue> plateName = addComboBoxOption(PLATE_NAME, "Plate name field:", cols, cols.get(0));
-
         final ComboBoxOption<OptionValue> plateWell = addComboBoxOption(PLATE_WELL, "Well field:", cols, cols.get(0));
-
         storePlates.addDependent(plateName, true);
         storePlates.addDependent(plateWell, true);
 
@@ -143,6 +144,19 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
             }
         });
 
+
+        addHiddenProjectOptions(cols);
+    }
+
+    private static final boolean SHOW_HIDDEN_PROJECT_OPTIONS = false;  // Set to true for debugging via plugin
+    private void addHiddenProjectOptions(List<OptionValue> availableColumns) {
+        BooleanOption storeProjects = addBooleanOption(STORE_PROJECTS, "The FIMS database contains project information", false);
+        storeProjects.setVisible(SHOW_HIDDEN_PROJECT_OPTIONS);
+        Options projectOptions = new Options(this.getClass());
+        projectOptions.beginAlignHorizontally("", false);
+        projectOptions.addComboBoxOption(PROJECT_COLUMN, "", availableColumns, availableColumns.get(0));
+        projectOptions.endAlignHorizontally();
+        addMultipleOptions(PROJECT_FIELDS, projectOptions, false).setVisible(SHOW_HIDDEN_PROJECT_OPTIONS);
     }
 
     @SuppressWarnings("unchecked")
@@ -238,24 +252,31 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
                 final ComboBoxOption<OptionValue> plateName = (ComboBoxOption<OptionValue>)getOption(PLATE_NAME);
                 final ComboBoxOption<OptionValue> plateWell = (ComboBoxOption<OptionValue>)getOption(PLATE_WELL);
                 final MultipleOptions taxOptions = getMultipleOptions(TAX_FIELDS);
+                final MultipleOptions projOptions = getMultipleOptions(PROJECT_FIELDS);
 
                 tissueId.setPossibleValues(newCols);
                 specimenId.setPossibleValues(newCols);
                 plateName.setPossibleValues(newCols);
                 plateWell.setPossibleValues(newCols);
-                for(Option option : taxOptions.getMasterOptions().getOptions()) {
-                    if(option instanceof ComboBoxOption) {
-                        ((ComboBoxOption)option).setPossibleValues(newCols);
-                    }
-                }
-                for(Options options : taxOptions.getValues()) {
-                    for(Option option : options.getOptions()) {
-                        if(option instanceof ComboBoxOption) {
-                            ((ComboBoxOption)option).setPossibleValues(newCols);
-                        }
-                    }
-                }
+                setPossibleValuesForMultipleOptions(taxOptions, newCols);
+                setPossibleValuesForMultipleOptions(projOptions, newCols);
             }
         };
+    }
+
+    @SuppressWarnings("unchecked")
+    void setPossibleValuesForMultipleOptions(MultipleOptions multipleOptions, List<OptionValue> newCols) {
+        for(Option option : multipleOptions.getMasterOptions().getOptions()) {
+            if(option instanceof ComboBoxOption) {
+                ((ComboBoxOption)option).setPossibleValues(newCols);
+            }
+        }
+        for(Options options : multipleOptions.getValues()) {
+            for(Option option : options.getOptions()) {
+                if(option instanceof ComboBoxOption) {
+                    ((ComboBoxOption)option).setPossibleValues(newCols);
+                }
+            }
+        }
     }
 }

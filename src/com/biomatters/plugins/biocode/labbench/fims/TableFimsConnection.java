@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -14,6 +15,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.net.HttpURLConnection;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import org.jdom.input.SAXBuilder;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -42,6 +45,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     private String wellCol;
     private List<DocumentField> fields;
     private List<DocumentField> taxonomyFields;
+    private List<DocumentField> projectFields;
     private List<DocumentField> columns;
     private boolean connected = false;
 
@@ -65,7 +69,6 @@ public abstract class TableFimsConnection extends FIMSConnection{
             wellCol = options.getWellColumn();
         }
         fields = new ArrayList<DocumentField>();
-        taxonomyFields = new ArrayList<DocumentField>();
 
         _connect(options);
         try {
@@ -74,25 +77,17 @@ public abstract class TableFimsConnection extends FIMSConnection{
             throw new ConnectionException(e.getMessage(), e);
         }
 
-        List<Options> taxOptions = options.getMultipleOptions("taxFields").getValues();
-        for(Options taxOptionsValue : taxOptions){
-            Options.OptionValue colValue = (Options.OptionValue)taxOptionsValue.getOption("taxCol").getValue();
-            String code = XmlUtilities.encodeXMLChars(colValue.getName());
-            for(DocumentField column : columns) {
-                if(code.equals(column.getCode())) {
-                    if(!String.class.isAssignableFrom(column.getValueType())) {
-                        throw new ConnectionException("The taxonomy column '"+column.getName()+"' has an incorrect type ('"+column.getValueType().getSimpleName()+"').  All taxonomy columns must be string columns.");
-                    }
-                    taxonomyFields.add(column);
-                }
-            }
-        }
-
-        for (int i = 0, cellValuesSize = columns.size(); i < cellValuesSize; i++) {
-            DocumentField field = columns.get(i);
+        taxonomyFields = getFieldsFromMultipleOptions(options, TableFimsConnectionOptions.TAX_FIELDS, TableFimsConnectionOptions.TAX_COL);
+        for (DocumentField field : columns) {
             if (!taxonomyFields.contains(field)) {
                 fields.add(field);
             }
+        }
+
+        if(Boolean.TRUE.equals(options.getValue(TableFimsConnectionOptions.STORE_PROJECTS))) {
+            projectFields = getFieldsFromMultipleOptions(options, TableFimsConnectionOptions.PROJECT_FIELDS, TableFimsConnectionOptions.PROJECT_COLUMN);
+        } else {
+            projectFields = Collections.emptyList();
         }
 
 
@@ -117,6 +112,24 @@ public abstract class TableFimsConnection extends FIMSConnection{
             throw new ConnectionException("You have not set a tissue column");
         }
         connected = true;
+    }
+
+    List<DocumentField> getFieldsFromMultipleOptions(TableFimsConnectionOptions options, String fieldCode, String columnCode) throws ConnectionException {
+        List<DocumentField> result = new ArrayList<DocumentField>();
+        List<Options> taxOptions = options.getMultipleOptions(fieldCode).getValues();
+        for(Options taxOptionsValue : taxOptions){
+            Options.OptionValue colValue = (Options.OptionValue)taxOptionsValue.getOption(columnCode).getValue();
+            String code = XmlUtilities.encodeXMLChars(colValue.getName());
+            for(DocumentField column : columns) {
+                if(code.equals(column.getCode())) {
+                    if(!String.class.isAssignableFrom(column.getValueType())) {
+                        throw new ConnectionException("The taxonomy column '"+column.getName()+"' has an incorrect type ('"+column.getValueType().getSimpleName()+"').  All taxonomy columns must be string columns.");
+                    }
+                    result.add(column);
+                }
+            }
+        }
+        return result;
     }
 
     public abstract List<DocumentField> getTableColumns() throws IOException;
@@ -202,7 +215,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
         urlConnection.setRequestMethod("GET");
         InputStream in = urlConnection.getInputStream();
         SAXBuilder builder = new SAXBuilder();
-        Element root = null;
+        Element root;
         try {
             root = builder.build(in).detachRootElement();
         } catch (JDOMException e) {
@@ -230,5 +243,102 @@ public abstract class TableFimsConnection extends FIMSConnection{
             result.add("http://farm"+e.getAttributeValue("farm")+".static.flickr.com/"+e.getAttributeValue("server")+"/"+e.getAttributeValue("id")+"_"+e.getAttributeValue("secret")+"_z.jpg");
         }
         return result;
+    }
+
+    @Override
+    public List<FimsProject> getProjects() throws DatabaseServiceException {
+        if(getProjectFields().isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, FimsProject> projects = new HashMap<String, FimsProject>();
+
+        List<List<String>> projectCombinations = getProjectLists();
+        for (List<String> projectCombination : projectCombinations) {
+            String parentName = null;
+            for (String projectName : projectCombination) {
+                projectName = projectName.trim();
+                if(projectName.length() == 0) {
+                    continue;  // Ignore empty string projects.  Probably a bug in implementation.
+                }
+                if (!projects.containsKey(projectName)) {
+                    FimsProject parent = projects.get(parentName);
+                    projects.put(projectName,
+                            new FimsProject(projectName, projectName, parent));
+                }
+                parentName = projectName;
+            }
+        }
+        return new ArrayList<FimsProject>(projects.values());
+    }
+
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        Set<String> projectNames = new HashSet<String>();
+        for (FimsSample sample : samples) {
+            String project = getProjectForSample(sample);
+            if(project != null) {
+                projectNames.add(project);
+            }
+        }
+        return new ArrayList<String>(projectNames);
+    }
+
+    private String getProjectForSample(FimsSample sample) {
+        List<DocumentField> projectsLowestToHighest = new ArrayList<DocumentField>(projectFields);
+        Collections.reverse(projectsLowestToHighest);
+        for (DocumentField projectField : projectsLowestToHighest) {
+            Object projectNameCandidate = sample.getFimsAttributeValue(projectField.getCode());
+            if(projectNameCandidate != null) {
+                String name = projectNameCandidate.toString().trim();
+                if(name.length() > 0) {
+                    return name;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns a list of each project combination.
+     *
+     * ie.
+     * {
+     *  {Project,SubProject,SubSubProject}
+     *  {Project,SubProject2}
+     *  {Project,SubProject,SubSubProject2}
+     * }
+     *
+     * @return list of unique project lines.  May contain duplicates
+     */
+    protected abstract List<List<String>> getProjectLists() throws DatabaseServiceException;
+
+    protected List<DocumentField> getProjectFields() {
+        return Collections.unmodifiableList(projectFields);
+    }
+
+    /**
+     * @param projects The projects to map
+     * @return A mapping from {@link com.biomatters.geneious.publicapi.documents.DocumentField} to projects
+     */
+    protected Map<DocumentField, Collection<FimsProject>> getFieldsToProjects(List<FimsProject> projects) {
+        Multimap<DocumentField, FimsProject> map = ArrayListMultimap.create();
+        List<DocumentField> fields = projectFields;
+        for (FimsProject project : projects) {
+            int index = getProjectLevelIndex(project);
+            if(index >= 0 && index < fields.size()) {
+                map.put(fields.get(index), project);
+            }
+        }
+        return map.asMap();
+    }
+
+    private int getProjectLevelIndex(FimsProject project) {
+        int level = 0;
+        FimsProject parent = project.getParent();
+        while(parent != null) {
+            parent = parent.getParent();
+            level--;
+        }
+        return level;
     }
 }

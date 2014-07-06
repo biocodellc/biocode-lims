@@ -1,13 +1,12 @@
 package com.biomatters.plugins.biocode.server.security;
 
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
-import com.biomatters.plugins.biocode.server.security.LimsDatabaseConstants;
-import com.biomatters.plugins.biocode.server.security.User;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import javax.sql.DataSource;
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
@@ -24,7 +23,7 @@ import java.util.List;
  */
 @Path("users")
 public class Users {
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     /**
      * @return The current logged in {@link com.biomatters.plugins.biocode.server.security.User}
@@ -40,7 +39,7 @@ public class Users {
     }
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     public Response list() {
         Connection connection = null;
         try {
@@ -86,7 +85,7 @@ public class Users {
     }
 
     @GET
-    @Produces("application/json")
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     @Path("{username}")
     public User getUser(@PathParam("username")String username) {
         User user = getUserForUsername(username);
@@ -162,11 +161,15 @@ public class Users {
 
     @POST
     @Produces("text/plain")
-    @Consumes("application/json")
+    @Consumes({"application/json", "application/xml"})
     public String addUser(User user) {
+        return addUser(LIMSInitializationListener.getDataSource(), user);
+    }
+
+    static String addUser(DataSource dataSource, User user) {
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
 
             SqlUtilities.beginTransaction(connection);
 
@@ -214,7 +217,7 @@ public class Users {
     @PUT
     @Path("{username}")
     @Produces("text/plain")
-    @Consumes("application/json")
+    @Consumes({"application/json", "application/xml"})
     public String updateUser(@PathParam("username")String username, User user) {
         Connection connection = null;
         try {
@@ -224,7 +227,7 @@ public class Users {
 
             String updateUserQuery = "UPDATE " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
                                      "SET "    + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
-                                                (user.password == null ? "" : LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + "=?, ") +
+                                                 (user.password == null ? "" : LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + "=?, ") +
                                                  LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
                                                  LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + "=?, " +
                                                  LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + "=?, "  +
@@ -237,7 +240,6 @@ public class Users {
             statement.setObject(i++, user.username);
             if (user.password != null)
                 statement.setObject(i++, encoder.encode(user.password));
-
             statement.setObject(i++, user.firstname);
             statement.setObject(i++, user.lastname);
             statement.setObject(i++, user.email);

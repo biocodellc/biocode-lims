@@ -18,7 +18,6 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
-import org.apache.commons.dbcp.BasicDataSource;
 
 import javax.sql.DataSource;
 import java.lang.reflect.InvocationTargetException;
@@ -133,6 +132,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     public void disconnect() {
+        try {
+            Class dataSourceClass = dataSource.getClass();
+            dataSourceClass.getDeclaredMethod("close").invoke(dataSource);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
         if(legacyConnection != null) {
@@ -237,7 +243,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 for (String toCheckAgainst : required) {
                     if(url.toString().contains(toCheckAgainst)) {
                         urlsOfJar.add(url);
-                        System.out.println("XXXXXXXXXXXXXXXX" + url + "XXXXXXXXXXXXXXXXX");
                     }
                 }
             }
@@ -476,7 +481,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             System.out.print("\t");
             SqlUtilities.printSql(workflowQuery.toString(), sqlValues);
             preparedStatement = connection.prepareStatement(workflowQuery.toString());
-            fillStatement(sqlValues, preparedStatement);
+            SqlUtilities.fillStatement(sqlValues, preparedStatement);
 
             long start = System.currentTimeMillis();
             ResultSet resultSet = preparedStatement.executeQuery();
@@ -538,7 +543,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         try {
             connection = getConnection();
             getCount = connection.prepareStatement(countingQuery.toString());
-            fillStatement(plateIds, getCount);
+            SqlUtilities.fillStatement(plateIds, getCount);
             SqlUtilities.printSql(countingQuery.toString(), plateIds);
             System.out.println("Running trace counting query:");
             System.out.print("\t");
@@ -1108,7 +1113,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 SqlUtilities.printSql(workflowQueryString, workflowIds);
 
                 selectWorkflow = connection.prepareStatement(workflowQueryString);
-                fillStatement(new ArrayList<Object>(workflowIds), selectWorkflow);
+                SqlUtilities.fillStatement(new ArrayList<Object>(workflowIds), selectWorkflow);
 
                 long start = System.currentTimeMillis();
                 ResultSet workflowsSet = selectWorkflow.executeQuery();
@@ -1166,7 +1171,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 SqlUtilities.printSql(plateQueryString, plateIds);
 
                 selectPlate = connection.prepareStatement(plateQueryString);
-                fillStatement(new ArrayList<Object>(plateIds), selectPlate);
+                SqlUtilities.fillStatement(new ArrayList<Object>(plateIds), selectPlate);
 
                 long start = System.currentTimeMillis();
                 ResultSet plateSet = selectPlate.executeQuery();
@@ -1590,7 +1595,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             sql.append(" AND workflow.id = assembly.workflow INNER JOIN extraction ON workflow.extractionId = extraction.id");
 
             statement = connection.prepareStatement(sql.toString());
-            fillStatement(sqlValues, statement);
+            SqlUtilities.fillStatement(sqlValues, statement);
             SqlUtilities.printSql(sql.toString(), sqlValues);
             if (!isLocal()) {
                 statement.setFetchSize(Integer.MIN_VALUE);
@@ -1649,27 +1654,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             seq.date = created.getTime();
         }
         return seq;
-    }
-
-    private void fillStatement(List<Object> sqlValues, PreparedStatement statement) throws SQLException {
-        for (int i = 0; i < sqlValues.size(); i++) {
-            Object o = sqlValues.get(i);
-            if (o == null) {
-                statement.setNull(i + 1, Types.JAVA_OBJECT);
-            } else if (Integer.class.isAssignableFrom(o.getClass())) {
-                statement.setInt(i + 1, (Integer) o);
-            } else if (Double.class.isAssignableFrom(o.getClass())) {
-                statement.setDouble(i + 1, (Double) o);
-            } else if (String.class.isAssignableFrom(o.getClass())) {
-                statement.setString(i + 1, o.toString().toLowerCase());
-            } else if (Date.class.isAssignableFrom(o.getClass())) {
-                statement.setDate(i + 1, new java.sql.Date(((Date) o).getTime()));
-            } else if (Boolean.class.isAssignableFrom(o.getClass())) {
-                statement.setBoolean(i + 1, (Boolean) o);
-            } else {
-                throw new SQLException("You have a field parameter with an invalid type: " + o.getClass().getCanonicalName());
-            }
-        }
     }
 
     private List<? extends Query> removeFields(List<? extends Query> queries, List<String> codesToIgnore) {

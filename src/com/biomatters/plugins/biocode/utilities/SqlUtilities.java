@@ -332,6 +332,27 @@ public class SqlUtilities {
         return new QueryTermSurrounder(prepend, append, join);
     }
 
+    public static void fillStatement(List<Object> sqlValues, PreparedStatement statement) throws SQLException {
+        for (int i = 0; i < sqlValues.size(); i++) {
+            Object o = sqlValues.get(i);
+            if (o == null) {
+                statement.setNull(i + 1, Types.JAVA_OBJECT);
+            } else if (Integer.class.isAssignableFrom(o.getClass())) {
+                statement.setInt(i + 1, (Integer) o);
+            } else if (Double.class.isAssignableFrom(o.getClass())) {
+                statement.setDouble(i + 1, (Double) o);
+            } else if (String.class.isAssignableFrom(o.getClass())) {
+                statement.setString(i + 1, o.toString().toLowerCase());
+            } else if (Date.class.isAssignableFrom(o.getClass())) {
+                statement.setDate(i + 1, new java.sql.Date(((Date) o).getTime()));
+            } else if (Boolean.class.isAssignableFrom(o.getClass())) {
+                statement.setBoolean(i + 1, (Boolean) o);
+            } else {
+                throw new SQLException("You have a field parameter with an invalid type: " + o.getClass().getCanonicalName());
+            }
+        }
+    }
+
     public static class QueryTermSurrounder {
         private final String prepend, append, join;
 

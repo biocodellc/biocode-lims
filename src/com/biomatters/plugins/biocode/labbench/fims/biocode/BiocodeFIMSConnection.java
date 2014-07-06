@@ -3,14 +3,19 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.TissueDocument;
+import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsSample;
+import org.jdom.Element;
 
 import javax.ws.rs.core.Form;
+import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.util.*;
@@ -44,7 +49,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     private Map<String, SoftReference<FimsSample>> cachedSamples = new HashMap<String, SoftReference<FimsSample>>();
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query) throws ConnectionException {
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         // Ideally we wouldn't want to pull down the full sample straight away.  But the new Biocode FIMS always returns
         // every column for a sample.  So we'll cache the samples so at least we might not need to download it again.
 
@@ -90,13 +95,26 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     private List<FimsSample> getFimsSamplesBySearch(Graph graph, Form form, StringBuilder filterText) throws ConnectionException {
         List<FimsSample> samples = new ArrayList<FimsSample>();
+        if (BiocodeService.getInstance().isQueryCancled())
+            return samples;
+
         try {
             BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graph,
                     form, filterText == null || filterText.length() == 0 ? null : filterText.toString());
-            for (Row row : data.data) {
-                TableFimsSample sample = getFimsSampleForRow(data.header, row);
-                samples.add(sample);
-                cachedSamples.put(sample.getId(), new SoftReference<FimsSample>(sample));
+
+            if (data.data.size() == 0) {
+                if (form != null && form.asMap() != null && form.asMap().get(getTissueCol()) != null) {
+                    MultivaluedMap<String,String> map = form.asMap();
+                    for (String id : map.get(getTissueCol())) {
+                        cachedSamples.put(id, new SoftReference<FimsSample>(dummySample));
+                    }
+                }
+            } else {
+                for (Row row : data.data) {
+                    TableFimsSample sample = getFimsSampleForRow(data.header, row);
+                    samples.add(sample);
+                    cachedSamples.put(sample.getId(), new SoftReference<FimsSample>(sample));
+                }
             }
         } catch (DatabaseServiceException e) {
             throw new ConnectionException(e.getMessage(), e);
@@ -150,11 +168,14 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 sample = cachedResult.get();
             }
             TissueDocument tissueDoc;
-            if (sample != null) {
+            if (sample == dummySample) {
+                tissueDoc = null;
+            } else if (sample != null) {
                 tissueDoc = new TissueDocument(sample);
-            } else {
+            } else  {
                 tissueDoc = downloadTissueDocument(expeditionTitle, tissueId);
             }
+
             if(tissueDoc != null) {
                 if (callback != null) {
                     callback.add(tissueDoc, Collections.<String, Object>emptyMap());
@@ -205,12 +226,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public int getTotalNumberOfSamples() throws ConnectionException {
-        return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery()).size();
-    }
-
-    @Override
-    public boolean requiresMySql() {
-        return false;
+        return getTissueIdsMatchingQuery(Query.Factory.createBrowseQuery(), null).size();
     }
 
 
@@ -248,7 +264,6 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public void _disconnect() {
-        project = null;
     }
 
     @Override
@@ -260,4 +275,59 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         }
         return fields;
     }
+
+    // Projects are not implemented for the new Biocode FIMS yet because we can't identify which project or expedition a sample comes from.
+    // In a future update the author, John Deck, plans to add this information.  At that time we can implement it.
+
+    @Override
+    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyList();  // Currently can't identify projects from samples?  What are we doing about expedition name?
+    }
+
+    @Override
+    protected List<List<String>> getProjectLists() throws DatabaseServiceException {
+        // What should we do here?  Ask John Deck?
+        // Project
+        //  |- Expedition
+        // OR
+        // Expedition
+        return Collections.emptyList();  // We can probably get this from the service
+    }
+
+    private FimsSample dummySample = new FimsSample() {
+        @Override
+        public String getId() {
+            return null;
+        }
+
+        @Override
+        public String getSpecimenId() {
+            return null;
+        }
+
+        @Override
+        public List<DocumentField> getFimsAttributes() {
+            return null;
+        }
+
+        @Override
+        public List<DocumentField> getTaxonomyAttributes() {
+            return null;
+        }
+
+        @Override
+        public Object getFimsAttributeValue(String attributeName) {
+            return null;
+        }
+
+        @Override
+        public Element toXML() {
+            return null;
+        }
+
+        @Override
+        public void fromXML(Element element) throws XMLSerializationException {
+
+        }
+    };
 }

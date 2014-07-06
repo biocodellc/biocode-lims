@@ -1,17 +1,19 @@
 package com.biomatters.plugins.biocode.server.security;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 import javax.sql.DataSource;
 import javax.ws.rs.*;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 
 /**
@@ -72,6 +74,7 @@ public class Projects {
             if(project == null) {
                 project = new Project();
                 project.id = projectId;
+                project.globalId = resultSet.getString("external_id");
                 project.description = resultSet.getString("description");
                 project.name = resultSet.getString("name");
                 project.parentProjectId = resultSet.getInt("parent");
@@ -92,24 +95,17 @@ public class Projects {
     @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     @Path("{id}")
     public Project getForId(@PathParam("id")int id) {
-        return getProjectForId(id);
+        return getProjectForId(LIMSInitializationListener.getDataSource(), id);
     }
 
-    static Project getProjectForId(int id) {
-        List<Project> projectList = getProjectsForId(LIMSInitializationListener.getDataSource(), id);
+    static Project getProjectForId(DataSource dataSource, int id) {
+        List<Project> projectList = getProjectsForId(dataSource, id);
         if(projectList.isEmpty()) {
             throw new NotFoundException("No project for id " + id);
         } else {
             assert(projectList.size() == 1);
             return projectList.get(0);
         }
-    }
-
-    @POST
-    @Consumes({"application/json", "application/xml"})
-    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
-    public Project add(Project project) {
-        return addProject(LIMSInitializationListener.getDataSource(), project);
     }
 
     static Project addProject(DataSource dataSource, Project project) {
@@ -129,11 +125,16 @@ public class Projects {
                 resultSet.close();
             }
 
-            PreparedStatement insert = connection.prepareStatement("INSERT INTO project(id,name,description,parent) VALUES(?,?,?,?)");
+            PreparedStatement insert = connection.prepareStatement("INSERT INTO project(id,external_id,name,description,parent) VALUES(?,?,?,?,?)");
             insert.setObject(1, project.id);
-            insert.setObject(2, project.name);
-            insert.setObject(3, project.description);
-            insert.setObject(4, project.parentProjectId);
+            insert.setObject(2, project.globalId);
+            insert.setObject(3, project.name);
+            insert.setObject(4, project.description);
+            if(project.parentProjectId == -1) {
+                insert.setNull(5, Types.INTEGER);
+            } else {
+                insert.setObject(5, project.parentProjectId);
+            }
             int inserted = insert.executeUpdate();
             if(inserted > 1) {
                 throw new InternalServerErrorException("Inserted " + inserted + " projects instead of just 1.  Transaction rolled back");
@@ -167,12 +168,6 @@ public class Projects {
                 throw new InternalServerErrorException("Failed to insert project roles.");
             }
         }
-    }
-
-    @DELETE
-    @Path("{id}")
-    public void delete(@PathParam("id")int id) {
-        deleteProject(LIMSInitializationListener.getDataSource(), id);
     }
 
     static void deleteProject(DataSource dataSource, int id) {
@@ -218,7 +213,11 @@ public class Projects {
             );
             update.setObject(1, project.name);
             update.setObject(2, project.description);
-            update.setObject(3, project.parentProjectId);
+            if(project.parentProjectId == -1) {
+                update.setNull(3, Types.INTEGER);
+            } else {
+                update.setObject(3, project.parentProjectId);
+            }
             update.setObject(4, project.id);
             int updated = update.executeUpdate();
             if(updated > 1) {
@@ -283,7 +282,11 @@ public class Projects {
     @Consumes({"application/json", "application/xml"})
     @Path("{id}/roles/{username}")
     public void setRole(@PathParam("id") int projectId, @PathParam("username") String username, Role role) {
-        Project project = getForId(projectId);
+        setProjectRoleForUsername(LIMSInitializationListener.getDataSource(), projectId, username, role);
+    }
+
+    static void setProjectRoleForUsername(DataSource dataSource, int projectId, String username, Role role) {
+        Project project = getProjectForId(dataSource, projectId);
         Role current = null;
         for (Map.Entry<User, Role> entry : project.userRoles.entrySet()) {
             if(entry.getKey().username.equals(username)) {
@@ -301,7 +304,7 @@ public class Projects {
         }
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
             SqlUtilities.beginTransaction(connection);
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setObject(1, role.id);
@@ -322,9 +325,14 @@ public class Projects {
     @DELETE
     @Path("{id}/roles/{username}")
     public void deleteRole(@PathParam("id")int projectId, @PathParam("username")String username) {
+        DataSource dataSource = LIMSInitializationListener.getDataSource();
+        removeUserFromProject(dataSource, projectId, username);
+    }
+
+    static void removeUserFromProject(DataSource dataSource, int projectId, String username) {
         Connection connection = null;
         try {
-            connection = LIMSInitializationListener.getDataSource().getConnection();
+            connection = dataSource.getConnection();
             SqlUtilities.beginTransaction(connection);
             clearProjectRoles(connection, projectId, username);
             SqlUtilities.commitTransaction(connection);
@@ -333,5 +341,103 @@ public class Projects {
         } finally {
             SqlUtilities.closeConnection(connection);
         }
+    }
+
+    public static void updateProjectsFromFims(DataSource dataSource, FIMSConnection fimsConnection) throws DatabaseServiceException {
+        Multimap<String, String> parentToChildren = ArrayListMultimap.create();
+        Map<String, Project> toAddToLims = new HashMap<String, Project>();
+        List<FimsProject> fromFims = fimsConnection.getProjects();
+        for (FimsProject toAdd : fromFims) {
+            Project limsProjectToAdd = new Project();
+            limsProjectToAdd.name = toAdd.getName();
+            limsProjectToAdd.globalId = toAdd.getId();
+            toAddToLims.put(limsProjectToAdd.globalId, limsProjectToAdd);
+            FimsProject parent = toAdd.getParent();
+            parentToChildren.put(parent == null ? null : parent.getId(), toAdd.getId());
+        }
+
+        List<Project> projectsInDatabase = getProjectsForId(dataSource);
+        Map<String, Project> projects = new HashMap<String, Project>();
+        for (Project project : projectsInDatabase) {
+            projects.put(project.globalId, project);
+        }
+        try {
+            updateProjectHierarchy(null, dataSource, projects, toAddToLims, parentToChildren.asMap());
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, "Failed to update projects: " + e.getMessage(), false);
+        }
+    }
+
+    private static void updateProjectHierarchy(Project parent, DataSource dataSource, Map<String, Project> projectsInLims, Map<String, Project> projectsToAddFromFims, Map<String, Collection<String>> parentsToChildren) {
+        Collection<String> toAdd = parentsToChildren.get(parent == null ? null : parent.globalId);
+
+        if(toAdd != null) {
+            int idOfParent = parent == null ? -1 : parent.id;
+            for (String id : toAdd) {
+                Project child = projectsToAddFromFims.get(id);
+                Project inDatabase = projectsInLims.get(id);
+                if (inDatabase == null) {
+                    child.parentProjectId = idOfParent;
+                    inDatabase = Projects.addProject(dataSource, child);
+                } else {
+                    boolean needsUpdating = false;
+                    if (idOfParent != inDatabase.parentProjectId) {
+                        inDatabase.parentProjectId = idOfParent;
+                        needsUpdating = true;
+                    }
+                    if (!child.name.equals(inDatabase.name)) {
+                        inDatabase.name = child.name;
+                        needsUpdating = true;
+                    }
+                    if (needsUpdating) {
+                        Projects.updateProject(dataSource, inDatabase);
+                    }
+                }
+                updateProjectHierarchy(inDatabase, dataSource, projectsInLims, projectsToAddFromFims, parentsToChildren);
+            }
+        }
+
+        for (Map.Entry<String, Project> entry : projectsInLims.entrySet()) {
+            if(!projectsToAddFromFims.containsKey(entry.getKey())) {
+                Projects.deleteProject(dataSource, entry.getValue().id);
+            }
+        }
+    }
+
+    /**
+     *
+     * @param fimsConnection The connection to use to get {@link com.biomatters.plugins.biocode.labbench.fims.FimsProject} from.
+     * @param user The user account that is attempting to retreive data.
+     * @param role The role to check for.
+     * @return A list of {@link FimsProject}s that the specified user is allowed to view.  Or null if there are no projects in the system.
+     */
+    public static List<FimsProject> getFimsProjectsUserHasAtLeastRole(DataSource dataSource, FIMSConnection fimsConnection, User user, Role role) throws DatabaseServiceException {
+        List<FimsProject> projectsFromFims = fimsConnection.getProjects();
+        if(projectsFromFims.isEmpty()) {
+            return null;
+        }
+        if(role == null) {
+            return projectsFromFims;
+        }
+        if(user.isAdministrator) {
+            return projectsFromFims;
+        }
+        List<Project> projectsInLims = Projects.getProjectsForId(dataSource);
+        Map<String, Role> roleById = new HashMap<String, Role>();
+        for (Project p : projectsInLims) {
+            try {
+                roleById.put(p.globalId, p.getRoleForUser(dataSource, user));
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e, "Failed to retrieve project role: " + e.getMessage(), false);
+            }
+        }
+        List<FimsProject> toReturn = new ArrayList<FimsProject>();
+        for (FimsProject candidate : projectsFromFims) {
+            Role roleInProject = roleById.get(candidate.getId());
+            if(roleInProject != null && roleInProject.isAtLeast(role)) {
+                toReturn.add(candidate);
+            }
+        }
+        return toReturn;
     }
 }

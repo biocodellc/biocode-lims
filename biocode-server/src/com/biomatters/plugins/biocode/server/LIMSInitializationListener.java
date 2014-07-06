@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.*;
+import com.biomatters.plugins.biocode.server.security.Projects;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
@@ -22,6 +23,7 @@ import javax.ws.rs.ProcessingException;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Responsible for making the various LIMS connections on start up
@@ -104,6 +106,8 @@ public class LIMSInitializationListener implements ServletContextListener {
             } else {
                 throw new IllegalStateException("LIMSConnection was not a SqlLimsConnection.  Was " + limsConnection.getClass());
             }
+
+            startProjectPopulatingThread();
         } catch (IOException e) {
             initializationErrors.add(new IntializationError("Configuration Error",
                     "Failed to load properties file from " + connectionPropertiesFile.getAbsolutePath() + ": " + e.getMessage()));
@@ -117,7 +121,38 @@ public class LIMSInitializationListener implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
-        // todo
+        stopProjectPopulatingThread();
+        BiocodeService.getInstance().logOut();
+    }
+
+    private long TIME_BETWEEN_NEW_PROJECT_CHECK = 60 * 1000;
+    private AtomicBoolean updatingProjects = new AtomicBoolean(false);
+    private void startProjectPopulatingThread() {
+        updatingProjects.set(true);
+        Runnable runnable = new Runnable() {
+            public void run() {
+                int failureCount = 0;
+                while (updatingProjects.get()) {
+                    try {
+                        Projects.updateProjectsFromFims(dataSource, fimsConnection);
+                    } catch (DatabaseServiceException e) {
+                        System.err.println(e.getMessage());
+                        e.printStackTrace();
+                        failureCount++;
+                        if(failureCount > 10) {
+                            System.err.println("Made 10 failed attempts to update projects.  Giving up.");
+                            updatingProjects.set(false);
+                        }
+                    }
+                    ThreadUtilities.sleep(TIME_BETWEEN_NEW_PROJECT_CHECK);
+                }
+            }
+        };
+        new Thread(runnable).start();
+    }
+
+    private void stopProjectPopulatingThread() {
+        updatingProjects.set(false);
     }
 
     public static File getPropertiesFile() {
@@ -240,23 +275,46 @@ public class LIMSInitializationListener implements ServletContextListener {
             throw new MissingPropertyException("fims.tissueId", "fims.specimenId");
         }
 
-        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TISSUE_ID, tissueId);
-        setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.SPECIMEN_ID, specimenId);
+        setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.TISSUE_ID, tissueId);
+        setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.SPECIMEN_ID, specimenId);
         String plate = config.getProperty("fims.plate");
         String well = config.getProperty("fims.well");
         if (plate != null && well != null) {
-            fimsOptions.setValue(MySqlFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_WELL, well);
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.PLATE_NAME, plate);
+            fimsOptions.setValue(TableFimsConnectionOptions.STORE_PLATES, Boolean.TRUE);
+            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PLATE_WELL, well);
+            setFimsOptionBasedOnLabel(fimsOptions, TableFimsConnectionOptions.PLATE_NAME, plate);
         }
-        int index = 0;
-        String taxonField = config.getProperty("fims.taxon." + index);
-        while (taxonField != null) {
-            setFimsOptionBasedOnLabel(fimsOptions, MySqlFimsConnectionOptions.TAX_FIELDS + "." + index + "." +
-                    MySqlFimsConnectionOptions.TAX_COL, taxonField);
-            index++;
-            taxonField = config.getProperty("fims.taxon." + index);
+        setMultipleOptionsFromConfig(config, "fims.taxon.", fimsOptions, TableFimsConnectionOptions.TAX_FIELDS, TableFimsConnectionOptions.TAX_COL);
+        boolean enableProjects = setMultipleOptionsFromConfig(config, "fims.project.", fimsOptions, TableFimsConnectionOptions.PROJECT_FIELDS, TableFimsConnectionOptions.PROJECT_COLUMN);
+        fimsOptions.setValue(TableFimsConnectionOptions.STORE_PROJECTS, enableProjects);
+    }
+
+    private boolean setMultipleOptionsFromConfig(Properties config, String configKey, PasswordOptions fimsOptions, String multipleOptionsName, String optionNameToSet) {
+        // Get the refernce to the first Option in the MultipleOptions.  The rest will not have been instantiated yet.
+        Options.Option firstOption = fimsOptions.getOption(multipleOptionsName + "." + 0 + "." +
+                            optionNameToSet);
+        if (firstOption == null) {
+            return false;
         }
+        if (!(firstOption instanceof Options.ComboBoxOption)) {
+            throw new IllegalStateException("Unexpected Option, expected ComboBoxOption but was " + firstOption.getClass().getSimpleName());
+        }
+
+        boolean setSomething = false;
+        int optionIndex = 0;
+        String valueToSet = config.getProperty(configKey + optionIndex);
+        while (valueToSet != null) {
+            setSomething = true;
+            @SuppressWarnings("unchecked") Options.ComboBoxOption<Options.OptionValue> comboBoxOption = (Options.ComboBoxOption<Options.OptionValue>) firstOption;
+            for (Options.OptionValue optionValue : comboBoxOption.getPossibleOptionValues()) {
+                if (optionValue.getLabel().equals(valueToSet)) {
+                    fimsOptions.setValue(multipleOptionsName + "." + optionIndex + "." + optionNameToSet, optionValue);
+                }
+            }
+            optionIndex++;
+            valueToSet = config.getProperty(configKey + optionIndex);
+        }
+        return setSomething;
     }
 
     private void setFimsOptionBasedOnLabel(PasswordOptions fimsOptions, String optionName, String labelToLookFor) {
