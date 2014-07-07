@@ -453,7 +453,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             throw new DocumentOperationException("Failed to mark as pass/fail in LIMS: " + e.getMessage(), e);
         }
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
-            int savedSeqId = seqIds.get(annotatedDocument.getURN());
+            int savedSeqId = 0;
+            try {
+                savedSeqId = seqIds.get(annotatedDocument.getURN());
+            } catch (NullPointerException e) {
+                throw new DocumentOperationException(e.getMessage(), e);
+            }
             annotatedDocument.setFieldValue(LIMSConnection.SEQUENCE_ID, savedSeqId);
             annotatedDocument.save();
         }
