@@ -181,7 +181,7 @@
         </javac>
     </target>
 
-    <target name="server-test" depends="compile-server-tests, retrieve-server-dependencies">
+    <target name="server-test" depends="compile-server-tests">
         <junit dir="GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
             <batchtest todir="${report}">
                 <fileset dir="${server-test.classes}">
