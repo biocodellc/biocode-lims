@@ -268,6 +268,7 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
             tmpUser.password = $('#passinput')[0].value;
             $http.put(usersUrl + '/' + $scope.user.username, tmpUser).success(function(){
                 alert('password update sucessfull');
+                $scope.toggleModal();
             });
         }
 
