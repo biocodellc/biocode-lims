@@ -334,12 +334,6 @@ biocodeControllers.controller('aboutCtrl', ['$scope',
         $('li#about').attr('class', 'active');
     }]);
 
-biocodeControllers.controller('contactCtrl', ['$scope',
-    function($scope) {
-        $('.navbar-nav li').attr('class', '');
-        $('li#contact').attr('class', 'active');
-    }]);
-
 biocodeControllers.controller('homeCtrl', ['$scope', '$http',
     function($scope, $http) {
         $('.navbar-nav li').attr('class', '');
