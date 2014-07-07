@@ -37,13 +37,15 @@
     text-align: right;
 }
 
-.userinforow .table > tbody > tr > td:first-child {
+.userinforow .table > tbody > tr > td:first-child,
+.password-row .table > tbody > tr > td:first-child {
     border-top: none;
-    width: 100px;
+    width: 150px;
     text-align: right;
 }
 
-.userinforow .table > tbody > tr > td:last-child {
+.userinforow .table > tbody > tr > td:last-child,
+.password-row .table > tbody > tr > td:last-child {
     border-top: none;
     text-align: left;
 }
@@ -76,6 +78,14 @@
     margin-left: 15px;
     width: inherit;
     float: left;
+}
+
+.pass-dialog input {
+    width: 80%;
+}
+
+.pass-dialog button {
+    margin: 0;
 }
 
 

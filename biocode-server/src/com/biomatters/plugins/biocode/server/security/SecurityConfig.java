@@ -116,9 +116,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
-            .authorizeRequests().antMatchers("/biocode/**")
-                .authenticated()
-                .and()
+            .authorizeRequests()
+                .antMatchers("/biocode/projects/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
+                .antMatchers("/biocode/users/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
+                .antMatchers("/biocode/info/**").permitAll()
+                .antMatchers("/biocode/**").authenticated()
+                .anyRequest().permitAll()
+            .and()
             .httpBasic();
     }
 }

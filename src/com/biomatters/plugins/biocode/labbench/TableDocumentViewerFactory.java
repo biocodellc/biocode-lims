@@ -236,6 +236,9 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
             SimpleListener changeListener = new SimpleListener(){
                 public void objectChanged() {
                     internalModel = getTableModel(annotatedDocuments, options);
+                    if (internalModel == null) {
+                        return;
+                    }
                     JComponent component = createComponent(internalModel);
                     panel.removeAll();
                     JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));

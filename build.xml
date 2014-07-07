@@ -181,7 +181,7 @@
         </javac>
     </target>
 
-    <target name="server-test" depends="compile-server-tests, retrieve-server-dependencies">
+    <target name="server-test" depends="compile-server-tests">
         <junit dir="GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
             <batchtest todir="${report}">
                 <fileset dir="${server-test.classes}">
@@ -197,7 +197,7 @@
                 <pathelement location="${server-test.classes}"/>
                 <pathelement location="${GeneiousFiles}/resources"/>
                 <pathelement location="${GeneiousFiles}/bundledPlugins"/>
-                <path refid="classpath"/>
+                <path refid="server-classpath"/>
             </classpath>
             <env key="DISPLAY" value="0.0"/>
             <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>

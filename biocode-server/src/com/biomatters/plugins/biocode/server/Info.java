@@ -66,4 +66,18 @@ public class Info {
             return principal.toString();
         }
     }
+
+    @Produces("text/plain")
+    @GET
+    @Path("errors")
+    public String getErrors() {
+        String errors = LIMSInitializationListener.getErrorText();
+        if(errors != null) {
+            return "<p>The server configuration file is located at: " +
+                    LIMSInitializationListener.getPropertiesFile().getAbsolutePath() + "</p>" +
+                    "<p>Please report any errors to support@mooreabiocode.org</p>" +
+                    "<p>" + errors + "</p>";
+        }
+        return "";
+    }
 }

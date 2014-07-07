@@ -3,7 +3,7 @@
         <table class="table" border="0">
             <tbody>
             <tr>
-                <td>Name</td>
+                <td>Username</td>
                 <td><input type="text" id="username" ng-model="user.username"></td>
             </tr>
             <tr>
@@ -20,7 +20,20 @@
             </tr>
             <tr>
                 <td>Password</td>
-                <td><input type="text" id="password" ng-model="user.password"></td>
+                <td><input type="password" id="password" ng-model="user.password"></td>
+            </tr>
+            <tr>
+                <td>Confirm password</td>
+                <td><input type="password" id="re-password" ng-model="verify"></td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <label style="color: red" ng-show="verify != user.password">These passwords don't match. Try again?</label>
+                </td>
+            </tr>
+            <tr>
+                <td>Is Admin</td>
+                <td><input type="checkbox" ng-model="user.isAdministrator"></td>
             </tr>
             </tbody>
         </table>
