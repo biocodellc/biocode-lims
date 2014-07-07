@@ -1,10 +1,11 @@
 /**
  * Created by frank on 24/06/14.
  */
+var errorUrl = "biocode/info/errors";
 var projectsUrl = "biocode/projects";
 var usersUrl = "biocode/users";
 var rolesUrl = "biocode/roles";
-var usersPage = "#/users"
+var usersPage = "#/users";
 var projectMap = null;
 var projects = null;
 
@@ -337,4 +338,14 @@ biocodeControllers.controller('contactCtrl', ['$scope',
     function($scope) {
         $('.navbar-nav li').attr('class', '');
         $('li#contact').attr('class', 'active');
+    }]);
+
+biocodeControllers.controller('homeCtrl', ['$scope', '$http',
+    function($scope, $http) {
+        $('.navbar-nav li').attr('class', '');
+        $('li#home').attr('class', 'active');
+
+        $http.get(errorUrl).success(function (data) {
+            $('div.errors').html(data);
+        });
     }]);

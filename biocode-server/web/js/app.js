@@ -111,7 +111,11 @@ biocodeApp.config(['$routeProvider', 'ngModalDefaultsProvider',
                 templateUrl: 'partials/contact.html',
                 controller: 'contactCtrl'
             }).
+            when('/home', {
+                templateUrl: 'partials/home.html',
+                controller: 'homeCtrl'
+            }).
             otherwise({
-                redirectTo: '/projects'
+                redirectTo: '/home'
             });
     }]);
