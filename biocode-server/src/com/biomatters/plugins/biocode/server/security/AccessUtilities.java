@@ -32,13 +32,13 @@ public class AccessUtilities {
     }
 
     public static void checkUserHasRoleForSamples(Collection<FimsSample> samples, Role role) throws DatabaseServiceException {
-        List<String> projectIds = LIMSInitializationListener.getFimsConnection().getProjectsForSamples(samples);
+        Map<String, Collection<FimsSample>> projectMap = LIMSInitializationListener.getFimsConnection().getProjectsForSamples(samples);
         List<FimsProject> projectsUserCanWriteTo = Projects.getFimsProjectsUserHasAtLeastRole(
                 LIMSInitializationListener.getDataSource(),
                 LIMSInitializationListener.getFimsConnection(),
                 Users.getLoggedInUser(), role);
 
-        for (String projectId : projectIds) {
+        for (String projectId : projectMap.keySet()) {
             boolean found = false;
             for (FimsProject fimsProject : projectsUserCanWriteTo) {
                 if(fimsProject.getId().equals(projectId)) {

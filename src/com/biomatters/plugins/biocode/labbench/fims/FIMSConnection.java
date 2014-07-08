@@ -88,7 +88,7 @@ public abstract class FIMSConnection {
      *
      * @return The names of the projects for the specified samples.
      */
-    public abstract List<String> getProjectsForSamples(Collection<FimsSample> samples);
+    public abstract Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples);
 
     /**
      * @return A list of all projects in the system.

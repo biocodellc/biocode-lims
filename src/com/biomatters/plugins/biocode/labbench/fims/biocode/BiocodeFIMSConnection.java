@@ -282,8 +282,8 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     // In a future update the author, John Deck, plans to add this information.  At that time we can implement it.
 
     @Override
-    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
-        return Collections.emptyList();  // Currently can't identify projects from samples?  What are we doing about expedition name?
+    public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyMap();  // Currently can't identify projects from samples?  What are we doing about expedition name?
     }
 
     @Override

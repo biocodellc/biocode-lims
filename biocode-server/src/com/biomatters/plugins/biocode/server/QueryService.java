@@ -1,10 +1,18 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PlateDocument;
+import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
-import com.biomatters.plugins.biocode.server.security.*;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
+import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.server.security.Projects;
+import com.biomatters.plugins.biocode.server.security.Role;
+import com.biomatters.plugins.biocode.server.security.User;
+import com.biomatters.plugins.biocode.server.security.Users;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 
 import javax.ws.rs.*;
@@ -33,34 +41,91 @@ public class QueryService {
                            @DefaultValue("true")  @QueryParam("showWorkflows") boolean showWorkflows,
                            @DefaultValue("true")  @QueryParam("showPlates") boolean showPlates,
                            @DefaultValue("false") @QueryParam("showSequenceIds") boolean showSequenceIds,
-                                                  @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException, ConnectionException {
-        try {
-            Set<String> tissueIdsToMatchSet;
-            if(tissueIdsToMatch == null) {
-                tissueIdsToMatchSet = getTissueIdsToMatchForUsersAccess();
-            } else {
-                tissueIdsToMatchSet = new HashSet<String>(Arrays.asList(tissueIdsToMatch.split(",")));
-            }
-            return Response.ok(RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatchSet)).build();
-        } catch (ConnectionException e) {
-            throw new InternalServerErrorException("Could not access FIMS: " + e.getMainMessage());
-        }
+                                                  @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException {
+
+        Set<String> tissueIdsToMatchSet = tissueIdsToMatch == null ? null : new HashSet<String>(Arrays.asList(tissueIdsToMatch.split(",")));
+        LimsSearchResult result = RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatchSet);
+        LimsSearchResult filteredResult = getPermissionsFilteredResult(result);
+        return Response.ok(filteredResult).build();
     }
 
-    private Set<String> getTissueIdsToMatchForUsersAccess() throws DatabaseServiceException, ConnectionException {
-        Set<String> tissueIdsToMatchSet;List<FimsProject> projectsUserHasAccessTo = Projects.getFimsProjectsUserHasAtLeastRole(
-                LIMSInitializationListener.getDataSource(),
-                LIMSInitializationListener.getFimsConnection(),
-                Users.getLoggedInUser(), Role.READER);
-        if(projectsUserHasAccessTo == null) {
-            tissueIdsToMatchSet = null;
-        } else {
-            tissueIdsToMatchSet = new HashSet<String>(
-                    LIMSInitializationListener.getFimsConnection().getTissueIdsMatchingQuery(
-                            Query.Factory.createBrowseQuery(), projectsUserHasAccessTo)
-            );
+    LimsSearchResult getPermissionsFilteredResult(LimsSearchResult result) throws DatabaseServiceException {
+        Set<String> sampleIds = new HashSet<String>();
+
+        for (FimsSample fimsSample : result.getTissueSamples()) {
+            sampleIds.add(fimsSample.getId());
         }
-        return tissueIdsToMatchSet;
+        for (WorkflowDocument workflowDocument : result.getWorkflows()) {
+            Reaction extraction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
+            if(extraction != null && extraction instanceof ExtractionReaction) {
+                sampleIds.add(((ExtractionReaction) extraction).getTissueId());
+            }
+        }
+        for (PlateDocument plateDocument : result.getPlates()) {
+            for (Reaction reaction : plateDocument.getPlate().getReactions()) {
+
+                FimsSample fimsSample = reaction.getFimsSample();
+                if(fimsSample != null) {
+//                    allSamples.add(fimsSample);
+                }
+            }
+        }
+        List<FimsSample> allSamples;
+        try {
+            allSamples = LIMSInitializationListener.getFimsConnection().retrieveSamplesForTissueIds(sampleIds);
+        } catch (ConnectionException e) {
+            throw new DatabaseServiceException(e, e.getMainMessage(), false);
+        }
+
+        LimsSearchResult filteredResult = new LimsSearchResult();
+        Set<String> readableSampleIds = getReadableSampleIds(Users.getLoggedInUser(), allSamples);
+        for (FimsSample sample : result.getTissueSamples()) {
+            if(readableSampleIds.contains(sample.getId())) {
+                filteredResult.addTissueSample(sample);
+            }
+        }
+        for (WorkflowDocument workflow : result.getWorkflows()) {
+            FimsSample sample = workflow.getFimsSample();
+            if(sample != null && readableSampleIds.contains(sample.getId())) {
+                filteredResult.addWorkflow(workflow);
+            }
+        }
+        for (PlateDocument plateDocument : result.getPlates()) {
+            boolean canReadCompletePlate = true;
+            for (Reaction reaction : plateDocument.getPlate().getReactions()) {
+                if(!readableSampleIds.contains(reaction.getFimsSample().getId())) {
+                    canReadCompletePlate = false;
+                }
+            }
+            if(canReadCompletePlate) {
+                result.addPlate(plateDocument);
+            }
+        }
+        return filteredResult;
+    }
+
+    /**
+     * @param user The user to check for
+     * @param allSamples A list of all {@link com.biomatters.plugins.biocode.labbench.FimsSample} to examine
+     * @return A list of IDs for samples of the supplied list that are readable
+     * @throws DatabaseServiceException if there is a problem communicating with the FIMS or LIMS
+     */
+    Set<String> getReadableSampleIds(User user, List<FimsSample> allSamples) throws DatabaseServiceException {
+        List<FimsProject> readableProjects = Projects.getFimsProjectsUserHasAtLeastRole(
+                LIMSInitializationListener.getDataSource(), LIMSInitializationListener.getFimsConnection(),
+                user, Role.READER);
+        Map<String, Collection<FimsSample>> mappedSamples = LIMSInitializationListener.getFimsConnection().getProjectsForSamples(allSamples);
+        Set<String> validSampleIds = new HashSet<String>();
+        for (Map.Entry<String, Collection<FimsSample>> entry : mappedSamples.entrySet()) {
+            for (FimsProject readableProject : readableProjects) {
+                if(readableProject.getId().equals(entry.getKey())) {
+                    for (FimsSample fimsSample : entry.getValue()) {
+                        validSampleIds.add(fimsSample.getId());
+                    }
+                }
+            }
+        }
+        return validSampleIds;
     }
 
     @GET

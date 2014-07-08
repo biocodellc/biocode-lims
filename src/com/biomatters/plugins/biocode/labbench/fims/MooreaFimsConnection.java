@@ -15,6 +15,8 @@ import java.io.InputStream;
 import java.io.IOException;
 
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import org.jdom.input.SAXBuilder;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -234,20 +236,22 @@ public class MooreaFimsConnection extends FIMSConnection{
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
 
-        queryBuilder.append("SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID AND ");
-
-        if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
-            queryBuilder.append(PROJECT_FIELD.getCode()).append(" IN ");
-            SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
-            queryBuilder.append(" AND ");
-        }
+        queryBuilder.append("SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID ");
 
         String sqlString = SqlUtilities.getQuerySQLString(query, getSearchAttributes(), true);
-        if(sqlString == null) {
+
+        if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
+            queryBuilder.append(" AND ");
+            queryBuilder.append(PROJECT_FIELD.getCode()).append(" IN ");
+            SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
+        } else if(sqlString == null) {
             return Collections.emptyList();
         }
-        queryBuilder.append(sqlString);
 
+        if(sqlString != null) {
+            queryBuilder.append(" AND ");
+            queryBuilder.append(sqlString);
+        }
 
         String queryString = queryBuilder.toString();
         PreparedStatement statement = null;
@@ -421,14 +425,14 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
-        Set<String> projects = new HashSet<String>();
+    public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
+        Multimap<String, FimsSample> projects = ArrayListMultimap.create();
         for (FimsSample sample : samples) {
             Object projectName = sample.getFimsAttributeValue(PROJECT_FIELD.getCode());
             if(projectName != null) {
-                projects.add(projectName.toString());
+                projects.put(projectName.toString(), sample);
             }
         }
-        return new ArrayList<String>(projects);
+        return projects.asMap();
     }
 }

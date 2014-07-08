@@ -269,7 +269,7 @@ public class ServerFimsConnection extends FIMSConnection {
     }
 
     @Override
-    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
+    public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
         throw new UnsupportedOperationException("This method should only be used in the Biocode Server");
     }
 }

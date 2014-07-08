@@ -273,8 +273,8 @@ public class TAPIRFimsConnection extends FIMSConnection{
     // Projects are currently unsupported in Tapir connections.  Have to check with John Deck if the DarwinCore standard
     // has a field for Project.
     @Override
-    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
-        return Collections.emptyList();
+    public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
+        return Collections.emptyMap();
     }
 
     @Override

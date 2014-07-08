@@ -272,15 +272,15 @@ public abstract class TableFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
-        Set<String> projectNames = new HashSet<String>();
+    public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
+        Multimap<String, FimsSample> projectNames = ArrayListMultimap.create();
         for (FimsSample sample : samples) {
             String project = getProjectForSample(sample);
             if(project != null) {
-                projectNames.add(project);
+                projectNames.put(project, sample);
             }
         }
-        return new ArrayList<String>(projectNames);
+        return projectNames.asMap();
     }
 
     private String getProjectForSample(FimsSample sample) {

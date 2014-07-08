@@ -359,8 +359,8 @@ public class ProjectsTest extends Assert {
         }
 
         @Override
-        public List<String> getProjectsForSamples(Collection<FimsSample> samples) {
-            return Collections.emptyList();
+        public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
+            return Collections.emptyMap();
         }
 
         @Override
