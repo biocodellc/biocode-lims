@@ -64,7 +64,11 @@
         <war destfile="${warfile}" webxml="${server-folder}/web/WEB-INF/web.xml">
             <webinf dir="${server-folder}/web/WEB-INF"/>
             <classes dir="${classes}"/>
-            <lib dir="${lib}"/>
+            <lib dir="${lib}">
+                <exclude name="GeneiousPublicAPI*.jar"/>
+                <exclude name="jdom*.jar"/>
+                <exclude name="jebl*.jar"/>
+            </lib>
             <lib dir="${server-lib}"/>
             <fileset dir="${server-folder}/web"/>
             <fileset dir="${server-lib}">
