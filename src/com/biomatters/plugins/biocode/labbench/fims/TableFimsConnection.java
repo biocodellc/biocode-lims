@@ -260,10 +260,20 @@ public abstract class TableFimsConnection extends FIMSConnection{
                 if(projectName.length() == 0) {
                     continue;  // Ignore empty string projects.  Probably a bug in implementation.
                 }
-                if (!projects.containsKey(projectName)) {
+                FimsProject project = projects.get(projectName);
+                if (project == null) {
                     FimsProject parent = projects.get(parentName);
                     projects.put(projectName,
                             new FimsProject(projectName, projectName, parent));
+                } else {
+                    // Verify existing project has the same parents
+                    FimsProject existingParent = project.getParent();
+                    String existingParentName = existingParent == null ? null : existingParent.getName();
+
+                    if(!String.valueOf(parentName).equals(String.valueOf(existingParentName))) {
+                        throw new DatabaseServiceException("Inconsistent project definition.  " +
+                                "Project " + projectName + " has multiple parents (" + existingParentName + ", " + parentName + ")", false);
+                    }
                 }
                 parentName = projectName;
             }

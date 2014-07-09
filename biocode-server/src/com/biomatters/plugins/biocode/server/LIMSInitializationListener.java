@@ -137,7 +137,7 @@ public class LIMSInitializationListener implements ServletContextListener {
                     try {
                         Projects.updateProjectsFromFims(dataSource, fimsConnection);
                     } catch (DatabaseServiceException e) {
-                        System.err.println(e.getMessage());
+                        System.err.println("Encountered problem updating projects from FIMS: " + e.getMessage());
                         e.printStackTrace();
                         failureCount++;
                         if(failureCount > 10) {
