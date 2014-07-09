@@ -101,6 +101,7 @@ public class QueryService {
                 filteredResult.addPlate(plateDocument);
             }
         }
+        filteredResult.addAllSequenceIDs(result.getSequenceIds());
         return filteredResult;
     }
 
