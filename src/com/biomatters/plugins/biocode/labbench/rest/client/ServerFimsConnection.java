@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
@@ -16,6 +17,7 @@ import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageReader;
 import com.biomatters.plugins.biocode.server.XMLSerializableMessageWriter;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.glassfish.jersey.filter.LoggingFilter;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
@@ -26,6 +28,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * @author Matthew Cheung
@@ -73,6 +76,7 @@ public class ServerFimsConnection extends FIMSConnection {
                 connetionOptions.getUsername(),
                 connetionOptions.getPassword());
         WebTarget server = ClientBuilder.newClient().
+                register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false)).
                 register(authFeature).
                 register(XMLSerializableMessageReader.class).
                 register(XMLSerializableMessageWriter.class).

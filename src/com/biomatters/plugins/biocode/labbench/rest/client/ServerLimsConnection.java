@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
@@ -14,6 +15,7 @@ import com.biomatters.plugins.biocode.server.*;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.glassfish.jersey.filter.LoggingFilter;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
@@ -28,6 +30,7 @@ import javax.ws.rs.core.Response;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * @author Matthew Cheung
@@ -55,6 +58,7 @@ public class ServerLimsConnection extends LIMSConnection {
         HttpAuthenticationFeature authFeature = HttpAuthenticationFeature.universal(
                 connectionOptions.getUsername(), connectionOptions.getPassword());
         target = ClientBuilder.newClient().
+                register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false)).
                 register(authFeature).
                 register(XMLSerializableMessageReader.class).
                 register(XMLSerializableMessageWriter.class).
@@ -490,13 +494,13 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public void testConnection() throws DatabaseServiceException {
-        try {
-            target.path("info").path("details").request(MediaType.TEXT_PLAIN_TYPE).get();
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+//        try {
+//            target.path("info").path("details").request(MediaType.TEXT_PLAIN_TYPE).get();
+//        } catch (WebApplicationException e) {
+//            throw new DatabaseServiceException(e, e.getMessage(), false);
+//        } catch (ProcessingException e) {
+//            throw new DatabaseServiceException(e, e.getMessage(), false);
+//        }
     }
 
     private static final String COCKTAILS = "cocktails";
