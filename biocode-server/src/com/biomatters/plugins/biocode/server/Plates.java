@@ -1,8 +1,14 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.PlateDocument;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
@@ -55,12 +61,24 @@ public class Plates {
     @Consumes("text/plain")
     @Path("{id}/name")
     public void renamePlate(@PathParam("id")int id, String newName) {
-        // todo access check
         try {
+            checkAccessForPlateId(id);
             LIMSInitializationListener.getLimsConnection().renamePlate(id, newName);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         }
+    }
+
+    private static void checkAccessForPlateId(int id) throws DatabaseServiceException {
+        LimsSearchResult result = LIMSInitializationListener.getLimsConnection().getMatchingDocumentsFromLims(
+                Query.Factory.createFieldQuery(LIMSConnection.PLATE_ID_FIELD, Condition.EQUAL, new Object[]{id},
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
+        );
+        List<PlateDocument> plateList = result.getPlates();
+        if(plateList.size() < 1) {
+            throw new NotFoundException("Could not find plate for id = " + id);
+        }
+        AccessUtilities.checkUserHasRoleForPlate(Collections.singletonList(plateList.get(0).getPlate()), Role.WRITER);
     }
 
     @GET
@@ -144,8 +162,8 @@ public class Plates {
     @Produces("application/xml")
     @Path("{plateId}/gels")
     public List<GelImage> getGels(@PathParam("plateId")int plateId) {
-        // todo get Plate and check access
         try {
+            checkAccessForPlateId(plateId);
             Map<Integer, List<GelImage>> map = LIMSInitializationListener.getLimsConnection().getGelImages(
                     Collections.singletonList(plateId));
             return map.get(plateId);
