@@ -27,7 +27,7 @@ public class AccessUtilities {
         checkUserHasRoleForExtractionIds(extractionIdsFromPlates, role);
     }
 
-    static void checkUserHasRoleForExtractionIds(Set<String> extractionIds, Role role) throws DatabaseServiceException {
+    public static void checkUserHasRoleForExtractionIds(Collection<String> extractionIds, Role role) throws DatabaseServiceException {
         List<FimsSample> samples;
         Map<String, String> extractionIdToSampleId;
         try {

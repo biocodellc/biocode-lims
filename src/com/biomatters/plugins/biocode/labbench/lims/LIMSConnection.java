@@ -46,11 +46,12 @@ public abstract class LIMSConnection {
 
     public static final Map<String, List<DocumentField>> TABLE_TO_FIELDS = new HashMap<String, List<DocumentField>>();
 
+    public static final DocumentField WORKFLOW_ID_FIELD = DocumentField.createStringField("Workflow ID", "", "workflow.id", false, false);
     public static final DocumentField WORKFLOW_NAME_FIELD = DocumentField.createStringField("Workflow Name", "", "workflow.name", true, false);
     public static final DocumentField WORKFLOW_DATE_FIELD = DocumentField.createDateField("Last Modified (LIMS workflow)", "", "workflow.date", false, false);
     public static final DocumentField WORKFLOW_LOCUS_FIELD = DocumentField.createStringField("Locus", "The locus of the workflow", "workflow.locus", true, false);
     static {
-        TABLE_TO_FIELDS.put("workflow", Arrays.asList(WORKFLOW_NAME_FIELD, WORKFLOW_DATE_FIELD, WORKFLOW_LOCUS_FIELD));
+        TABLE_TO_FIELDS.put("workflow", Arrays.asList(WORKFLOW_ID_FIELD, WORKFLOW_NAME_FIELD, WORKFLOW_DATE_FIELD, WORKFLOW_LOCUS_FIELD));
     }
 
     public static final DocumentField PLATE_ID_FIELD = DocumentField.createStringField("Plate ID", "", "plate.id", false, false);
