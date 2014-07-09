@@ -661,7 +661,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                             }
                         }
                     }
-                    ThreadUtilities.sleep(10000);
+                    ThreadUtilities.sleep(60*1000);
                 }
             }
         };
