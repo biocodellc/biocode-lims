@@ -7,7 +7,6 @@ import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.fims.FimsProject;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.server.security.Projects;
 import com.biomatters.plugins.biocode.server.security.Role;
@@ -51,27 +50,27 @@ public class QueryService {
 
     LimsSearchResult getPermissionsFilteredResult(LimsSearchResult result) throws DatabaseServiceException {
         Set<String> sampleIds = new HashSet<String>();
+        Set<String> extractionIds = new HashSet<String>();
 
         for (FimsSample fimsSample : result.getTissueSamples()) {
             sampleIds.add(fimsSample.getId());
         }
         for (WorkflowDocument workflowDocument : result.getWorkflows()) {
-            Reaction extraction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
-            if(extraction != null && extraction instanceof ExtractionReaction) {
-                sampleIds.add(((ExtractionReaction) extraction).getTissueId());
-            }
+            extractionIds.add(workflowDocument.getWorkflow().getExtractionId());
         }
         for (PlateDocument plateDocument : result.getPlates()) {
             for (Reaction reaction : plateDocument.getPlate().getReactions()) {
-
-                FimsSample fimsSample = reaction.getFimsSample();
-                if(fimsSample != null) {
-//                    allSamples.add(fimsSample);
+                if(!reaction.isEmpty()) {
+                    extractionIds.add(reaction.getExtractionId());
                 }
             }
         }
         List<FimsSample> allSamples;
+        Map<String, String> extractionIdToSampleId;
         try {
+            extractionIdToSampleId = LIMSInitializationListener.getLimsConnection().getTissueIdsForExtractionIds(
+                    "extraction", new ArrayList<String>(extractionIds));
+            sampleIds.addAll(extractionIdToSampleId.values());
             allSamples = LIMSInitializationListener.getFimsConnection().retrieveSamplesForTissueIds(sampleIds);
         } catch (ConnectionException e) {
             throw new DatabaseServiceException(e, e.getMainMessage(), false);
@@ -85,20 +84,21 @@ public class QueryService {
             }
         }
         for (WorkflowDocument workflow : result.getWorkflows()) {
-            FimsSample sample = workflow.getFimsSample();
-            if(sample != null && readableSampleIds.contains(sample.getId())) {
+            String sampleId = extractionIdToSampleId.get(workflow.getWorkflow().getExtractionId());
+            if(readableSampleIds.contains(sampleId)) {
                 filteredResult.addWorkflow(workflow);
             }
         }
         for (PlateDocument plateDocument : result.getPlates()) {
             boolean canReadCompletePlate = true;
             for (Reaction reaction : plateDocument.getPlate().getReactions()) {
-                if(!readableSampleIds.contains(reaction.getFimsSample().getId())) {
+                String sampleId = extractionIdToSampleId.get(reaction.getExtractionId());
+                if(!reaction.isEmpty() && !readableSampleIds.contains(sampleId)) {
                     canReadCompletePlate = false;
                 }
             }
             if(canReadCompletePlate) {
-                result.addPlate(plateDocument);
+                filteredResult.addPlate(plateDocument);
             }
         }
         return filteredResult;
@@ -126,14 +126,5 @@ public class QueryService {
             }
         }
         return validSampleIds;
-    }
-
-    @GET
-    @Path("{id}")
-    @Produces("application/xml")
-    public String getResults(@PathParam("id")String id) {
-
-        // Do we need this method for POST
-        return id;
     }
 }
