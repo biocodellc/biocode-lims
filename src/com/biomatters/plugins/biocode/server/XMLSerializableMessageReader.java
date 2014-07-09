@@ -15,6 +15,7 @@ import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
@@ -36,7 +37,8 @@ public class XMLSerializableMessageReader implements MessageBodyReader<XMLSerial
     public XMLSerializable readFrom(Class<XMLSerializable> xmlSerializableClass, Type type, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> stringStringMultivaluedMap, InputStream inputStream) throws IOException, WebApplicationException {
         try {
             FastSaxBuilder builder = new FastSaxBuilder();
-            Document doc = builder.build(inputStream);
+            // We wrap the stream in a reader because sometimes the SaxBuilder has problems converting bytes into characters by itself
+            Document doc = builder.build(new InputStreamReader(inputStream));
             return XMLSerializer.classFromXML(doc.getRootElement(), xmlSerializableClass);
         } catch (JDOMException e) {
             throw new WebApplicationException("Received invalid XML: " + e.getMessage(), e);
