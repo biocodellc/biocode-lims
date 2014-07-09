@@ -38,8 +38,7 @@ public class RestUtilities {
                                                                                                          retrieveSequenceIds);
 
         List<DocumentField> searchAttributes = new ArrayList<DocumentField>(LIMSConnection.getSearchAttributes());
-
-        searchAttributes.add(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField());
+        searchAttributes.addAll(BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes());
 
         return new QueryParser(searchAttributes).parseQuery(query).execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
     }
