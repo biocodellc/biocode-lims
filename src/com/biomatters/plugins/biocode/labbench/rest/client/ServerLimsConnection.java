@@ -494,13 +494,13 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public void testConnection() throws DatabaseServiceException {
-//        try {
-//            target.path("info").path("details").request(MediaType.TEXT_PLAIN_TYPE).get();
-//        } catch (WebApplicationException e) {
-//            throw new DatabaseServiceException(e, e.getMessage(), false);
-//        } catch (ProcessingException e) {
-//            throw new DatabaseServiceException(e, e.getMessage(), false);
-//        }
+        try {
+            target.path("info").path("details").request(MediaType.TEXT_PLAIN_TYPE).get();
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
     }
 
     private static final String COCKTAILS = "cocktails";
