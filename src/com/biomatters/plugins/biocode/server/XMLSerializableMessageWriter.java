@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import org.jdom.Element;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
@@ -28,9 +27,6 @@ import java.lang.reflect.Type;
 @Provider
 @Produces("application/xml")
 public class XMLSerializableMessageWriter implements MessageBodyWriter<XMLSerializable> {
-
-    private static final Object globalLock = new Object();
-
     @Override
     public boolean isWriteable(Class<?> aClass, Type type, Annotation[] annotations, MediaType mediaType) {
         return XMLSerializable.class.isAssignableFrom(aClass);
@@ -44,10 +40,6 @@ public class XMLSerializableMessageWriter implements MessageBodyWriter<XMLSerial
 
     @Override
     public void writeTo(XMLSerializable xmlSerializable, Class<?> aClass, Type type, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> stringObjectMultivaluedMap, OutputStream outputStream) throws IOException, WebApplicationException {
-        XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
-        Element element = XMLSerializer.classToXML("root", xmlSerializable);
-        synchronized (globalLock) {
-            outputter.output(element, outputStream);
-        }
+        new XMLOutputter(Format.getPrettyFormat()).output(XMLSerializer.classToXML("root", xmlSerializable), outputStream);
     }
 }
