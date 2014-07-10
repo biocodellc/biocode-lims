@@ -92,6 +92,7 @@ public class QueryService {
                 String sampleId = extractionIdToSampleId.get(reaction.getExtractionId());
                 if(!reaction.isEmpty() && !readableSampleIds.contains(sampleId)) {
                     canReadCompletePlate = false;
+                    break;
                 }
             }
             if(canReadCompletePlate) {
