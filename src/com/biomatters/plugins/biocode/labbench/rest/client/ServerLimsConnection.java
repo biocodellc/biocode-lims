@@ -55,6 +55,7 @@ public class ServerLimsConnection extends LIMSConnection {
         HttpAuthenticationFeature authFeature = HttpAuthenticationFeature.universal(
                 connectionOptions.getUsername(), connectionOptions.getPassword());
         target = ClientBuilder.newClient().
+                register(ForbiddenExceptionClientFilter.class).
                 register(authFeature).
                 register(XMLSerializableMessageReader.class).
                 register(XMLSerializableMessageWriter.class).
