@@ -6,7 +6,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 
-import javax.ws.rs.core.NoContentException;
+import javax.ws.rs.NotFoundException;
 import java.util.*;
 
 /**
@@ -18,9 +18,9 @@ public class RestUtilities {
         // Can't instantiate
     }
 
-    public static <T> T getOnlyItemFromList(List<T> list, String noItemErrorMessage) throws NoContentException {
+    public static <T> T getOnlyItemFromList(List<T> list, String noItemErrorMessage) {
         if (list.isEmpty()) {
-            throw new NoContentException(noItemErrorMessage);
+            throw new NotFoundException(noItemErrorMessage);
         }
         return list.get(0);
     }

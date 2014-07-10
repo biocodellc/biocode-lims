@@ -1,10 +1,7 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
-import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
+import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
@@ -60,6 +57,11 @@ public class QueryService {
             plates.add(plate.getPlate());
         }
         extractionIds.addAll(AccessUtilities.getExtractionIdsFromPlates(plates));
+        List<AssembledSequence> sequences = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(result.getSequenceIds(), null, true);
+        for (AssembledSequence sequence : sequences) {
+            extractionIds.add(sequence.extractionId);
+        }
+
         List<FimsSample> allSamples;
         Map<String, String> extractionIdToSampleId;
         try {
@@ -96,8 +98,12 @@ public class QueryService {
                 filteredResult.addPlate(plateDocument);
             }
         }
-        filteredResult.addAllSequenceIDs(result.getSequenceIds());
+        for (AssembledSequence sequence : sequences) {
+            String sampleId = extractionIdToSampleId.get(sequence.extractionId);
+            if(readableSampleIds.contains(sampleId)) {
+                filteredResult.addSequenceID(sequence.id);
+            }
+        }
         return filteredResult;
     }
-
 }
