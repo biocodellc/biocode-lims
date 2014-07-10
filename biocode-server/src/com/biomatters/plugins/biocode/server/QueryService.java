@@ -33,7 +33,7 @@ public class QueryService {
                            @DefaultValue("true")  @QueryParam("showTissues") boolean showTissues,
                            @DefaultValue("true")  @QueryParam("showWorkflows") boolean showWorkflows,
                            @DefaultValue("true")  @QueryParam("showPlates") boolean showPlates,
-                           @DefaultValue("false") @QueryParam("showSequenceIds") boolean showSequenceIds,
+                           @DefaultValue("false") @QueryParam("showSequences") boolean showSequenceIds,
                                                   @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException {
 
         Set<String> tissueIdsToMatchSet = tissueIdsToMatch == null ? null : new HashSet<String>(Arrays.asList(tissueIdsToMatch.split(",")));
