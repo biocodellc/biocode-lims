@@ -158,7 +158,12 @@ class QueryParser {
         /* Extract query field. */
         DocumentField field = null;
         for (DocumentField searchAttribute : searchAttributes) {
-            if (searchAttribute.getCode().equals(queryParts[0])) {
+            String searchAttributeCode = searchAttribute.getCode();
+            int colonIndex = searchAttributeCode.indexOf(":");
+            if (colonIndex != -1) {
+                searchAttributeCode = searchAttributeCode.substring(colonIndex + 1);
+            }
+            if (searchAttributeCode.equals(queryParts[0])) {
                 field = searchAttribute;
                 break;
             }
