@@ -3,14 +3,14 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
+import com.biomatters.plugins.biocode.server.security.AccessUtilities;
+import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.NoContentException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Matthew Cheung
@@ -24,15 +24,27 @@ public class Sequences {
     @Produces("application/xml")
     @Path("{id}")
     @GET
-    public AssembledSequence getForIds(@PathParam("id")String idsString,
+    public AssembledSequence getForIds(@PathParam("id")String id,
         @DefaultValue("false")@QueryParam("includeFailed")Boolean includeFailed) throws NoContentException {
 
         try {
-            List<AssembledSequence> data = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(getIntegerListFromString(idsString), null, includeFailed);
-            return RestUtilities.getOnlyItemFromList(data, "No sequence for id: " + idsString);
+            List<Integer> idList = getIntegerListFromString(id);
+            Role roleToCheckFor = Role.READER;
+            List<AssembledSequence> data = getAssembledSequencesWithRoleCheck(idList, includeFailed, roleToCheckFor);
+            return RestUtilities.getOnlyItemFromList(data, "No sequence for id: " + id);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
+    }
+
+    List<AssembledSequence> getAssembledSequencesWithRoleCheck(List<Integer> idList, Boolean includeFailed, Role roleToCheckFor) throws DatabaseServiceException {
+        List<AssembledSequence> data = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(idList, null, includeFailed);
+        Set<String> extractionIds = new HashSet<String>();
+        for (AssembledSequence sequence : data) {
+            extractionIds.add(sequence.extractionId);
+        }
+        AccessUtilities.checkUserHasRoleForExtractionIds(extractionIds, roleToCheckFor);
+        return data;
     }
 
     private List<Integer> getIntegerListFromString(String idsString) {
@@ -56,6 +68,7 @@ public class Sequences {
     @Path("{id}/submitted")
     public void setSubmitted(@PathParam("id")int id, boolean submitted) {
         try {
+            getAssembledSequencesWithRoleCheck(Collections.singletonList(id), true, Role.WRITER);
             LIMSInitializationListener.getLimsConnection().setSequenceStatus(submitted, Collections.singletonList(id));
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
@@ -72,6 +85,7 @@ public class Sequences {
             if (integerListFromString.size() != 1) {
                 throw new BadRequestException("Invalid id: " + id);
             }
+            getAssembledSequencesWithRoleCheck(integerListFromString, true, Role.WRITER);
             LIMSInitializationListener.getLimsConnection().deleteSequences(integerListFromString);
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
@@ -92,6 +106,7 @@ public class Sequences {
                            @QueryParam("reactionIds")String reactionIds
                            ) {
         try {
+            AccessUtilities.checkUserHasRoleForExtractionIds(Collections.singletonList(seq.extractionId), Role.WRITER);
             return LIMSInitializationListener.getLimsConnection().addAssembly(isPass, notes, technician,
                     FailureReason.getReasonFromIdString(failureReason),
                     failureNotes, addChromatograms, seq, getIntegerListFromString(reactionIds), ProgressListener.EMPTY);

@@ -46,18 +46,20 @@ public abstract class LIMSConnection {
 
     public static final Map<String, List<DocumentField>> TABLE_TO_FIELDS = new HashMap<String, List<DocumentField>>();
 
+    public static final DocumentField WORKFLOW_ID_FIELD = DocumentField.createStringField("Workflow ID", "", "workflow.id", false, false);
     public static final DocumentField WORKFLOW_NAME_FIELD = DocumentField.createStringField("Workflow Name", "", "workflow.name", true, false);
     public static final DocumentField WORKFLOW_DATE_FIELD = DocumentField.createDateField("Last Modified (LIMS workflow)", "", "workflow.date", false, false);
     public static final DocumentField WORKFLOW_LOCUS_FIELD = DocumentField.createStringField("Locus", "The locus of the workflow", "workflow.locus", true, false);
     static {
-        TABLE_TO_FIELDS.put("workflow", Arrays.asList(WORKFLOW_NAME_FIELD, WORKFLOW_DATE_FIELD, WORKFLOW_LOCUS_FIELD));
+        TABLE_TO_FIELDS.put("workflow", Arrays.asList(WORKFLOW_ID_FIELD, WORKFLOW_NAME_FIELD, WORKFLOW_DATE_FIELD, WORKFLOW_LOCUS_FIELD));
     }
 
+    public static final DocumentField PLATE_ID_FIELD = DocumentField.createStringField("Plate ID", "", "plate.id", false, false);
     public static final DocumentField PLATE_TYPE_FIELD = DocumentField.createEnumeratedField(new String[]{"Extraction", "PCR", "CycleSequencing"}, "Plate type", "", "plate.type", true, false);
     public static final DocumentField PLATE_NAME_FIELD = DocumentField.createStringField("Plate Name (LIMS)", "", "plate.name", true, false);
     public static final DocumentField PLATE_DATE_FIELD = DocumentField.createDateField("Last Modified (LIMS plate)", "", "plate.date", false, false);
     static {
-        TABLE_TO_FIELDS.put("plate", Arrays.asList(PLATE_TYPE_FIELD, PLATE_NAME_FIELD, PLATE_DATE_FIELD));
+        TABLE_TO_FIELDS.put("plate", Arrays.asList(PLATE_TYPE_FIELD, PLATE_ID_FIELD, PLATE_NAME_FIELD, PLATE_DATE_FIELD));
     }
 
     public static final DocumentField EXTRACTION_ID_FIELD = DocumentField.createStringField("Extraction ID", "The Extraction ID", "extraction.extractionId", true, false);
