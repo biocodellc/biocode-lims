@@ -60,6 +60,11 @@ public class ServerFimsConnection extends FIMSConnection {
         return null;
     }
 
+    /**
+     * For pre release versions of the server we will require exact version matching until we have finalized the API.
+     * At that point we can use a more flexible system.  ie Major version, minor version.
+     */
+    private static final String EXPECTED_VERSION = "0.5";  // Update this when updating Info.version()
 
     @Override
     public void _connect(Options options) throws ConnectionException {
@@ -83,9 +88,8 @@ public class ServerFimsConnection extends FIMSConnection {
                 target(host).path("biocode");
         try {
             String serverVersion = server.path("info").path("version").request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
-            String expectedVersion = "0.2";
-            if (!serverVersion.equals(expectedVersion)) {
-                throw new ConnectionException("Incompatible server version.  Expected " + expectedVersion + " (alpha), was " + serverVersion);
+            if (!serverVersion.equals(EXPECTED_VERSION)) {
+                throw new ConnectionException("Incompatible server version.  Expected " + EXPECTED_VERSION + " (alpha), was " + serverVersion);
             }
             target = server.path("fims");
             tissueField = getDocumentField("tissue");
