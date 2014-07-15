@@ -1174,6 +1174,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 SqlUtilities.fillStatement(new ArrayList<Object>(plateIds), selectPlate);
 
                 long start = System.currentTimeMillis();
+                selectPlate.setQueryTimeout(0);
                 ResultSet plateSet = selectPlate.executeQuery();
                 System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (plates) query");
 
