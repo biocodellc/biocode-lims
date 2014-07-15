@@ -16,7 +16,6 @@ import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectio
 import com.biomatters.plugins.biocode.labbench.lims.*;
 import com.biomatters.plugins.biocode.server.security.Projects;
 import jebl.util.ProgressListener;
-import org.virion.jam.util.SimpleListener;
 
 import javax.servlet.*;
 import javax.sql.DataSource;
@@ -268,7 +267,7 @@ public class LIMSInitializationListener implements ServletContextListener {
     }
 
     private void setupTableFims(Properties config, PasswordOptions fimsOptions) throws ConnectionException, MissingPropertyException {
-        updateFimsOptions(fimsOptions);
+        fimsOptions.update();
         ((TableFimsConnectionOptions) fimsOptions).autodetectTaxonFields();
         String tissueId = config.getProperty("fims.tissueId");
         String specimenId = config.getProperty("fims.specimenId");
@@ -290,32 +289,10 @@ public class LIMSInitializationListener implements ServletContextListener {
         fimsOptions.setValue(TableFimsConnectionOptions.STORE_PROJECTS, enableProjects);
     }
 
-    private void updateFimsOptions(PasswordOptions fimsOptions) throws ConnectionException {
-        final AtomicBoolean waitingForUpdate = new AtomicBoolean(true);
-        fimsOptions.addChangeListener(new SimpleListener() {
-            @Override
-            public void objectChanged() {
-                waitingForUpdate.set(false);
-            }
-        });
-        fimsOptions.update();
-        long waitPeriod = 1000;
-        long max = 15 * waitPeriod;
-        long waited = 0;
-        while(waitingForUpdate.get()) {
-            ThreadUtilities.sleep(waitPeriod);
-            waited+= waitPeriod;
-            if(waited >= max) {
-                System.out.println("Waited over " + max + " ms for options to update, aborting...");
-                waitingForUpdate.set(false);
-            }
-        }
-    }
-
     private boolean setMultipleOptionsFromConfig(Properties config, String configKey, PasswordOptions fimsOptions, String multipleOptionsName, String optionNameToSet) {
         // Get the refernce to the first Option in the MultipleOptions.  The rest will not have been instantiated yet.
         Options.Option firstOption = fimsOptions.getOption(multipleOptionsName + "." + 0 + "." +
-                optionNameToSet);
+                            optionNameToSet);
         if (firstOption == null) {
             return false;
         }
