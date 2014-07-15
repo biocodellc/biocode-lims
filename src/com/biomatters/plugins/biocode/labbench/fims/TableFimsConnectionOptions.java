@@ -163,9 +163,12 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     public void autodetectTaxonFields() {
         MultipleOptions taxOptions = getMultipleOptions(TAX_FIELDS);
         ComboBoxOption<OptionValue> taxCol = (ComboBoxOption<OptionValue>)taxOptions.getMasterOptions().getOption(TAX_COL);
-        List<OptionValue> possibleOptionValues = taxCol.getPossibleOptionValues();
 
-        taxOptions.restoreDefaults();
+        List<OptionValue> possibleOptionValues;
+        synchronized (fieldUpdateLock) {
+            possibleOptionValues = taxCol.getPossibleOptionValues();
+            taxOptions.restoreDefaults();
+        }
         int foundCount = 0;
         for(String s : BiocodeUtilities.taxonomyNames) {
             for(OptionValue ov : possibleOptionValues) {
@@ -243,6 +246,20 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         ThreadUtilities.invokeNowOrLater(getUpdateFieldsRunnable(newCols));
     }
 
+    /**
+     * A lock to prevent retrieving and updating possible values for the various Options that display table columns at
+     * the same time.  This is required because methods that act on possible values of {@link Options.Option} are not
+     * thread safe.  Calling one of these methods without synchronising on this lock may cause a {@link ConcurrentModificationException}
+     * <p/>
+     * These methods include:
+     * <ul>
+     *  <li>{@link com.biomatters.geneious.publicapi.plugin.Options#toXML()}</li>
+     *  <li>{@link com.biomatters.geneious.publicapi.plugin.Options.ComboBoxOption#setPossibleValues(java.util.List)}</li>
+     *  <li>{@link com.biomatters.geneious.publicapi.plugin.Options.ComboBoxOption#getPossibleOptionValues()}</li>
+     * </ul>
+     */
+    private final Object fieldUpdateLock = new Object();
+
     private Runnable getUpdateFieldsRunnable(final List<OptionValue> newCols) {
         return new Runnable() {
             @SuppressWarnings("unchecked")
@@ -254,12 +271,14 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
                 final MultipleOptions taxOptions = getMultipleOptions(TAX_FIELDS);
                 final MultipleOptions projOptions = getMultipleOptions(PROJECT_FIELDS);
 
-                tissueId.setPossibleValues(newCols);
-                specimenId.setPossibleValues(newCols);
-                plateName.setPossibleValues(newCols);
-                plateWell.setPossibleValues(newCols);
-                setPossibleValuesForMultipleOptions(taxOptions, newCols);
-                setPossibleValuesForMultipleOptions(projOptions, newCols);
+                synchronized (fieldUpdateLock) {
+                    tissueId.setPossibleValues(newCols);
+                    specimenId.setPossibleValues(newCols);
+                    plateName.setPossibleValues(newCols);
+                    plateWell.setPossibleValues(newCols);
+                    setPossibleValuesForMultipleOptions(taxOptions, newCols);
+                    setPossibleValuesForMultipleOptions(projOptions, newCols);
+                }
             }
         };
     }

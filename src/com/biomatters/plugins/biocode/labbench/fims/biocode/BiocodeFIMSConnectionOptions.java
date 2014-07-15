@@ -188,7 +188,6 @@ import java.util.prefs.Preferences;
         if(project == null) {
             return NO_FIELDS;
         }
-        Set<String> urisSeen = new HashSet<String>();
         for (Project.Field field : project.getFields()) {
             fields.add(new OptionValue(TableFimsConnection.CODE_PREFIX + field.uri, field.name));
         }
