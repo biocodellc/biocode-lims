@@ -63,17 +63,27 @@ public class QueryService {
         }
 
         List<FimsSample> allSamples;
+        List<String> samplesNotInDatabase;
         Map<String, String> extractionIdToSampleId;
         try {
             extractionIdToSampleId = LIMSInitializationListener.getLimsConnection().getTissueIdsForExtractionIds(
                     "extraction", new ArrayList<String>(extractionIds));
             sampleIds.addAll(extractionIdToSampleId.values());
             allSamples = LIMSInitializationListener.getFimsConnection().retrieveSamplesForTissueIds(sampleIds);
+
+            Set<String> samplesInDatabase = new HashSet<String>();
+            for (FimsSample sample : allSamples) {
+                samplesInDatabase.add(sample.getId());
+            }
+            samplesNotInDatabase = new ArrayList<String>(extractionIdToSampleId.values());
+            samplesNotInDatabase.removeAll(samplesInDatabase);
         } catch (ConnectionException e) {
             throw new DatabaseServiceException(e, e.getMainMessage(), false);
         }
 
-        Set<String> readableSampleIds = AccessUtilities.getSampleIdsUserHasRoleFor(Users.getLoggedInUser(), allSamples, Role.READER);
+        Set<String> readableSampleIds = new HashSet<String>(samplesNotInDatabase);
+        readableSampleIds.addAll(AccessUtilities.getSampleIdsUserHasRoleFor(Users.getLoggedInUser(), allSamples, Role.READER));
+
         LimsSearchResult filteredResult = new LimsSearchResult();
         for (FimsSample sample : result.getTissueSamples()) {
             if(readableSampleIds.contains(sample.getId())) {
