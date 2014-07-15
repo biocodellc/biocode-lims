@@ -253,8 +253,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             Map<Integer, List<MemoryFile>> traces = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(Collections.singletonList(getId()), ProgressListener.EMPTY);
 
             List<Trace> result = new ArrayList<Trace>();
-            for (MemoryFile memoryFile : traces.get(getId())) {
-                result.add(new Trace(memoryFile));
+            List<MemoryFile> tracesForReaction = traces.get(getId());
+            if(tracesForReaction != null) {
+                for (MemoryFile memoryFile : tracesForReaction) {
+                    result.add(new Trace(memoryFile));
+                }
             }
 
             addTraces(result);
