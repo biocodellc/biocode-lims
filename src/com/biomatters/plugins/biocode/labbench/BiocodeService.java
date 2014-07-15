@@ -852,7 +852,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
                         if (workflows != null) {
                             for (WorkflowDocument workflow : workflows) {
-                                if (workflow.getId() == seq.workflowId) {
+                                if (workflow.getId() == seq.workflowId && workflow.getFimsSample() != null) {
                                     return new FimsData(workflow, null, null);
                                 }
                             }

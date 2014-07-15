@@ -1,4 +1,5 @@
 ==Biocode Plugin 2.7.1 - TBD==
+* Fixed a problem where seqeunces could be downloaded without annotated FIMS data.
 * Fixed a crash that happens when trying to view/edit traces when a cyclesequencing reaction has no existing traces.
 * Fixed a problem where a local LIMS database wouldn't be closed until Geneious was shutdown.
 
