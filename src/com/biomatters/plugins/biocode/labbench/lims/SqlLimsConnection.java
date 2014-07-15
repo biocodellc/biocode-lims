@@ -1578,6 +1578,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     @Override
     public List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+        if (sequenceIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<AssembledSequence> sequences = new ArrayList<AssembledSequence>();
         ConnectionWrapper connection = null;
         PreparedStatement statement = null;
