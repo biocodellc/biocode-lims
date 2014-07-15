@@ -1,5 +1,6 @@
 ==Biocode Plugin 2.7.1 - TBD==
 * Fixed a crash that happens when trying to view/edit traces when a cyclesequencing reaction has no existing traces.
+* Fixed a problem where a local LIMS database wouldn't be closed until Geneious was shutdown.
 
 ==Biocode Plugin 2.7.0 - 27 June 2014==
 * Enable cherry-picking from extraction plates.
