@@ -44,7 +44,7 @@ public class RestUtilities {
     }
 
     public static List<String> getListFromString(String stringList) {
-        if(stringList == null) {
+        if (stringList == null) {
             return null;
         }
         List<String> strings = new ArrayList<String>();
