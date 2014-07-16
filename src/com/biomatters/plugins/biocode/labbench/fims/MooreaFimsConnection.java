@@ -289,14 +289,14 @@ public class MooreaFimsConnection extends FIMSConnection{
         List<Object> parameters = new ArrayList<Object>();
         boolean first = true;
         for (String tissueId : tissueIds) {
+            int dot = tissueId.lastIndexOf(".");
+            if (dot == -1) {
+                continue; // Not in our expected format.  Means there will be no match in the FIMS
+            }
+            String sampleId = tissueId.substring(0, dot);
             try {
-                int dot = tissueId.lastIndexOf(".");
-                if (dot == -1) {
-                    continue; // Not in our expected format.  Means there will be no match in the FIMS
-                }
-                String sampleId = tissueId.substring(0, dot);
-                parameters.add(sampleId);
                 Integer tissueNum = Integer.parseInt(tissueId.substring(dot + 1));
+                parameters.add(sampleId);
                 parameters.add(tissueNum);
             } catch (NumberFormatException e) {
                 continue;  // Not in our expected format.  Means there will be no match in the FIMS
