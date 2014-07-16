@@ -36,7 +36,7 @@ public class QueryService {
                            @DefaultValue("false") @QueryParam("showSequences") boolean showSequenceIds,
                                                   @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException {
 
-        Set<String> tissueIdsToMatchSet = tissueIdsToMatch == null ? null : new HashSet<String>(Arrays.asList(tissueIdsToMatch.split(",")));
+        Set<String> tissueIdsToMatchSet = new HashSet<String>(RestUtilities.getListFromString(tissueIdsToMatch));
         LimsSearchResult result = RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatchSet);
         LimsSearchResult filteredResult = getPermissionsFilteredResult(result);
         return Response.ok(filteredResult).build();

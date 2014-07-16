@@ -42,4 +42,18 @@ public class RestUtilities {
 
         return new QueryParser(searchAttributes).parseQuery(query).execute(TISSUES_WORKFLOWS_PLATES_SEQUENCES, tissuesToMatch);
     }
+
+    public static List<String> getListFromString(String stringList) {
+        if(stringList == null) {
+            return null;
+        }
+        List<String> strings = new ArrayList<String>();
+        for (String item : Arrays.asList(stringList.split(","))) {
+            String toAdd = item.trim();
+            if(!toAdd.isEmpty()) {
+                strings.add(item);
+            }
+        }
+        return strings;
+    }
 }
