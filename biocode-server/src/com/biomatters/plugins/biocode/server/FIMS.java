@@ -12,6 +12,7 @@ import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
 import com.biomatters.plugins.biocode.server.security.Projects;
 import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.security.Users;
+import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 
 import javax.ws.rs.*;
 import java.util.Arrays;
@@ -108,12 +109,9 @@ public class FIMS {
     @GET
     @Produces("application/xml")
     public XMLSerializableList<FimsSample> getSamplesForIds(@QueryParam("ids")String ids) {
-        List<String> toSearchFor;
-        if(ids == null) {
+        List<String> toSearchFor = RestUtilities.getListFromString(ids);
+        if(toSearchFor == null) {
             toSearchFor = Collections.emptyList();
-        } else {
-            String[] idsArray = ids.split(",");
-            toSearchFor = Arrays.asList(idsArray);
         }
         try {
 

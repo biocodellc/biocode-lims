@@ -15,6 +15,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.server.security.AccessUtilities;
 import com.biomatters.plugins.biocode.server.security.Role;
+import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
@@ -131,7 +132,7 @@ public class Plates {
         }
         try {
             List<ExtractionReaction> extractions = LIMSInitializationListener.getLimsConnection().getExtractionsForIds(
-                    Arrays.asList(ids.split(","))
+                    RestUtilities.getListFromString(ids)
             );
             AccessUtilities.checkUserHasRoleForReactions(extractions, Role.READER);
             return new XMLSerializableList<ExtractionReaction>(ExtractionReaction.class, extractions);
@@ -152,7 +153,7 @@ public class Plates {
 
         try {
             return new StringMap(LIMSInitializationListener.getLimsConnection().getTissueIdsForExtractionIds(
-                    table, Arrays.asList(ids.split(","))));
+                    table, RestUtilities.getListFromString(ids)));
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(e.getMessage(), e);
         }
