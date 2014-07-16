@@ -484,6 +484,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             SqlUtilities.fillStatement(sqlValues, preparedStatement);
 
             long start = System.currentTimeMillis();
+            preparedStatement.setQueryTimeout(0);
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
