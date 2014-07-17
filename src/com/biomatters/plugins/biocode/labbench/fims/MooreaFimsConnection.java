@@ -40,7 +40,9 @@ public class MooreaFimsConnection extends FIMSConnection{
     private static final DocumentField MOOREA_TISSUE_BARCODE_FIELD = new DocumentField("Tissue Barcode", "", "biocode_tissue.tissue_barcode", String.class, true, false);
     private static final DocumentField LONGITUDE_FIELD = new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Double.class, false, false);
     private static final DocumentField LATITUDE_FIELD = new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Double.class, false, false);
-    private static final DocumentField PROJECT_FIELD = new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false);
+    static final DocumentField PROJECT_FIELD = new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false);
+    private static final DocumentField SUBPROJECT_FIELD = new DocumentField("SubProject", "", "biocode.SubProject", String.class, false, false);
+    private static final DocumentField SUBSUBPROJECT_FIELD = new DocumentField("SubSubProject", "", "biocode.SubSubProject", String.class, false, false);
 
     public String getLabel() {
         return "Moorea FIMS";
@@ -161,6 +163,8 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         fields.add(new DocumentField("Collector's Event ID", "", "biocode_collecting_event.Coll_EventID_collector", String.class, false, false));
         fields.add(PROJECT_FIELD);
+        fields.add(SUBPROJECT_FIELD);
+        fields.add(SUBSUBPROJECT_FIELD);
         fields.add(new DocumentField("Taxa Team", "", "biocode_collecting_event.TaxTeam", String.class, true, false));
         fields.add(new DocumentField("Collector", "", "biocode_collecting_event.Collector", String.class, true, false));
         fields.add(new DocumentField("Collector List", "", "biocode_collecting_event.Collector_List", String.class, true, false));

@@ -87,6 +87,8 @@ public class MooreaFimsSample implements FimsSample {
         }
         else if(DocumentField.COMMON_NAME_FIELD.getCode().equals(code)) {
             code = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
+        } else if(MooreaFimsConnection.PROJECT_FIELD.getCode().equals(code)) {
+            code = "biocode.ProjectCode";  // We used the wrong column originally.  But we don't want to change the code otherwise we'll end up with two.
         }
 
         try {//skip collumns that don't exist
