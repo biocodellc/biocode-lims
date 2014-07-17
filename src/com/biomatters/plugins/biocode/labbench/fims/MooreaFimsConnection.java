@@ -407,17 +407,18 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     @Override
     public List<FimsProject> getProjects() throws DatabaseServiceException {
-        List<FimsProject> projects = new ArrayList<FimsProject>();
+        List<List<String>> combinations = new ArrayList<List<String>>();
 
+        String columns = "biocode.ProjectCode, biocode.SubProject, biocode.SubSubProject";
         PreparedStatement select = null;
         try {
-            select = prepareStatement("SELECT DISTINCT(" + PROJECT_FIELD.getCode() + ") FROM biocode_collecting_event");
+            select = prepareStatement("SELECT " + columns + " FROM biocode GROUP BY " + columns);
             ResultSet resultSet = select.executeQuery();
             while(resultSet.next()) {
-                String name = resultSet.getString(1).trim();
-                if(name.length() > 0) {
-                    projects.add(new FimsProject(name, name, null));
-                }
+                String proj = getValueAsTrimmedString(resultSet.getString(1));
+                String sub = getValueAsTrimmedString(resultSet.getString(2));
+                String subsub = getValueAsTrimmedString(resultSet.getString(3));
+                combinations.add(Arrays.asList(proj, sub, subsub));
             }
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Could not retrieve projects from FIMS: " + e.getMessage(), false);
@@ -425,16 +426,25 @@ public class MooreaFimsConnection extends FIMSConnection{
             SqlUtilities.cleanUpStatements(select);
         }
 
-        return projects;
+        return getProjectsFromListOfCombinations(combinations);
+    }
+
+    String getValueAsTrimmedString(String columnValue) {
+        if(columnValue == null) {
+            return "";
+        } else {
+            return columnValue.trim();
+        }
     }
 
     @Override
     public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
+        List<DocumentField> projectFieldsLowestToHighest = Arrays.asList(SUBSUBPROJECT_FIELD, SUBPROJECT_FIELD, PROJECT_FIELD);
         Multimap<String, FimsSample> projects = ArrayListMultimap.create();
         for (FimsSample sample : samples) {
-            Object projectName = sample.getFimsAttributeValue(PROJECT_FIELD.getCode());
+            String projectName = getProjectForSample(projectFieldsLowestToHighest, sample);
             if(projectName != null) {
-                projects.put(projectName.toString(), sample);
+                projects.put(projectName, sample);
             }
         }
         return projects.asMap();

@@ -250,36 +250,10 @@ public abstract class TableFimsConnection extends FIMSConnection{
         if(getProjectFields().isEmpty()) {
             return Collections.emptyList();
         }
-        Map<String, FimsProject> projects = new HashMap<String, FimsProject>();
-
         List<List<String>> projectCombinations = getProjectLists();
-        for (List<String> projectCombination : projectCombinations) {
-            String parentName = null;
-            for (String projectName : projectCombination) {
-                projectName = projectName.trim();
-                if(projectName.length() == 0) {
-                    continue;  // Ignore empty string projects.  Probably a bug in implementation.
-                }
-                FimsProject project = projects.get(projectName);
-                if (project == null) {
-                    FimsProject parent = projects.get(parentName);
-                    projects.put(projectName,
-                            new FimsProject(projectName, projectName, parent));
-                } else {
-                    // Verify existing project has the same parents
-                    FimsProject existingParent = project.getParent();
-                    String existingParentName = existingParent == null ? null : existingParent.getName();
-
-                    if(!String.valueOf(parentName).equals(String.valueOf(existingParentName))) {
-                        throw new DatabaseServiceException("Inconsistent project definition.  " +
-                                "Project " + projectName + " has multiple parents (" + existingParentName + ", " + parentName + ")", false);
-                    }
-                }
-                parentName = projectName;
-            }
-        }
-        return new ArrayList<FimsProject>(projects.values());
+        return getProjectsFromListOfCombinations(projectCombinations);
     }
+
 
     @Override
     public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
@@ -296,16 +270,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
     private String getProjectForSample(FimsSample sample) {
         List<DocumentField> projectsLowestToHighest = new ArrayList<DocumentField>(projectFields);
         Collections.reverse(projectsLowestToHighest);
-        for (DocumentField projectField : projectsLowestToHighest) {
-            Object projectNameCandidate = sample.getFimsAttributeValue(projectField.getCode());
-            if(projectNameCandidate != null) {
-                String name = projectNameCandidate.toString().trim();
-                if(name.length() > 0) {
-                    return name;
-                }
-            }
-        }
-        return null;
+        return getProjectForSample(projectsLowestToHighest, sample);
     }
 
     /**

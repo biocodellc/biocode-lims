@@ -26,6 +26,19 @@ import java.io.IOException;
  */
 public abstract class FIMSConnection {
 
+    protected static String getProjectForSample(List<DocumentField> projectsLowestToHighest, FimsSample sample) {
+        for (DocumentField projectField : projectsLowestToHighest) {
+            Object projectNameCandidate = sample.getFimsAttributeValue(projectField.getCode());
+            if(projectNameCandidate != null) {
+                String name = projectNameCandidate.toString().trim();
+                if(name.length() > 0) {
+                    return name;
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      *
      * @return a user-friendly name for this connection
@@ -83,6 +96,65 @@ public abstract class FIMSConnection {
     public abstract DocumentField getTissueSampleDocumentField();
 
     /**
+     * <p>Helper method to generate a list of {@link com.biomatters.plugins.biocode.labbench.fims.FimsProject} from a list
+     * of combinations.</p>
+     *
+     * <p><strong>Note</strong>: Lists must not contain null.</p>
+     *
+     * i.e.
+     * <pre>
+     * {
+     *    {Project,SubProject, SubSubProject}
+     *    {Project,SubProject, SubSubProject2}
+     *    {Project,SubProject2, SubSubProject3}
+     * }</pre>
+     *
+     * <pre>
+     * Will produce a hierarchy of
+     * Project
+     *  |-SubProject
+     *  |   |-SubProject
+     *  |        |-SubSubProject
+     *  |        |-SubSubProject2
+     *  |-SubProject2
+     *      |-SubSubProject3
+     * </pre>
+     *
+     * @param projectCombinations
+     * @return
+     * @throws DatabaseServiceException
+     */
+    protected static List<FimsProject> getProjectsFromListOfCombinations(List<List<String>> projectCombinations) throws DatabaseServiceException {
+        Map<String, FimsProject> projects = new HashMap<String, FimsProject>();
+        for (List<String> projectCombination : projectCombinations) {
+            String parentName = null;
+            for (String projectName : projectCombination) {
+                projectName = projectName.trim();
+                if(projectName.length() == 0) {
+                    continue;  // Ignore empty string projects.  Probably a bug in implementation.
+                }
+                FimsProject project = projects.get(projectName);
+                if (project == null) {
+                    FimsProject parent = projects.get(parentName);
+                    projects.put(projectName,
+                            new FimsProject(projectName, projectName, parent));
+                } else {
+                    // Verify existing project has the same parents
+                    FimsProject existingParent = project.getParent();
+                    String existingParentName = existingParent == null ? null : existingParent.getName();
+
+                    if(!String.valueOf(parentName).equals(String.valueOf(existingParentName))) {
+                        throw new DatabaseServiceException("Inconsistent project definition.  " +
+                                "Project " + projectName + " has multiple parents (" + existingParentName + ", " + parentName + ")", false);
+                    }
+                }
+                parentName = projectName;
+            }
+        }
+        return new ArrayList<FimsProject>(projects.values());
+    }
+
+    /**
      * Get the list of projects the specified samples belong to.  Use the result of {@link #getProjects()} to match up
      * the name to the project hierarchy.
      *
@@ -91,6 +163,8 @@ public abstract class FIMSConnection {
     public abstract Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples);
 
     /**
+     * Implementations may find the helper method {@link #getProjectsFromListOfCombinations(java.util.List)} useful.
+     *
      * @return A list of all projects in the system.
      */
     public abstract List<FimsProject> getProjects() throws DatabaseServiceException;
