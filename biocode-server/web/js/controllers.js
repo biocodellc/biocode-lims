@@ -24,6 +24,10 @@ biocodeControllers.controller('projectListCtrl', ['$scope', '$http',
                 data[i].hasChild = 'false';
                 data[i].cls = 'treegrid-' + data[i].id;
 
+
+            }
+
+            for (var i = 0; i < data.length; i++) {
                 if (data[i].parentProjectId == -1) {
                     continue;
                 }
