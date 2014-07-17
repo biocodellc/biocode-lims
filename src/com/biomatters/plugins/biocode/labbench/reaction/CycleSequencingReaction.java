@@ -93,11 +93,11 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         cacheNumTraces = numTracesString == null ? 0 : Integer.parseInt(numTracesString);
         List<Element> traceElements = element.getChildren("trace");
         if(traceElements.size() > 0) {
-            List<Trace> traces = new ArrayList<Trace>();
+            tracesStrongReference = new ArrayList<Trace>();
             for(Element traceElement : traceElements) {
-                traces.add(XMLSerializer.classFromXML(traceElement, Trace.class));
+                tracesStrongReference.add(XMLSerializer.classFromXML(traceElement, Trace.class));
             }
-            this.traces = new WeakReference<List<Trace>>(traces);
+            this.traces = new WeakReference<List<Trace>>(tracesStrongReference);
         }
 
         Element resultsElement = element.getChild(SEQ_RESULTS);
