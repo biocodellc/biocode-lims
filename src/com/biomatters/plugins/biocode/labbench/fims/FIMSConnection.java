@@ -11,6 +11,8 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 import java.util.*;
 import java.lang.ref.SoftReference;
@@ -121,63 +123,70 @@ public abstract class FIMSConnection {
      * </pre>
      *
      * @param projectCombinations List of project combinations.
-     * @param allowDuplicateNamesBetweenLevels True if projects with the same name are allowed in different parts of the hierarchy
+     * @param allowDuplicateNames True if projects with the same name are allowed in different parts of the hierarchy
      * @return a list of {@link com.biomatters.plugins.biocode.labbench.fims.FimsProject}
      * @throws DatabaseServiceException if there is a problem determining the overall project hierarchy
      */
-    protected static List<FimsProject> getProjectsFromListOfCombinations(List<List<String>> projectCombinations, boolean allowDuplicateNamesBetweenLevels) throws DatabaseServiceException {
-        Map<Integer, Map<String, FimsProject>> allProjects = new HashMap<Integer, Map<String, FimsProject>>();
+    protected static List<FimsProject> getProjectsFromListOfCombinations(List<List<String>> projectCombinations, boolean allowDuplicateNames) throws DatabaseServiceException {
+        Multimap<String, FimsProject> projects = ArrayListMultimap.create();
 
         for (List<String> projectCombination : projectCombinations) {
             String parentName = null;
-            int level = 1;
             for (String projectName : projectCombination) {
-
-                Map<String, FimsProject> projects = allProjects.get(level);
-                if(projects == null) {
-                    projects = new HashMap<String, FimsProject>();
-                    allProjects.put(level, projects);
-                }
-
                 projectName = projectName.trim();
                 if(projectName.length() == 0) {
                     continue;  // Ignore empty string projects.  Probably a bug in implementation.
                 }
-                FimsProject project = projects.get(projectName);
-                if (project == null) {
-                    String idToUse = projectName;
-                    for (Map<String, FimsProject> map : allProjects.values()) {
-                        if(map.containsKey(projectName)) {
-                            if(!allowDuplicateNamesBetweenLevels) {
-                                throw new DatabaseServiceException(projectName + " exists in multiple locations in the project hierarchy.", false);
-                            } else {
-                                idToUse = projectName + "." + level;
-                            }
-                        }
-                    }
-
-                    Map<String, FimsProject> parentProjects = level > 1 ? allProjects.get(level - 1) : Collections.<String, FimsProject>emptyMap();
-                    FimsProject parent = parentProjects.get(parentName);
-                    projects.put(projectName, new FimsProject(idToUse, projectName, parent));
+                Collection<FimsProject> projectsForName = projects.get(projectName);
+                if(projectsForName == null || projectsForName.isEmpty()) {
+                    FimsProject parent = getProjectFromLineage(projects, projectCombination, parentName);
+                    projects.put(projectName, new FimsProject(projectName, projectName, parent));
                 } else {
-                    // Verify existing project has the same parents
-                    FimsProject existingParent = project.getParent();
-                    String existingParentName = existingParent == null ? null : existingParent.getName();
-
-                    if(!String.valueOf(parentName).equals(String.valueOf(existingParentName))) {
-                        throw new DatabaseServiceException("Inconsistent project definition.  " +
-                                "Project " + projectName + " has multiple parents (" + existingParentName + ", " + parentName + ")", false);
+                    FimsProject existing = getProjectFromLineage(projects, projectCombination, projectName);
+                    if(existing == null) {
+                        // If there are projects for name but none that match this lineage then it's name must be duplicated
+                        if(allowDuplicateNames) {
+                            FimsProject existingParent = getProjectFromLineage(projects, projectCombination, parentName);
+                            projects.put(projectName, new FimsProject(projectName + "." + (projectsForName.size() + 1), projectName, existingParent));
+                        } else {
+                            FimsProject duplicate = projectsForName.iterator().next();
+                            FimsProject duplicateParent = duplicate.getParent();
+                            String duplicateParentName = duplicateParent == null ? "none" : duplicateParent.getName();
+                            throw new DatabaseServiceException("Inconsistent project definition.  " +
+                                    "Project " + projectName + " has multiple parents (" + duplicateParentName + ", " + parentName + ")", false);
+                        }
                     }
                 }
                 parentName = projectName;
-                level++;
             }
         }
         List<FimsProject> result = new ArrayList<FimsProject>();
-        for (Map<String, FimsProject> map : allProjects.values()) {
-            result.addAll(map.values());
+        for (Collection<FimsProject> projs : projects.asMap().values()) {
+            result.addAll(projs);
         }
         return result;
+    }
+
+    static FimsProject getProjectFromLineage(Multimap<String, FimsProject> projects, List<String> line, String projectName) {
+        if(projectName == null) {
+            return null;
+        }
+        int indexOfParent = line.indexOf(projectName);
+        if(indexOfParent == -1) {
+            throw new IllegalArgumentException(projectName + " not in lineage " + line);
+        }
+        for (FimsProject candidate : projects.get(projectName)) {
+            List<String> lineage = new ArrayList<String>();
+            FimsProject p = candidate;
+            while(p.getParent() != null) {
+                lineage.add(0, p.getParent().getName());
+                p = p.getParent();
+            }
+            if(line.subList(0, indexOfParent).equals(lineage)) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     /**
