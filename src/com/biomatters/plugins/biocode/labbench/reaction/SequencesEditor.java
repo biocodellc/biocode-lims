@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDo
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import org.jdom.Element;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,8 +41,12 @@ public abstract class SequencesEditor<T> {
         sequenceHolder.setPreferredSize(new Dimension(640,480));
         addSequenceAction = new GeneiousAction("Add sequence(s)") {
             public void actionPerformed(ActionEvent e) {
-
-                addSequences();
+                addSequences(new SimpleListener() {
+                    @Override
+                    public void objectChanged() {
+                        updateViewer();
+                    }
+                });
             }
         };
 
@@ -197,6 +202,7 @@ public abstract class SequencesEditor<T> {
 
     void addTrace(T trace) {
         sourceObjects.add(trace);
+        updateViewer();
     }
 
     abstract List<NucleotideSequenceDocument> createSequences(List<T> traces);
@@ -204,11 +210,11 @@ public abstract class SequencesEditor<T> {
     /**
      * The sequences can be added/removed
      *
-     * @return true if the sequences can be added/removed.  If true then {@link #addSequences()} and {@link #removeSequences()}
+     * @return true if the sequences can be added/removed.  If true then {@link #addSequences(org.virion.jam.util.SimpleListener)} and {@link #removeSequences()}
      * must be implemented.
      */
     abstract boolean canEdit();
     abstract void importSequences();
-    abstract void addSequences();
+    abstract void addSequences(SimpleListener finishedListener);
     abstract List<T> removeSequences();
 }

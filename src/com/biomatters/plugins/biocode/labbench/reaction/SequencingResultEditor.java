@@ -1,6 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
+import org.virion.jam.util.SimpleListener;
+
 import java.util.List;
 
 /**
@@ -29,7 +31,7 @@ public class SequencingResultEditor extends SequencesEditor<NucleotideSequenceDo
     }
 
     @Override
-    void addSequences() {
+    void addSequences(SimpleListener finishedListener) {
     }
 
     @Override

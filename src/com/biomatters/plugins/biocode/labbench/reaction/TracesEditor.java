@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
 import com.biomatters.geneious.publicapi.plugin.SequenceSelection;
 import com.biomatters.geneious.publicapi.plugin.ServiceUtilities;
 import jebl.util.ProgressListener;
+import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.io.File;
@@ -67,9 +68,7 @@ public class TracesEditor extends SequencesEditor<Trace> {
                 boolean removed = false;
                 for (NucleotideSequenceDocument doc : trace.getSequences()) {
                     if (currentIndex == selectedIndex.getSequenceIndex()) {
-                        if (trace.getId() >= 0) {
-                            removedTraces.add(trace);
-                        }
+                        removedTraces.add(trace);
                         removed = true;
                         currentIndex++;
                         break;
@@ -84,7 +83,7 @@ public class TracesEditor extends SequencesEditor<Trace> {
         return removedTraces;
     }
 
-    void addSequences() {
+    void addSequences(final SimpleListener finishedListener) {
         JFileChooser chooser = new JFileChooser(preferences.get("addTraces_defaultFolder", System.getProperty("user.dir")));
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         chooser.setMultiSelectionEnabled(true);
@@ -99,6 +98,9 @@ public class TracesEditor extends SequencesEditor<Trace> {
                         ReactionUtilities.importDocuments(sequenceFiles, progress);
                         for(File f : sequenceFiles) {
                             addTrace(new Trace(ReactionUtilities.loadFileIntoMemory(f)));
+                        }
+                        if(finishedListener != null) {
+                            finishedListener.objectChanged();
                         }
                     } catch (IOException e1) {
                         showMessageDialog("Could not import your documents: " + e1.getMessage());

@@ -3091,7 +3091,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 progressListener.setMessage("downloaded "+BiocodeUtilities.formatSize(bytes, 2));
                 progressListener.setProgress(pos/count);
                 pos++;
-                MemoryFile memoryFile = new MemoryFile(resultSet.getString("name"), resultSet.getBytes("data"));
+                MemoryFile memoryFile = new MemoryFile(resultSet.getInt("id"), resultSet.getString("name"), resultSet.getBytes("data"));
                 bytes += memoryFile.getData().length;
                 int id = resultSet.getInt("reaction");
                 List<MemoryFile> files = results.get(id);

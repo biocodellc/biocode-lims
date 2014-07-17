@@ -29,11 +29,7 @@ public class Trace implements XMLSerializable {
     }
 
     public Trace(MemoryFile file) throws IOException, DocumentImportException{
-        this(file, -1);
-    }
-
-    public Trace(MemoryFile file, int id) throws IOException, DocumentImportException{
-        this(convertRawTracesToTraceDocuments(file), file, id);
+        this(convertRawTracesToTraceDocuments(file), file, file.getDatabaseId());
     }
 
     public Trace(List<NucleotideSequenceDocument> sequences, MemoryFile file) {

@@ -10,6 +10,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 */
 @XmlRootElement
 public class MemoryFile {
+    private int databaseId;
     private String name;
     private byte[] data;
 
@@ -17,6 +18,13 @@ public class MemoryFile {
     }
 
     public MemoryFile(String name, byte[] data) {
+        this.name = name;
+        this.data = data;
+        this.databaseId = -1;
+    }
+
+    public MemoryFile(int databaseId, String name, byte[] data) {
+        this.databaseId = databaseId;
         this.name = name;
         this.data = data;
     }
@@ -35,5 +43,13 @@ public class MemoryFile {
 
     public void setData(byte[] data) {
         this.data = data;
+    }
+
+    public int getDatabaseId() {
+        return databaseId;
+    }
+
+    public void setDatabaseId(int databaseId) {
+        this.databaseId = databaseId;
     }
 }
