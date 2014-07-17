@@ -63,7 +63,7 @@ public class QueryService {
         }
 
         List<FimsSample> allSamples;
-        List<String> samplesNotInDatabase;
+        List<String> idsOfSamplesNotInDatabase;
         Map<String, String> extractionIdToSampleId;
         try {
             extractionIdToSampleId = LIMSInitializationListener.getLimsConnection().getTissueIdsForExtractionIds(
@@ -71,17 +71,17 @@ public class QueryService {
             sampleIds.addAll(extractionIdToSampleId.values());
             allSamples = LIMSInitializationListener.getFimsConnection().retrieveSamplesForTissueIds(sampleIds);
 
-            Set<String> samplesInDatabase = new HashSet<String>();
+            Set<String> idsOfSamplesInDatabase = new HashSet<String>();
             for (FimsSample sample : allSamples) {
-                samplesInDatabase.add(sample.getId());
+                idsOfSamplesInDatabase.add(sample.getId());
             }
-            samplesNotInDatabase = new ArrayList<String>(extractionIdToSampleId.values());
-            samplesNotInDatabase.removeAll(samplesInDatabase);
+            idsOfSamplesNotInDatabase = new ArrayList<String>(extractionIdToSampleId.values());
+            idsOfSamplesNotInDatabase.removeAll(idsOfSamplesInDatabase);
         } catch (ConnectionException e) {
             throw new DatabaseServiceException(e, e.getMainMessage(), false);
         }
 
-        Set<String> readableSampleIds = new HashSet<String>(samplesNotInDatabase);
+        Set<String> readableSampleIds = new HashSet<String>(idsOfSamplesNotInDatabase);
         readableSampleIds.addAll(AccessUtilities.getSampleIdsUserHasRoleFor(Users.getLoggedInUser(), allSamples, Role.READER));
 
         LimsSearchResult filteredResult = new LimsSearchResult();
