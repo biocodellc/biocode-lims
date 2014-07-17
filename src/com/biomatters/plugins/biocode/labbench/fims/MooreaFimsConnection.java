@@ -426,7 +426,7 @@ public class MooreaFimsConnection extends FIMSConnection{
             SqlUtilities.cleanUpStatements(select);
         }
 
-        return getProjectsFromListOfCombinations(combinations);
+        return getProjectsFromListOfCombinations(combinations, true);
     }
 
     String getValueAsTrimmedString(String columnValue) {

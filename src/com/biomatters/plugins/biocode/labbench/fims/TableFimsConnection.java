@@ -251,7 +251,7 @@ public abstract class TableFimsConnection extends FIMSConnection{
             return Collections.emptyList();
         }
         List<List<String>> projectCombinations = getProjectLists();
-        return getProjectsFromListOfCombinations(projectCombinations);
+        return getProjectsFromListOfCombinations(projectCombinations, false);
     }
 
 

@@ -120,24 +120,45 @@ public abstract class FIMSConnection {
      *      |-SubSubProject3
      * </pre>
      *
-     * @param projectCombinations
-     * @return
-     * @throws DatabaseServiceException
+     * @param projectCombinations List of project combinations.
+     * @param allowDuplicateNamesBetweenLevels True if projects with the same name are allowed in different parts of the hierarchy
+     * @return a list of {@link com.biomatters.plugins.biocode.labbench.fims.FimsProject}
+     * @throws DatabaseServiceException if there is a problem determining the overall project hierarchy
      */
-    protected static List<FimsProject> getProjectsFromListOfCombinations(List<List<String>> projectCombinations) throws DatabaseServiceException {
-        Map<String, FimsProject> projects = new HashMap<String, FimsProject>();
+    protected static List<FimsProject> getProjectsFromListOfCombinations(List<List<String>> projectCombinations, boolean allowDuplicateNamesBetweenLevels) throws DatabaseServiceException {
+        Map<Integer, Map<String, FimsProject>> allProjects = new HashMap<Integer, Map<String, FimsProject>>();
+
         for (List<String> projectCombination : projectCombinations) {
             String parentName = null;
+            int level = 1;
             for (String projectName : projectCombination) {
+
+                Map<String, FimsProject> projects = allProjects.get(level);
+                if(projects == null) {
+                    projects = new HashMap<String, FimsProject>();
+                    allProjects.put(level, projects);
+                }
+
                 projectName = projectName.trim();
                 if(projectName.length() == 0) {
                     continue;  // Ignore empty string projects.  Probably a bug in implementation.
                 }
                 FimsProject project = projects.get(projectName);
                 if (project == null) {
-                    FimsProject parent = projects.get(parentName);
-                    projects.put(projectName,
-                            new FimsProject(projectName, projectName, parent));
+                    String idToUse = projectName;
+                    for (Map<String, FimsProject> map : allProjects.values()) {
+                        if(map.containsKey(projectName)) {
+                            if(!allowDuplicateNamesBetweenLevels) {
+                                throw new DatabaseServiceException(projectName + " exists in multiple locations in the project hierarchy.", false);
+                            } else {
+                                idToUse = projectName + "." + level;
+                            }
+                        }
+                    }
+
+                    Map<String, FimsProject> parentProjects = level > 1 ? allProjects.get(level - 1) : Collections.<String, FimsProject>emptyMap();
+                    FimsProject parent = parentProjects.get(parentName);
+                    projects.put(projectName, new FimsProject(idToUse, projectName, parent));
                 } else {
                     // Verify existing project has the same parents
                     FimsProject existingParent = project.getParent();
@@ -149,9 +170,14 @@ public abstract class FIMSConnection {
                     }
                 }
                 parentName = projectName;
+                level++;
             }
         }
-        return new ArrayList<FimsProject>(projects.values());
+        List<FimsProject> result = new ArrayList<FimsProject>();
+        for (Map<String, FimsProject> map : allProjects.values()) {
+            result.addAll(map.values());
+        }
+        return result;
     }
 
     /**
@@ -163,7 +189,7 @@ public abstract class FIMSConnection {
     public abstract Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples);
 
     /**
-     * Implementations may find the helper method {@link #getProjectsFromListOfCombinations(java.util.List)} useful.
+     * Implementations may find the helper method {@link #getProjectsFromListOfCombinations(java.util.List, boolean)} useful.
      *
      * @return A list of all projects in the system.
      */
