@@ -14,11 +14,13 @@ import javax.ws.rs.Produces;
 @Path("permissions")
 public class Permissions {
 
-    // todo This can probably be removed once we move onto alpha with real user roles and privileges.
     @Produces("text/plain")
     @Path("delete/{table}")
     @GET
     public boolean canDelete(@PathParam("table")String table) {
-        return LIMSInitializationListener.getLimsConnection().deleteAllowed(table);
+        // Always return true.  The server should be configured with a database account that always allows it to delete
+        // from any table.  It controls write access to individual objects based on project membership rather than
+        // restricting based on object type.  We should remove this method the next time we change the server API.
+        return true;
     }
 }
