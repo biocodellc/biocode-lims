@@ -1,12 +1,12 @@
 <PluginVersions>
     <LatestVersion>2.7.0</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_7_0.gplugin</LatestVersionURL>
-    <ReleaseNotes>Biocode Plugin 2.7.0 (27 June 2014) - Release Notes
+    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_7_1.gplugin</LatestVersionURL>
+    <ReleaseNotes>Biocode Plugin 2.7.1 (18 July 2014) - Release Notes
 
-- Enable cherry-picking from extraction plates.
-- The MySQL JDBC driver is now bundled with the plugin.
-- Fixed issues with template system occasionally not saving or displaying templates correctly.
-- Fix incorrect cyclesequencing cocktail calculations.
+- Fixed a problem where seqeunces could be downloaded without annotated FIMS data.
+- Fixed a crash that happens when trying to view/edit traces when a cyclesequencing reaction has no existing traces.
+- Fixed a problem where a local LIMS database wouldn't be closed until Geneious was shutdown.
+- Fixed a bug where traces could not be added or removed from reactions using the traces editor.
 - Other minor fixes and improvements.
     </ReleaseNotes>
     <ExtraInformation></ExtraInformation>
