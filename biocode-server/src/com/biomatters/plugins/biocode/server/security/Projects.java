@@ -67,7 +67,8 @@ public class Projects {
     }
 
     private static List<Project> getProjectsForResultSet(ResultSet resultSet) throws SQLException {
-        Map<Integer, Project> projects = new HashMap<Integer, Project>();
+        Map<Integer, Project> projects = new LinkedHashMap<Integer, Project>();
+        Set<Project> addLater = new HashSet<Project>();
         while(resultSet.next()) {
             int projectId = resultSet.getInt("id");
             Project project = projects.get(projectId);
@@ -78,16 +79,39 @@ public class Projects {
                 project.description = resultSet.getString("description");
                 project.name = resultSet.getString("name");
                 project.parentProjectId = resultSet.getInt("parent");
+                boolean addNow = true;
                 if(resultSet.wasNull()) {
                     project.parentProjectId = -1;
+                } else {
+                    Project parent = projects.get(project.parentProjectId);
+                    if(parent == null) {
+                        addNow = false;  // Parent isn't in map yet, we'll add it later
+                    }
                 }
-                projects.put(projectId, project);
+                if(addNow) {
+                    projects.put(projectId, project);
+                } else {
+                    addLater.add(project);
+                }
             }
             User user = Users.createUserFromResultSetRow(resultSet);
             if(user != null) {
                 project.userRoles.put(user, Role.forId(resultSet.getInt("role")));
             }
         }
+
+        // Add the children that previously did not have parents.  We can be confident that the parents exist because
+        // of database foreign keys prevent a child from referencing a parent that does not exist
+        while(!addLater.isEmpty()) {
+            for (Project toAdd : new ArrayList<Project>(addLater)) {
+                Project parent = projects.get(toAdd.parentProjectId);
+                if(parent != null) {
+                    addLater.remove(toAdd);
+                    projects.put(toAdd.id, toAdd);
+                }
+            }
+        }
+
         return new ArrayList<Project>(projects.values());
     }
 
