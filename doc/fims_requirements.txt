@@ -1,0 +1,16 @@
+FIMS requirements.
+
+Methods to retrieve the following:
+# Specimen information by searching or by specifying an ID (Ideally the search would return just IDs and then we can retrieve specimens by that ID).
+# List of all taxonomy fields associated with specimens.
+# List of collection/metadata fields associated with specimens.
+
+The last two can potentially be hard coded into the LIMS, but the list would then need to be updated if there was anything added/removed.
+
+Regarding the search. Geneious allows users to search in two ways.  Ideally both of these would be possible.
+# Basic free text search.  ie The user can search by "MBIO".
+# Advanced search by fields.  With the ability to combine a number of terms using either AND or OR (limited to one type for each search).  ie. CountryCollected=USA AND Order=stomatopoda
+
+In addition if the following is provided then user access to data can be restricted based on project.
+# A way to retrieve the list of projects (and hierarchy if it exists)
+# A way to determine which project a tissue/sample belongs to if this information is not included already when downloaded
