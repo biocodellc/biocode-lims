@@ -18,6 +18,9 @@ import javax.ws.rs.*;
 @Path("info")
 @Singleton
 public class Info {
+    /**
+     * @return The API version of the server.
+     */
     @Produces("text/plain")
     @GET
     @Path("version")
@@ -29,7 +32,7 @@ public class Info {
     @GET
     @Path("details")
     public String getServerDetails() {
-        return "Alpha Biocode LIMS Server\nAPI is likely to change\n\nJava Version:" + System.getProperty("java.version");
+        return "Beta Biocode LIMS Server\nAPI is likely to change\n\nJava Version:" + System.getProperty("java.version");
     }
 
     @Produces("text/plain")
