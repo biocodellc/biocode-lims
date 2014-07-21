@@ -2527,6 +2527,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
 
         try {
+
+
             //check schema privileges
             String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE " +
                     "GRANTEE LIKE ? AND " +

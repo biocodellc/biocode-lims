@@ -153,7 +153,7 @@ public class ServerLimsConnection extends LIMSConnection {
         String result;
         try {
             Invocation.Builder request = target.path("plates").path("delete").request(MediaType.TEXT_PLAIN_TYPE);
-            Response response = request.post(Entity.entity(plates, MediaType.APPLICATION_XML_TYPE));
+            Response response = request.post(Entity.entity(new XMLSerializableList<Plate>(Plate.class, plates), MediaType.APPLICATION_XML_TYPE));
             result = response.readEntity(String.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
