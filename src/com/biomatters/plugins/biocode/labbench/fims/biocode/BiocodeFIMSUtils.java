@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
+import org.glassfish.jersey.filter.LoggingFilter;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
@@ -20,14 +22,23 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * @author Matthew Cheung
  *         Created on 7/02/14 5:51 AM
  */
 public class BiocodeFIMSUtils {
+
+    private static final String BISCICOL_URL = "http://biscicol.org";
+
+    static WebTarget getFimsWebTarget(String hostname) {
+        return ClientBuilder.newClient().target(hostname)
+                            .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
+    }
+
     static void login(String hostname, String username, String password) throws MalformedURLException, ProcessingException {
-            WebTarget path = ClientBuilder.newClient().target(hostname).path("id/authenticationService/login");
+            WebTarget path = getFimsWebTarget(hostname).path("id/authenticationService/login");
             Invocation.Builder request = path
                     .request(MediaType.TEXT_HTML_TYPE);
             Form formToPost = new Form().param("username", username).param("password", password);
@@ -37,19 +48,13 @@ public class BiocodeFIMSUtils {
     }
 
     static WebTarget getQueryTarget() {
-        WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
+        WebTarget target = getFimsWebTarget(BISCICOL_URL);
         target = target.path("biocode-fims/rest/query/json");
         return target;
     }
 
-    public static void main(String[] args) throws DatabaseServiceException {
-        List<Project> expeditions = getProjects();
-        for (Project expedition : expeditions) {
-            System.out.println(expedition.title);
-        }
-    }
     static List<Project> getProjects() throws DatabaseServiceException {
-        WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
+        WebTarget target = getFimsWebTarget(BISCICOL_URL);
         Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
         try {
             ProjectList fromService = request.get(ProjectList.class);
@@ -86,7 +91,7 @@ public class BiocodeFIMSUtils {
 
     static List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
-            WebTarget target = ClientBuilder.newClient().target("http://biscicol.org");
+            WebTarget target = getFimsWebTarget(BISCICOL_URL);
             Invocation.Builder request = target.path("id/projectService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
             return request.get(GraphList.class).getData();
         } catch(WebApplicationException e) {
