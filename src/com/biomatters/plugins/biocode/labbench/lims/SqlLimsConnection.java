@@ -2527,37 +2527,20 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
 
         try {
+            ResultSet nameSet = createStatement("SELECT DATABASE()").executeQuery();
+            nameSet.next();
+            String databaseName = nameSet.getString(1);
 
+            ResultSet resultSet = createStatement("SHOW GRANTS FOR CURRENT_USER").executeQuery();
 
-            //check schema privileges
-            String schemaSql = "select * from information_schema.SCHEMA_PRIVILEGES WHERE " +
-                    "GRANTEE LIKE ? AND " +
-                    "PRIVILEGE_TYPE='DELETE' AND " +
-                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%');";
-            PreparedStatement statement = createStatement(schemaSql);
-            statement.setString(1, "'"+getUsername()+"'@%");
-            statement.setString(2, getSchema());
-            ResultSet resultSet = statement.executeQuery();
-            if(resultSet.next()) {
-                return true;
+            while(resultSet.next()) {
+                String grantString = resultSet.getString(1);
+                if(isGrantStringForMySQLDatabase(grantString, databaseName, tableName)) {
+                    if(grantString.contains("ALL") || grantString.matches(".*DELETE(,|\\s+ON).*")) {
+                        return true;
+                    }
+                }
             }
-            resultSet.close();
-
-            //check table privileges
-            String tableSql = "select * from information_schema.TABLE_PRIVILEGES WHERE " +
-                    "GRANTEE LIKE ? AND " +
-                    "PRIVILEGE_TYPE='DELETE' AND " +
-                    "(TABLE_SCHEMA=? OR TABLE_SCHEMA='%') AND " +
-                    "(TABLE_NAME=? OR TABLE_NAME='%');";
-            statement = createStatement(tableSql);
-            statement.setString(1, "'"+getUsername()+"'@%");
-            statement.setString(2, getSchema());
-            statement.setString(3, tableName);
-            resultSet = statement.executeQuery();
-            if(resultSet.next()) {
-                return true;
-            }
-            resultSet.close();
         }
         catch(SQLException ex) {
             // todo
@@ -3148,5 +3131,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     @Override
     public boolean supportReporting() {
         return true;
+    }
+
+    static boolean isGrantStringForMySQLDatabase(String grantString, String databaseName, String tableName) {
+        return grantString.matches("GRANT.*ON\\s+(`?(("+ databaseName + ")|%|\\*)`?\\.)?`?(\\*|"+ tableName + ")`?\\s+TO.*");
     }
 }

@@ -161,7 +161,7 @@ public class ServerLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
 
-        if (result == null) {
+        if (result == null || result.isEmpty()) {
             return Collections.emptySet();
         } else {
             HashSet<Integer> set = new HashSet<Integer>();
