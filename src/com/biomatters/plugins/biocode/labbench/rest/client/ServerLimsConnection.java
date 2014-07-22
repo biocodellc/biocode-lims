@@ -169,7 +169,7 @@ public class ServerLimsConnection extends LIMSConnection {
                 try {
                     set.add(Integer.parseInt(idString));
                 } catch (NumberFormatException e) {
-                    throw new DatabaseServiceException("Server returned bad plate ID: " + idString + " is not a number", false);
+                    throw new DatabaseServiceException("Server returned bad plate IDs: " + result, false);
                 }
             }
             return set;
