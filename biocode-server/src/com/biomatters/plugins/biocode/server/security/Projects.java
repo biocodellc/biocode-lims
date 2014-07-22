@@ -40,17 +40,11 @@ public class Projects {
                     "LEFT OUTER JOIN project_role ON project.id = project_role.project_id " +
                     "LEFT OUTER JOIN users ON users.username = project_role.username " +
                     "LEFT OUTER JOIN authorities ON users.username = authorities.username ";
-            if(ids.length > 0) {
-                String questionMarkString = getQuestionMarkString(ids.length);
-                queryString += "WHERE project.id IN (" + questionMarkString + ") ";
-            }
 
             PreparedStatement select = connection.prepareStatement(queryString + "ORDER BY project.id");
-            for(int i=0; i<ids.length; i++) {
-                select.setObject(i+1, ids[i]);
-            }
+
             ResultSet resultSet = select.executeQuery();
-            projectList = getProjectsForResultSet(resultSet);
+            projectList = getProjectsForResultSet(resultSet, ids);
 
         } catch (SQLException e) {
             throw new InternalServerErrorException("Encountered an error accessing the database: " + e.getMessage(), e);
@@ -66,7 +60,7 @@ public class Projects {
         return StringUtilities.join(",", Arrays.asList(questionMarks));
     }
 
-    private static List<Project> getProjectsForResultSet(ResultSet resultSet) throws SQLException {
+    private static List<Project> getProjectsForResultSet(ResultSet resultSet, Integer[] projectIds) throws SQLException {
         Map<Integer, Project> projects = new LinkedHashMap<Integer, Project>();
         Set<Project> addLater = new HashSet<Project>();
         while(resultSet.next()) {
@@ -112,7 +106,19 @@ public class Projects {
             }
         }
 
-        return new ArrayList<Project>(projects.values());
+        if(projectIds.length == 0) {
+            return new ArrayList<Project>(projects.values());
+        } else {
+            ArrayList<Project> toReturn = new ArrayList<Project>();
+            for (int id : projectIds) {
+                Project project = projects.get(id);
+                if(project != null) {
+                    toReturn.add(project);
+                }
+            }
+
+            return toReturn;
+        }
     }
 
     @GET
