@@ -175,7 +175,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             } else if (sample != null) {
                 tissueDoc = new TissueDocument(sample);
             } else  {
-                tissueDoc = downloadTissueDocument(expeditionTitle, tissueId);
+                tissueDoc = downloadAndCacheAllTissuesAndReturnTissueForId(expeditionTitle, tissueId);
             }
 
             if(tissueDoc != null) {
@@ -189,15 +189,18 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     }
 
     /**
+     * <p>The Biocode FIMS only allows us to retrieve data for all tissues or for one tissue.  It does not allow batching.
+     * So to save making requests to the server we download and cache all tissues.</p>
+     * <p>If we didn't do this then we would be making N requests every time a new plate was downloaded.  Where N is
+     * the number of reactions (typically 96).</p>
      *
      * @param expeditionTitle or null to search all expeditions
      * @param tissueId The id of the tissue to retrieve
      * @return TissueDocument or null if no tissue was found
      * @throws ConnectionException if there was a problem communicating with the server
      */
-    private TissueDocument downloadTissueDocument(String expeditionTitle, String tissueId) throws ConnectionException {
+    private TissueDocument downloadAndCacheAllTissuesAndReturnTissueForId(String expeditionTitle, String tissueId) throws ConnectionException {
         Form form = new Form();
-        form.param(getTissueCol(), tissueId);
         Graph graph = null;
         for (Graph g : graphs.values()) {
             if(g.getExpeditionTitle().equals(expeditionTitle)) {
@@ -206,9 +209,10 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             }
         }
 
-        List<FimsSample> samples = getFimsSamplesBySearch(graph, form, null);
-        assert(samples.size() <= 1);
-        return samples.isEmpty() ? null : new TissueDocument(samples.get(0));
+        getFimsSamplesBySearch(graph, form, null);
+        SoftReference<FimsSample> inCache = cachedSamples.get(tissueId);
+        FimsSample cachedValue = inCache.get();
+        return cachedValue == null ? null : new TissueDocument(cachedValue);
     }
 
     private String getExpeditionOrAddToForm(Form form, String projectToSearch, AdvancedSearchQueryTerm termQuery) throws ConnectionException {
