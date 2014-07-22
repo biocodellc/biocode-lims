@@ -30,6 +30,12 @@ public class Projects {
         return Response.ok(new GenericEntity<List<Project>>(projectList) { }).build();
     }
 
+    /**
+     *
+     * @param dataSource To use to obtain a connection to the database
+     * @param ids A list of project IDs for which to retrieve projects or an empty list if all projects are to be retrieved
+     * @return A list of projects matching the specified ids or all projects if no ids were specified.
+     */
     static List<Project> getProjectsForId(DataSource dataSource, Integer... ids) {
         List<Project> projectList;
         Connection connection = null;
@@ -60,7 +66,7 @@ public class Projects {
         return StringUtilities.join(",", Arrays.asList(questionMarks));
     }
 
-    private static List<Project> getProjectsForResultSet(ResultSet resultSet, Integer[] projectIds) throws SQLException {
+    private static List<Project> getProjectsForResultSet(ResultSet resultSet, Integer... projectIds) throws SQLException {
         Map<Integer, Project> projects = new LinkedHashMap<Integer, Project>();
         Set<Project> addLater = new HashSet<Project>();
         while(resultSet.next()) {
@@ -109,14 +115,13 @@ public class Projects {
         if(projectIds.length == 0) {
             return new ArrayList<Project>(projects.values());
         } else {
-            ArrayList<Project> toReturn = new ArrayList<Project>();
+            List<Project> toReturn = new ArrayList<Project>();
             for (int id : projectIds) {
                 Project project = projects.get(id);
                 if(project != null) {
                     toReturn.add(project);
                 }
             }
-
             return toReturn;
         }
     }
