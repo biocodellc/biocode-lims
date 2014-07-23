@@ -151,6 +151,8 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
         List<FimsSample> results = new ArrayList<FimsSample>();
         HashSet<String> idsWithoutDupes = new HashSet<String>(tissueIds);
+
+        Set<String> toDownload = new HashSet<String>();
         for (String tissueId : idsWithoutDupes) {
             if(tissueId == null || tissueId.isEmpty()) {
                 continue;
@@ -162,21 +164,18 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 sample = cachedResult.get();
             }
             TissueDocument tissueDoc;
-            if (sample == dummySample) {
-                tissueDoc = null;
-            } else if (sample != null) {
+            if(sample == null) {
+                toDownload.add(tissueId);
+            } else if (sample != dummySample) {
                 tissueDoc = new TissueDocument(sample);
-            } else  {
-                tissueDoc = downloadAndCacheAllTissuesAndReturnTissueForId(null, tissueId);
-            }
-
-            if(tissueDoc != null) {
                 if (callback != null) {
                     callback.add(tissueDoc, Collections.<String, Object>emptyMap());
                 }
                 results.add(tissueDoc);
             }
         }
+
+        results.addAll(downloadAndCacheAllTissuesAndReturnTissueForId(null, toDownload));
         return results;
     }
 
@@ -187,11 +186,15 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
      * the number of reactions (typically 96).</p>
      *
      * @param expeditionTitle or null to search all expeditions
-     * @param tissueId The id of the tissue to retrieve
+     * @param tissueIds The id of the tissue to retrieve
      * @return TissueDocument or null if no tissue was found
      * @throws ConnectionException if there was a problem communicating with the server
      */
-    private TissueDocument downloadAndCacheAllTissuesAndReturnTissueForId(String expeditionTitle, String tissueId) throws ConnectionException {
+    private List<TissueDocument> downloadAndCacheAllTissuesAndReturnTissueForId(String expeditionTitle, Collection<String> tissueIds) throws ConnectionException {
+        if(tissueIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         Form form = new Form();
         Graph graph = null;
         for (Graph g : graphs.values()) {
@@ -202,9 +205,17 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         }
 
         getFimsSamplesBySearch(graph, form, null);
-        SoftReference<FimsSample> inCache = cachedSamples.get(tissueId);
-        FimsSample cachedValue = inCache.get();
-        return cachedValue == null ? null : new TissueDocument(cachedValue);
+        List<TissueDocument> results = new ArrayList<TissueDocument>();
+        for (String tissueId : tissueIds) {
+            SoftReference<FimsSample> inCache = cachedSamples.get(tissueId);
+            if(inCache != null) {
+                FimsSample cachedValue = inCache.get();
+                if(cachedValue != null) {
+                    results.add(new TissueDocument(cachedValue));
+                }
+            }
+        }
+        return results;
     }
 
     private String getExpeditionOrAddToForm(Form form, String projectToSearch, AdvancedSearchQueryTerm termQuery) throws ConnectionException {
