@@ -87,7 +87,7 @@ public class Plates {
     @Path("empty")
     public XMLSerializableList<Plate> getEmptyPlates(@QueryParam("platesToCheck")String platesToCheck) { // todo: Confirm if required.
         if(platesToCheck == null || platesToCheck.trim().isEmpty()) {
-            return null;
+            return new XMLSerializableList<Plate>(Plate.class, Collections.<Plate>emptyList());
         }
 
         String[] idStrings = platesToCheck.split(",");
