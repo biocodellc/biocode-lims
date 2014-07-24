@@ -133,8 +133,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     public void disconnect() {
         try {
-            Class dataSourceClass = dataSource.getClass();
-            dataSourceClass.getDeclaredMethod("close").invoke(dataSource);
+            if (dataSource != null) {
+                Class dataSourceClass = dataSource.getClass();
+                dataSourceClass.getDeclaredMethod("close").invoke(dataSource);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
