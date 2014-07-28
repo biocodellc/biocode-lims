@@ -92,7 +92,7 @@ public class FIMS {
                     LIMSInitializationListener.getDataSource(),
                     LIMSInitializationListener.getFimsConnection(),
                     Users.getLoggedInUser(), Role.READER);
-            if(projectsUserHasAccessTo.isEmpty()) {
+            if(projectsUserHasAccessTo == null || projectsUserHasAccessTo.isEmpty()) {
                 return "";
             }
             Query query = RestQueryUtils.createQueryFromQueryString(RestQueryUtils.QueryType.forTypeString(typeString), queryString, Collections.<String, Object>emptyMap());
