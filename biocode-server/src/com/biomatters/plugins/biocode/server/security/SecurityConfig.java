@@ -54,7 +54,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
             initializeAdminUserIfNecessary(dataSource);
 
-            correctFkTracesConstraintIfNecessary(dataSource);
+            updateFkTracesConstraintIfNecessary(dataSource);
         } else {
             needMemoryUsers = true;
         }
@@ -66,7 +66,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         }
     }
 
-    private void correctFkTracesConstraintIfNecessary(DataSource dataSource) throws SQLException {
+    private void updateFkTracesConstraintIfNecessary(DataSource dataSource) throws SQLException {
         Connection connection = null;
 
         PreparedStatement selectFkTracesConstraintStatement = null;
