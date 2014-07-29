@@ -15,9 +15,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.sql.DataSource;
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.NotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
@@ -49,6 +53,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             auth = auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
 
             initializeAdminUserIfNecessary(dataSource);
+
+            correctFkTracesConstraintIfNecessary(dataSource);
         } else {
             needMemoryUsers = true;
         }
@@ -57,6 +63,76 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             // If the database connection isn't set up or users haven't been added yet then we need to also use memory
             // auth with test users.
             auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name);
+        }
+    }
+
+    private void correctFkTracesConstraintIfNecessary(DataSource dataSource) throws SQLException {
+        Connection connection = null;
+
+        PreparedStatement selectFkTracesConstraintStatement = null;
+        PreparedStatement dropExistingFkTracesConstraintStatement = null;
+        PreparedStatement addNewFkTracesConstraintStatement = null;
+
+        ResultSet selectFkTracesContraintResult = null;
+        ResultSet selectFkTracesConstraintAfterCorrectionResult = null;
+        try {
+            connection = dataSource.getConnection();
+
+            String selectFkTracesConstraintQuery = "SELECT * " +
+                                                   "FROM information_schema.referential_constraints " +
+                                                   "WHERE constraint_name=?";
+            String dropExistingFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
+                                                         "DROP FOREIGN KEY FK_traces_1";
+            String addNewFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
+                                                   "ADD CONSTRAINT FK_traces_1 " +
+                                                   "    FOREIGN KEY (reaction)" +
+                                                   "    REFERENCES lims.cyclesequencing (id)" +
+                                                   "    ON UPDATE CASCADE " +
+                                                   "    ON DELETE CASCADE";
+
+            selectFkTracesConstraintStatement = connection.prepareStatement(selectFkTracesConstraintQuery);
+            dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
+            addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
+
+            selectFkTracesConstraintStatement.setObject(1, "FK_traces_1");
+            selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
+
+            if (!selectFkTracesContraintResult.next())             {
+                throw new NotFoundException("Could not find FK_traces_1 constraint.");
+            }
+
+            if (selectFkTracesContraintResult.getString("DELETE_RULE").equals("CASCADE") && selectFkTracesContraintResult.getString("UPDATE_RULE").equals("CASCADE")) {
+                return;
+            }
+
+            dropExistingFkTracesConstraintStatement.executeUpdate();
+            addNewFkTracesConstraintStatement.executeUpdate();
+            selectFkTracesConstraintAfterCorrectionResult = selectFkTracesConstraintStatement.executeQuery();
+
+            if (!selectFkTracesConstraintAfterCorrectionResult.next()) {
+                throw new NotFoundException("Could not add FK_traces_1 constraint.");
+            }
+
+            if (!selectFkTracesConstraintAfterCorrectionResult.getString("DELETE_RULE").equals("CASCADE") || !selectFkTracesConstraintAfterCorrectionResult.getString("UPDATE_RULE").equals("CASCADE")) {
+                throw new InternalServerErrorException("Could not update FK_traces_1 constraint.");
+            }
+        } finally {
+            if (selectFkTracesConstraintStatement != null) {
+                selectFkTracesConstraintStatement.close();
+            }
+            if (dropExistingFkTracesConstraintStatement != null) {
+                dropExistingFkTracesConstraintStatement.close();
+            }
+            if (addNewFkTracesConstraintStatement != null) {
+                addNewFkTracesConstraintStatement.close();
+            }
+            if (selectFkTracesContraintResult != null) {
+                selectFkTracesContraintResult.close();
+            }
+            if (selectFkTracesConstraintAfterCorrectionResult != null) {
+                selectFkTracesConstraintAfterCorrectionResult.close();
+            }
+            SqlUtilities.closeConnection(connection);
         }
     }
 
