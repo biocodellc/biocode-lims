@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.rest.client;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
@@ -111,8 +112,10 @@ public class ServerLimsConnection extends LIMSConnection {
     public void savePlates(List<Plate> plates, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         try {
             Invocation.Builder request = target.path("plates").request();
-            request.put(Entity.entity(new XMLSerializableList<Plate>(Plate.class, plates),
-                    MediaType.APPLICATION_XML_TYPE));
+            Response response = request.put(Entity.entity(new XMLSerializableList<Plate>(Plate.class, plates), MediaType.APPLICATION_XML_TYPE));
+            if (response.getStatusInfo() != Response.Status.OK) {
+                Dialogs.showMessageDialog("Could not add plate: " + response.readEntity(String.class));
+            }
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {

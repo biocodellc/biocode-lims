@@ -16,9 +16,12 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.server.security.AccessUtilities;
 import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
+
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.*;
 
 /**
@@ -37,9 +40,15 @@ public class Plates {
             AccessUtilities.checkUserHasRoleForPlate(plates.getList(), Role.WRITER);
             LIMSInitializationListener.getLimsConnection().savePlates(plates.getList(), ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
-            throw new WebApplicationException(e.getMessage(), e);
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                                                       .entity(e.getMessage())
+                                                       .type(MediaType.TEXT_PLAIN_TYPE)
+                                                       .build());
         } catch (BadDataException e) {
-            throw new WebApplicationException(e.getMessage(), e);
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                                                      .entity(e.getMessage())
+                                                      .type(MediaType.TEXT_PLAIN_TYPE)
+                                                      .build());
         }
     }
 
