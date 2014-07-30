@@ -113,7 +113,7 @@ public class ServerLimsConnection extends LIMSConnection {
         try {
             Invocation.Builder request = target.path("plates").request();
             Response response = request.put(Entity.entity(new XMLSerializableList<Plate>(Plate.class, plates), MediaType.APPLICATION_XML_TYPE));
-            if (response.getStatusInfo() != Response.Status.OK) {
+            if (response.getStatus() != Response.Status.OK.getStatusCode() && response.getStatus() != Response.Status.NO_CONTENT.getStatusCode()) {
                 Dialogs.showMessageDialog("Could not add plate: " + response.readEntity(String.class));
             }
         } catch (WebApplicationException e) {
