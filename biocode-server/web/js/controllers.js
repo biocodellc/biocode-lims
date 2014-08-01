@@ -53,6 +53,8 @@ biocodeControllers.controller('projectListCtrl', ['$scope', '$http',
 
             projects = $scope.projects;
             projectMap = $scope.projectMap;
+        }).error(function(data) {
+            $scope.errorMessage = data.substring(data.indexOf("<pre>") + 5, data.indexOf("</pre>"));
         });
 
         $scope.isFirst = true;
@@ -149,6 +151,8 @@ biocodeControllers.controller('userListCtrl', ['$scope', '$http',
         function init() {
             $http.get(usersUrl).success(function (data) {
                 $scope.users = data;
+            }).error(function(data) {
+                $scope.errorMessage = data.substring(data.indexOf("<pre>") + 5, data.indexOf("</pre>"));
             });
         }
 

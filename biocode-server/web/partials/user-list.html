@@ -1,4 +1,4 @@
-<div class="container">
+<div class="container" ng-hide="errorMessage">
     <div class="header">
         <h1>User List</h1>
         <button type="button" class="btn btn-primary btn-lg" onclick="location='#/create-user'">Create User</button>
@@ -16,7 +16,7 @@
                 <th>Username</th>
                 <th>First Name</th>
                 <th>Last Name</th>
-                <th>Email adress</th>
+                <th>Email address</th>
                 <th><input type="checkbox" id="all-project-roles" ng-click="onAllCheckBox($event.target)"></th>
             </tr>
             </thead>
@@ -30,5 +30,10 @@
             </tr>
             </tbody>
         </table>
+    </div>
+</div>
+<div class="container" ng-show="errorMessage">
+    <div class="errors">
+        {{errorMessage}}
     </div>
 </div>
