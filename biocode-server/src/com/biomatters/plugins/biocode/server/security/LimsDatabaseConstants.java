@@ -7,6 +7,7 @@ package com.biomatters.plugins.biocode.server.security;
 public class LimsDatabaseConstants {
     public static final String USERS_TABLE_NAME       = "users";
     public static final String AUTHORITIES_TABLE_NAME = "authorities";
+    public static final String BCID_ROOTS_TABLE_NAME  = "bcid_roots";
 
     public static final String USERNAME_COLUMN_NAME_USERS_TABLE  = "username";
     public static final String PASSWORD_COLUMN_NAME_USERS_TABLE  = "password";

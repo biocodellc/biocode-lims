@@ -55,6 +55,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             initializeAdminUserIfNecessary(dataSource);
 
             updateFkTracesConstraintIfNecessary(dataSource);
+
+            createBCIDRootsTableIfNecessary(dataSource);
         } else {
             needMemoryUsers = true;
         }
@@ -63,6 +65,49 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             // If the database connection isn't set up or users haven't been added yet then we need to also use memory
             // auth with test users.
             auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name);
+        }
+    }
+
+    private void createBCIDRootsTableIfNecessary(DataSource dataSource) throws SQLException {
+        Connection connection = null;
+
+        PreparedStatement selectBCIDRootsTableStatement = null;
+        PreparedStatement createBCIDRootsTableStatement = null;
+
+        try {
+            connection = dataSource.getConnection();
+
+            String selectBCIDRootsTableQuery = "SELECT * " +
+                                               "FROM information_schema.tables " +
+                                               "WHERE table_name=?";
+            String createBCIDRootsTableQuery = "CREATE TABLE " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME +
+                                               "(" +
+                                               "type VARCHAR(255) NOT NULL," +
+                                               "bcid_root VARCHAR(255) NOT NULL," +
+                                               "PRIMARY KEY (type)" +
+                                               ");";
+
+            selectBCIDRootsTableStatement = connection.prepareStatement(selectBCIDRootsTableQuery);
+            createBCIDRootsTableStatement = connection.prepareStatement(createBCIDRootsTableQuery);
+
+            selectBCIDRootsTableStatement.setObject(1, LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME);
+            if (selectBCIDRootsTableStatement.executeQuery().next()) {
+                return;
+            }
+
+            createBCIDRootsTableStatement.executeUpdate();
+
+            if (!selectBCIDRootsTableStatement.executeQuery().next()) {
+                throw new InternalServerErrorException("Could not create bcid_roots table.");
+            }
+        } finally {
+            if (selectBCIDRootsTableStatement != null) {
+                selectBCIDRootsTableStatement.close();
+            }
+            if (createBCIDRootsTableStatement != null) {
+                createBCIDRootsTableStatement.close();
+            }
+            SqlUtilities.closeConnection(connection);
         }
     }
 
