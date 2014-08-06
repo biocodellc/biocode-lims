@@ -68,6 +68,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         try {
             connection = getConnection();
             String errorMessage = verifyDatabaseVersionAndUpgradeIfNecessary(connection);
+
             if (errorMessage != null) {
                 throw new ConnectionException(errorMessage);
             }
@@ -200,6 +201,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     }
                     System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
                 }
+                updateFkTracesConstraintIfNecessary(dataSource);
             } finally {
                 SqlUtilities.cleanUpStatements(getReactionsAndResults, updateReaction);
             }
@@ -308,6 +310,84 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
+    private void updateFkTracesConstraintIfNecessary(DataSource dataSource) throws SQLException {
+        if (isLocal()) {
+            return;
+        }
+
+        Connection connection = null;
+
+        PreparedStatement selectFkTracesConstraintStatement = null;
+        PreparedStatement dropExistingFkTracesConstraintStatement = null;
+        PreparedStatement addNewFkTracesConstraintStatement = null;
+
+        ResultSet selectFkTracesContraintResult = null;
+        ResultSet selectFkTracesConstraintAfterCorrectionResult = null;
+        try {
+            connection = dataSource.getConnection();
+
+            String selectFkTracesConstraintQuery = "SELECT * " +
+                    "FROM information_schema.referential_constraints " +
+                    "WHERE constraint_name=?";
+            String dropExistingFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
+                    "DROP FOREIGN KEY FK_traces_1";
+            String addNewFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
+                    "ADD CONSTRAINT FK_traces_1 " +
+                    "    FOREIGN KEY (reaction)" +
+                    "    REFERENCES lims.cyclesequencing (id)" +
+                    "    ON UPDATE CASCADE " +
+                    "    ON DELETE CASCADE";
+
+            selectFkTracesConstraintStatement = connection.prepareStatement(selectFkTracesConstraintQuery);
+            dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
+            addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
+
+            selectFkTracesConstraintStatement.setObject(1, "FK_traces_1");
+            selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
+
+            if (!selectFkTracesContraintResult.next())             {
+                System.out.println("Could not find FK_traces_1 constraint.");
+                return;
+            }
+
+            if (selectFkTracesContraintResult.getString("DELETE_RULE").equals("CASCADE") && selectFkTracesContraintResult.getString("UPDATE_RULE").equals("CASCADE")) {
+                return;
+            }
+
+            System.out.println("Updating database constraints");
+
+            dropExistingFkTracesConstraintStatement.executeUpdate();
+            addNewFkTracesConstraintStatement.executeUpdate();
+            selectFkTracesConstraintAfterCorrectionResult = selectFkTracesConstraintStatement.executeQuery();
+
+            if (!selectFkTracesConstraintAfterCorrectionResult.next()) {
+                System.out.println("Could not add FK_traces_1 constraint.");
+                return;
+            }
+
+            if (!selectFkTracesConstraintAfterCorrectionResult.getString("DELETE_RULE").equals("CASCADE") || !selectFkTracesConstraintAfterCorrectionResult.getString("UPDATE_RULE").equals("CASCADE")) {
+                System.out.println("Could not update FK_traces_1 constraint.");
+                return;
+            }
+        } finally {
+            if (selectFkTracesConstraintStatement != null) {
+                selectFkTracesConstraintStatement.close();
+            }
+            if (dropExistingFkTracesConstraintStatement != null) {
+                dropExistingFkTracesConstraintStatement.close();
+            }
+            if (addNewFkTracesConstraintStatement != null) {
+                addNewFkTracesConstraintStatement.close();
+            }
+            if (selectFkTracesContraintResult != null) {
+                selectFkTracesContraintResult.close();
+            }
+            if (selectFkTracesConstraintAfterCorrectionResult != null) {
+                selectFkTracesConstraintAfterCorrectionResult.close();
+            }
+            SqlUtilities.closeConnection(connection);
+        }
+    }
 
     /**
      * @return an error message or null if everything is OK
@@ -937,10 +1017,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             if(r.getId() >= 0) {
                 terms.add(r.getId());
             }
-        }
-
-        if(tableName.equals("cyclesequencing")) {
-            deleteRecords("traces", "reaction", terms);
         }
 
         deleteRecords(tableName, "id", terms);

@@ -491,7 +491,7 @@ CREATE TABLE `traces` (
   `data` longblob NOT NULL,
   PRIMARY KEY  (`id`),
   KEY `FK_traces_1` (`reaction`),
-  CONSTRAINT `FK_traces_1` FOREIGN KEY (`reaction`) REFERENCES `cyclesequencing` (`id`)
+  CONSTRAINT `FK_traces_1` FOREIGN KEY (`reaction`) REFERENCES `cyclesequencing` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
 

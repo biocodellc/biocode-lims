@@ -54,8 +54,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
             initializeAdminUserIfNecessary(dataSource);
 
-            updateFkTracesConstraintIfNecessary(dataSource);
-
             createBCIDRootsTableIfNecessary(dataSource);
         } else {
             needMemoryUsers = true;
@@ -106,76 +104,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             }
             if (createBCIDRootsTableStatement != null) {
                 createBCIDRootsTableStatement.close();
-            }
-            SqlUtilities.closeConnection(connection);
-        }
-    }
-
-    private void updateFkTracesConstraintIfNecessary(DataSource dataSource) throws SQLException {
-        Connection connection = null;
-
-        PreparedStatement selectFkTracesConstraintStatement = null;
-        PreparedStatement dropExistingFkTracesConstraintStatement = null;
-        PreparedStatement addNewFkTracesConstraintStatement = null;
-
-        ResultSet selectFkTracesContraintResult = null;
-        ResultSet selectFkTracesConstraintAfterCorrectionResult = null;
-        try {
-            connection = dataSource.getConnection();
-
-            String selectFkTracesConstraintQuery = "SELECT * " +
-                                                   "FROM information_schema.referential_constraints " +
-                                                   "WHERE constraint_name=?";
-            String dropExistingFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
-                                                         "DROP FOREIGN KEY FK_traces_1";
-            String addNewFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
-                                                   "ADD CONSTRAINT FK_traces_1 " +
-                                                   "    FOREIGN KEY (reaction)" +
-                                                   "    REFERENCES lims.cyclesequencing (id)" +
-                                                   "    ON UPDATE CASCADE " +
-                                                   "    ON DELETE CASCADE";
-
-            selectFkTracesConstraintStatement = connection.prepareStatement(selectFkTracesConstraintQuery);
-            dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
-            addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
-
-            selectFkTracesConstraintStatement.setObject(1, "FK_traces_1");
-            selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
-
-            if (!selectFkTracesContraintResult.next())             {
-                throw new NotFoundException("Could not find FK_traces_1 constraint.");
-            }
-
-            if (selectFkTracesContraintResult.getString("DELETE_RULE").equals("CASCADE") && selectFkTracesContraintResult.getString("UPDATE_RULE").equals("CASCADE")) {
-                return;
-            }
-
-            dropExistingFkTracesConstraintStatement.executeUpdate();
-            addNewFkTracesConstraintStatement.executeUpdate();
-            selectFkTracesConstraintAfterCorrectionResult = selectFkTracesConstraintStatement.executeQuery();
-
-            if (!selectFkTracesConstraintAfterCorrectionResult.next()) {
-                throw new NotFoundException("Could not add FK_traces_1 constraint.");
-            }
-
-            if (!selectFkTracesConstraintAfterCorrectionResult.getString("DELETE_RULE").equals("CASCADE") || !selectFkTracesConstraintAfterCorrectionResult.getString("UPDATE_RULE").equals("CASCADE")) {
-                throw new InternalServerErrorException("Could not update FK_traces_1 constraint.");
-            }
-        } finally {
-            if (selectFkTracesConstraintStatement != null) {
-                selectFkTracesConstraintStatement.close();
-            }
-            if (dropExistingFkTracesConstraintStatement != null) {
-                dropExistingFkTracesConstraintStatement.close();
-            }
-            if (addNewFkTracesConstraintStatement != null) {
-                addNewFkTracesConstraintStatement.close();
-            }
-            if (selectFkTracesContraintResult != null) {
-                selectFkTracesContraintResult.close();
-            }
-            if (selectFkTracesConstraintAfterCorrectionResult != null) {
-                selectFkTracesConstraintAfterCorrectionResult.close();
             }
             SqlUtilities.closeConnection(connection);
         }
