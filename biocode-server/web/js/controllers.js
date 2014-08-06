@@ -53,8 +53,8 @@ biocodeControllers.controller('projectListCtrl', ['$scope', '$http',
 
             projects = $scope.projects;
             projectMap = $scope.projectMap;
-        }).error(function(data) {
-            $scope.errorMessage = data.substring(data.indexOf("<pre>") + 5, data.indexOf("</pre>"));
+        }).error(function(data, status) {
+            showError($scope, status, data, "projects");
         });
 
         $scope.isFirst = true;
@@ -151,8 +151,8 @@ biocodeControllers.controller('userListCtrl', ['$scope', '$http',
         function init() {
             $http.get(usersUrl).success(function (data) {
                 $scope.users = data;
-            }).error(function(data) {
-                $scope.errorMessage = data.substring(data.indexOf("<pre>") + 5, data.indexOf("</pre>"));
+            }).error(function(data, status) {
+                showError($scope, status, data, "users");
             });
         }
 
@@ -347,3 +347,14 @@ biocodeControllers.controller('homeCtrl', ['$scope', '$http',
             $('div.errors').html(data);
         });
     }]);
+
+function showError($scope, status, data, resourceName) {
+    if(status == 401 || status == 403) {
+        $scope.errorMessage = "You must be authenticated as an admin user to view " + resourceName + ".";
+    }
+    if(data.contains("Jetty")) {
+        $scope.errorMessage = data.substring(data.indexOf("<pre>") + 5, data.indexOf("</pre>"));
+    } else {
+        $scope.errorMessage = data;
+    }
+}
