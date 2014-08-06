@@ -1,0 +1,31 @@
+<div class="container" ng-hide="errorMessage">
+    <div class="header">
+        <h1>BCID Roots</h1>
+    </div>
+    <div class="row">
+        <div class="form-group userKeyword">
+            <table class="table table-striped table-bordered" id="bcidRootsTable">
+                <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Value</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="bcidRoot in bcidRoots">
+                    <td>{{bcidRoot.type}}</td>
+                    <td><div id="{{bcidRoot.type}}" contenteditable>{{bcidRoot.value}}</div></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row">
+        <button type="button" class="btn btn-primary btn-lg" ng-click="save()">Save</button>
+    </div>
+</div>
+<div class="container" ng-show="errorMessage">
+    <div class="errors">
+        {{errorMessage}}
+    </div>
+</div>

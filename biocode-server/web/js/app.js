@@ -111,6 +111,10 @@ biocodeApp.config(['$routeProvider', 'ngModalDefaultsProvider',
                 templateUrl: 'partials/home.html',
                 controller: 'homeCtrl'
             }).
+            when('/bcid-roots', {
+                templateUrl: 'partials/bcid-roots.html',
+                controller: 'bcidRootsCtrl'
+            }).
             otherwise({
                 redirectTo: '/home'
             });

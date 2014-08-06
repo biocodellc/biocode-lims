@@ -5,6 +5,7 @@ var errorUrl = "biocode/info/errors";
 var projectsUrl = "biocode/projects";
 var usersUrl = "biocode/users";
 var rolesUrl = "biocode/roles";
+var BCIDRootsURL = "biocode/bcid-roots";
 var usersPage = "#/users";
 var projectMap = null;
 var projects = null;
@@ -261,7 +262,7 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
 
         $scope.onUpdateUser = function() {
             $http.put(usersUrl + '/' + $scope.user.username, $scope.user).success(function(){
-                alert('update sucessfull');
+                alert('Update successful');
             });
         }
 
@@ -272,7 +273,7 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
             var tmpUser = $scope.user;
             tmpUser.password = $('#passinput')[0].value;
             $http.put(usersUrl + '/' + $scope.user.username, tmpUser).success(function(){
-                alert('password update sucessfull');
+                alert('Password update successful');
                 $scope.toggleModal();
             });
         }
@@ -358,3 +359,49 @@ function showError($scope, status, data, resourceName) {
         $scope.errorMessage = data;
     }
 }
+
+biocodeControllers.controller('bcidRootsCtrl', ['$scope', '$http',
+    function($scope, $http) {
+        $('.navbar-nav li').attr('class', '');
+        $('li#bcid-roots').attr('class', 'active');
+        init();
+
+        function init() {
+            $http.get(BCIDRootsURL).success(function (data) {
+                $scope.bcidRoots = data;
+            }).error(function(data, status) {
+                showError($scope, status, data, "bcid roots");
+            });
+        }
+
+        $scope.save = function() {
+            var bcidRootsTable = document.getElementById("bcidRootsTable");
+            var bcidRoots = [];
+            var bcidRootsNotUpdated = [];
+            for (var i = 1; i < bcidRootsTable.rows.length; i++) {
+                var newBCIDRoot = new Object();
+                var currRow = bcidRootsTable.rows[i].cells;
+
+                newBCIDRoot.type = currRow[0].textContent;
+                newBCIDRoot.value = currRow[1].textContent;
+
+                bcidRoots.push(newBCIDRoot);
+            }
+
+            for (var i = 0; i < bcidRoots.length; i++) {
+                $http.put(BCIDRootsURL + '/' + bcidRoots[i].type, JSON.stringify(bcidRoots[i])).error(function(data) {
+                    bcidRootsNotUpdated.push(bcidRoots[i].type);
+                });
+            }
+
+            if (bcidRootsNotUpdated.length > 0) {
+                var message = "Could not update BCID Roots:\n";
+                for (var i = 0; i < bcidRootsNotUpdated.length; i++) {
+                    message = message + "\n" + bcidRootsNotUpdated[i];
+                }
+                alert(message);
+            } else {
+                alert("Update successful");
+            }
+        }
+    }]);
