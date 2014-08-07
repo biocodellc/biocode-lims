@@ -2,14 +2,11 @@ package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.plugins.biocode.assembler.lims.AddAssemblyResultsToLimsOperation;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.Cancelable;
-import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import java.sql.*;
@@ -50,6 +47,7 @@ public abstract class LIMSConnection {
     public static final DocumentField WORKFLOW_NAME_FIELD = DocumentField.createStringField("Workflow Name", "", "workflow.name", true, false);
     public static final DocumentField WORKFLOW_DATE_FIELD = DocumentField.createDateField("Last Modified (LIMS workflow)", "", "workflow.date", false, false);
     public static final DocumentField WORKFLOW_LOCUS_FIELD = DocumentField.createStringField("Locus", "The locus of the workflow", "workflow.locus", true, false);
+    public static final DocumentField WORKFLOW_BCID_FIELD = DocumentField.createStringField("Workflow BCID", "The BCID of the workflow", "workflow.bcid", true, false);
     static {
         TABLE_TO_FIELDS.put("workflow", Arrays.asList(WORKFLOW_ID_FIELD, WORKFLOW_NAME_FIELD, WORKFLOW_DATE_FIELD, WORKFLOW_LOCUS_FIELD));
     }
@@ -65,6 +63,7 @@ public abstract class LIMSConnection {
     public static final DocumentField EXTRACTION_ID_FIELD = DocumentField.createStringField("Extraction ID", "The Extraction ID", "extraction.extractionId", true, false);
     public static final DocumentField EXTRACTION_BARCODE_FIELD = DocumentField.createStringField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", true, false);
     public static final DocumentField EXTRACTION_DATE_FIELD = DocumentField.createDateField("Extraction Date", "The Date of Extraction", "extraction.date", true, false);
+    public static final DocumentField EXTRACTION_BCID_FIELD = DocumentField.createStringField("Extraction BCID", "The BCID of the extraction", "extraction.bcid", true, false);
     static {
         TABLE_TO_FIELDS.put("extraction", Arrays.asList(EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, EXTRACTION_DATE_FIELD));
     }

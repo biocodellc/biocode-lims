@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDo
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.plugins.biocode.labbench.rest.client.ServerLimsConnection;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -97,21 +98,35 @@ public class WorkflowDocument extends MuitiPartDocument {
             fields.addAll(getFimsSample().getTaxonomyAttributes());
         }
         fields.addAll(Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
-                LIMSConnection.WORKFLOW_LOCUS_FIELD));
+                                    LIMSConnection.WORKFLOW_LOCUS_FIELD,
+                                    LIMSConnection.WORKFLOW_BCID_FIELD));
+
         return fields;
     }
 
     public Object getFieldValue(String fieldCodeName) {
         if("locus".equals(fieldCodeName)) {
             return workflow.getLocus();
-        }
-        if("numberOfParts".equals(fieldCodeName)) {
+        } else if("numberOfParts".equals(fieldCodeName)) {
             return getNumberOfParts();
-        }
-        if(PluginDocument.MODIFIED_DATE_FIELD.getCode().equals(fieldCodeName)) {
+        } else if(PluginDocument.MODIFIED_DATE_FIELD.getCode().equals(fieldCodeName)) {
             return new Date(workflow.getLastModified().getTime());
-        }
-        if(getFimsSample() != null) {
+        } else if (LIMSConnection.WORKFLOW_BCID_FIELD.getCode().equals(fieldCodeName)) {
+            LIMSConnection limsConnection;
+            try {
+                limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+                if (!(limsConnection instanceof ServerLimsConnection)) {
+                    return null;
+                }
+                String workflowBCIDRoot = ((ServerLimsConnection) limsConnection).getBCIDRoots().get("workflow");
+                if (workflowBCIDRoot == null) {
+                    return null;
+                }
+                return workflowBCIDRoot + workflow.getId();
+            } catch (DatabaseServiceException e) {
+                return null;
+            }
+        } else if(getFimsSample() != null) {
             return getFimsSample().getFimsAttributeValue(fieldCodeName);
         }
         return null;
