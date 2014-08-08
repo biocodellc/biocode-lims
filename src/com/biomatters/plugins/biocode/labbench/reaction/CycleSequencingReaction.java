@@ -37,6 +37,8 @@ import org.jdom.Element;
  */
 public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     public static final DocumentField NUM_TRACES_FIELD = DocumentField.createIntegerField("# Traces", "Number of traces attached to reaction", "numTraces");
+    public static final DocumentField NUM_PASSED_SEQS_FIELD = DocumentField.createIntegerField("# Passed", "Number of passed sequences attached to reaction", "numPassedSeqs");
+    public static final DocumentField NUM_SEQS_FIELD = DocumentField.createIntegerField("# Sequences", "Total number of sequencing results attached to reaction", "totalNumSeqs");
 
     private CycleSequencingOptions options;
     private Set<Integer> tracesToRemoveOnSave = new LinkedHashSet<Integer>();
@@ -478,6 +480,8 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     public List<DocumentField> getDisplayableFields() {
         List<DocumentField> fields = super.getDisplayableFields();
         fields.add(NUM_TRACES_FIELD);
+        fields.add(NUM_PASSED_SEQS_FIELD);
+        fields.add(NUM_SEQS_FIELD);
         return fields;
     }
 
@@ -490,8 +494,22 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             } else {
                 return "" + cachedTracesList.size();
             }
+        } else if(NUM_PASSED_SEQS_FIELD.getCode().equals(fieldCode)) {
+            return countSeqResults(SequencingResult.Status.PASS);
+        } else if(NUM_SEQS_FIELD.getCode().equals(fieldCode)) {
+            return countSeqResults(null);
         } else {
             return super.getFieldValue(fieldCode);
         }
+    }
+
+    private int countSeqResults(SequencingResult.Status statusToCheckFor) {
+        int count = 0;
+        for (SequencingResult sequencingResult : sequencingResults) {
+            if(statusToCheckFor == null || sequencingResult.getStatus() == statusToCheckFor) {
+                count++;
+            }
+        }
+        return count;
     }
 }
