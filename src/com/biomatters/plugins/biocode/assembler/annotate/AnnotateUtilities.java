@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDoc
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
+import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -347,5 +348,23 @@ public class AnnotateUtilities {
 
         annotatedDocument.save(updateModifiedDate);
         return fields;
+    }
+
+    static List<Options.OptionValue> getOptionValuesForFimsFields() {
+        List<DocumentField> fields = BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes();
+        List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
+        for(DocumentField field : fields) {
+            values.add(new Options.OptionValue(field.getCode(), field.getName(), field.getDescription()));
+        }
+        return values;
+    }
+
+    static DocumentField getDocumentFieldForOptionValue(Options.OptionValue optionValue) {
+        for (DocumentField candidate : BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes()) {
+            if(candidate.getCode().equals(optionValue.getName())) {
+                return candidate;
+            }
+        }
+        return null;
     }
 }

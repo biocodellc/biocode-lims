@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.assembler.annotate;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -13,8 +14,7 @@ import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -52,7 +52,11 @@ public class AnnotateLimsDataOptions extends Options {
         forwardPlateNameOption.setDescription("Name of cycle sequencing plate in LIMS for forward reads, must not be empty.");
         reversePlateNameOption.setDescription("Name of cycle sequencing plate in LIMS for reverse reads, may be the same as forward plate or empty.");
         useExistingOptions.beginAlignHorizontally(null, false);
-        idType = useExistingOptions.addComboBoxOption("idType", "", new OptionValue[] {WELL_NUMBER, BARCODE}, WELL_NUMBER);
+        List<OptionValue> valuesForMatching = new ArrayList<OptionValue>();
+        valuesForMatching.add(WELL_NUMBER);
+        valuesForMatching.addAll(AnnotateUtilities.getOptionValuesForFimsFields());
+        valuesForMatching.add(BARCODE);
+        idType = useExistingOptions.addComboBoxOption("idType", "", valuesForMatching, WELL_NUMBER);
         useExistingOptions.addLabel("is");
         useExistingOptions.addCustomOption(namePartOption);
         useExistingOptions.addLabel("part of name");
@@ -150,10 +154,6 @@ public class AnnotateLimsDataOptions extends Options {
 //                return samples.get(0);
 //            }
         } else {
-            BiocodeUtilities.Well well = BiocodeUtilities.getWellFromFileName(annotatedDocument.getName(), getNameSeaparator(), getNamePart());
-            if (well == null) {
-                return null;
-            }
             Object isForwardValue = annotatedDocument.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
             if(isForwardValue == null && noDirectionPlateSpecimens == null) {
                 //happens if user specifies different plates for forward and reverse but the sequences aren't annotated with directions
@@ -162,18 +162,49 @@ public class AnnotateLimsDataOptions extends Options {
                         "plates to annotate from.");
             }
             loadPlateSpecimens();
-            WorkflowDocument workflow;
             String sequencingPlateName;
+            Map<BiocodeUtilities.Well, WorkflowDocument> toExamine;
             if (isForwardValue == null) {
                 assert(noDirectionPlateSpecimens != null);
-                workflow = noDirectionPlateSpecimens.get(well);
+                toExamine = noDirectionPlateSpecimens;
                 sequencingPlateName = actualNoDirectionPlateName;
             } else if ((Boolean)isForwardValue) {
-                workflow = forwardPlateSpecimens.get(well);
+                toExamine = forwardPlateSpecimens;
                 sequencingPlateName = actualForwardPlateName;
             } else {
-                workflow = reversePlateSpecimens.get(well);
+                toExamine = reversePlateSpecimens;
                 sequencingPlateName = actualReversePlateName;
+            }
+            WorkflowDocument workflow;
+            BiocodeUtilities.Well well;
+            if(idType.getValue() == WELL_NUMBER) {
+                well = BiocodeUtilities.getWellFromFileName(annotatedDocument.getName(), getNameSeaparator(), getNamePart());
+                if (well == null) {
+                    return null;
+                }
+                workflow = toExamine.get(well);
+            } else {
+                String toMatch = BiocodeUtilities.getStringFromFileName(annotatedDocument.getName(), getNameSeaparator(), getNamePart());
+                if(toMatch == null) {
+                    return null;
+                }
+                DocumentField field = AnnotateUtilities.getDocumentFieldForOptionValue(idType.getValue());
+                Map<String, WorkflowDocument> values = new HashMap<String, WorkflowDocument>();
+                Map<String, BiocodeUtilities.Well> wells = new HashMap<String, BiocodeUtilities.Well>();
+                for (Map.Entry<BiocodeUtilities.Well, WorkflowDocument> entry : toExamine.entrySet()) {
+                    WorkflowDocument candidate = entry.getValue();
+                    Object fieldValue = candidate.getFimsSample().getFimsAttributeValue(field.getCode());
+                    if(fieldValue != null) {
+                        String valueAsString = String.valueOf(fieldValue);
+                        if(values.containsKey(valueAsString)) {
+                            throw new DocumentOperationException("Cannot annotate based on " + idType.getValue().getLabel() + ", plate contains multiple wells with the same value: " + fieldValue);
+                        }
+                        values.put(valueAsString, candidate);
+                        wells.put(valueAsString, entry.getKey());
+                    }
+                }
+                workflow = values.get(toMatch);
+                well = wells.get(toMatch);
             }
             return new FimsData(workflow, sequencingPlateName, well);
         }
