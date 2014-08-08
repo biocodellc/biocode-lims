@@ -482,16 +482,16 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     }
 
     @Override
-    public String getDisplayableValue(DocumentField field) {
-        if(NUM_TRACES_FIELD.getCode().equals(field.getCode())) {
+    public Object getFieldValue(String fieldCode) {
+        if(NUM_TRACES_FIELD.getCode().equals(fieldCode)) {
             List<Trace> cachedTracesList = getTraces();
             if(cachedTracesList == null) {
-                return ""+ cacheNumTraces;
+                return cacheNumTraces;
             } else {
-                return "" + cachedTracesList.size();
+                return cachedTracesList.size();
             }
         } else {
-            return super.getDisplayableValue(field);
+            return super.getFieldValue(fieldCode);
         }
     }
 }

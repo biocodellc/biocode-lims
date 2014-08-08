@@ -1,3 +1,6 @@
+==Biocode Plugin 2.7.2 - TBD==
+* Fixed a bug where the # Traces field would not be populated in the Tabular Plate View.
+
 ==Biocode Plugin 2.7.1 - 18 July 2014==
 * Fixed a problem where seqeunces could be downloaded without annotated FIMS data.
 * Fixed a crash that happens when trying to view/edit traces when a cyclesequencing reaction has no existing traces.
