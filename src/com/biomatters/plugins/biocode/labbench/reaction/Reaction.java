@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
 import com.biomatters.geneious.publicapi.documents.*;
-import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
@@ -9,9 +8,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.Workflow;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
-import jebl.util.ProgressListener;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -22,9 +19,6 @@ import java.awt.font.TextLayout;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.ImageObserver;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.List;
@@ -305,6 +299,15 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         invalidateFieldWidthCache();
     }
 
+    /**
+     * Get the value of a particular field.  Similar to {@link com.biomatters.geneious.publicapi.documents.PluginDocument#getFieldValue(String)}
+     *
+     * @param fieldCode field code. This should be the
+     *      {@link com.biomatters.geneious.publicapi.documents.DocumentField#getCode() code} of one of the fields
+     *      returned from {@link #getDisplayableFields()}.
+     * @return value for a field or null if this document does not have a field with the given field code.
+     *          The class of the returned value must be the {@link DocumentField#getValueType()} (or a subclass) of the corresponding DocumentField returned from {@link #getDisplayableFields()}.
+     */
     public Object getFieldValue(String fieldCode) {
         if(fieldCode.equals("testField")) {
             return "A";
@@ -546,7 +549,11 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
     }
 
-    public String getDisplayableValue(DocumentField field) {
+    /**
+     * @param field The field to retrieve the value of
+     * @return A formatted String interpretation of the value returned from {@link #getFieldValue(String)} intended for users.
+     */
+    final String getDisplayableValue(DocumentField field) {
         Object value = getFieldValue(field.getCode());
         if(value == null) {
             value = "";
