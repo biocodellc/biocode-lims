@@ -63,7 +63,7 @@ public abstract class LIMSConnection {
     public static final DocumentField EXTRACTION_ID_FIELD = DocumentField.createStringField("Extraction ID", "The Extraction ID", "extraction.extractionId", true, false);
     public static final DocumentField EXTRACTION_BARCODE_FIELD = DocumentField.createStringField("Extraction Barcode", "The Extraction Barcode", "extraction.extractionBarcode", true, false);
     public static final DocumentField EXTRACTION_DATE_FIELD = DocumentField.createDateField("Extraction Date", "The Date of Extraction", "extraction.date", true, false);
-    public static final DocumentField EXTRACTION_BCID_FIELD = DocumentField.createStringField("Extraction BCID", "The BCID of the extraction", "extraction.bcid", true, false);
+    public static final DocumentField EXTRACTION_BCID_FIELD = DocumentField.createStringField("Extraction BCID", "The BCID of the extraction", "extractionBCID", true, false);
     static {
         TABLE_TO_FIELDS.put("extraction", Arrays.asList(EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, EXTRACTION_DATE_FIELD));
     }

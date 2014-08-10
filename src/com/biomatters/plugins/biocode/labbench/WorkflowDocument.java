@@ -116,15 +116,15 @@ public class WorkflowDocument extends MuitiPartDocument {
             try {
                 limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
                 if (!(limsConnection instanceof ServerLimsConnection)) {
-                    return null;
+                    return "";
                 }
                 String workflowBCIDRoot = ((ServerLimsConnection) limsConnection).getBCIDRoots().get("workflow");
-                if (workflowBCIDRoot == null) {
-                    return null;
+                if (workflowBCIDRoot == null || workflow == null) {
+                    return "";
                 }
                 return workflowBCIDRoot + workflow.getId();
             } catch (DatabaseServiceException e) {
-                return null;
+                return "";
             }
         } else if(getFimsSample() != null) {
             return getFimsSample().getFimsAttributeValue(fieldCodeName);

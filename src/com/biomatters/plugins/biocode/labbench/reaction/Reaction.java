@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.*;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -8,7 +9,9 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.Workflow;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
+import com.biomatters.plugins.biocode.labbench.rest.client.ServerLimsConnection;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -309,8 +312,22 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
      *          The class of the returned value must be the {@link DocumentField#getValueType()} (or a subclass) of the corresponding DocumentField returned from {@link #getDisplayableFields()}.
      */
     public Object getFieldValue(String fieldCode) {
-        if(fieldCode.equals("testField")) {
-            return "A";
+        if (LIMSConnection.EXTRACTION_BCID_FIELD.getCode().equals(fieldCode)) {
+            LIMSConnection limsConnection;
+            try {
+                limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+                if (!(limsConnection instanceof ServerLimsConnection)) {
+                    return "";
+                }
+                String extractionBCIDRoot = ((ServerLimsConnection) limsConnection).getBCIDRoots().get("extraction");
+                String extractionId = getExtractionId();
+                if (extractionBCIDRoot == null || extractionId == null || extractionId.isEmpty()) {
+                    return "";
+                }
+                return extractionBCIDRoot + extractionId;
+            } catch (DatabaseServiceException e) {
+                return "";
+            }
         }
         Options options = getOptions();
         if(options == null) {
