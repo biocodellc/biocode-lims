@@ -11,7 +11,6 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
-import com.biomatters.plugins.biocode.labbench.TransactionException;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -53,7 +52,7 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
     }
 
     public boolean fieldIsFinal(String fieldCode) {
-        return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode) || "locus".equals(fieldCode);
+        return "extractionId".equals(fieldCode) || "workflowId".equals(fieldCode) || "locus".equals(fieldCode) || "extractionBCID".equals(fieldCode);
     }
 
     public void refreshValuesFromCaches() {
@@ -160,6 +159,7 @@ public class PCROptions extends ReactionOptions<PCRReaction> {
     public void init() {
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
+        addStringOption("extractionBCID", "Extraction BCID", "");
         addStringOption(WORKFLOW_ID, "Workflow ID", "");
         String[] sampleLoci = new String[] {"None", "COI", "16s", "18s", "ITS", "ITS1", "ITS2", "28S", "12S", "rbcl", "matK", "trnH-psba"};
         addEditableComboBoxOption(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "Locus", "None", sampleLoci);

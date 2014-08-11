@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.plugins.biocode.server.security.LimsDatabaseConstants;
+import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
+import com.biomatters.plugins.biocode.labbench.lims.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 
 import javax.ws.rs.*;
@@ -8,7 +9,9 @@ import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Gen Li
@@ -16,9 +19,9 @@ import java.util.List;
  */
 @Path("bcid-roots")
 public class BCIDRoots {
-    @GET
-    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
-    public Response get() {
+    private static Map<String, String> BCIDRootsCache = new HashMap<String, String>();
+
+    static {
         Connection connection = null;
         PreparedStatement getBCIDRootsStatement = null;
         ResultSet BCIDRootsResultSet = null;
@@ -33,14 +36,13 @@ public class BCIDRoots {
             BCIDRootsResultSet = getBCIDRootsStatement.executeQuery();
 
             List<BCIDRoot> BCIDRoots = new ArrayList<BCIDRoot>();
-            while (BCIDRootsResultSet.next()) {
-                BCIDRoots.add(new BCIDRoot(BCIDRootsResultSet.getString(LimsDatabaseConstants.TYPE_COLUMN_NAME_BCID_ROOTS_TABLE),
-                                           BCIDRootsResultSet.getString(LimsDatabaseConstants.BCID_ROOT_COLUMN_NAME_BCID_ROOTS_TABLE)));
-            }
 
-            return Response.ok(new GenericEntity<List<BCIDRoot>>(BCIDRoots){}).build();
+            while (BCIDRootsResultSet.next()) {
+                BCIDRootsCache.put(BCIDRootsResultSet.getString(LimsDatabaseConstants.TYPE_COLUMN_NAME_BCID_ROOTS_TABLE),
+                        BCIDRootsResultSet.getString(LimsDatabaseConstants.BCID_ROOT_COLUMN_NAME_BCID_ROOTS_TABLE));
+            }
         } catch (SQLException e) {
-            throw new InternalServerErrorException("Could not list BCID Roots.", e);
+            throw new InternalServerErrorException("Failed to retrieve BCID Roots.", e);
         } finally {
             try {
                 if (getBCIDRootsStatement != null) {
@@ -54,6 +56,18 @@ public class BCIDRoots {
             }
             SqlUtilities.closeConnection(connection);
         }
+    }
+
+    @GET
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
+    public Response get() {
+        List<BCIDRoot> BCIDRoots = new ArrayList<BCIDRoot>();
+
+        for (Map.Entry<String, String> BCIDRootEntry : BCIDRootsCache.entrySet()) {
+            BCIDRoots.add(new BCIDRoot(BCIDRootEntry.getKey(), BCIDRootEntry.getValue()));
+        }
+
+        return Response.ok(new GenericEntity<List<BCIDRoot>>(BCIDRoots){}).build();
     }
 
     @POST
@@ -73,9 +87,10 @@ public class BCIDRoots {
             SqlUtilities.beginTransaction(connection);
             if (!addBCIDRootStatement.execute()) {
                 SqlUtilities.commitTransaction(connection);
+                BCIDRootsCache.put(bcidRoot.type, bcidRoot.value);
             }
         } catch (SQLException e) {
-            throw new InternalServerErrorException("Could not add BCID Root '" + bcidRoot.type + ":" + bcidRoot.value + "'.", e);
+            throw new InternalServerErrorException("Failed to add BCID Root '" + bcidRoot.type + ":" + bcidRoot.value + "'.", e);
         } finally {
             try {
                 if (addBCIDRootStatement != null) {
@@ -110,9 +125,11 @@ public class BCIDRoots {
             SqlUtilities.beginTransaction(connection);
             if (updateBCIDRootStatement.executeUpdate() == 1) {
                 SqlUtilities.commitTransaction(connection);
+                BCIDRootsCache.remove(type);
+                BCIDRootsCache.put(bcidRoot.type, bcidRoot.value);
             }
         } catch (SQLException e) {
-            throw new InternalServerErrorException("Could not update BCID Root of type " + type + ".", e);
+            throw new InternalServerErrorException("Failed to update " + type + " BCID Root.", e);
         } finally {
             try {
                 if (updateBCIDRootStatement != null) {
@@ -142,9 +159,10 @@ public class BCIDRoots {
             SqlUtilities.beginTransaction(connection);
             if (deleteBCIDRootStatement.executeUpdate() == 1) {
                 SqlUtilities.commitTransaction(connection);
+                BCIDRootsCache.remove(type);
             }
         } catch (SQLException e) {
-            throw new InternalServerErrorException("Could not retrieve BCID Roots.", e);
+            throw new InternalServerErrorException("Failed to delete " + type + " BCID Root.", e);
         } finally {
             try {
                 if (deleteBCIDRootStatement != null) {
