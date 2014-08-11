@@ -201,6 +201,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     }
                     System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
                 }
+                updateFkTracesConstraintIfNecessary(dataSource);
             } finally {
                 SqlUtilities.cleanUpStatements(getReactionsAndResults, updateReaction);
             }
@@ -208,6 +209,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             makeAssemblyTablesWorkflowColumnConsistent(connection);
 
             updateFkTracesConstraintIfNecessary(dataSource);
+            createBCIDRootsTableIfNecessary(dataSource);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Failed to initialize database: " + e.getMessage(), false);
         } finally {
@@ -389,7 +391,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
 
             if (!selectFkTracesContraintResult.next())             {
-                System.out.println("Could not find FK_traces_1 constraint.");
+                System.out.println("Invalid database schema.");
                 return;
             }
 
@@ -397,21 +399,23 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 return;
             }
 
-            System.out.println("Updating database constraints");
+            System.out.println("Updating database schema, this might take a while...");
 
             dropExistingFkTracesConstraintStatement.executeUpdate();
             addNewFkTracesConstraintStatement.executeUpdate();
             selectFkTracesConstraintAfterCorrectionResult = selectFkTracesConstraintStatement.executeQuery();
 
             if (!selectFkTracesConstraintAfterCorrectionResult.next()) {
-                System.out.println("Could not add FK_traces_1 constraint.");
+                System.out.println("Failed to update database schema.");
                 return;
             }
 
             if (!selectFkTracesConstraintAfterCorrectionResult.getString("DELETE_RULE").equals("CASCADE") || !selectFkTracesConstraintAfterCorrectionResult.getString("UPDATE_RULE").equals("CASCADE")) {
-                System.out.println("Could not update FK_traces_1 constraint.");
+                System.out.println("Failed to update database schema.");
                 return;
             }
+
+            System.out.println("Successfully updated database schema.");
         } finally {
             if (selectFkTracesConstraintStatement != null) {
                 selectFkTracesConstraintStatement.close();
@@ -427,6 +431,52 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
             if (selectFkTracesConstraintAfterCorrectionResult != null) {
                 selectFkTracesConstraintAfterCorrectionResult.close();
+            }
+            SqlUtilities.closeConnection(connection);
+        }
+    }
+
+    private void createBCIDRootsTableIfNecessary(DataSource dataSource) throws SQLException, DatabaseServiceException {
+        if (isLocal()) {
+            return;
+        }
+
+        Connection connection = null;
+
+        PreparedStatement selectBCIDRootsTableStatement = null;
+        PreparedStatement createBCIDRootsTableStatement = null;
+        try {
+            connection = dataSource.getConnection();
+
+            String selectBCIDRootsTableQuery = "SELECT * " +
+                    "FROM information_schema.tables " +
+                    "WHERE table_name=?";
+            String createBCIDRootsTableQuery = "CREATE TABLE " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME +
+                    "(" +
+                    "type VARCHAR(255) NOT NULL," +
+                    "bcid_root VARCHAR(255) NOT NULL," +
+                    "PRIMARY KEY (type)" +
+                    ");";
+
+            selectBCIDRootsTableStatement = connection.prepareStatement(selectBCIDRootsTableQuery);
+            createBCIDRootsTableStatement = connection.prepareStatement(createBCIDRootsTableQuery);
+
+            selectBCIDRootsTableStatement.setObject(1, LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME);
+            if (selectBCIDRootsTableStatement.executeQuery().next()) {
+                return;
+            }
+
+            createBCIDRootsTableStatement.executeUpdate();
+
+            if (!selectBCIDRootsTableStatement.executeQuery().next()) {
+                throw new DatabaseServiceException("Could not create bcid_roots table.", false);
+            }
+        } finally {
+            if (selectBCIDRootsTableStatement != null) {
+                selectBCIDRootsTableStatement.close();
+            }
+            if (createBCIDRootsTableStatement != null) {
+                createBCIDRootsTableStatement.close();
             }
             SqlUtilities.closeConnection(connection);
         }

@@ -9,6 +9,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
+import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
@@ -40,9 +41,9 @@ import java.util.logging.Logger;
  *          Created on 4/04/14 11:14 AM
  */
 public class ServerLimsConnection extends LIMSConnection {
-
     private String username;
     WebTarget target;
+    private static Map<String, String> BCIDRoots = new HashMap<String, String>();
 
     @Override
     protected void _connect(PasswordOptions options) throws ConnectionException {
@@ -74,6 +75,8 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException {
+        updateBCIDRoots();
+
         String tissueIdsToMatchString = tissueIdsToMatch == null ? null : StringUtilities.join(",", tissueIdsToMatch);
 
         boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
@@ -590,6 +593,24 @@ public class ServerLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
     }
+
+    private static final String BCIDROOTS = "bcid-roots";
+
+    private void updateBCIDRoots() throws DatabaseServiceException {
+        try {
+            List<BCIDRoot> BCIDRootsList = target.path(BCIDROOTS).request(MediaType.APPLICATION_JSON_TYPE).get(new GenericType<List<BCIDRoot>>() {});
+            BCIDRoots.clear();
+            for (BCIDRoot val : BCIDRootsList) {
+                BCIDRoots.put(val.type, val.value);
+            }
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    public Map<String, String> getBCIDRoots() { return BCIDRoots; }
 
     @Override
     public void addThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException {
