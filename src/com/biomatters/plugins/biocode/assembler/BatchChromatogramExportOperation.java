@@ -161,7 +161,7 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
      * @param annotatedDocument The document to export
      * @return true if exported, false if failure
      */
-    private boolean exportChromatSeq(DocumentFileExporter abiExporter, DocumentFileExporter scfExporter, File directory, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException.Canceled {
+    private boolean exportChromatSeq(DocumentFileExporter abiExporter, DocumentFileExporter scfExporter, File directory, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         try {
             File file = getExportFile(directory, annotatedDocument, abiExporter);
             AnnotatedPluginDocument[] documentArray = {annotatedDocument};
@@ -197,6 +197,10 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
 
     public String getFileNameUsedFor(AnnotatedPluginDocument document) {
         return names.get(document);
+    }
+
+    public Map<AnnotatedPluginDocument, String> getFileNames() {
+        return names;
     }
 
     private void throwExceptionForFailedDocuments(List<String> names, List<AnnotatedPluginDocument> consensusWithoutLinks) throws DocumentOperationException {
@@ -236,16 +240,14 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
             fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionLower.length());
         }
-        fileName += exporter.getDefaultExtension();
         fileName = fileName.replace(' ', '_');
 
-        File exportFile = new File(directory, fileName);
-        if(exportFile.exists()) {
-            if(!Dialogs.showContinueCancelDialog("The folder " + directory.getName() + " already contains a file named " +
-                    exportFile.getName() + ". This file will be overwritten.", "Overwrite?", null, Dialogs.DialogIcon.WARNING)) {
-                throw new DocumentOperationException.Canceled();
-            }
+        File exportFile = new File(directory, fileName + exporter.getDefaultExtension());
+        int i = 2;
+        while (exportFile.exists()) {
+            exportFile = new File(directory, fileName + "_" + i++ + exporter.getDefaultExtension());
         }
+
         return exportFile;
     }
 }

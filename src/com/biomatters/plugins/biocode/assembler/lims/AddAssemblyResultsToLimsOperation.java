@@ -400,6 +400,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 //        }
 
         Map<URN, Integer> seqIds = new HashMap<URN, Integer>();
+        BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
         try {
             for (Map.Entry<URN, AssemblyResult> entry : assemblyResults.entrySet()) {
                 progress.beginSubtask();
@@ -443,12 +444,22 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     }
                 }
 
-                attachChromats(limsConnection, isPass, options.isAddChromatograms(), assemblyResult);
+                attachChromats(limsConnection, isPass, options.isAddChromatograms(), assemblyResult, chromatogramExportOperation);
             }
-
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Failed to mark as pass/fail in LIMS: " + e.getMessage(), e);
         }
+        File tempFolder;
+        try {
+            tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
+            for (Map.Entry<AnnotatedPluginDocument, String> entry : chromatogramExportOperation.getFileNames().entrySet()) {
+                new File(tempFolder, entry.getValue()).delete();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
             Integer savedSeqId = seqIds.get(annotatedDocument.getURN());
             if (savedSeqId == null) {
@@ -465,8 +476,12 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         return null;
     }
 
-    private static void attachChromats(LIMSConnection limsConnection, boolean isPass, boolean addChromatograms, AddAssemblyResultsToLimsOperation.AssemblyResult result) throws DocumentOperationException, DatabaseServiceException {
-        BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
+    private static void attachChromats(LIMSConnection limsConnection,
+                                       boolean isPass,
+                                       boolean addChromatograms,
+                                       AddAssemblyResultsToLimsOperation.AssemblyResult result,
+                                       BatchChromatogramExportOperation chromatogramExportOperation)
+            throws DocumentOperationException, DatabaseServiceException {
         Options chromatogramExportOptions = null;
         File tempFolder;
         try {
