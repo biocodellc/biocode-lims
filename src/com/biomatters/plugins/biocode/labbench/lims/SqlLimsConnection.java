@@ -201,14 +201,57 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     }
                     System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
                 }
-                updateFkTracesConstraintIfNecessary(dataSource);
             } finally {
                 SqlUtilities.cleanUpStatements(getReactionsAndResults, updateReaction);
             }
+
+            makeAssemblyTablesWorkflowColumnConsistent(connection);
+
+            updateFkTracesConstraintIfNecessary(dataSource);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Failed to initialize database: " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
+        }
+    }
+
+    /**
+     * <p>
+     *     The assembly table has a workflow column that may become inconsistent with the reaction the assembly belongs to.
+     *     In the future schema update we should remove this column.
+     * </p>
+     * <p>
+     *     We make sure to ignore this column when creating new sequences.  However we we will still fix it up on start
+     *     up so that any external systems that make use of the LIMS database directly don't get inconsistent data.
+     * </p>
+     * <p>
+     *     This method can be removed once the column is removed in a schema update.
+     * </p>
+     *
+     * @param connection
+     * @throws SQLException
+     */
+    private void makeAssemblyTablesWorkflowColumnConsistent(ConnectionWrapper connection) throws SQLException {
+        System.out.println("Making assembly table workflow column for consistent with reaction");
+        PreparedStatement fixWorkflow = null;
+        PreparedStatement getInconsistentRows = null;
+        try {
+            fixWorkflow = connection.prepareStatement("UPDATE assembly SET workflow = ? WHERE id = ?");
+
+            getInconsistentRows = connection.prepareStatement(
+                    "SELECT assembly.id, assembly.workflow, cyclesequencing.workflow FROM " +
+                    "assembly INNER JOIN sequencing_result ON assembly.id = sequencing_result.assembly " +
+                    "INNER JOIN cyclesequencing ON sequencing_result.reaction = cyclesequencing.id " +
+                    "WHERE assembly.workflow != cyclesequencing.workflow");
+            ResultSet inconsistentRowsSet = getInconsistentRows.executeQuery();
+            while (inconsistentRowsSet.next()) {
+                fixWorkflow.setObject(1, inconsistentRowsSet.getInt("cyclesequencing.workflow"));
+                fixWorkflow.setObject(2, inconsistentRowsSet.getInt("assembly.id"));
+                fixWorkflow.executeUpdate();
+            }
+            inconsistentRowsSet.close();
+        } finally {
+            SqlUtilities.cleanUpStatements(fixWorkflow, getInconsistentRows);
         }
     }
 
@@ -1668,14 +1711,20 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection = getConnection();
             List<Object> sqlValues = new ArrayList<Object>(sequenceIds);
 
-            StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
-            sql.append("FROM workflow INNER JOIN assembly ON assembly.id IN ");
+            // NOTE: We are not using the workflow column from the assembly table because it may be out of date.
+            // DISTINCT is required because there may be multiple rows per sequence.  ie For a sequence created from both
+            // forward and reverse trace there would be two rows.
+            StringBuilder sql = new StringBuilder("SELECT DISTINCT assembly.workflow, workflow.id, workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
+            sql.append("FROM sequencing_result INNER JOIN assembly ON assembly.id IN ");
             appendSetOfQuestionMarks(sql, sequenceIds.size());
             if (!includeFailed) {
                 sql.append(" AND assembly.progress = ?");
                 sqlValues.add("passed");
             }
-            sql.append(" AND workflow.id = assembly.workflow INNER JOIN extraction ON workflow.extractionId = extraction.id");
+            sql.append(" AND assembly.id = sequencing_result.assembly");
+            sql.append(" INNER JOIN cyclesequencing C ON C.id = sequencing_result.reaction");
+            sql.append(" INNER JOIN workflow ON workflow.id = C.workflow");
+            sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
 
             statement = connection.prepareStatement(sql.toString());
             SqlUtilities.fillStatement(sqlValues, statement);
@@ -1686,6 +1735,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             final ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
+                System.out.println(resultSet.getInt("assembly.workflow") + " " + resultSet.getInt("workflow.id"));
                 if (SystemUtilities.isAvailableMemoryLessThan(50)) {
                     statement.cancel();
                     throw new SQLException("Search cancelled due to lack of free memory");
