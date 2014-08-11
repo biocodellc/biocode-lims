@@ -14,7 +14,6 @@ import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -69,7 +68,7 @@ public class AnnotateFimsDataOptions extends Options {
         useExistingPlate.addDependent(useExistingValues[1], useExistingOptions, true);
         useExistingPlate.addDependent(useExistingValues[0], warningLabelOption, false);
 
-        List<OptionValue> fimsFields = convertDocumentFieldsToOptionValues(BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes());
+        List<OptionValue> fimsFields = AnnotateUtilities.getOptionValuesForFimsFields();
         if(fimsFields.size() > 0) {
             fimsField = addComboBoxOption("fimsField", "", fimsFields, fimsFields.get(0));
         }
@@ -130,14 +129,6 @@ public class AnnotateFimsDataOptions extends Options {
 
     public String getExistingPlateName() {
         return plateNameOption.getValue();
-    }
-
-    private static List<OptionValue> convertDocumentFieldsToOptionValues(List<DocumentField> fields) {
-        List<OptionValue> values = new ArrayList<OptionValue>();
-        for(DocumentField field : fields) {
-            values.add(new OptionValue(field.getCode(), field.getName(), field.getDescription()));
-        }
-        return values;
     }
 
     public AnnotateFimsDataOptions(Element e) throws XMLSerializationException{

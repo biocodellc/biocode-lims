@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.server.security;
 
+import com.biomatters.plugins.biocode.labbench.lims.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.springframework.security.core.context.SecurityContextHolder;

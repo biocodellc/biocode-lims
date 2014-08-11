@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.server.security;
+package com.biomatters.plugins.biocode.labbench.lims;
 
 /**
  * @author Gen Li

@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.server.security;
 
 import com.biomatters.plugins.biocode.labbench.lims.DatabaseScriptRunner;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
@@ -15,13 +16,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.sql.DataSource;
-import javax.ws.rs.InternalServerErrorException;
-import javax.ws.rs.NotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
@@ -53,8 +50,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             auth = auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
 
             initializeAdminUserIfNecessary(dataSource);
-
-            createBCIDRootsTableIfNecessary(dataSource);
         } else {
             needMemoryUsers = true;
         }
@@ -63,49 +58,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             // If the database connection isn't set up or users haven't been added yet then we need to also use memory
             // auth with test users.
             auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name);
-        }
-    }
-
-    private void createBCIDRootsTableIfNecessary(DataSource dataSource) throws SQLException {
-        Connection connection = null;
-
-        PreparedStatement selectBCIDRootsTableStatement = null;
-        PreparedStatement createBCIDRootsTableStatement = null;
-
-        try {
-            connection = dataSource.getConnection();
-
-            String selectBCIDRootsTableQuery = "SELECT * " +
-                                               "FROM information_schema.tables " +
-                                               "WHERE table_name=?";
-            String createBCIDRootsTableQuery = "CREATE TABLE " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME +
-                                               "(" +
-                                               "type VARCHAR(255) NOT NULL," +
-                                               "bcid_root VARCHAR(255) NOT NULL," +
-                                               "PRIMARY KEY (type)" +
-                                               ");";
-
-            selectBCIDRootsTableStatement = connection.prepareStatement(selectBCIDRootsTableQuery);
-            createBCIDRootsTableStatement = connection.prepareStatement(createBCIDRootsTableQuery);
-
-            selectBCIDRootsTableStatement.setObject(1, LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME);
-            if (selectBCIDRootsTableStatement.executeQuery().next()) {
-                return;
-            }
-
-            createBCIDRootsTableStatement.executeUpdate();
-
-            if (!selectBCIDRootsTableStatement.executeQuery().next()) {
-                throw new InternalServerErrorException("Could not create bcid_roots table.");
-            }
-        } finally {
-            if (selectBCIDRootsTableStatement != null) {
-                selectBCIDRootsTableStatement.close();
-            }
-            if (createBCIDRootsTableStatement != null) {
-                createBCIDRootsTableStatement.close();
-            }
-            SqlUtilities.closeConnection(connection);
         }
     }
 

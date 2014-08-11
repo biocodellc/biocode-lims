@@ -1,4 +1,4 @@
-package com.biomatters.plugins.biocode.server;
+package com.biomatters.plugins.biocode.labbench.lims;
 
 import javax.xml.bind.annotation.XmlRootElement;
 

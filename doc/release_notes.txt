@@ -1,5 +1,6 @@
 ==Biocode Plugin 2.7.2 - TBD==
 * Added '# Passed' and '# Sequences' fields to cycle sequencing plate views.
+* Annotate from FIMS/LIMS now works with any FIMS field in addition to well number.
 * Fixed a bug where the # Traces field would not be populated in the Tabular Plate View.
 
 ==Biocode Plugin 2.7.1 - 18 July 2014==

@@ -490,9 +490,9 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         if(NUM_TRACES_FIELD.getCode().equals(fieldCode)) {
             List<Trace> cachedTracesList = getTraces();
             if(cachedTracesList == null) {
-                return ""+ cacheNumTraces;
+                return cacheNumTraces;
             } else {
-                return "" + cachedTracesList.size();
+                return cachedTracesList.size();
             }
         } else if(NUM_PASSED_SEQS_FIELD.getCode().equals(fieldCode)) {
             return countSeqResults(SequencingResult.Status.PASS);
