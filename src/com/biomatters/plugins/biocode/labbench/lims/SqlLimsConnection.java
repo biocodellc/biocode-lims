@@ -1714,7 +1714,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             // NOTE: We are not using the workflow column from the assembly table because it may be out of date.
             // DISTINCT is required because there may be multiple rows per sequence.  ie For a sequence created from both
             // forward and reverse trace there would be two rows.
-            StringBuilder sql = new StringBuilder("SELECT DISTINCT assembly.workflow, workflow.id, workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
+            StringBuilder sql = new StringBuilder("SELECT DISTINCT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
             sql.append("FROM sequencing_result INNER JOIN assembly ON assembly.id IN ");
             appendSetOfQuestionMarks(sql, sequenceIds.size());
             if (!includeFailed) {
@@ -1735,7 +1735,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             final ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
-                System.out.println(resultSet.getInt("assembly.workflow") + " " + resultSet.getInt("workflow.id"));
                 if (SystemUtilities.isAvailableMemoryLessThan(50)) {
                     statement.cancel();
                     throw new SQLException("Search cancelled due to lack of free memory");
