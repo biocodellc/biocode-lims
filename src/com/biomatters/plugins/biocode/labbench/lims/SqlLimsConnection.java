@@ -1764,21 +1764,23 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             // NOTE: We are not using the workflow column from the assembly table because it may be out of date.
             // DISTINCT is required because there may be multiple rows per sequence.  ie For a sequence created from both
             // forward and reverse trace there would be two rows.
-            StringBuilder sql = new StringBuilder("SELECT DISTINCT workflow.locus, assembly.*, extraction.sampleId, " +
+            StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, " +
                     "extraction.extractionId, extraction.extractionBarcode, FP.name AS forwardPlate, RP.name AS reversePlate");
-            sql.append(" FROM sequencing_result INNER JOIN assembly ON assembly.id IN ");
+            sql.append(" FROM assembly INNER JOIN sequencing_result SR1 ON assembly.id IN ");
             appendSetOfQuestionMarks(sql, sequenceIds.size());
             if (!includeFailed) {
                 sql.append(" AND assembly.progress = ?");
                 sqlValues.add("passed");
             }
-            sql.append(" AND assembly.id = sequencing_result.assembly");
-            sql.append(" INNER JOIN cyclesequencing C ON C.id = sequencing_result.reaction");
-            sql.append(" INNER JOIN workflow ON workflow.id = C.workflow");
+            sql.append(" AND assembly.id = SR1.assembly");
+
+            sql.append(" INNER JOIN cyclesequencing F ON F.id = SR1.reaction AND F.direction = ?");
+            sql.append(" INNER JOIN sequencing_result SR2 ON SR2.assembly = assembly.id");
+            sql.append(" INNER JOIN cyclesequencing R ON R.id = SR2.reaction AND R.direction = ?");
+
+            sql.append(" INNER JOIN workflow ON workflow.id = CASE WHEN F.workflow IS NOT NULL THEN F.workflow ELSE R.workflow END");
             sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
-            sql.append(" INNER JOIN cyclesequencing F ON F.workflow = workflow.id AND F.direction = ?");
             sql.append(" INNER JOIN plate FP on F.plate = FP.id");
-            sql.append(" INNER JOIN cyclesequencing R ON R.workflow = workflow.id AND R.direction = ?");
             sql.append(" INNER JOIN plate RP on R.plate = RP.id");
             sqlValues.add("forward");
             sqlValues.add("reverse");
