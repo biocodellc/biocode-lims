@@ -23,6 +23,9 @@ public class AssembledSequence {
     public String sampleId;
     public String extractionBarcode;
 
+    public String forwardPlate;
+    public String reversePlate;
+
     public String consensus;
     public String confidenceScore;
     public Double coverage;

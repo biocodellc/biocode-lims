@@ -1764,8 +1764,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             // NOTE: We are not using the workflow column from the assembly table because it may be out of date.
             // DISTINCT is required because there may be multiple rows per sequence.  ie For a sequence created from both
             // forward and reverse trace there would be two rows.
-            StringBuilder sql = new StringBuilder("SELECT DISTINCT workflow.locus, assembly.*, extraction.sampleId, extraction.extractionId, extraction.extractionBarcode ");
-            sql.append("FROM sequencing_result INNER JOIN assembly ON assembly.id IN ");
+            StringBuilder sql = new StringBuilder("SELECT DISTINCT workflow.locus, assembly.*, extraction.sampleId, " +
+                    "extraction.extractionId, extraction.extractionBarcode, FP.name AS forwardPlate, RP.name AS reversePlate");
+            sql.append(" FROM sequencing_result INNER JOIN assembly ON assembly.id IN ");
             appendSetOfQuestionMarks(sql, sequenceIds.size());
             if (!includeFailed) {
                 sql.append(" AND assembly.progress = ?");
@@ -1775,6 +1776,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             sql.append(" INNER JOIN cyclesequencing C ON C.id = sequencing_result.reaction");
             sql.append(" INNER JOIN workflow ON workflow.id = C.workflow");
             sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
+            sql.append(" INNER JOIN cyclesequencing F ON F.workflow = workflow.id AND F.direction = ?");
+            sql.append(" INNER JOIN plate FP on F.plate = FP.id");
+            sql.append(" INNER JOIN cyclesequencing R ON R.workflow = workflow.id AND R.direction = ?");
+            sql.append(" INNER JOIN plate RP on R.plate = RP.id");
+            sqlValues.add("forward");
+            sqlValues.add("reverse");
 
             statement = connection.prepareStatement(sql.toString());
             SqlUtilities.fillStatement(sqlValues, statement);
@@ -1835,6 +1842,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         if(created != null) {
             seq.date = created.getTime();
         }
+        seq.forwardPlate = resultSet.getString("forwardPlate");
+        seq.reversePlate = resultSet.getString("reversePlate");
         return seq;
     }
 

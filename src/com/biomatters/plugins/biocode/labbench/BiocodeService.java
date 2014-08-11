@@ -923,6 +923,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
+    public DocumentField FWD_PLATE_FIELD = DocumentField.createStringField("Forward Plate", "", "forwardSeqPlate");
+    public DocumentField REV_PLATE_FIELD = DocumentField.createStringField("Reverse Plate", "", "reverseSeqPlate");
+
     private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq) {
         String qualities = seq.confidenceScore;
         DefaultNucleotideSequence sequence;
@@ -975,6 +978,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         doc.setFieldValue(LIMSConnection.EDIT_RECORD, seq.editRecord);
         doc.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, seq.extractionId);
         doc.setFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD, seq.extractionBarcode);
+
+        doc.setFieldValue(FWD_PLATE_FIELD, seq.forwardPlate);
+        doc.setFieldValue(REV_PLATE_FIELD, seq.reversePlate);
         return doc;
     }
 
