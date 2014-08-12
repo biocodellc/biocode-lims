@@ -1784,31 +1784,37 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         PreparedStatement statement = null;
         try {
             connection = getConnection();
-            List<Object> sqlValues = new ArrayList<Object>(sequenceIds);
+            List<Object> sqlValues = new ArrayList<Object>();
+            sqlValues.add("forward");
+            sqlValues.add("reverse");
+            sqlValues.addAll(sequenceIds);
 
-            // NOTE: We are not using the workflow column from the assembly table because it may be out of date.
-            // DISTINCT is required because there may be multiple rows per sequence.  ie For a sequence created from both
-            // forward and reverse trace there would be two rows.
+            // NOTE 1: We are not using the workflow column from the assembly table because it may be out of date.
+            // NOTE 2: We will only link the sequence to the first forward and first reverse reactions. Historically sequences
+            // were attached to workflows rather than a reaction.  So there could be multiple forward/reverse reactions.
+            // Note 3: We also only use the first workflow encountered out of the foward/reverse workflow.  Generally this is
+            // the same.  But it is possible for the user to edit workflows so that the forward and reverse no longer
+            // match.  So we account for that too.
             StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, " +
                     "extraction.extractionId, extraction.extractionBarcode, FP.name AS forwardPlate, RP.name AS reversePlate");
-            sql.append(" FROM assembly INNER JOIN sequencing_result SR1 ON assembly.id IN ");
+            sql.append(" FROM assembly INNER JOIN");
+            sql.append(" (SELECT assembly, min(C.id) as forward, min(C2.id) as reverse from sequencing_result");
+            sql.append(" LEFT OUTER JOIN cyclesequencing C ON sequencing_result.reaction = C.id AND C.direction = ?");
+            sql.append(" LEFT OUTER JOIN cyclesequencing C2 ON sequencing_result.reaction = C2.id AND C2.direction = ?");
+            sql.append(" GROUP BY assembly) SR ON assembly.id IN ");
             appendSetOfQuestionMarks(sql, sequenceIds.size());
             if (!includeFailed) {
                 sql.append(" AND assembly.progress = ?");
                 sqlValues.add("passed");
             }
-            sql.append(" AND assembly.id = SR1.assembly");
+            sql.append(" AND assembly.id = SR.assembly");
 
-            sql.append(" INNER JOIN cyclesequencing F ON F.id = SR1.reaction AND F.direction = ?");
-            sql.append(" INNER JOIN sequencing_result SR2 ON SR2.assembly = assembly.id");
-            sql.append(" INNER JOIN cyclesequencing R ON R.id = SR2.reaction AND R.direction = ?");
-
+            sql.append(" LEFT OUTER JOIN cyclesequencing F ON F.id = SR.forward");
+            sql.append(" LEFT OUTER JOIN cyclesequencing R ON R.id = SR.reverse");
+            sql.append(" LEFT OUTER JOIN plate FP on F.plate = FP.id");
+            sql.append(" LEFT OUTER JOIN plate RP on R.plate = RP.id");
             sql.append(" INNER JOIN workflow ON workflow.id = CASE WHEN F.workflow IS NOT NULL THEN F.workflow ELSE R.workflow END");
             sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
-            sql.append(" INNER JOIN plate FP on F.plate = FP.id");
-            sql.append(" INNER JOIN plate RP on R.plate = RP.id");
-            sqlValues.add("forward");
-            sqlValues.add("reverse");
 
             statement = connection.prepareStatement(sql.toString());
             SqlUtilities.fillStatement(sqlValues, statement);
