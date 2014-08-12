@@ -390,22 +390,14 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             connection = dataSource.getConnection();
 
             String selectFkTracesConstraintQuery = "SELECT * " +
-                    "FROM information_schema.referential_constraints " +
-                    "WHERE constraint_name=?";
-            String dropExistingFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
-                    "DROP FOREIGN KEY FK_traces_1";
-            String addNewFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
-                    "ADD CONSTRAINT FK_traces_1 " +
-                    "    FOREIGN KEY (reaction)" +
-                    "    REFERENCES lims.cyclesequencing (id)" +
-                    "    ON UPDATE CASCADE " +
-                    "    ON DELETE CASCADE";
+                                                   "FROM information_schema.referential_constraints " +
+                                                   "WHERE table_name=? AND referenced_table_name=?";
 
             selectFkTracesConstraintStatement = connection.prepareStatement(selectFkTracesConstraintQuery);
-            dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
-            addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
 
-            selectFkTracesConstraintStatement.setObject(1, "FK_traces_1");
+
+            selectFkTracesConstraintStatement.setObject(1, "traces");
+            selectFkTracesConstraintStatement.setObject(2, "cyclesequencing");
             selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
 
             if (!selectFkTracesContraintResult.next())             {
@@ -416,6 +408,21 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             if (selectFkTracesContraintResult.getString("DELETE_RULE").equals("CASCADE") && selectFkTracesContraintResult.getString("UPDATE_RULE").equals("CASCADE")) {
                 return;
             }
+
+            String constraintName = selectFkTracesContraintResult.getString("CONSTRAINT_NAME");
+
+            String dropExistingFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
+                                                         "DROP FOREIGN KEY " + constraintName;
+            
+            String addNewFkTracesConstraintQuery = "ALTER TABLE lims.traces " +
+                                                   "ADD CONSTRAINT " + constraintName +
+                                                   "    FOREIGN KEY (reaction)" +
+                                                   "    REFERENCES lims.cyclesequencing (id)" +
+                                                   "    ON UPDATE CASCADE" +
+                                                   "    ON DELETE CASCADE";
+
+            dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
+            addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
 
             System.out.println("Updating database schema, this might take a while...");
 
