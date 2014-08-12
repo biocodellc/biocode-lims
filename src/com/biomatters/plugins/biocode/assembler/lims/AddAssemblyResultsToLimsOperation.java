@@ -449,16 +449,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Failed to mark as pass/fail in LIMS: " + e.getMessage(), e);
         }
-        File tempFolder;
-        try {
-            tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
-            for (Map.Entry<AnnotatedPluginDocument, String> entry : chromatogramExportOperation.getFileNames().entrySet()) {
-                new File(tempFolder, entry.getValue()).delete();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
 
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
             Integer savedSeqId = seqIds.get(annotatedDocument.getURN());

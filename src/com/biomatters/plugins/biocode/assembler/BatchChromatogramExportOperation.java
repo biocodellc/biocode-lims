@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.assembler;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
@@ -199,10 +198,6 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         return names.get(document);
     }
 
-    public Map<AnnotatedPluginDocument, String> getFileNames() {
-        return names;
-    }
-
     private void throwExceptionForFailedDocuments(List<String> names, List<AnnotatedPluginDocument> consensusWithoutLinks) throws DocumentOperationException {
         List<String> consensusNames = new ArrayList<String>();
         for (AnnotatedPluginDocument consensusWithoutLink : consensusWithoutLinks) {
@@ -228,7 +223,7 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         throw new DocumentOperationException(message.toString());
     }
 
-    private File getExportFile(File directory, AnnotatedPluginDocument annotatedDocument, DocumentFileExporter exporter) throws DocumentOperationException.Canceled {
+    private File getExportFile(File directory, AnnotatedPluginDocument annotatedDocument, DocumentFileExporter exporter) throws DocumentOperationException {
         String extensionUpper = exporter.getDefaultExtension().toUpperCase();
         String extensionLower = exporter.getDefaultExtension().toLowerCase();
         String fileName = annotatedDocument.getName();
@@ -243,9 +238,17 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         fileName = fileName.replace(' ', '_');
 
         File exportFile = new File(directory, fileName + exporter.getDefaultExtension());
-        int i = 2;
-        while (exportFile.exists()) {
-            exportFile = new File(directory, fileName + "_" + i++ + exporter.getDefaultExtension());
+
+        int i = 1;
+        if (exportFile.exists()) {
+            while (exportFile.exists()) {
+                i++;
+                exportFile = new File(directory + File.separator + fileName + "_" + i, fileName + exporter.getDefaultExtension());
+            }
+
+            if (!new File(directory, fileName + "_" + i).mkdir()) {
+                throw new DocumentOperationException("Could not create temp directory.");
+            }
         }
 
         return exportFile;
