@@ -234,24 +234,42 @@ public abstract class SqlLimsConnection extends LIMSConnection {
      * @throws SQLException
      */
     private void makeAssemblyTablesWorkflowColumnConsistent(ConnectionWrapper connection) throws SQLException {
-        System.out.println("Making assembly table workflow column for consistent with reaction");
+        System.out.println("Making assembly table workflow column for consistent with reaction...");
         PreparedStatement fixWorkflow = null;
         PreparedStatement getInconsistentRows = null;
         try {
             fixWorkflow = connection.prepareStatement("UPDATE assembly SET workflow = ? WHERE id = ?");
 
             getInconsistentRows = connection.prepareStatement(
-                    "SELECT assembly.id, assembly.workflow, cyclesequencing.workflow FROM " +
-                    "assembly INNER JOIN sequencing_result ON assembly.id = sequencing_result.assembly " +
-                    "INNER JOIN cyclesequencing ON sequencing_result.reaction = cyclesequencing.id " +
-                    "WHERE assembly.workflow != cyclesequencing.workflow");
+                    "SELECT DISTINCT assembly.id, assembly.workflow, cyclesequencing.workflow FROM " +
+                            "assembly INNER JOIN sequencing_result ON assembly.id = sequencing_result.assembly " +
+                            "INNER JOIN cyclesequencing ON sequencing_result.reaction = cyclesequencing.id " +
+                            "WHERE assembly.workflow != cyclesequencing.workflow"
+            );
             ResultSet inconsistentRowsSet = getInconsistentRows.executeQuery();
             while (inconsistentRowsSet.next()) {
                 fixWorkflow.setObject(1, inconsistentRowsSet.getInt("cyclesequencing.workflow"));
                 fixWorkflow.setObject(2, inconsistentRowsSet.getInt("assembly.id"));
-                fixWorkflow.executeUpdate();
+                fixWorkflow.addBatch();
+            }
+            int[] results = fixWorkflow.executeBatch();
+            for (int result : results) {
+                if (result == PreparedStatement.EXECUTE_FAILED) {
+                    System.out.println("Failed to fix workflow for assembly entry");
+                }
             }
             inconsistentRowsSet.close();
+        } catch(SQLException e) {
+            if(e instanceof BatchUpdateException) {
+                BatchUpdateException batchException = (BatchUpdateException) e;
+                for(SQLException ex = batchException.getNextException(); ex != null; ex = ex.getNextException()) {
+                    String errorMessage = ex.getMessage();
+                    if(errorMessage != null && errorMessage.trim().length() > 0) {
+                        System.out.println(errorMessage);
+                    }
+                }
+                throw e;
+            }
         } finally {
             SqlUtilities.cleanUpStatements(fixWorkflow, getInconsistentRows);
         }
