@@ -499,7 +499,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new DatabaseServiceException(e, "Failed to create temporary files and directories to export traces: " + e.getMessage(), false);
         }
 
         Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
