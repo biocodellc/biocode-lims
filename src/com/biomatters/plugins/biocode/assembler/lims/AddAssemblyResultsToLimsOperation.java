@@ -476,39 +476,30 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         File tempFolder;
         try {
             tempFolder = FileUtilities.createTempFile("chromat", ".ab1", true).getParentFile();
+            for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
+                if (addChromatograms) {
+                    if (chromatogramExportOptions == null) {
+                        chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
+                    }
+                    List<Trace> traces = new ArrayList<Trace>();
+                    for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
+                        String nameOfFileToExport = chromatogramDocument.getName();
+                        String nameOfFileToExportWithExtensionRemoved = nameOfFileToExport.substring(0, nameOfFileToExport.lastIndexOf("."));
+                        File exportFolder = tempFolder;
+                        if (new File(exportFolder, nameOfFileToExport).exists() || new File(exportFolder, nameOfFileToExportWithExtensionRemoved + ".scf").exists()) {
+                            exportFolder = FileUtilities.createTempDir(true);
+                        }
+                        chromatogramExportOptions.setStringValue("exportTo", exportFolder.toString());
+                        chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
+                        File exportedFile = new File(exportFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
+                        traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument) chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
+                    }
+                    entry.getKey().addSequences(traces);
+                }
+                entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-
-        for (Map.Entry<CycleSequencingReaction, List<AnnotatedPluginDocument>> entry : result.getReactions().entrySet()) {
-            if (addChromatograms) {
-                if (chromatogramExportOptions == null) {
-                    chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
-                }
-                List<Trace> traces = new ArrayList<Trace>();
-                for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
-                    String nameOfFileToExport = chromatogramDocument.getName();
-                    String nameOfFileToExportWithExtensionRemoved = nameOfFileToExport.substring(0, nameOfFileToExport.lastIndexOf("."));
-                    String exportFolder = tempFolder.toString();
-                    int i = 2;
-                    if (new File(tempFolder, nameOfFileToExport).exists() || new File(tempFolder, nameOfFileToExportWithExtensionRemoved + ".scf").exists()) {
-                        exportFolder = tempFolder + File.separator + nameOfFileToExportWithExtensionRemoved + "_" + i;
-                        while (new File(tempFolder, nameOfFileToExportWithExtensionRemoved + "_" + i++).exists()) {
-                            exportFolder = tempFolder + File.separator + nameOfFileToExportWithExtensionRemoved + "_" + i;
-                        }
-                    }
-                    chromatogramExportOptions.setStringValue("exportTo", exportFolder);
-                    chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
-                    File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
-                    try {
-                        traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument) chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-                entry.getKey().addSequences(traces);
-            }
-            entry.getKey().getOptions().setValue(ReactionOptions.RUN_STATUS, isPass ? ReactionOptions.PASSED_VALUE : ReactionOptions.FAILED_VALUE);
         }
 
         Set<CycleSequencingReaction> reactionSet = result.getReactions().keySet();
