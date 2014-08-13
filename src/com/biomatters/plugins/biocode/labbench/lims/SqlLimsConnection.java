@@ -16,11 +16,16 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import jebl.util.Cancelable;
-import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import javax.sql.DataSource;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -30,6 +35,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * An SQL based {@link LIMSConnection}
@@ -167,6 +174,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             progressListener.setMessage("Updating orphaned links between reactions and seqeunces...");
             linkOrphanedSequences(connection);
 
+            progressListener.setMessage("Fixing sequence links...");
+//            undo(connection);
+            fixSequencesWithMultipleLinks(connection);
+
             progressListener.setMessage("Updating workflows for sequences...");
             makeAssemblyTablesWorkflowColumnConsistent(connection);
 
@@ -179,6 +190,155 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             throw new DatabaseServiceException(e, "Failed to initialize database: " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
+        }
+    }
+
+    private static void undo(ConnectionWrapper connection) throws SQLException, DatabaseServiceException {
+        Pattern pattern = Pattern.compile("(\\d+).*Removing:\\s((?:\\d+,?)+)\\sKeeping:\\s(\\d+,?)+");
+
+        PreparedStatement insert = null;
+
+        try {
+            insert = connection.prepareStatement("INSERT INTO sequencing_result(assembly,reaction) VALUES(?,?)");
+            File f = new File("/home/matthew/Desktop/out.txt");
+            BufferedReader reader = new BufferedReader(new FileReader(f));
+            String currentLine;
+            while((currentLine = reader.readLine()) != null) {
+                Matcher matcher = pattern.matcher(currentLine);
+                if(matcher.matches()) {
+                    int assemblyId = Integer.parseInt(matcher.group(1));
+                    insert.setObject(1, assemblyId);
+                    String listOfIds = matcher.group(2);
+
+                    int inserted = 0;
+                    for (String reactionIdString : listOfIds.split(",")) {
+                        insert.setObject(2, Integer.parseInt(reactionIdString));
+                        inserted += insert.executeUpdate();
+                    }
+                    System.out.println("Inserted " + inserted + " (" + listOfIds + ") for " + assemblyId);
+                }
+            }
+            reader.close();
+        } catch (IOException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            SqlUtilities.cleanUpStatements(insert);
+        }
+    }
+
+
+    private static void fixSequencesWithMultipleLinks(ConnectionWrapper connection) throws SQLException {
+        // Get list of assemblies with more than two reactions.
+        PreparedStatement getAssembliesWithTooManyReactions = connection.prepareStatement(
+                "SELECT assembly FROM sequencing_result GROUP BY assembly HAVING count(reaction) > 2");
+        ResultSet assemblySet = getAssembliesWithTooManyReactions.executeQuery();
+        List<Integer> assemblyIds = new ArrayList<Integer>();
+        while(assemblySet.next()) {
+            assemblyIds.add(assemblySet.getInt("assembly"));
+        }
+        assemblySet.close();
+        System.out.println("Found " + assemblyIds.size() + " sequences with more than 2 reactions...");
+
+        PreparedStatement getAssemblyDetails = connection.prepareStatement(
+                "SELECT C.direction, C.id, plate.name, C.location, assembly.progress, C.progress, C.workflow, assembly.editRecord, assembly.date, C.date " +
+                "FROM assembly " +
+                "INNER JOIN sequencing_result SR ON assembly.id = SR.assembly " +
+                "INNER JOIN cyclesequencing C ON C.id = SR.reaction " +
+                "INNER JOIN plate ON C.plate = plate.id " +
+                "WHERE assembly.id = ?"
+        );
+
+        PreparedStatement fixMapping = connection.prepareStatement("DELETE FROM sequencing_result WHERE " +
+                "assembly = ? AND reaction NOT IN (?,?)");
+
+        List<Integer> dunno = new ArrayList<Integer>();
+        int index = 0;
+        for (Integer assemblyId : assemblyIds) {
+            int count = index++;
+            if(count % 200 == 0) {
+                System.out.println(count + "/" + assemblyIds.size());
+            }
+            getAssemblyDetails.setObject(1, assemblyId);
+            ResultSet detailsSet = getAssemblyDetails.executeQuery();
+            Multimap<Integer, ReactionDesc> workflowToReaction = ArrayListMultimap.create();
+
+            List<ReactionDesc> sameEditRecord = new ArrayList<ReactionDesc>();
+            List<ReactionDesc> passed = new ArrayList<ReactionDesc>();
+            while(detailsSet.next()) {
+                ReactionDesc reaction = new ReactionDesc(detailsSet.getInt("C.id"), detailsSet.getString("plate.name"),
+                        detailsSet.getInt("C.workflow"), detailsSet.getString("C.direction"));
+
+                String editRecord = detailsSet.getString("assembly.editRecord");
+                workflowToReaction.put(reaction.workflow, reaction);
+
+                if ("passed".equals(detailsSet.getString("C.progress"))) {
+                    passed.add(reaction);
+                }
+
+                if(editRecord != null && editRecord.contains(reaction.plateName)) {
+                    sameEditRecord.add(reaction);
+                }
+            }
+
+            if(sameEditRecord.size() == 1) {
+                findAndAddMatchingReactions(workflowToReaction, sameEditRecord);
+            }
+            if(passed.size() == 1) {
+                findAndAddMatchingReactions(workflowToReaction, passed);
+            }
+
+            List<ReactionDesc> reactions = null;
+            if(sameEditRecord.size() == 2) {
+                reactions = sameEditRecord;
+            } else if (passed.size() == 2) {
+                reactions = passed;
+            } else {
+                dunno.add(assemblyId);
+            }
+            // If we wanted to go all the way we could assemble all the traces
+
+            if(reactions != null) {
+                assert(reactions.size() == 2);
+                Integer first = reactions.get(0).reactionId;
+                Integer second = reactions.get(1).reactionId;
+
+                List<Integer> allIds = new ArrayList<Integer>();
+                for (ReactionDesc reactionDesc : workflowToReaction.values()) {
+                    allIds.add(reactionDesc.reactionId);
+                }
+                allIds.remove(first);
+                allIds.remove(second);
+                System.out.println(assemblyId + "-> Removing: " + StringUtilities.join(",", allIds) + " Keeping: " + first + "," + second);
+                fixMapping.setObject(1, assemblyId);
+                fixMapping.setObject(2, first);
+                fixMapping.setObject(3, second);
+                fixMapping.executeUpdate();
+            }
+        }
+        System.out.println("Couldn't work out for " + dunno.size() + " records:\n" + StringUtilities.join("\n", dunno));
+    }
+
+    private static void findAndAddMatchingReactions(Multimap<Integer, ReactionDesc> workflowToReaction, List<ReactionDesc> sameEditRecord) {
+        ReactionDesc toFindPairOf = sameEditRecord.get(0);
+        Collection<ReactionDesc> reactions = workflowToReaction.get(toFindPairOf.workflow);
+        for (ReactionDesc reaction : reactions) {
+            if(reaction.reactionId != toFindPairOf.reactionId && !reaction.direction.equals(toFindPairOf.direction)) {
+                sameEditRecord.add(reaction);
+            }
+        }
+    }
+
+    private static class ReactionDesc {
+        int reactionId;
+        String plateName;
+        int workflow;
+        String direction;
+
+        private ReactionDesc(int reactionId, String plateName, int workflow, String direction) {
+            this.reactionId = reactionId;
+            this.plateName = plateName;
+            this.workflow = workflow;
+            this.direction = direction;
         }
     }
 
