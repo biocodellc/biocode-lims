@@ -183,14 +183,35 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
+    private final String BACKGROUND_TASKS_STARTED_KEY = "backgroundTasksStarted";
+    private final String NUM_BACKGROUND_TASK_FAILS = "numberOfTimesBackgroundTasksFailed";
+
     /**
      * Performs lower priority maintenance tasks for the database.  These are typically clean up or data correction
      * that isn't necessary for operation of the LIMS.
+     * <br/>
+     * <br/>
+     * <b>Note</b>:These tasks will execute at most once per day to avoid multiple users performing them simultaneously
      */
     private void performBackgroundInitializationTasks() {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
+            connection.beginTransaction();
+            String lastStartedString = getProperty(BACKGROUND_TASKS_STARTED_KEY);
+            long lastStarted;
+            try {
+                lastStarted= lastStartedString == null || lastStartedString.trim().length() == 0 ?
+                        0 : Long.parseLong(lastStartedString);
+            } catch (NumberFormatException e) {
+                lastStarted = 0;
+            }
+            int oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+            if(lastStarted > System.currentTimeMillis() - oneDayInMilliseconds) {
+                return;
+            }
+            setProperty(BACKGROUND_TASKS_STARTED_KEY, String.valueOf(System.currentTimeMillis()));
+            connection.endTransaction();
 
             System.out.println("Updating orphaned links between reactions and seqeunces...");
             linkOrphanedSequences(connection);
@@ -202,12 +223,46 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
             System.out.println("Updating workflows for sequences...");
             makeAssemblyTablesWorkflowColumnConsistent(connection);
+
+            setProperty(NUM_BACKGROUND_TASK_FAILS, String.valueOf(0));
         } catch (SQLException e) {
-            // Log exception to stderr then continue.  This is done in a background thread and low priority so it's OK
-            // if it fails.
-            e.printStackTrace();
+            handleBackgroundTaskFailure(e);
+        } catch (DatabaseServiceException e) {
+            handleBackgroundTaskFailure(e);
         } finally {
             returnConnection(connection);
+        }
+    }
+
+    private void handleBackgroundTaskFailure(Exception e) {
+        // Log exception to stderr then continue.  This is done in a background thread and low priority so it's OK
+        // if it fails.
+        e.printStackTrace();
+
+        try {
+            String numFailString = getProperty(NUM_BACKGROUND_TASK_FAILS);
+            int numFails = 0;
+            if(numFailString != null && numFailString.trim().length() > 0) {
+                try {
+                    numFails = Integer.parseInt(numFailString);
+                } catch (NumberFormatException e1) {
+                    // For some reason wasn't an integer.  Reset it.
+                    numFails = 0;
+                }
+            }
+            numFails++;
+            setProperty(NUM_BACKGROUND_TASK_FAILS, String.valueOf(numFails));
+
+            if(numFails > 10) {
+                BiocodeUtilities.displayExceptionDialog("Biocode Background Maintenance Tasks Failed",
+                        "The Biocode plugin has failed to perform background maintenance tasks the last <b>" + numFails +
+                        "</b> times it has tried.  Please contact support@mooreabiocode.org with these error details.", e, null);
+            }
+        } catch (DatabaseServiceException e1) {
+            // Can't do much in this case since we're trying to handle an error.  Just print out exception to stderr
+            // then display the original exception.
+            e1.printStackTrace();
+            BiocodeUtilities.displayExceptionDialog(e);
         }
     }
 
