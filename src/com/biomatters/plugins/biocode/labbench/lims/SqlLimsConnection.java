@@ -17,6 +17,7 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import jebl.util.Cancelable;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import javax.sql.DataSource;
@@ -157,63 +158,75 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return failureReasons;
     }
 
-    public void doAnyExtraInitialization() throws DatabaseServiceException {
+    public void doAnyExtraInitialization(ProgressListener progressListener) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
-            PreparedStatement getFailureReasons = null;
-            try {
-                getFailureReasons = connection.prepareStatement("SELECT * FROM failure_reason");
-                ResultSet resultSet = getFailureReasons.executeQuery();
-                failureReasons = new ArrayList<FailureReason>(FailureReason.getPossibleListFromResultSet(resultSet));
-            } finally {
-                SqlUtilities.cleanUpStatements(getFailureReasons);
-            }
+            populateFailureReasons(connection);
 
-            System.out.println("Populating sequencing_result table from results marked in previous versions...");
-            PreparedStatement getReactionsAndResults = null;
-            PreparedStatement updateReaction = null;
-            try {
-                getReactionsAndResults = connection.prepareStatement(
-                        "SELECT assembly.id AS assembly, cyclesequencing.id AS reaction FROM workflow " +
-                                "INNER JOIN cyclesequencing ON workflow.id = cyclesequencing.workflow " +
-                                "INNER JOIN assembly ON assembly.workflow = cyclesequencing.workflow AND " +
-                                "assembly.id NOT IN (SELECT assembly FROM sequencing_result);"
-                );
-                updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
-                ResultSet resultSet = getReactionsAndResults.executeQuery();
-                int count = 0;
-                while (resultSet.next()) {
-                    count++;
-                    updateReaction.setObject(1, resultSet.getInt("assembly"));
-                    updateReaction.setObject(2, resultSet.getInt("reaction"));
-                    updateReaction.addBatch();
-                }
+            progressListener.setMessage("Updating orphaned links between reactions and seqeunces...");
+            linkOrphanedSequences(connection);
 
-                if (count > 0) {
-                    long start = System.currentTimeMillis();
-                    int[] updateResults = updateReaction.executeBatch();
-                    int updated = 0;
-                    for (int result : updateResults) {
-                        if (result >= 0) {
-                            updated += result;
-                        }
-                    }
-                    System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
-                }
-                updateFkTracesConstraintIfNecessary(dataSource);
-            } finally {
-                SqlUtilities.cleanUpStatements(getReactionsAndResults, updateReaction);
-            }
-
+            progressListener.setMessage("Updating workflows for sequences...");
             makeAssemblyTablesWorkflowColumnConsistent(connection);
 
+            progressListener.setMessage("Correcting database schema (this may take some time but only needs to be done once)...");
             updateFkTracesConstraintIfNecessary(dataSource);
+
+            progressListener.setMessage("Creating BCID database table");
             createBCIDRootsTableIfNecessary(dataSource);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Failed to initialize database: " + e.getMessage(), false);
         } finally {
             returnConnection(connection);
+        }
+    }
+
+    private static void linkOrphanedSequences(ConnectionWrapper connection) throws SQLException {
+        System.out.println("Populating sequencing_result table from results marked in previous versions...");
+        PreparedStatement getReactionsAndResults = null;
+        PreparedStatement updateReaction = null;
+        try {
+            getReactionsAndResults = connection.prepareStatement(
+                    "SELECT assembly.id AS assembly, cyclesequencing.id AS reaction FROM workflow " +
+                            "INNER JOIN cyclesequencing ON workflow.id = cyclesequencing.workflow " +
+                            "INNER JOIN assembly ON assembly.workflow = cyclesequencing.workflow AND " +
+                            "assembly.id NOT IN (SELECT assembly FROM sequencing_result);"
+            );
+            updateReaction = connection.prepareStatement("INSERT INTO sequencing_result(assembly, reaction) VALUES(?,?)");
+            ResultSet resultSet = getReactionsAndResults.executeQuery();
+            int count = 0;
+            while (resultSet.next()) {
+                count++;
+                updateReaction.setObject(1, resultSet.getInt("assembly"));
+                updateReaction.setObject(2, resultSet.getInt("reaction"));
+                updateReaction.addBatch();
+            }
+
+            if (count > 0) {
+                long start = System.currentTimeMillis();
+                int[] updateResults = updateReaction.executeBatch();
+                int updated = 0;
+                for (int result : updateResults) {
+                    if (result >= 0) {
+                        updated += result;
+                    }
+                }
+                System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to populate " + updated + " reactions with assemblies.");
+            }
+        } finally {
+            SqlUtilities.cleanUpStatements(getReactionsAndResults, updateReaction);
+        }
+    }
+
+    private void populateFailureReasons(ConnectionWrapper connection) throws SQLException {
+        PreparedStatement getFailureReasons = null;
+        try {
+            getFailureReasons = connection.prepareStatement("SELECT * FROM failure_reason");
+            ResultSet resultSet = getFailureReasons.executeQuery();
+            failureReasons = new ArrayList<FailureReason>(FailureReason.getPossibleListFromResultSet(resultSet));
+        } finally {
+            SqlUtilities.cleanUpStatements(getFailureReasons);
         }
     }
 

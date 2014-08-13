@@ -26,6 +26,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -448,7 +449,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         synchronized (this) {
             loggingIn = true;
         }
-        ProgressListener progressListener;
+        final ProgressListener progressListener;
         if (block) {
             progressListener = new ProgressFrame("Connecting", "", GuiUtilities.getMainFrame());
             ((ProgressFrame) progressListener).setCancelable(false);
@@ -560,7 +561,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             buildCaches();
 
             progressListener.setMessage("Performing Further Initialization");
-            limsConnection.doAnyExtraInitialization();
+            limsConnection.doAnyExtraInitialization(progressListener);
 
             synchronized (this) {
                 isLoggedIn = true;
