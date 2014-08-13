@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.assembler;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
@@ -160,7 +161,7 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
      * @param annotatedDocument The document to export
      * @return true if exported, false if failure
      */
-    private boolean exportChromatSeq(DocumentFileExporter abiExporter, DocumentFileExporter scfExporter, File directory, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
+    private boolean exportChromatSeq(DocumentFileExporter abiExporter, DocumentFileExporter scfExporter, File directory, AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException.Canceled {
         try {
             File file = getExportFile(directory, annotatedDocument, abiExporter);
             AnnotatedPluginDocument[] documentArray = {annotatedDocument};
@@ -223,7 +224,7 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         throw new DocumentOperationException(message.toString());
     }
 
-    private File getExportFile(File directory, AnnotatedPluginDocument annotatedDocument, DocumentFileExporter exporter) throws DocumentOperationException {
+    private File getExportFile(File directory, AnnotatedPluginDocument annotatedDocument, DocumentFileExporter exporter) throws DocumentOperationException.Canceled {
         String extensionUpper = exporter.getDefaultExtension().toUpperCase();
         String extensionLower = exporter.getDefaultExtension().toLowerCase();
         String fileName = annotatedDocument.getName();
@@ -235,22 +236,16 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
         if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
             fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionLower.length());
         }
+        fileName += exporter.getDefaultExtension();
         fileName = fileName.replace(' ', '_');
 
-        File exportFile = new File(directory, fileName + exporter.getDefaultExtension());
-
-        int i = 1;
-        if (exportFile.exists()) {
-            while (exportFile.exists()) {
-                i++;
-                exportFile = new File(directory + File.separator + fileName + "_" + i, fileName + exporter.getDefaultExtension());
-            }
-
-            if (!new File(directory, fileName + "_" + i).mkdir()) {
-                throw new DocumentOperationException("Could not create temp directory.");
+        File exportFile = new File(directory, fileName);
+        if(exportFile.exists()) {
+            if(!Dialogs.showContinueCancelDialog("The folder " + directory.getName() + " already contains a file named " +
+                    exportFile.getName() + ". This file will be overwritten.", "Overwrite?", null, Dialogs.DialogIcon.WARNING)) {
+                throw new DocumentOperationException.Canceled();
             }
         }
-
         return exportFile;
     }
 }
