@@ -22,10 +22,6 @@ import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
 import javax.sql.DataSource;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -35,8 +31,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * An SQL based {@link LIMSConnection}
@@ -171,21 +165,17 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             connection = getConnection();
             populateFailureReasons(connection);
 
-            progressListener.setMessage("Updating orphaned links between reactions and seqeunces...");
-            linkOrphanedSequences(connection);
-
-            progressListener.setMessage("Fixing sequence links...");
-//            undo(connection);
-            fixSequencesWithMultipleLinks(connection);
-
-            progressListener.setMessage("Updating workflows for sequences...");
-            makeAssemblyTablesWorkflowColumnConsistent(connection);
-
             progressListener.setMessage("Correcting database schema (this may take some time but only needs to be done once)...");
             updateFkTracesConstraintIfNecessary(dataSource);
 
             progressListener.setMessage("Creating BCID database table");
             createBCIDRootsTableIfNecessary(dataSource);
+
+            new Thread() {
+                public void run() {
+                    performBackgroundInitializationTasks();
+                }
+            }.start();
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Failed to initialize database: " + e.getMessage(), false);
         } finally {
@@ -193,36 +183,31 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    private static void undo(ConnectionWrapper connection) throws SQLException, DatabaseServiceException {
-        Pattern pattern = Pattern.compile("(\\d+).*Removing:\\s((?:\\d+,?)+)\\sKeeping:\\s(\\d+,?)+");
-
-        PreparedStatement insert = null;
-
+    /**
+     * Performs lower priority maintenance tasks for the database.  These are typically clean up or data correction
+     * that isn't necessary for operation of the LIMS.
+     */
+    private void performBackgroundInitializationTasks() {
+        ConnectionWrapper connection = null;
         try {
-            insert = connection.prepareStatement("INSERT INTO sequencing_result(assembly,reaction) VALUES(?,?)");
-            File f = new File("/home/matthew/Desktop/out.txt");
-            BufferedReader reader = new BufferedReader(new FileReader(f));
-            String currentLine;
-            while((currentLine = reader.readLine()) != null) {
-                Matcher matcher = pattern.matcher(currentLine);
-                if(matcher.matches()) {
-                    int assemblyId = Integer.parseInt(matcher.group(1));
-                    insert.setObject(1, assemblyId);
-                    String listOfIds = matcher.group(2);
+            connection = getConnection();
 
-                    int inserted = 0;
-                    for (String reactionIdString : listOfIds.split(",")) {
-                        insert.setObject(2, Integer.parseInt(reactionIdString));
-                        inserted += insert.executeUpdate();
-                    }
-                    System.out.println("Inserted " + inserted + " (" + listOfIds + ") for " + assemblyId);
-                }
-            }
-            reader.close();
-        } catch (IOException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
+            System.out.println("Updating orphaned links between reactions and seqeunces...");
+            linkOrphanedSequences(connection);
+
+            System.out.println("Fixing sequence links...");
+            long start = System.currentTimeMillis();
+            fixSequencesWithMultipleLinks(connection);
+            System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to fix seq links");
+
+            System.out.println("Updating workflows for sequences...");
+            makeAssemblyTablesWorkflowColumnConsistent(connection);
+        } catch (SQLException e) {
+            // Log exception to stderr then continue.  This is done in a background thread and low priority so it's OK
+            // if it fails.
+            e.printStackTrace();
         } finally {
-            SqlUtilities.cleanUpStatements(insert);
+            returnConnection(connection);
         }
     }
 
@@ -238,6 +223,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
         assemblySet.close();
         System.out.println("Found " + assemblyIds.size() + " sequences with more than 2 reactions...");
+        System.out.println("Attempting to correct...");
 
         PreparedStatement getAssemblyDetails = connection.prepareStatement(
                 "SELECT C.direction, C.id, plate.name, C.location, assembly.progress, C.progress, C.workflow, assembly.editRecord, assembly.date, C.date " +
@@ -254,10 +240,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         List<Integer> dunno = new ArrayList<Integer>();
         int index = 0;
         for (Integer assemblyId : assemblyIds) {
-            int count = index++;
-            if(count % 200 == 0) {
-                System.out.println(count + "/" + assemblyIds.size());
-            }
             getAssemblyDetails.setObject(1, assemblyId);
             ResultSet detailsSet = getAssemblyDetails.executeQuery();
             Multimap<Integer, ReactionDesc> workflowToReaction = ArrayListMultimap.create();
