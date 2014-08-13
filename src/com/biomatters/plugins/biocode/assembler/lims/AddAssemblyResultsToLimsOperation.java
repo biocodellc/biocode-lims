@@ -484,10 +484,20 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             if (addChromatograms) {
                 if (chromatogramExportOptions == null) {
                     chromatogramExportOptions = chromatogramExportOperation.getOptions(entry.getValue());
-                    chromatogramExportOptions.setValue("exportTo", tempFolder.toString());
                 }
                 List<Trace> traces = new ArrayList<Trace>();
                 for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
+                    String nameOfFileToExport = chromatogramDocument.getName();
+                    String nameOfFileToExportWithExtensionRemoved = nameOfFileToExport.substring(0, nameOfFileToExport.lastIndexOf("."));
+                    String exportFolder = tempFolder.toString();
+                    int i = 2;
+                    if (new File(tempFolder, nameOfFileToExport).exists() || new File(tempFolder, nameOfFileToExportWithExtensionRemoved + ".scf").exists()) {
+                        exportFolder = tempFolder + File.separator + nameOfFileToExportWithExtensionRemoved + "_" + i;
+                        while (new File(tempFolder, nameOfFileToExportWithExtensionRemoved + "_" + i++).exists()) {
+                            exportFolder = tempFolder + File.separator + nameOfFileToExportWithExtensionRemoved + "_" + i;
+                        }
+                    }
+                    chromatogramExportOptions.setStringValue("exportTo", exportFolder);
                     chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
                     File exportedFile = new File(tempFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
                     try {
