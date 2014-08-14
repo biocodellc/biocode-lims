@@ -247,6 +247,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public List<DocumentField> getDisplayableFields() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
         fields.add(GEL_IMAGE_DOCUMENT_FIELD);
+        if(getType() != Type.Extraction) {
+            // Extraction reactions have the barcode as an editable option.  For the other types we'll just make it a displayable field.
+            fields.add(LIMSConnection.EXTRACTION_BARCODE_FIELD);
+        }
         for(Options.Option op : getOptions().getOptions()) {
             if(!(op instanceof Options.LabelOption) && !(op instanceof ButtonOption) && !(op instanceof Options.ButtonOption)){
                 if(op instanceof Options.ComboBoxOption) {
@@ -312,7 +316,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
      *          The class of the returned value must be the {@link DocumentField#getValueType()} (or a subclass) of the corresponding DocumentField returned from {@link #getDisplayableFields()}.
      */
     public Object getFieldValue(String fieldCode) {
-        if (LIMSConnection.EXTRACTION_BCID_FIELD.getCode().equals(fieldCode)) {
+        if(LIMSConnection.EXTRACTION_BARCODE_FIELD.getCode().equals(fieldCode)) {
+            return getExtractionBarcode();
+        } else if (LIMSConnection.EXTRACTION_BCID_FIELD.getCode().equals(fieldCode)) {
             LIMSConnection limsConnection;
             try {
                 limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();

@@ -1068,7 +1068,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
-        StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, " +
+        StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, " +
                 "plate.*, extraction.*, workflow.*, pcr.*, cyclesequencing.*, " +
                 "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes FROM ");
         // We join plate twice because HSQL doesn't let us use aliases.  The way the query is written means the select would produce a derived table.
