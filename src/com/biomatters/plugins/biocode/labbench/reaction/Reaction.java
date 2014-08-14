@@ -270,7 +270,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 }
             }
         }
-        fields.add(LIMSConnection.EXTRACTION_BCID_FIELD);
+//        fields.add(LIMSConnection.EXTRACTION_BCID_FIELD);
         return fields;
     }
 
