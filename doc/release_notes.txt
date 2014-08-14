@@ -3,6 +3,7 @@
 * Added 'Forward Plate' and 'Reverse Plate' fields to assembled sequences.
 * Annotate from FIMS/LIMS now works with any FIMS field in addition to well number.
 * Fixed a bug where the # Traces field would not be populated in the Tabular Plate View.
+* Fixed a bug where searching the Moorea FIMS on Collection Date could return additional results.
 
 ==Biocode Plugin 2.7.1 - 18 July 2014==
 * Fixed a problem where seqeunces could be downloaded without annotated FIMS data.
