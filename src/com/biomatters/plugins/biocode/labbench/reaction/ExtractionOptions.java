@@ -17,13 +17,12 @@ public class ExtractionOptions extends ReactionOptions<ExtractionReaction>{
     public static final String TISSUE_ID = "sampleId";
 
     public boolean fieldIsFinal(String fieldCode) {
-        return "extractionBCID".equals(fieldCode);//"sampleId".equals(fieldCode) || "extractionId".equals(fieldCode);
+        return false;//"sampleId".equals(fieldCode) || "extractionId".equals(fieldCode);
     }
 
     public ExtractionOptions() {
         addStringOption(TISSUE_ID, "Tissue Sample Id", "");
         addStringOption("extractionId", "Extraction Id", "");
-        addStringOption("extractionBCID", "Extraction BCID", "");
         addDateOption("date", "Date", new Date());
         OptionValue[] concStoredValues = new OptionValue[] {
             new OptionValue("yes", "Yes"),

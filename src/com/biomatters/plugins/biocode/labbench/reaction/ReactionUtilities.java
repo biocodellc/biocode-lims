@@ -595,10 +595,6 @@ public class ReactionUtilities {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
 
-        for (Reaction reaction : reactions) {
-            reaction.getOptions().setStringValue("extractionBCID", reaction.getFieldValue(LIMSConnection.EXTRACTION_BCID_FIELD.getCode()).toString());
-        }
-
         ReactionOptions options;
         try {
             options = XMLSerializer.clone(reactions.get(0).getOptions());

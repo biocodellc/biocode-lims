@@ -270,6 +270,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 }
             }
         }
+        fields.add(LIMSConnection.EXTRACTION_BCID_FIELD);
         return fields;
     }
 
@@ -327,7 +328,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 }
                 String extractionBCIDRoot = ((ServerLimsConnection) limsConnection).getBCIDRoots().get("extraction");
                 String extractionId = getExtractionId();
-                if (extractionBCIDRoot == null || extractionId == null || extractionId.isEmpty()) {
+                if (extractionBCIDRoot == null || extractionBCIDRoot.isEmpty() || extractionId == null || extractionId.isEmpty()) {
                     return "";
                 }
                 return extractionBCIDRoot + extractionId;
