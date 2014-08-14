@@ -15,6 +15,7 @@ import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.*;
 import com.biomatters.plugins.biocode.server.security.Projects;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import jebl.util.ProgressListener;
 
 import javax.servlet.*;
@@ -22,6 +23,8 @@ import javax.sql.DataSource;
 import javax.ws.rs.ProcessingException;
 import java.io.*;
 import java.net.MalformedURLException;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -108,6 +111,8 @@ public class LIMSInitializationListener implements ServletContextListener {
             }
 
             startProjectPopulatingThread();
+
+            createBCIDRootsTableIfNecessary(dataSource);
         } catch (IOException e) {
             initializationErrors.add(new IntializationError("Configuration Error",
                     "Failed to load properties file from " + connectionPropertiesFile.getAbsolutePath() + ": " + e.getMessage()));
@@ -430,6 +435,70 @@ public class LIMSInitializationListener implements ServletContextListener {
         private MissingPropertyException(String... missing) {
             super("Must specify " + StringUtilities.humanJoin(Arrays.asList(missing)));
             missingValues = missing;
+        }
+    }
+
+    private void createBCIDRootsTableIfNecessary(DataSource dataSource) throws SQLException, DatabaseServiceException {
+        java.sql.Connection connection = null;
+
+        PreparedStatement selectBCIDRootsTableStatement = null;
+        PreparedStatement createBCIDRootsTableStatement = null;
+        PreparedStatement populateBCIDRootsTableStatement = null;
+        try {
+            connection = dataSource.getConnection();
+
+            String selectBCIDRootsTableQuery = "SELECT * " +
+                                               "FROM information_schema.tables " +
+                                               "WHERE table_name=?";
+            String createBCIDRootsTableQuery = "CREATE TABLE " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME +
+                                               "(" +
+                                               "type VARCHAR(255) NOT NULL," +
+                                               "bcid_root VARCHAR(255) NOT NULL," +
+                                               "PRIMARY KEY (type)" +
+                                               ");";
+            String populateBCIDRootsTableQuery = "INSERT INTO " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME + " " +
+                                                 "VALUES (?, ?)";
+
+            selectBCIDRootsTableStatement = connection.prepareStatement(selectBCIDRootsTableQuery);
+            createBCIDRootsTableStatement = connection.prepareStatement(createBCIDRootsTableQuery);
+            populateBCIDRootsTableStatement = connection.prepareStatement(populateBCIDRootsTableQuery);
+
+            SqlUtilities.beginTransaction(connection);
+
+            selectBCIDRootsTableStatement.setObject(1, LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME);
+            if (selectBCIDRootsTableStatement.executeQuery().next()) {
+                return;
+            }
+
+            createBCIDRootsTableStatement.executeUpdate();
+
+            if (!selectBCIDRootsTableStatement.executeQuery().next()) {
+                throw new DatabaseServiceException("Could not create bcid_roots table.", false);
+            }
+
+            for (String BCIDRootType : LimsDatabaseConstants.SUPPORTED_BCID_ROOT_TYPES) {
+                populateBCIDRootsTableStatement.setObject(1, BCIDRootType);
+                populateBCIDRootsTableStatement.setObject(2, ""); // Empty initial BCID roots.
+                populateBCIDRootsTableStatement.addBatch();
+            }
+
+            int[] BCIDRootsTablePopulationResult = populateBCIDRootsTableStatement.executeBatch();
+
+            for (int BCIDRootInsertionResult : BCIDRootsTablePopulationResult) {
+                if (BCIDRootInsertionResult != 1) {
+                    throw new DatabaseServiceException("Could not populate bcid_roots table.", false);
+                }
+            }
+
+            SqlUtilities.commitTransaction(connection);
+        } finally {
+            if (selectBCIDRootsTableStatement != null) {
+                selectBCIDRootsTableStatement.close();
+            }
+            if (createBCIDRootsTableStatement != null) {
+                createBCIDRootsTableStatement.close();
+            }
+            SqlUtilities.closeConnection(connection);
         }
     }
 }
