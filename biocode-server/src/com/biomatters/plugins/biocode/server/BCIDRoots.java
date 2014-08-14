@@ -35,8 +35,6 @@ public class BCIDRoots {
 
             BCIDRootsResultSet = getBCIDRootsStatement.executeQuery();
 
-            List<BCIDRoot> BCIDRoots = new ArrayList<BCIDRoot>();
-
             while (BCIDRootsResultSet.next()) {
                 BCIDRootsCache.put(BCIDRootsResultSet.getString(LimsDatabaseConstants.TYPE_COLUMN_NAME_BCID_ROOTS_TABLE),
                         BCIDRootsResultSet.getString(LimsDatabaseConstants.BCID_ROOT_COLUMN_NAME_BCID_ROOTS_TABLE));
