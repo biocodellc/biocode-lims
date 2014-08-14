@@ -25,4 +25,9 @@ public class LimsDatabaseConstants {
     public static final String AUTHORITY_ADMIN_CODE = "admin";
     public static final String AUTHORITY_WRITER_CODE = "writer";
     public static final String AUTHORITY_READER_CODE = "reader";
+
+    public static final String[] SUPPORTED_BCID_ROOT_TYPES = {
+            "workflow",
+            "extraction"
+    };
 }

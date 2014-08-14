@@ -169,7 +169,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             updateFkTracesConstraintIfNecessary(dataSource);
 
             progressListener.setMessage("Creating BCID database table");
-            createBCIDRootsTableIfNecessary(dataSource);
 
             new Thread() {
                 public void run() {
@@ -667,52 +666,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
             if (selectFkTracesConstraintAfterCorrectionResult != null) {
                 selectFkTracesConstraintAfterCorrectionResult.close();
-            }
-            SqlUtilities.closeConnection(connection);
-        }
-    }
-
-    private void createBCIDRootsTableIfNecessary(DataSource dataSource) throws SQLException, DatabaseServiceException {
-        if (isLocal()) {
-            return;
-        }
-
-        Connection connection = null;
-
-        PreparedStatement selectBCIDRootsTableStatement = null;
-        PreparedStatement createBCIDRootsTableStatement = null;
-        try {
-            connection = dataSource.getConnection();
-
-            String selectBCIDRootsTableQuery = "SELECT * " +
-                    "FROM information_schema.tables " +
-                    "WHERE table_name=?";
-            String createBCIDRootsTableQuery = "CREATE TABLE " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME +
-                    "(" +
-                    "type VARCHAR(255) NOT NULL," +
-                    "bcid_root VARCHAR(255) NOT NULL," +
-                    "PRIMARY KEY (type)" +
-                    ");";
-
-            selectBCIDRootsTableStatement = connection.prepareStatement(selectBCIDRootsTableQuery);
-            createBCIDRootsTableStatement = connection.prepareStatement(createBCIDRootsTableQuery);
-
-            selectBCIDRootsTableStatement.setObject(1, LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME);
-            if (selectBCIDRootsTableStatement.executeQuery().next()) {
-                return;
-            }
-
-            createBCIDRootsTableStatement.executeUpdate();
-
-            if (!selectBCIDRootsTableStatement.executeQuery().next()) {
-                throw new DatabaseServiceException("Could not create bcid_roots table.", false);
-            }
-        } finally {
-            if (selectBCIDRootsTableStatement != null) {
-                selectBCIDRootsTableStatement.close();
-            }
-            if (createBCIDRootsTableStatement != null) {
-                createBCIDRootsTableStatement.close();
             }
             SqlUtilities.closeConnection(connection);
         }
