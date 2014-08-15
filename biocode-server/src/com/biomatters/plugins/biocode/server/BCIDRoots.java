@@ -37,7 +37,7 @@ public class BCIDRoots {
 
             while (BCIDRootsResultSet.next()) {
                 BCIDRootsCache.put(BCIDRootsResultSet.getString(LimsDatabaseConstants.TYPE_COLUMN_NAME_BCID_ROOTS_TABLE),
-                        BCIDRootsResultSet.getString(LimsDatabaseConstants.BCID_ROOT_COLUMN_NAME_BCID_ROOTS_TABLE));
+                                   BCIDRootsResultSet.getString(LimsDatabaseConstants.BCID_ROOT_COLUMN_NAME_BCID_ROOTS_TABLE));
             }
         } catch (SQLException e) {
             throw new InternalServerErrorException("Failed to retrieve BCID Roots.", e);
@@ -58,9 +58,8 @@ public class BCIDRoots {
 
     @GET
     @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
-    public Response get() {
+    public synchronized Response get() {
         List<BCIDRoot> BCIDRoots = new ArrayList<BCIDRoot>();
-
         for (Map.Entry<String, String> BCIDRootEntry : BCIDRootsCache.entrySet()) {
             BCIDRoots.add(new BCIDRoot(BCIDRootEntry.getKey(), BCIDRootEntry.getValue()));
         }
@@ -70,7 +69,7 @@ public class BCIDRoots {
 
     @POST
     @Consumes({"application/json", "application/xml"})
-    public void add(BCIDRoot bcidRoot) {
+    public synchronized void add(BCIDRoot bcidRoot) {
         Connection connection = null;
         PreparedStatement addBCIDRootStatement = null;
         try {
@@ -104,7 +103,15 @@ public class BCIDRoots {
     @PUT
     @Path("{type}")
     @Consumes({"application/json", "application/xml"})
-    public void update(@PathParam("type")String type, BCIDRoot bcidRoot) {
+    public synchronized void update(@PathParam("type")String type, BCIDRoot bcidRoot) throws InternalServerErrorException {
+        if (!BCIDRootsCache.containsKey(type)) {
+            throw new InternalServerErrorException("Could not find " + type + " BCID root.");
+        }
+
+        if (!type.equals(bcidRoot.type)) {
+            throw new InternalServerErrorException("Cannot change the type of a BCID root.");
+        }
+
         Connection connection = null;
         PreparedStatement updateBCIDRootStatement = null;
         try {
@@ -142,7 +149,7 @@ public class BCIDRoots {
 
     @DELETE
     @Path("{type}")
-    public void delete(@PathParam("type")String type) {
+    public synchronized void delete(@PathParam("type")String type) {
         Connection connection = null;
         PreparedStatement deleteBCIDRootStatement = null;
         try {

@@ -449,7 +449,8 @@ public class LIMSInitializationListener implements ServletContextListener {
 
             String selectBCIDRootsTableQuery = "SELECT * " +
                                                "FROM information_schema.tables " +
-                                               "WHERE table_name=?";
+                                               "WHERE table_name=? " +
+                                               "AND table_schema IN (SELECT DATABASE())";
             String createBCIDRootsTableQuery = "CREATE TABLE " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME +
                                                "(" +
                                                "type VARCHAR(255) NOT NULL," +
@@ -478,14 +479,14 @@ public class LIMSInitializationListener implements ServletContextListener {
 
             for (String BCIDRootType : LimsDatabaseConstants.SUPPORTED_BCID_ROOT_TYPES) {
                 populateBCIDRootsTableStatement.setObject(1, BCIDRootType);
-                populateBCIDRootsTableStatement.setObject(2, ""); // Empty initial BCID roots.
+                populateBCIDRootsTableStatement.setObject(2, ""); // Empty BCID roots.
                 populateBCIDRootsTableStatement.addBatch();
             }
 
             int[] BCIDRootsTablePopulationResult = populateBCIDRootsTableStatement.executeBatch();
 
             for (int BCIDRootInsertionResult : BCIDRootsTablePopulationResult) {
-                if (BCIDRootInsertionResult != 1) {
+                if (BCIDRootInsertionResult != 1 && BCIDRootInsertionResult != PreparedStatement.SUCCESS_NO_INFO) {
                     throw new DatabaseServiceException("Could not populate bcid_roots table.", false);
                 }
             }

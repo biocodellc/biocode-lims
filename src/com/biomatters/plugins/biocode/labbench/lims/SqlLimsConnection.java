@@ -600,7 +600,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
             String selectFkTracesConstraintQuery = "SELECT * " +
                                                    "FROM information_schema.referential_constraints " +
-                                                   "WHERE table_name=? AND referenced_table_name=?" +
+                                                   "WHERE table_name=? " +
+                                                   "AND referenced_table_name=? " +
                                                    "AND constraint_schema IN (SELECT DATABASE())";
 
             selectFkTracesConstraintStatement = connection.prepareStatement(selectFkTracesConstraintQuery);
