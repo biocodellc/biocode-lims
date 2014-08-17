@@ -1960,7 +1960,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             // Note 3: We also only use the first workflow encountered out of the foward/reverse workflow.  Generally this is
             // the same.  But it is possible for the user to edit workflows so that the forward and reverse no longer
             // match.  So we account for that too.
-            StringBuilder sql = new StringBuilder("SELECT workflow.id, workflow.locus, assembly.*, extraction.sampleId, " +
+            StringBuilder sql = new StringBuilder("SELECT workflow.locus, assembly.*, extraction.sampleId, " +
                     "extraction.extractionId, extraction.extractionBarcode, FP.name AS forwardPlate, RP.name AS reversePlate");
             sql.append(" FROM assembly INNER JOIN");
             sql.append(" (SELECT assembly, min(C.id) as forward, min(C2.id) as reverse from sequencing_result");
@@ -2014,12 +2014,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     private AssembledSequence getAssembledSequence(ResultSet resultSet) throws SQLException {
         AssembledSequence seq = new AssembledSequence();
         seq.confidenceScore = resultSet.getString("assembly.confidence_scores");
-        seq.id = resultSet.getInt("assembly.id");
+        seq.id = resultSet.getInt("id");
         seq.workflowLocus = resultSet.getString("workflow.locus");
         seq.extractionId = resultSet.getString("assembly.extraction_id");
         seq.progress = resultSet.getString("progress");
         seq.consensus = resultSet.getString("consensus");
-        seq.workflowId = resultSet.getInt("workflow.id");
+        seq.workflowId = resultSet.getInt("workflow");
         seq.assemblyNotes = resultSet.getString("assembly.notes");
         seq.sampleId = resultSet.getString("sampleId");
         seq.coverage = resultSet.getDouble("assembly.coverage");
