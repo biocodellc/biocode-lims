@@ -22,6 +22,8 @@ import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
 import javax.sql.DataSource;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -631,6 +633,50 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                                                    "    ON UPDATE CASCADE" +
                                                    "    ON DELETE CASCADE";
 
+
+            PreparedStatement getTraceCount = connection.prepareStatement("SELECT COUNT(id) FROM traces");
+            ResultSet traceCountResultSet = getTraceCount.executeQuery();
+            traceCountResultSet.next();
+            int numTraces = traceCountResultSet.getInt(1);
+
+            int estimateInMinutes = numTraces / 1000;
+            String estimate;
+            if(estimateInMinutes < 5) {
+                estimate = "up to five minutes";
+            } else if(estimateInMinutes < 10) {
+                estimate = "up to ten minutes";
+            } else if(estimateInMinutes < 60) {
+                estimate = "about " + estimateInMinutes + " minutes";
+            } else {
+                estimate = "about an hour";
+            }
+
+            boolean canPerformUpdate = privilegeAllowed("traces", "ALTER");
+            String privilegeMessage = canPerformUpdate ? "" :
+                    "Geneious has detected you do not have the privileges to perform this update.\n";
+
+            String applyUpdate = "Apply Update";
+            String connect = "Just Connect";
+            // Change the default button order depending on if the user is likely to be able to apply the update
+            String[] actions = canPerformUpdate ? new String[]{applyUpdate, connect} : new String[]{connect, applyUpdate};
+            Dialogs.DialogOptions options = new Dialogs.DialogOptions(actions, "Database Needs Updating", null, Dialogs.DialogIcon.INFORMATION);
+            options.setMoreOptionsButtonText("Show Commands", "Hide Commands");
+            Object userChoice = Dialogs.showMoreOptionsDialog(options,
+                    "The LIMS database schema needs updating.  This update may take " + estimate + ".  " +
+                            "\n\n" +
+                            privilegeMessage +
+                            "<strong>Note</strong>: Without this update you may have trouble deleting plates." +
+                            "\n\n" +
+                            "Please contact your database administrator to apply the commands below.",
+                    "The following commands must be run to update the database:<ol>" +
+                            "<li>" + dropExistingFkTracesConstraintQuery + "</li>" +
+                            "<li>" + addNewFkTracesConstraintQuery + "</li>" +
+                            "</ol>"
+            );
+            if(!userChoice.equals(applyUpdate)) {
+                return;
+            }
+
             dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
             addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
 
@@ -651,6 +697,17 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
 
             System.out.println("Successfully updated database schema.");
+        } catch(SQLException e) {
+            StringWriter stacktrace = new StringWriter();
+            e.printStackTrace(new PrintWriter(stacktrace));
+
+            Dialogs.DialogOptions options = new Dialogs.DialogOptions(Dialogs.OK_ONLY, "Failed to Update Database", null, Dialogs.DialogIcon.INFORMATION);
+            Dialogs.showMoreOptionsDialog(options, "Geneious failed to apply an update to the LIMS database schema for " +
+                            "the following reason: " + e.getMessage() +
+                            "\n\n<strong>Note</strong>: Connection will now continue but without this update you may have trouble deleting plates." +
+                            "\n\nPlease contact support@mooreabiocode.org with the details below.",
+                    "Geneious attempted to add a cascading delete to the foreign key on the traces table.  But it ran " +
+                            "into the following problem: " + e.getMessage() + "<br>" + stacktrace);
         } finally {
             if (selectFkTracesConstraintStatement != null) {
                 selectFkTracesConstraintStatement.close();
@@ -2905,6 +2962,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     @Override
     public boolean deleteAllowed(String tableName) {
+        String grantToCheckFor = "DELETE";
+        return privilegeAllowed(tableName, grantToCheckFor);
+    }
+
+    private boolean privilegeAllowed(String tableName, String grantToCheckFor) {
         if(isLocal() || getUsername().toLowerCase().equals("root")) {
             return true;
         }
@@ -2919,7 +2981,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             while(resultSet.next()) {
                 String grantString = resultSet.getString(1);
                 if(isGrantStringForMySQLDatabase(grantString, databaseName, tableName)) {
-                    if(grantString.contains("ALL") || grantString.matches(".*DELETE(,|\\s+ON).*")) {
+                    if(grantString.contains("ALL") || grantString.matches(".*" + grantToCheckFor + "(,|\\s+ON).*")) {
                         return true;
                     }
                 }
