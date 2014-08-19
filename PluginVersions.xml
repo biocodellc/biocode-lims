@@ -1,13 +1,20 @@
 <PluginVersions>
-    <LatestVersion>2.7.1</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_7_1.gplugin</LatestVersionURL>
-    <ReleaseNotes>Biocode Plugin 2.7.1 (18 July 2014) - Release Notes
+    <LatestVersion>2.8.0</LatestVersion>
+    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_0.gplugin</LatestVersionURL>
+    <ReleaseNotes>Biocode Plugin 2.8.0 (19 August 2014) - Release Notes
 
-- Fixed a problem where seqeunces could be downloaded without annotated FIMS data.
-- Fixed a crash that happens when trying to view/edit traces when a cyclesequencing reaction has no existing traces.
-- Fixed a problem where a local LIMS database wouldn't be closed until Geneious was shutdown.
-- Fixed a bug where traces could not be added or removed from reactions using the traces editor.
-- Other minor fixes and improvements.
+    - Added '# Passed' and '# Sequences' fields to cycle sequencing plate views.
+    - Added 'Forward Plate' and 'Reverse Plate' fields to assembled sequences.
+    - Annotate from FIMS/LIMS now works with any FIMS field in addition to well number.
+    - Added extraction barcode as a displayable field on all plate types.
+    - Improved performance when using the Biocode FIMS.
+    - Fixed a bug where the # Traces field would not be populated in the Tabular Plate View.
+    - Fixed a bug where searching the Moorea FIMS on Collection Date could return additional results.
+    - Other minor fixes and improvements.
     </ReleaseNotes>
-    <ExtraInformation></ExtraInformation>
+    <ExtraInformation>
+        This version will apply a schema fix to MySQL LIMS databases which may take anywhere between a minute and an hour to perform.
+        The amount of time depends on the number of traces stored in the database.  If your database has over 30,000 traces
+        then it is recommended that an administrator perform it beforehand. Contact support@mooreasoftware.org for instructions.
+    </ExtraInformation>
 </PluginVersions>
