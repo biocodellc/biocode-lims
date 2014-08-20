@@ -10,17 +10,23 @@ import com.biomatters.geneious.publicapi.documents.sequence.*;
 import com.biomatters.geneious.publicapi.implementations.SequenceExtractionUtilities;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
+import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOperation;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOptions;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -103,15 +109,29 @@ public class WorkflowBuilder extends DocumentOperation {
             throw new DocumentOperationException("Must be logged into LIMS");
         }
 //        renameSequencesFromFIMS(annotatedDocuments, progressListener);
+//        renameFromTraceList(annotatedDocuments, progressListener);
 //        if(true)return;
 
         // todo Currently requries Manual annotate from FIMS step here
 
 //        doubleCheckTaxonInNameAgainstFIMS(annotatedDocuments);
 
+        DocumentField tissueIdField = BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField();
+
         // Map seqs to plates from FIMS values
         Map<String, List<AnnotatedPluginDocument>> plateToSequences = new HashMap<String, List<AnnotatedPluginDocument>>();
+        Multimap<String, AnnotatedPluginDocument> tissueToTraces = ArrayListMultimap.create();
         for (AnnotatedPluginDocument document : annotatedDocuments) {
+            if(NucleotideGraphSequenceDocument.class.isAssignableFrom(document.getDocumentClass())) {
+                if(((NucleotideGraphSequenceDocument)document.getDocumentOrNull()).getChromatogramLength() > 0) {
+                    Object tissueId = document.getFieldValue(tissueIdField);
+                    if(tissueId != null) {
+                        tissueToTraces.put(String.valueOf(tissueId), document);
+                    }
+                    continue;
+                }
+            }
+
             Object plateName = document.getFieldValue("biocode_tissue.format_name96");
             if(plateName == null) {
                 System.out.println("Ignoring " + document.getName() + " because it has no annotated plate.");
@@ -132,7 +152,7 @@ public class WorkflowBuilder extends DocumentOperation {
             String reversePrimer = options.getValueAsString(REV);
             String tech = "Automatic";
 
-            buildPlates(plateToSequences, locus, forwardPrimer, reversePrimer, tech, progressListener);
+            buildPlates(plateToSequences, tissueToTraces.asMap(), locus, forwardPrimer, reversePrimer, tech, progressListener);
         } catch (ConnectionException e) {
             e.printStackTrace();
             throw new DocumentOperationException(e.getMessage(), e);
@@ -151,6 +171,60 @@ public class WorkflowBuilder extends DocumentOperation {
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
             throw new DocumentOperationException(e.getMessage(), e);
+        }
+    }
+
+    private void renameFromTraceList(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener) throws DocumentOperationException {
+        Map<String, TraceLine> map = new HashMap<String, TraceLine>();
+        File traceList = new File("/home/matthew/Dropbox/BOLD dumps/FISHES/boldtracefiles/tracelistMOD.txt");
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(traceList));
+            String currentLine;
+            while((currentLine = reader.readLine()) != null) {
+                if(currentLine.startsWith("TraceName")) {
+                    continue;
+                }
+
+                String[] parts = currentLine.split("\t");
+                if(parts.length == 4) {
+                    TraceLine line = new TraceLine(parts[0].trim(), "yes".equals(parts[1].trim().toLowerCase()), parts[2].trim(), parts[3].trim());
+                    map.put(line.name, line);
+                } else {
+                    System.out.println("Skipping: " + currentLine);
+                }
+            }
+        } catch (IOException e) {
+            throw new DocumentOperationException(e.getMessage(), e);
+        }
+
+        CompositeProgressListener composite = new CompositeProgressListener(progressListener, annotatedDocuments.length);
+        for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
+            String oldName = annotatedDocument.getName();
+            composite.beginSubtask(oldName);
+            TraceLine traceLine = map.get(oldName);
+            if(traceLine != null) {
+                annotatedDocument.setName(oldName + "|" + traceLine.tissueId);
+                annotatedDocument.setFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD, traceLine.isForward);
+                annotatedDocument.save();
+            } else {
+                System.out.println("Coudn't find matching line for " + oldName);
+            }
+
+        }
+
+    }
+
+    private class TraceLine {
+        String name;
+        boolean isForward;
+        String boldId;
+        String tissueId;
+
+        private TraceLine(String name, boolean isForward, String boldId, String tissueId) {
+            this.name = name;
+            this.isForward = isForward;
+            this.boldId = boldId;
+            this.tissueId = tissueId;
         }
     }
 
@@ -258,7 +332,7 @@ public class WorkflowBuilder extends DocumentOperation {
         return files;
     }
 
-    public void buildPlates(Map<String, List<AnnotatedPluginDocument>> platesToSequences, String locus, String forwardPrimer, String reversePrimer, String tech, final ProgressListener progressListener) throws ConnectionException, SQLException, BadDataException, DocumentOperationException, IOException, DocumentImportException, DatabaseServiceException {
+    public void buildPlates(Map<String, List<AnnotatedPluginDocument>> platesToSequences, Map<String, Collection<AnnotatedPluginDocument>> tissueToTraces, String locus, String forwardPrimer, String reversePrimer, String tech, final ProgressListener progressListener) throws ConnectionException, SQLException, BadDataException, DocumentOperationException, IOException, DocumentImportException, DatabaseServiceException {
         final CompositeProgressListener plateComposite = new CompositeProgressListener(progressListener, platesToSequences.size());
 
         Set<String> assemblyMissing = new HashSet<String>();
@@ -289,13 +363,13 @@ public class WorkflowBuilder extends DocumentOperation {
             Map<String, String> tissueIds = BiocodeService.getInstance().getActiveFIMSConnection().getTissueIdsFromFimsTissuePlate(plateName);
             Set<String> extractionIds = BiocodeService.getInstance().getActiveLIMSConnection().getAllExtractionIdsForTissueIds(new ArrayList<String>(tissueIds.values()));
 
-                Set<String> wellsToExtract = new HashSet<String>();
-                for (AnnotatedPluginDocument document : plateEntry.getValue()) {
-                    Object value = document.getFieldValue("biocode_tissue.well_number96");
-                    if(value != null) {
-                        wellsToExtract.add(value.toString());
-                    }
+            Set<String> wellsToExtract = new HashSet<String>();
+            for (AnnotatedPluginDocument document : plateEntry.getValue()) {
+                Object value = document.getFieldValue("biocode_tissue.well_number96");
+                if(value != null) {
+                    wellsToExtract.add(value.toString());
                 }
+            }
 
             int saved = 0;
             for(Map.Entry<String, String> entry : tissueIds.entrySet()) {
@@ -310,7 +384,6 @@ public class WorkflowBuilder extends DocumentOperation {
                 extractionIds.add(extractionId);
                 saved++;
             }
-
 
             extractionPlate.setName(extractionPlateName);
             int emptyCount = 0;
@@ -336,42 +409,78 @@ public class WorkflowBuilder extends DocumentOperation {
 
             //====================(2) PCR PLATE=========================================================================
             composite.beginSubtask("Creating PCR plate");
-            Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
-
             // We don't want to copy all extractions.  Just the ones we have traces for.
+            String fieldCodeToCheck = "biocode.Specimen_Num_Collector";
             Set<String> idsToMatch = new HashSet<String>();
             for (AnnotatedPluginDocument doc : plateEntry.getValue()) {
-                Object id = doc.getFieldValue("biocode.Specimen_Num_Collector");
+                Object id = doc.getFieldValue(fieldCodeToCheck);
                 if(id != null) {
                     idsToMatch.add(id.toString());
                 }
             }
-            copyPlateOfSameSizeIfIdFound(extractionPlate, pcrPlate, idsToMatch);
 
-            for(Reaction r : pcrPlate.getReactions()) {
-                if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()){
-                    r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
-                    r.getOptions().setValue(ReactionOptions.RUN_STATUS, ReactionOptions.RUN_VALUE);
-                    r.getOptions().setValue("notes", "Automatically entered from Sonia's raw data");
-                    r.getOptions().setValue(PCROptions.PRIMER_OPTION_ID, forwardPrimer);
-                    r.getOptions().setValue(PCROptions.PRIMER_REVERSE_OPTION_ID, reversePrimer);
-                }
-            }
             String pcrPlateName = plateName + "_PCR01_" + locus;
-            pcrPlate.setName(pcrPlateName);
-            pcrPlate.setThermocycle(BiocodeService.getInstance().getPCRThermocycles().get(0));
-
-            emptyCount = 0;
-            for (Reaction r : pcrPlate.getReactions()) {
-                if(r.getExtractionId() == null || r.getExtractionId().length() == 0) {
-                    emptyCount++;
+            List<PlateDocument> pcrPlates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
+                    Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{pcrPlateName},
+                            BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                    null, null
+            ).getPlates();
+            Plate pcrPlate = null;
+            boolean hadPlate = false;
+            for (PlateDocument candidate : pcrPlates) {
+                hadPlate = true;
+                Set<String> onPlate = new HashSet<String>();
+                for (Reaction reaction : candidate.getPlate().getReactions()) {
+                    if(reaction.isEmpty()) {
+                        continue;
+                    }
+                    if(reaction.getLocus().equals(locus)) {
+                        onPlate.add(String.valueOf(reaction.getFieldValue(fieldCodeToCheck)));
+                    }
+                }
+                boolean noMatch = false;
+                for (String id : idsToMatch) {
+                    if(!onPlate.contains(id)) {
+                        noMatch = true;
+                    }
+                }
+                if(!noMatch) {
+                    pcrPlate = candidate.getPlate();
                 }
             }
 
-            BiocodeService.getInstance().savePlate(pcrPlate, composite);
-            System.out.println("\tCreated PCR plate " + pcrPlateName);
-            System.out.println("\tempty PCR: "+emptyCount);
-            System.out.println();
+            if(pcrPlate == null) {
+                if(hadPlate) {
+                     pcrPlateName = plateName + "_PCR02_" + locus;
+                }
+                pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
+                pcrPlate.setName(pcrPlateName);
+                pcrPlate.setThermocycle(BiocodeService.getInstance().getPCRThermocycles().get(0));
+                copyPlateOfSameSizeIfIdFound(extractionPlate, pcrPlate, idsToMatch);
+                for(Reaction r : pcrPlate.getReactions()) {
+                    if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()){
+                        r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
+                        r.getOptions().setValue(ReactionOptions.RUN_STATUS, ReactionOptions.RUN_VALUE);
+                        r.getOptions().setValue("notes", "Automatically entered from BOLD import");
+                        r.getOptions().setValue(PCROptions.PRIMER_OPTION_ID, forwardPrimer);
+                        r.getOptions().setValue(PCROptions.PRIMER_REVERSE_OPTION_ID, reversePrimer);
+                    }
+                }
+                emptyCount = 0;
+                for (Reaction r : pcrPlate.getReactions()) {
+                    if(r.getExtractionId() == null || r.getExtractionId().length() == 0) {
+                        emptyCount++;
+                    }
+                }
+
+                BiocodeService.getInstance().savePlate(pcrPlate, composite);
+                System.out.println("\tCreated PCR plate " + pcrPlateName);
+                System.out.println("\tempty PCR: "+emptyCount);
+                System.out.println();
+            } else {
+                System.out.println("\tRe-using PCR plate " + pcrPlateName);
+            }
+
 
             // Get the plate and annotate the workflow onto sequences
             Query plateQuery = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{pcrPlateName},
@@ -390,106 +499,16 @@ public class WorkflowBuilder extends DocumentOperation {
 
             //==================(3) CS FORWARD PLATE====================================================================
             composite.beginSubtask("Creating Sequencing plate (forward)");
-            String seqFPlateName = createCycleSequencingPlate(pcrPlate, plateName, true, locus, tech, forwardPrimer, composite);
+            String seqFPlateName = createCycleSequencingPlate(pcrPlate, plateName, true, locus, tech, forwardPrimer, tissueToTraces, composite);
 
             //==================(4) CS REVERSE PLATE====================================================================
             composite.beginSubtask("Creating Sequencing plate (reverse)");
-            String seqRPlateName = createCycleSequencingPlate(pcrPlate, plateName, false, locus, tech, reversePrimer, composite);
+            String seqRPlateName = createCycleSequencingPlate(pcrPlate, plateName, false, locus, tech, reversePrimer, tissueToTraces, composite);
 
             //==================(5) Link our sequences to the original contigs and traces  =============================
             composite.beginSubtask("Linking sequences to assemblies and traces");
-            // todo This whole section isn't geneic.  It relies on BIOCODE_ID_PATTERN and also relies on the working directory
-            WritableDatabaseService workingDir = (WritableDatabaseService) plateEntry.getValue().get(0).getDatabase().getParentService().getParentService();
-            Map<String, AnnotatedPluginDocument> biocodeIdToSeq = new HashMap<String, AnnotatedPluginDocument>();
-            Map<String, AnnotatedPluginDocument> biocodeIdToAssembly = new HashMap<String, AnnotatedPluginDocument>();
-            Set<String> idsWithDuplicates = new HashSet<String>();
-            for (AnnotatedPluginDocument seq : plateEntry.getValue()) {
-                Matcher matcher = BIOCODE_ID_PATTERN.matcher(seq.getName());
-                if(!matcher.matches()) {
-                    throw new DocumentOperationException(seq.getName() + " does not match pattern!");
-                }
-                String id = matcher.group(1);
-                List<AnnotatedPluginDocument> docsMatchingId = workingDir.retrieve(Query.Factory.createFieldQuery(DocumentField.NAME_FIELD, Condition.CONTAINS, new Object[]{id},
-                        Collections.<String, Object>singletonMap(WritableDatabaseService.KEY_SEARCH_SUBFOLDERS, Boolean.TRUE)), ProgressListener.EMPTY);
-                for (AnnotatedPluginDocument document : docsMatchingId) {
-                    if(SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass()) && document.getName().startsWith(id)) {
-                        if(biocodeIdToAssembly.get(id) != null) {
-                            idsWithDuplicates.add(id);
-                        }
-                        biocodeIdToAssembly.put(id, document);
-                    }
-                }
-                if(biocodeIdToAssembly.get(id) == null) {
-                    assemblyMissing.add(id);
-                } else {
-                    biocodeIdToSeq.put(id, seq);
-                }
-            }
-            if(!idsWithDuplicates.isEmpty()) {
-                throw new DocumentOperationException("Duplicate assemblies for:\n" + StringUtilities.join("\n", idsWithDuplicates));
-            }
 
-            for (Map.Entry<String, AnnotatedPluginDocument> entry : biocodeIdToAssembly.entrySet()) {
-                String id = entry.getKey();
-                AnnotatedPluginDocument assemblyDoc = entry.getValue();
-                AnnotatedPluginDocument finalSequence = biocodeIdToSeq.get(id);
-                setOperationRecordForConsensusAndAssembly(assemblyDoc, finalSequence);
-            }
-
-            for (String biocodeId : biocodeIdToSeq.keySet()) {
-                AnnotatedPluginDocument seq = biocodeIdToSeq.get(biocodeId);
-                AnnotatedPluginDocument assembly = biocodeIdToAssembly.get(biocodeId);
-                if(assembly == null) {
-                    throw new DocumentOperationException("Assembly missing for " + biocodeId);
-                }
-                if(seq == null) {
-                    throw new DocumentOperationException("Seq missing for " + biocodeId);
-                }
-
-                String well = String.valueOf(seq.getFieldValue("biocode_tissue.well_number96"));
-                Reaction reaction = platePluginDoc.getPlate().getReaction(new BiocodeUtilities.Well(well));
-
-                String workflowName = reaction.getWorkflow().getName();
-                if(workflowName == null || workflowName.trim().length() == 0) {
-                    throw new DocumentOperationException("No workflow for found in " + platePluginDoc.getName() + "(" + well + ")" + " for " + seq.getName());
-                }
-                seq.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflowName);
-                seq.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, well);
-                seq.save();
-
-                assembly.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflowName);
-                assembly.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, well);
-                assembly.save();
-
-                if (SequenceAlignmentDocument.class.isAssignableFrom(assembly.getDocumentClass())) {
-                    SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)assembly.getDocument();
-                    for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
-                        if (i == alignment.getContigReferenceSequenceIndex()) continue;
-                        AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
-
-                        if (referencedDocument == null) {
-                            SequenceDocument toExtract = alignment.getSequence(i);
-                            AnnotatedPluginDocument newRef = DocumentUtilities.createAnnotatedPluginDocument(
-                                    SequenceExtractionUtilities.extract(toExtract, new SequenceExtractionUtilities.ExtractionOptions(1, toExtract.getSequenceLength())));
-                            referencedDocument = ((WritableDatabaseService)assembly.getDatabase()).addDocumentCopy(newRef, ProgressListener.EMPTY);
-                            alignment.setReferencedDocument(i, referencedDocument);
-                            assembly.saveDocument();
-                            System.out.println("Contig \"" + assembly.getName() + "\" is missing a referened document.  Created " + referencedDocument.getName());
-                        }
-                        if (!NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
-                            throw new DocumentOperationException("Contig \"" + assembly.getName() + "\" contains a sequence which is not DNA");
-                        }
-                        boolean originalReversed = referencedDocument.getName().endsWith(SequenceExtractionUtilities.REVERSED_NAME_SUFFIX);
-                        boolean reversedInAssembly =  alignment.isReferencedDocumentReversed(i);
-                        boolean reversed = (originalReversed || reversedInAssembly) && !(originalReversed && reversedInAssembly);
-                        referencedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD,
-                                reversed ? seqRPlateName : seqFPlateName);
-                        referencedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflowName);
-                        referencedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, well);
-                        referencedDocument.save();
-                    }
-                }
-            }
+            List<AnnotatedPluginDocument> sequencesToPass = getSequencesToPassGeneratingContigsIfRequired(seqFPlateName, plateEntry.getValue(), tissueToTraces, composite);
 
             //=================(6) ASSEMBLIES===========================================================================
             composite.beginSubtask("Saving sequences to plates");
@@ -498,12 +517,119 @@ public class WorkflowBuilder extends DocumentOperation {
             markAsPassOptions.setValue("trace.attachChromatograms", true);
             markAsPassOptions.setValue("details.technician", tech);
             markAsPassOptions.setValue("details.notes", "Automatically entered from Sonia's raw data");
-            markAsPassOperation.performOperation(new ArrayList<AnnotatedPluginDocument>(biocodeIdToSeq.values()), composite, markAsPassOptions);
-
+            markAsPassOperation.performOperation(sequencesToPass, composite, markAsPassOptions);
         }
         if(!assemblyMissing.isEmpty()) {
             Dialogs.showMessageDialog("Assemblies Missing:\n" + StringUtilities.join("\n", assemblyMissing));
         }
+    }
+
+    private static List<AnnotatedPluginDocument> getSequencesToPassGeneratingContigsIfRequired(String plateName, List<AnnotatedPluginDocument> sequences, Map<String, Collection<AnnotatedPluginDocument>> tissueToTraces, ProgressListener progressListener) throws DocumentOperationException, DatabaseServiceException {
+        AnnotateLimsDataOperation annotate = new AnnotateLimsDataOperation();
+        AnnotateLimsDataOptions options = (AnnotateLimsDataOptions)annotate.getOptions(sequences);
+        options.setValue("forwardPlateName", plateName);
+        options.setValue("reversePlateName", "");
+        options.setValue("idType", "tissueId");
+        options.setValue("namePart", "0");
+        options.setValue("nameSeparator", "_");
+        annotate.performOperation(sequences, progressListener, options);
+        return sequences;
+    }
+
+    List<AnnotatedPluginDocument> getSequencesToPassForSoniasData(Set<String> assemblyMissing, Map.Entry<String, List<AnnotatedPluginDocument>> plateEntry, PlateDocument platePluginDoc, String seqFPlateName, String seqRPlateName) throws DocumentOperationException, DatabaseServiceException {
+        // todo This whole section isn't geneic.  It relies on BIOCODE_ID_PATTERN and also relies on the working directory
+        WritableDatabaseService workingDir = (WritableDatabaseService) plateEntry.getValue().get(0).getDatabase().getParentService().getParentService();
+        Map<String, AnnotatedPluginDocument> biocodeIdToSeq = new HashMap<String, AnnotatedPluginDocument>();
+        Map<String, AnnotatedPluginDocument> biocodeIdToAssembly = new HashMap<String, AnnotatedPluginDocument>();
+        Set<String> idsWithDuplicates = new HashSet<String>();
+        for (AnnotatedPluginDocument seq : plateEntry.getValue()) {
+            Matcher matcher = BIOCODE_ID_PATTERN.matcher(seq.getName());
+            if(!matcher.matches()) {
+                throw new DocumentOperationException(seq.getName() + " does not match pattern!");
+            }
+            String id = matcher.group(1);
+            List<AnnotatedPluginDocument> docsMatchingId = workingDir.retrieve(Query.Factory.createFieldQuery(DocumentField.NAME_FIELD, Condition.CONTAINS, new Object[]{id},
+                    Collections.<String, Object>singletonMap(WritableDatabaseService.KEY_SEARCH_SUBFOLDERS, Boolean.TRUE)), ProgressListener.EMPTY);
+            for (AnnotatedPluginDocument document : docsMatchingId) {
+                if(SequenceAlignmentDocument.class.isAssignableFrom(document.getDocumentClass()) && document.getName().startsWith(id)) {
+                    if(biocodeIdToAssembly.get(id) != null) {
+                        idsWithDuplicates.add(id);
+                    }
+                    biocodeIdToAssembly.put(id, document);
+                }
+            }
+            if(biocodeIdToAssembly.get(id) == null) {
+                assemblyMissing.add(id);
+            } else {
+                biocodeIdToSeq.put(id, seq);
+            }
+        }
+        if(!idsWithDuplicates.isEmpty()) {
+            throw new DocumentOperationException("Duplicate assemblies for:\n" + StringUtilities.join("\n", idsWithDuplicates));
+        }
+
+        for (Map.Entry<String, AnnotatedPluginDocument> entry : biocodeIdToAssembly.entrySet()) {
+            String id = entry.getKey();
+            AnnotatedPluginDocument assemblyDoc = entry.getValue();
+            AnnotatedPluginDocument finalSequence = biocodeIdToSeq.get(id);
+            setOperationRecordForConsensusAndAssembly(assemblyDoc, finalSequence);
+        }
+
+        for (String biocodeId : biocodeIdToSeq.keySet()) {
+            AnnotatedPluginDocument seq = biocodeIdToSeq.get(biocodeId);
+            AnnotatedPluginDocument assembly = biocodeIdToAssembly.get(biocodeId);
+            if(assembly == null) {
+                throw new DocumentOperationException("Assembly missing for " + biocodeId);
+            }
+            if(seq == null) {
+                throw new DocumentOperationException("Seq missing for " + biocodeId);
+            }
+
+            String well = String.valueOf(seq.getFieldValue("biocode_tissue.well_number96"));
+            Reaction reaction = platePluginDoc.getPlate().getReaction(new BiocodeUtilities.Well(well));
+
+            String workflowName = reaction.getWorkflow().getName();
+            if(workflowName == null || workflowName.trim().length() == 0) {
+                throw new DocumentOperationException("No workflow for found in " + platePluginDoc.getName() + "(" + well + ")" + " for " + seq.getName());
+            }
+            seq.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflowName);
+            seq.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, well);
+            seq.save();
+
+            assembly.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflowName);
+            assembly.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, well);
+            assembly.save();
+
+            if (SequenceAlignmentDocument.class.isAssignableFrom(assembly.getDocumentClass())) {
+                SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)assembly.getDocument();
+                for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
+                    if (i == alignment.getContigReferenceSequenceIndex()) continue;
+                    AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
+
+                    if (referencedDocument == null) {
+                        SequenceDocument toExtract = alignment.getSequence(i);
+                        AnnotatedPluginDocument newRef = DocumentUtilities.createAnnotatedPluginDocument(
+                                SequenceExtractionUtilities.extract(toExtract, new SequenceExtractionUtilities.ExtractionOptions(1, toExtract.getSequenceLength())));
+                        referencedDocument = ((WritableDatabaseService)assembly.getDatabase()).addDocumentCopy(newRef, ProgressListener.EMPTY);
+                        alignment.setReferencedDocument(i, referencedDocument);
+                        assembly.saveDocument();
+                        System.out.println("Contig \"" + assembly.getName() + "\" is missing a referened document.  Created " + referencedDocument.getName());
+                    }
+                    if (!NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
+                        throw new DocumentOperationException("Contig \"" + assembly.getName() + "\" contains a sequence which is not DNA");
+                    }
+                    boolean originalReversed = referencedDocument.getName().endsWith(SequenceExtractionUtilities.REVERSED_NAME_SUFFIX);
+                    boolean reversedInAssembly =  alignment.isReferencedDocumentReversed(i);
+                    boolean reversed = (originalReversed || reversedInAssembly) && !(originalReversed && reversedInAssembly);
+                    referencedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD,
+                            reversed ? seqRPlateName : seqFPlateName);
+                    referencedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, workflowName);
+                    referencedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, well);
+                    referencedDocument.save();
+                }
+            }
+        }
+        return new ArrayList<AnnotatedPluginDocument>(biocodeIdToSeq.values());
     }
 
     private void copyPlateOfSameSizeIfIdFound(Plate srcPlate, Plate destPlate, Collection<String> ids) {
@@ -527,7 +653,7 @@ public class WorkflowBuilder extends DocumentOperation {
         System.out.println("Copied " + count + " reactions from " + srcPlate.getName() + " to " + destPlate.getName());
     }
 
-    private void setOperationRecordForConsensusAndAssembly(AnnotatedPluginDocument assemblyDoc, AnnotatedPluginDocument consensus) throws DocumentOperationException, DatabaseServiceException {
+    private static void setOperationRecordForConsensusAndAssembly(AnnotatedPluginDocument assemblyDoc, AnnotatedPluginDocument consensus) throws DocumentOperationException, DatabaseServiceException {
         URN parentOperationRecord = consensus.getParentOperationRecord();
         if(parentOperationRecord == null) {
             OperationRecordDocument record = new OperationRecordDocument(Collections.singletonList(assemblyDoc.getURN()), "Generate_Consensus", System.currentTimeMillis());
@@ -536,29 +662,95 @@ public class WorkflowBuilder extends DocumentOperation {
         }
     }
 
-    private String createCycleSequencingPlate(Plate pcrPlateToCopyFrom, String plateName, boolean forwardNotReverse, String locus, String tech, String primerUrn, ProgressListener progressListener) throws DocumentOperationException, DatabaseServiceException, BadDataException {
-        System.out.println("Creating Cycle Sequencing Plate");
-        Plate csPlate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
-        NewPlateDocumentOperation.copyPlateOfSameSize(pcrPlateToCopyFrom, csPlate, false);
+    private String createCycleSequencingPlate(Plate pcrPlateToCopyFrom, String plateName, boolean forwardNotReverse, String locus, String tech, String primerUrn, Map<String, Collection<AnnotatedPluginDocument>> tissueToTraces, ProgressListener progressListener) throws DocumentOperationException, DatabaseServiceException, BadDataException, IOException {
+        List<Query> queries = new ArrayList<Query>();
+        for (Reaction reaction : pcrPlateToCopyFrom.getReactions()) {
+            if(reaction.isEmpty()) {
+                continue;
+            }
+            Query fieldQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL,
+                    new Object[]{reaction.getWorkflow().getName()},
+                            BiocodeService.getSearchDownloadOptions(false, false, true, false));
+            queries.add(fieldQuery);
+        }
 
-        for(Reaction r : csPlate.getReactions()) {
-            if(r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()) {
-                r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
-                r.getOptions().setValue(ReactionOptions.RUN_STATUS, ReactionOptions.RUN_VALUE);
-                r.getOptions().setValue("technician", tech);
-                r.getOptions().setValue(CycleSequencingOptions.DIRECTION, forwardNotReverse ? CycleSequencingOptions.FORWARD_VALUE : CycleSequencingOptions.REVERSE_VALUE);
-                r.getOptions().setValue("notes", "Automatically entered from Sonia's raw data");
-                r.getOptions().setValue(CycleSequencingOptions.PRIMER_OPTION_ID, primerUrn);
+        List<PlateDocument> platesWithMatchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
+                Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]),
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
+        ).getPlates();
+
+        Plate csPlate = null;
+        for (PlateDocument candidate : platesWithMatchingWorkflows) {
+            boolean stillGood = true;
+            Plate candidatePlate = candidate.getPlate();
+            if(candidatePlate.getReactionType() != Reaction.Type.CycleSequencing) {
+                stillGood = false;
+            }
+            for (Reaction reaction : candidatePlate.getReactions()) {
+                if(CycleSequencingOptions.FORWARD_VALUE.equals(reaction.getOptions().getValueAsString(CycleSequencingOptions.DIRECTION)) != forwardNotReverse) {
+                    stillGood = false;
+                }
+            }
+            if(stillGood) {
+                csPlate = candidate.getPlate();
             }
         }
-        String seqPlateName = plateName + "_CYC01_" + locus + (forwardNotReverse ? "_F" : "_R" );
-        csPlate.setName(seqPlateName);
-        csPlate.setThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles().get(0));
 
-        BiocodeService.getInstance().savePlate(csPlate, progressListener);
-        System.out.println("\tCreated cycle sequencing plate " + seqPlateName);
-        System.out.println();
-        return seqPlateName;
+        boolean needsSaving = false;
+        if(csPlate == null) {
+            System.out.println("Creating Cycle Sequencing Plate");
+            csPlate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
+            NewPlateDocumentOperation.copyPlateOfSameSize(pcrPlateToCopyFrom, csPlate, false);
+
+            for (Reaction r : csPlate.getReactions()) {
+                if (r.getExtractionId() != null && r.getExtractionId().length() > 0 && !r.isEmpty()) {
+                    r.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
+                    r.getOptions().setValue(ReactionOptions.RUN_STATUS, ReactionOptions.RUN_VALUE);
+                    r.getOptions().setValue("technician", tech);
+                    r.getOptions().setValue(CycleSequencingOptions.DIRECTION, forwardNotReverse ? CycleSequencingOptions.FORWARD_VALUE : CycleSequencingOptions.REVERSE_VALUE);
+                    r.getOptions().setValue("notes", "Automatically entered from BOLD import");
+                    r.getOptions().setValue(CycleSequencingOptions.PRIMER_OPTION_ID, primerUrn);
+                }
+            }
+            String seqPlateName = plateName + "_CYC01_" + locus + (forwardNotReverse ? "_F" : "_R");
+            csPlate.setName(seqPlateName);
+            csPlate.setThermocycle(BiocodeService.getInstance().getCycleSequencingThermocycles().get(0));
+
+            needsSaving = true;
+
+            System.out.println("\tCreated cycle sequencing plate " + seqPlateName);
+            System.out.println();
+        }
+
+        BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
+        DocumentField tissueField = BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField();
+        for (Reaction reaction : csPlate.getReactions()) {
+            Object tissue = reaction.getFieldValue(tissueField.getCode());
+            if(tissue != null) {
+                Collection<AnnotatedPluginDocument> traces = tissueToTraces.get(String.valueOf(tissue));
+                for (AnnotatedPluginDocument trace : traces) {
+                    if(Boolean.valueOf(forwardNotReverse).equals(trace.getFieldValue(IS_FORWARD_FIELD))) {
+                        File tempDir = FileUtilities.createTempDir(true);
+                        Options chromatogramExportOptions = chromatogramExportOperation.getOptions(trace);
+                        chromatogramExportOptions.setStringValue("exportTo", tempDir.getAbsolutePath());
+                        chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {trace}, ProgressListener.EMPTY, chromatogramExportOptions);
+                        File exportedFile = new File(tempDir, chromatogramExportOperation.getFileNameUsedFor(trace));
+
+                        ((CycleSequencingReaction)reaction).addSequences(Collections.singletonList(
+                                new Trace(Collections.singletonList((NucleotideSequenceDocument)trace.getDocument()),
+                                        ReactionUtilities.loadFileIntoMemory(exportedFile))
+                        ));
+                        needsSaving = true;
+                    }
+                }
+            }
+        }
+
+        if(needsSaving) {
+            BiocodeService.getInstance().savePlate(csPlate, progressListener);
+        }
+
+        return csPlate.getName();
     }
 
 
