@@ -509,14 +509,17 @@ public class WorkflowBuilder extends DocumentOperation {
             composite.beginSubtask("Linking sequences to assemblies and traces");
 
             List<AnnotatedPluginDocument> sequencesToPass = getSequencesToPassGeneratingContigsIfRequired(seqFPlateName, plateEntry.getValue(), tissueToTraces, composite);
+            for (AnnotatedPluginDocument sequencesToPas : sequencesToPass) {
+                sequencesToPas.setFieldValue(BiocodeService.getInstance().REV_PLATE_FIELD, seqRPlateName);
+            }
 
             //=================(6) ASSEMBLIES===========================================================================
             composite.beginSubtask("Saving sequences to plates");
             DocumentOperation markAsPassOperation = PluginUtilities.getDocumentOperation("MarkAssemblyAsPassInLims");
             Options markAsPassOptions = markAsPassOperation.getOptions(plateEntry.getValue());
-            markAsPassOptions.setValue("trace.attachChromatograms", true);
+            markAsPassOptions.setValue("trace.attachChromatograms", false);
             markAsPassOptions.setValue("details.technician", tech);
-            markAsPassOptions.setValue("details.notes", "Automatically entered from Sonia's raw data");
+            markAsPassOptions.setValue("details.notes", "Automatically entered from BOLD import");
             markAsPassOperation.performOperation(sequencesToPass, composite, markAsPassOptions);
         }
         if(!assemblyMissing.isEmpty()) {
@@ -527,11 +530,12 @@ public class WorkflowBuilder extends DocumentOperation {
     private static List<AnnotatedPluginDocument> getSequencesToPassGeneratingContigsIfRequired(String plateName, List<AnnotatedPluginDocument> sequences, Map<String, Collection<AnnotatedPluginDocument>> tissueToTraces, ProgressListener progressListener) throws DocumentOperationException, DatabaseServiceException {
         AnnotateLimsDataOperation annotate = new AnnotateLimsDataOperation();
         AnnotateLimsDataOptions options = (AnnotateLimsDataOptions)annotate.getOptions(sequences);
-        options.setValue("forwardPlateName", plateName);
-        options.setValue("reversePlateName", "");
-        options.setValue("idType", "tissueId");
-        options.setValue("namePart", "0");
-        options.setValue("nameSeparator", "_");
+        options.setValue("useExistingPlate", "plateFromOptions");
+        options.setValue("useExistingOptions.forwardPlateName", plateName);
+        options.setValue("useExistingOptions.reversePlateName", "");
+        options.setValue("useExistingOptions.idType", "tissueId");
+        options.setValue("useExistingOptions.namePart", "0");
+        options.setValue("useExistingOptions.nameSeparator", "_");
         annotate.performOperation(sequences, progressListener, options);
         return sequences;
     }
@@ -665,7 +669,7 @@ public class WorkflowBuilder extends DocumentOperation {
     private String createCycleSequencingPlate(Plate pcrPlateToCopyFrom, String plateName, boolean forwardNotReverse, String locus, String tech, String primerUrn, Map<String, Collection<AnnotatedPluginDocument>> tissueToTraces, ProgressListener progressListener) throws DocumentOperationException, DatabaseServiceException, BadDataException, IOException {
         List<Query> queries = new ArrayList<Query>();
         for (Reaction reaction : pcrPlateToCopyFrom.getReactions()) {
-            if(reaction.isEmpty()) {
+            if(reaction.isEmpty() || reaction.getWorkflow() == null) {
                 continue;
             }
             Query fieldQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL,
@@ -725,9 +729,16 @@ public class WorkflowBuilder extends DocumentOperation {
         BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
         DocumentField tissueField = BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField();
         for (Reaction reaction : csPlate.getReactions()) {
+            List<Trace> currentTraces = ((CycleSequencingReaction) reaction).getTraces();
+            if(currentTraces != null && !currentTraces.isEmpty()) {
+                continue;
+            }
             Object tissue = reaction.getFieldValue(tissueField.getCode());
             if(tissue != null) {
                 Collection<AnnotatedPluginDocument> traces = tissueToTraces.get(String.valueOf(tissue));
+                if(traces == null) {
+                    continue;
+                }
                 for (AnnotatedPluginDocument trace : traces) {
                     if(Boolean.valueOf(forwardNotReverse).equals(trace.getFieldValue(IS_FORWARD_FIELD))) {
                         File tempDir = FileUtilities.createTempDir(true);
