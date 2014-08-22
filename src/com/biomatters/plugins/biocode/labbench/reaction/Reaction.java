@@ -40,7 +40,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     private int plateId;
     private String plateName;
     private Workflow workflow;
-    String extractionBarcode;
+    protected String extractionBarcode;
+    protected Integer databaseIdOfExtraction = null;
     private int position;
     public boolean isError = false;
     private FimsSample fimsSample = null;
@@ -327,8 +328,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                     return "";
                 }
                 String extractionBCIDRoot = ((ServerLimsConnection) limsConnection).getBCIDRoots().get("extraction");
-                String extractionId = getExtractionId();
-                if (extractionBCIDRoot == null || extractionBCIDRoot.isEmpty() || extractionId == null || extractionId.isEmpty()) {
+                Integer extractionId = getDatabaseIdOfExtraction();
+                if (extractionBCIDRoot == null || extractionBCIDRoot.isEmpty() || extractionId == null || extractionId == -1) {
                     return "";
                 }
                 return extractionBCIDRoot + extractionId;
@@ -377,6 +378,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public String getExtractionBarcode() {
         return extractionBarcode;
     }
+
+    public Integer getDatabaseIdOfExtraction() {
+        return databaseIdOfExtraction;
+    }
     
     public final Color getBackgroundColor() {
         if(isError) {
@@ -388,6 +393,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public FimsSample getFimsSample() {
         return fimsSample;
     }
+
+    private static final String EXTRACTION_DATABASE_ID = "databaseIdOfExtraction";
 
     public Element toXML() {
         Element element = new Element("Reaction");
@@ -408,6 +415,9 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         }
         if(extractionBarcode != null) {
             element.addContent(new Element("extractionBarcode").setText(extractionBarcode));
+        }
+        if(databaseIdOfExtraction != null) {
+            element.addContent(new Element(EXTRACTION_DATABASE_ID).setText(String.valueOf(databaseIdOfExtraction)));
         }
         if(isError) {
             element.addContent(new Element("isError").setText("true"));
@@ -456,6 +466,14 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         extractionBarcode = element.getChildText("extractionBarcode");
         if(plateNameElement != null) {
             plateName = plateNameElement.getText();
+        }
+        String databaseExtractionIdString = element.getChildText(EXTRACTION_DATABASE_ID);
+        if(databaseExtractionIdString != null) {
+            try {
+                databaseIdOfExtraction = Integer.parseInt(databaseExtractionIdString);
+            } catch (NumberFormatException e) {
+                throw new XMLSerializationException("Bad value for " + EXTRACTION_DATABASE_ID + ", expected an integer but was: " + databaseExtractionIdString, e);
+            }
         }
         isError = element.getChild("isError") != null;
         Element fimsElement = element.getChild("fimsSample");

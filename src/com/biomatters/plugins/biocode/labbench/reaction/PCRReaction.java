@@ -43,6 +43,7 @@ public class PCRReaction extends Reaction<PCRReaction> {
         setId(r.getInt("pcr.id"));
         setPlateId(r.getInt("pcr.plate"));
         extractionBarcode = r.getString("extractionBarcode");
+        databaseIdOfExtraction = r.getInt("workflow.extractionId");
         ReactionOptions options = getOptions();
         String extractionId = r.getString("extractionId");
         if(extractionId != null) {

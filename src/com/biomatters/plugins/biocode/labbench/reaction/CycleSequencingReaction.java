@@ -115,6 +115,7 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         setPosition(r.getInt("cyclesequencing.location"));
         setCreated(r.getTimestamp("cyclesequencing.date"));
         extractionBarcode = r.getString("extractionBarcode");
+        databaseIdOfExtraction = r.getInt("workflow.extractionId");
         setId(r.getInt("cyclesequencing.id"));
         Options options = getOptions();
 

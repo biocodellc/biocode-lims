@@ -40,6 +40,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         options.setValue(ExtractionOptions.TISSUE_ID, r.getString("extraction.sampleId"));
         options.setValue("extractionId", r.getString("extraction.extractionId"));
         extractionBarcode = r.getString("extraction.extractionBarcode");
+        databaseIdOfExtraction = getId();
         options.setValue("extractionBarcode", extractionBarcode);
         options.setValue("extractionMethod", r.getString("extraction.method"));
         options.setValue("previousPlate", r.getString("extraction.previousPlate"));
