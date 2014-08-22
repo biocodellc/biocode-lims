@@ -379,7 +379,18 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         return extractionBarcode;
     }
 
-    public Integer getDatabaseIdOfExtraction() {
+    /**
+     * Get the database ID of the extraction associated with this reaction.  For an extraction this would be it's ID.
+     * Not displayed to the user.  The user identifies extractions by a more human friendly identifier that can be
+     * renamed.
+     * ie MBIO3589.1.2 rather than it's database ID.
+     * <br/><br/>
+     * <strong>Note</strong>: The value returned from this method is used to create the extraction BCID defined by
+     * {@link com.biomatters.plugins.biocode.labbench.lims.LIMSConnection#EXTRACTION_BCID_FIELD}
+     *
+     * @return The ID of this extraction in the database.
+     */
+    protected Integer getDatabaseIdOfExtraction() {
         return databaseIdOfExtraction;
     }
     
