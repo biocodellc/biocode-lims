@@ -8,6 +8,7 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 
 import javax.ws.rs.BadRequestException;
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -78,7 +79,7 @@ public class RestQueryUtils {
         if (value instanceof String) {
             return (String)value;
         } else if (value instanceof Integer) {
-            return ((Integer)value).toString();
+            return value.toString();
         } else if (value instanceof Date) {
             Date valueCastToDate = (Date)value;
             DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -86,6 +87,58 @@ public class RestQueryUtils {
         } else {
             return null;
         }
+    }
+
+    /* Unsupported field values grayed out. */
+    public static Object parseQueryValue(Class queryValueType, String stringValue) {
+        Object result;
+
+        if (queryValueType.equals(Integer.class)) {
+            try {
+                result = new Integer(stringValue);
+            } catch (NumberFormatException e) {
+                throw new BadRequestException("Invalid integer value: " + stringValue, e);
+            }
+        } else if (queryValueType.equals(String.class)) {
+            result = stringValue;
+        } else if (queryValueType.equals(Date.class)) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            try {
+                result = dateFormat.parse(stringValue);
+            } catch (ParseException e) {
+                throw new BadRequestException("Invalid date value: " + stringValue, e);
+            }
+        }
+//        else if (queryValueType.equals(Boolean.class)) {
+//            if (stringValue.toLowerCase().equals("true") || stringValue.toLowerCase().equals("false")) {
+//                result = new Boolean(stringValue);
+//            } else {
+//                throw new BadRequestException("Invalid boolean value: " + stringValue);
+//            }
+//        } else if (queryValueType.equals(Long.class)) {
+//            try {
+//                result = new Long(stringValue);
+//            } catch (NumberFormatException e) {
+//                throw new BadRequestException("Invalid long value: " + stringValue, e);
+//            }
+//        } else if (queryValueType.equals(Double.class)) {
+//            try {
+//                result = new Double(stringValue);
+//            } catch (NumberFormatException e) {
+//                throw new BadRequestException("Invalid double value: " + stringValue, e);
+//            }
+//        }  else if (queryValueType.equals(URL.class)) {
+//            try {
+//                result = new URL(stringValue);
+//            } catch (MalformedURLException e) {
+//                throw new BadRequestException("Invalid url value: " + stringValue, e);
+//            }
+//        }
+        else {
+            throw new BadRequestException("Unsupported query value type.");
+        }
+
+        return result;
     }
 
     public static RestQueryUtils.Query createRestQuery(com.biomatters.geneious.publicapi.databaseservice.Query query) {
@@ -115,8 +168,12 @@ public class RestQueryUtils {
                 } else {
                     first = false;
                 }
+                List<String> valuesAsString = new ArrayList<String>();
+                for (Object value : term.getValues()) {
+                    valuesAsString.add(queryValueObjectToString(value));
+                }
                 queryBuilder.append("[").append(term.getField().getCode()).append("]").append(conditionMap.get(term.getCondition())).append(
-                        StringUtilities.join(",", Arrays.asList(term.getValues())));
+                        StringUtilities.join(",", valuesAsString));
             }
 
             return new RestQueryUtils.Query(type, queryBuilder.toString());
@@ -145,7 +202,6 @@ public class RestQueryUtils {
                 if (condition == null) {
                     throw new BadRequestException("Unsupported condition " + conditionString);
                 }
-                Object value = matcher.group(3);
 
                 DocumentField field = null;
                 for (QueryField queryField : BiocodeService.getInstance().getSearchFields()) {
@@ -156,6 +212,7 @@ public class RestQueryUtils {
                 if (field == null) {
                     throw new BadRequestException("Unknown field " + code);
                 }
+                Object value = parseQueryValue(field.getValueType(), matcher.group(3));
 
                 subQueries.add(com.biomatters.geneious.publicapi.databaseservice.Query.Factory.createFieldQuery(field, condition, new Object[]{value}, searchOptions));
             } else {
@@ -212,10 +269,6 @@ public class RestQueryUtils {
 //        Condition.STRING_LENGTH_GREATER_THAN,
 //        Condition.BEGINS_WITH,
 //        Condition.ENDS_WITH
-    }
-
-    public static boolean supportsConditionForRestQuery(Condition condition) {
-        return conditionMap.containsKey(condition);
     }
 
     private static Map<Class, Map<String, Condition>> stringSymbolToConditionMaps = new HashMap<Class, Map<String, Condition>>();
