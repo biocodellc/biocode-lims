@@ -88,10 +88,9 @@ public class ServerLimsConnection extends LIMSConnection {
                     .queryParam("showTissues", BiocodeService.isDownloadTissues(query))
                     .queryParam("showWorkflows", downloadWorkflows)
                     .queryParam("showPlates", downloadPlates)
-                    .queryParam("showSequences", BiocodeService.isDownloadSequences(query))
-                    .queryParam("tissueIdsToMatch", tissueIdsToMatchString);
+                    .queryParam("showSequences", BiocodeService.isDownloadSequences(query));
             Invocation.Builder request = target.request(MediaType.APPLICATION_XML_TYPE);
-            result = request.get(LimsSearchResult.class);
+            result = request.post(Entity.entity(tissueIdsToMatchString, MediaType.TEXT_PLAIN_TYPE), LimsSearchResult.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {

@@ -36,10 +36,27 @@ public class QueryService {
                            @DefaultValue("false") @QueryParam("showSequences") boolean showSequenceIds,
                                                   @QueryParam("tissueIdsToMatch") String tissueIdsToMatch) throws DatabaseServiceException {
 
+        return performSearch(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatch);
+    }
+
+    Response performSearch(String query, boolean showTissues, boolean showWorkflows, boolean showPlates, boolean showSequenceIds, String tissueIdsToMatch) throws DatabaseServiceException {
         Set<String> tissueIdsToMatchSet = tissueIdsToMatch == null ? null : new HashSet<String>(RestUtilities.getListFromString(tissueIdsToMatch));
         LimsSearchResult result = RestUtilities.getSearchResults(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatchSet);
         LimsSearchResult filteredResult = getPermissionsFilteredResult(result);
         return Response.ok(filteredResult).build();
+    }
+
+    @POST
+    @Produces("application/xml")
+    @Consumes("text/plain")
+    public Response searchWithPost(@QueryParam("q") String query,
+                           @DefaultValue("true")  @QueryParam("showTissues") boolean showTissues,
+                           @DefaultValue("true")  @QueryParam("showWorkflows") boolean showWorkflows,
+                           @DefaultValue("true")  @QueryParam("showPlates") boolean showPlates,
+                           @DefaultValue("false") @QueryParam("showSequences") boolean showSequenceIds,
+                                                  String tissueIdsToMatch) throws DatabaseServiceException {
+
+        return performSearch(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatch);
     }
 
     LimsSearchResult getPermissionsFilteredResult(LimsSearchResult result) throws DatabaseServiceException {
