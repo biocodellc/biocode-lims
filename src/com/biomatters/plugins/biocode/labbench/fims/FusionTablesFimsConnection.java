@@ -117,15 +117,19 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                     prepend = "";
                     break;
                 case GREATER_THAN:
+                case DATE_AFTER:
                     join = ">";
                     break;
                 case GREATER_THAN_OR_EQUAL_TO:
+                case DATE_AFTER_OR_ON:
                     join = ">=";
                     break;
                 case LESS_THAN:
+                case DATE_BEFORE:
                     join = "<";
                     break;
                 case LESS_THAN_OR_EQUAL_TO:
+                case DATE_BEFORE_OR_ON:
                     join = "<=";
                     break;
                 case NOT_CONTAINS:
@@ -202,17 +206,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
 
 
     public Condition[] getFieldConditions(Class fieldClass) {
-        if(Integer.class.equals(fieldClass) || Double.class.equals(fieldClass)) {
-            return new Condition[] {
-                    Condition.EQUAL,
-                    Condition.NOT_EQUAL,
-                    Condition.GREATER_THAN,
-                    Condition.GREATER_THAN_OR_EQUAL_TO,
-                    Condition.LESS_THAN,
-                    Condition.LESS_THAN_OR_EQUAL_TO
-            };
-        }
-        else if(String.class.equals(fieldClass)) {
+        if(String.class.equals(fieldClass)) {
             return new Condition[] {
                     Condition.CONTAINS,
                     Condition.NOT_CONTAINS,
@@ -221,22 +215,8 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
                     Condition.BEGINS_WITH,
                     Condition.ENDS_WITH,
             };
-        }
-        else if(Date.class.equals(fieldClass)) {
-            return new Condition[] {
-                    Condition.EQUAL,
-                    Condition.NOT_EQUAL,
-                    Condition.GREATER_THAN,
-                    Condition.GREATER_THAN_OR_EQUAL_TO,
-                    Condition.LESS_THAN,
-                    Condition.LESS_THAN_OR_EQUAL_TO
-            };
-        }
-        else {
-            return new Condition[] {
-                    Condition.EQUAL,
-                    Condition.NOT_EQUAL
-            };
+        } else {
+            return super.getFieldConditions(fieldClass);
         }
     }
 

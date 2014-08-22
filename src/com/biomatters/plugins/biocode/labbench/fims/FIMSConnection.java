@@ -274,10 +274,10 @@ public abstract class FIMSConnection {
             return new Condition[] {
                     Condition.EQUAL,
                     Condition.NOT_EQUAL,
-                    Condition.GREATER_THAN,
-                    Condition.GREATER_THAN_OR_EQUAL_TO,
-                    Condition.LESS_THAN,
-                    Condition.LESS_THAN_OR_EQUAL_TO
+                    Condition.DATE_AFTER,
+                    Condition.DATE_AFTER_OR_ON,
+                    Condition.DATE_BEFORE,
+                    Condition.DATE_BEFORE_OR_ON
             };
         }
         else {

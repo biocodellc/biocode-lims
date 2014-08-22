@@ -172,7 +172,8 @@ public class RestQueryUtils {
                 for (Object value : term.getValues()) {
                     valuesAsString.add(queryValueObjectToString(value));
                 }
-                queryBuilder.append("[").append(term.getField().getCode()).append("]").append(conditionMap.get(term.getCondition())).append(
+                queryBuilder.append("[").append(term.getField().getCode()).append("]").append(
+                        getConditionSymbol(term.getField().getValueType(), term.getCondition())).append(
                         StringUtilities.join(",", valuesAsString));
             }
 
@@ -181,7 +182,11 @@ public class RestQueryUtils {
     }
 
     public static com.biomatters.geneious.publicapi.databaseservice.Query createQueryFromQueryString(QueryType type, String queryString, Map<String, Object> searchOptions) throws BadRequestException {
-        String possibleConditions = StringUtilities.join("|", conditionMap.values());
+        Set<String> conditions = new HashSet<String>();
+        for (Map<String, Condition> mapForType : stringSymbolToConditionMaps.values()) {
+            conditions.addAll(mapForType.keySet());
+        }
+        String possibleConditions = StringUtilities.join("|", conditions);
 
         Pattern fieldQueryPattern = Pattern.compile("\\[(.*)\\](" + possibleConditions + ")(.*)");
         String[] parts = queryString.split("\\+");
@@ -192,16 +197,6 @@ public class RestQueryUtils {
             Matcher matcher = fieldQueryPattern.matcher(part);
             if(matcher.matches()) {
                 String code = matcher.group(1);
-                Condition condition = null;
-                String conditionString = matcher.group(2);
-                for (Map.Entry<Condition, String> entry : conditionMap.entrySet()) {
-                    if(entry.getValue().equals(conditionString)) {
-                        condition = entry.getKey();
-                    }
-                }
-                if (condition == null) {
-                    throw new BadRequestException("Unsupported condition " + conditionString);
-                }
 
                 DocumentField field = null;
                 for (QueryField queryField : BiocodeService.getInstance().getSearchFields()) {
@@ -212,6 +207,18 @@ public class RestQueryUtils {
                 if (field == null) {
                     throw new BadRequestException("Unknown field " + code);
                 }
+
+                Condition condition = null;
+                String conditionString = matcher.group(2);
+                for (Map.Entry<String, Condition> entry : stringSymbolToConditionMaps.get(field.getValueType()).entrySet()) {
+                    if(entry.getKey().equals(conditionString)) {
+                        condition = entry.getValue();
+                    }
+                }
+                if (condition == null) {
+                    throw new BadRequestException("Unsupported condition " + conditionString);
+                }
+
                 Object value = parseQueryValue(field.getValueType(), matcher.group(3));
 
                 subQueries.add(com.biomatters.geneious.publicapi.databaseservice.Query.Factory.createFieldQuery(field, condition, new Object[]{value}, searchOptions));
@@ -252,23 +259,6 @@ public class RestQueryUtils {
             }
             return null;
         }
-    }
-
-    private static Map<Condition, String> conditionMap = new HashMap<Condition, String>();
-    static {
-        conditionMap.put(Condition.EQUAL, ":");
-        conditionMap.put(Condition.NOT_EQUAL, "!:");
-        conditionMap.put(Condition.GREATER_THAN, ">");
-        conditionMap.put(Condition.GREATER_THAN_OR_EQUAL_TO, ">=");
-        conditionMap.put(Condition.LESS_THAN, "<");
-        conditionMap.put(Condition.LESS_THAN_OR_EQUAL_TO, "<=");
-
-        conditionMap.put(Condition.CONTAINS, "~");
-        conditionMap.put(Condition.NOT_CONTAINS, "!~");
-//        Condition.STRING_LENGTH_LESS_THAN,
-//        Condition.STRING_LENGTH_GREATER_THAN,
-//        Condition.BEGINS_WITH,
-//        Condition.ENDS_WITH
     }
 
     private static Map<Class, Map<String, Condition>> stringSymbolToConditionMaps = new HashMap<Class, Map<String, Condition>>();
