@@ -745,11 +745,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
 
                 callback.setMessage("Creating results...");
-                // Now add tissues that match the LIMS query
-                // FimsSamples would have been downloaded as part of plate creation.  Collect them now.
-                List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
                 Set<String> tissueIdsToDownload = new HashSet<String>();
                 if(isDownloadSequences(query) || isDownloadSequences(query)) {
+                    // Now add tissues that match the LIMS query
+                    // FimsSamples would have been downloaded as part of plate creation.  Collect them now.
                     tissueIdsToDownload.addAll(limsResult.getTissueIds());
                 }
 
@@ -770,9 +769,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         tissueIdsToDownload.addAll(tissueIdsMatchingFimsQuery);
                     }
                 }
-                callback.setMessage("Downloading Tissues");
+                List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
                 try {
                     if(!tissueIdsToDownload.isEmpty()) {
+                        callback.setMessage("Downloading " + tissueIdsToDownload.size() + " matching tissues...");
                         tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsToDownload));
                     }
                 } catch (ConnectionException e) {
@@ -786,7 +786,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     return;
                 }
                 if(isDownloadSequences(query)) {
-                    callback.setMessage("Downloading Sequences");
+                    callback.setMessage("Downloading " + limsResult.getSequenceIds().size() + " matching sequences...");
                     getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
