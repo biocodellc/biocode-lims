@@ -2,11 +2,13 @@ package com.biomatters.plugins.biocode.server.utilities;
 
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.plugins.biocode.server.RestQueryUtils;
 import com.biomatters.plugins.biocode.server.utilities.query.QueryValues;
 import com.biomatters.plugins.biocode.server.utilities.query.*;
 
 import javax.ws.rs.BadRequestException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.regex.Matcher;
@@ -183,9 +185,61 @@ class QueryParser {
         }
 
         /* Extract query value. */
-        Object value = RestQueryUtils.parseQueryValue(field.getValueType(), queryParts[1]);
+        Object value = parseQueryValue(field.getValueType(), queryParts[1]);
 
         return QueryValues.createQueryValues(field, condition, value);
+    }
+
+    /* Unsupported field values grayed out. */
+    private Object parseQueryValue(Class queryValueType, String stringValue) {
+        Object result;
+
+        if (queryValueType.equals(Integer.class)) {
+            try {
+                result = new Integer(stringValue);
+            } catch (NumberFormatException e) {
+                throw new BadRequestException("Invalid integer value: " + stringValue, e);
+            }
+        } else if (queryValueType.equals(String.class)) {
+            result = stringValue;
+        } else if (queryValueType.equals(Date.class)) {
+            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            try {
+                result = dateFormat.parse(stringValue);
+            } catch (ParseException e) {
+                throw new BadRequestException("Invalid date value: " + stringValue, e);
+            }
+        }
+//        else if (queryValueType.equals(Boolean.class)) {
+//            if (stringValue.toLowerCase().equals("true") || stringValue.toLowerCase().equals("false")) {
+//                result = new Boolean(stringValue);
+//            } else {
+//                throw new BadRequestException("Invalid boolean value: " + stringValue);
+//            }
+//        } else if (queryValueType.equals(Long.class)) {
+//            try {
+//                result = new Long(stringValue);
+//            } catch (NumberFormatException e) {
+//                throw new BadRequestException("Invalid long value: " + stringValue, e);
+//            }
+//        } else if (queryValueType.equals(Double.class)) {
+//            try {
+//                result = new Double(stringValue);
+//            } catch (NumberFormatException e) {
+//                throw new BadRequestException("Invalid double value: " + stringValue, e);
+//            }
+//        }  else if (queryValueType.equals(URL.class)) {
+//            try {
+//                result = new URL(stringValue);
+//            } catch (MalformedURLException e) {
+//                throw new BadRequestException("Invalid url value: " + stringValue, e);
+//            }
+//        }
+        else {
+            throw new BadRequestException("Unsupported query value type.");
+        }
+
+        return result;
     }
 
     /* Converts String queries to postfix notation. */
