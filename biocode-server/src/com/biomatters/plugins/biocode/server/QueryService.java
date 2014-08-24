@@ -63,9 +63,7 @@ public class QueryService {
         Set<String> sampleIds = new HashSet<String>();
         Set<String> extractionIds = new HashSet<String>();
 
-        for (FimsSample fimsSample : result.getTissueSamples()) {
-            sampleIds.add(fimsSample.getId());
-        }
+        sampleIds.addAll(result.getTissueIds());
         for (WorkflowDocument workflowDocument : result.getWorkflows()) {
             extractionIds.add(workflowDocument.getWorkflow().getExtractionId());
         }
@@ -102,9 +100,9 @@ public class QueryService {
         readableSampleIds.addAll(AccessUtilities.getSampleIdsUserHasRoleFor(Users.getLoggedInUser(), allSamples, Role.READER));
 
         LimsSearchResult filteredResult = new LimsSearchResult();
-        for (FimsSample sample : result.getTissueSamples()) {
-            if(readableSampleIds.contains(sample.getId())) {
-                filteredResult.addTissueSample(sample);
+        for (String tissueId : result.getTissueIds()) {
+            if(readableSampleIds.contains(tissueId)) {
+                filteredResult.addTissueSample(tissueId);
             }
         }
         for (WorkflowDocument workflow : result.getWorkflows()) {

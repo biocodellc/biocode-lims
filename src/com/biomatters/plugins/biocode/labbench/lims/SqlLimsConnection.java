@@ -910,18 +910,17 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
-            boolean needTissues = downloadTissues || downloadSequences;
             boolean needWorkflows = downloadWorkflows || downloadSequences;
             queryResult = createPlateAndWorkflowsFromResultSet(connection,
                     callback != null ? callback : ProgressListener.EMPTY, resultSet,
-                    needTissues, needWorkflows, downloadPlates);
+                    needWorkflows, downloadPlates);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(preparedStatement);
             returnConnection(connection);
         }
-        result.tissueSamples.addAll(queryResult.tissueSamples);
+        result.tissueIds.addAll(queryResult.tissueIds);
 
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(queryResult.workflows.values());
         if (downloadWorkflows && callback != null) {
@@ -1464,13 +1463,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     private class WorkflowsAndPlatesQueryResult {
-        private List<FimsSample> tissueSamples;
+        private List<String> tissueIds;
         private Map<Integer, Plate> plates;
         private Map<Integer, WorkflowDocument> workflows;
         private Set<Integer> sequenceIds;
 
         private WorkflowsAndPlatesQueryResult() {
-            tissueSamples = new ArrayList<FimsSample>();
+            tissueIds = new ArrayList<String>();
             plates = new HashMap<Integer, Plate>();
             workflows = new HashMap<Integer, WorkflowDocument>();
             sequenceIds = new HashSet<Integer>();
@@ -1480,7 +1479,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(
             ConnectionWrapper connection, ProgressListener cancelable, ResultSet resultSet,
-            boolean getTissues, boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
+            boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
         final StringBuilder totalErrors = new StringBuilder("");
 
@@ -1604,14 +1603,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
         }
 
-        if(!tissueIds.isEmpty() && getTissues) {
-            cancelable.setMessage("Checking samples that match result from LIMS...");
-            try {
-                result.tissueSamples.addAll(BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(tissueIds));
-            } catch (ConnectionException e) {
-                throw new DatabaseServiceException(e, "Unable to retrieve FIMS samples", false);
-            }
-        }
+        result.tissueIds.addAll(tissueIds);
 
         if (totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {

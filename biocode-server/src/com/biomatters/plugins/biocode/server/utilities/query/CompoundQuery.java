@@ -26,8 +26,8 @@ public abstract class CompoundQuery extends Query {
         LimsSearchResult LHSResult = LHS.execute(tissuesWorkflowsPlatesSequences, tissuesToMatch),
                          RHSResult = RHS.execute(tissuesWorkflowsPlatesSequences, tissuesToMatch);
 
-        return combineResults(LHSResult.getTissueSamples(),
-                              RHSResult.getTissueSamples(),
+        return combineResults(LHSResult.getTissueIds(),
+                              RHSResult.getTissueIds(),
                               LHSResult.getWorkflows(),
                               RHSResult.getWorkflows(),
                               LHSResult.getPlates(),
@@ -40,8 +40,8 @@ public abstract class CompoundQuery extends Query {
 
     public Query getRHS() { return RHS; }
 
-    protected final LimsSearchResult combineResults(List<FimsSample>       LHSTissueSamples,
-                                          List<FimsSample>       RHSTissueSamples,
+    protected final LimsSearchResult combineResults(List<String>       LHSTissueSamples,
+                                          List<String>       RHSTissueSamples,
                                           List<WorkflowDocument> LHSWorkflows,
                                           List<WorkflowDocument> RHSWorkflows,
                                           List<PlateDocument>    LHSPlates,

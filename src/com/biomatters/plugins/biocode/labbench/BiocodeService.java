@@ -748,7 +748,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 // Now add tissues that match the LIMS query
                 // FimsSamples would have been downloaded as part of plate creation.  Collect them now.
                 List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
-                tissueSamples.addAll(limsResult.getTissueSamples());
+                Set<String> tissueIdsToDownload = new HashSet<String>();
+                if(isDownloadSequences(query) || isDownloadSequences(query)) {
+                    tissueIdsToDownload.addAll(limsResult.getTissueIds());
+                }
 
                 if(isDownloadTissues(query)) {
                     boolean downloadAllSamplesFromFimsQuery = false;
@@ -764,23 +767,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         );
                     }
                     if(downloadAllSamplesFromFimsQuery && tissueIdsMatchingFimsQuery != null) {
-                        callback.setMessage("Downloading Tissues");
-                        try {
-                            List<String> toRetrieveFromFims = new ArrayList<String>(tissueIdsMatchingFimsQuery);
-                            for (FimsSample tissueSample : tissueSamples) {
-                                toRetrieveFromFims.remove(tissueSample.getId());
-                            }
-                            if(!toRetrieveFromFims.isEmpty()) {
-                                tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(toRetrieveFromFims));
-                            }
-                        } catch (ConnectionException e) {
-                            throw new DatabaseServiceException(e, e.getMessage(), false);
-                        }
+                        tissueIdsToDownload.addAll(tissueIdsMatchingFimsQuery);
                     }
+                }
+                callback.setMessage("Downloading Tissues");
+                try {
+                    if(!tissueIdsToDownload.isEmpty()) {
+                        tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsToDownload));
+                    }
+                } catch (ConnectionException e) {
+                    throw new DatabaseServiceException(e, e.getMessage(), false);
+                }
 
-                    for (FimsSample tissueSample : tissueSamples) {
-                        callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
-                    }
+                for (FimsSample tissueSample : tissueSamples) {
+                    callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
                 }
                 if(callback.isCanceled()) {
                     return;
