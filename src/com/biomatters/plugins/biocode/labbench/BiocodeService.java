@@ -778,9 +778,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 } catch (ConnectionException e) {
                     throw new DatabaseServiceException(e, e.getMessage(), false);
                 }
-
-                for (FimsSample tissueSample : tissueSamples) {
-                    callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
+                if(isDownloadTissues(query)) {
+                    for (FimsSample tissueSample : tissueSamples) {
+                        callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
+                    }
                 }
                 if(callback.isCanceled()) {
                     return;
