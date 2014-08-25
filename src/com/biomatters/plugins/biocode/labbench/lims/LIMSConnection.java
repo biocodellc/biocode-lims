@@ -284,12 +284,20 @@ public abstract class LIMSConnection {
      *
      * @param query    The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
      * @param tissueIdsToMatch  A list of FIMS samples to match.  Or null to return all results.
-     * @param cancelable A cancelable to cancel the search task.  Cannot be null.
+     * @param cancelable A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
      * @return {@link LimsSearchResult} with workflows and plates found.
      * @throws SQLException if there is a problem with the database
      */
     public abstract LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, Cancelable cancelable) throws DatabaseServiceException;
 
+    /**
+     * Retrieves a list of {@link Plate}s from the LIMS by ID.
+     *
+     * @param plateIds The collection of IDs of the plates to retrieve
+     * @param cancelable A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
+     * @return a list of {@link Plate}s matching the specified IDs.
+     * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
+     */
     public abstract List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
 
     /**
@@ -310,6 +318,14 @@ public abstract class LIMSConnection {
      */
     public abstract String getProperty(String key) throws DatabaseServiceException;
 
+    /**
+     * Retrieves a list of {@link com.biomatters.plugins.biocode.labbench.WorkflowDocument}s from the LIMS by ID.
+     *
+     * @param workflowIds The collection of IDs of the workflow documents to retrieve
+     * @param cancelable A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
+     * @return a list of {@link com.biomatters.plugins.biocode.labbench.WorkflowDocument}s matching the specified IDs.
+     * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
+     */
     public abstract List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
     public abstract List<Workflow> getWorkflowsByName(Collection<String> workflowNames) throws DatabaseServiceException;
     public abstract Map<String,String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException;

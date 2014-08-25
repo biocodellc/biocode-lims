@@ -1561,7 +1561,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ResultSet plateSet = selectPlate.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (plates) query");
 
-            plates = getPlatesFromResultSet(plateSet);
+            plates = getPlatesFromResultSet(plateSet, cancelable);
             plateSet.close();
             return plates;
         } catch (SQLException e) {
@@ -1589,12 +1589,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return queryBuilder.toString();
     }
 
-    private List<Plate> getPlatesFromResultSet(ResultSet resultSet) throws SQLException {
+    private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException {
         Map<Integer, Plate> plates = new HashMap<Integer, Plate>();
         final StringBuilder totalErrors = new StringBuilder("");
 
         int previousId = -1;
         while (resultSet.next()) {
+            if(cancelable.isCanceled()) {
+                return Collections.emptyList();
+            }
             Plate plate;
             int plateId = resultSet.getInt("plate.id");
             if (plateId == 0 && resultSet.getString("plate.name") == null) {
