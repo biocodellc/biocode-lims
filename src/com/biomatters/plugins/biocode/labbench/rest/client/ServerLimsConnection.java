@@ -85,6 +85,7 @@ public class ServerLimsConnection extends LIMSConnection {
         try {
             WebTarget target = this.target.path("search")
                     .queryParam("q", RestQueryUtils.geneiousQueryToRestQueryString(query))
+                    .queryParam("matchTissues", tissueIdsToMatch != null)
                     .queryParam("showTissues", BiocodeService.isDownloadTissues(query))
                     .queryParam("showWorkflows", downloadWorkflows)
                     .queryParam("showPlates", downloadPlates)

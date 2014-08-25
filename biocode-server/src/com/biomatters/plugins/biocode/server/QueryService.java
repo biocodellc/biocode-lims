@@ -50,13 +50,14 @@ public class QueryService {
     @Produces("application/xml")
     @Consumes("text/plain")
     public Response searchWithPost(@QueryParam("q") String query,
+                           @DefaultValue("true")  @QueryParam("matchTissues") boolean matchTissues,
                            @DefaultValue("true")  @QueryParam("showTissues") boolean showTissues,
                            @DefaultValue("true")  @QueryParam("showWorkflows") boolean showWorkflows,
                            @DefaultValue("true")  @QueryParam("showPlates") boolean showPlates,
                            @DefaultValue("false") @QueryParam("showSequences") boolean showSequenceIds,
                                                   String tissueIdsToMatch) throws DatabaseServiceException {
 
-        return performSearch(query, showTissues, showWorkflows, showPlates, showSequenceIds, tissueIdsToMatch);
+        return performSearch(query, showTissues, showWorkflows, showPlates, showSequenceIds, matchTissues ? tissueIdsToMatch : null);
     }
 
     LimsSearchResult getPermissionsFilteredResult(LimsSearchResult result) throws DatabaseServiceException {
