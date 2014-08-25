@@ -11,11 +11,13 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.server.security.AccessUtilities;
 import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
+import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NoContentException;
-import java.util.Collections;
-import java.util.List;
+import javax.ws.rs.core.Response;
+import java.util.*;
 
 /**
  * @author Matthew Cheung
@@ -25,15 +27,37 @@ import java.util.List;
  */
 @Path("workflows")
 public class Workflows {
+
+    @GET
+    @Produces("application/xml")
+    @Consumes("text/plain")
+    public XMLSerializableList<WorkflowDocument> getWorkflows(@QueryParam("ids")String idListAsString) {
+        try {
+            List<WorkflowDocument> workflows = LIMSInitializationListener.getLimsConnection().getWorkflowsById(
+                    Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY);
+            Set<String> extractionIds = new HashSet<String>();
+            for (WorkflowDocument workflow : workflows) {
+                extractionIds.add(workflow.getWorkflow().getExtractionId());
+            }
+            AccessUtilities.checkUserHasRoleForExtractionIds(extractionIds, Role.READER);
+            return new XMLSerializableList<WorkflowDocument>(WorkflowDocument.class, workflows);
+        } catch (DatabaseServiceException e) {
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                                                       .entity(e.getMessage())
+                                                       .type(MediaType.TEXT_PLAIN_TYPE)
+                                                       .build());
+        }
+    }
+
     @GET
     @Path("{id}")
     @Produces("application/xml")
-    public Workflow get(@PathParam("id")String id) throws NoContentException {
-        if(id == null || id.trim().isEmpty()) {
+    public Workflow get(@PathParam("id")String workflowName) throws NoContentException {
+        if(workflowName == null || workflowName.trim().isEmpty()) {
             throw new BadRequestException("Must specify ids");
         }
         try {
-            Workflow result = RestUtilities.getOnlyItemFromList(LIMSInitializationListener.getLimsConnection().getWorkflows(Collections.singletonList(id)), "No workflow for id: " + id);
+            Workflow result = RestUtilities.getOnlyItemFromList(LIMSInitializationListener.getLimsConnection().getWorkflowsByName(Collections.singletonList(workflowName)), "No workflow for id: " + workflowName);
             AccessUtilities.checkUserHasRoleForExtractionIds(Collections.singletonList(result.getExtractionId()), Role.READER);
             return result;
         } catch (DatabaseServiceException e) {
@@ -69,12 +93,11 @@ public class Workflows {
                 Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_ID_FIELD, Condition.EQUAL, new Object[]{id},
                         BiocodeService.getSearchDownloadOptions(false, true, false, false)), null, null
         );
-        List<WorkflowDocument> workflowList = result.getWorkflows();
-        if(workflowList.size() < 1) {
+        Map<Integer, String> extractionIdsForWorkflows = QueryService.getExtractionIdsForWorkflows(result.getWorkflowIds());
+        String extractionId = extractionIdsForWorkflows.get(id);
+        if(extractionId == null) {
             throw new NotFoundException("Could not find workflow for id = " + id);
         }
-        AccessUtilities.checkUserHasRoleForExtractionIds(Collections.singletonList(
-                workflowList.get(0).getWorkflow().getExtractionId()
-        ), role);
+        AccessUtilities.checkUserHasRoleForExtractionIds(Collections.singletonList(extractionId), role);
     }
 }

@@ -71,9 +71,8 @@ public class QueryService {
         Set<String> extractionIds = new HashSet<String>();
 
         sampleIds.addAll(result.getTissueIds());
-        for (WorkflowDocument workflowDocument : result.getWorkflows()) {
-            extractionIds.add(workflowDocument.getWorkflow().getExtractionId());
-        }
+        Map<Integer, String> extractionIdsForWorkflows = getExtractionIdsForWorkflows(result.getWorkflowIds());
+        extractionIds.addAll(extractionIdsForWorkflows.values());
 
         Map<Integer, Collection<String>> extractionIdsForPlates = getExtractionIdsForPlates(result.getPlateIds());
         for (Collection<String> extractionIdsForPlate : extractionIdsForPlates.values()) {
@@ -112,8 +111,8 @@ public class QueryService {
                 filteredResult.addTissueSample(tissueId);
             }
         }
-        for (WorkflowDocument workflow : result.getWorkflows()) {
-            String sampleId = extractionIdToSampleId.get(workflow.getWorkflow().getExtractionId());
+        for (Integer workflow : result.getWorkflowIds()) {
+            String sampleId = extractionIdToSampleId.get(extractionIdsForWorkflows.get(workflow));
             if(readableSampleIds.contains(sampleId)) {
                 filteredResult.addWorkflow(workflow);
             }
@@ -179,6 +178,39 @@ public class QueryService {
                 }
             }
             return mapping.asMap();
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
+    }
+
+    public static Map<Integer, String> getExtractionIdsForWorkflows(List<Integer> workflowIds) throws DatabaseServiceException {
+        if(workflowIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Integer, String> mapping = new HashMap<Integer, String>();
+        DataSource dataSource = LIMSInitializationListener.getDataSource();
+        Connection connection = null;
+        try {
+            connection = dataSource.getConnection();
+
+            StringBuilder queryBuilder = new StringBuilder("SELECT id, extrctionId FROM workflow WHERE id IN ");
+            SqlUtilities.appendSetOfQuestionMarks(queryBuilder, workflowIds.size());
+            PreparedStatement select = connection.prepareStatement(queryBuilder.toString());
+            SqlUtilities.fillStatement(workflowIds, select);
+            SqlUtilities.printSql(queryBuilder.toString(), workflowIds);
+            ResultSet resultSet = select.executeQuery();
+            while(resultSet.next()) {
+                String extractionId = resultSet.getString("extractionId");
+                if(extractionId != null) {
+                    extractionId = extractionId.trim();
+                    if(extractionId.length() > 0) {
+                        mapping.put(resultSet.getInt("id"), extractionId);
+                    }
+                }
+            }
+            return mapping;
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {

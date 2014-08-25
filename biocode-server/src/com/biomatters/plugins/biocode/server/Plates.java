@@ -28,11 +28,12 @@ import java.util.*;
 public class Plates {
 
     @GET
+    @Produces("application/xml")
     @Consumes("text/plain")
     public XMLSerializableList<Plate> getForIds(@QueryParam("ids")String idListAsString) {
         try {
             List<Plate> plates = LIMSInitializationListener.getLimsConnection().getPlates(
-                    Sequences.getIntegerListFromString(idListAsString));
+                    Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY);
             AccessUtilities.checkUserHasRoleForPlate(plates, Role.READER);
             return new XMLSerializableList<Plate>(Plate.class, plates);
         } catch (DatabaseServiceException e) {
@@ -90,7 +91,7 @@ public class Plates {
     }
 
     private static void checkAccessForPlateId(int id) throws DatabaseServiceException {
-        List<Plate> plateList = LIMSInitializationListener.getLimsConnection().getPlates(Collections.singletonList(id));
+        List<Plate> plateList = LIMSInitializationListener.getLimsConnection().getPlates(Collections.singletonList(id), ProgressListener.EMPTY);
         if(plateList.size() < 1) {
             throw new NotFoundException("Could not find plate for id = " + id);
         }

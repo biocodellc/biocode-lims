@@ -14,7 +14,6 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -253,7 +252,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 List<Plate> plates;
                 try {
                     List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlateIds();
-                    plates = limsConnection.getPlates(plateIds);
+                    plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);

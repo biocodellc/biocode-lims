@@ -2,16 +2,9 @@ package com.biomatters.plugins.biocode.labbench.lims;
 
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.documents.XMLSerializer;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
-import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
-import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import org.jdom.Element;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Matthew Cheung
@@ -20,26 +13,25 @@ import java.util.List;
  *          Created on 4/04/14 11:56 AM
  */
 public class LimsSearchResult implements XMLSerializable {
-    List<String> tissueIds = new ArrayList<String>();
-    XMLSerializableList<WorkflowDocument> workflows = new XMLSerializableList<WorkflowDocument>(
-            WorkflowDocument.class, new ArrayList<WorkflowDocument>());
-    List<Integer> plates = new ArrayList<Integer>();
-    List<Integer> sequenceIds = new ArrayList<Integer>();
+    Set<String> tissueIds = new HashSet<String>();
+    Set<Integer> workflows = new HashSet<Integer>();
+    Set<Integer> plates = new HashSet<Integer>();
+    Set<Integer> sequenceIds = new HashSet<Integer>();
 
     public List<String> getTissueIds() {
-        return tissueIds;
+        return new ArrayList<String>(tissueIds);
     }
 
-    public List<WorkflowDocument> getWorkflows() {
-        return workflows.getList();
+    public List<Integer> getWorkflowIds() {
+        return new ArrayList<Integer>(workflows);
     }
 
     public List<Integer> getPlateIds() {
-        return plates;
+        return new ArrayList<Integer>(plates);
     }
 
     public List<Integer> getSequenceIds() {
-        return Collections.unmodifiableList(sequenceIds);
+        return new ArrayList<Integer>(sequenceIds);
     }
 
     public void addTissueSample(String tissueId) {
@@ -50,11 +42,11 @@ public class LimsSearchResult implements XMLSerializable {
         this.tissueIds.addAll(tissueIds);
     }
 
-    public void addWorkflow(WorkflowDocument workflow) {
+    public void addWorkflow(Integer workflow) {
         workflows.add(workflow);
     }
 
-    public void addAllWorkflows(Collection<? extends WorkflowDocument> workflows) {
+    public void addAllWorkflows(Collection<? extends Integer> workflows) {
         this.workflows.addAll(workflows);
     }
 
@@ -83,7 +75,7 @@ public class LimsSearchResult implements XMLSerializable {
     public Element toXML() {
         Element root = new Element(XMLSerializable.ROOT_ELEMENT_NAME);
         addIdListAsElement(root, TISSUES, tissueIds);
-        root.addContent(XMLSerializer.classToXML(WORKFLOWS, workflows));
+        addIdListAsElement(root, WORKFLOWS, workflows);
         addIdListAsElement(root, PLATES, plates);
         addIdListAsElement(root, SEQUENCES, sequenceIds);
         return root;
@@ -93,12 +85,12 @@ public class LimsSearchResult implements XMLSerializable {
     @Override
     public void fromXML(Element element) throws XMLSerializationException {
         tissueIds = getIdListFromElement(element, TISSUES, TEXT_PARSER);
-        workflows = getListFromElement(element, WORKFLOWS);
+        workflows = getIdListFromElement(element, WORKFLOWS, INTEGER_PARSER);
         plates = getIdListFromElement(element, PLATES, INTEGER_PARSER);
         sequenceIds = getIdListFromElement(element, SEQUENCES, INTEGER_PARSER);
     }
 
-    private static void addIdListAsElement(Element root, String elementName, List<?> ids) {
+    private static void addIdListAsElement(Element root, String elementName, Collection<?> ids) {
         Element seqElement = new Element(elementName);
         for (Object sequenceId : ids) {
             seqElement.addContent(new Element("id").setText(String.valueOf(sequenceId)));
@@ -106,16 +98,16 @@ public class LimsSearchResult implements XMLSerializable {
         root.addContent(seqElement);
     }
 
-    private static <T> List<T> getIdListFromElement(Element element, String elementName, Parser<T> parser) throws XMLSerializationException {
+    private static <T> Set<T> getIdListFromElement(Element element, String elementName, Parser<T> parser) throws XMLSerializationException {
         Element sequencesElement = element.getChild(elementName);
-        List<T> tempList = new ArrayList<T>();
+        Set<T> tempSet = new HashSet<T>();
         if(sequencesElement != null) {
             for (Element child : sequencesElement.getChildren()) {
                 String childText = child.getText();
-                tempList.add(parser.parseText(childText));
+                tempSet.add(parser.parseText(childText));
             }
         }
-        return tempList;
+        return tempSet;
     }
 
     private static abstract class Parser<T> {
@@ -139,13 +131,4 @@ public class LimsSearchResult implements XMLSerializable {
             }
         }
     };
-
-    public static XMLSerializableList getListFromElement(Element element, String key) throws XMLSerializationException {
-        Element workflowsElement = element.getChild(key);
-        if(workflowsElement != null) {
-            return XMLSerializer.classFromXML(workflowsElement, XMLSerializableList.class);
-        } else {
-            throw new XMLSerializationException("Missing " + key + " element");
-        }
-    }
 }

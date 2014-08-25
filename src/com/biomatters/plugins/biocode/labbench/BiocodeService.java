@@ -752,7 +752,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 List<Plate> plates;
                 if(!limsResult.getPlateIds().isEmpty() && isDownloadPlates(query)) {
                     callback.setMessage("Downloading " + getCountString("matching plate document", limsResult.getPlateIds().size()) + "...");
-                    plates = limsConnection.getPlates(limsResult.getPlateIds());
+                    plates = limsConnection.getPlates(limsResult.getPlateIds(), callback);
                     for (Plate plate : plates) {
                         PlateDocument plateDocument = new PlateDocument(plate);
                         if (isDownloadPlates(query) && callback != null) {
@@ -761,7 +761,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     }
                 }
 
-                List<WorkflowDocument> workflowList = limsResult.getWorkflows();
+                if(callback.isCanceled()) {
+                    return;
+                }
+
+                List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
+                boolean needWorkflows = isDownloadWorkflows(query) || isDownloadSequences(query);
+                if(!limsResult.getWorkflowIds().isEmpty() && needWorkflows) {
+                    callback.setMessage("Downloading " + BiocodeService.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
+                    workflows.addAll(limsConnection.getWorkflowsById(limsResult.getWorkflowIds(), callback));
+                    for (WorkflowDocument document : workflows) {
+                        callback.add(document, Collections.<String, Object>emptyMap());
+                    }
+                }
+
                 if(callback.isCanceled()) {
                     return;
                 }
@@ -810,7 +823,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading " + limsResult.getSequenceIds().size() + " matching sequences...");
-                    getMatchingAssemblyDocumentsForIds(workflowList, tissueSamples, limsResult.getSequenceIds(), callback, true);
+                    getMatchingAssemblyDocumentsForIds(workflows, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
             } catch (DatabaseServiceException e) {
@@ -1622,7 +1635,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                         BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
         ).getPlateIds();
-        List<Plate> plates = limsConnection.getPlates(plateIds);
+        List<Plate> plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
         if(plates.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }
@@ -1662,7 +1675,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
-        List<Workflow> list = limsConnection.getWorkflows(workflowIds);
+        List<Workflow> list = limsConnection.getWorkflowsByName(workflowIds);
         Map<String, Workflow> result = new HashMap<String, Workflow>();
         for (Workflow workflow : list) {
             result.put(workflow.getName(), workflow);
@@ -1732,7 +1745,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         try {
             List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlateIds();
-            List<Plate> plates = limsConnection.getPlates(plateIds);
+            List<Plate> plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
             assert(plates.size() <= 1);
             if(plates.isEmpty()) {
                 return null;

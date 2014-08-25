@@ -1,8 +1,6 @@
 package com.biomatters.plugins.biocode.server.utilities.query;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
-import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 
 import java.util.List;
@@ -27,8 +25,8 @@ public abstract class CompoundQuery extends Query {
 
         return combineResults(LHSResult.getTissueIds(),
                               RHSResult.getTissueIds(),
-                              LHSResult.getWorkflows(),
-                              RHSResult.getWorkflows(),
+                              LHSResult.getWorkflowIds(),
+                              RHSResult.getWorkflowIds(),
                               LHSResult.getPlateIds(),
                               RHSResult.getPlateIds(),
                               LHSResult.getSequenceIds(),
@@ -41,8 +39,8 @@ public abstract class CompoundQuery extends Query {
 
     protected final LimsSearchResult combineResults(List<String>       LHSTissueSamples,
                                           List<String>       RHSTissueSamples,
-                                          List<WorkflowDocument> LHSWorkflows,
-                                          List<WorkflowDocument> RHSWorkflows,
+                                          List<Integer> LHSWorkflows,
+                                          List<Integer> RHSWorkflows,
                                           List<Integer>    LHSPlates,
                                           List<Integer>    RHSPlates,
                                           List<Integer>          LHSSequenceIds,

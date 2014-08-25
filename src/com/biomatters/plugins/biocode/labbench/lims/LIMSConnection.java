@@ -290,7 +290,7 @@ public abstract class LIMSConnection {
      */
     public abstract LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException;
 
-    public abstract List<Plate> getPlates(Collection<Integer> plateIds) throws DatabaseServiceException;
+    public abstract List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
 
     /**
      * Sets a database wide property.  Can be retrieved by calling {@link #getProperty(String)}
@@ -310,7 +310,8 @@ public abstract class LIMSConnection {
      */
     public abstract String getProperty(String key) throws DatabaseServiceException;
 
-    public abstract List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException;
+    public abstract List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
+    public abstract List<Workflow> getWorkflowsByName(Collection<String> workflowNames) throws DatabaseServiceException;
     public abstract Map<String,String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException;
     public abstract void renameWorkflow(int id, String newName) throws DatabaseServiceException;
 

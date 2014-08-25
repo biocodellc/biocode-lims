@@ -82,7 +82,6 @@ public class ServerLimsConnection extends LIMSConnection {
 
         boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
         boolean downloadPlates = BiocodeService.isDownloadPlates(query);
-        LimsSearchResult result;
         try {
             WebTarget target = this.target.path("search")
                     .queryParam("q", RestQueryUtils.geneiousQueryToRestQueryString(query))
@@ -92,23 +91,36 @@ public class ServerLimsConnection extends LIMSConnection {
                     .queryParam("showPlates", downloadPlates)
                     .queryParam("showSequences", BiocodeService.isDownloadSequences(query));
             Invocation.Builder request = target.request(MediaType.APPLICATION_XML_TYPE);
-            result = request.post(Entity.entity(tissueIdsToMatchString, MediaType.TEXT_PLAIN_TYPE), LimsSearchResult.class);
+            return request.post(Entity.entity(tissueIdsToMatchString, MediaType.TEXT_PLAIN_TYPE), LimsSearchResult.class);
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
-
-        if (downloadWorkflows && callback != null) {
-            for (WorkflowDocument workflow : result.getWorkflows()) {
-                callback.add(workflow, Collections.<String, Object>emptyMap());
-            }
-        }
-        return result;
     }
 
     @Override
-    public List<Plate> getPlates(Collection<Integer> plateIds) throws DatabaseServiceException {
+    public List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException {
+        if(workflowIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            Invocation.Builder request = target.path("workflows")
+                    .queryParam("ids", StringUtilities.join(",", workflowIds))
+                    .request(MediaType.APPLICATION_XML_TYPE);
+            return request.get(
+                    new GenericType<XMLSerializableList<WorkflowDocument>>() {
+                    }
+            ).getList();
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    @Override
+    public List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
         if(plateIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -469,13 +481,13 @@ public class ServerLimsConnection extends LIMSConnection {
     private static final String WORKFLOWS = "workflows";
 
     @Override
-    public List<Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
-        if(workflowIds.isEmpty()) {
+    public List<Workflow> getWorkflowsByName(Collection<String> workflowNames) throws DatabaseServiceException {
+        if(workflowNames.isEmpty()) {
             return Collections.emptyList();
         }
         List<Workflow> data = new ArrayList<Workflow>();
         try {
-            for (String id : workflowIds) {
+            for (String id : workflowNames) {
                 if (id.isEmpty()) {
                     continue;
                 }
