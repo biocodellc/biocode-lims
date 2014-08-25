@@ -22,16 +22,14 @@ import java.util.*;
 public class Sequences {
 
     @Produces("application/xml")
-    @Path("{id}")
     @GET
-    public AssembledSequence getForIds(@PathParam("id")String id,
+    public List<AssembledSequence> getForIds(@QueryParam("ids")String idListString,
         @DefaultValue("false")@QueryParam("includeFailed")Boolean includeFailed) throws NoContentException {
 
         try {
-            List<Integer> idList = getIntegerListFromString(id);
+            List<Integer> idList = getIntegerListFromString(idListString);
             Role roleToCheckFor = Role.READER;
-            List<AssembledSequence> data = getAssembledSequencesWithRoleCheck(idList, includeFailed, roleToCheckFor);
-            return RestUtilities.getOnlyItemFromList(data, "No sequence for id: " + id);
+            return getAssembledSequencesWithRoleCheck(idList, includeFailed, roleToCheckFor);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }

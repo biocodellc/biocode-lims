@@ -223,21 +223,22 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
-        List<AssembledSequence> result = new ArrayList<AssembledSequence>();
+        if(sequenceIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         try {
-            for (int i : sequenceIds) {
-                result.add(target.path("sequences").path(Integer.toString(i)).
-                        queryParam("includeFailed", includeFailed).
-                        request(MediaType.APPLICATION_XML_TYPE).get(
-                        AssembledSequence.class
-                ));
-            }
+            return target.path("sequences").
+                    queryParam("includeFailed", includeFailed).
+                    queryParam("ids", StringUtilities.join(",", sequenceIds)).
+                    request(MediaType.APPLICATION_XML_TYPE).get(
+                    new GenericType<List<AssembledSequence>>() {
+                    }
+            );
         } catch (WebApplicationException e){
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e){
             throw new DatabaseServiceException(e, e.getMessage(), false);
         }
-        return result;
     }
 
     @Override
