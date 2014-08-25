@@ -4,7 +4,6 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -16,7 +15,6 @@ import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 import javax.ws.rs.*;
 import javax.ws.rs.core.NoContentException;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 
 /**

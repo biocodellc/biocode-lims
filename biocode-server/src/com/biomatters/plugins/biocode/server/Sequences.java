@@ -5,7 +5,6 @@ import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.reaction.FailureReason;
 import com.biomatters.plugins.biocode.server.security.AccessUtilities;
 import com.biomatters.plugins.biocode.server.security.Role;
-import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;

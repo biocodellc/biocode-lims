@@ -294,7 +294,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 "assembly = ? AND reaction NOT IN (?,?)");
 
         List<Integer> dunno = new ArrayList<Integer>();
-        int index = 0;
         for (Integer assemblyId : assemblyIds) {
             getAssemblyDetails.setObject(1, assemblyId);
             ResultSet detailsSet = getAssemblyDetails.executeQuery();
@@ -910,9 +909,43 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             ResultSet resultSet = preparedStatement.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS query");
 
+            Set<Integer> workflowIds = new HashSet<Integer>();
+            Set<Integer> plateIds = new HashSet<Integer>();
+            while (resultSet.next()) {
+                if (SystemUtilities.isAvailableMemoryLessThan(50)) {
+                    resultSet.close();
+                    throw new SQLException("Search cancelled due to lack of free memory");
+                }
+                if (callback.isCanceled()) {
+                    return result;
+                }
+
+                String tissue = resultSet.getString("sampleId");
+                if(tissue != null) {
+                    result.addTissueSample(tissue);
+                }
+
+                int plateId = resultSet.getInt("plate.id");
+                if(!resultSet.wasNull()) {
+                    plateIds.add(plateId);
+                }
+
+                int workflowId = resultSet.getInt("workflow.id");
+                if(!resultSet.wasNull()) {
+                    workflowIds.add(workflowId);
+                }
+
+                int sequenceId = resultSet.getInt("assembly.id");
+                if (!resultSet.wasNull()) {
+                    result.addSequenceID(sequenceId);
+                }
+            }
+            resultSet.close();
+
+
             boolean needWorkflows = downloadWorkflows || downloadSequences;
-            queryResult = createPlateAndWorkflowsFromResultSet(connection,
-                    callback != null ? callback : ProgressListener.EMPTY, resultSet,
+            queryResult = fetchPlatesAndWorkflowsForIds(connection,
+                    callback != null ? callback : ProgressListener.EMPTY, workflowIds, plateIds,
                     needWorkflows, downloadPlates);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
@@ -920,7 +953,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             SqlUtilities.cleanUpStatements(preparedStatement);
             returnConnection(connection);
         }
-        result.tissueIds.addAll(queryResult.tissueIds);
+        result.addAllTissueSamples(queryResult.tissueIds);
 
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(queryResult.workflows.values());
         if (downloadWorkflows && callback != null) {
@@ -928,8 +961,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 callback.add(document, Collections.<String, Object>emptyMap());
             }
         }
-        result.workflows.addAll(workflows);
-        result.sequenceIds.addAll(queryResult.sequenceIds);
+        result.addAllWorkflows(workflows);
+        result.addAllSequenceIDs(queryResult.sequenceIds);
 
         List<Plate> plates = new ArrayList<Plate>(queryResult.plates.values());
         for (Plate plate : plates) {
@@ -937,7 +970,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             if (downloadPlates && callback != null) {
                 callback.add(plateDocument, Collections.<String, Object>emptyMap());
             }
-            result.plates.add(plateDocument);
+            result.addPlate(plateDocument);
         }
         return result;
     }
@@ -1477,47 +1510,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
 
-    private WorkflowsAndPlatesQueryResult createPlateAndWorkflowsFromResultSet(
-            ConnectionWrapper connection, ProgressListener cancelable, ResultSet resultSet,
-            boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
+    private WorkflowsAndPlatesQueryResult fetchPlatesAndWorkflowsForIds(
+            ConnectionWrapper connection, ProgressListener cancelable, Set<Integer> workflowIds,
+            Set<Integer> plateIds, boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
         final StringBuilder totalErrors = new StringBuilder("");
-
-        Set<String> tissueIds = new HashSet<String>();
-        Set<Integer> workflowIds = new HashSet<Integer>();
-        Set<Integer> plateIds = new HashSet<Integer>();
-
-        System.out.println("Creating Reactions...");
-        while (resultSet.next()) {
-            if (SystemUtilities.isAvailableMemoryLessThan(50)) {
-                resultSet.close();
-                throw new SQLException("Search cancelled due to lack of free memory");
-            }
-            if (cancelable.isCanceled()) {
-                return new WorkflowsAndPlatesQueryResult();
-            }
-
-            String tissue = resultSet.getString("sampleId");
-            if(tissue != null) {
-                tissueIds.add(tissue);
-            }
-
-            int plateId = resultSet.getInt("plate.id");
-            if(!resultSet.wasNull()) {
-                plateIds.add(plateId);
-            }
-
-            int workflowId = resultSet.getInt("workflow.id");
-            if(!resultSet.wasNull()) {
-                workflowIds.add(workflowId);
-            }
-
-            int sequenceId = resultSet.getInt("assembly.id");
-            if (!resultSet.wasNull()) {
-                result.sequenceIds.add(sequenceId);
-            }
-        }
-        resultSet.close();
 
         Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
         if(!workflowIds.isEmpty() && getWorkflows) {
@@ -1602,8 +1599,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 SqlUtilities.cleanUpStatements(selectPlate);
             }
         }
-
-        result.tissueIds.addAll(tissueIds);
 
         if (totalErrors.length() > 0) {
             Runnable runnable = new Runnable() {

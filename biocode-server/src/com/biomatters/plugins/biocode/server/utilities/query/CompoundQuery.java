@@ -1,7 +1,6 @@
 package com.biomatters.plugins.biocode.server.utilities.query;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.PlateDocument;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;

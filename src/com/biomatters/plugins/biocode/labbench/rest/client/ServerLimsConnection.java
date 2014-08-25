@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.*;
+import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
