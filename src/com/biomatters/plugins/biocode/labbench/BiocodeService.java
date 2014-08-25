@@ -92,7 +92,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private BiocodeService() {
     }
 
-    public static String getCountString(String words, int count) {
+    private static String getCountString(String words, int count) {
         String base = count + " " + words;
         if(count > 1) {
             return base + "s";
@@ -779,7 +779,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     return;
                 }
 
-                callback.setMessage("Creating results...");
                 Set<String> tissueIdsToDownload = new HashSet<String>();
                 if(isDownloadTissues(query) || isDownloadSequences(query)) {
                     // Now add tissues that match the LIMS query
@@ -807,7 +806,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
                 try {
                     if(!tissueIdsToDownload.isEmpty()) {
-                        callback.setMessage("Downloading " + tissueIdsToDownload.size() + " matching tissues...");
+                        callback.setMessage("Downloading " + getCountString("matching tissue", tissueIdsToDownload.size()) + "...");
                         tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsToDownload));
                     }
                 } catch (ConnectionException e) {
@@ -822,7 +821,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     return;
                 }
                 if(isDownloadSequences(query)) {
-                    callback.setMessage("Downloading " + limsResult.getSequenceIds().size() + " matching sequences...");
+                    callback.setMessage("Downloading " + getCountString("matching sequence", limsResult.getSequenceIds().size()) + "...");
                     getMatchingAssemblyDocumentsForIds(workflows, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
