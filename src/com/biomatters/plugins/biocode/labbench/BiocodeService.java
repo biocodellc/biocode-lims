@@ -92,6 +92,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private BiocodeService() {
     }
 
+    public static String getCountString(String words, int count) {
+        String base = count + " " + words;
+        if(count > 1) {
+            return base + "s";
+        } else {
+            return base;
+        }
+    }
+
     public void setDataDirectory(File dataDirectory) {
         this.dataDirectory = dataDirectory;
 
@@ -739,6 +748,19 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 callback.setMessage("Searching LIMS...");
                 LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
                         areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
+
+                List<Plate> plates;
+                if(!limsResult.getPlateIds().isEmpty() && isDownloadPlates(query)) {
+                    callback.setMessage("Downloading " + getCountString("matching plate document", limsResult.getPlateIds().size()) + "...");
+                    plates = limsConnection.getPlates(limsResult.getPlateIds());
+                    for (Plate plate : plates) {
+                        PlateDocument plateDocument = new PlateDocument(plate);
+                        if (isDownloadPlates(query) && callback != null) {
+                            callback.add(plateDocument, Collections.<String, Object>emptyMap());
+                        }
+                    }
+                }
+
                 List<WorkflowDocument> workflowList = limsResult.getWorkflows();
                 if(callback.isCanceled()) {
                     return;
@@ -746,7 +768,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                 callback.setMessage("Creating results...");
                 Set<String> tissueIdsToDownload = new HashSet<String>();
-                if(isDownloadSequences(query) || isDownloadSequences(query)) {
+                if(isDownloadTissues(query) || isDownloadSequences(query)) {
                     // Now add tissues that match the LIMS query
                     // FimsSamples would have been downloaded as part of plate creation.  Collect them now.
                     tissueIdsToDownload.addAll(limsResult.getTissueIds());
@@ -1596,18 +1618,19 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws DocumentOperationException, DatabaseServiceException {
-        List<PlateDocument> plateList = limsConnection.getMatchingDocumentsFromLims(
+        List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                         BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
-        ).getPlates();
-        if(plateList.size() == 0) {
+        ).getPlateIds();
+        List<Plate> plates = limsConnection.getPlates(plateIds);
+        if(plates.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }
-        assert plateList.size() == 1;
-        if(plateList.get(0).getPlate().getReactionType() != Reaction.Type.CycleSequencing) {
+        assert plateIds.size() == 1;
+        if(plates.get(0).getReactionType() != Reaction.Type.CycleSequencing) {
             throw new DocumentOperationException("The plate '"+plateName+"' is not a cycle sequencing plate.");
         }
-        Plate plate = plateList.get(0).getPlate();
+        Plate plate = plates.get(0);
 
         List<String> workflowNames = new ArrayList<String>();
         for(Reaction r : plate.getReactions()) {
@@ -1702,5 +1725,23 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
 
         return false;
+    }
+
+    public Plate getPlateForName(String plateName) throws DatabaseServiceException {
+        Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
+                                BiocodeService.getSearchDownloadOptions(false, false, true, false));
+        try {
+            List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlateIds();
+            List<Plate> plates = limsConnection.getPlates(plateIds);
+            assert(plates.size() <= 1);
+            if(plates.isEmpty()) {
+                return null;
+            } else {
+                return plates.get(0);
+            }
+        } catch (DatabaseServiceException e) {
+            e.printStackTrace();
+            throw new DatabaseServiceException(e, "Failed to download plate " + plateName + ": " + e.getMessage(), false);
+        }
     }
 }

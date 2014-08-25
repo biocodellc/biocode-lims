@@ -893,7 +893,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
-        Map<Integer, Plate> platesById = new HashMap<Integer, Plate>();
         Map<Integer, WorkflowDocument> workflowDocsById = new HashMap<Integer, WorkflowDocument>();
 
         ConnectionWrapper connection = null;
@@ -918,7 +917,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     resultSet.close();
                     throw new SQLException("Search cancelled due to lack of free memory");
                 }
-                if (callback.isCanceled()) {
+                if (callback != null && callback.isCanceled()) {
                     return result;
                 }
 
@@ -947,16 +946,15 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
             boolean needWorkflows = downloadWorkflows || downloadSequences;
             if(!workflowIds.isEmpty() && needWorkflows) {
-                callback.setMessage("Downloading " + getCountString("matching workflow document", workflowIds.size()) + "...");
+                if(callback != null) {
+                    callback.setMessage("Downloading " + BiocodeService.getCountString("matching workflow document", workflowIds.size()) + "...");
+                }
                 workflowDocsById.putAll(fetchWorkflowsForIds(connection,
                         callback != null ? callback : ProgressListener.EMPTY, workflowIds
                 ));
             }
 
-            if(!plateIds.isEmpty() && downloadPlates) {
-                callback.setMessage("Downloading " + getCountString("matching plate document", plateIds.size()) + "...");
-                platesById.putAll(fetchPlatesForIds(connection, plateIds));
-            }
+            result.addAllPlates(plateIds);
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
@@ -971,15 +969,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         }
         result.addAllWorkflows(workflows);
-
-        List<Plate> plates = new ArrayList<Plate>(platesById.values());
-        for (Plate plate : plates) {
-            PlateDocument plateDocument = new PlateDocument(plate);
-            if (downloadPlates && callback != null) {
-                callback.add(plateDocument, Collections.<String, Object>emptyMap());
-            }
-            result.addPlate(plateDocument);
-        }
         return result;
     }
 
@@ -1570,12 +1559,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return byId;
     }
 
-    private Map<Integer, Plate> fetchPlatesForIds(ConnectionWrapper connection, Set<Integer> plateIds) throws SQLException {
+    public List<Plate> getPlates(Collection<Integer> plateIds) throws DatabaseServiceException {
+        ConnectionWrapper connection = null;
+
         // Query for full contents of plates that matched our query
         String plateQueryString = constructPlateQuery(plateIds);
         PreparedStatement selectPlate = null;
-        Map<Integer, Plate> plates;
+        List<Plate> plates;
         try {
+            connection = getConnection();
             System.out.println("Running LIMS (plates) query:");
             System.out.print("\t");
             SqlUtilities.printSql(plateQueryString, plateIds);
@@ -1591,17 +1583,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             plates = getPlatesFromResultSet(plateSet);
             plateSet.close();
             return plates;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, "Unable to retrieve plates: " + e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(selectPlate);
-        }
-    }
-
-    private static String getCountString(String words, int count) {
-        String base = count + " " + words;
-        if(count > 1) {
-            return base + "s";
-        } else {
-            return base;
+            returnConnection(connection);
         }
     }
 
@@ -1622,7 +1608,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return queryBuilder.toString();
     }
 
-    private Map<Integer, Plate> getPlatesFromResultSet(ResultSet resultSet) throws SQLException {
+    private List<Plate> getPlatesFromResultSet(ResultSet resultSet) throws SQLException {
         Map<Integer, Plate> plates = new HashMap<Integer, Plate>();
         final StringBuilder totalErrors = new StringBuilder("");
 
@@ -1693,7 +1679,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             };
             ThreadUtilities.invokeNowOrLater(runnable);
         }
-        return plates;
+        return new ArrayList<Plate>(plates.values());
     }
 
     /**

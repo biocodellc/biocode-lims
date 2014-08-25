@@ -44,7 +44,7 @@ public class Sequences {
         return data;
     }
 
-    private List<Integer> getIntegerListFromString(String idsString) {
+    public static List<Integer> getIntegerListFromString(String idsString) {
         if(idsString == null || idsString.trim().isEmpty()) {
             throw new BadRequestException("Must specify ids");
         }

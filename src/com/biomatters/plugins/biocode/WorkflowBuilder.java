@@ -343,18 +343,12 @@ public class WorkflowBuilder extends DocumentOperation {
             //==================(1) EXTRACTION PLATE====================================================================
             composite.beginSubtask("Creating extraction plate");
             String extractionPlateName = plateName + "_X1";
-            List<PlateDocument> existing = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
-                    Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
-                            BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
-            ).getPlates();
-
-            Plate extractionPlate;
-            if(existing.isEmpty()) {
+            Plate extractionPlate = BiocodeService.getInstance().getPlateForName(extractionPlateName);
+            if(extractionPlate == null) {
                 extractionPlate = new Plate(Plate.Size.w96, Reaction.Type.Extraction);
                 System.out.println("\tCreated plate " + extractionPlateName);
                 System.out.println();
             } else {
-                extractionPlate = existing.get(0).getPlate();
                 System.out.println("\tUsing existing plate " + extractionPlateName);
                 System.out.println();
             }
@@ -394,15 +388,10 @@ public class WorkflowBuilder extends DocumentOperation {
             }
 
             BiocodeService.getInstance().savePlate(extractionPlate, progressListener);
-            List<PlateDocument> plates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
-                    Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{extractionPlateName},
-                            BiocodeService.getSearchDownloadOptions(false, false, true, false)),
-                    null, null
-            ).getPlates();
-            if(plates.size() != 1) {
+            extractionPlate = BiocodeService.getInstance().getPlateForName(extractionPlateName);
+            if(extractionPlate == null) {
                 throw new DocumentOperationException("Could not find the plate "+extractionPlateName);
             }
-            extractionPlate = plates.get(0).getPlate();
             System.out.println("\tSaved extractions: "+saved);
             System.out.println("\tEmpty extractions: "+emptyCount);
 
@@ -419,33 +408,29 @@ public class WorkflowBuilder extends DocumentOperation {
                 }
             }
 
-            String pcrPlateName = plateName + "_PCR01_" + locus;
-            List<PlateDocument> pcrPlates = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
-                    Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{pcrPlateName},
-                            BiocodeService.getSearchDownloadOptions(false, false, true, false)),
-                    null, null
-            ).getPlates();
             Plate pcrPlate = null;
+            String pcrPlateName = plateName + "_PCR01_" + locus;
+            Plate candidate = BiocodeService.getInstance().getPlateForName(pcrPlateName);
             boolean hadPlate = false;
-            for (PlateDocument candidate : pcrPlates) {
+            if(candidate != null) {
                 hadPlate = true;
                 Set<String> onPlate = new HashSet<String>();
-                for (Reaction reaction : candidate.getPlate().getReactions()) {
-                    if(reaction.isEmpty()) {
+                for (Reaction reaction : candidate.getReactions()) {
+                    if (reaction.isEmpty()) {
                         continue;
                     }
-                    if(reaction.getLocus().equals(locus)) {
+                    if (reaction.getLocus().equals(locus)) {
                         onPlate.add(String.valueOf(reaction.getFieldValue(fieldCodeToCheck)));
                     }
                 }
                 boolean noMatch = false;
                 for (String id : idsToMatch) {
-                    if(!onPlate.contains(id)) {
+                    if (!onPlate.contains(id)) {
                         noMatch = true;
                     }
                 }
-                if(!noMatch) {
-                    pcrPlate = candidate.getPlate();
+                if (!noMatch) {
+                    pcrPlate = candidate;
                 }
             }
 
@@ -678,15 +663,15 @@ public class WorkflowBuilder extends DocumentOperation {
             queries.add(fieldQuery);
         }
 
-        List<PlateDocument> platesWithMatchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
+        List<Integer> plateIds = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
                 Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]),
                         BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
-        ).getPlates();
+        ).getPlateIds();
+        List<Plate> platesWithMatchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getPlates(plateIds);
 
         Plate csPlate = null;
-        for (PlateDocument candidate : platesWithMatchingWorkflows) {
+        for (Plate candidatePlate : platesWithMatchingWorkflows) {
             boolean stillGood = true;
-            Plate candidatePlate = candidate.getPlate();
             if(candidatePlate.getReactionType() != Reaction.Type.CycleSequencing) {
                 stillGood = false;
             }
@@ -696,7 +681,7 @@ public class WorkflowBuilder extends DocumentOperation {
                 }
             }
             if(stillGood) {
-                csPlate = candidate.getPlate();
+                csPlate = candidatePlate;
             }
         }
 

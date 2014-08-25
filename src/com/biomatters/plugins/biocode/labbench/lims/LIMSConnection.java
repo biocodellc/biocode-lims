@@ -290,6 +290,8 @@ public abstract class LIMSConnection {
      */
     public abstract LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException;
 
+    public abstract List<Plate> getPlates(Collection<Integer> plateIds) throws DatabaseServiceException;
+
     /**
      * Sets a database wide property.  Can be retrieved by calling {@link #getProperty(String)}
      *

@@ -332,7 +332,7 @@ public class SqlUtilities {
         return new QueryTermSurrounder(prepend, append, join);
     }
 
-    public static void fillStatement(List<Object> sqlValues, PreparedStatement statement) throws SQLException {
+    public static void fillStatement(List<?> sqlValues, PreparedStatement statement) throws SQLException {
         for (int i = 0; i < sqlValues.size(); i++) {
             Object o = sqlValues.get(i);
             if (o == null) {

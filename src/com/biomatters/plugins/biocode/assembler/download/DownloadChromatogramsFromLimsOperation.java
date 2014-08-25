@@ -2,9 +2,7 @@ package com.biomatters.plugins.biocode.assembler.download;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
@@ -16,7 +14,6 @@ import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingReaction;
@@ -75,7 +72,6 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             CompositeProgressListener progress = new CompositeProgressListener(callback, 0.2, 0.5, 0.2);
             progress.setIndeterminateProgress();
             progress.beginSubtask("Getting reactions");
-            LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
             List<String> plateNames = ((DownloadChromatogramsFromLimsOptions)options).getPlateNames();
             List<CycleSequencingReaction> reactions = new ArrayList<CycleSequencingReaction>();
             final Map<CycleSequencingReaction, FimsData> fimsDataForReactions = new HashMap<CycleSequencingReaction, FimsData>();
@@ -83,23 +79,10 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
             for (String plateName : plateNames) {
                 reactionsProgress.beginSubtask(plateName);
                 if (reactionsProgress.isCanceled()) return null;
-                Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false));
-                List<PlateDocument> plateDocuments;
-
-                try {
-                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlates();
-                } catch (DatabaseServiceException e) {
-                    e.printStackTrace();
-                    throw new DocumentOperationException("Failed to connect to LIMS: " + e.getMessage(), e);
-                }
-                if (plateDocuments.isEmpty()) {
+                Plate plate = BiocodeService.getInstance().getPlateForName(plateName);
+                if (plate == null) {
                     throw new DocumentOperationException("No plate found with name \"" + plateName + "\"");
                 }
-                if (plateDocuments.size() != 1) {
-                    throw new DocumentOperationException("Multiple plates found matching name \"" + plateName + "\"");
-                }
-                Plate plate = plateDocuments.get(0).getPlate();
                 if (plate.getReactionType() != Reaction.Type.CycleSequencing) {
                     throw new DocumentOperationException("Plate \"" + plateName + "\" is not a sequencing plate");
                 }

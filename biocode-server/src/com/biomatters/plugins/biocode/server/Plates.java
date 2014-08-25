@@ -1,14 +1,8 @@
 package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
-import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.PlateDocument;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
@@ -32,6 +26,22 @@ import java.util.*;
  */
 @Path("plates")
 public class Plates {
+
+    @GET
+    @Consumes("text/plain")
+    public XMLSerializableList<Plate> getForIds(@QueryParam("ids")String idListAsString) {
+        try {
+            List<Plate> plates = LIMSInitializationListener.getLimsConnection().getPlates(
+                    Sequences.getIntegerListFromString(idListAsString));
+            AccessUtilities.checkUserHasRoleForPlate(plates, Role.READER);
+            return new XMLSerializableList<Plate>(Plate.class, plates);
+        } catch (DatabaseServiceException e) {
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                                                       .entity(e.getMessage())
+                                                       .type(MediaType.TEXT_PLAIN_TYPE)
+                                                       .build());
+        }
+    }
 
     @PUT
     @Consumes("application/xml")
@@ -80,15 +90,11 @@ public class Plates {
     }
 
     private static void checkAccessForPlateId(int id) throws DatabaseServiceException {
-        LimsSearchResult result = LIMSInitializationListener.getLimsConnection().getMatchingDocumentsFromLims(
-                Query.Factory.createFieldQuery(LIMSConnection.PLATE_ID_FIELD, Condition.EQUAL, new Object[]{id},
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
-        );
-        List<PlateDocument> plateList = result.getPlates();
+        List<Plate> plateList = LIMSInitializationListener.getLimsConnection().getPlates(Collections.singletonList(id));
         if(plateList.size() < 1) {
             throw new NotFoundException("Could not find plate for id = " + id);
         }
-        AccessUtilities.checkUserHasRoleForPlate(Collections.singletonList(plateList.get(0).getPlate()), Role.WRITER);
+        AccessUtilities.checkUserHasRoleForPlate(Collections.singletonList(plateList.get(0)), Role.WRITER);
     }
 
     @GET

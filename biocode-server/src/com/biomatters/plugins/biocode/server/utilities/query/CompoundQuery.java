@@ -29,8 +29,8 @@ public abstract class CompoundQuery extends Query {
                               RHSResult.getTissueIds(),
                               LHSResult.getWorkflows(),
                               RHSResult.getWorkflows(),
-                              LHSResult.getPlates(),
-                              RHSResult.getPlates(),
+                              LHSResult.getPlateIds(),
+                              RHSResult.getPlateIds(),
                               LHSResult.getSequenceIds(),
                               RHSResult.getSequenceIds());
     }
@@ -43,8 +43,8 @@ public abstract class CompoundQuery extends Query {
                                           List<String>       RHSTissueSamples,
                                           List<WorkflowDocument> LHSWorkflows,
                                           List<WorkflowDocument> RHSWorkflows,
-                                          List<PlateDocument>    LHSPlates,
-                                          List<PlateDocument>    RHSPlates,
+                                          List<Integer>    LHSPlates,
+                                          List<Integer>    RHSPlates,
                                           List<Integer>          LHSSequenceIds,
                                           List<Integer>          RHSSequenceIds) {
         LimsSearchResult combinedResult = new LimsSearchResult();

@@ -23,8 +23,7 @@ public class LimsSearchResult implements XMLSerializable {
     List<String> tissueIds = new ArrayList<String>();
     XMLSerializableList<WorkflowDocument> workflows = new XMLSerializableList<WorkflowDocument>(
             WorkflowDocument.class, new ArrayList<WorkflowDocument>());
-    XMLSerializableList<PlateDocument> plates = new XMLSerializableList<PlateDocument>(
-            PlateDocument.class, new ArrayList<PlateDocument>());
+    List<Integer> plates = new ArrayList<Integer>();
     List<Integer> sequenceIds = new ArrayList<Integer>();
 
     public List<String> getTissueIds() {
@@ -35,8 +34,8 @@ public class LimsSearchResult implements XMLSerializable {
         return workflows.getList();
     }
 
-    public List<PlateDocument> getPlates() {
-        return plates.getList();
+    public List<Integer> getPlateIds() {
+        return plates;
     }
 
     public List<Integer> getSequenceIds() {
@@ -59,11 +58,11 @@ public class LimsSearchResult implements XMLSerializable {
         this.workflows.addAll(workflows);
     }
 
-    public void addPlate(PlateDocument plate) {
+    public void addPlate(Integer plate) {
         plates.add(plate);
     }
 
-    public void addAllPlates(Collection<? extends PlateDocument> plates) {
+    public void addAllPlates(Collection<? extends Integer> plates) {
         this.plates.addAll(plates);
     }
 
@@ -85,7 +84,7 @@ public class LimsSearchResult implements XMLSerializable {
         Element root = new Element(XMLSerializable.ROOT_ELEMENT_NAME);
         addIdListAsElement(root, TISSUES, tissueIds);
         root.addContent(XMLSerializer.classToXML(WORKFLOWS, workflows));
-        root.addContent(XMLSerializer.classToXML(PLATES, plates));
+        addIdListAsElement(root, PLATES, plates);
         addIdListAsElement(root, SEQUENCES, sequenceIds);
         return root;
     }
@@ -95,7 +94,7 @@ public class LimsSearchResult implements XMLSerializable {
     public void fromXML(Element element) throws XMLSerializationException {
         tissueIds = getIdListFromElement(element, TISSUES, TEXT_PARSER);
         workflows = getListFromElement(element, WORKFLOWS);
-        plates = getListFromElement(element, PLATES);
+        plates = getIdListFromElement(element, PLATES, INTEGER_PARSER);
         sequenceIds = getIdListFromElement(element, SEQUENCES, INTEGER_PARSER);
     }
 

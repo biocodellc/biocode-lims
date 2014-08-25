@@ -104,12 +104,27 @@ public class ServerLimsConnection extends LIMSConnection {
                 callback.add(workflow, Collections.<String, Object>emptyMap());
             }
         }
-        if (downloadPlates && callback != null) {
-            for (PlateDocument plateDocument : result.getPlates()) {
-                callback.add(plateDocument, Collections.<String, Object>emptyMap());
-            }
-        }
         return result;
+    }
+
+    @Override
+    public List<Plate> getPlates(Collection<Integer> plateIds) throws DatabaseServiceException {
+        if(plateIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            Invocation.Builder request = target.path("plates")
+                    .queryParam("ids", StringUtilities.join(",", plateIds))
+                    .request(MediaType.APPLICATION_XML_TYPE);
+            return request.get(
+                    new GenericType<XMLSerializableList<Plate>>() {
+                    }
+            ).getList();
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
     }
 
     @Override

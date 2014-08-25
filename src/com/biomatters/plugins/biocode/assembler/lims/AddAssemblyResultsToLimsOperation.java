@@ -250,27 +250,27 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             } else {
                 Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                         BiocodeService.getSearchDownloadOptions(false, false, true, false));//Query.Factory.createQuery(plateName);
-                List<PlateDocument> plateDocuments;
+                List<Plate> plates;
                 try {
-                    plateDocuments = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlates();
+                    List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlateIds();
+                    plates = limsConnection.getPlates(plateIds);
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);
                 }
-                if (plateDocuments.isEmpty()) {
+                if (plates.isEmpty()) {
                     sequencingPlateCache.put(plateName, null);
                     return "No plate found with name \"" + plateName + "\"";
                 }
-                if (plateDocuments.size() != 1) {
+                if (plates.size() != 1) {
                     sequencingPlateCache.put(plateName, null);
                     return "Multiple plates found matching name \"" + plateName + "\"";
                 }
-                PlateDocument plateDocument = plateDocuments.get(0);
-                if (plateDocument.getPlate().getReactionType() != Reaction.Type.CycleSequencing) {
+                plate = plates.get(0);
+                if (plate.getReactionType() != Reaction.Type.CycleSequencing) {
                     sequencingPlateCache.put(plateName, null);
                     return "Plate \"" + plateName + "\" is not a sequencing plate";
                 }
-                plate = plateDocument.getPlate();
                 sequencingPlateCache.put(plateName, plate);
             }
             if (plate == null) {

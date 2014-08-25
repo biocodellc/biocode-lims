@@ -3,13 +3,19 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
-import com.biomatters.plugins.biocode.labbench.plates.Plate;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.server.security.*;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
+import javax.sql.DataSource;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -68,11 +74,11 @@ public class QueryService {
         for (WorkflowDocument workflowDocument : result.getWorkflows()) {
             extractionIds.add(workflowDocument.getWorkflow().getExtractionId());
         }
-        List<Plate> plates = new ArrayList<Plate>();
-        for (PlateDocument plate : result.getPlates()) {
-            plates.add(plate.getPlate());
+
+        Map<Integer, Collection<String>> extractionIdsForPlates = getExtractionIdsForPlates(result.getPlateIds());
+        for (Collection<String> extractionIdsForPlate : extractionIdsForPlates.values()) {
+            extractionIdsForPlate.addAll(extractionIdsForPlate);
         }
-        extractionIds.addAll(AccessUtilities.getExtractionIdsFromPlates(plates));
         List<AssembledSequence> sequences = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(result.getSequenceIds(), null, true);
         for (AssembledSequence sequence : sequences) {
             extractionIds.add(sequence.extractionId);
@@ -112,17 +118,17 @@ public class QueryService {
                 filteredResult.addWorkflow(workflow);
             }
         }
-        for (PlateDocument plateDocument : result.getPlates()) {
+        for (Integer plateId : result.getPlateIds()) {
             boolean canReadCompletePlate = true;
-            for (Reaction reaction : plateDocument.getPlate().getReactions()) {
-                String sampleId = extractionIdToSampleId.get(reaction.getExtractionId());
-                if(!reaction.isEmpty() && !readableSampleIds.contains(sampleId)) {
+            for (String extractionIdToCheck : extractionIdsForPlates.get(plateId)) {
+                String sampleId = extractionIdToSampleId.get(extractionIdToCheck);
+                if(!readableSampleIds.contains(sampleId)) {
                     canReadCompletePlate = false;
                     break;
                 }
             }
             if(canReadCompletePlate) {
-                filteredResult.addPlate(plateDocument);
+                filteredResult.addPlate(plateId);
             }
         }
         for (AssembledSequence sequence : sequences) {
@@ -132,5 +138,51 @@ public class QueryService {
             }
         }
         return filteredResult;
+    }
+
+    private static Map<Integer, Collection<String>> getExtractionIdsForPlates(List<Integer> plateIds) throws DatabaseServiceException {
+        if(plateIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Multimap<Integer, String> mapping = ArrayListMultimap.create();
+        DataSource dataSource = LIMSInitializationListener.getDataSource();
+        Connection connection = null;
+        try {
+            connection = dataSource.getConnection();
+
+            StringBuilder queryBuilder = new StringBuilder("SELECT plate.id, E.extractionId FROM plate " +
+                    "LEFT OUTER JOIN extraction ON extraction.plate = plate.id " +
+                    "LEFT OUTER JOIN workflow W ON extraction.id = W.extractionId " +
+                    "LEFT OUTER JOIN pcr ON pcr.plate = plate.id  " +
+                    "LEFT OUTER JOIN cyclesequencing ON cyclesequencing.plate = plate.id " +
+                    "LEFT OUTER JOIN workflow ON workflow.id = " +
+                    "CASE WHEN pcr.workflow IS NOT NULL THEN pcr.workflow ELSE " +
+                        "CASE WHEN W.id IS NOT NULL THEN W.id ELSE " +
+                            "cyclesequencing.workflow END " +
+                    "END " +
+                    "LEFT OUTER JOIN extraction E ON E.id = " +
+                    "CASE WHEN extraction.id IS NULL THEN workflow.extractionId ELSE extraction.id END " +
+                    "WHERE plate.id IN ");
+            SqlUtilities.appendSetOfQuestionMarks(queryBuilder, plateIds.size());
+            queryBuilder.append(" ORDER BY plate.id");
+            PreparedStatement select = connection.prepareStatement(queryBuilder.toString());
+            SqlUtilities.fillStatement(plateIds, select);
+            SqlUtilities.printSql(queryBuilder.toString(), plateIds);
+            ResultSet resultSet = select.executeQuery();
+            while(resultSet.next()) {
+                String extractionId = resultSet.getString("E.extractionId");
+                if(extractionId != null) {
+                    extractionId = extractionId.trim();
+                    if(extractionId.length() > 0) {
+                        mapping.put(resultSet.getInt("plate.id"), extractionId);
+                    }
+                }
+            }
+            return mapping.asMap();
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
     }
 }
