@@ -893,8 +893,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
 
+        Map<Integer, Plate> platesById = new HashMap<Integer, Plate>();
+        Map<Integer, WorkflowDocument> workflowDocsById = new HashMap<Integer, WorkflowDocument>();
+
         ConnectionWrapper connection = null;
-        WorkflowsAndPlatesQueryResult queryResult;
         PreparedStatement preparedStatement = null;
         try {
             connection = getConnection();
@@ -944,27 +946,33 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
 
             boolean needWorkflows = downloadWorkflows || downloadSequences;
-            queryResult = fetchPlatesAndWorkflowsForIds(connection,
-                    callback != null ? callback : ProgressListener.EMPTY, workflowIds, plateIds,
-                    needWorkflows, downloadPlates);
+            if(!workflowIds.isEmpty() && needWorkflows) {
+                callback.setMessage("Downloading " + getCountString("matching workflow document", workflowIds.size()) + "...");
+                workflowDocsById.putAll(fetchWorkflowsForIds(connection,
+                        callback != null ? callback : ProgressListener.EMPTY, workflowIds
+                ));
+            }
+
+            if(!plateIds.isEmpty() && downloadPlates) {
+                callback.setMessage("Downloading " + getCountString("matching plate document", plateIds.size()) + "...");
+                platesById.putAll(fetchPlatesForIds(connection, plateIds));
+            }
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             SqlUtilities.cleanUpStatements(preparedStatement);
             returnConnection(connection);
         }
-        result.addAllTissueSamples(queryResult.tissueIds);
 
-        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(queryResult.workflows.values());
+        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(workflowDocsById.values());
         if (downloadWorkflows && callback != null) {
             for (WorkflowDocument document : workflows) {
                 callback.add(document, Collections.<String, Object>emptyMap());
             }
         }
         result.addAllWorkflows(workflows);
-        result.addAllSequenceIDs(queryResult.sequenceIds);
 
-        List<Plate> plates = new ArrayList<Plate>(queryResult.plates.values());
+        List<Plate> plates = new ArrayList<Plate>(platesById.values());
         for (Plate plate : plates) {
             PlateDocument plateDocument = new PlateDocument(plate);
             if (downloadPlates && callback != null) {
@@ -1495,63 +1503,48 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return result;
     }
 
-    private class WorkflowsAndPlatesQueryResult {
-        private List<String> tissueIds;
-        private Map<Integer, Plate> plates;
-        private Map<Integer, WorkflowDocument> workflows;
-        private Set<Integer> sequenceIds;
 
-        private WorkflowsAndPlatesQueryResult() {
-            tissueIds = new ArrayList<String>();
-            plates = new HashMap<Integer, Plate>();
-            workflows = new HashMap<Integer, WorkflowDocument>();
-            sequenceIds = new HashSet<Integer>();
-        }
-    }
-
-
-    private WorkflowsAndPlatesQueryResult fetchPlatesAndWorkflowsForIds(
-            ConnectionWrapper connection, ProgressListener cancelable, Set<Integer> workflowIds,
-            Set<Integer> plateIds, boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
-        WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
-
+    private Map<Integer, WorkflowDocument> fetchWorkflowsForIds(
+            ConnectionWrapper connection, ProgressListener cancelable, Set<Integer> workflowIds) throws SQLException, DatabaseServiceException {
+        Map<Integer, WorkflowDocument> byId = new HashMap<Integer, WorkflowDocument>();
         Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
-        if(!workflowIds.isEmpty() && getWorkflows) {
-            cancelable.setMessage("Downloading " + getCountString("matching workflow document", workflowIds.size()) + "...");
-            // Query for full contents of plates that matched our query
-            String workflowQueryString = constructWorkflowQuery(workflowIds);
-            PreparedStatement selectWorkflow = null;
-            try {
-                System.out.println("Running LIMS (workflows) query:");
-                System.out.print("\t");
-                SqlUtilities.printSql(workflowQueryString, workflowIds);
 
-                selectWorkflow = connection.prepareStatement(workflowQueryString);
-                SqlUtilities.fillStatement(new ArrayList<Object>(workflowIds), selectWorkflow);
+        // Query for full contents of plates that matched our query
+        String workflowQueryString = constructWorkflowQuery(workflowIds);
+        PreparedStatement selectWorkflow = null;
+        try {
+            System.out.println("Running LIMS (workflows) query:");
+            System.out.print("\t");
+            SqlUtilities.printSql(workflowQueryString, workflowIds);
 
-                long start = System.currentTimeMillis();
-                ResultSet workflowsSet = selectWorkflow.executeQuery();
-                System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
+            selectWorkflow = connection.prepareStatement(workflowQueryString);
+            SqlUtilities.fillStatement(new ArrayList<Object>(workflowIds), selectWorkflow);
 
-                while(workflowsSet.next()) {
-                    int workflowId = workflowsSet.getInt("workflow.id");
-                    WorkflowDocument existingWorkflow = result.workflows.get(workflowId);
-                    if (existingWorkflow != null) {
-                        existingWorkflow.addRow(workflowsSet);
-                    } else {
-                        WorkflowDocument newWorkflow = new WorkflowDocument(workflowsSet);
-                        result.workflows.put(workflowId, newWorkflow);
-                    }
+            long start = System.currentTimeMillis();
+            ResultSet workflowsSet = selectWorkflow.executeQuery();
+            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
 
-                    String sampleId = workflowsSet.getString("extraction.sampleId");
-                    if (sampleId != null) {
-                        workflowToSampleId.put(workflowId, sampleId);
-                    }
+            while(workflowsSet.next()) {
+                if(cancelable.isCanceled()) {
+                    return Collections.emptyMap();
                 }
-                workflowsSet.close();
-            } finally {
-                SqlUtilities.cleanUpStatements(selectWorkflow);
+                int workflowId = workflowsSet.getInt("workflow.id");
+                WorkflowDocument existingWorkflow = byId.get(workflowId);
+                if (existingWorkflow != null) {
+                    existingWorkflow.addRow(workflowsSet);
+                } else {
+                    WorkflowDocument newWorkflow = new WorkflowDocument(workflowsSet);
+                    byId.put(workflowId, newWorkflow);
+                }
+
+                String sampleId = workflowsSet.getString("extraction.sampleId");
+                if (sampleId != null) {
+                    workflowToSampleId.put(workflowId, sampleId);
+                }
             }
+            workflowsSet.close();
+        } finally {
+            SqlUtilities.cleanUpStatements(selectWorkflow);
         }
 
 
@@ -1561,8 +1554,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 // So pre-cache all the samples we need in one query and hold a reference so they don't get garbage collected
                 @SuppressWarnings("UnusedDeclaration")
                 List<FimsSample> samples = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(workflowToSampleId.values());
+
                 for (Map.Entry<Integer, String> entry : workflowToSampleId.entrySet()) {
-                    WorkflowDocument workflowDocument = result.workflows.get(entry.getKey());
+                    WorkflowDocument workflowDocument = byId.get(entry.getKey());
                     Reaction reaction = workflowDocument.getMostRecentReaction(Reaction.Type.Extraction);
                     FimsSample sample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(entry.getValue());
                     if (reaction != null && reaction.getFimsSample() == null) {
@@ -1573,32 +1567,33 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 throw new DatabaseServiceException(e, "Unable to retrieve FIMS samples", false);
             }
         }
+        return byId;
+    }
 
-        if(!plateIds.isEmpty() && getPlates) {
-            cancelable.setMessage("Downloading " + getCountString("matching plate document", plateIds.size()) + "...");
-            // Query for full contents of plates that matched our query
-            String plateQueryString = constructPlateQuery(plateIds);
-            PreparedStatement selectPlate = null;
-            try {
-                System.out.println("Running LIMS (plates) query:");
-                System.out.print("\t");
-                SqlUtilities.printSql(plateQueryString, plateIds);
+    private Map<Integer, Plate> fetchPlatesForIds(ConnectionWrapper connection, Set<Integer> plateIds) throws SQLException {
+        // Query for full contents of plates that matched our query
+        String plateQueryString = constructPlateQuery(plateIds);
+        PreparedStatement selectPlate = null;
+        Map<Integer, Plate> plates;
+        try {
+            System.out.println("Running LIMS (plates) query:");
+            System.out.print("\t");
+            SqlUtilities.printSql(plateQueryString, plateIds);
 
-                selectPlate = connection.prepareStatement(plateQueryString);
-                SqlUtilities.fillStatement(new ArrayList<Object>(plateIds), selectPlate);
+            selectPlate = connection.prepareStatement(plateQueryString);
+            SqlUtilities.fillStatement(new ArrayList<Object>(plateIds), selectPlate);
 
-                long start = System.currentTimeMillis();
-                selectPlate.setQueryTimeout(0);
-                ResultSet plateSet = selectPlate.executeQuery();
-                System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (plates) query");
+            long start = System.currentTimeMillis();
+            selectPlate.setQueryTimeout(0);
+            ResultSet plateSet = selectPlate.executeQuery();
+            System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (plates) query");
 
-                result.plates.putAll(getPlatesFromResultSet(plateSet));
-                plateSet.close();
-            } finally {
-                SqlUtilities.cleanUpStatements(selectPlate);
-            }
+            plates = getPlatesFromResultSet(plateSet);
+            plateSet.close();
+            return plates;
+        } finally {
+            SqlUtilities.cleanUpStatements(selectPlate);
         }
-        return result;
     }
 
     private static String getCountString(String words, int count) {
