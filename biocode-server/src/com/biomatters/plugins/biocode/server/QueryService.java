@@ -195,7 +195,8 @@ public class QueryService {
         try {
             connection = dataSource.getConnection();
 
-            StringBuilder queryBuilder = new StringBuilder("SELECT id, extrctionId FROM workflow WHERE id IN ");
+            StringBuilder queryBuilder = new StringBuilder("SELECT workflow.id, extraction.extractionId FROM workflow " +
+                    "INNER JOIN extraction ON extraction.id = workflow.extractionId WHERE workflow.id IN ");
             SqlUtilities.appendSetOfQuestionMarks(queryBuilder, workflowIds.size());
             PreparedStatement select = connection.prepareStatement(queryBuilder.toString());
             SqlUtilities.fillStatement(workflowIds, select);
