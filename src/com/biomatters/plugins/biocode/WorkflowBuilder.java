@@ -665,7 +665,7 @@ public class WorkflowBuilder extends DocumentOperation {
 
         List<Integer> plateIds = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(
                 Query.Factory.createOrQuery(queries.toArray(new Query[queries.size()]),
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, ProgressListener.EMPTY
         ).getPlateIds();
         List<Plate> platesWithMatchingWorkflows = BiocodeService.getInstance().getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
 

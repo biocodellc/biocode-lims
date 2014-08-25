@@ -284,11 +284,11 @@ public abstract class LIMSConnection {
      *
      * @param query    The query.  Can include boolean values for "workflowDocuments" and "plateDocuments" to disable downloading
      * @param tissueIdsToMatch  A list of FIMS samples to match.  Or null to return all results.
-     * @param callback To add results to as they are found.  Can be null.  If it is not null, then workflows and plates will be added to the callback.
+     * @param cancelable A cancelable to cancel the search task.  Cannot be null.
      * @return {@link LimsSearchResult} with workflows and plates found.
      * @throws SQLException if there is a problem with the database
      */
-    public abstract LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException;
+    public abstract LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, Cancelable cancelable) throws DatabaseServiceException;
 
     public abstract List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
 

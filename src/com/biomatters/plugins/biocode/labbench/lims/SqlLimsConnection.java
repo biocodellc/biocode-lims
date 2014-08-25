@@ -818,7 +818,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, RetrieveCallback callback) throws DatabaseServiceException {
+    public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, Cancelable cancelable) throws DatabaseServiceException {
         LimsSearchResult result = new LimsSearchResult();
 
         Boolean downloadTissues = BiocodeService.isDownloadTissues(query);
@@ -913,7 +913,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     resultSet.close();
                     throw new SQLException("Search cancelled due to lack of free memory");
                 }
-                if (callback != null && callback.isCanceled()) {
+                if (cancelable.isCanceled()) {
                     return result;
                 }
 

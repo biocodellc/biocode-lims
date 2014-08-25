@@ -1632,7 +1632,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws DocumentOperationException, DatabaseServiceException {
         List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
-                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, null
+                        BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, ProgressListener.EMPTY
         ).getPlateIds();
         List<Plate> plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
         if(plates.size() == 0) {
@@ -1743,7 +1743,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         try {
-            List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, null).getPlateIds();
+            List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
             List<Plate> plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
             assert(plates.size() <= 1);
             if(plates.isEmpty()) {
