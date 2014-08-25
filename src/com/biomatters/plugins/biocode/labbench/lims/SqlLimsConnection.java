@@ -1514,7 +1514,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ConnectionWrapper connection, ProgressListener cancelable, Set<Integer> workflowIds,
             Set<Integer> plateIds, boolean getWorkflows, boolean getPlates) throws SQLException, DatabaseServiceException {
         WorkflowsAndPlatesQueryResult result = new WorkflowsAndPlatesQueryResult();
-        final StringBuilder totalErrors = new StringBuilder("");
 
         Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
         if(!workflowIds.isEmpty() && getWorkflows) {
@@ -1598,19 +1597,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             } finally {
                 SqlUtilities.cleanUpStatements(selectPlate);
             }
-        }
-
-        if (totalErrors.length() > 0) {
-            Runnable runnable = new Runnable() {
-                public void run() {
-                    if (totalErrors.toString().contains("connection")) {
-                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", totalErrors.toString());
-                    } else {
-                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n" + totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
-                    }
-                }
-            };
-            ThreadUtilities.invokeNowOrLater(runnable);
         }
         return result;
     }
