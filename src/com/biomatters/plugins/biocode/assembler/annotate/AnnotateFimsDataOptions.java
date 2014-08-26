@@ -68,7 +68,7 @@ public class AnnotateFimsDataOptions extends Options {
         useExistingPlate.addDependent(useExistingValues[1], useExistingOptions, true);
         useExistingPlate.addDependent(useExistingValues[0], warningLabelOption, false);
 
-        List<OptionValue> fimsFields = AnnotateUtilities.getOptionValuesForFimsFields();
+        List<OptionValue> fimsFields = BiocodeUtilities.getOptionValuesForFimsFields();
         if(fimsFields.size() > 0) {
             fimsField = addComboBoxOption("fimsField", "", fimsFields, fimsFields.get(0));
         }

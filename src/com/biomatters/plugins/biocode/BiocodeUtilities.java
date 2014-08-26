@@ -258,6 +258,24 @@ public class BiocodeUtilities {
         return roundedBorderPanel;
     }
 
+    public static List<Options.OptionValue> getOptionValuesForFimsFields() {
+        List<DocumentField> fields = BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes();
+        List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
+        for(DocumentField field : fields) {
+            values.add(new Options.OptionValue(field.getCode(), field.getName(), field.getDescription()));
+        }
+        return values;
+    }
+
+    public static DocumentField getDocumentFieldForOptionValue(Options.OptionValue optionValue) {
+        for (DocumentField candidate : BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes()) {
+            if(candidate.getCode().equals(optionValue.getName())) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
     public enum ReadDirection {
         NONE("N"), FORWARD("F"), REVERSE("R");
 

@@ -52,7 +52,7 @@ public class AnnotateLimsDataOptions extends Options {
         useExistingOptions.beginAlignHorizontally(null, false);
         List<OptionValue> valuesForMatching = new ArrayList<OptionValue>();
         valuesForMatching.add(WELL_NUMBER);
-        valuesForMatching.addAll(AnnotateUtilities.getOptionValuesForFimsFields());
+        valuesForMatching.addAll(BiocodeUtilities.getOptionValuesForFimsFields());
         valuesForMatching.add(BARCODE);
         idType = useExistingOptions.addComboBoxOption("idType", "", valuesForMatching, WELL_NUMBER);
         useExistingOptions.addLabel("is");
@@ -186,7 +186,7 @@ public class AnnotateLimsDataOptions extends Options {
                 if(toMatch == null) {
                     return null;
                 }
-                DocumentField field = AnnotateUtilities.getDocumentFieldForOptionValue(idType.getValue());
+                DocumentField field = BiocodeUtilities.getDocumentFieldForOptionValue(idType.getValue());
                 Map<String, WorkflowDocument> values = new HashMap<String, WorkflowDocument>();
                 Map<String, BiocodeUtilities.Well> wells = new HashMap<String, BiocodeUtilities.Well>();
                 for (Map.Entry<BiocodeUtilities.Well, WorkflowDocument> entry : toExamine.entrySet()) {

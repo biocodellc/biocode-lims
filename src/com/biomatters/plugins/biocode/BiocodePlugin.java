@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
+import com.biomatters.plugins.biocode.submission.bold.GenerateBOLDTraceSubmissionOperation;
 import org.jdom.Document;
 import org.jdom.JDOMException;
 import org.jdom.input.SAXBuilder;
@@ -42,6 +43,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     private static GeneiousActionOptions superBiocodeAction;
     public static final String PLUGIN_VERSION = "2.99.2";
+    public static final String SUPPORT_EMAIL = "support@mooreabiocode.org";
 
     public static GeneiousActionOptions getSuperBiocodeAction() {
         if (superBiocodeAction == null) {
@@ -73,7 +75,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public String getEmailAddressForCrashes() {
-        return "support@mooreabiocode.org";
+        return SUPPORT_EMAIL;
     }
 
     public String getVersion() {
@@ -330,6 +332,7 @@ public class BiocodePlugin extends GeneiousPlugin {
                 new AddAssemblyResultsToLimsOperation(true, false),
                 new AddAssemblyResultsToLimsOperation(false, false),
                 new MarkSequencesAsSubmittedInLimsOperation(),
+                new GenerateBOLDTraceSubmissionOperation(),
 //                new WorkflowBuilder(),  // Used as a one off to import raw Biocode data into Darwin
 //                new MetagenomicsDocumentOperation()
                 //new ImportLimsOperation()
