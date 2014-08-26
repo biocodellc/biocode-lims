@@ -32,7 +32,9 @@ public class PasswordOptions extends Options{
     public void setPasswordsFromOptions(Options enterPasswordOptions) {}
 
     /**
-     * Retrieves column list from FIMS and then populates possible values for Options on the dispatch thread.
+     * Retrieves updated list of option values and then populates possible values for Options.  Option population is scheduled
+     * on the dispatch thread if {@link com.biomatters.geneious.publicapi.plugin.Geneious#isHeadless()} returns false,
+     * otherwise it is done immediately after retrieving the new values.
      *
      * @throws ConnectionException if a problem occurs retrieving the column list from the FIMS
      */

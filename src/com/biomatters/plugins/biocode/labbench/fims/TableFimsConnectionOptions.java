@@ -16,8 +16,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
+import jebl.util.ProgressListener;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -106,19 +106,33 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         if(updateAutomatically()) {
             connectionOptions.addChangeListener(new SimpleListener() {
                 public void objectChanged() {
-                    final ProgressFrame progress = new ProgressFrame("Updating Fields...", "", 1000, true, Dialogs.getCurrentModalDialog());
-                    progress.setCancelable(false);
+
+                    final ProgressListener progress;
+                    if(Geneious.isHeadless()) {
+                        progress = ProgressListener.EMPTY;
+                    } else {
+                        ProgressFrame progressFrame = new ProgressFrame("Updating Fields...", "", 1000, true, Dialogs.getCurrentModalDialog());
+                        progressFrame.setCancelable(false);
+                        progress = progressFrame;
+                    }
+
                     progress.setIndeterminateProgress();
-                    new Thread() {
+                    Runnable doUpdate = new Runnable() {
                         public void run() {
                             try {
                                 update();
                             } catch (ConnectionException e) {
                                 Dialogs.showMessageDialog(e.getMessage());
                             }
-                            progress.setComplete();
+                            progress.setProgress(1.0);
                         }
-                    }.start();
+                    };
+
+                    if(Geneious.isHeadless()) {
+                        doUpdate.run();
+                    } else {
+                        new Thread(doUpdate).start();
+                    }
                 }
             });
         }
@@ -243,7 +257,12 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
             newCols = NO_FIELDS;
         }
 
-        ThreadUtilities.invokeNowOrLater(getUpdateFieldsRunnable(newCols));
+        Runnable runnable = getUpdateFieldsRunnable(newCols);
+        if(Geneious.isHeadless()) {
+            runnable.run();
+        } else {
+            ThreadUtilities.invokeNowOrLater(runnable);
+        }
     }
 
     /**
