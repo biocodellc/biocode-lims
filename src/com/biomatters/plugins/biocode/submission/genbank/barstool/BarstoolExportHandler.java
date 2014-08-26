@@ -89,7 +89,7 @@ public class BarstoolExportHandler {
             List<AnnotatedPluginDocument> traceDocs = new ArrayList<AnnotatedPluginDocument>(traceDocsMap.keySet());
             BatchChromatogramExportOperation chromatogramExportOperation = new BatchChromatogramExportOperation();
             Options chromatogramExportOptions = chromatogramExportOperation.getOptions(traceDocs);
-            chromatogramExportOptions.setValue("exportTo", tracesFolder.toString());
+            chromatogramExportOptions.setValue(BatchChromatogramExportOperation.EXPORT_FOLDER, tracesFolder.toString());
             chromatogramExportOperation.performOperation(traceDocs, progress, chromatogramExportOptions);
             if (progress.isCanceled()) throw new DocumentOperationException.Canceled();
 

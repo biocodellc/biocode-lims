@@ -26,6 +26,8 @@ import java.util.Map;
  */
 public class BatchChromatogramExportOperation extends DocumentOperation {
 
+    public static final String EXPORT_FOLDER = "exportTo";
+
     public GeneiousActionOptions getActionOptions() {
         return new GeneiousActionOptions("Original Chromatograms...").setMainMenuLocation(GeneiousActionOptions.MainMenu.Export);
     }
@@ -75,7 +77,7 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
             options.addLabel("");
         }
 
-        Options.FileSelectionOption folderOption = options.addFileSelectionOption("exportTo", "Export to Folder:", "");
+        Options.FileSelectionOption folderOption = options.addFileSelectionOption(EXPORT_FOLDER, "Export to Folder:", "");
         folderOption.setSelectionType(JFileChooser.DIRECTORIES_ONLY);
         return options;
     }
@@ -84,7 +86,7 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
         DocumentFileExporter abiExporter = PluginUtilities.getDocumentFileExporter("abi");
         DocumentFileExporter scfExporter = PluginUtilities.getDocumentFileExporter("scf");
-        File directory = new File(options.getValueAsString("exportTo"));
+        File directory = new File(options.getValueAsString(EXPORT_FOLDER));
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
                 throw new DocumentOperationException("Export failed because the folder " + directory + " could not be created");

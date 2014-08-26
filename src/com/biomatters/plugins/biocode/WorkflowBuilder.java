@@ -724,7 +724,7 @@ public class WorkflowBuilder extends DocumentOperation {
                     if(Boolean.valueOf(forwardNotReverse).equals(trace.getFieldValue(BiocodeUtilities.IS_FORWARD_FIELD))) {
                         File tempDir = FileUtilities.createTempDir(true);
                         Options chromatogramExportOptions = chromatogramExportOperation.getOptions(trace);
-                        chromatogramExportOptions.setStringValue("exportTo", tempDir.getAbsolutePath());
+                        chromatogramExportOptions.setStringValue(BatchChromatogramExportOperation.EXPORT_FOLDER, tempDir.getAbsolutePath());
                         chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {trace}, ProgressListener.EMPTY, chromatogramExportOptions);
                         File exportedFile = new File(tempDir, chromatogramExportOperation.getFileNameUsedFor(trace));
 

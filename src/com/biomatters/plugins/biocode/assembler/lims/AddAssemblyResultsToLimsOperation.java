@@ -488,7 +488,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                         if (new File(exportFolder, nameOfFileToExport).exists() || new File(exportFolder, nameOfFileToExportWithExtensionRemoved + ".scf").exists()) {
                             exportFolder = FileUtilities.createTempDir(true);
                         }
-                        chromatogramExportOptions.setStringValue("exportTo", exportFolder.toString());
+                        chromatogramExportOptions.setStringValue(BatchChromatogramExportOperation.EXPORT_FOLDER, exportFolder.toString());
                         chromatogramExportOperation.performOperation(new AnnotatedPluginDocument[] {chromatogramDocument}, ProgressListener.EMPTY, chromatogramExportOptions);
                         File exportedFile = new File(exportFolder, chromatogramExportOperation.getFileNameUsedFor(chromatogramDocument));
                         traces.add(new Trace(Arrays.asList((NucleotideSequenceDocument) chromatogramDocument.getDocument()), ReactionUtilities.loadFileIntoMemory(exportedFile)));
