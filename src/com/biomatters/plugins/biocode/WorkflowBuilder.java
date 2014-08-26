@@ -38,9 +38,6 @@ import java.util.regex.Pattern;
  */
 public class WorkflowBuilder extends DocumentOperation {
 
-    //taken from the alignment plugin...
-    public static final DocumentField IS_FORWARD_FIELD = DocumentField.createBooleanField("Is Forward Read",
-            "Whether this read is in the forward direction", "isForwardRead", true, false);
     private final String TRACE_FOLDER = "traceFolder";
     private final String USE_TRACES = "attachTraces";
 
@@ -724,7 +721,7 @@ public class WorkflowBuilder extends DocumentOperation {
                     continue;
                 }
                 for (AnnotatedPluginDocument trace : traces) {
-                    if(Boolean.valueOf(forwardNotReverse).equals(trace.getFieldValue(IS_FORWARD_FIELD))) {
+                    if(Boolean.valueOf(forwardNotReverse).equals(trace.getFieldValue(BiocodeUtilities.IS_FORWARD_FIELD))) {
                         File tempDir = FileUtilities.createTempDir(true);
                         Options chromatogramExportOptions = chromatogramExportOperation.getOptions(trace);
                         chromatogramExportOptions.setStringValue("exportTo", tempDir.getAbsolutePath());
@@ -876,7 +873,7 @@ public class WorkflowBuilder extends DocumentOperation {
                             }
                             else if(assembly.isReferencedDocumentReversed(i)) {
                                 AnnotatedPluginDocument referencedDocument = assemblyReference;
-                                referencedDocument.setFieldValue(IS_FORWARD_FIELD, false);
+                                referencedDocument.setFieldValue(BiocodeUtilities.IS_FORWARD_FIELD, false);
                                 referencedDocument.save();
                             }
 
