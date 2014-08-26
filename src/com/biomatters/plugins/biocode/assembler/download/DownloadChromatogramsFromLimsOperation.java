@@ -9,7 +9,6 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDo
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
@@ -151,7 +150,7 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                             continue;
                         }
                         AnnotatedPluginDocument traceDocument = DocumentUtilities.createAnnotatedPluginDocument(traceSequence);
-                        traceDocument.setFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD, isForward);
+                        traceDocument.setFieldValue(BiocodeUtilities.IS_FORWARD_FIELD, isForward);
                         fimsData.put(traceDocument, fimsDataForReactions.get(reaction));
                         chromatogramDocuments.add(traceDocument);
                     }

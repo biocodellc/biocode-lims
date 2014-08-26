@@ -15,7 +15,6 @@ import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceD
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
@@ -59,6 +58,8 @@ public class BiocodeUtilities {
             "super family", "super-family", "family", "tribe", "subtribe", "sub tribe", "sub-tribe", "genus",
             "subgenus", "sub genus", "sub-genus", "specificepithet", "specific epithet", "subspecificepithet",
             "subspecific epithet", "scientificname", "scientific name"};
+    public static final DocumentField IS_FORWARD_FIELD = DocumentField.createBooleanField("Is Forward Read",
+            "Whether this read is in the forward direction", "isForwardRead", true, false);
 
     public static Options getConsensusOptions(AnnotatedPluginDocument[] selectedDocuments) throws DocumentOperationException {
         DocumentOperation consensusOperation = PluginUtilities.getDocumentOperation("Generate_Consensus");
@@ -291,7 +292,7 @@ public class BiocodeUtilities {
             }
             boolean bothFound = false;
             for (AnnotatedPluginDocument traceDoc : traceDocs) {
-                Object isForwardValue = traceDoc.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
+                Object isForwardValue = traceDoc.getFieldValue(IS_FORWARD_FIELD);
                 if (isForwardValue == null) {
                     continue;
                 }

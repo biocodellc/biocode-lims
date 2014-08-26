@@ -13,7 +13,6 @@ import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
-import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOptions;
 import com.biomatters.plugins.biocode.labbench.*;
@@ -204,7 +203,7 @@ public class WorkflowBuilder extends DocumentOperation {
             TraceLine traceLine = map.get(oldName);
             if(traceLine != null) {
                 annotatedDocument.setName(oldName + "|" + traceLine.tissueId);
-                annotatedDocument.setFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD, traceLine.isForward);
+                annotatedDocument.setFieldValue(BiocodeUtilities.IS_FORWARD_FIELD, traceLine.isForward);
                 annotatedDocument.save();
             } else {
                 System.out.println("Coudn't find matching line for " + oldName);

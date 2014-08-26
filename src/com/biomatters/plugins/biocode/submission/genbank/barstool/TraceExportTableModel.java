@@ -1,8 +1,8 @@
 package com.biomatters.plugins.biocode.submission.genbank.barstool;
 
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
-import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -59,7 +59,7 @@ public class TraceExportTableModel extends TabDelimitedExport.ExportTableModel {
             case 4:
                 return options.getBaseCaller();
             case 5:
-                Object isForwardValue = doc.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
+                Object isForwardValue = doc.getFieldValue(BiocodeUtilities.IS_FORWARD_FIELD);
                 if (isForwardValue == null) {
                     return noReadDirectionValue;
                 } else {

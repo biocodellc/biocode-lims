@@ -6,14 +6,12 @@ import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.assembler.SetReadDirectionOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -154,7 +152,7 @@ public class AnnotateLimsDataOptions extends Options {
 //                return samples.get(0);
 //            }
         } else {
-            Object isForwardValue = annotatedDocument.getFieldValue(SetReadDirectionOperation.IS_FORWARD_FIELD);
+            Object isForwardValue = annotatedDocument.getFieldValue(BiocodeUtilities.IS_FORWARD_FIELD);
             if(isForwardValue == null && noDirectionPlateSpecimens == null) {
                 //happens if user specifies different plates for forward and reverse but the sequences aren't annotated with directions
                 throw new DocumentOperationException("Could not determine direction of reads, make sure you have run " +
