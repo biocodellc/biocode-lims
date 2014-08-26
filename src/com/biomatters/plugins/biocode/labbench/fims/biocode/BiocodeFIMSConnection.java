@@ -4,6 +4,7 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -87,7 +88,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 if (inner instanceof AdvancedSearchQueryTerm) {
                     expeditionToSearch = getExpeditionOrAddToForm(form, expeditionToSearch, (AdvancedSearchQueryTerm) inner);
                 } else {
-                    throw new ConnectionException("Unexpected type.  Contact support@mooreabiocode.org");
+                    throw new ConnectionException("Unexpected type.  Contact " + BiocodePlugin.SUPPORT_EMAIL);
                 }
             }
         }

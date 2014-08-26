@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.SystemUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
@@ -257,7 +258,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             if(numFails > 10) {
                 BiocodeUtilities.displayExceptionDialog("Biocode Background Maintenance Tasks Failed",
                         "The Biocode plugin has failed to perform background maintenance tasks the last <b>" + numFails +
-                        "</b> times it has tried.  Please contact support@mooreabiocode.org with these error details.", e, null);
+                        "</b> times it has tried.  Please contact " + BiocodePlugin.SUPPORT_EMAIL + " with these error details.", e, null);
             }
         } catch (DatabaseServiceException e1) {
             // Can't do much in this case since we're trying to handle an error.  Just print out exception to stderr
@@ -705,7 +706,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             Dialogs.showMoreOptionsDialog(options, "Geneious failed to apply an update to the LIMS database schema for " +
                             "the following reason: " + e.getMessage() +
                             "\n\n<strong>Note</strong>: Connection will now continue but without this update you may have trouble deleting plates." +
-                            "\n\nPlease contact support@mooreabiocode.org with the details below.",
+                            "\n\nPlease contact " + BiocodePlugin.SUPPORT_EMAIL + " with the details below.",
                     "Geneious attempted to add a cascading delete to the foreign key on the traces table.  But it ran " +
                             "into the following problem: " + e.getMessage() + "<br>" + stacktrace);
         } finally {
