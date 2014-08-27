@@ -671,15 +671,18 @@ public class WorkflowBuilder extends DocumentOperation {
 
         Plate csPlate = null;
         for (Plate candidatePlate : platesWithMatchingWorkflows) {
+            boolean stillGood = true;
             if(candidatePlate.getReactionType() != Reaction.Type.CycleSequencing) {
-                continue;
+                stillGood = false;
             }
             for (Reaction reaction : candidatePlate.getReactions()) {
                 if(CycleSequencingOptions.FORWARD_VALUE.equals(reaction.getOptions().getValueAsString(CycleSequencingOptions.DIRECTION)) != forwardNotReverse) {
-                    continue;
+                    stillGood = false;
                 }
             }
-            csPlate = candidatePlate;
+            if(stillGood) {
+                csPlate = candidatePlate;
+            }
         }
 
         boolean needsSaving = false;

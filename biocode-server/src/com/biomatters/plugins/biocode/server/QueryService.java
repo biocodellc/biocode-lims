@@ -75,6 +75,9 @@ public class QueryService {
         extractionIds.addAll(extractionIdsForWorkflows.values());
 
         Map<Integer, Collection<String>> extractionIdsForPlates = getExtractionIdsForPlates(result.getPlateIds());
+        for (Collection<String> extractionIdsForPlate : extractionIdsForPlates.values()) {
+            extractionIds.addAll(extractionIdsForPlate);
+        }
 
         List<AssembledSequence> sequences = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(result.getSequenceIds(), null, true);
         for (AssembledSequence sequence : sequences) {
