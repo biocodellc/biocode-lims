@@ -25,7 +25,7 @@ public class Info {
     @GET
     @Path("version")
     public String version() {
-        return "0.5"; // Make sure to update ServerFimsConnection.EXPECTED_VERSION
+        return "0.6"; // Make sure to update ServerFimsConnection.EXPECTED_VERSION
     }
 
     @Produces("text/plain")

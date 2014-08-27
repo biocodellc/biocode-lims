@@ -64,7 +64,7 @@ public class ServerFimsConnection extends FIMSConnection {
      * For pre release versions of the server we will require exact version matching until we have finalized the API.
      * At that point we can use a more flexible system.  ie Major version, minor version.
      */
-    private static final String EXPECTED_VERSION = "0.5";  // Update this when updating Info.version()
+    private static final String EXPECTED_VERSION = "0.6";  // Update this when updating Info.version()
 
     @Override
     public void _connect(Options options) throws ConnectionException {
