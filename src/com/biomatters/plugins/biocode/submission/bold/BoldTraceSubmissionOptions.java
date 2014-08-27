@@ -3,6 +3,7 @@ package com.biomatters.plugins.biocode.submission.bold;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.GTextPane;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -58,7 +59,7 @@ public class BoldTraceSubmissionOptions extends Options {
         addDivider("Output");
 
         addFileSelectionOption(LOCATION, "Location:", "").setSelectionType(JFileChooser.DIRECTORIES_ONLY);
-        addStringOption(NAME, "Submission Name:", "", "Name for the submission folder and the zip containing it");
+        addStringOption(NAME, "Submission Name:", "", "Name of submission folder and zip file");
 
         Options filenameOptions = new Options(this.getClass());
         filenameOptions.addStringOption(FWD_SUFFIX, "Forward:", "", "Useful if both reads share same name");
@@ -84,6 +85,8 @@ public class BoldTraceSubmissionOptions extends Options {
 
     @Override
     protected JPanel createPanel() {
+        // todo Add extra help note with button that explains in more detail why things need to be annotated
+
         GPanel mainPanel = new GPanel(new BorderLayout());
 
         GPanel infoPanel = new GPanel();
@@ -97,5 +100,14 @@ public class BoldTraceSubmissionOptions extends Options {
         JPanel original = super.createPanel();
         mainPanel.add(original, BorderLayout.CENTER);
         return mainPanel;
+    }
+
+    public DocumentField getProcessIdField() {
+        Object value = getValue(PROCESS_ID);
+        if(value instanceof OptionValue) {
+            return BiocodeUtilities.getDocumentFieldForOptionValue((OptionValue)value);
+        } else {
+            throw new IllegalStateException("Value for " + PROCESS_ID + " should have been an OptionValue but was " + value.getClass().getSimpleName());
+        }
     }
 }

@@ -276,6 +276,15 @@ public class BiocodeUtilities {
         return null;
     }
 
+    public static String getCountString(String words, int count) {
+        String base = count + " " + words;
+        if(count > 1) {
+            return base + "s";
+        } else {
+            return base;
+        }
+    }
+
     public enum ReadDirection {
         NONE("N"), FORWARD("F"), REVERSE("R");
 

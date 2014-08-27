@@ -92,15 +92,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private BiocodeService() {
     }
 
-    private static String getCountString(String words, int count) {
-        String base = count + " " + words;
-        if(count > 1) {
-            return base + "s";
-        } else {
-            return base;
-        }
-    }
-
     public void setDataDirectory(File dataDirectory) {
         this.dataDirectory = dataDirectory;
 
@@ -751,7 +742,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                 List<Plate> plates;
                 if(!limsResult.getPlateIds().isEmpty() && isDownloadPlates(query)) {
-                    callback.setMessage("Downloading " + getCountString("matching plate document", limsResult.getPlateIds().size()) + "...");
+                    callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching plate document", limsResult.getPlateIds().size()) + "...");
                     plates = limsConnection.getPlates(limsResult.getPlateIds(), callback);
                     for (Plate plate : plates) {
                         PlateDocument plateDocument = new PlateDocument(plate);
@@ -768,7 +759,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
                 boolean needWorkflows = isDownloadWorkflows(query) || isDownloadSequences(query);
                 if(!limsResult.getWorkflowIds().isEmpty() && needWorkflows) {
-                    callback.setMessage("Downloading " + BiocodeService.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
+                    callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
                     workflows.addAll(limsConnection.getWorkflowsById(limsResult.getWorkflowIds(), callback));
                     for (WorkflowDocument document : workflows) {
                         callback.add(document, Collections.<String, Object>emptyMap());
@@ -806,7 +797,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 List<FimsSample> tissueSamples = new ArrayList<FimsSample>();
                 try {
                     if(!tissueIdsToDownload.isEmpty()) {
-                        callback.setMessage("Downloading " + getCountString("matching tissue", tissueIdsToDownload.size()) + "...");
+                        callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching tissue", tissueIdsToDownload.size()) + "...");
                         tissueSamples.addAll(activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdsToDownload));
                     }
                 } catch (ConnectionException e) {
@@ -821,7 +812,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     return;
                 }
                 if(isDownloadSequences(query)) {
-                    callback.setMessage("Downloading " + getCountString("matching sequence", limsResult.getSequenceIds().size()) + "...");
+                    callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching sequence", limsResult.getSequenceIds().size()) + "...");
                     getMatchingAssemblyDocumentsForIds(workflows, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
@@ -1673,8 +1664,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return limsConnection.getWorkflowIds(idsToCheck, loci, reactionType);
     }
 
-    public Map<String, Workflow> getWorkflows(Collection<String> workflowIds) throws DatabaseServiceException {
-        List<Workflow> list = limsConnection.getWorkflowsByName(workflowIds);
+    public Map<String, Workflow> getWorkflows(Collection<String> workflowNames) throws DatabaseServiceException {
+        List<Workflow> list = limsConnection.getWorkflowsByName(workflowNames);
         Map<String, Workflow> result = new HashMap<String, Workflow>();
         for (Workflow workflow : list) {
             result.put(workflow.getName(), workflow);
@@ -1690,7 +1681,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         activeCallbacks.remove(callback);
     }
 
-    public List<WorkflowDocument> getWorkflowDocumentsForNames(List<String> workflowNames) throws DatabaseServiceException {
+    public List<WorkflowDocument> getWorkflowDocumentsForNames(Collection<String> workflowNames) throws DatabaseServiceException {
         List<WorkflowDocument> workflows;
         workflows = new ArrayList<WorkflowDocument>();
 
@@ -1698,7 +1689,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false);
         if(workflowNames.size() == 1) {
             workflowQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL,
-                    new Object[]{workflowNames.get(0)}, options);
+                    new Object[]{workflowNames.iterator().next()}, options);
         } else {
             List<Query> subQueries = new ArrayList<Query>();
             for (String id : workflowNames) {
