@@ -101,9 +101,9 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         createTracesSpreadsheet(compositeProgress, submissionDir);
 
         compositeProgress.beginSubtask("Exporting forward traces");
-        exportTracesToFolder(new ArrayList<AnnotatedPluginDocument>(forwardDocsAndPrimerInfo.keySet()), options, submissionDir, compositeProgress, traceExporter);
+        exportTracesToFolder(new ArrayList<AnnotatedPluginDocument>(forwardDocsAndPrimerInfo.keySet()), options.getForwardSuffix(), submissionDir, compositeProgress, traceExporter);
         compositeProgress.beginSubtask("Exporting reverse traces");
-        exportTracesToFolder(new ArrayList<AnnotatedPluginDocument>(reverseDocsAndPrimerInfo.keySet()), options, submissionDir, compositeProgress, traceExporter);
+        exportTracesToFolder(new ArrayList<AnnotatedPluginDocument>(reverseDocsAndPrimerInfo.keySet()), options.getReverseSuffix(), submissionDir, compositeProgress, traceExporter);
 
         try {
             compositeProgress.beginSubtask("Zipping submission folder");
@@ -113,7 +113,12 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         }
     }
 
-    private static void exportTracesToFolder(List<AnnotatedPluginDocument> tracesToExport, BoldTraceSubmissionOptions options, File tempDir, CompositeProgressListener compositeProgress, DocumentOperation traceExporter) throws DocumentOperationException {
+    private static void exportTracesToFolder(List<AnnotatedPluginDocument> tracesToExport, String filenameSuffix, File tempDir, CompositeProgressListener compositeProgress, DocumentOperation traceExporter) throws DocumentOperationException {
+        if(filenameSuffix == null) {
+            filenameSuffix = "";
+        } else {
+            filenameSuffix = filenameSuffix.trim();
+        }
         try {
             File tempTracesDir = FileUtilities.createTempDir(true);
             Options exportOptions = traceExporter.getOptions(tracesToExport);
@@ -124,7 +129,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
                 throw new DocumentOperationException("Could not list files in " + tempTracesDir.getAbsolutePath());
             }
             for (File f : filesInDir) {
-                File dest = new File(tempDir, f.getName() + options.getForwardSuffix().trim());
+                File dest = new File(tempDir, f.getName() + filenameSuffix);
                 if(!f.renameTo(dest)) {
                     throw new DocumentOperationException("Failed to move file " + f.getAbsolutePath() + " to " + dest.getAbsolutePath());
                 }

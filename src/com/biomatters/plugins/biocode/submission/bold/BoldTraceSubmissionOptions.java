@@ -1,5 +1,7 @@
 package com.biomatters.plugins.biocode.submission.bold;
 
+import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.components.GTextPane;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -7,6 +9,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
@@ -55,7 +58,7 @@ public class BoldTraceSubmissionOptions extends Options {
         addDivider("Output");
 
         addFileSelectionOption(LOCATION, "Location:", "").setSelectionType(JFileChooser.DIRECTORIES_ONLY);
-        addStringOption(NAME, "Submission Name:", "");
+        addStringOption(NAME, "Submission Name:", "", "Name for the submission folder and the zip containing it");
 
         Options filenameOptions = new Options(this.getClass());
         filenameOptions.addStringOption(FWD_SUFFIX, "Forward:", "", "Useful if both reads share same name");
@@ -76,6 +79,23 @@ public class BoldTraceSubmissionOptions extends Options {
     }
 
     public File getZipFile() {
-        return new File(getValueAsString(LOCATION), getValueAsString(NAME));
+        return new File(getValueAsString(LOCATION), getValueAsString(NAME) + ".zip");
+    }
+
+    @Override
+    protected JPanel createPanel() {
+        GPanel mainPanel = new GPanel(new BorderLayout());
+
+        GPanel infoPanel = new GPanel();
+        GTextPane infoPane = GTextPane.createHtmlPane(
+                "<i><strong>Note</strong>: This operation produces output according to the " +
+                "<a href=\"http://www.boldsystems.org/index.php/resources/handbook?chapter=3_submissions.html#trace_submissions\">" +
+                "BOLD systems v3 handbook</a></i>.");
+        infoPanel.add(infoPane);
+        mainPanel.add(infoPanel, BorderLayout.SOUTH);
+
+        JPanel original = super.createPanel();
+        mainPanel.add(original, BorderLayout.CENTER);
+        return mainPanel;
     }
 }
