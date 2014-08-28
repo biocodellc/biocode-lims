@@ -1,7 +1,13 @@
 package com.biomatters.plugins.biocode.submission.bold;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.GLabel;
+import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.components.GTextPane;
 import com.biomatters.geneious.publicapi.plugin.Options;
 
+import javax.swing.*;
+import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -20,10 +26,6 @@ class RenamingOptions extends Options {
     }
 
     RenamingOptions(Set<String> primers, Set<String> loci) {
-        // todo Better messaging
-        addLabel("Geneious has found the following primers and loci for the selected traces.  You may choose " +
-                "an alternative name for primers");
-
         Options primerOptions = new Options(RenamingOptions.class);
         for (String primer : primers) {
             primerOptions.addStringOption(primer, primer + ":", primer);
@@ -35,6 +37,25 @@ class RenamingOptions extends Options {
             markerOptions.addStringOption(locus, locus + ":", locus);
         }
         addChildOptions(MARKER_OPTIONS, "Locus -> Marker", "", markerOptions);
+    }
+
+    @Override
+    protected JPanel createPanel() {
+        GPanel mainPanel = new GPanel(new BorderLayout());
+
+        GPanel infoPanel = new GPanel();
+        infoPanel.add(new GLabel(Dialogs.DialogIcon.INFORMATION.getIcon()));
+        GTextPane infoPane = GTextPane.createHtmlPane(
+                "Geneious has found the following primers and loci linked to your traces.<br>" +
+                "Please assign markers for each locus and rename any primers if necessary.<br><br>" +
+                "<strong>Note</strong>: Names are case sensitive and primers must already exist in BOLD.<br>The list of " +
+                "existing primers can be found <a href=\"http://www.boldsystems.org/index.php/Public_Primer_PrimerSearch\">here</a>.");
+        infoPanel.add(infoPane);
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+
+        JPanel original = super.createPanel();
+        mainPanel.add(original, BorderLayout.CENTER);
+        return mainPanel;
     }
 
     RenameMap getRenameMap() {
