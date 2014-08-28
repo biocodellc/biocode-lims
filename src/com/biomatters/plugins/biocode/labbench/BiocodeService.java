@@ -1735,6 +1735,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         try {
             List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
+            if(plateIds.isEmpty()) {
+                return null;
+            }
             List<Plate> plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
             assert(plates.size() <= 1);
             if(plates.isEmpty()) {

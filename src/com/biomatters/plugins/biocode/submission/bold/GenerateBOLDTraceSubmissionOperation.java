@@ -108,7 +108,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         compositeProgress.beginSubtask("Examining input files");
         Map<AnnotatedPluginDocument, TraceInfo> traceEntries;
         try {
-            traceEntries = mapDocumentsToPrimers(annotatedDocuments, options.getForwardSuffix(), options.getReverseSuffix(), options.getProcessIdField());
+            traceEntries = mapDocumentsToPrimers(annotatedDocuments, options);
             if(traceEntries.isEmpty()) {
                 throw new DocumentOperationException("Could not find any primer information for your traces.  " +
                         "This could be because they are not annotated with a LIMS workflow or that workflow has no valid PCR reaction.");
@@ -142,7 +142,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             return;
         }
 
-        RenamingOptions.RenameMap renameMap = askUserAboutRenamingPrimers(traceEntries.values());
+        RenamingOptions.RenameMap renameMap = options.isUserManuallyEntering() ? null : askUserAboutRenamingPrimers(traceEntries.values());
 
         compositeProgress.beginSubtask("Writing data.xls spreadsheet");
         createTracesSpreadsheet(traceEntries.values(), renameMap, submissionDir, compositeProgress);
@@ -203,9 +203,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         return renamingOptions.getRenameMap();
     }
 
-    private static Map<AnnotatedPluginDocument, TraceInfo> mapDocumentsToPrimers(AnnotatedPluginDocument[] inputDocs, String forwardSuffix, String reverseSuffix, DocumentField processIdField) throws DocumentOperationException, MissingFieldValueException {
-        Map<AnnotatedPluginDocument, TraceInfo> result = new HashMap<AnnotatedPluginDocument, TraceInfo>();
-
+    private static Map<AnnotatedPluginDocument, TraceInfo> mapDocumentsToPrimers(AnnotatedPluginDocument[] inputDocs, BoldTraceSubmissionOptions options) throws DocumentOperationException, MissingFieldValueException {
         Map<URN, Boolean> directionForDocs = new HashMap<URN, Boolean>();
         Set<String> names = new HashSet<String>();
         for (AnnotatedPluginDocument annotatedDocument : inputDocs) {
@@ -216,7 +214,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             } else {
                 boolean fowardDirection = Boolean.TRUE.equals(isForward);
                 directionForDocs.put(annotatedDocument.getURN(), fowardDirection);
-                name = annotatedDocument.getName() + (fowardDirection ? forwardSuffix : reverseSuffix);
+                name = getFilename(options, annotatedDocument, fowardDirection);
             }
             if(names.contains(name)) {
                 throw new DocumentOperationException("Duplicate name detected: " + name + ".  " +
@@ -225,10 +223,32 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             names.add(name);
         }
 
+        getFieldValuesFromDocs(inputDocs, options.getProcessIdField());
+        if(options.isUserManuallyEntering()) {
+            return mapDocumentsToUserSpecifiedValues(inputDocs, directionForDocs, options);
+        } else {
+            return mapDocumentsToPrimersUsingLimsInfo(inputDocs, directionForDocs, options);
+        }
+    }
+
+    private static Map<AnnotatedPluginDocument, TraceInfo> mapDocumentsToUserSpecifiedValues(AnnotatedPluginDocument[] inputDocs, Map<URN, Boolean> directionForDocs, BoldTraceSubmissionOptions options) {
+        Map<AnnotatedPluginDocument, TraceInfo> result = new HashMap<AnnotatedPluginDocument, TraceInfo>();
+        for (AnnotatedPluginDocument inputDoc : inputDocs) {
+            Boolean isForward = directionForDocs.get(inputDoc.getURN());
+            result.put(inputDoc, new TraceInfo(
+                    getFilename(options, inputDoc, isForward), options.getUserEnteredForwardPcrPrimer(),
+                    options.getUserEnteredReversePcrPrimer(), options.getUserEnteredSequencingPrimer(), isForward,
+                    String.valueOf(inputDoc.getFieldValue(options.getProcessIdField())), options.getUserEnteredMarker()
+            ));
+        }
+        return result;
+    }
+
+    private static Map<AnnotatedPluginDocument, TraceInfo> mapDocumentsToPrimersUsingLimsInfo(AnnotatedPluginDocument[] inputDocs, Map<URN, Boolean> directionForDocs, BoldTraceSubmissionOptions options) throws MissingFieldValueException, DocumentOperationException {
+        Map<AnnotatedPluginDocument, TraceInfo> result = new HashMap<AnnotatedPluginDocument, TraceInfo>();
         Multimap<String, AnnotatedPluginDocument> workflowToDocument = getFieldValuesFromDocs(inputDocs, BiocodeUtilities.WORKFLOW_NAME_FIELD);
-          // Also check for the existence of sequencing plate field and process ID field.  Even if we don't actually need the map.
+        // Also check for the existence of sequencing plate field and process ID field.  Even if we don't actually need the map.
         getFieldValuesFromDocs(inputDocs, BiocodeUtilities.SEQUENCING_PLATE_FIELD);
-//        getFieldValuesFromDocs(inputDocs, processIdField);
 
         try {
             List<WorkflowDocument> workflowDocs = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflowToDocument.keySet());
@@ -245,10 +265,11 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
                     }
                     String fwdPcrPrimer = getPrimerNameFromReaction(pcrReaction, PCROptions.PRIMER_OPTION_ID);
                     String revPcrPrimer = getPrimerNameFromReaction(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
+                    Boolean isForward = directionForDocs.get(document.getURN());
                     result.put(document,
-                            new TraceInfo(document.getName() + forwardSuffix, fwdPcrPrimer, revPcrPrimer,
-                            seqPrimer, directionForDocs.get(document.getURN()),
-                            String.valueOf(document.getFieldValue(processIdField)), workflowDoc.getWorkflow().getLocus())
+                            new TraceInfo(getFilename(options, document, isForward),
+                                    fwdPcrPrimer, revPcrPrimer, seqPrimer, isForward,
+                                    String.valueOf(document.getFieldValue(options.getProcessIdField())), workflowDoc.getWorkflow().getLocus())
                     );
                 }
 
@@ -257,6 +278,10 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException("Failed to retrieve workflows from LIMS: " + e.getMessage(), e);
         }
+    }
+
+    private static String getFilename(BoldTraceSubmissionOptions options, AnnotatedPluginDocument document, Boolean isForward) {
+        return document.getName() + (isForward ? options.getForwardSuffix() : options.getReverseSuffix());
     }
 
     static Reaction getMostLikelyPcrReactionForSeqReaction(WorkflowDocument workflowDoc, Reaction cyclesequencingReaction) {
@@ -371,9 +396,17 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             WritableWorkbook spreadsheet = Workbook.createWorkbook(spreadsheetFile, template);
             WritableSheet sheet = spreadsheet.getSheet(0);
 
+            List<TraceInfo> sortedTraceInfo = new ArrayList<TraceInfo>(traceEntries);
+            Collections.sort(sortedTraceInfo, new Comparator<TraceInfo>() {
+                @Override
+                public int compare(TraceInfo o1, TraceInfo o2) {
+                    return o1.filename.compareTo(o2.filename);
+                }
+            });
+
             int rowIndex = 1;
             CompositeProgressListener compositeProgress = new CompositeProgressListener(progressListener, traceEntries.size());
-            for (TraceInfo entry : traceEntries) {
+            for (TraceInfo entry : sortedTraceInfo) {
                 compositeProgress.beginSubtask();
                 String forwardPrimer = renameMap == null ? entry.forwardPcrPrimer : renameMap.getNameForPrimer(entry.forwardPcrPrimer);
                 String reversePrimer = renameMap == null ? entry.reversePcrPrimer : renameMap.getNameForPrimer(entry.reversePcrPrimer);

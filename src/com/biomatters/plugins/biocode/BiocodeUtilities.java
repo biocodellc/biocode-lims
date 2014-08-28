@@ -260,14 +260,30 @@ public class BiocodeUtilities {
 
     public static List<Options.OptionValue> getOptionValuesForFimsFields() {
         List<DocumentField> fields = BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes();
+        return getOptionValuesForDocumentFields(fields);
+    }
+
+    public static class DocumentFieldOptionValue extends Options.OptionValue {
+        private DocumentField field;
+
+        public DocumentFieldOptionValue(DocumentField field) {
+            super(field.getCode(), field.getName(), field.getDescription());
+            this.field = field;
+        }
+    }
+
+    public static List<Options.OptionValue> getOptionValuesForDocumentFields(List<DocumentField> fields) {
         List<Options.OptionValue> values = new ArrayList<Options.OptionValue>();
         for(DocumentField field : fields) {
-            values.add(new Options.OptionValue(field.getCode(), field.getName(), field.getDescription()));
+            values.add(new DocumentFieldOptionValue(field));
         }
         return values;
     }
 
     public static DocumentField getDocumentFieldForOptionValue(Options.OptionValue optionValue) {
+        if(optionValue instanceof DocumentFieldOptionValue) {
+            return ((DocumentFieldOptionValue)optionValue).field;
+        }
         for (DocumentField candidate : BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes()) {
             if(candidate.getCode().equals(optionValue.getName())) {
                 return candidate;
