@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.documents.URN;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
@@ -30,6 +31,7 @@ import jxl.write.WriteException;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Exports traces to a zip file for submission to BOLD. In accordance with the
@@ -122,9 +124,10 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             return;
         }
 
-        // todo Ask about renaming primers to match BOLD
+        RenamingOptions.RenameMap renameMap = askUserAboutRenamingPrimers(traceEntries.values());
+
         compositeProgress.beginSubtask("Writing data.xls spreadsheet");
-        createTracesSpreadsheet(traceEntries.values(), submissionDir, compositeProgress);
+        createTracesSpreadsheet(traceEntries.values(), renameMap, submissionDir, compositeProgress);
 
         List<AnnotatedPluginDocument> forwardDocs = new ArrayList<AnnotatedPluginDocument>();
         List<AnnotatedPluginDocument> reverseDocs = new ArrayList<AnnotatedPluginDocument>();
@@ -155,6 +158,31 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         } catch (IOException e) {
             throw new DocumentOperationException("Failed to create submission package: " + e.getMessage(), e);
         }
+    }
+
+    private static RenamingOptions.RenameMap askUserAboutRenamingPrimers(Collection<TraceInfo> values) throws DocumentOperationException.Canceled {
+        Set<String> primers = new HashSet<String>();
+        Set<String> loci = new HashSet<String>();
+        for (TraceInfo value : values) {
+            primers.add(value.forwardPcrPrimer);
+            primers.add(value.reversePcrPrimer);
+            if(!value.sequencingPrimer.isEmpty()) {  // Might be empty since it's a non required field
+                primers.add(value.sequencingPrimer);
+            }
+            loci.add(value.locus);
+        }
+        final RenamingOptions renamingOptions = new RenamingOptions(primers, loci);
+        final AtomicBoolean userClickedOK = new AtomicBoolean();
+        ThreadUtilities.invokeNowOrWait(new Runnable() {
+            public void run() {
+                userClickedOK.set(Dialogs.showOptionsDialog(renamingOptions, "Rename?", true));
+            }
+        });
+
+        if(!userClickedOK.get()) {
+            throw new DocumentOperationException.Canceled();
+        }
+        return renamingOptions.getRenameMap();
     }
 
     private static Map<AnnotatedPluginDocument, TraceInfo> mapDocumentsToPrimers(AnnotatedPluginDocument[] inputDocs, String forwardSuffix, String reverseSuffix, DocumentField processIdField) throws DocumentOperationException, MissingFieldValueException {
@@ -220,12 +248,33 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         }
         Reaction pcrReaction = null;
         for (Reaction candidate : pcrReactions) {
-            boolean isBeforeSeq = candidate.getDate().before(cyclesequencingReaction.getDate());
+            boolean isBeforeSeq = beforeOrSameDay(cyclesequencingReaction, candidate);
             if(isBeforeSeq && (pcrReaction == null || candidate.getDate().after(pcrReaction.getDate()))) {
                 pcrReaction = candidate;
             }
         }
         return pcrReaction;
+    }
+
+    /**
+     * The LIMS only stores year, month and day.  So this method checks those and ignores hours, seconds and milliseconds.
+     *
+     * @param checkAgainst The reaction to check against
+     * @param candidate The reaction to check
+     * @return true if the candidate is before or on the same day (ignoring time)
+     */
+    private static boolean beforeOrSameDay(Reaction checkAgainst, Reaction candidate) {
+        GregorianCalendar checkAgainstCal = new GregorianCalendar();
+        checkAgainstCal.setTime(checkAgainst.getDate());
+
+        GregorianCalendar candidateCal = new GregorianCalendar();
+        candidateCal.setTime(candidate.getDate());
+
+        boolean sameYear = candidateCal.get(Calendar.YEAR) == checkAgainstCal.get(Calendar.YEAR);
+        boolean sameMonth = candidateCal.get(Calendar.MONTH) == checkAgainstCal.get(Calendar.MONTH);
+        return candidateCal.get(Calendar.YEAR) < checkAgainstCal.get(Calendar.YEAR) ||
+                (sameYear && candidateCal.get(Calendar.MONTH) < checkAgainstCal.get(Calendar.MONTH)) ||
+                (sameYear && sameMonth && candidateCal.get(Calendar.DAY_OF_MONTH) <= checkAgainstCal.get(Calendar.DAY_OF_MONTH));
     }
 
     private static String getPrimerNameFromReaction(Reaction reaction, String optionKey) {
@@ -295,7 +344,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         }
     }
 
-    static File createTracesSpreadsheet(Collection<TraceInfo> traceEntries, File submssionDir, ProgressListener progressListener) throws DocumentOperationException {
+    static File createTracesSpreadsheet(Collection<TraceInfo> traceEntries, RenamingOptions.RenameMap renameMap, File submssionDir, ProgressListener progressListener) throws DocumentOperationException {
         try {
             File templateFile = getTemplateSpreadsheet();
             File spreadsheetFile = new File(submssionDir, "data.xls");
@@ -308,13 +357,17 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             CompositeProgressListener compositeProgress = new CompositeProgressListener(progressListener, traceEntries.size());
             for (TraceInfo entry : traceEntries) {
                 compositeProgress.beginSubtask();
+                String forwardPrimer = renameMap == null ? entry.forwardPcrPrimer : renameMap.getNameForPrimer(entry.forwardPcrPrimer);
+                String reversePrimer = renameMap == null ? entry.reversePcrPrimer : renameMap.getNameForPrimer(entry.reversePcrPrimer);
+                String sequencingPrimer = renameMap == null ? entry.sequencingPrimer : renameMap.getNameForPrimer(entry.sequencingPrimer);
+                String marker = renameMap == null ? entry.locus : renameMap.getMarkerForLocus(entry.locus);
                 sheet.addCell(new Label(0, rowIndex, entry.filename));
-                sheet.addCell(new Label(2, rowIndex, entry.forwardPcrPrimer));
-                sheet.addCell(new Label(3, rowIndex, entry.reversePcrPrimer));
-                sheet.addCell(new Label(4, rowIndex, entry.sequencingPrimer));
+                sheet.addCell(new Label(2, rowIndex, forwardPrimer));
+                sheet.addCell(new Label(3, rowIndex, reversePrimer));
+                sheet.addCell(new Label(4, rowIndex, sequencingPrimer));
                 sheet.addCell(new Label(5, rowIndex, entry.forwardNotReverse ? "F" : "R"));
                 sheet.addCell(new Label(6, rowIndex, entry.processId));
-                sheet.addCell(new Label(9, rowIndex, entry.locus));
+                sheet.addCell(new Label(9, rowIndex, marker));
                 rowIndex++;
             }
             spreadsheet.write();

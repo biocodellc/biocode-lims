@@ -70,7 +70,7 @@ public class BOLDTraceSubmissionTest extends Assert {
         infoList.add(new TraceInfo("myTrace1.ab1", "LCO", "HCO", "", false, "abc", "COI"));
         infoList.add(new TraceInfo("myTrace2.ab1", "fwd", "rev", "", true, "abc", "ITS"));
 
-        GenerateBOLDTraceSubmissionOperation.createTracesSpreadsheet(infoList, tempDir, ProgressListener.EMPTY);
+        GenerateBOLDTraceSubmissionOperation.createTracesSpreadsheet(infoList, null, tempDir, ProgressListener.EMPTY);
         File expectedFile = new File(tempDir, "data.xls");
         assertTrue("Spreadsheet does not exist or is named incorrectly. " +
                 "Must be named data.xls according to BOLD specification", expectedFile.exists());
@@ -99,7 +99,7 @@ public class BOLDTraceSubmissionTest extends Assert {
 
         File tempDir = FileUtilities.createTempDir(true);
         GenerateBOLDTraceSubmissionOperation.createTracesSpreadsheet(Collections.singletonList(
-                new TraceInfo("myTrace.ab1", "LCO", "HCO", "", true, "abc", "COI")), tempDir, ProgressListener.EMPTY);
+                new TraceInfo("myTrace.ab1", "LCO", "HCO", "", true, "abc", "COI")), null, tempDir, ProgressListener.EMPTY);
 
         assertEquals(oldText, FileUtilities.getTextFromFile(template));
     }
@@ -172,6 +172,21 @@ public class BOLDTraceSubmissionTest extends Assert {
         cal.add(Calendar.DAY_OF_MONTH, 1);
         assertEquals(recentPcr, GenerateBOLDTraceSubmissionOperation.getMostLikelyPcrReactionForSeqReaction(
                 new WorkflowDocument(workflow, Arrays.asList(extraction, pcr, seq, recentPcr)), seq));
+    }
+
+    @Test
+    public void reactionDateCheckIgnoresTime() {
+        GregorianCalendar cal = new GregorianCalendar();
+        Date start = cal.getTime();
+
+        Workflow workflow = new Workflow(1, "test", "", "", start);
+        cal.set(Calendar.HOUR, 11);
+        Reaction seq = getReactionWithCreationDate(cal.getTime(), Reaction.Type.CycleSequencing);
+        cal.set(Calendar.HOUR, 10);
+        Reaction pcr = getReactionWithCreationDate(cal.getTime(), Reaction.Type.PCR);
+
+        assertEquals(pcr, GenerateBOLDTraceSubmissionOperation.getMostLikelyPcrReactionForSeqReaction(
+                new WorkflowDocument(workflow, Arrays.asList(pcr, seq)), seq));
     }
 
     private static Reaction getReactionWithCreationDate(final Date creationDate, Reaction.Type type) {
