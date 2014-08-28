@@ -52,7 +52,7 @@ public class BoldTraceSubmissionOptions extends Options {
         List<OptionValue> fimsFieldsOptionValues = BiocodeUtilities.getOptionValuesForDocumentFields(getNonEmptyDocumentFields(documentsToExport));
         OptionValue defaultValue = fimsFieldsOptionValues.get(0);
         for (OptionValue candidate : fimsFieldsOptionValues) {
-            String lowerCaseLabel = candidate.getLabel();
+            String lowerCaseLabel = candidate.getLabel().toLowerCase();
             if(lowerCaseLabel.matches(".*bold\\s*(process)?\\s*id.*")) {
                 defaultValue = candidate;
             }
