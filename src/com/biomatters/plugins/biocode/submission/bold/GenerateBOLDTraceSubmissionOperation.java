@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.documents.URN;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -109,7 +110,24 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         try {
             traceEntries = mapDocumentsToPrimers(annotatedDocuments, options.getForwardSuffix(), options.getReverseSuffix(), options.getProcessIdField());
             if(traceEntries.isEmpty()) {
-                throw new DocumentOperationException("Could not find workflows in LIMS");  // todo Handle partial case
+                throw new DocumentOperationException("Could not find any primer information for your traces.  " +
+                        "This could be because they are not annotated with a LIMS workflow or that workflow has no valid PCR reaction.");
+            }
+            Set<String> docsMissingPrimers = new HashSet<String>();
+            for (AnnotatedPluginDocument document : annotatedDocuments) {
+                if(traceEntries.get(document) == null) {
+                    docsMissingPrimers.add(document.getName());
+                }
+            }
+            if(!docsMissingPrimers.isEmpty()) {
+                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.CONTINUE_CANCEL, "Missing primer information");
+                dialogOptions.setMoreOptionsButtonText("Show Document List", "Hide Document List");
+                if(Dialogs.CANCEL == Dialogs.showMoreOptionsDialog(dialogOptions, "Cannot determine primer information for " +
+                        BiocodeUtilities.getCountString("document", docsMissingPrimers.size()) + ".  This could be " +
+                        "because they are not annotated with a LIMS workflow or that workflow has no valid PCR reaction.\n\n" +
+                                "These will not be included in the submission package.", StringUtilities.join("\n", docsMissingPrimers))) {
+                    return;
+                }
             }
             if(compositeProgress.isCanceled()) {
                 return;
@@ -210,7 +228,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         Multimap<String, AnnotatedPluginDocument> workflowToDocument = getFieldValuesFromDocs(inputDocs, BiocodeUtilities.WORKFLOW_NAME_FIELD);
           // Also check for the existence of sequencing plate field and process ID field.  Even if we don't actually need the map.
         getFieldValuesFromDocs(inputDocs, BiocodeUtilities.SEQUENCING_PLATE_FIELD);
-        getFieldValuesFromDocs(inputDocs, processIdField);
+//        getFieldValuesFromDocs(inputDocs, processIdField);
 
         try {
             List<WorkflowDocument> workflowDocs = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflowToDocument.keySet());

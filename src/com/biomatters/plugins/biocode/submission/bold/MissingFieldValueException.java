@@ -28,7 +28,7 @@ class MissingFieldValueException extends Exception {
      */
     void showDialog() {
         Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, field.getName() + "s Missing");
-        dialogOptions.setMoreOptionsButtonText("Show Documents", "Hide Documents");
+        dialogOptions.setMoreOptionsButtonText("Show Document List", "Hide Document List");
         Dialogs.showMoreOptionsDialog(dialogOptions,
                 BiocodeUtilities.getCountString("document", namesOfDocsWithMissing.size()) +
                         " did not have an annotated " + field.getName() + ".  \n\n" +
