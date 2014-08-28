@@ -194,7 +194,6 @@ public class BoldTraceSubmissionOptions extends Options {
         return mainPanel;
     }
 
-    // todo
     public DocumentField getProcessIdField() {
         Object value = getValue(PROCESS_ID);
         if(value instanceof OptionValue) {
