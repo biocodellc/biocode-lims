@@ -640,42 +640,44 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             traceCountResultSet.next();
             int numTraces = traceCountResultSet.getInt(1);
 
-            int estimateInMinutes = numTraces / 1000;
-            String estimate;
-            if(estimateInMinutes < 5) {
-                estimate = "up to five minutes";
-            } else if(estimateInMinutes < 10) {
-                estimate = "up to ten minutes";
-            } else if(estimateInMinutes < 60) {
-                estimate = "about " + estimateInMinutes + " minutes";
-            } else {
-                estimate = "about an hour";
-            }
+            if(!Geneious.isHeadless()) {
+                int estimateInMinutes = numTraces / 1000;
+                String estimate;
+                if (estimateInMinutes < 5) {
+                    estimate = "up to five minutes";
+                } else if (estimateInMinutes < 10) {
+                    estimate = "up to ten minutes";
+                } else if (estimateInMinutes < 60) {
+                    estimate = "about " + estimateInMinutes + " minutes";
+                } else {
+                    estimate = "about an hour";
+                }
 
-            boolean canPerformUpdate = privilegeAllowed("traces", "ALTER");
-            String privilegeMessage = canPerformUpdate ? "" :
-                    "Geneious has detected you do not have the privileges to perform this update.\n";
+                boolean canPerformUpdate = privilegeAllowed("traces", "ALTER");
+                String privilegeMessage = canPerformUpdate ? "" :
+                        "Geneious has detected you do not have the privileges to perform this update.\n";
 
-            String applyUpdate = "Apply Update";
-            String connect = "Just Connect";
-            // Change the default button order depending on if the user is likely to be able to apply the update
-            String[] actions = canPerformUpdate ? new String[]{applyUpdate, connect} : new String[]{connect, applyUpdate};
-            Dialogs.DialogOptions options = new Dialogs.DialogOptions(actions, "Database Needs Updating", null, Dialogs.DialogIcon.INFORMATION);
-            options.setMoreOptionsButtonText("Show Commands", "Hide Commands");
-            Object userChoice = Dialogs.showMoreOptionsDialog(options,
-                    "The LIMS database schema needs updating.  This update may take " + estimate + ".  " +
-                            "\n\n" +
-                            privilegeMessage +
-                            "<strong>Note</strong>: Without this update you may have trouble deleting plates." +
-                            "\n\n" +
-                            "Please contact your database administrator to apply the commands below.",
-                    "The following commands must be run to update the database:<ol>" +
-                            "<li>" + dropExistingFkTracesConstraintQuery + "</li>" +
-                            "<li>" + addNewFkTracesConstraintQuery + "</li>" +
-                            "</ol>"
-            );
-            if(!userChoice.equals(applyUpdate)) {
-                return;
+                String applyUpdate = "Apply Update";
+                String connect = "Just Connect";
+                // Change the default button order depending on if the user is likely to be able to apply the update
+                String[] actions = canPerformUpdate ? new String[]{applyUpdate, connect} : new String[]{connect, applyUpdate};
+                Dialogs.DialogOptions options = new Dialogs.DialogOptions(actions, "Database Needs Updating", null, Dialogs.DialogIcon.INFORMATION);
+                options.setMoreOptionsButtonText("Show Commands", "Hide Commands");
+                Object userChoice = Dialogs.showMoreOptionsDialog(options,
+                        "The LIMS database schema needs updating.  This update may take " + estimate + ".  " +
+                                "\n\n" +
+                                privilegeMessage +
+                                "<strong>Note</strong>: Without this update you may have trouble deleting plates." +
+                                "\n\n" +
+                                "Please contact your database administrator to apply the commands below.",
+                        "The following commands must be run to update the database:<ol>" +
+                                "<li>" + dropExistingFkTracesConstraintQuery + "</li>" +
+                                "<li>" + addNewFkTracesConstraintQuery + "</li>" +
+                                "</ol>"
+                );
+                if (!userChoice.equals(applyUpdate)) {
+                    return;
+                }
             }
 
             dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
