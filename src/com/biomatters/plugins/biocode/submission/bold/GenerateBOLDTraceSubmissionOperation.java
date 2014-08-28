@@ -73,6 +73,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
 
     @Override
     public void performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options _options, SequenceSelection sequenceSelection, OperationCallback callback) throws DocumentOperationException {
+        progressListener.setIndeterminateProgress();
         if (!(_options instanceof BoldTraceSubmissionOptions)) {
             throw new DocumentOperationException("Options must be obtained from calling getOptions(), expected " + BoldTraceSubmissionOptions.class.getSimpleName() + " but was " + _options.getClass().getSimpleName());
         }
