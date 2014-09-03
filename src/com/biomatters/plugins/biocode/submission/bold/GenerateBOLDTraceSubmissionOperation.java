@@ -206,7 +206,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
 
     private static Map<AnnotatedPluginDocument, TraceInfo> mapDocumentsToPrimers(AnnotatedPluginDocument[] inputDocs, BoldTraceSubmissionOptions options) throws DocumentOperationException, MissingFieldValueException {
         Map<URN, Boolean> directionForDocs = new HashMap<URN, Boolean>();
-        Set<String> names = new HashSet<String>();
+        Multimap<String, AnnotatedPluginDocument> names = ArrayListMultimap.create();
         for (AnnotatedPluginDocument annotatedDocument : inputDocs) {
             Object isForward = annotatedDocument.getFieldValue(BiocodeUtilities.IS_FORWARD_FIELD);
             String name;
@@ -217,11 +217,20 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
                 directionForDocs.put(annotatedDocument.getURN(), fowardDirection);
                 name = getFilename(options, annotatedDocument, fowardDirection);
             }
-            if(names.contains(name)) {
-                throw new DocumentOperationException("Duplicate name detected: " + name + ".  " +
-                        "If your forward and reverse traces use the same name, try adding a suffix.");
+            names.put(name, annotatedDocument);
+        }
+
+        for (Map.Entry<String, Collection<AnnotatedPluginDocument>> entry : names.asMap().entrySet()) {
+            if(entry.getValue().size() > 1) {
+                List<String> docNames = new ArrayList<String>();
+                for (AnnotatedPluginDocument document : entry.getValue()) {
+                    docNames.add(document.getName());
+                }
+                throw new DocumentOperationException("Duplicate name detected: <strong>" + entry.getKey() + "</strong>.\n\n" +
+                                    "The following documents will be exported with this same name:\n" + StringUtilities.join("\n", docNames) +
+                                    "\n\n<strong>Hint</strong>: If your forward and reverse traces use the same name, try adding a suffix."
+                );
             }
-            names.add(name);
         }
 
         getFieldValuesFromDocs(inputDocs, options.getProcessIdField());
@@ -284,8 +293,10 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         }
     }
 
+    private static final String TRACE_FILE_EXTENSION = ".ab1";
     private static String getFilename(BoldTraceSubmissionOptions options, AnnotatedPluginDocument document, Boolean isForward) {
-        return document.getName() + (isForward ? options.getForwardSuffix() : options.getReverseSuffix());
+        String filename = BiocodeUtilities.getExportedFilenameForDoc(document, TRACE_FILE_EXTENSION);
+        return filename + (isForward ? options.getForwardSuffix() : options.getReverseSuffix());
     }
 
     static Reaction getMostLikelyPcrReactionForSeqReaction(WorkflowDocument workflowDoc, Reaction cyclesequencingReaction) {

@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSeque
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.assembler.lims.InputType;
 import com.biomatters.plugins.biocode.assembler.lims.MarkInLimsUtilities;
 import jebl.util.CompositeProgressListener;
@@ -227,23 +228,12 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
     }
 
     private File getExportFile(File directory, AnnotatedPluginDocument annotatedDocument, DocumentFileExporter exporter) throws DocumentOperationException.Canceled {
-        String extensionUpper = exporter.getDefaultExtension().toUpperCase();
-        String extensionLower = exporter.getDefaultExtension().toLowerCase();
-        String fileName = annotatedDocument.getName();
-        int extensionIndex = fileName.indexOf(extensionUpper);
-        if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
-            fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionUpper.length());
-        }
-        extensionIndex = fileName.indexOf(extensionLower);
-        if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
-            fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionLower.length());
-        }
-        fileName += exporter.getDefaultExtension();
-        fileName = fileName.replace(' ', '_');
+        String extension = exporter.getDefaultExtension();
+        String fileName = BiocodeUtilities.getExportedFilenameForDoc(annotatedDocument, extension);
 
         File exportFile = new File(directory, fileName);
-        if(exportFile.exists()) {
-            if(!Dialogs.showContinueCancelDialog("The folder " + directory.getName() + " already contains a file named " +
+        if (exportFile.exists()) {
+            if (!Dialogs.showContinueCancelDialog("The folder " + directory.getName() + " already contains a file named " +
                     exportFile.getName() + ". This file will be overwritten.", "Overwrite?", null, Dialogs.DialogIcon.WARNING)) {
                 throw new DocumentOperationException.Canceled();
             }

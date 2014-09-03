@@ -189,7 +189,7 @@ public class BiocodeUtilities {
         List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
         for(AnnotatedPluginDocument doc : docs) {
             if(WorkflowDocument.class.isAssignableFrom(doc.getDocumentClass())) {
-                workflows.add((WorkflowDocument)doc.getDocumentOrCrash());
+                workflows.add((WorkflowDocument) doc.getDocumentOrCrash());
             }
         }
         return workflows;
@@ -261,6 +261,32 @@ public class BiocodeUtilities {
     public static List<Options.OptionValue> getOptionValuesForFimsFields() {
         List<DocumentField> fields = BiocodeService.getInstance().getActiveFIMSConnection().getSearchAttributes();
         return getOptionValuesForDocumentFields(fields);
+    }
+
+    /**
+     * Gets a legal file name for the document if it is to be exported.  All spaces are replaced with underscores.
+     * If the extension is part of the name already, then this method will extract it and move it to the end.<br/><br/>
+     * ie ABC.ab1 2" will become "ABC_2.ab1"
+     *
+     * @param annotatedDocument The document to export.
+     * @param extension The extension for the exported document.
+     * @return The filename that should be used for the exported document.  Will always end in the specified extension.
+     */
+    public static String getExportedFilenameForDoc(AnnotatedPluginDocument annotatedDocument, String extension) {
+        String extensionUpper = extension.toUpperCase();
+        String extensionLower = extension.toLowerCase();
+        String fileName = annotatedDocument.getName();
+        int extensionIndex = fileName.indexOf(extensionUpper);
+        if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
+            fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionUpper.length());
+        }
+        extensionIndex = fileName.indexOf(extensionLower);
+        if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
+            fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionLower.length());
+        }
+        fileName += extension;
+        fileName = fileName.replace(' ', '_');
+        return fileName;
     }
 
     public static class DocumentFieldOptionValue extends Options.OptionValue {
