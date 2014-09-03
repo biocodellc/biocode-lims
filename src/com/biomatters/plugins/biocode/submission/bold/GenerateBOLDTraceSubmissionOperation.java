@@ -112,7 +112,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             traceEntries = mapDocumentsToPrimers(annotatedDocuments, options);
             if(traceEntries.isEmpty()) {
                 throw new DocumentOperationException("Could not find any primer information for your traces.  " +
-                        "This could be because they are not annotated with a LIMS workflow or that workflow has no valid PCR reaction.");
+                        "This could be because they are not annotated with LIMS information or that matching reactions could not be found in the current LIMS.");
             }
             Set<String> docsMissingPrimers = new HashSet<String>();
             for (AnnotatedPluginDocument document : annotatedDocuments) {
@@ -125,7 +125,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
                 dialogOptions.setMoreOptionsButtonText("Show Document List", "Hide Document List");
                 if(Dialogs.CANCEL == Dialogs.showMoreOptionsDialog(dialogOptions, "Cannot determine primer information for " +
                         BiocodeUtilities.getCountString("document", docsMissingPrimers.size()) + ".  This could be " +
-                        "because they are not annotated with a LIMS workflow or that workflow has no valid PCR reaction.\n\n" +
+                        "because they are not annotated with LIMS information or that matching reactions could not be found in the current LIMS.\n\n" +
                                 "These will not be included in the submission package.", StringUtilities.join("\n", docsMissingPrimers))) {
                     return;
                 }
@@ -256,6 +256,9 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
             for (WorkflowDocument workflowDoc : workflowDocs) {
                 for (AnnotatedPluginDocument document : workflowToDocument.get(workflowDoc.getName())) {
                     Reaction cyclesequencingReaction = getSequencingReactionForDoc(workflowDoc, document);
+                    if(cyclesequencingReaction == null) {
+                        continue;
+                    }
                     String seqPrimer = getPrimerNameFromReaction(cyclesequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
                     if(seqPrimer == null) {
                         seqPrimer = "";  // This is a non required field.  So we'll set it to empty String if null.
