@@ -268,14 +268,14 @@ public class BiocodeUtilities {
      * If the extension is part of the name already, then this method will extract it and move it to the end.<br/><br/>
      * ie ABC.ab1 2" will become "ABC_2.ab1"
      *
-     * @param annotatedDocument The document to export.
+     * @param fileName The desired filename
      * @param extension The extension for the exported document.
+     * @param suffix A suffix for the filename.  Occurs before the extension.
      * @return The filename that should be used for the exported document.  Will always end in the specified extension.
      */
-    public static String getExportedFilenameForDoc(AnnotatedPluginDocument annotatedDocument, String extension) {
+    public static String getNiceExportedFilename(String fileName, String extension, String suffix) {
         String extensionUpper = extension.toUpperCase();
         String extensionLower = extension.toLowerCase();
-        String fileName = annotatedDocument.getName();
         int extensionIndex = fileName.indexOf(extensionUpper);
         if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
             fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionUpper.length());
@@ -284,7 +284,7 @@ public class BiocodeUtilities {
         if (extensionIndex != -1) { //the extensions can end up in the middle of the name if renaming has occurred
             fileName = fileName.substring(0, extensionIndex) + fileName.substring(extensionIndex + extensionLower.length());
         }
-        fileName += extension;
+        fileName += suffix + extension;
         fileName = fileName.replace(' ', '_');
         return fileName;
     }

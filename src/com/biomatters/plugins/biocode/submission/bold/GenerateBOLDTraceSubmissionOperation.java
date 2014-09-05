@@ -295,8 +295,9 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
 
     private static final String TRACE_FILE_EXTENSION = ".ab1";
     private static String getFilename(BoldTraceSubmissionOptions options, AnnotatedPluginDocument document, Boolean isForward) {
-        String filename = BiocodeUtilities.getExportedFilenameForDoc(document, TRACE_FILE_EXTENSION);
-        return filename + (isForward ? options.getForwardSuffix() : options.getReverseSuffix());
+        String suffix = isForward ? options.getForwardSuffix() : options.getReverseSuffix();
+        String filename = BiocodeUtilities.getNiceExportedFilename(document.getName(), TRACE_FILE_EXTENSION, suffix);
+        return filename + suffix;
     }
 
     static Reaction getMostLikelyPcrReactionForSeqReaction(WorkflowDocument workflowDoc, Reaction cyclesequencingReaction) {
@@ -392,7 +393,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
                 throw new DocumentOperationException("Could not list files in " + tempTracesDir.getAbsolutePath());
             }
             for (File f : filesInDir) {
-                File dest = new File(submssionDir, f.getName() + filenameSuffix);
+                File dest = new File(submssionDir, BiocodeUtilities.getNiceExportedFilename(f.getName(), TRACE_FILE_EXTENSION, filenameSuffix));
                 if (!FileUtilities.renameToWithRetry(f, dest)) {
                     throw new DocumentOperationException("Failed to move file " + f.getAbsolutePath() + " to " + dest.getAbsolutePath());
                 }

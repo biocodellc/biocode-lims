@@ -229,7 +229,7 @@ public class BatchChromatogramExportOperation extends DocumentOperation {
 
     private File getExportFile(File directory, AnnotatedPluginDocument annotatedDocument, DocumentFileExporter exporter) throws DocumentOperationException.Canceled {
         String extension = exporter.getDefaultExtension();
-        String fileName = BiocodeUtilities.getExportedFilenameForDoc(annotatedDocument, extension);
+        String fileName = BiocodeUtilities.getNiceExportedFilename(annotatedDocument.getName(), extension, null);
 
         File exportFile = new File(directory, fileName);
         if (exportFile.exists()) {
