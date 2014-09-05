@@ -296,8 +296,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
     private static final String TRACE_FILE_EXTENSION = ".ab1";
     private static String getFilename(BoldTraceSubmissionOptions options, AnnotatedPluginDocument document, Boolean isForward) {
         String suffix = isForward ? options.getForwardSuffix() : options.getReverseSuffix();
-        String filename = BiocodeUtilities.getNiceExportedFilename(document.getName(), TRACE_FILE_EXTENSION, suffix);
-        return filename + suffix;
+        return BiocodeUtilities.getNiceExportedFilename(document.getName(), TRACE_FILE_EXTENSION, suffix);
     }
 
     static Reaction getMostLikelyPcrReactionForSeqReaction(WorkflowDocument workflowDoc, Reaction cyclesequencingReaction) {
