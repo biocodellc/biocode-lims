@@ -5,7 +5,6 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.AssembledSequence;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -17,13 +16,10 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.server.*;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
-import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
-import org.glassfish.jersey.filter.LoggingFilter;
 
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
@@ -33,7 +29,6 @@ import javax.ws.rs.core.Response;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.logging.Logger;
 
 /**
  * @author Matthew Cheung
@@ -58,15 +53,7 @@ public class ServerLimsConnection extends LIMSConnection {
             host = "http://" + host;
         }
 
-        HttpAuthenticationFeature authFeature = HttpAuthenticationFeature.universal(
-                connectionOptions.getUsername(), connectionOptions.getPassword());
-        target = ClientBuilder.newClient().
-                register(ForbiddenExceptionClientFilter.class).
-                register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false)).
-                register(authFeature).
-                register(XMLSerializableMessageReader.class).
-                register(XMLSerializableMessageWriter.class).
-                target(host).path("biocode");
+        target = RestQueryUtils.getBiocodeWebTarget(host, connectionOptions.getUsername(), connectionOptions.getPassword());
         try {
             testConnection();
         } catch (DatabaseServiceException e) {

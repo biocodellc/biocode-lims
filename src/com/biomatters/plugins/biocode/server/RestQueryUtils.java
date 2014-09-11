@@ -4,13 +4,24 @@ import com.biomatters.geneious.publicapi.databaseservice.*;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.rest.client.ForbiddenExceptionClientFilter;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
+import org.glassfish.jersey.filter.LoggingFilter;
 
+import javax.net.ssl.*;
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
+import java.security.GeneralSecurityException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -308,5 +319,55 @@ public class RestQueryUtils {
             }
         }
         return "";
+    }
+
+    public static WebTarget getBiocodeWebTarget(String host, String username, String password) throws ConnectionException {
+        HttpAuthenticationFeature authFeature = HttpAuthenticationFeature.universal(username, password);
+        ClientBuilder clientBuilder = ClientBuilder.newBuilder().sslContext(getSSLContext()).hostnameVerifier(new HostnameVerifier() {
+            @Override
+            public boolean verify(String s, SSLSession sslSession) {
+                return true;
+            }
+        }).withConfig(new ClientConfig());
+        return clientBuilder.build().
+                register(ForbiddenExceptionClientFilter.class).
+                register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false)).
+                register(authFeature).
+                register(XMLSerializableMessageReader.class).
+                register(XMLSerializableMessageWriter.class).
+                target(host).path("biocode");
+
+    }
+
+    /**
+     * Older versions of Java often have out of date lists of trusted certificate authorities (CA).  This method
+     * returns an SSL context that trusts all certificates regardless of what is in the Java keystore.
+     *
+     * @throws com.biomatters.plugins.biocode.labbench.ConnectionException if there is a problem creating the SSL context
+     */
+    private static SSLContext getSSLContext() throws ConnectionException {
+        // Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager() {
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return new java.security.cert.X509Certificate[0];
+                    }
+                    public void checkClientTrusted(
+                            java.security.cert.X509Certificate[] certs, String authType) {
+                    }
+                    public void checkServerTrusted(
+                            java.security.cert.X509Certificate[] certs, String authType) {
+                    }
+                }
+        };
+
+        // Install the all-trusting trust manager
+        try {
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            return sc;
+        } catch (GeneralSecurityException e) {
+            throw new ConnectionException("Error setting up options for SSL connection. Error details:\n", e);
+        }
     }
 }
