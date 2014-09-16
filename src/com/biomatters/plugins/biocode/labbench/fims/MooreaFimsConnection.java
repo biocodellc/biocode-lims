@@ -1,27 +1,31 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.geneious.publicapi.databaseservice.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.plugins.biocode.labbench.*;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
-
-import java.sql.*;
-import java.util.*;
-import java.util.Date;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.io.InputStream;
-import java.io.IOException;
-
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import org.jdom.input.SAXBuilder;
 import org.jdom.Element;
 import org.jdom.JDOMException;
-import org.jdom.output.XMLOutputter;
+import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.sql.*;
+import java.util.*;
+import java.util.Date;
 
 /**
  * @author steve
@@ -41,6 +45,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     private static final DocumentField LONGITUDE_FIELD = new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Double.class, false, false);
     private static final DocumentField LATITUDE_FIELD = new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Double.class, false, false);
     static final DocumentField PROJECT_FIELD = new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false);
+    static final DocumentField BIOCODE_PROJECT_FIELD = new DocumentField("Project Name", "", "biocode.ProjectCode", String.class, false, false);
     private static final DocumentField SUBPROJECT_FIELD = new DocumentField("SubProject", "", "biocode.SubProject", String.class, false, false);
     private static final DocumentField SUBSUBPROJECT_FIELD = new DocumentField("SubSubProject", "", "biocode.SubSubProject", String.class, false, false);
 
@@ -246,7 +251,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
             queryBuilder.append(" AND ");
-            queryBuilder.append(PROJECT_FIELD.getCode()).append(" IN ");
+            queryBuilder.append(BIOCODE_PROJECT_FIELD.getCode()).append(" IN ");
             SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
         } else if(sqlString == null) {
             return Collections.emptyList();
@@ -439,7 +444,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     @Override
     public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
-        List<DocumentField> projectFieldsLowestToHighest = Arrays.asList(SUBSUBPROJECT_FIELD, SUBPROJECT_FIELD, PROJECT_FIELD);
+        List<DocumentField> projectFieldsLowestToHighest = Arrays.asList(SUBSUBPROJECT_FIELD, SUBPROJECT_FIELD, BIOCODE_PROJECT_FIELD);
         Multimap<String, FimsSample> projects = ArrayListMultimap.create();
         for (FimsSample sample : samples) {
             String projectName = getProjectForSample(projectFieldsLowestToHighest, sample);
