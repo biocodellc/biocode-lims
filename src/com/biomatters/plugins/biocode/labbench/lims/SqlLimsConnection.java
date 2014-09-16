@@ -1488,6 +1488,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             SqlUtilities.fillStatement(new ArrayList<Object>(workflowIds), selectWorkflow);
 
             long start = System.currentTimeMillis();
+            selectWorkflow.setQueryTimeout(0);
             ResultSet workflowsSet = selectWorkflow.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
 
