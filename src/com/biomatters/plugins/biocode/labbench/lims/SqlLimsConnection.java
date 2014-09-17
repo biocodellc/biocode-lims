@@ -1592,7 +1592,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException {
         Map<Integer, Plate> plates = new HashMap<Integer, Plate>();
-        final StringBuilder totalErrors = new StringBuilder("");
+        final Set<String> totalErrors = new HashSet<String>();
 
         int previousId = -1;
         while (resultSet.next()) {
@@ -1617,7 +1617,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     String error = checkReactions(prevPlate);
                     if (error != null) {
                         //noinspection StringConcatenationInsideStringBufferAppend
-                        totalErrors.append(error + "\n");
+                        totalErrors.add(error + "\n");
                     }
                     plates.put(previousId, prevPlate);
                 }
@@ -1643,7 +1643,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 String error = checkReactions(prevPlate);
                 if (error != null) {
                     //noinspection StringConcatenationInsideStringBufferAppend
-                    totalErrors.append(error + "\n");
+                    totalErrors.add(error + "\n");
                 }
 
                 plates.put(previousId, prevPlate);
@@ -1652,13 +1652,17 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
         setInitialTraceCountsForPlates(plates);
 
-        if (totalErrors.length() > 0) {
+        final StringBuilder sb = new StringBuilder("");
+        for (String line : totalErrors)
+            sb.append(line);
+
+        if (sb.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
-                    if (totalErrors.toString().contains("connection")) {
-                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", totalErrors.toString());
+                    if (sb.toString().contains("connection")) {
+                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", sb.toString());
                     } else {
-                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n" + totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
+                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n" + sb, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
                     }
                 }
             };
