@@ -1955,17 +1955,23 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             sqlValues.addAll(sequenceIds);
 
             // NOTE 1: We are not using the workflow column from the assembly table because it may be out of date.
-            // NOTE 2: We will only link the sequence to the first forward and first reverse reactions. Historically sequences
-            // were attached to workflows rather than a reaction.  So there could be multiple forward/reverse reactions.
+            // NOTE 2: We use the GROUP_CONCAT() function on the plate name because there may be multiple forward or
+            // reverse plates.
             // Note 3: We also only use the first workflow encountered out of the foward/reverse workflow.  Generally this is
             // the same.  But it is possible for the user to edit workflows so that the forward and reverse no longer
             // match.  So we account for that too.
             StringBuilder sql = new StringBuilder("SELECT assembly.*, workflow.id, workflow.locus, extraction.sampleId, " +
-                    "extraction.extractionId, extraction.extractionBarcode, FP.name AS forwardPlate, RP.name AS reversePlate");
+                    "extraction.extractionId, extraction.extractionBarcode, forwardPlate, reversePlate");
             sql.append(" FROM assembly INNER JOIN");
-            sql.append(" (SELECT assembly, min(C.id) as forward, min(C2.id) as reverse from sequencing_result");
-            sql.append(" LEFT OUTER JOIN cyclesequencing C ON sequencing_result.reaction = C.id AND C.direction = ?");
-            sql.append(" LEFT OUTER JOIN cyclesequencing C2 ON sequencing_result.reaction = C2.id AND C2.direction = ?");
+            sql.append(" (SELECT assembly, ");
+            sql.append(" MIN(CASE WHEN F.workflow IS NOT NULL THEN F.workflow ELSE R.workflow END) AS workflow,");
+            sql.append(" GROUP_CONCAT(FP.name) as forwardPlate,");
+            sql.append(" GROUP_CONCAT(RP.name) as reversePlate");
+            sql.append(" FROM sequencing_result");
+            sql.append(" LEFT OUTER JOIN cyclesequencing F ON sequencing_result.reaction = F.id AND F.direction = ?");
+            sql.append(" LEFT OUTER JOIN cyclesequencing R ON sequencing_result.reaction = R.id AND R.direction = ?");
+            sql.append(" LEFT OUTER JOIN plate FP on F.plate = FP.id");
+            sql.append(" LEFT OUTER JOIN plate RP on R.plate = RP.id");
             sql.append(" GROUP BY assembly) SR ON assembly.id IN ");
             appendSetOfQuestionMarks(sql, sequenceIds.size());
             if (!includeFailed) {
@@ -1974,11 +1980,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
             sql.append(" AND assembly.id = SR.assembly");
 
-            sql.append(" LEFT OUTER JOIN cyclesequencing F ON F.id = SR.forward");
-            sql.append(" LEFT OUTER JOIN cyclesequencing R ON R.id = SR.reverse");
-            sql.append(" LEFT OUTER JOIN plate FP on F.plate = FP.id");
-            sql.append(" LEFT OUTER JOIN plate RP on R.plate = RP.id");
-            sql.append(" INNER JOIN workflow ON workflow.id = CASE WHEN F.workflow IS NOT NULL THEN F.workflow ELSE R.workflow END");
+            sql.append(" INNER JOIN workflow ON workflow.id = SR.workflow");
             sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
 
             statement = connection.prepareStatement(sql.toString());
