@@ -217,11 +217,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             System.out.println("Updating orphaned links between reactions and seqeunces...");
             linkOrphanedSequences(connection);
 
-            System.out.println("Fixing sequence links...");
-            long start = System.currentTimeMillis();
-            fixSequencesWithMultipleLinks(connection);
-            System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to fix seq links");
-
             System.out.println("Updating workflows for sequences...");
             makeAssemblyTablesWorkflowColumnConsistent(connection);
 
@@ -265,94 +260,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             e1.printStackTrace();
             BiocodeUtilities.displayExceptionDialog(e);
         }
-    }
-
-
-    private static void fixSequencesWithMultipleLinks(ConnectionWrapper connection) throws SQLException {
-        // Get list of assemblies with more than two reactions.
-        PreparedStatement getAssembliesWithTooManyReactions = connection.prepareStatement(
-                "SELECT assembly FROM sequencing_result GROUP BY assembly HAVING count(reaction) > 2");
-        ResultSet assemblySet = getAssembliesWithTooManyReactions.executeQuery();
-        List<Integer> assemblyIds = new ArrayList<Integer>();
-        while(assemblySet.next()) {
-            assemblyIds.add(assemblySet.getInt("assembly"));
-        }
-        assemblySet.close();
-        System.out.println("Found " + assemblyIds.size() + " sequences with more than 2 reactions...");
-        System.out.println("Attempting to correct...");
-
-        PreparedStatement getAssemblyDetails = connection.prepareStatement(
-                "SELECT C.direction, C.id, plate.name, C.location, assembly.progress, C.progress, C.workflow, assembly.editRecord, assembly.date, C.date " +
-                "FROM assembly " +
-                "INNER JOIN sequencing_result SR ON assembly.id = SR.assembly " +
-                "INNER JOIN cyclesequencing C ON C.id = SR.reaction " +
-                "INNER JOIN plate ON C.plate = plate.id " +
-                "WHERE assembly.id = ?"
-        );
-
-        PreparedStatement fixMapping = connection.prepareStatement("DELETE FROM sequencing_result WHERE " +
-                "assembly = ? AND reaction NOT IN (?,?)");
-
-        List<Integer> dunno = new ArrayList<Integer>();
-        for (Integer assemblyId : assemblyIds) {
-            getAssemblyDetails.setObject(1, assemblyId);
-            ResultSet detailsSet = getAssemblyDetails.executeQuery();
-            Multimap<Integer, ReactionDesc> workflowToReaction = ArrayListMultimap.create();
-
-            List<ReactionDesc> sameEditRecord = new ArrayList<ReactionDesc>();
-            List<ReactionDesc> passed = new ArrayList<ReactionDesc>();
-            while(detailsSet.next()) {
-                ReactionDesc reaction = new ReactionDesc(detailsSet.getInt("C.id"), detailsSet.getString("plate.name"),
-                        detailsSet.getInt("C.workflow"), detailsSet.getString("C.direction"));
-
-                String editRecord = detailsSet.getString("assembly.editRecord");
-                workflowToReaction.put(reaction.workflow, reaction);
-
-                if ("passed".equals(detailsSet.getString("C.progress"))) {
-                    passed.add(reaction);
-                }
-
-                if(editRecord != null && editRecord.contains(reaction.plateName)) {
-                    sameEditRecord.add(reaction);
-                }
-            }
-
-            if(sameEditRecord.size() == 1) {
-                findAndAddMatchingReactions(workflowToReaction, sameEditRecord);
-            }
-            if(passed.size() == 1) {
-                findAndAddMatchingReactions(workflowToReaction, passed);
-            }
-
-            List<ReactionDesc> reactions = null;
-            if(sameEditRecord.size() == 2) {
-                reactions = sameEditRecord;
-            } else if (passed.size() == 2) {
-                reactions = passed;
-            } else {
-                dunno.add(assemblyId);
-            }
-            // If we wanted to go all the way we could assemble all the traces
-
-            if(reactions != null) {
-                assert(reactions.size() == 2);
-                Integer first = reactions.get(0).reactionId;
-                Integer second = reactions.get(1).reactionId;
-
-                List<Integer> allIds = new ArrayList<Integer>();
-                for (ReactionDesc reactionDesc : workflowToReaction.values()) {
-                    allIds.add(reactionDesc.reactionId);
-                }
-                allIds.remove(first);
-                allIds.remove(second);
-                System.out.println(assemblyId + "-> Removing: " + StringUtilities.join(",", allIds) + " Keeping: " + first + "," + second);
-                fixMapping.setObject(1, assemblyId);
-                fixMapping.setObject(2, first);
-                fixMapping.setObject(3, second);
-                fixMapping.executeUpdate();
-            }
-        }
-        System.out.println("Couldn't work out for " + dunno.size() + " records:\n" + StringUtilities.join("\n", dunno));
     }
 
     private static void findAndAddMatchingReactions(Multimap<Integer, ReactionDesc> workflowToReaction, List<ReactionDesc> sameEditRecord) {
