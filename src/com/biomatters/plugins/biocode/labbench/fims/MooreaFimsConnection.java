@@ -444,7 +444,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     @Override
     public Map<String, Collection<FimsSample>> getProjectsForSamples(Collection<FimsSample> samples) {
-        List<DocumentField> projectFieldsLowestToHighest = Arrays.asList(SUBSUBPROJECT_FIELD, SUBPROJECT_FIELD, BIOCODE_PROJECT_FIELD);
+        List<DocumentField> projectFieldsLowestToHighest = Arrays.asList(SUBSUBPROJECT_FIELD, SUBPROJECT_FIELD, PROJECT_FIELD);
         Multimap<String, FimsSample> projects = ArrayListMultimap.create();
         for (FimsSample sample : samples) {
             String projectName = getProjectForSample(projectFieldsLowestToHighest, sample);
@@ -453,5 +453,32 @@ public class MooreaFimsConnection extends FIMSConnection{
             }
         }
         return projects.asMap();
+    }
+
+    /**
+     * Typically {@link com.biomatters.geneious.publicapi.documents.DocumentField} created by the Moorea FIMS use the
+     * column name as the code {@link com.biomatters.geneious.publicapi.documents.DocumentField#getCode()}.  But the
+     * following are some special cases where that is not the case.
+     * <ul>
+     *     <li>We are using a core Geneious document field to represent a column in the FIMS</li>
+     *     <li>The column we are using has changed from the original column, but we don't want to create a new document field</li>
+     *     <li>The document field is a concatenation of several fields in the FIMS database</li>
+     * </ul>
+     * This method handles the first two cases where one SQL column maps to the document field.  In any other case it
+     * will just return the code for the supplied document field.
+     *
+     * @param field The {@link com.biomatters.geneious.publicapi.documents.DocumentField}, cannot be null.
+     * @return The matching SQL column name
+     */
+    public static String getSQLColumnNameForDocumentField(DocumentField field) {
+        if (field.equals(DocumentField.ORGANISM_FIELD)) {
+            return "biocode.ScientificName"; //we use the standard organism field so we need to map it to the correct database id
+        } else if (field.equals(DocumentField.COMMON_NAME_FIELD)) {
+            return "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
+        } else if(field.equals(PROJECT_FIELD)) {
+            return BIOCODE_PROJECT_FIELD.getCode();
+        } else {
+            return field.getCode();
+        }
     }
 }

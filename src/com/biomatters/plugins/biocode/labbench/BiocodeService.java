@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleot
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -819,6 +820,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 if(isDownloadTissues(query)) {
                     for (FimsSample tissueSample : tissueSamples) {
                         callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
+                    }
+                    Map<String, Collection<FimsSample>> map = getActiveFIMSConnection().getProjectsForSamples(tissueSamples);
+                    for (Map.Entry<String, Collection<FimsSample>> entry : map.entrySet()) {
+                        System.out.println(entry.getKey() + ":" + StringUtilities.join(",", entry.getValue()));
                     }
                 }
                 if(callback.isCanceled()) {

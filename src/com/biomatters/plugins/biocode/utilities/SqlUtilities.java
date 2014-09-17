@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 
 import java.sql.*;
@@ -101,11 +102,8 @@ public class SqlUtilities {
                 queryBuilder.append(queryString);
             }
             else {
-                if (specialCaseForBiocode && fieldCode.equals(DocumentField.ORGANISM_FIELD.getCode())) {
-                    fieldCode = "biocode.ScientificName"; //we use the standard organism field so we need to map it to the correct database id
-                }
-                else if (specialCaseForBiocode && fieldCode.equals(DocumentField.COMMON_NAME_FIELD.getCode())) {
-                    fieldCode = "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
+                if(specialCaseForBiocode) {
+                    fieldCode = MooreaFimsConnection.getSQLColumnNameForDocumentField(aquery.getField());
                 }
                 String[] elements = fieldCode.split("\\.");
                 for (int i1 = 0; i1 < elements.length; i1++) {
