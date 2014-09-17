@@ -66,6 +66,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection;
+    private Object limsConnectionLock = new Object();
     private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     private Driver driver;
     private Driver localDriver;
@@ -245,10 +246,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public LIMSConnection getActiveLIMSConnection() throws DatabaseServiceException {
-        if (limsConnection == null) {
-            throw new DatabaseServiceException("No active Lims connection, please try to relogin Biocode service.", false);
+        synchronized (limsConnectionLock) {
+            if (limsConnection == null) {
+                throw new DatabaseServiceException("No active Lims connection, please try to relogin Biocode service.", false);
+            }
+            return limsConnection;
         }
-        return limsConnection;
     }
 
     public synchronized boolean isLoggedIn() {
@@ -408,10 +411,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             activeFIMSConnection.disconnect();
             activeFIMSConnection = null;
         }
-        if(limsConnection != null) {
-            limsConnection.disconnect();
+
+        synchronized (limsConnectionLock) {
+            if(limsConnection != null) {
+                limsConnection.disconnect();
+            }
+            limsConnection = null;
         }
-        limsConnection = null;
+
         if(reportingService != null) {
             reportingService.notifyLoginStatusChanged();
         }
@@ -477,7 +484,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String error = null;
 
         try {
-            limsConnection = connection.getLIMSConnection();
+            synchronized (limsConnectionLock) {
+                limsConnection = connection.getLIMSConnection();
+            }
         } catch (ConnectionException e) {
             error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: " + e.getMessage();
         }
@@ -657,10 +666,25 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return new Thread("Checking for the LIMS connection being closed") {
             @Override
             public void run() {
-                while(isLoggedIn() && limsConnection != null) {
+                LIMSConnection originalConnection = null;
+                while(isLoggedIn()) {
+                    LIMSConnection activeLIMSConnection = null;
+                    try {
+                        activeLIMSConnection = getActiveLIMSConnection();
+
+                        //for potential memory leak
+                        if (originalConnection == null)
+                            originalConnection = activeLIMSConnection;
+                        else if (originalConnection != activeLIMSConnection)
+                            break;
+                    } catch (DatabaseServiceException e) {
+                        e.printStackTrace();
+                        break;
+                    }
+
                     if(activeCallbacks.isEmpty()) {
                         try {
-                            limsConnection.testConnection();
+                            activeLIMSConnection.testConnection();
                         } catch (DatabaseServiceException e) {
                             if(!e.getMessage().contains("Streaming result set")) {  //last ditch attempt to stop the system logging users out incorrectly - we should have caught all cases of this because the operations creating streaming result sets should have registered their callbacks/progress listeners with the service
                                 e.printStackTrace();
