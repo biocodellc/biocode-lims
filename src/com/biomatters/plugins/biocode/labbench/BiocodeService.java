@@ -790,12 +790,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
 
                 List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
-                boolean needWorkflows = isDownloadWorkflows(query) || isDownloadSequences(query);
+                boolean downloadWorkflows = isDownloadWorkflows(query);
+                boolean downloadSequences = isDownloadSequences(query);
+                boolean needWorkflows = downloadWorkflows || downloadSequences;
                 if(!limsResult.getWorkflowIds().isEmpty() && needWorkflows) {
-                    callback.setMessage("Downloading " + BiocodeService.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
+                    callback.setMessage((downloadWorkflows ? "Downloading " : "Retrieving ") + BiocodeService.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
                     workflows.addAll(getActiveLIMSConnection().getWorkflowsById(limsResult.getWorkflowIds(), callback));
-                    for (WorkflowDocument document : workflows) {
-                        callback.add(document, Collections.<String, Object>emptyMap());
+                    if (downloadWorkflows) {
+                        for (WorkflowDocument document : workflows) {
+                            callback.add(document, Collections.<String, Object>emptyMap());
+                        }
                     }
                 }
 
