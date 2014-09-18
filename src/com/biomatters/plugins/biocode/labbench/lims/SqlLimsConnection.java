@@ -60,7 +60,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     private DataSource dataSource;
 
-    public DataSource getDataSource() {
+    public synchronized DataSource getDataSource() throws SQLException{
+        if (dataSource == null)
+            throw new SQLException("LIMS database is disconnected, please try to relogin.");
+
         return dataSource;
     }
 
@@ -68,7 +71,11 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     protected void _connect(PasswordOptions options) throws ConnectionException {
         LimsConnectionOptions allLimsOptions = (LimsConnectionOptions) options;
         PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
-        dataSource = connectToDb(selectedLimsOptions);
+
+        synchronized (this) {
+            dataSource = connectToDb(selectedLimsOptions);
+        }
+
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
@@ -89,7 +96,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     protected synchronized Connection getConnectionInternal() throws SQLException {
         if(legacyConnection == null) {
             // By pass the new way of getting connections.  Get one directly from the pool.
-            legacyConnection = dataSource.getConnection();
+            legacyConnection = getDataSource().getConnection();
         }
         return legacyConnection;
     }
@@ -106,7 +113,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     protected ConnectionWrapper getConnection() throws SQLException {
         ConnectionWrapper toReturn = connectionForThread.get();
         if (toReturn == null || toReturn.isClosed()) {
-            toReturn = new ConnectionWrapper(dataSource.getConnection());
+            toReturn = new ConnectionWrapper(getDataSource().getConnection());
             connectionForThread.set(toReturn);
         }
         synchronized (connectionCounts) {
@@ -137,7 +144,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public void disconnect() {
+    public synchronized void disconnect() {
         try {
             if (dataSource != null) {
                 Class dataSourceClass = dataSource.getClass();
@@ -169,7 +176,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             populateFailureReasons(connection);
 
             progressListener.setMessage("Correcting database schema (this may take some time but only needs to be done once)...");
-            updateFkTracesConstraintIfNecessary(dataSource);
+            updateFkTracesConstraintIfNecessary(getDataSource());
 
             progressListener.setMessage("Creating BCID database table");
 
