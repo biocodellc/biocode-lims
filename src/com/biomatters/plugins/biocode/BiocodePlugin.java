@@ -110,7 +110,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
         private String createHtmlWithWidth(String extraInformation, int width) {
             String tmp = extraInformation.replaceAll("(\\s)+", " ");
-            if (tmp == null && tmp.length() == 0)
+            if (tmp == null || tmp.length() == 0)
                 return "";
 
             StringBuilder sb = new StringBuilder("<html><br>Note: ");
@@ -119,12 +119,18 @@ public class BiocodePlugin extends GeneiousPlugin {
             while (start < tmp.length()) {
                 end = start + width;
                 if (end >= tmp.length() - 1) {
-                    sb.append("<br>" + tmp.substring(start));
+                    sb.append("<br>").append(tmp.substring(start));
                     break;
                 }
 
-                end = start + tmp.substring(start, end).lastIndexOf(" ");      //assume there is no 70 length word
-                sb.append("<br>" + tmp.substring(start, end));
+                int indexOfLastSpace = tmp.substring(start, end).lastIndexOf(" ");
+                if(indexOfLastSpace == -1) {
+                    // If for some reason we have a 70 length word we'll just stop here and add the rest of the text on one line
+                    sb.append("<br>").append(tmp.substring(start));
+                    break;
+                }
+                end = start + indexOfLastSpace;
+                sb.append("<br>").append(tmp.substring(start, end));
                 start = end;
             }
 
