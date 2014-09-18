@@ -438,6 +438,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 seq.numberOfAmbiguities = assemblyResult.ambiguities;
                 seq.editRecord = assemblyResult.editRecord;
 
+                if (seq.extractionId == null || seq.workflowId == null)
+                    throw new DatabaseServiceException("LIMS info is missed, please try \"Annotate with FIMS/LIMS data...\" option", false);
+
                 int seqId = limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(),
                         options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), seq, reactionIds, progress);
                 if(progress.isCanceled()) {
