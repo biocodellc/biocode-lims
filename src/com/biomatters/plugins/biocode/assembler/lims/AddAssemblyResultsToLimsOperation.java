@@ -214,11 +214,50 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
 
+    private static class PlateAndWell {
+        private String plate;
+        private String well;
+
+        private PlateAndWell(AnnotatedPluginDocument document) {
+            this(document, null);
+        }
+
+        /**
+         * Get the plate and well associated with a trace sequence.  Uses the referenced document if there is one.
+         * Otherwise uses the sequence document.
+         *
+         * @param document The referenced trace document
+         * @param pluginDocument The trace sequence within an assembly
+         */
+        private PlateAndWell(AnnotatedPluginDocument document, PluginDocument pluginDocument) {
+            if(document != null) {
+                plate = getStringOrNull(document.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD.getCode()));
+                well = getStringOrNull(document.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode()));
+            }
+            // Fallback to the plugin document if necessary
+            if(pluginDocument != null) {
+                if (plate == null) {
+                    plate = getStringOrNull(pluginDocument.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD.getCode()));
+                }
+                if (well == null) {
+                    well = getStringOrNull(pluginDocument.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode()));
+                }
+            }
+        }
+
+        private static String getStringOrNull(Object obj) {
+            if(obj == null) {
+                return null;
+            } else {
+                return String.valueOf(obj);
+            }
+        }
+    }
+
     private String getChromatogramProperties(InputType inputType, Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
                                              AnnotatedPluginDocument annotatedDocument, AssemblyResult assemblyResult) throws DocumentOperationException {
-        List<AnnotatedPluginDocument> chromatograms = new ArrayList<AnnotatedPluginDocument>();
-        List<SequenceDocument> sequences = new ArrayList<SequenceDocument>();
 
+        Map<PlateAndWell, AnnotatedPluginDocument> reactionsToChromatograms = new HashMap<PlateAndWell, AnnotatedPluginDocument>();
         if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
             SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)annotatedDocument.getDocument();
             for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
@@ -232,19 +271,15 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 if (referencedDocument != null && !NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
                     throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" contains a sequence which is not DNA");
                 }
-                chromatograms.add(referencedDocument);
-                sequences.add(sequence);
+                reactionsToChromatograms.put(new PlateAndWell(annotatedDocument, sequence), annotatedDocument);
             }
-        } else if(inputType == InputType.TRACES) {
-            chromatograms.add(annotatedDocument);
+        } else {
+            reactionsToChromatograms.put(new PlateAndWell(annotatedDocument), inputType == InputType.TRACES ? annotatedDocument : null);
         }
 
-        boolean haveSourceChromatograms = !chromatograms.isEmpty();
-        List<AnnotatedPluginDocument> toGetReactionsFrom = haveSourceChromatograms ? chromatograms : Collections.singletonList(annotatedDocument);
-
-        for (int i = 0; i < sequences.size(); i++) {
-            SequenceDocument sequence = sequences.get(i);
-            String plateName = (String) sequence.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD.getCode());
+        for (Map.Entry<PlateAndWell, AnnotatedPluginDocument> entry : reactionsToChromatograms.entrySet()) {
+            PlateAndWell plateAndWell = entry.getKey();
+            String plateName = plateAndWell.plate;
             if (plateName == null) {
                 return "FIMS data not annotated on referenced sequence (plate name)";
             }
@@ -282,7 +317,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 return "Cannot find sequencing plate \"" + plateName + "\"";
             }
 
-            String wellName = (String) sequence.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode());
+            String wellName = plateAndWell.well;
             if (wellName == null) {
                 return "FIMS data not annotated on referenced sequence (well name)";
             }
@@ -316,10 +351,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             assemblyResult.extractionId = reaction.getExtractionId();
 
-            AnnotatedPluginDocument doc = null;
-            if (toGetReactionsFrom.size() > i)
-                doc = toGetReactionsFrom.get(i);
-
+            AnnotatedPluginDocument doc = entry.getValue();
             assemblyResult.addReaction((CycleSequencingReaction) reaction, doc != null ? Collections.singletonList(doc) : Collections.<AnnotatedPluginDocument>emptyList());
         }
         return null;
@@ -437,9 +469,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 seq.bin = assemblyResult.bin;
                 seq.numberOfAmbiguities = assemblyResult.ambiguities;
                 seq.editRecord = assemblyResult.editRecord;
-
-                if (seq.extractionId == null || seq.workflowId == null)
-                    throw new DatabaseServiceException("LIMS info is missed, please try \"Annotate with FIMS/LIMS data...\" option", false);
 
                 int seqId = limsConnection.addAssembly(isPass, options.getNotes(), options.getTechnician(),
                         options.getFailureReason(), options.getFailureNotes(), options.isAddChromatograms(), seq, reactionIds, progress);
