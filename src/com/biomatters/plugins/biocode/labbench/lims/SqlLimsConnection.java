@@ -1449,6 +1449,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     public List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
+        if(plateIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         ConnectionWrapper connection = null;
 
         // Query for full contents of plates that matched our query
