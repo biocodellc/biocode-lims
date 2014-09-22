@@ -271,7 +271,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 if (referencedDocument != null && !NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
                     throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" contains a sequence which is not DNA");
                 }
-                reactionsToChromatograms.put(new PlateAndWell(annotatedDocument, sequence), annotatedDocument);
+                reactionsToChromatograms.put(new PlateAndWell(referencedDocument, sequence), referencedDocument);
             }
         } else {
             reactionsToChromatograms.put(new PlateAndWell(annotatedDocument), inputType == InputType.TRACES ? annotatedDocument : null);
@@ -524,7 +524,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     List<Trace> traces = new ArrayList<Trace>();
                     for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
                         String nameOfFileToExport = chromatogramDocument.getName();
-                        String nameOfFileToExportWithExtensionRemoved = nameOfFileToExport.substring(0, nameOfFileToExport.lastIndexOf("."));
+                        int indexOfLastDot = nameOfFileToExport.lastIndexOf(".");
+                        String nameOfFileToExportWithExtensionRemoved = indexOfLastDot == -1 ? nameOfFileToExport :
+                                nameOfFileToExport.substring(0, indexOfLastDot);
                         File exportFolder = tempFolder;
                         if (new File(exportFolder, nameOfFileToExport).exists() || new File(exportFolder, nameOfFileToExportWithExtensionRemoved + ".scf").exists()) {
                             exportFolder = FileUtilities.createTempDir(true);
