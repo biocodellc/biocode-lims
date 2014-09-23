@@ -836,10 +836,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     for (FimsSample tissueSample : tissueSamples) {
                         callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
                     }
-                    Map<String, Collection<FimsSample>> map = getActiveFIMSConnection().getProjectsForSamples(tissueSamples);
-                    for (Map.Entry<String, Collection<FimsSample>> entry : map.entrySet()) {
-                        System.out.println(entry.getKey() + ":" + StringUtilities.join(",", entry.getValue()));
-                    }
                 }
                 if(callback.isCanceled()) {
                     return;
