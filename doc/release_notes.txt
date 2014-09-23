@@ -1,3 +1,10 @@
+==Biocode Plugin 2.8.1 - 23 September 2014==
+* Made 'Forward Plate' and 'Reverse Plate' fields on assembled sequences support more than one value.
+* Fixed a bug where workflows were being added to search results when downloading sequences
+* Made the 'Mark as Passed' operation work even when links to the original chromatogram documents has been lost.
+* Fixed a problem where a background maintenance task would fail when using the Built-in MySQL LIMS.
+* Other minor fixes and improvements.
+
 ==Biocode Plugin 2.8.0 - 19 August 2014==
 * Added '# Passed' and '# Sequences' fields to cycle sequencing plate views.
 * Added 'Forward Plate' and 'Reverse Plate' fields to assembled sequences.

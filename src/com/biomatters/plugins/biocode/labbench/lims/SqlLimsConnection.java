@@ -225,11 +225,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             System.out.println("Updating orphaned links between reactions and seqeunces...");
             linkOrphanedSequences(connection);
 
-            System.out.println("Fixing sequence links...");
-            long start = System.currentTimeMillis();
-            fixSequencesWithMultipleLinks(connection);
-            System.out.println("Took " + (System.currentTimeMillis() - start) + "ms to fix seq links");
-
             System.out.println("Updating workflows for sequences...");
             makeAssemblyTablesWorkflowColumnConsistent(connection);
 
@@ -273,94 +268,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             e1.printStackTrace();
             BiocodeUtilities.displayExceptionDialog(e);
         }
-    }
-
-
-    private static void fixSequencesWithMultipleLinks(ConnectionWrapper connection) throws SQLException {
-        // Get list of assemblies with more than two reactions.
-        PreparedStatement getAssembliesWithTooManyReactions = connection.prepareStatement(
-                "SELECT assembly FROM sequencing_result GROUP BY assembly HAVING count(reaction) > 2");
-        ResultSet assemblySet = getAssembliesWithTooManyReactions.executeQuery();
-        List<Integer> assemblyIds = new ArrayList<Integer>();
-        while(assemblySet.next()) {
-            assemblyIds.add(assemblySet.getInt("assembly"));
-        }
-        assemblySet.close();
-        System.out.println("Found " + assemblyIds.size() + " sequences with more than 2 reactions...");
-        System.out.println("Attempting to correct...");
-
-        PreparedStatement getAssemblyDetails = connection.prepareStatement(
-                "SELECT C.direction, C.id, plate.name, C.location, assembly.progress, C.progress, C.workflow, assembly.editRecord, assembly.date, C.date " +
-                "FROM assembly " +
-                "INNER JOIN sequencing_result SR ON assembly.id = SR.assembly " +
-                "INNER JOIN cyclesequencing C ON C.id = SR.reaction " +
-                "INNER JOIN plate ON C.plate = plate.id " +
-                "WHERE assembly.id = ?"
-        );
-
-        PreparedStatement fixMapping = connection.prepareStatement("DELETE FROM sequencing_result WHERE " +
-                "assembly = ? AND reaction NOT IN (?,?)");
-
-        List<Integer> dunno = new ArrayList<Integer>();
-        for (Integer assemblyId : assemblyIds) {
-            getAssemblyDetails.setObject(1, assemblyId);
-            ResultSet detailsSet = getAssemblyDetails.executeQuery();
-            Multimap<Integer, ReactionDesc> workflowToReaction = ArrayListMultimap.create();
-
-            List<ReactionDesc> sameEditRecord = new ArrayList<ReactionDesc>();
-            List<ReactionDesc> passed = new ArrayList<ReactionDesc>();
-            while(detailsSet.next()) {
-                ReactionDesc reaction = new ReactionDesc(detailsSet.getInt("C.id"), detailsSet.getString("plate.name"),
-                        detailsSet.getInt("C.workflow"), detailsSet.getString("C.direction"));
-
-                String editRecord = detailsSet.getString("assembly.editRecord");
-                workflowToReaction.put(reaction.workflow, reaction);
-
-                if ("passed".equals(detailsSet.getString("C.progress"))) {
-                    passed.add(reaction);
-                }
-
-                if(editRecord != null && editRecord.contains(reaction.plateName)) {
-                    sameEditRecord.add(reaction);
-                }
-            }
-
-            if(sameEditRecord.size() == 1) {
-                findAndAddMatchingReactions(workflowToReaction, sameEditRecord);
-            }
-            if(passed.size() == 1) {
-                findAndAddMatchingReactions(workflowToReaction, passed);
-            }
-
-            List<ReactionDesc> reactions = null;
-            if(sameEditRecord.size() == 2) {
-                reactions = sameEditRecord;
-            } else if (passed.size() == 2) {
-                reactions = passed;
-            } else {
-                dunno.add(assemblyId);
-            }
-            // If we wanted to go all the way we could assemble all the traces
-
-            if(reactions != null) {
-                assert(reactions.size() == 2);
-                Integer first = reactions.get(0).reactionId;
-                Integer second = reactions.get(1).reactionId;
-
-                List<Integer> allIds = new ArrayList<Integer>();
-                for (ReactionDesc reactionDesc : workflowToReaction.values()) {
-                    allIds.add(reactionDesc.reactionId);
-                }
-                allIds.remove(first);
-                allIds.remove(second);
-                System.out.println(assemblyId + "-> Removing: " + StringUtilities.join(",", allIds) + " Keeping: " + first + "," + second);
-                fixMapping.setObject(1, assemblyId);
-                fixMapping.setObject(2, first);
-                fixMapping.setObject(3, second);
-                fixMapping.executeUpdate();
-            }
-        }
-        System.out.println("Couldn't work out for " + dunno.size() + " records:\n" + StringUtilities.join("\n", dunno));
     }
 
     private static void findAndAddMatchingReactions(Multimap<Integer, ReactionDesc> workflowToReaction, List<ReactionDesc> sameEditRecord) {
@@ -1498,6 +1405,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             SqlUtilities.fillStatement(new ArrayList<Object>(workflowIds), selectWorkflow);
 
             long start = System.currentTimeMillis();
+            selectWorkflow.setQueryTimeout(0);
             ResultSet workflowsSet = selectWorkflow.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (workflows) query");
 
@@ -1551,6 +1459,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     public List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
+        if(plateIds.isEmpty()) {
+            return Collections.emptyList();
+        }
         ConnectionWrapper connection = null;
 
         // Query for full contents of plates that matched our query
@@ -1601,7 +1512,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException {
         Map<Integer, Plate> plates = new HashMap<Integer, Plate>();
-        final StringBuilder totalErrors = new StringBuilder("");
+        final Set<String> totalErrors = new HashSet<String>();
 
         int previousId = -1;
         while (resultSet.next()) {
@@ -1626,7 +1537,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     String error = checkReactions(prevPlate);
                     if (error != null) {
                         //noinspection StringConcatenationInsideStringBufferAppend
-                        totalErrors.append(error + "\n");
+                        totalErrors.add(error + "\n");
                     }
                     plates.put(previousId, prevPlate);
                 }
@@ -1652,7 +1563,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 String error = checkReactions(prevPlate);
                 if (error != null) {
                     //noinspection StringConcatenationInsideStringBufferAppend
-                    totalErrors.append(error + "\n");
+                    totalErrors.add(error + "\n");
                 }
 
                 plates.put(previousId, prevPlate);
@@ -1661,13 +1572,17 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
         setInitialTraceCountsForPlates(plates);
 
-        if (totalErrors.length() > 0) {
+        final StringBuilder sb = new StringBuilder("");
+        for (String line : totalErrors)
+            sb.append(line);
+
+        if (sb.length() > 0) {
             Runnable runnable = new Runnable() {
                 public void run() {
-                    if (totalErrors.toString().contains("connection")) {
-                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", totalErrors.toString());
+                    if (sb.toString().contains("connection")) {
+                        Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", sb.toString());
                     } else {
-                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n" + totalErrors, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
+                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n" + sb, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
                     }
                 }
             };
@@ -1960,17 +1875,23 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             sqlValues.addAll(sequenceIds);
 
             // NOTE 1: We are not using the workflow column from the assembly table because it may be out of date.
-            // NOTE 2: We will only link the sequence to the first forward and first reverse reactions. Historically sequences
-            // were attached to workflows rather than a reaction.  So there could be multiple forward/reverse reactions.
+            // NOTE 2: We use the GROUP_CONCAT() function on the plate name because there may be multiple forward or
+            // reverse plates.
             // Note 3: We also only use the first workflow encountered out of the foward/reverse workflow.  Generally this is
             // the same.  But it is possible for the user to edit workflows so that the forward and reverse no longer
             // match.  So we account for that too.
             StringBuilder sql = new StringBuilder("SELECT assembly.*, workflow.id, workflow.locus, extraction.sampleId, " +
-                    "extraction.extractionId, extraction.extractionBarcode, FP.name AS forwardPlate, RP.name AS reversePlate");
+                    "extraction.extractionId, extraction.extractionBarcode, forwardPlate, reversePlate");
             sql.append(" FROM assembly INNER JOIN");
-            sql.append(" (SELECT assembly, min(C.id) as forward, min(C2.id) as reverse from sequencing_result");
-            sql.append(" LEFT OUTER JOIN cyclesequencing C ON sequencing_result.reaction = C.id AND C.direction = ?");
-            sql.append(" LEFT OUTER JOIN cyclesequencing C2 ON sequencing_result.reaction = C2.id AND C2.direction = ?");
+            sql.append(" (SELECT assembly, ");
+            sql.append(" MIN(CASE WHEN F.workflow IS NOT NULL THEN F.workflow ELSE R.workflow END) AS workflow,");
+            sql.append(" GROUP_CONCAT(FP.name) as forwardPlate,");
+            sql.append(" GROUP_CONCAT(RP.name) as reversePlate");
+            sql.append(" FROM sequencing_result");
+            sql.append(" LEFT OUTER JOIN cyclesequencing F ON sequencing_result.reaction = F.id AND F.direction = ?");
+            sql.append(" LEFT OUTER JOIN cyclesequencing R ON sequencing_result.reaction = R.id AND R.direction = ?");
+            sql.append(" LEFT OUTER JOIN plate FP on F.plate = FP.id");
+            sql.append(" LEFT OUTER JOIN plate RP on R.plate = RP.id");
             sql.append(" GROUP BY assembly) SR ON assembly.id IN ");
             appendSetOfQuestionMarks(sql, sequenceIds.size());
             if (!includeFailed) {
@@ -1979,11 +1900,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
             sql.append(" AND assembly.id = SR.assembly");
 
-            sql.append(" LEFT OUTER JOIN cyclesequencing F ON F.id = SR.forward");
-            sql.append(" LEFT OUTER JOIN cyclesequencing R ON R.id = SR.reverse");
-            sql.append(" LEFT OUTER JOIN plate FP on F.plate = FP.id");
-            sql.append(" LEFT OUTER JOIN plate RP on R.plate = RP.id");
-            sql.append(" INNER JOIN workflow ON workflow.id = CASE WHEN F.workflow IS NOT NULL THEN F.workflow ELSE R.workflow END");
+            sql.append(" INNER JOIN workflow ON workflow.id = SR.workflow");
             sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
 
             statement = connection.prepareStatement(sql.toString());

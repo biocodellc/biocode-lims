@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleot
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -66,6 +67,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection;
+    private Object limsConnectionLock = new Object();
     private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     private Driver driver;
     private Driver localDriver;
@@ -163,7 +165,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
         }
 
-        limsConnection.deleteSequences(sequencesToDelete);
+        getActiveLIMSConnection().deleteSequences(sequencesToDelete);
 
         if(documentsWithNoIdField.size() > 0) {
             throw new DatabaseServiceException("Some of your selected documents were not correctly annotated with LIMS data, and could not be deleted.  Please contact Biomatters for assistance.", false);
@@ -211,12 +213,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
         if(WorkflowDocument.class.isAssignableFrom(document.getDocumentClass())) {
             WorkflowDocument doc = (WorkflowDocument)document.getDocumentOrThrow(DatabaseServiceException.class);
-            limsConnection.renameWorkflow(doc.getWorkflow().getId(), newValue.getValue().toString());
+            getActiveLIMSConnection().renameWorkflow(doc.getWorkflow().getId(), newValue.getValue().toString());
         }
 
         if(PlateDocument.class.isAssignableFrom(document.getDocumentClass())) {
             PlateDocument doc = (PlateDocument)document.getDocumentOrThrow(DatabaseServiceException.class);
-            limsConnection.renamePlate(doc.getPlate().getId(), newValue.getValue().toString());
+            getActiveLIMSConnection().renamePlate(doc.getPlate().getId(), newValue.getValue().toString());
         }
     }
 
@@ -236,10 +238,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public LIMSConnection getActiveLIMSConnection() throws DatabaseServiceException {
-        if (limsConnection == null) {
-            throw new DatabaseServiceException("No active Lims connection", false);
+        synchronized (limsConnectionLock) {
+            if (limsConnection == null) {
+                throw new DatabaseServiceException("No active Lims connection, please try to relogin Biocode service.", false);
+            }
+            return limsConnection;
         }
-        return limsConnection;
     }
 
     public synchronized boolean isLoggedIn() {
@@ -399,10 +403,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             activeFIMSConnection.disconnect();
             activeFIMSConnection = null;
         }
-        if(limsConnection != null) {
-            limsConnection.disconnect();
+
+        synchronized (limsConnectionLock) {
+            if(limsConnection != null) {
+                limsConnection.disconnect();
+            }
+            limsConnection = null;
         }
-        limsConnection = null;
+
         if(reportingService != null) {
             reportingService.notifyLoginStatusChanged();
         }
@@ -468,7 +476,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         String error = null;
 
         try {
-            limsConnection = connection.getLIMSConnection();
+            synchronized (limsConnectionLock) {
+                limsConnection = connection.getLIMSConnection();
+            }
         } catch (ConnectionException e) {
             error = "There was an error connecting to your LIMS: cannot find your LIMS connection class: " + e.getMessage();
         }
@@ -555,12 +565,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 disconnectCheckingThread.interrupt();
             }
 
-            limsConnection.connect(connection.getLimsOptions());
+            getActiveLIMSConnection().connect(connection.getLimsOptions());
             progressListener.setMessage("Building Caches");
             buildCaches();
 
             progressListener.setMessage("Performing Further Initialization");
-            limsConnection.doAnyExtraInitialization(progressListener);
+            getActiveLIMSConnection().doAnyExtraInitialization(progressListener);
 
             synchronized (this) {
                 isLoggedIn = true;
@@ -648,10 +658,25 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         return new Thread("Checking for the LIMS connection being closed") {
             @Override
             public void run() {
-                while(isLoggedIn() && limsConnection != null) {
+                LIMSConnection originalConnection = null;
+                while(isLoggedIn()) {
+                    LIMSConnection activeLIMSConnection = null;
+                    try {
+                        activeLIMSConnection = getActiveLIMSConnection();
+
+                        //for potential memory leak
+                        if (originalConnection == null)
+                            originalConnection = activeLIMSConnection;
+                        else if (originalConnection != activeLIMSConnection)
+                            break;
+                    } catch (DatabaseServiceException e) {
+                        e.printStackTrace();
+                        break;
+                    }
+
                     if(activeCallbacks.isEmpty()) {
                         try {
-                            limsConnection.testConnection();
+                            activeLIMSConnection.testConnection();
                         } catch (DatabaseServiceException e) {
                             if(!e.getMessage().contains("Streaming result set")) {  //last ditch attempt to stop the system logging users out incorrectly - we should have caught all cases of this because the operations creating streaming result sets should have registered their callbacks/progress listeners with the service
                                 e.printStackTrace();
@@ -737,13 +762,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
             try {
                 callback.setMessage("Searching LIMS...");
-                LimsSearchResult limsResult = limsConnection.getMatchingDocumentsFromLims(query,
+                LimsSearchResult limsResult = getActiveLIMSConnection().getMatchingDocumentsFromLims(query,
                         areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
 
                 List<Plate> plates;
                 if(!limsResult.getPlateIds().isEmpty() && isDownloadPlates(query)) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching plate document", limsResult.getPlateIds().size()) + "...");
-                    plates = limsConnection.getPlates(limsResult.getPlateIds(), callback);
+                    plates = getActiveLIMSConnection().getPlates(limsResult.getPlateIds(), callback);
                     for (Plate plate : plates) {
                         PlateDocument plateDocument = new PlateDocument(plate);
                         if (isDownloadPlates(query) && callback != null) {
@@ -757,12 +782,16 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
 
                 List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
-                boolean needWorkflows = isDownloadWorkflows(query) || isDownloadSequences(query);
+                boolean downloadWorkflows = isDownloadWorkflows(query);
+                boolean downloadSequences = isDownloadSequences(query);
+                boolean needWorkflows = downloadWorkflows || downloadSequences;
                 if(!limsResult.getWorkflowIds().isEmpty() && needWorkflows) {
-                    callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
-                    workflows.addAll(limsConnection.getWorkflowsById(limsResult.getWorkflowIds(), callback));
-                    for (WorkflowDocument document : workflows) {
-                        callback.add(document, Collections.<String, Object>emptyMap());
+                    callback.setMessage((downloadWorkflows ? "Downloading " : "Retrieving ") + BiocodeUtilities.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
+                    workflows.addAll(getActiveLIMSConnection().getWorkflowsById(limsResult.getWorkflowIds(), callback));
+                    if (downloadWorkflows) {
+                        for (WorkflowDocument document : workflows) {
+                            callback.add(document, Collections.<String, Object>emptyMap());
+                        }
                     }
                 }
 
@@ -807,6 +836,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     for (FimsSample tissueSample : tissueSamples) {
                         callback.add(new TissueDocument(tissueSample), Collections.<String, Object>emptyMap());
                     }
+                    Map<String, Collection<FimsSample>> map = getActiveFIMSConnection().getProjectsForSamples(tissueSamples);
+                    for (Map.Entry<String, Collection<FimsSample>> entry : map.entrySet()) {
+                        System.out.println(entry.getKey() + ":" + StringUtilities.join(",", entry.getValue()));
+                    }
                 }
                 if(callback.isCanceled()) {
                     return;
@@ -824,7 +857,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     if(!hasAlreadyTriedReconnect) {
                         try {
                             System.out.println("attempting a reconnect...");
-                            limsConnection.reconnect();
+                            getActiveLIMSConnection().reconnect();
                         } catch (ConnectionException e1) {
                             throw new DatabaseServiceException(e1, "Your previous search did not cancel properly, and Geneious was unable to correct the problem.  Try logging out, and logging in again.\n\n"+message, false);
                         }
@@ -869,7 +902,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         final List<String> missingTissueIds = new ArrayList<String>();
         ArrayList<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
 
-        List<AssembledSequence> sequences = limsConnection.getAssemblyDocuments(sequenceIds, callback, includeFailed);
+        List<AssembledSequence> sequences = getActiveLIMSConnection().getAssemblyDocuments(sequenceIds, callback, includeFailed);
 
         try {
             for (final AssembledSequence seq : sequences) {
@@ -952,10 +985,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public DocumentField FWD_PLATE_FIELD = DocumentField.createStringField("Forward Plate", "", "forwardSeqPlate");
     public DocumentField REV_PLATE_FIELD = DocumentField.createStringField("Reverse Plate", "", "reverseSeqPlate");
 
-    private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq) {
+    private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq) throws DatabaseServiceException {
         String qualities = seq.confidenceScore;
         DefaultNucleotideSequence sequence;
-        URN urn = new URN("Biocode", limsConnection.getUrn(), "" + seq.id);
+        URN urn = new URN("Biocode", getActiveLIMSConnection().getUrn(), "" + seq.id);
         String name = seq.extractionId + " " + seq.workflowLocus;
 
         if (qualities == null || seq.progress == null || seq.progress.toLowerCase().contains("failed")) {
@@ -1076,7 +1109,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public void addNewCocktails(List<? extends Cocktail> newCocktails) throws DatabaseServiceException {
         if(newCocktails.size() > 0) {
-            limsConnection.addCocktails(newCocktails);
+            getActiveLIMSConnection().addCocktails(newCocktails);
         }
         buildCaches();
     }
@@ -1085,7 +1118,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(!isLoggedIn) {
             throw new DatabaseServiceException("You need to be logged in", false);
         }
-        return limsConnection.deleteAllowed(tableName);
+        return getActiveLIMSConnection().deleteAllowed(tableName);
 
 
     }
@@ -1094,7 +1127,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(deletedCocktails == null || deletedCocktails.size() == 0) {
             return;
         }
-        limsConnection.deleteCocktails(deletedCocktails);
+        getActiveLIMSConnection().deleteCocktails(deletedCocktails);
         buildCaches();
     }
 
@@ -1116,10 +1149,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         } catch (XMLSerializationException e) {
             throw new DatabaseServiceException(e, "Could not read the caches from disk", false);
         }
-        PCRThermocycles = limsConnection.getThermocyclesFromDatabase(Thermocycle.Type.pcr);
-        cyclesequencingThermocycles = limsConnection.getThermocyclesFromDatabase(Thermocycle.Type.cyclesequencing);
-        PCRCocktails = limsConnection.getPCRCocktailsFromDatabase();
-        cyclesequencingCocktails = limsConnection.getCycleSequencingCocktailsFromDatabase();
+        PCRThermocycles = getActiveLIMSConnection().getThermocyclesFromDatabase(Thermocycle.Type.pcr);
+        cyclesequencingThermocycles = getActiveLIMSConnection().getThermocyclesFromDatabase(Thermocycle.Type.cyclesequencing);
+        PCRCocktails = getActiveLIMSConnection().getPCRCocktailsFromDatabase();
+        cyclesequencingCocktails = getActiveLIMSConnection().getCycleSequencingCocktailsFromDatabase();
         try {
             saveCachesToDisk();
         } catch (IOException e) {
@@ -1390,15 +1423,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void removeThermoCycles(List<Thermocycle> cycles,  Thermocycle.Type type) throws DatabaseServiceException {
-        limsConnection.deleteThermoCycles(type, cycles);
+        getActiveLIMSConnection().deleteThermoCycles(type, cycles);
         buildCaches();
     }
 
     public void insertThermocycles(List<Thermocycle> cycles, Thermocycle.Type type) throws DatabaseServiceException {
-        if(limsConnection == null) {
-            throw new DatabaseServiceException("You are not logged in", false);
-        }
-        limsConnection.addThermoCycles(type, cycles);
+        getActiveLIMSConnection().addThermoCycles(type, cycles);
         buildCaches();
     }
 
@@ -1491,7 +1521,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             extractionIds.add(reaction.getExtractionId());
         }
-        return limsConnection.getTissueIdsForExtractionIds(tableName, extractionIds);
+        return getActiveLIMSConnection().getTissueIdsForExtractionIds(tableName, extractionIds);
     }
 
     public void savePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException, BadDataException {
@@ -1548,15 +1578,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
         }
-        limsConnection.savePlates(Collections.singletonList(plate), progress);
+        getActiveLIMSConnection().savePlates(Collections.singletonList(plate), progress);
     }
 
     public void deletePlate(ProgressListener progress, Plate plate) throws DatabaseServiceException {
 
-        Set<Integer> plateIds = limsConnection.deletePlates(Collections.singletonList(plate), progress);
+        Set<Integer> plateIds = getActiveLIMSConnection().deletePlates(Collections.singletonList(plate), progress);
 
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            List<Plate> emptyPlates = limsConnection.getEmptyPlates(plateIds);
+            List<Plate> emptyPlates = getActiveLIMSConnection().getEmptyPlates(plateIds);
             if(emptyPlates.size() > 0) {
                 StringBuilder message = new StringBuilder("Geneious has found the following empty plates in the database.\n  Do you want to delete them as well?\n");
                 for(Plate emptyPlate : emptyPlates) {
@@ -1621,11 +1651,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public Map<BiocodeUtilities.Well, WorkflowDocument> getWorkflowsForCycleSequencingPlate(String plateName) throws DocumentOperationException, DatabaseServiceException {
-        List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(
+        List<Integer> plateIds = getActiveLIMSConnection().getMatchingDocumentsFromLims(
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                         BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, ProgressListener.EMPTY
         ).getPlateIds();
-        List<Plate> plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
+        List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
         if(plates.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }
@@ -1661,11 +1691,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         if(idsToCheck.size() == 0) {
             return Collections.emptyMap();
         }
-        return limsConnection.getWorkflowIds(idsToCheck, loci, reactionType);
+        return getActiveLIMSConnection().getWorkflowIds(idsToCheck, loci, reactionType);
     }
 
     public Map<String, Workflow> getWorkflows(Collection<String> workflowNames) throws DatabaseServiceException {
-        List<Workflow> list = limsConnection.getWorkflowsByName(workflowNames);
+        List<Workflow> list = getActiveLIMSConnection().getWorkflowsByName(workflowNames);
         Map<String, Workflow> result = new HashMap<String, Workflow>();
         for (Workflow workflow : list) {
             result.put(workflow.getName(), workflow);
@@ -1711,11 +1741,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public List<String> getPlatesUsingThermocycle(Thermocycle thermocycle) throws DatabaseServiceException {
-        return limsConnection.getPlatesUsingThermocycle(thermocycle.getId());
+        return getActiveLIMSConnection().getPlatesUsingThermocycle(thermocycle.getId());
     }
 
     public Collection<String> getPlatesUsingCocktail(Cocktail cocktail) throws DatabaseServiceException {
-        return limsConnection.getPlatesUsingCocktail(cocktail.getReactionType(), cocktail.getId());
+        return getActiveLIMSConnection().getPlatesUsingCocktail(cocktail.getReactionType(), cocktail.getId());
     }
 
     public boolean isQueryCancled() {
@@ -1734,11 +1764,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         Query q = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
         try {
-            List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
+            List<Integer> plateIds = getActiveLIMSConnection().getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
             if(plateIds.isEmpty()) {
                 return null;
             }
-            List<Plate> plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
+            List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
             assert(plates.size() <= 1);
             if(plates.isEmpty()) {
                 return null;

@@ -214,31 +214,72 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
     }
 
 
+    private static class PlateAndWell {
+        private String plate;
+        private String well;
+
+        private PlateAndWell(AnnotatedPluginDocument document) {
+            this(document, null);
+        }
+
+        /**
+         * Get the plate and well associated with a trace sequence.  Uses the referenced document if there is one.
+         * Otherwise uses the sequence document.
+         *
+         * @param document The referenced trace document
+         * @param pluginDocument The trace sequence within an assembly
+         */
+        private PlateAndWell(AnnotatedPluginDocument document, PluginDocument pluginDocument) {
+            if(document != null) {
+                plate = getStringOrNull(document.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD.getCode()));
+                well = getStringOrNull(document.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode()));
+            }
+            // Fallback to the plugin document if necessary
+            if(pluginDocument != null) {
+                if (plate == null) {
+                    plate = getStringOrNull(pluginDocument.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD.getCode()));
+                }
+                if (well == null) {
+                    well = getStringOrNull(pluginDocument.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode()));
+                }
+            }
+        }
+
+        private static String getStringOrNull(Object obj) {
+            if(obj == null) {
+                return null;
+            } else {
+                return String.valueOf(obj);
+            }
+        }
+    }
+
     private String getChromatogramProperties(InputType inputType, Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
                                              AnnotatedPluginDocument annotatedDocument, AssemblyResult assemblyResult) throws DocumentOperationException {
-        List<AnnotatedPluginDocument> chromatograms = new ArrayList<AnnotatedPluginDocument>();
+
+        Map<PlateAndWell, AnnotatedPluginDocument> reactionsToChromatograms = new HashMap<PlateAndWell, AnnotatedPluginDocument>();
         if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
             SequenceAlignmentDocument alignment = (SequenceAlignmentDocument)annotatedDocument.getDocument();
             for (int i = 0; i < alignment.getNumberOfSequences(); i ++) {
                 if (i == alignment.getContigReferenceSequenceIndex()) continue;
                 AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
-                if (referencedDocument == null) {
-                    throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" is missing a referened document");
+                SequenceDocument sequence = alignment.getSequence(i);
+
+                if (referencedDocument == null && sequence == null) {
+                    throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" is missing a referened document, please try to regenerate this Contig.");
                 }
-                if (!NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
+                if (referencedDocument != null && !NucleotideSequenceDocument.class.isAssignableFrom(referencedDocument.getDocumentClass())) {
                     throw new DocumentOperationException("Contig \"" + annotatedDocument.getName() + "\" contains a sequence which is not DNA");
                 }
-                chromatograms.add(referencedDocument);
+                reactionsToChromatograms.put(new PlateAndWell(referencedDocument, sequence), referencedDocument);
             }
-        } else if(inputType == InputType.TRACES) {
-            chromatograms.add(annotatedDocument);
+        } else {
+            reactionsToChromatograms.put(new PlateAndWell(annotatedDocument), inputType == InputType.TRACES ? annotatedDocument : null);
         }
 
-        boolean haveSourceChromatograms = !chromatograms.isEmpty();
-        List<AnnotatedPluginDocument> toGetReactionsFrom = haveSourceChromatograms ? chromatograms : Collections.singletonList(annotatedDocument);
-
-        for (AnnotatedPluginDocument doc : toGetReactionsFrom) {
-            String plateName = (String)doc.getFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
+        for (Map.Entry<PlateAndWell, AnnotatedPluginDocument> entry : reactionsToChromatograms.entrySet()) {
+            PlateAndWell plateAndWell = entry.getKey();
+            String plateName = plateAndWell.plate;
             if (plateName == null) {
                 return "FIMS data not annotated on referenced sequence (plate name)";
             }
@@ -276,7 +317,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                 return "Cannot find sequencing plate \"" + plateName + "\"";
             }
 
-            String wellName = (String) doc.getFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD);
+            String wellName = plateAndWell.well;
             if (wellName == null) {
                 return "FIMS data not annotated on referenced sequence (well name)";
             }
@@ -310,8 +351,8 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             assemblyResult.extractionId = reaction.getExtractionId();
 
-            assemblyResult.addReaction((CycleSequencingReaction) reaction,
-                    haveSourceChromatograms ? Collections.singletonList(doc) : Collections.<AnnotatedPluginDocument>emptyList());
+            AnnotatedPluginDocument doc = entry.getValue();
+            assemblyResult.addReaction((CycleSequencingReaction) reaction, doc != null ? Collections.singletonList(doc) : Collections.<AnnotatedPluginDocument>emptyList());
         }
         return null;
     }
@@ -483,7 +524,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                     List<Trace> traces = new ArrayList<Trace>();
                     for (AnnotatedPluginDocument chromatogramDocument : entry.getValue()) {
                         String nameOfFileToExport = chromatogramDocument.getName();
-                        String nameOfFileToExportWithExtensionRemoved = nameOfFileToExport.substring(0, nameOfFileToExport.lastIndexOf("."));
+                        int indexOfLastDot = nameOfFileToExport.lastIndexOf(".");
+                        String nameOfFileToExportWithExtensionRemoved = indexOfLastDot == -1 ? nameOfFileToExport :
+                                nameOfFileToExport.substring(0, indexOfLastDot);
                         File exportFolder = tempFolder;
                         if (new File(exportFolder, nameOfFileToExport).exists() || new File(exportFolder, nameOfFileToExportWithExtensionRemoved + ".scf").exists()) {
                             exportFolder = FileUtilities.createTempDir(true);

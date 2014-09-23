@@ -106,9 +106,40 @@ public class BiocodePlugin extends GeneiousPlugin {
             releaseNotesDisplay = addMultipleLineStringOption("releaseNotes", "", releaseNotes, 10, true);
 
             if (!extraInformation.isEmpty()) {
-                addLabel("<html><br>Note: " + extraInformation + "</html>");
+                addLabel(createHtmlWithWidth(extraInformation, 70));
             }
         }
+
+        private String createHtmlWithWidth(String extraInformation, int width) {
+            String tmp = extraInformation.replaceAll("(\\s)+", " ");
+            if (tmp == null || tmp.length() == 0)
+                return "";
+
+            StringBuilder sb = new StringBuilder("<html><br>Note: ");
+            int start = 0;
+            int end;
+            while (start < tmp.length()) {
+                end = start + width;
+                if (end >= tmp.length() - 1) {
+                    sb.append("<br>").append(tmp.substring(start));
+                    break;
+                }
+
+                int indexOfLastSpace = tmp.substring(start, end).lastIndexOf(" ");
+                if(indexOfLastSpace == -1) {
+                    // If for some reason we have a 70 length word we'll just stop here and add the rest of the text on one line
+                    sb.append("<br>").append(tmp.substring(start));
+                    break;
+                }
+                end = start + indexOfLastSpace;
+                sb.append("<br>").append(tmp.substring(start, end));
+                start = end;
+            }
+
+            sb.append("</html>");
+            return sb.toString();
+        }
+
 
         @Override
         protected JPanel createPanel() {

@@ -1,27 +1,31 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
-import com.biomatters.geneious.publicapi.databaseservice.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.plugins.biocode.labbench.*;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
-
-import java.sql.*;
-import java.util.*;
-import java.util.Date;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.io.InputStream;
-import java.io.IOException;
-
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import org.jdom.input.SAXBuilder;
 import org.jdom.Element;
 import org.jdom.JDOMException;
-import org.jdom.output.XMLOutputter;
+import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.sql.*;
+import java.util.*;
+import java.util.Date;
 
 /**
  * @author steve
@@ -41,6 +45,7 @@ public class MooreaFimsConnection extends FIMSConnection{
     private static final DocumentField LONGITUDE_FIELD = new DocumentField("Longitude", "", "biocode_collecting_event.DecimalLongitude", Double.class, false, false);
     private static final DocumentField LATITUDE_FIELD = new DocumentField("Latitude", "", "biocode_collecting_event.DecimalLatitude", Double.class, false, false);
     static final DocumentField PROJECT_FIELD = new DocumentField("Project Name", "", "biocode_collecting_event.ProjectCode", String.class, false, false);
+    static final DocumentField BIOCODE_PROJECT_FIELD = new DocumentField("Project Name", "", "biocode.ProjectCode", String.class, false, false);
     private static final DocumentField SUBPROJECT_FIELD = new DocumentField("SubProject", "", "biocode.SubProject", String.class, false, false);
     private static final DocumentField SUBSUBPROJECT_FIELD = new DocumentField("SubSubProject", "", "biocode.SubSubProject", String.class, false, false);
 
@@ -246,7 +251,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 
         if(projectsToMatch != null && !projectsToMatch.isEmpty()) {
             queryBuilder.append(" AND ");
-            queryBuilder.append(PROJECT_FIELD.getCode()).append(" IN ");
+            queryBuilder.append(BIOCODE_PROJECT_FIELD.getCode()).append(" IN ");
             SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
         } else if(sqlString == null) {
             return Collections.emptyList();
@@ -448,5 +453,32 @@ public class MooreaFimsConnection extends FIMSConnection{
             }
         }
         return projects.asMap();
+    }
+
+    /**
+     * Typically {@link com.biomatters.geneious.publicapi.documents.DocumentField} created by the Moorea FIMS use the
+     * column name as the code {@link com.biomatters.geneious.publicapi.documents.DocumentField#getCode()}.  But the
+     * following are some special cases where that is not the case.
+     * <ul>
+     *     <li>We are using a core Geneious document field to represent a column in the FIMS</li>
+     *     <li>The column we are using has changed from the original column, but we don't want to create a new document field</li>
+     *     <li>The document field is a concatenation of several fields in the FIMS database</li>
+     * </ul>
+     * This method handles the first two cases where one SQL column maps to the document field.  In any other case it
+     * will just return the code for the supplied document field.
+     *
+     * @param field The {@link com.biomatters.geneious.publicapi.documents.DocumentField}, cannot be null.
+     * @return The matching SQL column name
+     */
+    public static String getSQLColumnNameForDocumentField(DocumentField field) {
+        if (field.equals(DocumentField.ORGANISM_FIELD)) {
+            return "biocode.ScientificName"; //we use the standard organism field so we need to map it to the correct database id
+        } else if (field.equals(DocumentField.COMMON_NAME_FIELD)) {
+            return "biocode.ColloquialName"; //we use the standard common name field so we need to map it to the correct database id
+        } else if(field.equals(PROJECT_FIELD)) {
+            return BIOCODE_PROJECT_FIELD.getCode();
+        } else {
+            return field.getCode();
+        }
     }
 }
