@@ -21,6 +21,6 @@
     <ExtraInformation>
         Upgrading to 2.8.0 will apply a schema fix to MySQL LIMS databases which may take anywhere between a minute and an hour to perform.
         The amount of time depends on the number of traces stored in the database.  If your database has over 30,000 traces
-        then it is recommended that an administrator perform it beforehand. Contact support@mooreasoftware.org for instructions.
+        then it is recommended that an administrator perform it beforehand. Contact support@mooreabiocode.org for instructions.
     </ExtraInformation>
 </PluginVersions>
