@@ -963,20 +963,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
 
-            for (AnnotatedPluginDocument doc : resultDocuments) {
-                DocumentNote note = doc.getDocumentNotes(true).getNote("sequencingPrimer");
-
-                if (note == null) {
-                    continue;
-                }
-
-                System.out.print("workflow: " + doc.getFieldValue("workflowName") + " ");
-                System.out.print("primer: " + note.getFieldValue("fwd_primer_name") + " ");
-                System.out.print("primer sequence: " + note.getFieldValue("fwd_primer_seq") + " ");
-                System.out.print("reverse primer: " + note.getFieldValue("rev_primer_name") + " ");
-                System.out.println("reverse primer sequence: " + note.getFieldValue("rev_primer_seq") + " ");
-            }
-
             return resultDocuments;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
