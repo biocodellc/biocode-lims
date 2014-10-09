@@ -1902,11 +1902,10 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             sql.append(" INNER JOIN workflow ON workflow.id = SR.workflow");
             sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
             sql.append(" LEFT OUTER JOIN pcr ON pcr.workflow = workflow.id AND pcr.id IN");
-            sql.append(" (SELECT MAX(pcr.id) as num");
+            sql.append(" (SELECT MAX(pcr.id)");
             sql.append(" FROM pcr INNER JOIN workflow");
             sql.append(" ON pcr.workflow = workflow.id");
             sql.append(" GROUP BY workflow.id)");
-            sql.append(" GROUP BY assembly.id");
 
             statement = connection.prepareStatement(sql.toString());
             SqlUtilities.fillStatement(sqlValues, statement);
