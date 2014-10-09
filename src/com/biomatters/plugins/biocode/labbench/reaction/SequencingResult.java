@@ -9,7 +9,6 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 
 import javax.swing.*;
@@ -317,7 +316,7 @@ public class SequencingResult implements XMLSerializable {
             public void run() {
                 try {
                     List<AnnotatedPluginDocument> matching = BiocodeService.getInstance().getMatchingAssemblyDocumentsForIds(
-                            null, null, Collections.singletonList(result.getSequenceId()), null, false);
+                            null, Collections.singletonList(result.getSequenceId()), null, false);
                     assert(matching.size() <= 1);
                     for (AnnotatedPluginDocument annotatedPluginDocument : matching) {
                         doc.set((NucleotideSequenceDocument) annotatedPluginDocument.getDocumentOrNull());

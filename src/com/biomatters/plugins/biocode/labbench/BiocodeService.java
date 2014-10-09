@@ -835,7 +835,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching sequence", limsResult.getSequenceIds().size()) + "...");
-                    getMatchingAssemblyDocumentsForIds(null, tissueSamples, limsResult.getSequenceIds(), callback, true);
+                    getMatchingAssemblyDocumentsForIds(tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
             } catch (DatabaseServiceException e) {
@@ -869,7 +869,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     /**
-     * @param workflows     Used to retrieve FIMS data if not null
      * @param samples       Used to retrieve FIMS data if not null
      * @param sequenceIds   The sequences to retrieve
      * @param callback      To add documents to
@@ -877,7 +876,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
      * @return A list of the documents found/added
      * @throws SQLException if anything goes wrong
      */
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(final Collection<WorkflowDocument> workflows, final List<FimsSample> samples,
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(final List<FimsSample> samples,
                                                                             List<Integer> sequenceIds,
                                                                             RetrieveCallback callback,
                                                                             boolean includeFailed)
@@ -897,14 +896,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 AnnotatedPluginDocument doc = createAssemblyDocument(seq);
                 FimsDataGetter getter = new FimsDataGetter() {
                     public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
-                        if (workflows != null) {
-                            for (WorkflowDocument workflow : workflows) {
-                                if (workflow.getId() == seq.workflowId && workflow.getFimsSample() != null) {
-                                    return new FimsData(workflow, null, null);
-                                }
-                            }
-                        }
-
                         String tissueId = seq.sampleId;
                         if (samples != null) {
                             for (FimsSample sample : samples) {
