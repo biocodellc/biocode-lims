@@ -1028,24 +1028,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         doc.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, seq.extractionId);
         doc.setFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD, seq.extractionBarcode);
 
-        String sequencingPrimerNoteCode = "sequencingPrimer";
-        AnnotatedPluginDocument.DocumentNotes documentNotes = doc.getDocumentNotes(true);
-        DocumentNote sequencingPrimerNote = documentNotes.getNote(sequencingPrimerNoteCode);
-        if (sequencingPrimerNote == null) {
-            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType(sequencingPrimerNoteCode);
-            if (sequencingPrimerType != null) {
-                sequencingPrimerNote = sequencingPrimerType.createDocumentNote();
-            }
-        }
-        if (sequencingPrimerNote != null) {
-            sequencingPrimerNote.setFieldValue("fwd_primer_name", seq.forwardPrimerName);
-            sequencingPrimerNote.setFieldValue("fwd_primer_seq", seq.forwardPrimerSequence);
-            sequencingPrimerNote.setFieldValue("rev_primer_name", seq.reversePrimerName);
-            sequencingPrimerNote.setFieldValue("rev_primer_seq", seq.reversePrimerSequence);
-
-            documentNotes.setNote(sequencingPrimerNote);
-            documentNotes.saveNotes();
-        }
+        AnnotateUtilities.setSequencingPrimerNote(doc, seq.forwardPrimerName, seq.forwardPrimerSequence, seq.reversePrimerName, seq.reversePrimerSequence);
 
         doc.setFieldValue(FWD_PLATE_FIELD, seq.forwardPlate);
         doc.setFieldValue(REV_PLATE_FIELD, seq.reversePlate);

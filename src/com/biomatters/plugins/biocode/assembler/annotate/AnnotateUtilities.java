@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDoc
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
-import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
@@ -309,17 +308,7 @@ public class AnnotateUtilities {
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         }
 
-        //annotate the primers...
-        AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
-        DocumentNote note = notes.getNote("sequencingPrimer");
-        if (note == null) {
-            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType("sequencingPrimer");
-            if (sequencingPrimerType != null) {
-                note = sequencingPrimerType.createDocumentNote();
-            }
-        }
-
-        if (note != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
+        if (fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
             AnnotatedPluginDocument forwardPrimer = null;
             DocumentSelectionOption option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(PCROptions.PRIMER_OPTION_ID);
@@ -334,21 +323,65 @@ public class AnnotateUtilities {
                 reversePrimer = value.get(0);
             }
 
+            String forwardPrimerName = null;
+            String forwardPrimerSequence = null;
+            String reversePrimerName = null;
+            String reversePrimerSequence = null;
+
             if (forwardPrimer != null) {
-                note.setFieldValue("fwd_primer_name", forwardPrimer.getName());
-                OligoSequenceDocument sequence = (OligoSequenceDocument) forwardPrimer.getDocument();
-                note.setFieldValue("fwd_primer_seq", sequence.getBindingSequence().toString());
+                forwardPrimerName = forwardPrimer.getName();
+                forwardPrimerSequence = ((OligoSequenceDocument) forwardPrimer.getDocument()).toString();
+
             }
             if (reversePrimer != null) {
-                note.setFieldValue("rev_primer_name", reversePrimer.getName());
-                OligoSequenceDocument sequence = (OligoSequenceDocument) reversePrimer.getDocument();
-                note.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
+                reversePrimerName = reversePrimer.getName();
+                reversePrimerSequence = ((OligoSequenceDocument) reversePrimer.getDocument()).toString();
             }
-            notes.setNote(note);
+
+            setSequencingPrimerNote(annotatedDocument, forwardPrimerName, forwardPrimerSequence, reversePrimerName, reversePrimerSequence);
         }
 
         annotatedDocument.save(updateModifiedDate);
         return fields;
     }
 
+    public static void setSequencingPrimerNote(AnnotatedPluginDocument document,
+                                               String forwardPrimerName,
+                                               String forwardPrimerSequence,
+                                               String reversePrimerName,
+                                               String reversePrimerSequence) {
+        String code = "sequencingPrimer";
+        AnnotatedPluginDocument.DocumentNotes notes = document.getDocumentNotes(true);
+        DocumentNote note = notes.getNote(code);
+
+        if (note == null) {
+            DocumentNoteType type = DocumentNoteUtilities.getNoteType(code);
+            if (type != null) {
+                note = type.createDocumentNote();
+            }
+        }
+
+        if (note != null) {
+            if (!isNullOrEmpty(forwardPrimerName)) {
+                note.setFieldValue("fwd_primer_name", forwardPrimerName);
+            }
+            if (!isNullOrEmpty(forwardPrimerSequence)) {
+                note.setFieldValue("fwd_primer_seq", forwardPrimerSequence);
+            }
+            if (!isNullOrEmpty(reversePrimerName)) {
+                note.setFieldValue("rev_primer_name", reversePrimerName);
+            }
+            if (!isNullOrEmpty(reversePrimerSequence)){
+                note.setFieldValue("rev_primer_seq", reversePrimerSequence);
+            }
+
+            notes.setNote(note);
+
+            notes.saveNotes();
+        }
+    }
+
+    private static boolean isNullOrEmpty(String s) {
+        return s == null || s.isEmpty();
+    }
 }
