@@ -17,7 +17,6 @@ import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
@@ -1880,8 +1879,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             // Note 3: We also only use the first workflow encountered out of the foward/reverse workflow.  Generally this is
             // the same.  But it is possible for the user to edit workflows so that the forward and reverse no longer
             // match.  So we account for that too.
-            StringBuilder sql = new StringBuilder("SELECT assembly.*, workflow.id, workflow.locus, extraction.sampleId, " +
-                    "extraction.extractionId, extraction.extractionBarcode, forwardPlate, reversePlate");
+            StringBuilder sql = new StringBuilder("SELECT assembly.*, workflow.id, workflow.name, workflow.locus, extraction.sampleId, " +
+                    "extraction.extractionId, extraction.extractionBarcode, forwardPlate, reversePlate, pcr.prName, pcr.prSequence, pcr.revPrName, pcr.revPrSequence");
             sql.append(" FROM assembly INNER JOIN");
             sql.append(" (SELECT assembly, ");
             sql.append(" MIN(CASE WHEN F.workflow IS NOT NULL THEN F.workflow ELSE R.workflow END) AS workflow,");
@@ -1902,6 +1901,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             sql.append(" INNER JOIN workflow ON workflow.id = SR.workflow");
             sql.append(" INNER JOIN extraction ON workflow.extractionId = extraction.id");
+            sql.append(" LEFT OUTER JOIN pcr ON pcr.workflow = workflow.id AND pcr.id IN");
+            sql.append(" (SELECT MAX(pcr.id) as num");
+            sql.append(" FROM pcr INNER JOIN workflow");
+            sql.append(" ON pcr.workflow = workflow.id");
+            sql.append(" GROUP BY workflow.id)");
+            sql.append(" GROUP BY assembly.id");
 
             statement = connection.prepareStatement(sql.toString());
             SqlUtilities.fillStatement(sqlValues, statement);
@@ -1938,10 +1943,10 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         seq.confidenceScore = resultSet.getString("assembly.confidence_scores");
         seq.id = resultSet.getInt("assembly.id");
         seq.workflowLocus = resultSet.getString("workflow.locus");
-        seq.extractionId = resultSet.getString("assembly.extraction_id");
         seq.progress = resultSet.getString("progress");
         seq.consensus = resultSet.getString("consensus");
         seq.workflowId = resultSet.getInt("workflow.id");
+        seq.workflowName = resultSet.getString("workflow.name");
         seq.assemblyNotes = resultSet.getString("assembly.notes");
         seq.sampleId = resultSet.getString("sampleId");
         seq.coverage = resultSet.getDouble("assembly.coverage");
@@ -1958,6 +1963,10 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         seq.editRecord = resultSet.getString("assembly.editrecord");
         seq.extractionId = resultSet.getString("extraction.extractionId");
         seq.extractionBarcode = resultSet.getString("extraction.extractionBarcode");
+        seq.forwardPrimerName = resultSet.getString("pcr.prName");
+        seq.forwardPrimerSequence = resultSet.getString("pcr.prSequence");
+        seq.reversePrimerName = resultSet.getString("revPrName");
+        seq.reversePrimerSequence = resultSet.getString("revPrSequence");
         java.sql.Date created = resultSet.getDate("date");
         if(created != null) {
             seq.date = created.getTime();

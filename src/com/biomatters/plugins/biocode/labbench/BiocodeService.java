@@ -11,7 +11,6 @@ import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleot
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -781,17 +780,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     return;
                 }
 
-                List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
-                boolean downloadWorkflows = isDownloadWorkflows(query);
-                boolean downloadSequences = isDownloadSequences(query);
-                boolean needWorkflows = downloadWorkflows || downloadSequences;
-                if(!limsResult.getWorkflowIds().isEmpty() && needWorkflows) {
-                    callback.setMessage((downloadWorkflows ? "Downloading " : "Retrieving ") + BiocodeUtilities.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
-                    workflows.addAll(getActiveLIMSConnection().getWorkflowsById(limsResult.getWorkflowIds(), callback));
-                    if (downloadWorkflows) {
-                        for (WorkflowDocument document : workflows) {
-                            callback.add(document, Collections.<String, Object>emptyMap());
-                        }
+                if(isDownloadWorkflows(query) && !limsResult.getWorkflowIds().isEmpty()) {
+                    callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
+                    List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>(getActiveLIMSConnection().getWorkflowsById(limsResult.getWorkflowIds(), callback));
+                    for (WorkflowDocument document : workflows) {
+                        callback.add(document, Collections.<String, Object>emptyMap());
                     }
                 }
 
@@ -842,7 +835,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching sequence", limsResult.getSequenceIds().size()) + "...");
-                    getMatchingAssemblyDocumentsForIds(workflows, tissueSamples, limsResult.getSequenceIds(), callback, true);
+                    getMatchingAssemblyDocumentsForIds(null, tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
             } catch (DatabaseServiceException e) {
@@ -884,16 +877,15 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
      * @return A list of the documents found/added
      * @throws SQLException if anything goes wrong
      */
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(
-            final Collection<WorkflowDocument> workflows, final List<FimsSample> samples,
-            List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
-        if (sequenceIds.isEmpty()) {
+    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(final Collection<WorkflowDocument> workflows, final List<FimsSample> samples,
+                                                                            List<Integer> sequenceIds,
+                                                                            RetrieveCallback callback,
+                                                                            boolean includeFailed)
+            throws DatabaseServiceException {
+        if (!BiocodeService.getInstance().isLoggedIn() || sequenceIds.isEmpty()) {
             return Collections.emptyList();
         }
 
-        if (!BiocodeService.getInstance().isLoggedIn()) {
-            return Collections.emptyList();
-        }
         List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
         final List<String> missingTissueIds = new ArrayList<String>();
         ArrayList<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
@@ -970,6 +962,21 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
+
+            for (AnnotatedPluginDocument doc : resultDocuments) {
+                DocumentNote note = doc.getDocumentNotes(true).getNote("sequencingPrimer");
+
+                if (note == null) {
+                    continue;
+                }
+
+                System.out.print("workflow: " + doc.getFieldValue("workflowName") + " ");
+                System.out.print("primer: " + note.getFieldValue("fwd_primer_name") + " ");
+                System.out.print("primer sequence: " + note.getFieldValue("fwd_primer_seq") + " ");
+                System.out.print("reverse primer: " + note.getFieldValue("rev_primer_name") + " ");
+                System.out.println("reverse primer sequence: " + note.getFieldValue("rev_primer_seq") + " ");
+            }
+
             return resultDocuments;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
@@ -1014,6 +1021,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             doc.setFieldValue(AnnotateUtilities.NOTES_FIELD, notes);
         }
         doc.setFieldValue(LIMSConnection.WORKFLOW_LOCUS_FIELD, seq.workflowLocus);
+        doc.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, seq.workflowName);
         doc.setFieldValue(AnnotateUtilities.PROGRESS_FIELD, seq.progress);
         doc.setFieldValue(DocumentField.CONTIG_MEAN_COVERAGE, seq.coverage);
         doc.setFieldValue(DocumentField.DISAGREEMENTS, seq.numberOfDisagreements);
@@ -1034,8 +1042,28 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         doc.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, seq.extractionId);
         doc.setFieldValue(LIMSConnection.EXTRACTION_BARCODE_FIELD, seq.extractionBarcode);
 
+        String sequencingPrimerNoteCode = "sequencingPrimer";
+        AnnotatedPluginDocument.DocumentNotes documentNotes = doc.getDocumentNotes(true);
+        DocumentNote sequencingPrimerNote = documentNotes.getNote(sequencingPrimerNoteCode);
+        if (sequencingPrimerNote == null) {
+            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType(sequencingPrimerNoteCode);
+            if (sequencingPrimerType != null) {
+                sequencingPrimerNote = sequencingPrimerType.createDocumentNote();
+            }
+        }
+        if (sequencingPrimerNote != null) {
+            sequencingPrimerNote.setFieldValue("fwd_primer_name", seq.forwardPrimerName);
+            sequencingPrimerNote.setFieldValue("fwd_primer_seq", seq.forwardPrimerSequence);
+            sequencingPrimerNote.setFieldValue("rev_primer_name", seq.reversePrimerName);
+            sequencingPrimerNote.setFieldValue("rev_primer_seq", seq.reversePrimerSequence);
+
+            documentNotes.setNote(sequencingPrimerNote);
+            documentNotes.saveNotes();
+        }
+
         doc.setFieldValue(FWD_PLATE_FIELD, seq.forwardPlate);
         doc.setFieldValue(REV_PLATE_FIELD, seq.reversePlate);
+
         return doc;
     }
 

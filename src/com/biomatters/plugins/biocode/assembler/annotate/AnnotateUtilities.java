@@ -318,6 +318,7 @@ public class AnnotateUtilities {
                 note = sequencingPrimerType.createDocumentNote();
             }
         }
+
         if (note != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
             AnnotatedPluginDocument forwardPrimer = null;
