@@ -4,16 +4,18 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
-import com.biomatters.plugins.biocode.labbench.AssembledSequence;
+import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
-import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
-import com.biomatters.plugins.biocode.server.*;
+import com.biomatters.plugins.biocode.server.RestQueryUtils;
+import com.biomatters.plugins.biocode.server.StringMap;
+import com.biomatters.plugins.biocode.server.XMLSerializableList;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
@@ -40,6 +42,7 @@ public class ServerLimsConnection extends LIMSConnection {
     private String username;
     WebTarget target;
     private static Map<String, String> BCIDRoots = new HashMap<String, String>();
+    public static final int BATCH_SIZE = 100;
 
     @Override
     protected void _connect(PasswordOptions options) throws ConnectionException {
@@ -88,42 +91,12 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException {
-        if(workflowIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        try {
-            Invocation.Builder request = target.path("workflows")
-                    .queryParam("ids", StringUtilities.join(",", workflowIds))
-                    .request(MediaType.APPLICATION_XML_TYPE);
-            return request.get(
-                    new GenericType<XMLSerializableList<WorkflowDocument>>() {
-                    }
-            ).getList();
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+        return this.<WorkflowDocument>requestWithBatch(target.path("workflows"), "ids", workflowIds, MediaType.APPLICATION_XML_TYPE);
     }
 
     @Override
     public List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
-        if(plateIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        try {
-            Invocation.Builder request = target.path("plates")
-                    .queryParam("ids", StringUtilities.join(",", plateIds))
-                    .request(MediaType.APPLICATION_XML_TYPE);
-            return request.get(
-                    new GenericType<XMLSerializableList<Plate>>() {
-                    }
-            ).getList();
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+        return this.<Plate>requestWithBatch(target.path("plates"), "ids", plateIds, MediaType.APPLICATION_XML_TYPE);
     }
 
     @Override
@@ -238,26 +211,27 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
-        if(sequenceIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        try {
-            return target.path("sequences").
-                    queryParam("includeFailed", includeFailed).
-                    queryParam("ids", StringUtilities.join(",", sequenceIds)).
-                    request(MediaType.APPLICATION_XML_TYPE).get(
-                    new GenericType<List<AssembledSequence>>() {
-                    }
-            );
-        } catch (WebApplicationException e){
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e){
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+        final List<AssembledSequence> ret = new ArrayList<AssembledSequence>();
+        new BatchRequestExecutor(sequenceIds) {
+
+            @Override
+            protected void iterateBatch(List batch) {
+                ret.addAll(target.path("sequences").
+                        queryParam("includeFailed", batch).
+                        queryParam("ids", StringUtilities.join(",", batch)).
+                        request(MediaType.APPLICATION_XML_TYPE).get(
+                        new GenericType<List<AssembledSequence>>() {
+                        }
+                ));
+            }
+        }.executeBatch();
+
+        return ret;
     }
 
     @Override
     public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
+        //not sure if this need batch
         try {
             WebTarget resource = target.path("sequences").
                     queryParam("isPass", isPass).
@@ -315,33 +289,28 @@ public class ServerLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public Map<String, String> getTissueIdsForExtractionIds(String tableName, List<String> extractionIds) throws DatabaseServiceException {
-        try {
-            return target.path("plates").path("tissues").
-                    queryParam("type", tableName).
-                    queryParam("extractionIds", StringUtilities.join(",", extractionIds)).
-                    request(MediaType.APPLICATION_XML_TYPE).
-                    get(StringMap.class).getMap();
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+    public Map<String, String> getTissueIdsForExtractionIds(final String tableName, final List<String> extractionIds) throws DatabaseServiceException {
+        final Map<String, String> ret = new HashMap<String, String>();
+        new BatchRequestExecutor(extractionIds) {
+
+            @Override
+            protected void iterateBatch(List batch) {
+                Map<String, String> tmpMap = target.path("plates").path("tissues").
+                        queryParam("type", tableName).
+                        queryParam("extractionIds", StringUtilities.join(",", batch)).
+                        request(MediaType.APPLICATION_XML_TYPE).
+                        get(StringMap.class).getMap();
+
+                ret.putAll(tmpMap);
+            }
+        }.executeBatch();
+
+        return ret;
     }
 
     @Override
     public List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException {
-        try {
-            return target.path("plates").path("extractions").
-                    queryParam("ids", StringUtilities.join(",", extractionIds)).
-                    request(MediaType.APPLICATION_XML_TYPE).
-                    get(new GenericType<XMLSerializableList<ExtractionReaction>>() {
-                    }).getList();
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+        return this.<ExtractionReaction>requestWithBatch(target.path("plates").path("extractions"), "ids", extractionIds, MediaType.APPLICATION_XML_TYPE);
     }
 
     @Override
@@ -396,31 +365,24 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public Set<String> getAllExtractionIdsForTissueIds(List<String> tissueIds) throws DatabaseServiceException {
-        try {
-            return new HashSet<String>(Arrays.asList(
-                    target.path("tissues").path("extractions").queryParam("tissues",
-                            StringUtilities.join(",", tissueIds)).request(MediaType.TEXT_PLAIN_TYPE).get(String.class).split("\\n")
-            ));
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+        final Set<String> ret = new HashSet<String>();
+        new BatchRequestExecutor(tissueIds) {
+
+            @Override
+            protected void iterateBatch(List batch) {
+                ret.addAll(Arrays.asList(
+                        target.path("tissues").path("extractions").queryParam("tissues",
+                                StringUtilities.join(",", batch)).request(MediaType.TEXT_PLAIN_TYPE).get(String.class).split("\\n")
+                ));
+            }
+        }.executeBatch();
+
+        return ret;
     }
 
     @Override
     public List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
-        try {
-            return target.path("extractions").
-                    queryParam("barcodes", StringUtilities.join(",", barcodes)).
-                    request(MediaType.APPLICATION_XML_TYPE).
-                    get(new GenericType<XMLSerializableList<ExtractionReaction>>() {
-                    }).getList();
-        } catch (WebApplicationException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } catch (ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        }
+        return this.<ExtractionReaction>requestWithBatch(target.path("extractions"), "barcodes", barcodes, MediaType.APPLICATION_XML_TYPE);
     }
 
     @Override
@@ -694,5 +656,65 @@ public class ServerLimsConnection extends LIMSConnection {
             return Collections.emptyList();
         }
         return response.readEntity(type);
+    }
+
+    public static<T extends XMLSerializable> List<T> requestWithBatch(WebTarget target, String paramKey, Collection params, MediaType type) throws DatabaseServiceException {
+        return requestWithBatch(target, paramKey, params, BATCH_SIZE, type);
+    }
+
+    public static<T extends XMLSerializable> List<T> requestWithBatch(final WebTarget target, final String paramKey, Collection params, int batchSize, final MediaType type) throws DatabaseServiceException {
+        final List<T> ret = new ArrayList<T>();
+        new BatchRequestExecutor(params){
+
+            @Override
+            protected void iterateBatch(List batch) {
+                Invocation.Builder request = target.queryParam(paramKey, StringUtilities.join(",", batch)).request(type);
+                ret.addAll(request.get(new GenericType<XMLSerializableList<T>>() {}).getList());
+            }
+        }.executeBatch();
+
+        return ret;
+    }
+
+    public abstract static class BatchRequestExecutor {
+        private Collection params;
+
+        public BatchRequestExecutor(Collection params) {
+            this.params = params;
+        }
+
+        public void executeBatch() throws DatabaseServiceException {
+            executeBatch(BATCH_SIZE);
+        }
+
+        public void executeBatch(int batchSize) throws DatabaseServiceException {
+            if(params.isEmpty()) {
+                return;
+            }
+
+            if (batchSize <= 0)
+                batchSize = BATCH_SIZE;
+
+            try {
+                Iterator it = params.iterator();
+                while (it.hasNext()) {
+                    int count = 0;
+                    List batch = new ArrayList();
+                    batch.add(it.next());
+
+                    while (++count < batchSize && it.hasNext()) {
+                        batch.add(it.next());
+                    }
+
+                    iterateBatch(batch);
+                }
+            } catch (WebApplicationException e) {
+                throw new DatabaseServiceException(e, e.getMessage(), false);
+            } catch (ProcessingException e) {
+                throw new DatabaseServiceException(e, e.getMessage(), false);
+            }
+        }
+
+        protected abstract void iterateBatch(List batch);
     }
 }
