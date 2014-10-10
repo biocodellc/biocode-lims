@@ -318,6 +318,7 @@ public class AnnotateUtilities {
                 note = sequencingPrimerType.createDocumentNote();
             }
         }
+        boolean savedDocument = false;
         if (note != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
             AnnotatedPluginDocument forwardPrimer = null;
@@ -344,9 +345,12 @@ public class AnnotateUtilities {
                 note.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
             }
             notes.setNote(note);
+            notes.saveNotes();
+            savedDocument = true;
         }
-
-        annotatedDocument.save(updateModifiedDate);
+        if(!savedDocument) {
+            annotatedDocument.save(updateModifiedDate);
+        }
         return fields;
     }
 
