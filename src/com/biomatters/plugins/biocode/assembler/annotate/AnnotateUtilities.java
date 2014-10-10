@@ -330,12 +330,12 @@ public class AnnotateUtilities {
 
             if (forwardPrimer != null) {
                 forwardPrimerName = forwardPrimer.getName();
-                forwardPrimerSequence = ((OligoSequenceDocument) forwardPrimer.getDocument()).toString();
+                forwardPrimerSequence = ((OligoSequenceDocument) forwardPrimer.getDocument()).getBindingSequence().toString();
 
             }
             if (reversePrimer != null) {
                 reversePrimerName = reversePrimer.getName();
-                reversePrimerSequence = ((OligoSequenceDocument) reversePrimer.getDocument()).toString();
+                reversePrimerSequence = ((OligoSequenceDocument) reversePrimer.getDocument()).getBindingSequence().toString();
             }
 
             setSequencingPrimerNote(annotatedDocument, forwardPrimerName, forwardPrimerSequence, reversePrimerName, reversePrimerSequence);
