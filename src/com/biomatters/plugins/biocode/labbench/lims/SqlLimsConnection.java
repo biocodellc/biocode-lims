@@ -1083,7 +1083,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    public Set<String> getAllExtractionIdsForTissueIds(List<String> tissueIds) throws DatabaseServiceException {
+    public Set<String> getAllExtractionIdsForTissueIds_(List<String> tissueIds) throws DatabaseServiceException {
         if(tissueIds.isEmpty()) {
             return Collections.emptySet();
         }
@@ -1116,7 +1116,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return result;
     }
 
-    public List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
+    public List<ExtractionReaction> getExtractionsFromBarcodes_(List<String> barcodes) throws DatabaseServiceException {
         if (barcodes.size() == 0) {
             System.out.println("empty!");
             return Collections.emptyList();
@@ -1384,7 +1384,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException {
+    public List<WorkflowDocument> getWorkflowsById_(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException {
         Map<Integer, WorkflowDocument> byId = new HashMap<Integer, WorkflowDocument>();
         Map<Integer, String> workflowToSampleId = new HashMap<Integer, String>();
 
@@ -1457,7 +1457,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return new ArrayList<WorkflowDocument>(byId.values());
     }
 
-    public List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
+    public List<Plate> getPlates_(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
         if(plateIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -1859,7 +1859,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+    public List<AssembledSequence> getAssemblyDocuments_(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
         if (sequenceIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -3313,7 +3313,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public Map<String, String> getTissueIdsForExtractionIds(String tableName, List<String> extractionIds) throws DatabaseServiceException {
+    public Map<String, String> getTissueIdsForExtractionIds_(String tableName, List<String> extractionIds) throws DatabaseServiceException {
         String tableDefinition = tableName.equals("extraction") ? tableName : tableName+", extraction, workflow";
         String notExtractionBit = tableName.equals("extraction") ? "" : " workflow.extractionId = extraction.id AND " + tableName + ".workflow = workflow.id AND";
         StringBuilder sql = new StringBuilder("SELECT extraction.extractionId AS extractionId, extraction.sampleId AS tissue FROM " + tableDefinition + " WHERE" + notExtractionBit + " (");
@@ -3416,7 +3416,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException {
+    public List<ExtractionReaction> getExtractionsForIds_(List<String> extractionIds) throws DatabaseServiceException {
         List<ExtractionReaction> extractionsThatExist = new ArrayList<ExtractionReaction>();
         if(extractionIds.isEmpty()) {
             return extractionsThatExist;

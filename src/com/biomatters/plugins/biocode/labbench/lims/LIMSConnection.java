@@ -1,7 +1,10 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
-import com.biomatters.geneious.publicapi.databaseservice.*;
-import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
+import com.biomatters.geneious.publicapi.documents.Condition;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -12,7 +15,6 @@ import jebl.util.ProgressListener;
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
-import java.util.List;
 
 /**
  * @author steve
@@ -23,6 +25,7 @@ public abstract class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
     public static final int EXPECTED_SERVER_MAJOR_VERSION = 9;
     public static final String EXPECTED_SERVER_FULL_VERSION = "9.1";
+    public static final int BATCH_SIZE = 100;
 
     /**
      * Was used for a beta version. But since we didn't actually break backwards compatibility we reverted back to the old
@@ -96,11 +99,37 @@ public abstract class LIMSConnection {
     public abstract void deleteSequences(List<Integer> sequencesToDelete) throws DatabaseServiceException;
     public abstract void deleteSequencesForWorkflowId(Integer workflowId, String extractionId) throws DatabaseServiceException;
 
-    public abstract Map<String,String> getTissueIdsForExtractionIds(String tableName, List<String> extractionIds) throws DatabaseServiceException;
+    public final Map<String,String> getTissueIdsForExtractionIds(final String tableName, List<String> extractionIds) throws DatabaseServiceException {
+        final Map<String, String> ret = new HashMap<String, String>();
+        new BatchRequestExecutor(extractionIds, null) {
+
+            @Override
+            protected void iterateBatch(List batch) throws DatabaseServiceException {
+                ret.putAll(getTissueIdsForExtractionIds_(tableName, batch));
+            }
+        }.executeBatch();
+
+        return ret;
+    }
+
+    protected abstract Map<String,String> getTissueIdsForExtractionIds_(String tableName, List<String> extractionIds) throws DatabaseServiceException;
 
     public abstract Map<Integer,List<MemoryFile>> downloadTraces(List<Integer> reactionIds, ProgressListener progressListener) throws DatabaseServiceException;
 
-    public abstract List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException;
+    public final List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException {
+        final List<ExtractionReaction> ret = new ArrayList<ExtractionReaction>();
+        new BatchRequestExecutor(extractionIds, null) {
+
+            @Override
+            protected void iterateBatch(List batch) throws DatabaseServiceException {
+                ret.addAll(getExtractionsForIds_(batch));
+            }
+        }.executeBatch();
+
+        return ret;
+    }
+
+    protected abstract List<ExtractionReaction> getExtractionsForIds_(List<String> extractionIds) throws DatabaseServiceException;
 
     public abstract void setSequenceStatus(boolean submitted, List<Integer> ids) throws DatabaseServiceException;
 
@@ -276,9 +305,35 @@ public abstract class LIMSConnection {
     public abstract Map<Integer, List<GelImage>> getGelImages(Collection<Integer> plateIds) throws DatabaseServiceException;
 
 
-    public abstract Set<String> getAllExtractionIdsForTissueIds(List<String> tissueIds) throws DatabaseServiceException;
+    public final Set<String> getAllExtractionIdsForTissueIds(final List<String> tissueIds) throws DatabaseServiceException {
+        final Set<String> ret = new HashSet<String>();
+        new BatchRequestExecutor(tissueIds, null) {
 
-    public abstract List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException;
+            @Override
+            protected void iterateBatch(List batch) throws DatabaseServiceException{
+                ret.addAll(getAllExtractionIdsForTissueIds_(batch));
+            }
+        }.executeBatch();
+
+        return ret;
+    }
+
+    protected abstract Set<String> getAllExtractionIdsForTissueIds_(List<String> tissueIds) throws DatabaseServiceException;
+
+    public final List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
+        final List<ExtractionReaction> ret = new ArrayList<ExtractionReaction>();
+        new BatchRequestExecutor(barcodes, null) {
+
+            @Override
+            protected void iterateBatch(List batch) throws DatabaseServiceException{
+                ret.addAll(getExtractionsFromBarcodes_(batch));
+            }
+        }.executeBatch();
+
+        return ret;
+    }
+
+    protected abstract List<ExtractionReaction> getExtractionsFromBarcodes_(List<String> barcodes) throws DatabaseServiceException;
 
     /**
      *
@@ -298,7 +353,19 @@ public abstract class LIMSConnection {
      * @return a list of {@link Plate}s matching the specified IDs.
      * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
      */
-    public abstract List<Plate> getPlates(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
+    public final List<Plate> getPlates(Collection<Integer> plateIds, final Cancelable cancelable) throws DatabaseServiceException {
+        final List<Plate> ret = new ArrayList<Plate>();
+        new BatchRequestExecutor(plateIds, cancelable) {
+            @Override
+            protected void iterateBatch(List batch) throws DatabaseServiceException {
+                ret.addAll(getPlates_(batch, cancelable));
+            }
+        };
+
+        return ret;
+    }
+
+    protected abstract List<Plate> getPlates_(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
 
     /**
      * Sets a database wide property.  Can be retrieved by calling {@link #getProperty(String)}
@@ -326,14 +393,40 @@ public abstract class LIMSConnection {
      * @return a list of {@link com.biomatters.plugins.biocode.labbench.WorkflowDocument}s matching the specified IDs.
      * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
      */
-    public abstract List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
+    public final List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, final Cancelable cancelable) throws DatabaseServiceException {
+        final List<WorkflowDocument> ret = new ArrayList<WorkflowDocument>();
+        new BatchRequestExecutor(workflowIds, cancelable) {
+
+            @Override
+            protected void iterateBatch(List batch) throws DatabaseServiceException {
+                ret.addAll(getWorkflowsById_(batch, cancelable));
+            }
+        }.executeBatch();
+
+        return ret;
+    }
+
+    protected abstract List<WorkflowDocument> getWorkflowsById_(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
     public abstract List<Workflow> getWorkflowsByName(Collection<String> workflowNames) throws DatabaseServiceException;
     public abstract Map<String,String> getWorkflowIds(List<String> idsToCheck, List<String> loci, Reaction.Type reactionType) throws DatabaseServiceException;
     public abstract void renameWorkflow(int id, String newName) throws DatabaseServiceException;
 
     public abstract void testConnection() throws DatabaseServiceException;
 
-    public abstract List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
+    public final List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, final RetrieveCallback callback, final boolean includeFailed) throws DatabaseServiceException {
+        final List<AssembledSequence> ret = new ArrayList<AssembledSequence>();
+        new BatchRequestExecutor(sequenceIds, null) {
+
+            @Override
+            protected void iterateBatch(List batch) throws DatabaseServiceException {
+                ret.addAll(getAssemblyDocuments_(batch, callback, includeFailed));
+            }
+        }.executeBatch();
+
+        return ret;
+    }
+
+    protected abstract List<AssembledSequence> getAssemblyDocuments_(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
 
     /**
      * @param plateIds the ids of the plates to check
@@ -354,4 +447,48 @@ public abstract class LIMSConnection {
     public abstract List<Thermocycle> getThermocyclesFromDatabase(Thermocycle.Type type) throws DatabaseServiceException;
     public abstract void addThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException;
     public abstract void deleteThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException;
+
+    public abstract static class BatchRequestExecutor {
+        private Collection params;
+        private Cancelable cancelable;
+
+        public BatchRequestExecutor(Collection params, Cancelable cancelable) {
+            this.params = params;
+            this.cancelable = cancelable;
+        }
+
+        public void executeBatch() throws DatabaseServiceException {
+            executeBatch(BATCH_SIZE);
+        }
+
+        public void executeBatch(int batchSize) throws DatabaseServiceException {
+            if(params.isEmpty()) {
+                return;
+            }
+
+            if (batchSize <= 0)
+                batchSize = BATCH_SIZE;
+
+            Iterator it = params.iterator();
+            while (it.hasNext() && !isCancled()) {
+                int count = 0;
+                List batch = new ArrayList();
+                batch.add(it.next());
+
+                while (++count < batchSize && it.hasNext()) {
+                    batch.add(it.next());
+                }
+
+                if (isCancled()) return;
+
+                iterateBatch(batch);
+            }
+        }
+
+        private boolean isCancled() {
+            return (cancelable != null && cancelable.isCanceled());
+        }
+
+        protected abstract void iterateBatch(List batch) throws DatabaseServiceException;
+    }
 }
