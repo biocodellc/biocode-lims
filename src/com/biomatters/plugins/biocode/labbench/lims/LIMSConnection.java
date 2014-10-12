@@ -360,7 +360,7 @@ public abstract class LIMSConnection {
             protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
                 ret.addAll(getPlates_(batch, cancelable));
             }
-        };
+        }.executeBatch();
 
         return ret;
     }
