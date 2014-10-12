@@ -101,10 +101,10 @@ public abstract class LIMSConnection {
 
     public final Map<String,String> getTissueIdsForExtractionIds(final String tableName, List<String> extractionIds) throws DatabaseServiceException {
         final Map<String, String> ret = new HashMap<String, String>();
-        new BatchRequestExecutor(extractionIds, null) {
+        new BatchRequestExecutor<String>(extractionIds, null) {
 
             @Override
-            protected void iterateBatch(List batch) throws DatabaseServiceException {
+            protected void iterateBatch(List<String> batch) throws DatabaseServiceException {
                 ret.putAll(getTissueIdsForExtractionIds_(tableName, batch));
             }
         }.executeBatch();
@@ -118,10 +118,10 @@ public abstract class LIMSConnection {
 
     public final List<ExtractionReaction> getExtractionsForIds(List<String> extractionIds) throws DatabaseServiceException {
         final List<ExtractionReaction> ret = new ArrayList<ExtractionReaction>();
-        new BatchRequestExecutor(extractionIds, null) {
+        new BatchRequestExecutor<String>(extractionIds, null) {
 
             @Override
-            protected void iterateBatch(List batch) throws DatabaseServiceException {
+            protected void iterateBatch(List<String> batch) throws DatabaseServiceException {
                 ret.addAll(getExtractionsForIds_(batch));
             }
         }.executeBatch();
@@ -307,10 +307,10 @@ public abstract class LIMSConnection {
 
     public final Set<String> getAllExtractionIdsForTissueIds(final List<String> tissueIds) throws DatabaseServiceException {
         final Set<String> ret = new HashSet<String>();
-        new BatchRequestExecutor(tissueIds, null) {
+        new BatchRequestExecutor<String>(tissueIds, null) {
 
             @Override
-            protected void iterateBatch(List batch) throws DatabaseServiceException{
+            protected void iterateBatch(List<String> batch) throws DatabaseServiceException{
                 ret.addAll(getAllExtractionIdsForTissueIds_(batch));
             }
         }.executeBatch();
@@ -322,10 +322,10 @@ public abstract class LIMSConnection {
 
     public final List<ExtractionReaction> getExtractionsFromBarcodes(List<String> barcodes) throws DatabaseServiceException {
         final List<ExtractionReaction> ret = new ArrayList<ExtractionReaction>();
-        new BatchRequestExecutor(barcodes, null) {
+        new BatchRequestExecutor<String>(barcodes, null) {
 
             @Override
-            protected void iterateBatch(List batch) throws DatabaseServiceException{
+            protected void iterateBatch(List<String> batch) throws DatabaseServiceException{
                 ret.addAll(getExtractionsFromBarcodes_(batch));
             }
         }.executeBatch();
@@ -355,9 +355,9 @@ public abstract class LIMSConnection {
      */
     public final List<Plate> getPlates(Collection<Integer> plateIds, final Cancelable cancelable) throws DatabaseServiceException {
         final List<Plate> ret = new ArrayList<Plate>();
-        new BatchRequestExecutor(plateIds, cancelable) {
+        new BatchRequestExecutor<Integer>(plateIds, cancelable) {
             @Override
-            protected void iterateBatch(List batch) throws DatabaseServiceException {
+            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
                 ret.addAll(getPlates_(batch, cancelable));
             }
         };
@@ -395,10 +395,10 @@ public abstract class LIMSConnection {
      */
     public final List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, final Cancelable cancelable) throws DatabaseServiceException {
         final List<WorkflowDocument> ret = new ArrayList<WorkflowDocument>();
-        new BatchRequestExecutor(workflowIds, cancelable) {
+        new BatchRequestExecutor<Integer>(workflowIds, cancelable) {
 
             @Override
-            protected void iterateBatch(List batch) throws DatabaseServiceException {
+            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
                 ret.addAll(getWorkflowsById_(batch, cancelable));
             }
         }.executeBatch();
@@ -415,10 +415,10 @@ public abstract class LIMSConnection {
 
     public final List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, final RetrieveCallback callback, final boolean includeFailed) throws DatabaseServiceException {
         final List<AssembledSequence> ret = new ArrayList<AssembledSequence>();
-        new BatchRequestExecutor(sequenceIds, null) {
+        new BatchRequestExecutor<Integer>(sequenceIds, null) {
 
             @Override
-            protected void iterateBatch(List batch) throws DatabaseServiceException {
+            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
                 ret.addAll(getAssemblyDocuments_(batch, callback, includeFailed));
             }
         }.executeBatch();
@@ -448,11 +448,11 @@ public abstract class LIMSConnection {
     public abstract void addThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException;
     public abstract void deleteThermoCycles(Thermocycle.Type type, List<Thermocycle> cycles) throws DatabaseServiceException;
 
-    public abstract static class BatchRequestExecutor {
-        private Collection params;
+    public abstract static class BatchRequestExecutor<T> {
+        private Collection<T> params;
         private Cancelable cancelable;
 
-        public BatchRequestExecutor(Collection params, Cancelable cancelable) {
+        public BatchRequestExecutor(Collection<T> params, Cancelable cancelable) {
             this.params = params;
             this.cancelable = cancelable;
         }
@@ -469,10 +469,10 @@ public abstract class LIMSConnection {
             if (batchSize <= 0)
                 batchSize = BATCH_SIZE;
 
-            Iterator it = params.iterator();
+            Iterator<T> it = params.iterator();
             while (it.hasNext() && !isCancled()) {
                 int count = 0;
-                List batch = new ArrayList();
+                List<T> batch = new ArrayList<T>();
                 batch.add(it.next());
 
                 while (++count < batchSize && it.hasNext()) {
@@ -489,6 +489,6 @@ public abstract class LIMSConnection {
             return (cancelable != null && cancelable.isCanceled());
         }
 
-        protected abstract void iterateBatch(List batch) throws DatabaseServiceException;
+        protected abstract void iterateBatch(List<T> batch) throws DatabaseServiceException;
     }
 }
