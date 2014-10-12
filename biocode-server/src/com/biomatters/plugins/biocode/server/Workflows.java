@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.server.security.AccessUtilities;
 import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
+import com.biomatters.plugins.biocode.server.utilities.XMLSerializableListRetrieveCallback;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
@@ -33,14 +34,18 @@ public class Workflows {
     @Consumes("text/plain")
     public XMLSerializableList<WorkflowDocument> getWorkflows(@QueryParam("ids")String idListAsString) {
         try {
-            List<WorkflowDocument> workflows = LIMSInitializationListener.getLimsConnection().getWorkflowsById(
-                    Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY);
+            XMLSerializableListRetrieveCallback<WorkflowDocument> callback =
+                    new XMLSerializableListRetrieveCallback<WorkflowDocument>(WorkflowDocument.class);
+            LIMSInitializationListener.getLimsConnection().retrieveWorkflowsById(
+                    Sequences.getIntegerListFromString(idListAsString), callback);
+            XMLSerializableList<WorkflowDocument> workflows = callback.getResults();
+
             Set<String> extractionIds = new HashSet<String>();
-            for (WorkflowDocument workflow : workflows) {
+            for (WorkflowDocument workflow : workflows.getList()) {
                 extractionIds.add(workflow.getWorkflow().getExtractionId());
             }
             AccessUtilities.checkUserHasRoleForExtractionIds(extractionIds, Role.READER);
-            return new XMLSerializableList<WorkflowDocument>(WorkflowDocument.class, workflows);
+            return workflows;
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
                                                        .entity(e.getMessage())

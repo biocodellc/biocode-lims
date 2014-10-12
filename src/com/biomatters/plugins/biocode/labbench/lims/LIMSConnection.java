@@ -389,21 +389,21 @@ public abstract class LIMSConnection {
      * Retrieves a list of {@link com.biomatters.plugins.biocode.labbench.WorkflowDocument}s from the LIMS by ID.
      *
      * @param workflowIds The collection of IDs of the workflow documents to retrieve
-     * @param cancelable A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
+     * @param callback To add workflow documents to
      * @return a list of {@link com.biomatters.plugins.biocode.labbench.WorkflowDocument}s matching the specified IDs.
      * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
      */
-    public final List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, final Cancelable cancelable) throws DatabaseServiceException {
-        final List<WorkflowDocument> ret = new ArrayList<WorkflowDocument>();
-        new BatchRequestExecutor<Integer>(workflowIds, cancelable) {
+    public final void retrieveWorkflowsById(Collection<Integer> workflowIds, final RetrieveCallback callback) throws DatabaseServiceException {
+        new BatchRequestExecutor<Integer>(workflowIds, callback) {
 
             @Override
             protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
-                ret.addAll(getWorkflowsById_(batch, cancelable));
+                List<WorkflowDocument> workflows = getWorkflowsById_(batch, callback);
+                for (WorkflowDocument workflow : workflows) {
+                    callback.add(workflow, Collections.<String, Object>emptyMap());
+                }
             }
         }.executeBatch();
-
-        return ret;
     }
 
     protected abstract List<WorkflowDocument> getWorkflowsById_(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
