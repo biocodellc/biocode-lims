@@ -34,14 +34,8 @@ public class Plates {
     @Consumes("text/plain")
     public XMLSerializableList<Plate> getForIds(@QueryParam("ids")String idListAsString) {
         try {
-            List<Plate> plates = BiocodeService.retrieveAndGetList(Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY,
-                new BiocodeService.RetrievalOpeartion<Integer, Plate>() {
-                    @Override
-                    protected void retrieve(List<Integer> ids, LimsSearchCallback<Plate> callback) throws DatabaseServiceException {
-                        LIMSInitializationListener.getLimsConnection().retrievePlates(ids, callback);
-                    }
-                }
-            );
+            List<Plate> plates = LIMSInitializationListener.getLimsConnection().getPlates(
+                    Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY);
             AccessUtilities.checkUserHasRoleForPlate(plates, Role.READER);
             return new XMLSerializableList<Plate>(Plate.class, plates);
         } catch (DatabaseServiceException e) {
@@ -99,12 +93,11 @@ public class Plates {
     }
 
     private static void checkAccessForPlateId(int id) throws DatabaseServiceException {
-        // todo
-//        List<Plate> plateList = LIMSInitializationListener.getLimsConnection().retrievePlates(Collections.singletonList(id), ProgressListener.EMPTY);
-//        if(plateList.size() < 1) {
-//            throw new NotFoundException("Could not find plate for id = " + id);
-//        }
-//        AccessUtilities.checkUserHasRoleForPlate(Collections.singletonList(plateList.get(0)), Role.WRITER);
+        List<Plate> plateList = LIMSInitializationListener.getLimsConnection().getPlates(Collections.singletonList(id), ProgressListener.EMPTY);
+        if(plateList.size() < 1) {
+            throw new NotFoundException("Could not find plate for id = " + id);
+        }
+        AccessUtilities.checkUserHasRoleForPlate(Collections.singletonList(plateList.get(0)), Role.WRITER);
     }
 
     @GET

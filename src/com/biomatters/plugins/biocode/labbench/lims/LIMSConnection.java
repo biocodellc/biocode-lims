@@ -357,10 +357,23 @@ public abstract class LIMSConnection {
     public final void retrievePlates(Collection<Integer> plateIds, final LimsSearchCallback<Plate> callback) throws DatabaseServiceException {
         performRetrieval(plateIds, new Operation<Integer, Plate>() {
             @Override
-            List<Plate> doIt(Collection<Integer> inputs) throws DatabaseServiceException {
+            List<Plate> doIt(Collection<Integer> inputs, Cancelable cancelable) throws DatabaseServiceException {
                 return getPlates_(inputs, callback);
             }
         }, callback);
+    }
+
+    /**
+     * A convenience method for {@link #retrievePlates(java.util.Collection, LimsSearchCallback)} that stores results
+     * during retrieval and returns them.
+     *
+     * @see #retrievePlates(java.util.Collection, LimsSearchCallback)
+     */
+    public final List<Plate> getPlates(final List<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
+        LimsSearchCallback.LimsSearchRetrieveListCallback<Plate> callback =
+                                new LimsSearchCallback.LimsSearchRetrieveListCallback<Plate>(cancelable);
+        retrievePlates(plateIds, callback);
+        return callback.getResults();
     }
 
     protected abstract List<Plate> getPlates_(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
@@ -394,11 +407,24 @@ public abstract class LIMSConnection {
     public final void retrieveWorkflowsById(Collection<Integer> workflowIds, final LimsSearchCallback<WorkflowDocument> callback) throws DatabaseServiceException {
         performRetrieval(workflowIds, new Operation<Integer, WorkflowDocument>() {
             @Override
-            List<WorkflowDocument> doIt(Collection<Integer> inputs) throws DatabaseServiceException {
+            List<WorkflowDocument> doIt(Collection<Integer> inputs, Cancelable cancelable) throws DatabaseServiceException {
                 return getWorkflowsById_(inputs, callback);
             }
         },
         callback);
+    }
+
+    /**
+     * A convenience method for {@link #retrieveWorkflowsById(java.util.Collection, LimsSearchCallback)} that stores
+     * results during retrieval and returns them.
+     *
+     * @see #retrieveWorkflowsById(java.util.Collection, LimsSearchCallback)
+     */
+    public final List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException {
+        LimsSearchCallback.LimsSearchRetrieveListCallback<WorkflowDocument> callback =
+                                        new LimsSearchCallback.LimsSearchRetrieveListCallback<WorkflowDocument>(cancelable);
+        retrieveWorkflowsById(workflowIds, callback);
+        return callback.getResults();
     }
 
     protected abstract List<WorkflowDocument> getWorkflowsById_(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
@@ -488,17 +514,17 @@ public abstract class LIMSConnection {
     }
 
     private static abstract class Operation<InputType, OutputType> {
-        abstract List<OutputType> doIt(Collection<InputType> inputs) throws DatabaseServiceException;
+        abstract List<OutputType> doIt(Collection<InputType> inputs, Cancelable cancelable) throws DatabaseServiceException;
     }
 
-    private <IdType, T extends XMLSerializable> void performRetrieval(
+    private static <IdType, T extends XMLSerializable> void performRetrieval(
             Collection<IdType> ids, final Operation<IdType, T> operation, final LimsSearchCallback<T> callback)
             throws DatabaseServiceException {
 
         new BatchRequestExecutor<IdType>(ids, callback) {
             @Override
             protected void iterateBatch(List<IdType> batch) throws DatabaseServiceException {
-                List<T> results = operation.doIt(batch);
+                List<T> results = operation.doIt(batch, ProgressListener.EMPTY);
                 for (T result : results) {
                     callback.addResult(result);
                 }

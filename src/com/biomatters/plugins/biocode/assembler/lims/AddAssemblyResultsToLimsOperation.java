@@ -291,8 +291,9 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                         BiocodeService.getSearchDownloadOptions(false, false, true, false));//Query.Factory.createQuery(plateName);
                 List<Plate> plates;
                 try {
-                    List<Integer> plateIds = BiocodeService.getInstance().getActiveLIMSConnection().getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
-                    plates = BiocodeService.getInstance().getPlates(plateIds, ProgressListener.EMPTY);
+                    LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+                    List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
+                    plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
                 } catch (DatabaseServiceException e) {
                     e.printStackTrace();
                     throw new DocumentOperationException("Failed to connect to FIMS: " + e.getMessage(), e);

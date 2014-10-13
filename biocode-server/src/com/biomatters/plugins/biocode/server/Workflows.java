@@ -35,22 +35,11 @@ public class Workflows {
     public XMLSerializableList<WorkflowDocument> getWorkflows(@QueryParam("ids")String idListAsString) {
         try {
             final Set<String> extractionIds = new HashSet<String>();
-            final List<WorkflowDocument> results = new ArrayList<WorkflowDocument>();
-            LIMSInitializationListener.getLimsConnection().retrieveWorkflowsById(
-                    Sequences.getIntegerListFromString(idListAsString),
-                    new LimsSearchCallback<WorkflowDocument>() {
-                        @Override
-                        public void addResult(WorkflowDocument result) {
-                            extractionIds.add(result.getWorkflow().getExtractionId());
-                            results.add(result);
-                        }
-
-                        @Override
-                        public boolean isCanceled() {
-                            return false;
-                        }
-                    }
-            );
+            final List<WorkflowDocument> results = LIMSInitializationListener.getLimsConnection().getWorkflowsById(
+                    Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY);
+            for (WorkflowDocument result : results) {
+                extractionIds.add(result.getWorkflow().getExtractionId());
+            }
             AccessUtilities.checkUserHasRoleForExtractionIds(extractionIds, Role.READER);
             return new XMLSerializableList<WorkflowDocument>(WorkflowDocument.class, results);
         } catch (DatabaseServiceException e) {

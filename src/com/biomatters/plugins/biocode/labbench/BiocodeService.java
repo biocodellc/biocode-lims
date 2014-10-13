@@ -875,27 +875,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
     }
 
-    public List<Plate> getPlates(final List<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
-        return retrieveAndGetList(plateIds, cancelable, new RetrievalOpeartion<Integer, Plate>() {
-            @Override
-            protected void retrieve(List<Integer> ids, LimsSearchCallback<Plate> callback) throws DatabaseServiceException {
-                getActiveLIMSConnection().retrievePlates(plateIds, callback);
-            }
-        });
-    }
-
-    public static abstract class RetrievalOpeartion<I, T extends XMLSerializable> {
-        protected abstract void retrieve(List<I> ids, LimsSearchCallback<T> callback) throws DatabaseServiceException;
-    }
-
-    public static <InputType, T extends XMLSerializable> List<T> retrieveAndGetList(List<InputType> input, Cancelable cancelable,
-                                                                             RetrievalOpeartion<InputType, T> operation) throws DatabaseServiceException {
-        LimsSearchCallback.LimsSearchRetrieveListCallback<T> callback =
-                        new LimsSearchCallback.LimsSearchRetrieveListCallback<T>(cancelable);
-        operation.retrieve(input, callback);
-        return callback.getResults();
-    }
-
     /**
      * @param samples       Used to retrieve FIMS data if not null
      * @param sequenceIds   The sequences to retrieve
@@ -1667,7 +1646,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                         BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, ProgressListener.EMPTY
         ).getPlateIds();
-        List<Plate> plates = getPlates(plateIds, ProgressListener.EMPTY);
+        List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
         if(plates.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }
@@ -1780,7 +1759,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(plateIds.isEmpty()) {
                 return null;
             }
-            List<Plate> plates = getPlates(plateIds, new LimsSearchCallback.LimsSearchRetrieveListCallback<Plate>(ProgressListener.EMPTY));
+            List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, new LimsSearchCallback.LimsSearchRetrieveListCallback<Plate>(ProgressListener.EMPTY));
             assert(plates.size() <= 1);
             if(plates.isEmpty()) {
                 return null;
