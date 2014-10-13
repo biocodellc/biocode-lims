@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.labbench.rest.client;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
-import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
@@ -238,7 +237,7 @@ public class ServerLimsConnection extends LIMSConnection {
     }
 
     @Override
-    public List<AssembledSequence> getAssemblyDocuments_(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+    public List<AssembledSequence> getAssemblySequences_(Collection<Integer> sequenceIds, Cancelable cancelable, boolean includeFailed) throws DatabaseServiceException {
         try {
             return target.path("sequences").
                     queryParam("includeFailed", sequenceIds).

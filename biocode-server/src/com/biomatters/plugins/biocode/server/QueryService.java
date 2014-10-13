@@ -79,7 +79,7 @@ public class QueryService {
             extractionIds.addAll(extractionIdsForPlate);
         }
 
-        List<AssembledSequence> sequences = LIMSInitializationListener.getLimsConnection().getAssemblyDocuments(result.getSequenceIds(), null, true);
+        List<AssembledSequence> sequences = LIMSInitializationListener.getLimsConnection().getAssemblySequences(result.getSequenceIds(), null, true);
         for (AssembledSequence sequence : sequences) {
             extractionIds.add(sequence.extractionId);
         }

@@ -5,7 +5,6 @@ import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -434,20 +433,23 @@ public abstract class LIMSConnection {
 
     public abstract void testConnection() throws DatabaseServiceException;
 
-    public final List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, final RetrieveCallback callback, final boolean includeFailed) throws DatabaseServiceException {
-        final List<AssembledSequence> ret = new ArrayList<AssembledSequence>();
-        new BatchRequestExecutor<Integer>(sequenceIds, null) {
-
+    public final void retrieveAssembledSequences(List<Integer> sequenceIds, LimsSearchCallback<AssembledSequence> callback, final boolean includeFailed) throws DatabaseServiceException {
+        performRetrieval(sequenceIds, new Operation<Integer, AssembledSequence>() {
             @Override
-            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
-                ret.addAll(getAssemblyDocuments_(batch, callback, includeFailed));
+            List<AssembledSequence> doIt(Collection<Integer> inputs, Cancelable cancelable) throws DatabaseServiceException {
+                return getAssemblySequences_(inputs, cancelable, includeFailed);
             }
-        }.executeBatch();
-
-        return ret;
+        }, callback);
     }
 
-    protected abstract List<AssembledSequence> getAssemblyDocuments_(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
+    public final List<AssembledSequence> getAssemblySequences(List<Integer> sequenceIds, RetrieveCallback cancelable, boolean includeFailed) throws DatabaseServiceException {
+        LimsSearchCallback.LimsSearchRetrieveListCallback<AssembledSequence> callback =
+                                                new LimsSearchCallback.LimsSearchRetrieveListCallback<AssembledSequence>(cancelable);
+        retrieveAssembledSequences(sequenceIds, callback, includeFailed);
+        return callback.getResults();
+    }
+
+    protected abstract List<AssembledSequence> getAssemblySequences_(Collection<Integer> sequenceIds, Cancelable cancelable, boolean includeFailed) throws DatabaseServiceException;
 
     /**
      * @param plateIds the ids of the plates to check
@@ -517,15 +519,15 @@ public abstract class LIMSConnection {
         abstract List<OutputType> doIt(Collection<InputType> inputs, Cancelable cancelable) throws DatabaseServiceException;
     }
 
-    private static <IdType, T extends XMLSerializable> void performRetrieval(
-            Collection<IdType> ids, final Operation<IdType, T> operation, final LimsSearchCallback<T> callback)
+    private static <IdType, ResultType> void performRetrieval(
+            Collection<IdType> ids, final Operation<IdType, ResultType> operation, final LimsSearchCallback<ResultType> callback)
             throws DatabaseServiceException {
 
         new BatchRequestExecutor<IdType>(ids, callback) {
             @Override
             protected void iterateBatch(List<IdType> batch) throws DatabaseServiceException {
-                List<T> results = operation.doIt(batch, ProgressListener.EMPTY);
-                for (T result : results) {
+                List<ResultType> results = operation.doIt(batch, ProgressListener.EMPTY);
+                for (ResultType result : results) {
                     callback.addResult(result);
                 }
             }
