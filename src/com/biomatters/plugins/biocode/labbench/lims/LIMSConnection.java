@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -349,20 +350,17 @@ public abstract class LIMSConnection {
      * Retrieves a list of {@link Plate}s from the LIMS by ID.
      *
      * @param plateIds The collection of IDs of the plates to retrieve
-     * @param cancelable A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
+     * @param callback A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
      * @return a list of {@link Plate}s matching the specified IDs.
      * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
      */
-    public final List<Plate> getPlates(Collection<Integer> plateIds, final Cancelable cancelable) throws DatabaseServiceException {
-        final List<Plate> ret = new ArrayList<Plate>();
-        new BatchRequestExecutor<Integer>(plateIds, cancelable) {
+    public final void retrievePlates(Collection<Integer> plateIds, final LimsSearchCallback<Plate> callback) throws DatabaseServiceException {
+        performRetrieval(plateIds, new Operation<Integer, Plate>() {
             @Override
-            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
-                ret.addAll(getPlates_(batch, cancelable));
+            List<Plate> doIt(Collection<Integer> inputs) throws DatabaseServiceException {
+                return getPlates_(inputs, callback);
             }
-        }.executeBatch();
-
-        return ret;
+        }, callback);
     }
 
     protected abstract List<Plate> getPlates_(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
@@ -393,17 +391,14 @@ public abstract class LIMSConnection {
      * @return a list of {@link com.biomatters.plugins.biocode.labbench.WorkflowDocument}s matching the specified IDs.
      * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
      */
-    public final void retrieveWorkflowsById(Collection<Integer> workflowIds, final RetrieveCallback callback) throws DatabaseServiceException {
-        new BatchRequestExecutor<Integer>(workflowIds, callback) {
-
+    public final void retrieveWorkflowsById(Collection<Integer> workflowIds, final LimsSearchCallback<WorkflowDocument> callback) throws DatabaseServiceException {
+        performRetrieval(workflowIds, new Operation<Integer, WorkflowDocument>() {
             @Override
-            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
-                List<WorkflowDocument> workflows = getWorkflowsById_(batch, callback);
-                for (WorkflowDocument workflow : workflows) {
-                    callback.add(workflow, Collections.<String, Object>emptyMap());
-                }
+            List<WorkflowDocument> doIt(Collection<Integer> inputs) throws DatabaseServiceException {
+                return getWorkflowsById_(inputs, callback);
             }
-        }.executeBatch();
+        },
+        callback);
     }
 
     protected abstract List<WorkflowDocument> getWorkflowsById_(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
@@ -490,5 +485,24 @@ public abstract class LIMSConnection {
         }
 
         protected abstract void iterateBatch(List<T> batch) throws DatabaseServiceException;
+    }
+
+    private static abstract class Operation<InputType, OutputType> {
+        abstract List<OutputType> doIt(Collection<InputType> inputs) throws DatabaseServiceException;
+    }
+
+    private <IdType, T extends XMLSerializable> void performRetrieval(
+            Collection<IdType> ids, final Operation<IdType, T> operation, final LimsSearchCallback<T> callback)
+            throws DatabaseServiceException {
+
+        new BatchRequestExecutor<IdType>(ids, callback) {
+            @Override
+            protected void iterateBatch(List<IdType> batch) throws DatabaseServiceException {
+                List<T> results = operation.doIt(batch);
+                for (T result : results) {
+                    callback.addResult(result);
+                }
+            }
+        }.executeBatch();
     }
 }

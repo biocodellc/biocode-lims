@@ -22,10 +22,13 @@ import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchCallback;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
+import com.google.common.base.Function;
+import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -764,16 +767,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 LimsSearchResult limsResult = getActiveLIMSConnection().getMatchingDocumentsFromLims(query,
                         areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
 
-                List<Plate> plates;
                 if(!limsResult.getPlateIds().isEmpty() && isDownloadPlates(query)) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching plate document", limsResult.getPlateIds().size()) + "...");
-                    plates = getActiveLIMSConnection().getPlates(limsResult.getPlateIds(), callback);
-                    for (Plate plate : plates) {
-                        PlateDocument plateDocument = new PlateDocument(plate);
-                        if (isDownloadPlates(query) && callback != null) {
-                            callback.add(plateDocument, Collections.<String, Object>emptyMap());
-                        }
-                    }
+                    getActiveLIMSConnection().retrievePlates(
+                            limsResult.getPlateIds(),
+                            LimsSearchCallback.forRetrieveCallback(callback, new Function<Plate, PlateDocument>() {
+                                @Override
+                                public PlateDocument apply(Plate plate) {
+                                    return new PlateDocument(plate);
+                                }
+                            })
+                    );
                 }
 
                 if(callback.isCanceled()) {
@@ -782,7 +786,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                 if(isDownloadWorkflows(query) && !limsResult.getWorkflowIds().isEmpty()) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
-                    getActiveLIMSConnection().retrieveWorkflowsById(limsResult.getWorkflowIds(), callback);
+                    getActiveLIMSConnection().retrieveWorkflowsById(limsResult.getWorkflowIds(),
+                            LimsSearchCallback.forRetrieveCallback(callback, new Function<WorkflowDocument, PluginDocument>() {
+                                @Override
+                                public PluginDocument apply(WorkflowDocument workflowDocument) {
+                                    return workflowDocument;
+                                }
+                            }));
                 }
 
                 if(callback.isCanceled()) {
@@ -863,6 +873,27 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 activeCallbacks.remove(callback);
             }
         }
+    }
+
+    public List<Plate> getPlates(final List<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
+        return retrieveAndGetList(plateIds, cancelable, new RetrievalOpeartion<Integer, Plate>() {
+            @Override
+            protected void retrieve(List<Integer> ids, LimsSearchCallback<Plate> callback) throws DatabaseServiceException {
+                getActiveLIMSConnection().retrievePlates(plateIds, callback);
+            }
+        });
+    }
+
+    public static abstract class RetrievalOpeartion<I, T extends XMLSerializable> {
+        protected abstract void retrieve(List<I> ids, LimsSearchCallback<T> callback) throws DatabaseServiceException;
+    }
+
+    public static <InputType, T extends XMLSerializable> List<T> retrieveAndGetList(List<InputType> input, Cancelable cancelable,
+                                                                             RetrievalOpeartion<InputType, T> operation) throws DatabaseServiceException {
+        LimsSearchCallback.LimsSearchRetrieveListCallback<T> callback =
+                        new LimsSearchCallback.LimsSearchRetrieveListCallback<T>(cancelable);
+        operation.retrieve(input, callback);
+        return callback.getResults();
     }
 
     /**
@@ -1636,7 +1667,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{plateName},
                         BiocodeService.getSearchDownloadOptions(false, false, true, false)), null, ProgressListener.EMPTY
         ).getPlateIds();
-        List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
+        List<Plate> plates = getPlates(plateIds, ProgressListener.EMPTY);
         if(plates.size() == 0) {
             throw new DocumentOperationException("The plate '"+plateName+"' does not exist in the database.");
         }
@@ -1749,7 +1780,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(plateIds.isEmpty()) {
                 return null;
             }
-            List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
+            List<Plate> plates = getPlates(plateIds, new LimsSearchCallback.LimsSearchRetrieveListCallback<Plate>(ProgressListener.EMPTY));
             assert(plates.size() <= 1);
             if(plates.isEmpty()) {
                 return null;

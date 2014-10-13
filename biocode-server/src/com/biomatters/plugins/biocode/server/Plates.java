@@ -3,6 +3,8 @@ package com.biomatters.plugins.biocode.server;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchCallback;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
@@ -32,8 +34,14 @@ public class Plates {
     @Consumes("text/plain")
     public XMLSerializableList<Plate> getForIds(@QueryParam("ids")String idListAsString) {
         try {
-            List<Plate> plates = LIMSInitializationListener.getLimsConnection().getPlates(
-                    Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY);
+            List<Plate> plates = BiocodeService.retrieveAndGetList(Sequences.getIntegerListFromString(idListAsString), ProgressListener.EMPTY,
+                new BiocodeService.RetrievalOpeartion<Integer, Plate>() {
+                    @Override
+                    protected void retrieve(List<Integer> ids, LimsSearchCallback<Plate> callback) throws DatabaseServiceException {
+                        LIMSInitializationListener.getLimsConnection().retrievePlates(ids, callback);
+                    }
+                }
+            );
             AccessUtilities.checkUserHasRoleForPlate(plates, Role.READER);
             return new XMLSerializableList<Plate>(Plate.class, plates);
         } catch (DatabaseServiceException e) {
@@ -91,11 +99,12 @@ public class Plates {
     }
 
     private static void checkAccessForPlateId(int id) throws DatabaseServiceException {
-        List<Plate> plateList = LIMSInitializationListener.getLimsConnection().getPlates(Collections.singletonList(id), ProgressListener.EMPTY);
-        if(plateList.size() < 1) {
-            throw new NotFoundException("Could not find plate for id = " + id);
-        }
-        AccessUtilities.checkUserHasRoleForPlate(Collections.singletonList(plateList.get(0)), Role.WRITER);
+        // todo
+//        List<Plate> plateList = LIMSInitializationListener.getLimsConnection().retrievePlates(Collections.singletonList(id), ProgressListener.EMPTY);
+//        if(plateList.size() < 1) {
+//            throw new NotFoundException("Could not find plate for id = " + id);
+//        }
+//        AccessUtilities.checkUserHasRoleForPlate(Collections.singletonList(plateList.get(0)), Role.WRITER);
     }
 
     @GET

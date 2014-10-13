@@ -7,11 +7,11 @@ import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchCallback;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.server.security.AccessUtilities;
 import com.biomatters.plugins.biocode.server.security.Role;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
-import com.biomatters.plugins.biocode.server.utilities.XMLSerializableListRetrieveCallback;
 import jebl.util.ProgressListener;
 
 import javax.ws.rs.*;
@@ -34,18 +34,25 @@ public class Workflows {
     @Consumes("text/plain")
     public XMLSerializableList<WorkflowDocument> getWorkflows(@QueryParam("ids")String idListAsString) {
         try {
-            XMLSerializableListRetrieveCallback<WorkflowDocument> callback =
-                    new XMLSerializableListRetrieveCallback<WorkflowDocument>(WorkflowDocument.class);
+            final Set<String> extractionIds = new HashSet<String>();
+            final List<WorkflowDocument> results = new ArrayList<WorkflowDocument>();
             LIMSInitializationListener.getLimsConnection().retrieveWorkflowsById(
-                    Sequences.getIntegerListFromString(idListAsString), callback);
-            XMLSerializableList<WorkflowDocument> workflows = callback.getResults();
+                    Sequences.getIntegerListFromString(idListAsString),
+                    new LimsSearchCallback<WorkflowDocument>() {
+                        @Override
+                        public void addResult(WorkflowDocument result) {
+                            extractionIds.add(result.getWorkflow().getExtractionId());
+                            results.add(result);
+                        }
 
-            Set<String> extractionIds = new HashSet<String>();
-            for (WorkflowDocument workflow : workflows.getList()) {
-                extractionIds.add(workflow.getWorkflow().getExtractionId());
-            }
+                        @Override
+                        public boolean isCanceled() {
+                            return false;
+                        }
+                    }
+            );
             AccessUtilities.checkUserHasRoleForExtractionIds(extractionIds, Role.READER);
-            return workflows;
+            return new XMLSerializableList<WorkflowDocument>(WorkflowDocument.class, results);
         } catch (DatabaseServiceException e) {
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
                                                        .entity(e.getMessage())
