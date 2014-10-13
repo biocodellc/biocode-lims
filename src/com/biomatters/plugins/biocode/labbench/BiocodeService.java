@@ -904,8 +904,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     @Nullable
                     @Override
                     public AnnotatedPluginDocument apply(final @Nullable AssembledSequence seq) {
-                        DocumentOperationException exception = exceptionDuringAnnotate.get();
-                        if(exception != null) {
+                        //noinspection ThrowableResultOfMethodCallIgnored
+                        if(exceptionDuringAnnotate.get() != null) {
                             return null;  // exception has to be thrown later.  Function doesn't throw exceptions
                         }
 
