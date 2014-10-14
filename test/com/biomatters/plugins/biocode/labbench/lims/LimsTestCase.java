@@ -172,7 +172,7 @@ public abstract class LimsTestCase extends Assert {
         return pcrPlate;
     }
 
-    protected void saveCyclesequencingPlate(String plateName, String locus, String direction, BiocodeService service, Plate copyReactionsFrom, String... extractionIds) throws DatabaseServiceException, BadDataException, DocumentOperationException {
+    protected Plate saveCyclesequencingPlate(String plateName, String locus, String direction, BiocodeService service, Plate copyReactionsFrom, String... extractionIds) throws DatabaseServiceException, BadDataException, DocumentOperationException {
         Plate plate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
         if(copyReactionsFrom != null) {
             NewPlateDocumentOperation.copyPlateOfSameSize(copyReactionsFrom, plate, null);
@@ -190,5 +190,6 @@ public abstract class LimsTestCase extends Assert {
             reaction.getOptions().setValue(CycleSequencingOptions.DIRECTION, direction);
         }
         service.savePlate(plate, ProgressListener.EMPTY);
+        return plate;
     }
 }
