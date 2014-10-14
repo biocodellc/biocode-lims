@@ -24,7 +24,7 @@ import java.util.Date;
 public abstract class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
     public static final int EXPECTED_SERVER_MAJOR_VERSION = 9;
-    public static final String EXPECTED_SERVER_FULL_VERSION = "9.1";
+    public static final String EXPECTED_SERVER_FULL_VERSION = "9.2";
     public static final int BATCH_SIZE = 100;
 
     /**
