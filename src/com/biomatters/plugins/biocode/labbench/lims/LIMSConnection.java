@@ -26,6 +26,8 @@ public abstract class LIMSConnection {
     public static final int EXPECTED_SERVER_MAJOR_VERSION = 9;
     public static final String EXPECTED_SERVER_FULL_VERSION = "9.2";
     public static final int BATCH_SIZE = 100;
+    public static final String EXPECTED_SERVER_FULL_VERSION = "9.1";
+    public static final int BATCH_SIZE = 200;
 
     /**
      * Was used for a beta version. But since we didn't actually break backwards compatibility we reverted back to the old
@@ -349,20 +351,30 @@ public abstract class LIMSConnection {
      * Retrieves a list of {@link Plate}s from the LIMS by ID.
      *
      * @param plateIds The collection of IDs of the plates to retrieve
-     * @param cancelable A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
+     * @param callback A cancelable to cancel the search task.  Cannot be null.  Can be a {@link jebl.util.ProgressListener#EMPTY}
      * @return a list of {@link Plate}s matching the specified IDs.
      * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
      */
-    public final List<Plate> getPlates(Collection<Integer> plateIds, final Cancelable cancelable) throws DatabaseServiceException {
-        final List<Plate> ret = new ArrayList<Plate>();
-        new BatchRequestExecutor<Integer>(plateIds, cancelable) {
+    public final void retrievePlates(Collection<Integer> plateIds, final LimsSearchCallback<Plate> callback) throws DatabaseServiceException {
+        performRetrieval(plateIds, new Operation<Integer, Plate>() {
             @Override
-            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
-                ret.addAll(getPlates_(batch, cancelable));
+            List<Plate> doIt(Collection<Integer> inputs, Cancelable cancelable) throws DatabaseServiceException {
+                return getPlates_(inputs, callback);
             }
-        }.executeBatch();
+        }, callback);
+    }
 
-        return ret;
+    /**
+     * A convenience method for {@link #retrievePlates(java.util.Collection, LimsSearchCallback)} that stores results
+     * during retrieval and returns them.
+     *
+     * @see #retrievePlates(java.util.Collection, LimsSearchCallback)
+     */
+    public final List<Plate> getPlates(final List<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException {
+        LimsSearchCallback.LimsSearchRetrieveListCallback<Plate> callback =
+                                new LimsSearchCallback.LimsSearchRetrieveListCallback<Plate>(cancelable);
+        retrievePlates(plateIds, callback);
+        return callback.getResults();
     }
 
     protected abstract List<Plate> getPlates_(Collection<Integer> plateIds, Cancelable cancelable) throws DatabaseServiceException;
@@ -393,17 +405,27 @@ public abstract class LIMSConnection {
      * @return a list of {@link com.biomatters.plugins.biocode.labbench.WorkflowDocument}s matching the specified IDs.
      * @throws DatabaseServiceException if a problem happens while communicating with the LIMS
      */
-    public final void retrieveWorkflowsById(Collection<Integer> workflowIds, final RetrieveCallback callback) throws DatabaseServiceException {
-        new BatchRequestExecutor<Integer>(workflowIds, callback) {
-
+    public final void retrieveWorkflowsById(Collection<Integer> workflowIds, final LimsSearchCallback<WorkflowDocument> callback) throws DatabaseServiceException {
+        performRetrieval(workflowIds, new Operation<Integer, WorkflowDocument>() {
             @Override
-            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
-                List<WorkflowDocument> workflows = getWorkflowsById_(batch, callback);
-                for (WorkflowDocument workflow : workflows) {
-                    callback.add(workflow, Collections.<String, Object>emptyMap());
-                }
+            List<WorkflowDocument> doIt(Collection<Integer> inputs, Cancelable cancelable) throws DatabaseServiceException {
+                return getWorkflowsById_(inputs, callback);
             }
-        }.executeBatch();
+        },
+        callback);
+    }
+
+    /**
+     * A convenience method for {@link #retrieveWorkflowsById(java.util.Collection, LimsSearchCallback)} that stores
+     * results during retrieval and returns them.
+     *
+     * @see #retrieveWorkflowsById(java.util.Collection, LimsSearchCallback)
+     */
+    public final List<WorkflowDocument> getWorkflowsById(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException {
+        LimsSearchCallback.LimsSearchRetrieveListCallback<WorkflowDocument> callback =
+                                        new LimsSearchCallback.LimsSearchRetrieveListCallback<WorkflowDocument>(cancelable);
+        retrieveWorkflowsById(workflowIds, callback);
+        return callback.getResults();
     }
 
     protected abstract List<WorkflowDocument> getWorkflowsById_(Collection<Integer> workflowIds, Cancelable cancelable) throws DatabaseServiceException;
@@ -413,20 +435,23 @@ public abstract class LIMSConnection {
 
     public abstract void testConnection() throws DatabaseServiceException;
 
-    public final List<AssembledSequence> getAssemblyDocuments(List<Integer> sequenceIds, final RetrieveCallback callback, final boolean includeFailed) throws DatabaseServiceException {
-        final List<AssembledSequence> ret = new ArrayList<AssembledSequence>();
-        new BatchRequestExecutor<Integer>(sequenceIds, null) {
-
+    public final void retrieveAssembledSequences(List<Integer> sequenceIds, LimsSearchCallback<AssembledSequence> callback, final boolean includeFailed) throws DatabaseServiceException {
+        performRetrieval(sequenceIds, new Operation<Integer, AssembledSequence>() {
             @Override
-            protected void iterateBatch(List<Integer> batch) throws DatabaseServiceException {
-                ret.addAll(getAssemblyDocuments_(batch, callback, includeFailed));
+            List<AssembledSequence> doIt(Collection<Integer> inputs, Cancelable cancelable) throws DatabaseServiceException {
+                return getAssemblySequences_(inputs, cancelable, includeFailed);
             }
-        }.executeBatch();
-
-        return ret;
+        }, callback);
     }
 
-    protected abstract List<AssembledSequence> getAssemblyDocuments_(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException;
+    public final List<AssembledSequence> getAssemblySequences(List<Integer> sequenceIds, RetrieveCallback cancelable, boolean includeFailed) throws DatabaseServiceException {
+        LimsSearchCallback.LimsSearchRetrieveListCallback<AssembledSequence> callback =
+                                                new LimsSearchCallback.LimsSearchRetrieveListCallback<AssembledSequence>(cancelable);
+        retrieveAssembledSequences(sequenceIds, callback, includeFailed);
+        return callback.getResults();
+    }
+
+    protected abstract List<AssembledSequence> getAssemblySequences_(Collection<Integer> sequenceIds, Cancelable cancelable, boolean includeFailed) throws DatabaseServiceException;
 
     /**
      * @param plateIds the ids of the plates to check
@@ -490,5 +515,24 @@ public abstract class LIMSConnection {
         }
 
         protected abstract void iterateBatch(List<T> batch) throws DatabaseServiceException;
+    }
+
+    private static abstract class Operation<InputType, OutputType> {
+        abstract List<OutputType> doIt(Collection<InputType> inputs, Cancelable cancelable) throws DatabaseServiceException;
+    }
+
+    private static <IdType, ResultType> void performRetrieval(
+            Collection<IdType> ids, final Operation<IdType, ResultType> operation, final LimsSearchCallback<ResultType> callback)
+            throws DatabaseServiceException {
+
+        new BatchRequestExecutor<IdType>(ids, callback) {
+            @Override
+            protected void iterateBatch(List<IdType> batch) throws DatabaseServiceException {
+                List<ResultType> results = operation.doIt(batch, ProgressListener.EMPTY);
+                for (ResultType result : results) {
+                    callback.addResult(result);
+                }
+            }
+        }.executeBatch();
     }
 }

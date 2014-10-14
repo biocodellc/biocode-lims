@@ -22,10 +22,12 @@ import com.biomatters.plugins.biocode.labbench.connection.ConnectionManager;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsSearchCallback;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.labbench.reporting.ReportingService;
+import com.google.common.base.Function;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.jdom.JDOMException;
@@ -34,6 +36,7 @@ import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 import org.virion.jam.framework.AbstractFrame;
 
+import javax.annotation.Nullable;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -47,6 +50,7 @@ import java.util.*;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -70,7 +74,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     private Driver driver;
     private Driver localDriver;
-    private static BiocodeService instance = new BiocodeService();;
+    private static BiocodeService instance = new BiocodeService();
     public final Map<String, Image[]> imageCache = new HashMap<String, Image[]>();
     private File dataDirectory;
     private static final long FIMS_CONNECTION_TIMEOUT_THRESHOLD_MILLISECONDS = 60000;
@@ -764,16 +768,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 LimsSearchResult limsResult = getActiveLIMSConnection().getMatchingDocumentsFromLims(query,
                         areBrowseQueries(fimsQueries) ? null : tissueIdsMatchingFimsQuery, callback);
 
-                List<Plate> plates;
                 if(!limsResult.getPlateIds().isEmpty() && isDownloadPlates(query)) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching plate document", limsResult.getPlateIds().size()) + "...");
-                    plates = getActiveLIMSConnection().getPlates(limsResult.getPlateIds(), callback);
-                    for (Plate plate : plates) {
-                        PlateDocument plateDocument = new PlateDocument(plate);
-                        if (isDownloadPlates(query) && callback != null) {
-                            callback.add(plateDocument, Collections.<String, Object>emptyMap());
-                        }
-                    }
+                    getActiveLIMSConnection().retrievePlates(
+                            limsResult.getPlateIds(),
+                            LimsSearchCallback.forRetrievePluginDocumentCallback(callback, new Function<Plate, PlateDocument>() {
+                                @Override
+                                public PlateDocument apply(Plate plate) {
+                                    return new PlateDocument(plate);
+                                }
+                            })
+                    );
                 }
 
                 if(callback.isCanceled()) {
@@ -782,7 +787,13 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
                 if(isDownloadWorkflows(query) && !limsResult.getWorkflowIds().isEmpty()) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching workflow document", limsResult.getWorkflowIds().size()) + "...");
-                    getActiveLIMSConnection().retrieveWorkflowsById(limsResult.getWorkflowIds(), callback);
+                    getActiveLIMSConnection().retrieveWorkflowsById(limsResult.getWorkflowIds(),
+                            LimsSearchCallback.forRetrievePluginDocumentCallback(callback, new Function<WorkflowDocument, PluginDocument>() {
+                                @Override
+                                public PluginDocument apply(WorkflowDocument workflowDocument) {
+                                    return workflowDocument;
+                                }
+                            }));
                 }
 
                 if(callback.isCanceled()) {
@@ -882,51 +893,73 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             return Collections.emptyList();
         }
 
-        List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
+        final List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
+        final String limsUrn = getActiveLIMSConnection().getUrn();
         final List<String> missingTissueIds = new ArrayList<String>();
-        ArrayList<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
+        final List<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
+        final AtomicReference<DocumentOperationException> exceptionDuringAnnotate = new AtomicReference<DocumentOperationException>();
 
-        List<AssembledSequence> sequences = getActiveLIMSConnection().getAssemblyDocuments(sequenceIds, callback, includeFailed);
-
-        try {
-            for (final AssembledSequence seq : sequences) {
-                AnnotatedPluginDocument doc = createAssemblyDocument(seq);
-                FimsDataGetter getter = new FimsDataGetter() {
-                    public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
-                        String tissueId = seq.sampleId;
-                        if (samples != null) {
-                            for (FimsSample sample : samples) {
-                                if (sample.getId().equals(tissueId)) {
-                                    return new FimsData(sample, null, null);
-                                }
-                            }
+        LimsSearchCallback<AssembledSequence> limsCallback = LimsSearchCallback.forRetrieveAnnotatedPluginDocumentCallback(callback,
+                new Function<AssembledSequence, AnnotatedPluginDocument>() {
+                    @Nullable
+                    @Override
+                    public AnnotatedPluginDocument apply(final @Nullable AssembledSequence seq) {
+                        //noinspection ThrowableResultOfMethodCallIgnored
+                        if(exceptionDuringAnnotate.get() != null) {
+                            return null;  // exception has to be thrown later.  Function doesn't throw exceptions
                         }
-                        if (!BiocodeService.getInstance().isLoggedIn()) {
+
+                        AnnotatedPluginDocument doc = createAssemblyDocument(seq, limsUrn);
+                        FimsDataGetter getter = new FimsDataGetter() {
+                            public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                                String tissueId = seq.sampleId;
+                                if (samples != null) {
+                                    for (FimsSample sample : samples) {
+                                        if (sample.getId().equals(tissueId)) {
+                                            return new FimsData(sample, null, null);
+                                        }
+                                    }
+                                }
+                                if (!BiocodeService.getInstance().isLoggedIn()) {
+                                    return null;
+                                }
+                                FimsSample fimsSample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(tissueId);
+                                if (fimsSample != null) {
+                                    return new FimsData(fimsSample, null, null);
+                                } else {
+                                    document.setFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), tissueId);
+                                    missingTissueIds.add(tissueId);
+                                }
+                                return null;
+                            }
+                        };
+
+                        ArrayList<String> failBlog = new ArrayList<String>();
+                        try {
+                            AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
+                        } catch (DocumentOperationException e) {
+                            exceptionDuringAnnotate.set(e);
                             return null;
                         }
-                        FimsSample fimsSample = BiocodeService.getInstance().getActiveFIMSConnection().getFimsSampleFromCache(tissueId);
-                        if (fimsSample != null) {
-                            return new FimsData(fimsSample, null, null);
+                        if (failBlog.size() == 0) {
+                            resultDocuments.add(doc);
+                            return doc;
                         } else {
-                            document.setFieldValue(BiocodeService.getInstance().getActiveFIMSConnection().getTissueSampleDocumentField(), tissueId);
-                            missingTissueIds.add(tissueId);
+                            // Will be added to callback later
+                            documentsWithoutFimsData.add(doc);
+                            return null;
                         }
-                        return null;
                     }
-                };
+                });
 
-                ArrayList<String> failBlog = new ArrayList<String>();
-                AnnotateUtilities.annotateDocument(getter, failBlog, doc, false);
-                if (failBlog.size() == 0) {
-                    resultDocuments.add(doc);
-                    if (callback != null) {
-                        callback.add(doc, Collections.<String, Object>emptyMap());
-                    }
-                } else {
-                    // Will be added to callback later
-                    documentsWithoutFimsData.add(doc);
-                }
+        getActiveLIMSConnection().retrieveAssembledSequences(sequenceIds, limsCallback, includeFailed);
+
+        try {
+            DocumentOperationException documentOperationException = exceptionDuringAnnotate.get();
+            if(documentOperationException != null) {
+                throw documentOperationException;
             }
+
 
             //annotate with FIMS data if we couldn't before...
             final List<FimsSample> newFimsSamples = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(missingTissueIds);
@@ -950,7 +983,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                     callback.add(doc, Collections.<String, Object>emptyMap());
                 }
             }
-
             return resultDocuments;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
@@ -962,10 +994,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     public DocumentField FWD_PLATE_FIELD = DocumentField.createStringField("Forward Plate", "", "forwardSeqPlate");
     public DocumentField REV_PLATE_FIELD = DocumentField.createStringField("Reverse Plate", "", "reverseSeqPlate");
 
-    private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq) throws DatabaseServiceException {
+    private AnnotatedPluginDocument createAssemblyDocument(AssembledSequence seq, String limsUrn) {
         String qualities = seq.confidenceScore;
         DefaultNucleotideSequence sequence;
-        URN urn = new URN("Biocode", getActiveLIMSConnection().getUrn(), "" + seq.id);
+        URN urn = new URN("Biocode", limsUrn, "" + seq.id);
         String name = seq.extractionId + " " + seq.workflowLocus;
 
         if (qualities == null || seq.progress == null || seq.progress.toLowerCase().contains("failed")) {
@@ -1749,7 +1781,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(plateIds.isEmpty()) {
                 return null;
             }
-            List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, ProgressListener.EMPTY);
+            List<Plate> plates = getActiveLIMSConnection().getPlates(plateIds, new LimsSearchCallback.LimsSearchRetrieveListCallback<Plate>(ProgressListener.EMPTY));
             assert(plates.size() <= 1);
             if(plates.isEmpty()) {
                 return null;

@@ -91,7 +91,6 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         Map<AnnotatedPluginDocument, SequenceDocument> docsToMark = MarkInLimsUtilities.getDocsToMark(annotatedDocuments, selection);
 
         Map<String, Plate> sequencingPlateCache = new HashMap<String, Plate>();
-        LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
         IssueTracker issueTracker = new IssueTracker(isAutomated);
         CompositeProgressListener progress = new CompositeProgressListener(progressListener, docsToMark.size());
         Map<URN, AssemblyResult> results = new HashMap<URN, AssemblyResult>();
@@ -106,7 +105,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
 
             AssemblyResult assemblyResult = new AssemblyResult();
 
-            String errorString = getChromatogramProperties(options.getInputType(), sequencingPlateCache, limsConnection, annotatedDocument, assemblyResult);
+            String errorString = getChromatogramProperties(options.getInputType(), sequencingPlateCache, annotatedDocument, assemblyResult);
             if (errorString != null) {
                 issueTracker.setIssue(annotatedDocument, errorString);
                 continue;
@@ -254,7 +253,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
         }
     }
 
-    private String getChromatogramProperties(InputType inputType, Map<String, Plate> sequencingPlateCache, LIMSConnection limsConnection,
+    private String getChromatogramProperties(InputType inputType, Map<String, Plate> sequencingPlateCache,
                                              AnnotatedPluginDocument annotatedDocument, AssemblyResult assemblyResult) throws DocumentOperationException {
 
         Map<PlateAndWell, AnnotatedPluginDocument> reactionsToChromatograms = new HashMap<PlateAndWell, AnnotatedPluginDocument>();
@@ -292,6 +291,7 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
                         BiocodeService.getSearchDownloadOptions(false, false, true, false));//Query.Factory.createQuery(plateName);
                 List<Plate> plates;
                 try {
+                    LIMSConnection limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
                     List<Integer> plateIds = limsConnection.getMatchingDocumentsFromLims(q, null, ProgressListener.EMPTY).getPlateIds();
                     plates = limsConnection.getPlates(plateIds, ProgressListener.EMPTY);
                 } catch (DatabaseServiceException e) {

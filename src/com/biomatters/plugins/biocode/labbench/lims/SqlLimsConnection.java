@@ -1859,7 +1859,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public List<AssembledSequence> getAssemblyDocuments_(List<Integer> sequenceIds, RetrieveCallback callback, boolean includeFailed) throws DatabaseServiceException {
+    public List<AssembledSequence> getAssemblySequences_(Collection<Integer> sequenceIds, Cancelable cancelable, boolean includeFailed) throws DatabaseServiceException {
         if (sequenceIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -1920,7 +1920,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     statement.cancel();
                     throw new SQLException("Search cancelled due to lack of free memory");
                 }
-                if (callback != null && callback.isCanceled()) {
+                if (cancelable != null && cancelable.isCanceled()) {
                     return Collections.emptyList();
                 }
                 AssembledSequence seq = getAssembledSequence(resultSet);

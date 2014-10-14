@@ -58,6 +58,11 @@ public class LIMSInitializationListener implements ServletContextListener {
         return dataSource;
     }
 
+    private static LDAPAuthenticationDetails ldapAuthenticationDetails;
+
+    public static LDAPAuthenticationDetails getLdapAuthenticationDetails() { return ldapAuthenticationDetails; }
+
+
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
         initializeGeneiousUtilities();
@@ -92,6 +97,8 @@ public class LIMSInitializationListener implements ServletContextListener {
             biocodeeService = BiocodeService.getInstance();
             biocodeeService.setDataDirectory(dataDir);
 
+            setLdapAuthenticationSettings(config);
+
             setFimsOptionsFromConfigFile(connectionConfig, config);
 
             setLimsOptionsFromConfigFile(connectionConfig, config);
@@ -121,6 +128,15 @@ public class LIMSInitializationListener implements ServletContextListener {
                     e.getMessage() + " in configuration file (" + connectionPropertiesFile.getAbsolutePath() + ")"));
         } catch (Exception e) {
             initializationErrors.add(IntializationError.forException(e));
+        }
+    }
+
+    private void setLdapAuthenticationSettings(Properties config) {
+        if (Boolean.parseBoolean(config.getProperty("ldap.enabled")) == true) {
+            ldapAuthenticationDetails = new LDAPAuthenticationDetails((String)config.get("ldap.server"),
+                                                                        (String)config.get("ldap.port"),
+                                                                        (String)config.get("ldap.username"),
+                                                                        (String)config.get("ldap.password"));
         }
     }
 
