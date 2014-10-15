@@ -1,3 +1,12 @@
+==Biocode Plugin 3.0.0 - TBD==
+
+'''Additional Notes'''
+* This version includes an update to the LIMS database format.  This version can still be used by older versions of the
+  LIMS plugin.
+  Built-in MySQL users will be upgraded automatically.
+  Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
+  The schema upgrade script can be found at http://software.mooreabiocode.org
+
 ==Biocode Plugin 2.8.1 - 23 September 2014==
 * Made 'Forward Plate' and 'Reverse Plate' fields on assembled sequences support more than one value.
 * Fixed a bug where workflows were being added to search results when downloading sequences
