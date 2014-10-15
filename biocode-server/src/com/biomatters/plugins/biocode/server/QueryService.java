@@ -130,13 +130,6 @@ public class QueryService {
             }
         }
 
-        for (AssembledSequence sequence : sequences) {
-            String sampleId = extractionIdToSampleId.get(sequence.extractionId);
-            if(readableSampleIds.contains(sampleId)) {
-                filteredResult.addSequenceID(sequence.id);
-            }
-        }
-
         for (Map.Entry<Integer, String> entry : sequenceExtractionMap.entrySet()) {
             int sequenceId = entry.getKey();
             String extractionId = entry.getValue();
