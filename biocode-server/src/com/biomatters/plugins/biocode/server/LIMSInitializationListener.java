@@ -132,11 +132,25 @@ public class LIMSInitializationListener implements ServletContextListener {
     }
 
     private void setLdapAuthenticationSettings(Properties config) {
-        if (Boolean.parseBoolean(config.getProperty("ldap.enabled")) == true) {
-            ldapAuthenticationDetails = new LDAPAuthenticationDetails((String)config.get("ldap.server"),
-                                                                        (String)config.get("ldap.port"),
-                                                                        (String)config.get("ldap.username"),
-                                                                        (String)config.get("ldap.password"));
+        boolean isLdapEnabled = Boolean.parseBoolean(config.getProperty("ldap.enabled"));
+
+        String server = (String)config.get("ldap.server");
+        String port = (String)config.get("ldap.port");
+        String username = (String)config.get("ldap.username");
+        String password = (String)config.get("ldap.password");
+
+        if (isLdapEnabled) {
+            int portAsInt;
+
+            try {
+                portAsInt = Integer.parseInt(port);
+
+                ldapAuthenticationDetails = new LDAPAuthenticationDetails(server, portAsInt, username, password);
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid LDAP authentication details: Invalid port: " + port + ".");
+            } catch (IllegalArgumentException e) {
+                System.err.println("Invalid LDAP authentication details: " + e.getMessage());
+            }
         }
     }
 

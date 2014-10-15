@@ -44,8 +44,10 @@
         <dependency org="org.glassfish.jersey.core" name="jersey-client" rev="2.6" conf="server->default"/>
 
         <!-- Spring Security -->
-        <dependency org="org.springframework.security" name="spring-security-web" rev="3.2.3.RELEASE" conf="server->default"/>
-        <dependency org="org.springframework.security" name="spring-security-config" rev="3.2.3.RELEASE" conf="server->default"/>
+        <dependency org="org.springframework.security" name="spring-security-web" rev="3.2.5.RELEASE" conf="server->default"/>
+        <dependency org="org.springframework.security" name="spring-security-config" rev="3.2.5.RELEASE" conf="server->default"/>
+        <dependency org="org.springframework.security" name="spring-security-ldap" rev="3.2.5.RELEASE" conf="server->default"/>
+        <dependency org="org.springframework.ldap" name="spring-ldap-core" rev="2.0.2.RELEASE" conf="server->default"/>
         <dependency org="org.springframework" name="spring-jdbc" rev="3.2.3.RELEASE" conf="server->default"/>
     </dependencies>
 </ivy-module>
