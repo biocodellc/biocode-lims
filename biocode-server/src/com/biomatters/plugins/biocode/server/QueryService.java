@@ -79,10 +79,8 @@ public class QueryService {
             extractionIds.addAll(extractionIdsForPlate);
         }
 
-        List<AssembledSequence> sequences = LIMSInitializationListener.getLimsConnection().getAssemblySequences(result.getSequenceIds(), null, true);
-        for (AssembledSequence sequence : sequences) {
-            extractionIds.add(sequence.extractionId);
-        }
+        Map<Integer, String> sequenceExtractionMap = getExtractionIdsForSequences(result.getSequenceIds());
+        extractionIds.addAll(sequenceExtractionMap.values());
 
         List<FimsSample> allSamples;
         List<String> idsOfSamplesNotInDatabase;
@@ -131,10 +129,21 @@ public class QueryService {
                 filteredResult.addPlate(plateId);
             }
         }
+
         for (AssembledSequence sequence : sequences) {
             String sampleId = extractionIdToSampleId.get(sequence.extractionId);
             if(readableSampleIds.contains(sampleId)) {
                 filteredResult.addSequenceID(sequence.id);
+            }
+        }
+
+        for (Map.Entry<Integer, String> entry : sequenceExtractionMap.entrySet()) {
+            int sequenceId = entry.getKey();
+            String extractionId = entry.getValue();
+
+            String sampleId = extractionIdToSampleId.get(extractionId);
+            if(readableSampleIds.contains(sampleId)) {
+                filteredResult.addSequenceID(sequenceId);
             }
         }
         return filteredResult;
@@ -202,6 +211,41 @@ public class QueryService {
             PreparedStatement select = connection.prepareStatement(queryBuilder.toString());
             SqlUtilities.fillStatement(workflowIds, select);
             SqlUtilities.printSql(queryBuilder.toString(), workflowIds);
+            ResultSet resultSet = select.executeQuery();
+            while(resultSet.next()) {
+                String extractionId = resultSet.getString("extractionId");
+                if(extractionId != null) {
+                    extractionId = extractionId.trim();
+                    if(extractionId.length() > 0) {
+                        mapping.put(resultSet.getInt("id"), extractionId);
+                    }
+                }
+            }
+            return mapping;
+        } catch (SQLException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
+    }
+
+    public static Map<Integer, String> getExtractionIdsForSequences(List<Integer> sequenceIds) throws DatabaseServiceException {
+        if(sequenceIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Integer, String> mapping = new HashMap<Integer, String>();
+        DataSource dataSource = LIMSInitializationListener.getDataSource();
+        Connection connection = null;
+        try {
+            StringBuilder queryBuilder = new StringBuilder("select assembly.id, extraction.extractionId from assembly, workflow, extraction where assembly.id IN ");
+            SqlUtilities.appendSetOfQuestionMarks(queryBuilder, sequenceIds.size());
+            queryBuilder.append(" and assembly.workflow = workflow.id and workflow.extractionId = extraction.id ");
+
+            connection = dataSource.getConnection();
+            PreparedStatement select = connection.prepareStatement(queryBuilder.toString());
+            SqlUtilities.fillStatement(sequenceIds, select);
+            SqlUtilities.printSql(queryBuilder.toString(), sequenceIds);
             ResultSet resultSet = select.executeQuery();
             while(resultSet.next()) {
                 String extractionId = resultSet.getString("extractionId");
