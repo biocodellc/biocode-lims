@@ -3386,6 +3386,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             countResultSet.close();
 
             SqlUtilities.printSql(getTracesQuery.toString(), reactionIds);
+            getTraces.setQueryTimeout(0);
             ResultSet resultSet = getTraces.executeQuery();
             Map<Integer, List<MemoryFile>> results = new HashMap<Integer, List<MemoryFile>>();
             double pos = 0;
