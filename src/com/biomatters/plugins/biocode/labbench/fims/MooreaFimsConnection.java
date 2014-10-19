@@ -76,7 +76,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         properties.put("password", ((PasswordOption)options.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
-            connection = driver.connect("jdbc:mysql://"+options.getValueAsString("serverUrl")+":"+options.getValueAsString("serverPort"), properties);
+            connection = DriverManager.getConnection("jdbc:mysql://"+options.getValueAsString("serverUrl")+":"+options.getValueAsString("serverPort"), properties);
             Statement statement = connection.createStatement();
             statement.execute("USE biocode");
         } catch (SQLException e1) {

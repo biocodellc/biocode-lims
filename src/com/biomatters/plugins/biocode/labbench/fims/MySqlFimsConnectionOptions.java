@@ -38,7 +38,7 @@ public class MySqlFimsConnectionOptions extends TableFimsConnectionOptions{
         properties.put("password", ((PasswordOption)connectionOptions.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
-            Connection connection = driver.connect("jdbc:mysql://"+connectionOptions.getValueAsString("serverUrl")+":"+connectionOptions.getValueAsString("serverPort"), properties);
+            Connection connection = DriverManager.getConnection("jdbc:mysql://"+connectionOptions.getValueAsString("serverUrl")+":"+connectionOptions.getValueAsString("serverPort"), properties);
             Statement statement = connection.createStatement();
             statement.execute("USE "+connectionOptions.getValueAsString("database"));
             ResultSet resultSet = statement.executeQuery("DESCRIBE "+connectionOptions.getValueAsString("table"));
