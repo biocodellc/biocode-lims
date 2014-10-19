@@ -71,7 +71,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
             DriverManager.setLoginTimeout(20);
             String connectionStringring = "jdbc:mysql://" + connectionOptions.getValueAsString("serverUrl") + ":" +
                     connectionOptions.getValueAsString("serverPort") + "/" + connectionOptions.getValueAsString("database");
-            connection = driver.connect(connectionStringring, properties);
+            connection = DriverManager.getConnection(connectionStringring, properties);
             if(connection == null) {
                 throw new SQLException("The driver "+driver.getClass().getName()+" is not the right kind of driver to connect to "+connectionOptions.getValueAsString("serverUrl"));
             }
