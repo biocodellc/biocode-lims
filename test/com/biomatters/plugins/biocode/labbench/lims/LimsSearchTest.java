@@ -633,4 +633,45 @@ public class LimsSearchTest extends LimsTestCase {
             assertEquals(2, searchResults.size());
         }
     }
+
+    @Test
+    public void canFindPcrPlateWithNoWorkflows() throws DatabaseServiceException, BadDataException, SQLException {
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_M037", "MBIO24950.1", "1", service);
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, "1");
+        for (Reaction reaction : pcrPlate.getReactions()) {
+            reaction.setExtractionId("");
+            reaction.setWorkflow(null);
+        }
+        service.savePlate(pcrPlate, ProgressListener.EMPTY);
+
+        List<AnnotatedPluginDocument> results = service.retrieve(
+                Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL,
+                        new Object[]{pcrPlate.getName()}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                ProgressListener.EMPTY);
+        assertEquals(1, results.size());
+        Plate plateFromSearch = getPlateFromDocument(results.get(0), pcrPlate.getName(), Reaction.Type.PCR);
+        assertNotNull(plateFromSearch);
+    }
+
+    @Test
+    public void canFindSequencingPlateWithNoWorkflows() throws DatabaseServiceException, BadDataException, SQLException, DocumentOperationException {
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_M037", "MBIO24950.1", "1", service);
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, "1");
+        Plate seqPlate = saveCyclesequencingPlate("SeqF_M037", "COI", "forward", service, pcrPlate, "1");
+        for (Reaction reaction : seqPlate.getReactions()) {
+            reaction.setExtractionId("");
+            reaction.setWorkflow(null);
+        }
+        service.savePlate(seqPlate, ProgressListener.EMPTY);
+
+        List<AnnotatedPluginDocument> results = service.retrieve(
+                Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL,
+                        new Object[]{seqPlate.getName()}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                ProgressListener.EMPTY);
+        assertEquals(1, results.size());
+        Plate plateFromSearch = getPlateFromDocument(results.get(0), seqPlate.getName(), Reaction.Type.CycleSequencing);
+        assertNotNull(plateFromSearch);
+    }
 }
