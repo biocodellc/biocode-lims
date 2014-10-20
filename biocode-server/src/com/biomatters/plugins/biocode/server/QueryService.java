@@ -7,6 +7,7 @@ import com.biomatters.plugins.biocode.server.security.*;
 import com.biomatters.plugins.biocode.server.utilities.RestUtilities;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
 import javax.sql.DataSource;
@@ -146,7 +147,7 @@ public class QueryService {
         if(plateIds.isEmpty()) {
             return Collections.emptyMap();
         }
-        Multimap<Integer, String> mapping = ArrayListMultimap.create();
+        Multimap<Integer, String> mapping = HashMultimap.create();
         DataSource dataSource = LIMSInitializationListener.getDataSource();
         Connection connection = null;
         try {

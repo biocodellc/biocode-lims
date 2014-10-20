@@ -767,6 +767,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
         Map<String, List<AdvancedSearchQueryTerm>> tableToTerms = mapQueryTermsToTable(terms);
         List<Object> sqlValues = new ArrayList<Object>();
+        List<Object> valuesForNoWorkflowQuery = new ArrayList<Object>();
         if (tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty()) {
             sqlValues.addAll(tissueIdsToMatch);
         }
@@ -785,11 +786,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         QueryPart platePart = getQueryForTable("plate", tableToTerms, operator);
         if (platePart != null) {
             sqlValues.addAll(platePart.parameters);
+            valuesForNoWorkflowQuery.addAll(platePart.parameters);
         }
 
         QueryPart assemblyPart = getQueryForTable("assembly", tableToTerms, operator);
         if (assemblyPart != null) {
             sqlValues.addAll(assemblyPart.parameters);
+            valuesForNoWorkflowQuery.addAll(assemblyPart.parameters);
         }
 
         boolean onlySearchingOnFIMSFields = workflowPart == null && extractionPart == null && platePart == null && assemblyPart == null;
@@ -808,15 +811,26 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         StringBuilder workflowQuery = constructLimsQueryString(
                 tissueIdsToMatch, operator,
                 workflowPart, extractionPart, platePart, assemblyPart);
+        runLimsSearchQuery("LIMS query", result, workflowQuery.toString(), sqlValues, cancelable);
 
+
+        String noWorkflowQuery = getPcrAndSequencingPlatesWithNoWorkflowQuery(operator, workflowPart, extractionPart, platePart, assemblyPart);
+        if(noWorkflowQuery != null) {
+            runLimsSearchQuery("LIMS query (no workflow)", result, noWorkflowQuery, valuesForNoWorkflowQuery, cancelable);
+        }
+
+        return result;
+    }
+
+    private void runLimsSearchQuery(String queryDescription, LimsSearchResult result, String queryString, List<Object> sqlValues, Cancelable cancelable) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         PreparedStatement preparedStatement = null;
         try {
             connection = getConnection();
-            System.out.println("Running LIMS query:");
+            System.out.println("Running " + queryDescription + ":");
             System.out.print("\t");
-            SqlUtilities.printSql(workflowQuery.toString(), sqlValues);
-            preparedStatement = connection.prepareStatement(workflowQuery.toString());
+            SqlUtilities.printSql(queryString, sqlValues);
+            preparedStatement = connection.prepareStatement(queryString);
             SqlUtilities.fillStatement(sqlValues, preparedStatement);
 
             long start = System.currentTimeMillis();
@@ -830,7 +844,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     throw new SQLException("Search cancelled due to lack of free memory");
                 }
                 if (cancelable.isCanceled()) {
-                    return result;
+                    return;
                 }
 
                 String tissue = resultSet.getString("sampleId");
@@ -838,7 +852,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                     result.addTissueSample(tissue);
                 }
 
-                int plateId = resultSet.getInt("plate.id");
+                int plateId = resultSet.getInt("plateId");
                 if(!resultSet.wasNull()) {
                     result.addPlate(plateId);
                 }
@@ -860,7 +874,54 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             SqlUtilities.cleanUpStatements(preparedStatement);
             returnConnection(connection);
         }
-        return result;
+    }
+
+
+    private String getPcrAndSequencingPlatesWithNoWorkflowQuery(CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
+                                                                QueryPart extractionQueryConditions, QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
+        if(operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || extractionQueryConditions != null)) {
+            // No point doing an AND query. Because either:
+            // 1. Retrieving workflows require workflow links which are non-existent
+            // 2. Retrieving based on extractions which are covered by the main query
+            return null;
+        }
+        if(workflowQueryConditions != null && extractionQueryConditions == null && plateQueryConditions == null && assemblyQueryConditions == null) {
+            // If workflows are the only thing that are being queried then return nothing.
+            return null;
+        }
+        StringBuilder queryBuilder = new StringBuilder(
+                "SELECT extraction.sampleId, workflow.id, plate.id AS plateId, assembly.id, assembly.date FROM ");
+
+        // Don't include extraction plates.  They are covered by the regular query
+        queryBuilder.append("(SELECT * FROM plate WHERE id NOT IN (SELECT DISTINCT plate FROM extraction)) plate");
+
+        queryBuilder.append(" LEFT OUTER JOIN pcr ON plate.id = pcr.plate");
+        queryBuilder.append(" LEFT OUTER JOIN cyclesequencing ON plate.id = cyclesequencing.plate");
+        queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON sequencing_result.reaction = cyclesequencing.id");
+        queryBuilder.append(" LEFT OUTER JOIN assembly ON sequencing_result.assembly = assembly.id");
+        // The following two joins are to get the correct columns.  They should be empty since this query is retrieving
+        // pcr and cyclesquencing plates with no workflows
+        queryBuilder.append(" LEFT OUTER JOIN workflow ON pcr.workflow = workflow.id");
+        queryBuilder.append(" LEFT OUTER JOIN extraction ON workflow.extractionId = extraction.id");
+
+        queryBuilder.append(
+            " WHERE NOT EXISTS (SELECT workflow FROM pcr WHERE plate = plate.id AND workflow IS NOT NULL) " +
+            "AND NOT EXISTS (SELECT workflow FROM cyclesequencing WHERE plate = plate.id AND workflow IS NOT NULL) "
+        );
+
+        List<String> conditions = new ArrayList<String>();
+        if(plateQueryConditions != null) {
+            conditions.add("(" + plateQueryConditions + ")");
+        }
+        if(assemblyQueryConditions != null) {
+            conditions.add("(" + assemblyQueryConditions + ")");
+        }
+        if(!conditions.isEmpty()) {
+            queryBuilder.append(" AND (").append(StringUtilities.join(operator.toString(), conditions)).append(")");
+        }
+
+        queryBuilder.append(" ORDER BY assembly.date desc");
+        return queryBuilder.toString();
     }
 
     private void setInitialTraceCountsForPlates(Map<Integer, Plate> plateMap) throws SQLException {
@@ -926,7 +987,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         boolean filterOnTissues = tissueIdsToMatch != null && !tissueIdsToMatch.isEmpty();
 
         StringBuilder queryBuilder = new StringBuilder(
-                "SELECT extraction.sampleId, workflow.id, plate.id, assembly.id, assembly.date FROM ");
+                "SELECT extraction.sampleId, workflow.id, plate.id AS plateId, assembly.id, assembly.date FROM ");
         StringBuilder conditionBuilder = operator == CompoundSearchQuery.Operator.AND ? queryBuilder : whereConditionForOrQuery;
 
         boolean searchExtractionTable = filterOnTissues || extractionQueryConditions != null;
@@ -3386,6 +3447,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             countResultSet.close();
 
             SqlUtilities.printSql(getTracesQuery.toString(), reactionIds);
+            getTraces.setQueryTimeout(0);
             ResultSet resultSet = getTraces.executeQuery();
             Map<Integer, List<MemoryFile>> results = new HashMap<Integer, List<MemoryFile>>();
             double pos = 0;

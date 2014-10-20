@@ -86,7 +86,7 @@ public class AnnotateFimsDataOperation extends DocumentOperation {
                         String plateId = getPlateId(document, options);
                         FimsSample sample = getFimsSample(fimsSamples, plateId, well);
                         if(sample != null) {
-                            return new FimsData(sample, plateId, well);
+                            return new FimsData(sample, null, well);
                         }
                     }
                     return null;

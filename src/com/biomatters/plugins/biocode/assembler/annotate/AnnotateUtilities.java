@@ -307,7 +307,8 @@ public class AnnotateUtilities {
         } else {
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         }
-
+        
+        boolean savedDocument = false;
         if (fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
             AnnotatedPluginDocument forwardPrimer = null;
@@ -338,10 +339,12 @@ public class AnnotateUtilities {
                 reversePrimerSequence = ((OligoSequenceDocument) reversePrimer.getDocument()).getBindingSequence().toString();
             }
 
-            setSequencingPrimerNote(annotatedDocument, forwardPrimerName, forwardPrimerSequence, reversePrimerName, reversePrimerSequence);
+            setSequencingPrimerNote(annotatedDocument, forwardPrimerName, forwardPrimerSequence, reversePrimerName, reversePrimerSequence);            
+            savedDocument = true;
         }
-
-        annotatedDocument.save(updateModifiedDate);
+        if(!savedDocument) {
+            annotatedDocument.save(updateModifiedDate);
+        }
         return fields;
     }
 
