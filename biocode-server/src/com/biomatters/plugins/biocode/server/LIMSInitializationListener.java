@@ -58,9 +58,9 @@ public class LIMSInitializationListener implements ServletContextListener {
         return dataSource;
     }
 
-    private static LDAPAuthenticationDetails ldapAuthenticationDetails;
+    private static LDAPConfiguration LDAPConfiguration;
 
-    public static LDAPAuthenticationDetails getLdapAuthenticationDetails() { return ldapAuthenticationDetails; }
+    public static LDAPConfiguration getLDAPConfiguration() { return LDAPConfiguration; }
 
 
     @Override
@@ -136,8 +136,7 @@ public class LIMSInitializationListener implements ServletContextListener {
 
         String server = (String)config.get("ldap.server");
         String port = (String)config.get("ldap.port");
-        String username = (String)config.get("ldap.username");
-        String password = (String)config.get("ldap.password");
+        String userDNPattern = (String)config.get("ldap.userDNPattern");
 
         if (isLdapEnabled) {
             int portAsInt;
@@ -145,11 +144,11 @@ public class LIMSInitializationListener implements ServletContextListener {
             try {
                 portAsInt = Integer.parseInt(port);
 
-                ldapAuthenticationDetails = new LDAPAuthenticationDetails(server, portAsInt, username, password);
+                LDAPConfiguration = new LDAPConfiguration(server, portAsInt, userDNPattern);
             } catch (NumberFormatException e) {
-                System.err.println("Invalid LDAP authentication details: Invalid port: " + port + ".");
+                System.err.println("Invalid LDAP configuration: Invalid port: " + port + ".");
             } catch (IllegalArgumentException e) {
-                System.err.println("Invalid LDAP authentication details: " + e.getMessage());
+                System.err.println("Invalid LDAP configuration: " + e.getMessage());
             }
         }
     }

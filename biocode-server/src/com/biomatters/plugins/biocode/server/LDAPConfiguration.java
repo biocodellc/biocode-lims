@@ -8,25 +8,23 @@ import java.util.HashMap;
  * @author Gen Li
  *         Created on 14/10/14 3:56 PM
  */
-public class LDAPAuthenticationDetails {
+public class LDAPConfiguration {
     private String server;
     private int port;
-    private String username;
-    private String password;
+    private String userDNPattern;
 
-    public LDAPAuthenticationDetails(final String server, final int port, final String username, final String password) throws IllegalArgumentException {
+    public LDAPConfiguration(final String server, final int port, final String userDNPattern)
+            throws IllegalArgumentException {
         StringArgumentUtilities.checkForNULLOrEmptyStringArguments(new HashMap<String, String>() {
             {
                 put("server", server);
-                put("username", username);
-                put("password", password);
+                put("userDNPattern", userDNPattern);
             }
         });
 
         this.server = server;
         this.port = port;
-        this.username = username;
-        this.password = password;
+        this.userDNPattern = userDNPattern;
     }
 
     public String getServer() {
@@ -37,11 +35,5 @@ public class LDAPAuthenticationDetails {
         return port;
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
+    public String getUserDNPattern() { return userDNPattern; }
 }

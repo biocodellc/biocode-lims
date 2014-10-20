@@ -4,6 +4,7 @@ import com.biomatters.plugins.biocode.labbench.lims.DatabaseScriptRunner;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
+import com.biomatters.plugins.biocode.server.LDAPConfiguration;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,28 +36,35 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Autowired
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+     public void configure(AuthenticationManagerBuilder auth) throws Exception {
         LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
 
-        boolean needMemoryUsers;
+        boolean needMemoryUsers = false;
 
         boolean hasDatabaseConnection = limsConnection instanceof SqlLimsConnection;
 
-        if (hasDatabaseConnection) {
+        LDAPConfiguration ldapConfiguration = LIMSInitializationListener.getLDAPConfiguration();
+
+        if (ldapConfiguration != null) {
+            auth = auth.ldapAuthentication()
+                       .userDnPatterns(ldapConfiguration.getUserDNPattern())
+                       .contextSource()
+                       .url(ldapConfiguration.getServer())
+                       .port(ldapConfiguration.getPort())
+                       .and().and();
+        } else if (hasDatabaseConnection) {
             DataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
 
             needMemoryUsers = createUserTablesIfNecessary(dataSource);
 
-            auth = auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
+            auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(encoder).and();
 
             initializeAdminUserIfNecessary(dataSource);
-        } else {
-            needMemoryUsers = true;
         }
 
-        if(!hasDatabaseConnection || needMemoryUsers) {
-            // If the database connection isn't set up or users haven't been added yet then we need to also use memory
-            // auth with test users.
+        if (needMemoryUsers) {
+            // If the use of LDAP authentication isn't specified or the database connection isn't set up or users
+            // haven't been added yet then we need to also use memory auth with test users.
             auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name);
         }
     }
