@@ -45,7 +45,7 @@ public class StringArgumentUtilities {
     }
 
     public static boolean isStringNULLOrEmpty(String string) {
-        return string.isEmpty() || isStringNULL(string);
+        return isStringNULL(string) ||string.isEmpty();
     }
 
     public static boolean isStringNULL(String string) {
@@ -68,7 +68,8 @@ public class StringArgumentUtilities {
         List<String> identifiersOfEmptyStrings = new ArrayList<String>();
 
         for (Map.Entry<String, String> stringIdentifierAndString : stringIdentifierToString.entrySet()) {
-            if (stringIdentifierAndString.getValue().isEmpty()) {
+            String string = stringIdentifierAndString.getValue();
+            if (string != null && string.isEmpty()) {
                 identifiersOfEmptyStrings.add(stringIdentifierAndString.getKey());
             }
         }
