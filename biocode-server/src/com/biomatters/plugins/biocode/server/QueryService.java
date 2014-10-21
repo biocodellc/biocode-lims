@@ -119,7 +119,12 @@ public class QueryService {
         }
         for (Integer plateId : result.getPlateIds()) {
             boolean canReadCompletePlate = true;
-            for (String extractionIdToCheck : extractionIdsForPlates.get(plateId)) {
+            Collection<String> plateExtractions = extractionIdsForPlates.get(plateId);
+            if(plateExtractions == null) {
+                filteredResult.addPlate(plateId);
+                continue;
+            }
+            for (String extractionIdToCheck : plateExtractions) {
                 String sampleId = extractionIdToSampleId.get(extractionIdToCheck);
                 if(!readableSampleIds.contains(sampleId)) {
                     canReadCompletePlate = false;
