@@ -442,7 +442,7 @@ public abstract class LIMSConnection {
         }, callback);
     }
 
-    public final List<AssembledSequence> getAssemblySequences(List<Integer> sequenceIds, RetrieveCallback cancelable, boolean includeFailed) throws DatabaseServiceException {
+    public final List<AssembledSequence> getAssemblySequences(List<Integer> sequenceIds, Cancelable cancelable, boolean includeFailed) throws DatabaseServiceException {
         LimsSearchCallback.LimsSearchRetrieveListCallback<AssembledSequence> callback =
                                                 new LimsSearchCallback.LimsSearchRetrieveListCallback<AssembledSequence>(cancelable);
         retrieveAssembledSequences(sequenceIds, callback, includeFailed);

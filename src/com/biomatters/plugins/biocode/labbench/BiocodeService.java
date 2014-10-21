@@ -843,7 +843,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
                 if(isDownloadSequences(query)) {
                     callback.setMessage("Downloading " + BiocodeUtilities.getCountString("matching sequence", limsResult.getSequenceIds().size()) + "...");
-                    getMatchingAssemblyDocumentsForIds(tissueSamples, limsResult.getSequenceIds(), callback, true);
+                    retrieveMatchingAssemblyDocumentsForIds(tissueSamples, limsResult.getSequenceIds(), callback, true);
                 }
 
             } catch (DatabaseServiceException e) {
@@ -879,21 +879,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     /**
      * @param samples       Used to retrieve FIMS data if not null
      * @param sequenceIds   The sequences to retrieve
-     * @param callback      To add documents to
+     * @param callback      To add documents to.  Must not be null
      * @param includeFailed true to included empty sequences for failed results
-     * @return A list of the documents found/added
+     *
      * @throws SQLException if anything goes wrong
      */
-    public List<AnnotatedPluginDocument> getMatchingAssemblyDocumentsForIds(final List<FimsSample> samples,
-                                                                            List<Integer> sequenceIds,
-                                                                            RetrieveCallback callback,
-                                                                            boolean includeFailed)
+    public void retrieveMatchingAssemblyDocumentsForIds(final List<FimsSample> samples,
+                                                        List<Integer> sequenceIds,
+                                                        RetrieveCallback callback,
+                                                        boolean includeFailed)
             throws DatabaseServiceException {
         if (!BiocodeService.getInstance().isLoggedIn() || sequenceIds.isEmpty()) {
-            return Collections.emptyList();
+            return;
         }
 
-        final List<AnnotatedPluginDocument> resultDocuments = new ArrayList<AnnotatedPluginDocument>();
         final String limsUrn = getActiveLIMSConnection().getUrn();
         final List<String> missingTissueIds = new ArrayList<String>();
         final List<AnnotatedPluginDocument> documentsWithoutFimsData = new ArrayList<AnnotatedPluginDocument>();
@@ -942,7 +941,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                             return null;
                         }
                         if (failBlog.size() == 0) {
-                            resultDocuments.add(doc);
                             return doc;
                         } else {
                             // Will be added to callback later
@@ -978,12 +976,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             };
             for (AnnotatedPluginDocument doc : documentsWithoutFimsData) {
                 AnnotateUtilities.annotateDocument(fimsDataGetter, new ArrayList<String>(), doc, false);
-                resultDocuments.add(doc);
-                if (callback != null) {
-                    callback.add(doc, Collections.<String, Object>emptyMap());
-                }
+                callback.add(doc, Collections.<String, Object>emptyMap());
             }
-            return resultDocuments;
         } catch (DocumentOperationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ConnectionException e) {

@@ -35,7 +35,7 @@ public class Sequences {
     }
 
     List<AssembledSequence> getAssembledSequencesWithRoleCheck(List<Integer> idList, Boolean includeFailed, Role roleToCheckFor) throws DatabaseServiceException {
-        List<AssembledSequence> data = LIMSInitializationListener.getLimsConnection().getAssemblySequences(idList, null, includeFailed);
+        List<AssembledSequence> data = LIMSInitializationListener.getLimsConnection().getAssemblySequences(idList, ProgressListener.EMPTY, includeFailed);
         Set<String> extractionIds = new HashSet<String>();
         for (AssembledSequence sequence : data) {
             extractionIds.add(sequence.extractionId);

@@ -4,7 +4,9 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GPanel;
 import com.biomatters.geneious.publicapi.components.GTable;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
@@ -24,9 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Enumeration;
+import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -315,12 +315,19 @@ public class SequencingResult implements XMLSerializable {
             @Override
             public void run() {
                 try {
-                    List<AnnotatedPluginDocument> matching = BiocodeService.getInstance().getMatchingAssemblyDocumentsForIds(
-                            null, Collections.singletonList(result.getSequenceId()), null, false);
-                    assert(matching.size() <= 1);
-                    for (AnnotatedPluginDocument annotatedPluginDocument : matching) {
-                        doc.set((NucleotideSequenceDocument) annotatedPluginDocument.getDocumentOrNull());
-                    }
+                    BiocodeService.getInstance().retrieveMatchingAssemblyDocumentsForIds(
+                            null, Collections.singletonList(result.getSequenceId()), new RetrieveCallback() {
+                                @Override
+                                protected void _add(PluginDocument document, Map<String, Object> searchResultProperties) {
+                                    assert (doc.get() == null);
+                                    doc.set((NucleotideSequenceDocument)document);
+                                }
+
+                                @Override
+                                protected void _add(AnnotatedPluginDocument annotatedPluginDocument, Map<String, Object> searchResultProperties) {
+                                    add(annotatedPluginDocument.getDocumentOrNull(), searchResultProperties);
+                                }
+                            }, false);
                 } catch (DatabaseServiceException e) {
                     error.set(e);
                 }
