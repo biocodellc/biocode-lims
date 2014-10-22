@@ -1,6 +1,6 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.plugins.biocode.server.utilities.StringArgumentUtilities;
+import com.biomatters.plugins.biocode.server.utilities.StringVerificationUtilities;
 
 import java.util.HashMap;
 
@@ -12,19 +12,31 @@ public class LDAPConfiguration {
     private String server;
     private int port;
     private String userDNPattern;
+    private String userSearchBase;
+    private String userSearchFilter;
+    private String groupSearchBase;
+    private String groupSearchFilter;
+    private String groupRoleAttribute;
+    private String rolePrefix;
 
-    public LDAPConfiguration(final String server, final int port, final String userDNPattern)
-            throws IllegalArgumentException {
-        StringArgumentUtilities.checkForNULLOrEmptyStringArguments(new HashMap<String, String>() {
-            {
-                put("server", server);
-                put("userDNPattern", userDNPattern);
-            }
-        });
-
+    public LDAPConfiguration(String server,
+                             int port,
+                             String userDNPattern,
+                             String userSearchBase,
+                             String userSearchFilter,
+                             String groupSearchBase,
+                             String groupSearchFilter,
+                             String groupRoleAttribute,
+                             String rolePrefix) {
         this.server = server;
         this.port = port;
         this.userDNPattern = userDNPattern;
+        this.userSearchBase = userSearchBase;
+        this.userSearchFilter = userSearchFilter;
+        this.groupSearchBase = groupSearchBase;
+        this.groupSearchFilter = groupSearchFilter;
+        this.groupRoleAttribute = groupRoleAttribute;
+        this.rolePrefix = rolePrefix;
     }
 
     public String getServer() {
@@ -36,4 +48,16 @@ public class LDAPConfiguration {
     }
 
     public String getUserDNPattern() { return userDNPattern; }
+
+    public String getUserSearchBase() { return userSearchBase; }
+
+    public String getUserSearchFilter() { return userSearchFilter; }
+
+    public String getGroupSearchBase() { return groupSearchBase; }
+
+    public String getGroupSearchFilter() { return groupSearchFilter; }
+
+    public String getGroupRoleAttribute() { return groupRoleAttribute; }
+
+    public String getRolePrefix() { return rolePrefix; }
 }

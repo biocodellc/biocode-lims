@@ -6,13 +6,16 @@ import com.biomatters.plugins.biocode.labbench.lims.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
 import com.biomatters.plugins.biocode.server.LDAPConfiguration;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
+import com.biomatters.plugins.biocode.server.utilities.StringVerificationUtilities;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.authentication.configurers.ldap.LdapAuthenticationProviderConfigurer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -21,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -36,7 +40,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Autowired
-     public void configure(AuthenticationManagerBuilder auth) throws Exception {
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
         LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
 
         boolean needMemoryUsers = false;
@@ -46,12 +50,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         LDAPConfiguration ldapConfiguration = LIMSInitializationListener.getLDAPConfiguration();
 
         if (ldapConfiguration != null) {
-            auth = auth.ldapAuthentication()
-                       .userDnPatterns(ldapConfiguration.getUserDNPattern())
-                       .contextSource()
-                       .url(ldapConfiguration.getServer())
-                       .port(ldapConfiguration.getPort())
-                       .and().and();
+            authenticateWithLDAP(auth, ldapConfiguration);
         } else if (hasDatabaseConnection) {
             DataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
 
@@ -133,5 +132,51 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .anyRequest().permitAll()
             .and()
             .httpBasic();
+    }
+
+    private AuthenticationManagerBuilder authenticateWithLDAP(AuthenticationManagerBuilder auth, final LDAPConfiguration config) throws Exception {
+        StringVerificationUtilities.throwExceptionIfAllNULLOrEmptyStrings(new HashMap<String, String>() {{
+            put("server", config.getServer());
+        }});
+
+        StringVerificationUtilities.throwExceptionIfAllNULLOrEmptyStrings(new HashMap<String, String>() {{
+            put("userDNPattern", config.getUserDNPattern());
+            put("userSearchFilter", config.getUserSearchFilter());
+        }});
+
+        LdapAuthenticationProviderConfigurer<AuthenticationManagerBuilder> ldapAuthenticationProviderConfigurer = auth.ldapAuthentication();
+
+        ldapAuthenticationProviderConfigurer.contextSource().url(config.getServer());
+        ldapAuthenticationProviderConfigurer.contextSource().port(config.getPort());
+
+        if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getUserDNPattern())) {
+            ldapAuthenticationProviderConfigurer.userDnPatterns(config.getUserDNPattern());
+        }
+
+        if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getUserSearchFilter())) {
+            ldapAuthenticationProviderConfigurer.userSearchFilter(config.getUserSearchFilter());
+        }
+
+        if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getUserSearchBase())) {
+            ldapAuthenticationProviderConfigurer.userSearchBase(config.getUserSearchBase());
+        }
+
+        if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getGroupSearchBase())) {
+            ldapAuthenticationProviderConfigurer.groupSearchBase(config.getGroupSearchBase());
+        }
+
+        if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getGroupSearchFilter())) {
+            ldapAuthenticationProviderConfigurer.groupSearchFilter(config.getGroupSearchFilter());
+        }
+
+        if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getGroupRoleAttribute())) {
+            ldapAuthenticationProviderConfigurer.groupRoleAttribute(config.getGroupRoleAttribute());
+        }
+
+        if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getRolePrefix())) {
+            ldapAuthenticationProviderConfigurer.rolePrefix(config.getRolePrefix());
+        }
+
+        return ldapAuthenticationProviderConfigurer.and();
     }
 }

@@ -134,9 +134,15 @@ public class LIMSInitializationListener implements ServletContextListener {
     private void setLdapAuthenticationSettings(Properties config) {
         boolean isLdapEnabled = Boolean.parseBoolean(config.getProperty("ldap.enabled"));
 
-        String server = (String)config.get("ldap.server");
-        String port = (String)config.get("ldap.port");
-        String userDNPattern = (String)config.get("ldap.userDNPattern");
+        String server =             (String)config.get("ldap.server");
+        String port =               (String)config.get("ldap.port");
+        String userDNPattern =      (String)config.get("ldap.userDNPattern");
+        String userSearchBase =     (String)config.get("ldap.userSearchBase");
+        String userSearchFilter =   (String)config.get("ldap.userSearchFilter");
+        String groupSearchBase =    (String)config.get("ldap.groupSearchBase");
+        String groupSearchFilter =  (String)config.get("ldap.groupSearchFilter");
+        String groupRoleAttribute = (String)config.get("ldap.groupRoleAttribute");
+        String rolePrefix =         (String)config.get("ldap.rolePrefix");
 
         if (isLdapEnabled) {
             int portAsInt;
@@ -144,7 +150,15 @@ public class LIMSInitializationListener implements ServletContextListener {
             try {
                 portAsInt = Integer.parseInt(port);
 
-                LDAPConfiguration = new LDAPConfiguration(server, portAsInt, userDNPattern);
+                LDAPConfiguration = new LDAPConfiguration(server,
+                                                          portAsInt,
+                                                          userDNPattern,
+                                                          userSearchBase,
+                                                          userSearchFilter,
+                                                          groupSearchBase,
+                                                          groupSearchFilter,
+                                                          groupRoleAttribute,
+                                                          rolePrefix);
             } catch (NumberFormatException e) {
                 System.err.println("Invalid LDAP configuration: Invalid port: " + port + ".");
             } catch (IllegalArgumentException e) {
