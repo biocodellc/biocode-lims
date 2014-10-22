@@ -13,7 +13,6 @@ import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.TextAreaOption;
-import com.biomatters.plugins.biocode.labbench.TransactionException;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -177,7 +176,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
                 }
                 Runnable showEditor = new Runnable() {
                     public void run() {
-                        TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"));
+                        TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"), reaction);
                         if(editor.showDialog(tracesButton.getComponent())) {
                             reaction.setTraces(editor.getSourceObjects());
                             for(Trace t : editor.getDeletedObjects()) {
