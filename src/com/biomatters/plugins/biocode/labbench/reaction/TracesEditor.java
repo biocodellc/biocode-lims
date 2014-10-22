@@ -4,11 +4,18 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.WritableDatabaseService;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentUtilities;
 import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentImportException;
+import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.SequenceSelection;
 import com.biomatters.geneious.publicapi.plugin.ServiceUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
+import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
+import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import jebl.util.ProgressListener;
 import org.virion.jam.util.SimpleListener;
 
@@ -25,8 +32,15 @@ import java.util.List;
  *          Created on 19/09/13 3:28 PM
  */
 public class TracesEditor extends SequencesEditor<Trace> {
+    private Reaction reaction = null;
+
     public TracesEditor(final List<Trace> tracesa, String reactionName) {
         super(tracesa, reactionName);
+    }
+
+    public TracesEditor(final List<Trace> tracesa, String reactionName, Reaction reaction) {
+        this(tracesa, reactionName);
+        this.reaction = reaction;
     }
 
     List<NucleotideSequenceDocument> createSequences(List<Trace> traces) {
@@ -47,7 +61,31 @@ public class TracesEditor extends SequencesEditor<Trace> {
                     for (Trace trace : getSourceObjects()) {
                         for (NucleotideSequenceDocument doc : trace.getSequences()) {
                             if (currentIndex == selectedIndex.getSequenceIndex()) {
-                                selectedFolder.addDocumentCopy(DocumentUtilities.createAnnotatedPluginDocument(doc), ProgressListener.EMPTY).setUnread(true);
+                                AnnotatedPluginDocument annotatedPluginDocument = DocumentUtilities.createAnnotatedPluginDocument(doc);
+
+                                if (reaction != null) {
+                                    List<String> workflows = new ArrayList<String>();
+                                    workflows.add(reaction.getWorkflow().getName());
+                                    final List<WorkflowDocument> workflowDocuments = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflows);
+                                    FimsData data = null;
+
+                                    if (workflowDocuments != null && workflowDocuments.size() > 0) {
+                                        data = new FimsData(workflowDocuments.get(0), reaction.getPlateName(), null);
+                                    } else {
+                                        data = new FimsData(reaction.getFimsSample(), reaction.getPlateName(), null);
+                                    }
+
+                                    final FimsData finalData = data;
+                                    FimsDataGetter fimsDataGetter = new FimsDataGetter() {
+                                        public FimsData getFimsData(AnnotatedPluginDocument document) throws DocumentOperationException {
+                                            return finalData;
+                                        }
+                                    };
+
+                                    AnnotateUtilities.annotateFimsData(new AnnotatedPluginDocument[]{annotatedPluginDocument}, ProgressListener.EMPTY, fimsDataGetter, false);
+                                }
+
+                                selectedFolder.addDocumentCopy(annotatedPluginDocument, ProgressListener.EMPTY).setUnread(true);
                             }
                             currentIndex++;
                         }
@@ -55,6 +93,8 @@ public class TracesEditor extends SequencesEditor<Trace> {
                 }
             } catch (DatabaseServiceException e1) {
                 Dialogs.showMessageDialog(e1.getMessage());
+            } catch (DocumentOperationException e) {
+                Dialogs.showMessageDialog(e.getMessage());
             }
         }
     }
