@@ -5,7 +5,6 @@ import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
-import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.FileUtilities;
@@ -87,7 +86,8 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
     }
 
     public void refreshValuesFromCaches() {
-        final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
+        //noinspection unchecked
+        final ComboBoxOption<OptionValue> cocktailsOption = (ComboBoxOption<OptionValue>)getOption(COCKTAIL_OPTION_ID);
         cocktailsOption.setPossibleValues(getCocktails());
     }
 
@@ -110,7 +110,8 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         cocktailButton = (ButtonOption)getOption(COCKTAIL_BUTTON_ID);
         labelOption = (LabelOption)getOption(LABEL_OPTION_ID);
         tracesButton = (com.biomatters.plugins.biocode.labbench.ButtonOption)getOption(TRACES_BUTTON_ID);
-        final ComboBoxOption cocktailsOption = (ComboBoxOption)getOption(COCKTAIL_OPTION_ID);
+        //noinspection unchecked
+        final ComboBoxOption<OptionValue> cocktailsOption = (ComboBoxOption<OptionValue>)getOption(COCKTAIL_OPTION_ID);
         addPrimersButton = (ButtonOption)getOption(ADD_PRIMER_TO_LOCAL_ID);
 
         ButtonOption viewSeqResultsButton = (ButtonOption)getOption(SEQ_RESULTS_BUTTON_NAME);
@@ -176,7 +177,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
                 }
                 Runnable showEditor = new Runnable() {
                     public void run() {
-                        TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.EMPTY_LIST : reaction.getTraces(), getValueAsString("extractionId"), reaction);
+                        TracesEditor editor = new TracesEditor((reaction.getTraces() == null) ? Collections.<Trace>emptyList() : reaction.getTraces(), getValueAsString("extractionId"), reaction);
                         if(editor.showDialog(tracesButton.getComponent())) {
                             reaction.setTraces(editor.getSourceObjects());
                             for(Trace t : editor.getDeletedObjects()) {
@@ -265,7 +266,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         cocktailButton.setSpanningComponent(true);
         addCustomOption(cocktailButton);
         Options.OptionValue[] cleanupValues = new OptionValue[] {new OptionValue("true", "Yes"), new OptionValue("false", "No")};
-        ComboBoxOption cleanupOption = addComboBoxOption("cleanupPerformed", "Cleanup performed", cleanupValues, cleanupValues[1]);
+        ComboBoxOption<OptionValue> cleanupOption = addComboBoxOption("cleanupPerformed", "Cleanup performed", cleanupValues, cleanupValues[1]);
         StringOption cleanupMethodOption = addStringOption("cleanupMethod", "Cleanup method", "");
         cleanupMethodOption.setDisabledValue("");
         cleanupOption.addDependent(cleanupMethodOption, cleanupValues[0]);
@@ -289,15 +290,6 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
             cocktails.add(new OptionValue("-1", "No available cocktails"));
         }
         return cocktails;
-    }
-
-    private List<Options.OptionValue> getOptionValues(List<AnnotatedPluginDocument> documents) {
-        ArrayList<Options.OptionValue> primerList = new ArrayList<Options.OptionValue>();
-        for(AnnotatedPluginDocument doc : documents) {
-            OligoSequenceDocument seq = (OligoSequenceDocument)doc.getDocumentOrCrash();
-            primerList.add(new OptionValue(doc.getName(), doc.getName(), seq.getSequenceString()));
-        }
-        return primerList;
     }
 
     @Override

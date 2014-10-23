@@ -68,7 +68,7 @@ public class TracesEditor extends SequencesEditor<Trace> {
                                     List<String> workflows = new ArrayList<String>();
                                     workflows.add(reaction.getWorkflow().getName());
                                     final List<WorkflowDocument> workflowDocuments = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflows);
-                                    FimsData data = null;
+                                    FimsData data;
 
                                     if (workflowDocuments != null && workflowDocuments.size() > 0) {
                                         data = new FimsData(workflowDocuments.get(0), reaction.getPlateName(), new BiocodeUtilities.Well(reaction.getLocationString()));
@@ -107,7 +107,7 @@ public class TracesEditor extends SequencesEditor<Trace> {
             List<Trace> traces = getSourceObjects();
             for (Trace trace : traces) {
                 boolean removed = false;
-                for (NucleotideSequenceDocument doc : trace.getSequences()) {
+                for (NucleotideSequenceDocument ignored : trace.getSequences()) {
                     if (currentIndex == selectedIndex.getSequenceIndex()) {
                         removedTraces.add(trace);
                         removed = true;
