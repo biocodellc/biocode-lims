@@ -16,7 +16,6 @@ import com.biomatters.plugins.biocode.assembler.annotate.AnnotateUtilities;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsData;
 import com.biomatters.plugins.biocode.assembler.annotate.FimsDataGetter;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.WorkflowDocument;
 import jebl.util.ProgressListener;
 import org.virion.jam.util.SimpleListener;
@@ -72,9 +71,9 @@ public class TracesEditor extends SequencesEditor<Trace> {
                                     FimsData data = null;
 
                                     if (workflowDocuments != null && workflowDocuments.size() > 0) {
-                                        data = new FimsData(workflowDocuments.get(0), reaction.getPlateName(), findWell(workflowDocuments.get(0).getFimsSample()));
+                                        data = new FimsData(workflowDocuments.get(0), reaction.getPlateName(), new BiocodeUtilities.Well(reaction.getLocationString()));
                                     } else {
-                                        data = new FimsData(reaction.getFimsSample(), reaction.getPlateName(), findWell(reaction.getFimsSample()));
+                                        data = new FimsData(reaction.getFimsSample(), reaction.getPlateName(), new BiocodeUtilities.Well(reaction.getLocationString()));
                                     }
 
                                     final FimsData finalData = data;
@@ -99,11 +98,6 @@ public class TracesEditor extends SequencesEditor<Trace> {
                 Dialogs.showMessageDialog(e.getMessage());
             }
         }
-    }
-
-    private BiocodeUtilities.Well findWell(FimsSample fimsSample) {
-        String wellNum = (String) fimsSample.getFimsAttributeValue("biocode_tissue.well_number96");
-        return new BiocodeUtilities.Well(wellNum);
     }
 
     List<Trace> removeSequences() {
