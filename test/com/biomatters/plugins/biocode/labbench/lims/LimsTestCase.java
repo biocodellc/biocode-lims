@@ -81,7 +81,6 @@ public abstract class LimsTestCase extends Assert {
     @After
     public void logoutAndDeleteLIMS() throws IOException {
         BiocodeService.getInstance().logOut();
-        LocalLIMSConnectionOptions.deleteDatabase(DATABASE_NAME);
     }
 
     /**
