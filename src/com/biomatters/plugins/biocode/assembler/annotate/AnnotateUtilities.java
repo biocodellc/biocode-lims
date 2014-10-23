@@ -354,7 +354,7 @@ public class AnnotateUtilities {
      * @return The direction of a trace or null if the annotatedDocument is not a trace or has not had the direction set.
      * @throws DocumentOperationException if there is a problem loading the document
      */
-    public static Boolean getDirectionForTrace(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
+    static Boolean getDirectionForTrace(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
         Boolean directionForTrace = null;
         if(NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
             NucleotideGraphSequenceDocument graphSeq = (NucleotideGraphSequenceDocument) annotatedDocument.getDocument();
@@ -366,7 +366,7 @@ public class AnnotateUtilities {
         return directionForTrace;
     }
 
-    public static AnnotatedPluginDocument getPrimer(Reaction pcrReaction, String optionKey) {
+    private static AnnotatedPluginDocument getPrimer(Reaction pcrReaction, String optionKey) {
         AnnotatedPluginDocument forwardPrimer = null;
         DocumentSelectionOption option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(optionKey);
         List<AnnotatedPluginDocument> value = option.getDocuments();
