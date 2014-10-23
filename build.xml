@@ -122,6 +122,7 @@
     </target>
 
     <target name="clean">
+        <delete dir="${server-test.classes}"/>
         <delete dir="${lib}"/>
         <delete dir="${server-lib}"/>
         <delete dir="${build}"/>
