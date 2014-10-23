@@ -9,12 +9,13 @@ public class LimsDatabaseConstants {
     public static final String AUTHORITIES_TABLE_NAME = "authorities";
     public static final String BCID_ROOTS_TABLE_NAME  = "bcid_roots";
 
-    public static final String USERNAME_COLUMN_NAME_USERS_TABLE  = "username";
-    public static final String PASSWORD_COLUMN_NAME_USERS_TABLE  = "password";
-    public static final String FIRSTNAME_COLUMN_NAME_USERS_TABLE = "firstname";
-    public static final String LASTNAME_COLUMN_NAME_USERS_TABLE  = "lastname";
-    public static final String EMAIL_COLUMN_NAME_USERS_TABLE     = "email";
-    public static final String ENABLED_COLUMN_NAME_USERS_TABLE   = "enabled";
+    public static final String USERNAME_COLUMN_NAME_USERS_TABLE        = "username";
+    public static final String PASSWORD_COLUMN_NAME_USERS_TABLE        = "password";
+    public static final String FIRSTNAME_COLUMN_NAME_USERS_TABLE       = "firstname";
+    public static final String LASTNAME_COLUMN_NAME_USERS_TABLE        = "lastname";
+    public static final String EMAIL_COLUMN_NAME_USERS_TABLE           = "email";
+    public static final String ENABLED_COLUMN_NAME_USERS_TABLE         = "enabled";
+    public static final String IS_LDAP_ACCOUNT_COLUMN_NAME_USERS_TABLE = "is_ldap_account";
 
     public static final String USERNAME_COLUMN_NAME_AUTHORITIES_TABLE  = "username";
     public static final String AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE = "authority";
@@ -22,8 +23,8 @@ public class LimsDatabaseConstants {
     public static final String TYPE_COLUMN_NAME_BCID_ROOTS_TABLE      = "type";
     public static final String BCID_ROOT_COLUMN_NAME_BCID_ROOTS_TABLE = "bcid_root";
 
-    public static final String AUTHORITY_ADMIN_CODE  = "admin";
-    public static final String AUTHORITY_USER_CODE = "user";
+    public static final String AUTHORITY_ADMIN_CODE = "admin";
+    public static final String AUTHORITY_USER_CODE  = "user";
 
     public static final String[] SUPPORTED_BCID_ROOT_TYPES = {
             "workflow",

@@ -15,8 +15,9 @@ public class User {
     public String email;
     public boolean enabled = true;
     public boolean isAdministrator = false;
+    public boolean isLDAPAccount = false;
 
-    public User(String username, String password, String firstname, String lastname, String email, boolean enabled, boolean isAdministrator) {
+    public User(String username, String password, String firstname, String lastname, String email, boolean enabled, boolean isAdministrator, boolean isLDAPAccount) {
         this.username = username;
         this.password = password;
         this.firstname = firstname;
@@ -24,6 +25,7 @@ public class User {
         this.email = email;
         this.enabled = enabled;
         this.isAdministrator = isAdministrator;
+        this.isLDAPAccount = isLDAPAccount;
     }
 
     public User() {

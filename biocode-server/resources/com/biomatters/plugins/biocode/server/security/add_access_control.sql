@@ -5,6 +5,7 @@ CREATE TABLE users (
   lastname VARCHAR(255) NOT NULL,
   email VARCHAR(320) NOT NULL,
   enabled BIT NOT NULL,
+  is_ldap BIT NOT NULL,
   PRIMARY KEY(username)
 );
 
@@ -32,9 +33,3 @@ CREATE TABLE project_role (
   FOREIGN KEY(project_id) REFERENCES project(id) ON DELETE CASCADE,
   FOREIGN KEY(username) REFERENCES users(username) ON DELETE CASCADE
 );
-
-
-
-
-
-

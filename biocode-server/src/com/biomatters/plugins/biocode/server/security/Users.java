@@ -24,6 +24,7 @@ import java.util.List;
  */
 @Path("users")
 public class Users {
+    private static final String NAME_MODIFIER_FOR_LDAP_ACCOUNTS = "(LDAP)";
     private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     /**
@@ -32,8 +33,11 @@ public class Users {
     public static User getLoggedInUser() throws InternalServerErrorException {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (principal instanceof UserDetails) {
-            UserDetails user = (UserDetails) principal;
-            return getUserForUsername(user.getUsername());
+            String username = ((UserDetails)principal).getUsername();
+            if (principal instanceof org.springframework.security.ldap.userdetails.LdapUserDetailsImpl) {
+                username = username + " " + NAME_MODIFIER_FOR_LDAP_ACCOUNTS;
+            }
+            return getUserForUsername(username);
         } else {
             return null;
         }
@@ -64,7 +68,8 @@ public class Users {
                                    LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                    LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", "  +
                                    LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + ", " +
-                                   LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " " +
+                                   LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + ", " +
+                                   LimsDatabaseConstants.IS_LDAP_ACCOUNT_COLUMN_NAME_USERS_TABLE + " " +
                        "FROM "   + getUserTableJoinedWithAuthTable();
 
         PreparedStatement statement = connection.prepareStatement(query);
@@ -109,7 +114,8 @@ public class Users {
                                        LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE + ", " +
-                                       LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + " " +
+                                       LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE + ", " +
+                                       LimsDatabaseConstants.IS_LDAP_ACCOUNT_COLUMN_NAME_USERS_TABLE + " " +
                            "FROM "   + getUserTableJoinedWithAuthTable() + " " +
                            "WHERE "  + usernameUserTable + "=?";
 
@@ -149,7 +155,8 @@ public class Users {
                         resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
                         resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE),
                         resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE),
-                        LimsDatabaseConstants.AUTHORITY_ADMIN_CODE.equals(authority));
+                        LimsDatabaseConstants.AUTHORITY_ADMIN_CODE.equals(authority),
+                        resultSet.getBoolean(LimsDatabaseConstants.IS_LDAP_ACCOUNT_COLUMN_NAME_USERS_TABLE));
     }
 
     private static String getUserTableJoinedWithAuthTable() {
@@ -174,7 +181,7 @@ public class Users {
 
             SqlUtilities.beginTransaction(connection);
 
-            String addUserQuery = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?)";
+            String addUserQuery = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
             PreparedStatement statement = connection.prepareStatement(addUserQuery);
 
@@ -184,6 +191,7 @@ public class Users {
             statement.setObject(4, user.lastname);
             statement.setObject(5, user.email);
             statement.setObject(6, true);
+            statement.setObject(7, false);
 
             int inserted = statement.executeUpdate();
 

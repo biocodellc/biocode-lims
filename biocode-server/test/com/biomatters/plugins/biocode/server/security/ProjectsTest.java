@@ -120,7 +120,7 @@ public class ProjectsTest extends Assert {
 
     @Test
     public void canListRoles() {
-        User user1 = new User("user1", "password", "", "", "test@test.com", true, false);
+        User user1 = new User("user1", "password", "", "", "test@test.com", true, false, false);
         Users.addUser(dataSource, user1);
 
         Project p = new Project();
@@ -135,7 +135,7 @@ public class ProjectsTest extends Assert {
 
     @Test
     public void canSetRole() {
-        User user1 = new User("user1", "password", "", "", "test@test.com", true, false);
+        User user1 = new User("user1", "password", "", "", "test@test.com", true, false, false);
         Users.addUser(dataSource, user1);
 
         Project p = new Project();
