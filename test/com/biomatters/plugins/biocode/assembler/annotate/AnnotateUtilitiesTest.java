@@ -7,7 +7,7 @@ import com.biomatters.geneious.publicapi.implementations.DefaultAlignmentDocumen
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideGraphSequence;
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
-import com.biomatters.plugins.biocode.WorkflowBuilder;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,7 +43,7 @@ public class AnnotateUtilitiesTest extends Assert {
         assertNull(AnnotateUtilities.getDirectionForTrace(document));
 
         for (boolean direction : new boolean[]{true, false}) {
-            document.setFieldValue(WorkflowBuilder.IS_FORWARD_FIELD, direction);
+            document.setFieldValue(BiocodeUtilities.IS_FORWARD_FIELD, direction);
             Boolean result = AnnotateUtilities.getDirectionForTrace(document);
             if(shouldReturnDirection) {
                 assertEquals(direction, result);

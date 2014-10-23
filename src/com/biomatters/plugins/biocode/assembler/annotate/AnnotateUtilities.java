@@ -8,7 +8,6 @@ import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceD
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.WorkflowBuilder;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
@@ -352,7 +351,7 @@ public class AnnotateUtilities {
         if(NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
             NucleotideGraphSequenceDocument graphSeq = (NucleotideGraphSequenceDocument) annotatedDocument.getDocument();
             if(graphSeq.getChromatogramLength() > 0) {
-                Object isForwardString = annotatedDocument.getFieldValue(WorkflowBuilder.IS_FORWARD_FIELD.getCode());
+                Object isForwardString = annotatedDocument.getFieldValue(BiocodeUtilities.IS_FORWARD_FIELD.getCode());
                 directionForTrace = isForwardString == null ? null : Boolean.valueOf(isForwardString.toString());
             }
         }
