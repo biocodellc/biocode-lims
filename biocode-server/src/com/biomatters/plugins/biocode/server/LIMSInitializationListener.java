@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.*;
+import com.biomatters.plugins.biocode.server.security.LDAPConfiguration;
 import com.biomatters.plugins.biocode.server.security.Projects;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import jebl.util.ProgressListener;
@@ -143,27 +144,28 @@ public class LIMSInitializationListener implements ServletContextListener {
         String groupSearchFilter =  (String)config.get("ldap.groupSearchFilter");
         String groupRoleAttribute = (String)config.get("ldap.groupRoleAttribute");
         String rolePrefix =         (String)config.get("ldap.rolePrefix");
+        String adminAuthority =     (String)config.get("ldap.adminAuthority");
 
         if (isLdapEnabled) {
             int portAsInt;
 
             try {
                 portAsInt = Integer.parseInt(port);
-
-                LDAPConfiguration = new LDAPConfiguration(server,
-                                                          portAsInt,
-                                                          userDNPattern,
-                                                          userSearchBase,
-                                                          userSearchFilter,
-                                                          groupSearchBase,
-                                                          groupSearchFilter,
-                                                          groupRoleAttribute,
-                                                          rolePrefix);
             } catch (NumberFormatException e) {
                 System.err.println("Invalid LDAP configuration: Invalid port: " + port + ".");
-            } catch (IllegalArgumentException e) {
-                System.err.println("Invalid LDAP configuration: " + e.getMessage());
+                return;
             }
+
+            LDAPConfiguration = new LDAPConfiguration(server,
+                                                      portAsInt,
+                                                      userDNPattern,
+                                                      userSearchBase,
+                                                      userSearchFilter,
+                                                      groupSearchBase,
+                                                      groupSearchFilter,
+                                                      groupRoleAttribute,
+                                                      rolePrefix,
+                                                      adminAuthority);
         }
     }
 

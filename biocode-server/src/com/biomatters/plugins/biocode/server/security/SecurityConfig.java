@@ -4,7 +4,6 @@ import com.biomatters.plugins.biocode.labbench.lims.DatabaseScriptRunner;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsDatabaseConstants;
 import com.biomatters.plugins.biocode.labbench.lims.SqlLimsConnection;
-import com.biomatters.plugins.biocode.server.LDAPConfiguration;
 import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.server.utilities.StringVerificationUtilities;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
@@ -15,7 +14,7 @@ import org.springframework.security.config.annotation.authentication.configurers
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -37,6 +36,12 @@ import java.util.Set;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+    private static final String BASE_URL      = "/biocode";
+    private static final String PROJECTS_URL  = BASE_URL + "/projects";
+    private static final String USERS_URL     = BASE_URL + "/users";
+    private static final String BCIDROOTS_URL = BASE_URL + "/bcid-roots";
+    private static final String INFO_URL      = BASE_URL + "/info";
+
     private PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @Autowired
@@ -64,7 +69,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         if (needMemoryUsers) {
             // If the use of LDAP authentication isn't specified or the database connection isn't set up or users
             // haven't been added yet then we need to also use memory auth with test users.
-            auth.inMemoryAuthentication().withUser("admin").password("admin").roles(Role.ADMIN.name);
+            auth.inMemoryAuthentication().withUser("admin").password("admin").roles(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE);
         }
     }
 
@@ -123,19 +128,30 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.csrf().disable()
-            .authorizeRequests()
-                .antMatchers("/biocode/projects/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
-                .antMatchers("/biocode/users/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
-                .antMatchers("/biocode/info/**").permitAll()
-                .antMatchers("/biocode/**").authenticated()
+        http.csrf().disable().authorizeRequests()
+                .antMatchers(PROJECTS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
+                .antMatchers(USERS_URL +"/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
+                .antMatchers(BCIDROOTS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
+                .antMatchers(INFO_URL + "/**").permitAll()
+                .antMatchers(BASE_URL + "/**").authenticated()
                 .anyRequest().permitAll()
             .and()
             .httpBasic();
+
+        if (LIMSInitializationListener.getLDAPConfiguration() != null) {
+            String LDAPAdminAuthority = LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority();
+
+            if (!StringVerificationUtilities.isStringNULLOrEmpty(LDAPAdminAuthority)) {
+                http.csrf().disable().authorizeRequests()
+                        .antMatchers(PROJECTS_URL + "/**").hasAnyAuthority(LDAPAdminAuthority)
+                        .antMatchers(USERS_URL + "/**").hasAnyAuthority(LDAPAdminAuthority)
+                        .antMatchers(BCIDROOTS_URL + "/**").hasAnyAuthority(LDAPAdminAuthority);
+            }
+        }
     }
 
     private AuthenticationManagerBuilder authenticateWithLDAP(AuthenticationManagerBuilder auth, final LDAPConfiguration config) throws Exception {
-        StringVerificationUtilities.throwExceptionIfAllNULLOrEmptyStrings(new HashMap<String, String>() {{
+        StringVerificationUtilities.throwExceptionIfExistsNULLOrEmptyStrings(new HashMap<String, String>() {{
             put("server", config.getServer());
         }});
 

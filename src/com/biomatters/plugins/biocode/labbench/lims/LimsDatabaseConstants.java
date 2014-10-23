@@ -22,9 +22,8 @@ public class LimsDatabaseConstants {
     public static final String TYPE_COLUMN_NAME_BCID_ROOTS_TABLE      = "type";
     public static final String BCID_ROOT_COLUMN_NAME_BCID_ROOTS_TABLE = "bcid_root";
 
-    public static final String AUTHORITY_ADMIN_CODE = "admin";
-    public static final String AUTHORITY_WRITER_CODE = "writer";
-    public static final String AUTHORITY_READER_CODE = "reader";
+    public static final String AUTHORITY_ADMIN_CODE  = "admin";
+    public static final String AUTHORITY_USER_CODE = "user";
 
     public static final String[] SUPPORTED_BCID_ROOT_TYPES = {
             "workflow",

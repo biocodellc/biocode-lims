@@ -193,7 +193,7 @@ public class Users {
                 PreparedStatement insertAuth = connection.prepareStatement(addAuthorityQuery);
 
                 insertAuth.setObject(1, user.username);
-                insertAuth.setObject(2, user.isAdministrator ? LimsDatabaseConstants.AUTHORITY_ADMIN_CODE : LimsDatabaseConstants.AUTHORITY_WRITER_CODE);
+                insertAuth.setObject(2, user.isAdministrator ? LimsDatabaseConstants.AUTHORITY_ADMIN_CODE : LimsDatabaseConstants.AUTHORITY_USER_CODE);
 
                 int insertedAuth = insertAuth.executeUpdate();
 
@@ -257,7 +257,7 @@ public class Users {
                 PreparedStatement updateAuth = connection.prepareStatement(updateAuthorityQuery);
                 updateAuth.setObject(1, user.isAdministrator ?
                         LimsDatabaseConstants.AUTHORITY_ADMIN_CODE :
-                        LimsDatabaseConstants.AUTHORITY_WRITER_CODE);
+                        LimsDatabaseConstants.AUTHORITY_USER_CODE);
                 updateAuth.setObject(2, user.username);
                 int updatedAuth = updateAuth.executeUpdate();
                 if(updatedAuth == 1) {

@@ -1,14 +1,12 @@
-package com.biomatters.plugins.biocode.server;
-
-import com.biomatters.plugins.biocode.server.utilities.StringVerificationUtilities;
-
-import java.util.HashMap;
+package com.biomatters.plugins.biocode.server.security;
 
 /**
  * @author Gen Li
  *         Created on 14/10/14 3:56 PM
  */
 public class LDAPConfiguration {
+    private static final String ROLE_PREFIX = "ROLE_";
+
     private String server;
     private int port;
     private String userDNPattern;
@@ -18,6 +16,7 @@ public class LDAPConfiguration {
     private String groupSearchFilter;
     private String groupRoleAttribute;
     private String rolePrefix;
+    private String adminAuthority;
 
     public LDAPConfiguration(String server,
                              int port,
@@ -27,7 +26,8 @@ public class LDAPConfiguration {
                              String groupSearchBase,
                              String groupSearchFilter,
                              String groupRoleAttribute,
-                             String rolePrefix) {
+                             String rolePrefix,
+                             String adminAuthority) {
         this.server = server;
         this.port = port;
         this.userDNPattern = userDNPattern;
@@ -37,6 +37,7 @@ public class LDAPConfiguration {
         this.groupSearchFilter = groupSearchFilter;
         this.groupRoleAttribute = groupRoleAttribute;
         this.rolePrefix = rolePrefix;
+        this.adminAuthority = adminAuthority;
     }
 
     public String getServer() {
@@ -47,17 +48,35 @@ public class LDAPConfiguration {
         return port;
     }
 
-    public String getUserDNPattern() { return userDNPattern; }
+    public String getUserDNPattern() {
+        return userDNPattern;
+    }
 
-    public String getUserSearchBase() { return userSearchBase; }
+    public String getUserSearchBase() {
+        return userSearchBase;
+    }
 
-    public String getUserSearchFilter() { return userSearchFilter; }
+    public String getUserSearchFilter() {
+        return userSearchFilter;
+    }
 
-    public String getGroupSearchBase() { return groupSearchBase; }
+    public String getGroupSearchBase() {
+        return groupSearchBase;
+    }
 
-    public String getGroupSearchFilter() { return groupSearchFilter; }
+    public String getGroupSearchFilter() {
+        return groupSearchFilter;
+    }
 
-    public String getGroupRoleAttribute() { return groupRoleAttribute; }
+    public String getGroupRoleAttribute() {
+        return groupRoleAttribute;
+    }
 
-    public String getRolePrefix() { return rolePrefix; }
+    public String getRolePrefix() {
+        return rolePrefix;
+    }
+
+    public String getAdminAuthority() {
+        return adminAuthority == null ? null : ROLE_PREFIX + adminAuthority.toUpperCase();
+    }
 }
