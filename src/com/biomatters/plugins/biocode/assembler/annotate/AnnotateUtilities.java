@@ -2,12 +2,14 @@ package com.biomatters.plugins.biocode.assembler.annotate;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.*;
+import com.biomatters.geneious.publicapi.documents.sequence.NucleotideGraphSequenceDocument;
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDocument;
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.WorkflowBuilder;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
@@ -321,25 +323,17 @@ public class AnnotateUtilities {
         boolean savedDocument = false;
         if (note != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
-            AnnotatedPluginDocument forwardPrimer = null;
-            DocumentSelectionOption option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(PCROptions.PRIMER_OPTION_ID);
-            List<AnnotatedPluginDocument> value = option.getDocuments();
-            if (value.size() > 0) {
-                forwardPrimer = value.get(0);
-            }
-            AnnotatedPluginDocument reversePrimer = null;
-            option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(PCROptions.PRIMER_REVERSE_OPTION_ID);
-            value = option.getDocuments();
-            if (value.size() > 0) {
-                reversePrimer = value.get(0);
-            }
+            Boolean directionForTrace = getDirectionForTrace(annotatedDocument);
 
-            if (forwardPrimer != null) {
+            AnnotatedPluginDocument forwardPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_OPTION_ID);
+            AnnotatedPluginDocument reversePrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
+
+            if (forwardPrimer != null && (directionForTrace == null || directionForTrace)) {
                 note.setFieldValue("fwd_primer_name", forwardPrimer.getName());
                 OligoSequenceDocument sequence = (OligoSequenceDocument) forwardPrimer.getDocument();
                 note.setFieldValue("fwd_primer_seq", sequence.getBindingSequence().toString());
             }
-            if (reversePrimer != null) {
+            if (reversePrimer != null && (directionForTrace == null || !directionForTrace)) {
                 note.setFieldValue("rev_primer_name", reversePrimer.getName());
                 OligoSequenceDocument sequence = (OligoSequenceDocument) reversePrimer.getDocument();
                 note.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
@@ -352,6 +346,34 @@ public class AnnotateUtilities {
             annotatedDocument.save(updateModifiedDate);
         }
         return fields;
+    }
+
+    /**
+     *
+     * @param annotatedDocument The document to get the direction for
+     * @return The direction of a trace or null if the annotatedDocument is not a trace or has not had the direction set.
+     * @throws DocumentOperationException if there is a problem loading the document
+     */
+    public static Boolean getDirectionForTrace(AnnotatedPluginDocument annotatedDocument) throws DocumentOperationException {
+        Boolean directionForTrace = null;
+        if(NucleotideGraphSequenceDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
+            NucleotideGraphSequenceDocument graphSeq = (NucleotideGraphSequenceDocument) annotatedDocument.getDocument();
+            if(graphSeq.getChromatogramLength() > 0) {
+                Object isForwardString = annotatedDocument.getFieldValue(WorkflowBuilder.IS_FORWARD_FIELD.getCode());
+                directionForTrace = isForwardString == null ? null : Boolean.valueOf(isForwardString.toString());
+            }
+        }
+        return directionForTrace;
+    }
+
+    public static AnnotatedPluginDocument getPrimer(Reaction pcrReaction, String optionKey) {
+        AnnotatedPluginDocument forwardPrimer = null;
+        DocumentSelectionOption option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(optionKey);
+        List<AnnotatedPluginDocument> value = option.getDocuments();
+        if (value.size() > 0) {
+            forwardPrimer = value.get(0);
+        }
+        return forwardPrimer;
     }
 
     static List<Options.OptionValue> getOptionValuesForFimsFields() {
