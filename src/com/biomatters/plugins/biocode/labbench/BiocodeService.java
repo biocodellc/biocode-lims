@@ -11,7 +11,6 @@ import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleot
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -67,7 +66,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private boolean isLoggedIn = false;
     private FIMSConnection activeFIMSConnection;
     private LIMSConnection limsConnection;
-    private Object limsConnectionLock = new Object();
+    private final Object limsConnectionLock = new Object();
     private final String loggedOutMessage = "Right click on the " + getName() + " service in the service tree to log in.";
     private Driver driver;
     private Driver localDriver;
@@ -87,7 +86,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private ConnectionManager connectionManager;
     private boolean loggingIn;
     ReportingService reportingService;
-    private Thread disconnectCheckingThread;
+    private DisconnectCheckingThread disconnectCheckingThread;
     private boolean driverLoaded;
     public static final int STATEMENT_QUERY_TIMEOUT = 300;
 
@@ -588,7 +587,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(reportingService != null) {
                 reportingService.notifyLoginStatusChanged();
             }
-            disconnectCheckingThread = getDisconnectCheckingThread();
+            disconnectCheckingThread = new DisconnectCheckingThread();
             disconnectCheckingThread.start();
         } catch (ConnectionException e1) {
             // todo Surface exception in server.  The current error handling swallows the exception when there is no GUI.  ie Server mode
@@ -663,42 +662,56 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         ThreadUtilities.invokeNowOrWait(runnable);
     }
 
-    public Thread getDisconnectCheckingThread() {
-        return new Thread("Checking for the LIMS connection being closed") {
-            @Override
-            public void run() {
-                LIMSConnection originalConnection = null;
-                while(isLoggedIn()) {
-                    LIMSConnection activeLIMSConnection = null;
-                    try {
-                        activeLIMSConnection = getActiveLIMSConnection();
+    private class DisconnectCheckingThread extends Thread {
 
-                        //for potential memory leak
-                        if (originalConnection == null)
-                            originalConnection = activeLIMSConnection;
-                        else if (originalConnection != activeLIMSConnection)
-                            break;
-                    } catch (DatabaseServiceException e) {
-                        e.printStackTrace();
+        /**
+         * A lock to prevent this thread from being interrupted when it is waiting for the ServiceTree status to update
+         */
+        private final Object interruptionLock = new Object();
+
+        @Override
+        public void run() {
+            LIMSConnection originalConnection = null;
+            while(isLoggedIn()) {
+                LIMSConnection activeLIMSConnection;
+                try {
+                    activeLIMSConnection = getActiveLIMSConnection();
+
+                    //for potential memory leak
+                    if (originalConnection == null)
+                        originalConnection = activeLIMSConnection;
+                    else if (originalConnection != activeLIMSConnection)
                         break;
-                    }
+                } catch (DatabaseServiceException e) {
+                    e.printStackTrace();
+                    break;
+                }
 
-                    if(activeCallbacks.isEmpty()) {
-                        try {
-                            activeLIMSConnection.testConnection();
-                        } catch (DatabaseServiceException e) {
-                            if(!e.getMessage().contains("Streaming result set")) {  //last ditch attempt to stop the system logging users out incorrectly - we should have caught all cases of this because the operations creating streaming result sets should have registered their callbacks/progress listeners with the service
-                                e.printStackTrace();
-                                if(isLoggedIn()) {
+                if(activeCallbacks.isEmpty()) {
+                    try {
+                        activeLIMSConnection.testConnection();
+                    } catch (DatabaseServiceException e) {
+                        if(!e.getMessage().contains("Streaming result set")) {  //last ditch attempt to stop the system logging users out incorrectly - we should have caught all cases of this because the operations creating streaming result sets should have registered their callbacks/progress listeners with the service
+                            e.printStackTrace();
+                            if(isLoggedIn()) {
+                                // Prevent the thread from being interrupted while logging out
+                                synchronized (interruptionLock) {
                                     logOut();
                                 }
                             }
                         }
                     }
-                    ThreadUtilities.sleep(60*1000);
                 }
+                ThreadUtilities.sleep(60*1000);
             }
-        };
+        }
+
+        @Override
+        public void interrupt() {
+            synchronized (interruptionLock) {
+                super.interrupt();
+            }
+        }
     }
 
     @Override
