@@ -107,7 +107,7 @@ public class TracesEditor extends SequencesEditor<Trace> {
             List<Trace> traces = getSourceObjects();
             for (Trace trace : traces) {
                 boolean removed = false;
-                for (NucleotideSequenceDocument doc : trace.getSequences()) {
+                for (NucleotideSequenceDocument ignored : trace.getSequences()) {
                     if (currentIndex == selectedIndex.getSequenceIndex()) {
                         removedTraces.add(trace);
                         removed = true;
