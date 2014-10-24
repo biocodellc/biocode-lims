@@ -5,7 +5,9 @@ import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.ldap.userdetails.LdapUserDetailsImpl;
 
 import javax.sql.DataSource;
 import javax.ws.rs.*;
@@ -24,23 +26,14 @@ import java.util.List;
  */
 @Path("users")
 public class Users {
-    private static final String NAME_MODIFIER_FOR_LDAP_ACCOUNTS = "(LDAP)";
+    private static final String LDAP_USERNAME_IDENTIFIER = "(LDAP)";
     private static BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    /**
-     * @return The current logged in {@link com.biomatters.plugins.biocode.server.security.User}
-     */
-    public static User getLoggedInUser() throws InternalServerErrorException {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetails) {
-            String username = ((UserDetails)principal).getUsername();
-            if (principal instanceof org.springframework.security.ldap.userdetails.LdapUserDetailsImpl) {
-                username = username + " " + NAME_MODIFIER_FOR_LDAP_ACCOUNTS;
-            }
-            return getUserForUsername(username);
-        } else {
-            return null;
-        }
+    @GET
+    @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
+    @Path("logged-in-user")
+    public User loggedInUser() {
+        return getLoggedInUser();
     }
 
     @GET
@@ -63,7 +56,6 @@ public class Users {
     public static List<User> getUserList(Connection connection) throws SQLException {
         String query = "SELECT " + LimsDatabaseConstants.USERS_TABLE_NAME + "." +
                                    LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE + ", " +
-                                   LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + ", " +
                                    LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                    LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                    LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", "  +
@@ -109,7 +101,6 @@ public class Users {
             String usernameUserTable = LimsDatabaseConstants.USERS_TABLE_NAME + "." + LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE;
 
             String query = "SELECT " + usernameUserTable + ", " +
-                                       LimsDatabaseConstants.PASSWORD_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE + ", " +
                                        LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE + ", " +
@@ -145,17 +136,18 @@ public class Users {
      */
     static User createUserFromResultSetRow(ResultSet resultSet) throws SQLException {
         String username = resultSet.getString(LimsDatabaseConstants.USERNAME_COLUMN_NAME_USERS_TABLE);
-        if(username == null) {
+
+        if (username == null) {
             return null;
         }
-        String authority = resultSet.getString(LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE);
+
         return new User(username,
                         null,
                         resultSet.getString(LimsDatabaseConstants.FIRSTNAME_COLUMN_NAME_USERS_TABLE),
                         resultSet.getString(LimsDatabaseConstants.LASTNAME_COLUMN_NAME_USERS_TABLE),
                         resultSet.getString(LimsDatabaseConstants.EMAIL_COLUMN_NAME_USERS_TABLE),
                         resultSet.getBoolean(LimsDatabaseConstants.ENABLED_COLUMN_NAME_USERS_TABLE),
-                        LimsDatabaseConstants.AUTHORITY_ADMIN_CODE.equals(authority),
+                        resultSet.getString(LimsDatabaseConstants.AUTHORITY_COLUMN_NAME_AUTHORITIES_TABLE).equals(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE),
                         resultSet.getBoolean(LimsDatabaseConstants.IS_LDAP_ACCOUNT_COLUMN_NAME_USERS_TABLE));
     }
 
@@ -181,7 +173,7 @@ public class Users {
 
             SqlUtilities.beginTransaction(connection);
 
-            String addUserQuery = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            String addUserQuery = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             PreparedStatement statement = connection.prepareStatement(addUserQuery);
 
@@ -228,6 +220,10 @@ public class Users {
     @Produces("text/plain")
     @Consumes({"application/json", "application/xml"})
     public String updateUser(@PathParam("username")String username, User user) {
+        if (getUserForUsername(username).isLDAPAccount) {
+            return "Cannot update LDAP accounts.";
+        }
+
         Connection connection = null;
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
@@ -296,6 +292,10 @@ public class Users {
                 throw new ForbiddenException("Action denied: insufficient permissions.");
             }
 
+            if (getUserForUsername(username).isLDAPAccount) {
+                return "LDAP accounts cannot be deleted.";
+            }
+
             connection = LIMSInitializationListener.getDataSource().getConnection();
             SqlUtilities.beginTransaction(connection);
 
@@ -322,6 +322,19 @@ public class Users {
         }
     }
 
+    /**
+     * @return The current logged in {@link com.biomatters.plugins.biocode.server.security.User}
+     */
+    public static User getLoggedInUser() throws InternalServerErrorException {
+        UserDetails userDetails = getLoggedInUserDetails();
+
+        if (userDetails != null) {
+            return getUserForUsername(getUsername(userDetails));
+        }
+
+        return null;
+    }
+
     public boolean isAdmin(User user) throws InternalServerErrorException {
         String username = user.username;
 
@@ -343,15 +356,107 @@ public class Users {
                 throw new InternalServerErrorException("No authority associated with user account '" + username + "'.");
             }
 
-            if (resultSet.getString("authority").equals(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)) {
-                return true;
-            } else {
-                return false;
-            }
+            return resultSet.getString("authority").equals(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE);
         } catch (SQLException e) {
             throw new InternalServerErrorException("Error verifying authority of user account '" + username + "'", e);
         } finally {
             SqlUtilities.closeConnection(connection);
         }
+    }
+
+    public static void handleLDAPUserLogin() {
+        UserDetails loggedInUserDetails = getLoggedInUserDetails();
+        if (isLDAPUser(loggedInUserDetails)) {
+            try {
+                if (getLoggedInUser() == null) {
+                    addLDAPUser(loggedInUserDetails.getUsername(), hasAuthority(loggedInUserDetails, LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority()));
+                }
+            } catch (NotFoundException e) {
+                addLDAPUser(loggedInUserDetails.getUsername(), hasAuthority(loggedInUserDetails, LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority()));
+            }
+        }
+    }
+
+    private static UserDetails getLoggedInUserDetails() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (principal instanceof UserDetails) {
+            return (UserDetails)principal;
+        }
+
+        return null;
+    }
+
+    private static boolean isLDAPUser(UserDetails userDetails) {
+        return userDetails instanceof LdapUserDetailsImpl;
+    }
+
+    private static String getUsername(UserDetails userDetails) {
+        if (isLDAPUser(userDetails)) {
+            return getUsernameWithLDAPIdentifier(userDetails.getUsername());
+        }
+
+        return userDetails.getUsername();
+    }
+
+    private static boolean addLDAPUser(String username, boolean isAdministrator) {
+        Connection connection = null;
+        try {
+            connection = LIMSInitializationListener.getDataSource().getConnection();
+
+            SqlUtilities.beginTransaction(connection);
+
+            String addUserQuery = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?)";
+            String usernameWithLDAPIdentifier = getUsernameWithLDAPIdentifier(username);
+            PreparedStatement statement = connection.prepareStatement(addUserQuery);
+
+            statement.setObject(1, usernameWithLDAPIdentifier);
+            statement.setObject(2, "");
+            statement.setObject(3, "");
+            statement.setObject(4, "");
+            statement.setObject(5, "");
+            statement.setObject(6, true);
+            statement.setObject(7, true);
+
+            int inserted = statement.executeUpdate();
+
+            if (inserted == 1) {
+                String addAuthorityQuery = "INSERT INTO " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " VALUES (?,?)";
+                PreparedStatement insertAuth = connection.prepareStatement(addAuthorityQuery);
+
+                insertAuth.setObject(1, usernameWithLDAPIdentifier);
+                insertAuth.setObject(2, isAdministrator ? LimsDatabaseConstants.AUTHORITY_ADMIN_CODE : LimsDatabaseConstants.AUTHORITY_USER_CODE);
+
+                int insertedAuth = insertAuth.executeUpdate();
+
+                if (insertedAuth == 1) {
+                    SqlUtilities.commitTransaction(connection);
+                    return true;
+                } else {
+                    throw new InternalServerErrorException("Failed to add user account. " +
+                            "Rows inserted into authorities database, expected: 1, actual: " + insertedAuth);
+                }
+            } else {
+                throw new InternalServerErrorException("Failed to add user account. " +
+                        "Rows inserted into users database, expected: 1, actual: " + inserted);
+            }
+        } catch (SQLException e) {
+            throw new InternalServerErrorException("Failed to add user.", e);
+        } finally {
+            SqlUtilities.closeConnection(connection);
+        }
+    }
+
+    public static String getUsernameWithLDAPIdentifier(String userName) {
+        return userName + " " + LDAP_USERNAME_IDENTIFIER;
+    }
+
+    private static boolean hasAuthority(UserDetails userDetails, String authority) {
+        for (GrantedAuthority authorityOfUser : userDetails.getAuthorities()) {
+            if (authorityOfUser.getAuthority().equals(authority)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

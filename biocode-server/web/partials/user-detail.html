@@ -1,9 +1,9 @@
 <div class="container">
     <div class="header">
         <h1>{{user.username}}</h1>
-        <button type="button" class="btn btn-primary btn-lg" ng-click="onUpdateUser()">Update</button>
-        <button type="button" class="btn btn-primary btn-lg" ng-click="toggleModal()">Change Password</button>
-        <button type="button" class="btn btn-primary btn-lg delBtn" ng-click="onDeleteUser()">Delete</button>
+        <button ng-disabled="user.isLDAPAccount==true" type="button" class="btn btn-primary btn-lg" ng-click="onUpdateUser()">Update</button>
+        <button ng-disabled="user.isLDAPAccount==true" type="button" class="btn btn-primary btn-lg" ng-click="toggleModal()">Change Password</button>
+        <button ng-disabled="user.isLDAPAccount==true" type="button" class="btn btn-primary btn-lg delBtn" ng-click="onDeleteUser()">Delete</button>
         <div class="pass-dialog">
             <modal-dialog show='myData.modalShown' width='400px' dialog-title="{{user.username}}'s New Password"
                           on-close='logClose()'>
@@ -12,7 +12,7 @@
                         <tbody>
                         <tr>
                             <td>Password</td>
-                            <td><input type="password" id="passinput" ng-model="password"></td>
+                            <td><input ng-disabled="user." type="password" id="passinput" ng-model="password"></td>
                         </tr>
                         <tr>
                             <td>Confirm password</td>
@@ -42,19 +42,19 @@
             <tbody>
             <tr>
                 <td>First Name</td>
-                <td><input type="text" id="firstname" ng-model="user.firstname"></td>
+                <td><input ng-disabled="user.isLDAPAccount==true" type="text" id="firstname" ng-model="user.firstname"></td>
             </tr>
             <tr>
                 <td>Last Name</td>
-                <td><input type="text" id="lastname" ng-model="user.lastname"></td>
+                <td><input ng-disabled="user.isLDAPAccount==true" type="text" id="lastname" ng-model="user.lastname"></td>
             </tr>
             <tr>
                 <td>Email</td>
-                <td><input type="text" id="email" ng-model="user.email"></td>
+                <td><input ng-disabled="user.isLDAPAccount==true" type="text" id="email" ng-model="user.email"></td>
             </tr>
             <tr>
                 <td>Is Admin</td>
-                <td><input type="checkbox" id="is-dmin" ng-model="user.isAdministrator"></td>
+                <td><input ng-disabled="user.isLDAPAccount==true" type="checkbox" id="is-dmin" ng-model="user.isAdministrator"></td>
             </tr>
             </tbody>
         </table>

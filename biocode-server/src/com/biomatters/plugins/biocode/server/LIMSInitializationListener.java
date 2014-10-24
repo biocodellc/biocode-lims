@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *          Created on 20/03/14 3:18 PM
  */
 public class LIMSInitializationListener implements ServletContextListener {
-
     private static final String settingsFolderName = ".biocode-lims";
     private static final String defaultPropertiesFile = "default_connection.properties";
     private static final String propertiesFile = "connection.properties";

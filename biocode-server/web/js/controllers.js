@@ -6,7 +6,10 @@ var projectsUrl = "biocode/projects";
 var usersUrl = "biocode/users";
 var rolesUrl = "biocode/roles";
 var BCIDRootsURL = "biocode/bcid-roots";
+
 var usersPage = "#/users";
+var loggedInUserPage = "/logged-in-user";
+
 var projectMap = null;
 var projects = null;
 
@@ -154,6 +157,10 @@ biocodeControllers.controller('userListCtrl', ['$scope', '$http',
                 $scope.users = data;
             }).error(function(data, status) {
                 showError($scope, status, data, "users");
+            });
+
+            $http.get(usersUrl + loggedInUserPage).success(function(data) {
+               $scope.loggedInUser = data;
             });
         }
 
