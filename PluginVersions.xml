@@ -1,7 +1,13 @@
 <PluginVersions>
-    <LatestVersion>2.8.1</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_1.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 2.8.1 - 23 September 2014==
+    <LatestVersion>2.8.2</LatestVersion>
+    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_2.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 2.8.2 - 28 October 2014==
+* Fixed a bug that was causing the Sequencing Primer document note to sometimes not show up on downloaded sequences.
+* Fixed a bug where traces downloaded directly from the plate viewer would not be annotated with FIMS information.
+* Fixed a bug that caused the FIMS plate to be set as the Sequencing Plate when annotating assemblies using the FIMS.
+* Other minor fixes and improvements.
+
+==Biocode Plugin 2.8.1 - 23 September 2014==
 * Made 'Forward Plate' and 'Reverse Plate' fields on assembled sequences support more than one value.
 * Fixed a bug where workflows were being added to search results when downloading sequences
 * Made the 'Mark as Passed' operation work even when links to the original chromatogram documents has been lost.
