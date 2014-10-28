@@ -8,6 +8,7 @@ import com.biomatters.plugins.biocode.server.LIMSInitializationListener;
 import com.biomatters.plugins.biocode.server.utilities.StringVerificationUtilities;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configurers.ldap.LdapAuthenticationProviderConfigurer;
@@ -16,6 +17,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -72,6 +74,37 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         }
     }
 
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+            .authorizeRequests()
+                .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**", BCIDROOTS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
+                .antMatchers(INFO_URL + "/**").permitAll()
+                .antMatchers(BASE_URL + "/**").authenticated()
+                .anyRequest().permitAll().and()
+            .addFilter(filter())
+            .httpBasic();
+
+        if (LIMSInitializationListener.getLDAPConfiguration() != null) {
+            String LDAPAdminAuthority = LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority();
+
+            if (!StringVerificationUtilities.isStringNULLOrEmpty(LDAPAdminAuthority)) {
+                http.authorizeRequests()
+                    .antMatchers(PROJECTS_URL + "/**").hasAuthority(LDAPAdminAuthority)
+                    .antMatchers(USERS_URL + "/**").hasAuthority(LDAPAdminAuthority)
+                    .antMatchers(BCIDROOTS_URL + "/**").hasAuthority(LDAPAdminAuthority);
+            }
+        }
+    }
+
+    @Bean
+    AuthenticationFilter filter() throws Exception {
+        AuthenticationFilter filter = new AuthenticationFilter();
+        filter.setAuthenticationManager(super.authenticationManager());
+        filter.setAuthenticationEntryPoint(new LoginUrlAuthenticationEntryPoint());
+        return filter;
+    }
+
     private void initializeAdminUserIfNecessary(DataSource dataSource) throws SQLException {
         Connection connection = null;
         try {
@@ -123,30 +156,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             throw new IllegalStateException("Missing " + scriptName + ".  Cannot set up security.");
         }
         DatabaseScriptRunner.runScript(connection, script, false, false);
-    }
-
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        http.csrf().disable().authorizeRequests()
-                .antMatchers(PROJECTS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
-                .antMatchers(USERS_URL +"/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
-                .antMatchers(BCIDROOTS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
-                .antMatchers(INFO_URL + "/**").permitAll()
-                .antMatchers(BASE_URL + "/**").authenticated()
-                .anyRequest().permitAll()
-            .and()
-            .httpBasic();
-
-        if (LIMSInitializationListener.getLDAPConfiguration() != null) {
-            String LDAPAdminAuthority = LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority();
-
-            if (!StringVerificationUtilities.isStringNULLOrEmpty(LDAPAdminAuthority)) {
-                http.csrf().disable().authorizeRequests()
-                        .antMatchers(PROJECTS_URL + "/**").hasAnyAuthority(LDAPAdminAuthority)
-                        .antMatchers(USERS_URL + "/**").hasAnyAuthority(LDAPAdminAuthority)
-                        .antMatchers(BCIDROOTS_URL + "/**").hasAnyAuthority(LDAPAdminAuthority);
-            }
-        }
     }
 
     private AuthenticationManagerBuilder authenticateWithLDAP(AuthenticationManagerBuilder auth, final LDAPConfiguration config) throws Exception {

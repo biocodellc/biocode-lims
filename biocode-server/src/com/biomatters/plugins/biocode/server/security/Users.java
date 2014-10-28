@@ -393,7 +393,7 @@ public class Users {
 
     private static String getUsername(UserDetails userDetails) {
         if (isLDAPUser(userDetails)) {
-            return getUsernameWithLDAPIdentifier(userDetails.getUsername());
+            return appendWithLDAPIdentifier(userDetails.getUsername());
         }
 
         return userDetails.getUsername();
@@ -407,7 +407,7 @@ public class Users {
             SqlUtilities.beginTransaction(connection);
 
             String addUserQuery = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?)";
-            String usernameWithLDAPIdentifier = getUsernameWithLDAPIdentifier(username);
+            String usernameWithLDAPIdentifier = appendWithLDAPIdentifier(username);
             PreparedStatement statement = connection.prepareStatement(addUserQuery);
 
             statement.setObject(1, usernameWithLDAPIdentifier);
@@ -447,7 +447,7 @@ public class Users {
         }
     }
 
-    public static String getUsernameWithLDAPIdentifier(String userName) {
+    public static String appendWithLDAPIdentifier(String userName) {
         return userName + " " + LDAP_USERNAME_IDENTIFIER;
     }
 
