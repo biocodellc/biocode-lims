@@ -164,10 +164,6 @@ biocodeControllers.controller('userListCtrl', ['$scope', '$http',
             });
         }
 
-        $scope.onAllCheckBox = function(target) {
-            $('td input').prop('checked', target.checked);
-        }
-
         $scope.onDeleteUser = function() {
             var inputs = $(":checked") ;
             var delUsers = new Object();
@@ -254,6 +250,10 @@ biocodeControllers.controller('userDetailCtrl', ['$scope', '$http', '$routeParam
                 for (var i = 0; i < data.length; i++) {
                     $scope.projectRolesMap[data[i].id] = data[i];
                 }
+            });
+
+            $http.get(usersUrl + loggedInUserPage).success(function(data) {
+                $scope.loggedInUser = data;
             });
         }
 

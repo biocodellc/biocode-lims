@@ -17,8 +17,7 @@
                 <th>First Name</th>
                 <th>Last Name</th>
                 <th>Email Address</th>
-                <th>Is LDAP Account</th>
-                <th><input type="checkbox" id="all-project-roles" ng-click="onAllCheckBox($event.target)"></th>
+                <th>Select</th>
             </tr>
             </thead>
             <tbody>
@@ -27,8 +26,7 @@
                 <td>{{user.firstname}}</td>
                 <td>{{user.lastname}}</td>
                 <td>{{user.email}}</td>
-                <td><img ng-show="{{user.isLDAPAccount}}" src="../img/tick.png"/></td>
-                <td><input ng-disabled="user.isLDAPAccount==true" type="checkbox"></td>
+                <td><input ng-hide="user.isLDAPAccount==true" type="checkbox"></td>
             </tr>
             </tbody>
         </table>

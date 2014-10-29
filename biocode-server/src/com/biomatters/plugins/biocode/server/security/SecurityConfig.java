@@ -17,7 +17,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -100,8 +99,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     AuthenticationFilter filter() throws Exception {
         AuthenticationFilter filter = new AuthenticationFilter();
+
         filter.setAuthenticationManager(super.authenticationManager());
-        filter.setAuthenticationEntryPoint(new LoginUrlAuthenticationEntryPoint());
+        filter.setAuthenticationEntryPoint(new BasicAuthenticationEntryPoint());
+
         return filter;
     }
 
@@ -110,13 +111,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         try {
             connection = dataSource.getConnection();
 
-            List<User> users = Users.getUserList(connection);
+            boolean noJDBCUser = true;
 
-            Users usersResource = new Users();
-            if (users.isEmpty()) {
-                User newAdmin = new User("admin", "admin", "admin", "", "", true, true, false);
+            for (User user : Users.getUserList(connection)) {
+                if (!user.isLDAPAccount) {
+                    noJDBCUser = false;
+                    break;
+                }
+            }
 
-                usersResource.addUser(newAdmin);
+            if (noJDBCUser) {
+                Users.addUser(dataSource, new User("admin", "admin", "admin", "", "", true, true, false));
             }
         } finally {
             SqlUtilities.closeConnection(connection);
