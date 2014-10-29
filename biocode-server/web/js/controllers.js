@@ -379,6 +379,10 @@ biocodeControllers.controller('bcidRootsCtrl', ['$scope', '$http',
             }).error(function(data, status) {
                 showError($scope, status, data, "bcid roots");
             });
+
+            $http.get(usersUrl + loggedInUserPage).success(function(data) {
+                $scope.loggedInUser = data;
+            });
         }
 
         $scope.save = function() {
@@ -389,8 +393,8 @@ biocodeControllers.controller('bcidRootsCtrl', ['$scope', '$http',
                 var newBCIDRoot = new Object();
                 var currRow = bcidRootsTable.rows[i].cells;
 
-                newBCIDRoot.type = currRow[0].textContent;
-                newBCIDRoot.value = currRow[1].textContent;
+                newBCIDRoot.type = currRow.namedItem("type").textContent;
+                newBCIDRoot.value = currRow.namedItem("value").textContent;
 
                 bcidRoots.push(newBCIDRoot);
             }

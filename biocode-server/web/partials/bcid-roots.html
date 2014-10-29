@@ -13,15 +13,16 @@
                 </thead>
                 <tbody>
                 <tr ng-repeat="bcidRoot in bcidRoots">
-                    <td>{{bcidRoot.type}}</td>
-                    <td><div id="{{bcidRoot.type}}" contenteditable>{{bcidRoot.value}}</div></td>
+                    <td id="type">{{bcidRoot.type}}</td>
+                    <td id="value" ng-show="loggedInUser.isAdministrator==true"><div contenteditable>{{bcidRoot.value}}</div></td>
+                    <td id="value-uneditable" ng-hide="loggedInUser.isAdministrator==true"><div>{{bcidRoot.value}}</div></td>
                 </tr>
                 </tbody>
             </table>
         </div>
     </div>
     <div class="row">
-        <button type="button" class="btn btn-primary btn-lg" ng-click="save()">Save</button>
+        <button type="button" ng-disabled="loggedInUser.isAdministrator!=true" class="btn btn-primary btn-lg" ng-click="save()">Save</button>
     </div>
 </div>
 <div class="container" ng-show="errorMessage">

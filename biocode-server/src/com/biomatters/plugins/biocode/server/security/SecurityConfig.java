@@ -77,9 +77,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
             .authorizeRequests()
-                .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**", BCIDROOTS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
+                .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
                 .antMatchers(INFO_URL + "/**").permitAll()
-                .antMatchers(BASE_URL + "/**").authenticated()
+                .antMatchers(BASE_URL + "/**", BCIDROOTS_URL + "/**").authenticated()
                 .anyRequest().permitAll().and()
             .addFilter(filter())
             .httpBasic();
