@@ -80,8 +80,8 @@ public class BiocodeUtilities {
     public static void displayExceptionDialog(String title, String message, Exception exception, Component owner) {
         StringWriter stacktrace = new StringWriter();
         exception.printStackTrace(new PrintWriter(stacktrace));
-        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, title, owner, Dialogs.DialogIcon.WARNING);
-        dialogOptions.setMoreOptionsButtonText("Show details...", "Hide details...");
+        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(Dialogs.OK_ONLY, title, owner, Dialogs.DialogIcon.INFORMATION);
+        dialogOptions.setMoreOptionsButtonText("Show Details", "Hide Details");
         Dialogs.showMoreOptionsDialog(dialogOptions, message, stacktrace.toString());
     }
 
