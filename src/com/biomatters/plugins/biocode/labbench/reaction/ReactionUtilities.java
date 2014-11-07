@@ -19,6 +19,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
+import com.biomatters.plugins.biocode.options.PlateSizeOption;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -82,7 +83,7 @@ public class ReactionUtilities {
         }
 
         Options options = new Options(ReactionUtilities.class);
-        Options.FileSelectionOption selectionOption = options.addFileSelectionOption("inputFolder", "Folder containing chromats", "", new String[0], "Browse...");
+        final Options.FileSelectionOption selectionOption = options.addFileSelectionOption("inputFolder", "Folder containing chromats", "", new String[0], "Browse...");
         selectionOption.setSelectionType(JFileChooser.DIRECTORIES_ONLY);
 
 
@@ -91,23 +92,41 @@ public class ReactionUtilities {
             fieldValues.add(new Options.OptionValue(field.getCode(), field.getName(), field.getDescription()));
         }
         Options.OptionValue[] chooseValues = new Options.OptionValue[] {
-                new Options.OptionValue("well", "Well number"),
+                new Options.OptionValue("well", "Well number, "),
                 new Options.OptionValue("field", "Field")
         };
+
+        final Options.ComboBoxOption<Options.OptionValue> plateSizeOption = options.addCustomOption(new PlateSizeOption("Original plate size is ", "Original plate size is "));
+        String size;
+        Plate.Size plateSize = plate.getPlateSize();
+        if (plateSize == null) {
+            size = "None";
+        } else {
+            size = "" + plate.getPlateSize().numberOfReactions();
+        }
+
+        plateSizeOption.setValue(new Options.OptionValue(size, size));
+        Options.ButtonOption buttonOption = options.addButtonOption("autodetect", "", "Autodetect");
+
         Options.RadioOption<Options.OptionValue> chooseOption = options.addRadioOption("choose", "Match", chooseValues, chooseValues[0], Options.Alignment.VERTICAL_ALIGN);
         Options.ComboBoxOption<Options.OptionValue> fieldOption = options.addComboBoxOption("field", "", fieldValues, fieldValues.get(0));
         chooseOption.setDependentPosition(Options.RadioOption.DependentPosition.RIGHT);
+        chooseOption.addDependent(chooseValues[0], plateSizeOption, true);
+        chooseOption.addDependent(chooseValues[0], buttonOption, true);
+
+        chooseOption.setDependentPosition(Options.RadioOption.DependentPosition.RIGHT);
         chooseOption.addDependent(chooseValues[1], fieldOption, true);
+
 
         options.beginAlignHorizontally(null, false);
         Options.Option label = options.addLabel("Match:");
         label.setDescription("Separate sequences in to groups according to their names and assemble each group individually");
-        NamePartOption namePartOption2 = new NamePartOption("namePart2", "");
+        final NamePartOption namePartOption2 = new NamePartOption("namePart2", "");
         options.addCustomOption(namePartOption2);
         namePartOption2.setDescription("Each name is split into segments by the given separator, then the n-th segment is used to identify the sequence's well");
         options.addLabel("part of name,");
         options.addLabel(" seperated by");
-        NameSeparatorOption nameSeperatorOption = new NameSeparatorOption("nameSeparator", "");
+        final NameSeparatorOption nameSeperatorOption = new NameSeparatorOption("nameSeparator", "");
         options.addCustomOption(nameSeperatorOption);
         options.endAlignHorizontally();
 
@@ -137,6 +156,45 @@ public class ReactionUtilities {
         fixNames.setDisabledValue(false);
         plateBackwards.addDependent(fixNames, true);
 
+        buttonOption.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e) {
+                File folder = new File(selectionOption.getValue());
+                String separatorString = nameSeperatorOption.getSeparatorString();
+                String filterText = filterOption.getValue();
+                int wellPart = namePartOption2.getPart();
+                int max = Integer.MIN_VALUE;
+                for(File f : folder.listFiles()) {
+                    if(f.isHidden()) {
+                        continue;
+                    }
+                    if(f.getName().startsWith(".")) { //stupid macos files
+                        continue;
+                    }
+                    if(filterText != null && !f.getName().contains(filterText)) {
+                        continue;
+                    }
+
+                    BiocodeUtilities.Well originalWell = null;
+                    BiocodeUtilities.Well newWell = null;
+                    if(f.getName().toLowerCase().endsWith(".ab1")) { //let's do some actual work...
+                        String[] nameParts = f.getName().split(separatorString);
+                        CycleSequencingReaction r = null;
+                        originalWell = BiocodeUtilities.getWellFromFileName(f.getName(), separatorString, wellPart);
+                        max = max > originalWell.number ? max : originalWell.number;
+                    }
+                }
+
+                if (max > 0 && max <= 6) {
+                    plateSizeOption.setValue(new Options.OptionValue("48", "48"));
+                } else if (max > 6 && max <= 12) {
+                    plateSizeOption.setValue(new Options.OptionValue("96", "96"));
+                } else if (max > 12) {
+                    plateSizeOption.setValue(new Options.OptionValue("384", "384"));
+                } else {
+                    Dialogs.showMessageDialog("Can not detect plate size, please specify plate size.");
+                }
+            }
+        });
 
         if(!Dialogs.showOptionsDialog(options, "Bulk add traces", true, owner)){
             return null;
@@ -165,9 +223,10 @@ public class ReactionUtilities {
 
         final String separatorString = nameSeperatorOption.getSeparatorString();
         final DocumentField finalField = field;
+
         Runnable runnable = new Runnable() {
             public void run() {
-                final ImportTracesResult result = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue(), filterOption.getValue());
+                final ImportTracesResult result = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, Plate.Size.sizeOf(plateSizeOption.getValue().getName()), plate, plateBackwards.getValue(), fixNames.getValue(), filterOption.getValue());
                 Runnable runnable = new Runnable() {
                     public void run() {
                         ThreadUtilities.sleep(100);
@@ -240,12 +299,12 @@ public class ReactionUtilities {
      * @param fieldToCheck
      * @param checkPlate
      * @param folder
-     * @param plateSize
+     * @param plate
      * @param flipPlate
      * @param checkNames
      * @param filterText
      */
-    private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size plateSize, boolean flipPlate, boolean checkNames, String filterText) {
+    private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, String separatorString, int platePart, int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, Plate.Size originalPlateSize, Plate plate, boolean flipPlate, boolean checkNames, String filterText) {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
@@ -290,8 +349,8 @@ public class ReactionUtilities {
                 else {
                     originalWell = BiocodeUtilities.getWellFromFileName(f.getName(), separatorString, partToMatch);
                     if (originalWell == null) continue;
-                    int location = flipPlate ? plateSize.numberOfReactions()-Plate.getWellLocation(originalWell, plateSize)-1 : Plate.getWellLocation(originalWell, plateSize);
-                    newWell = Plate.getWell(location, plateSize);
+                    int location = flipPlate ? originalPlateSize.numberOfReactions()-Plate.getWellLocation(originalWell, originalPlateSize)-1 : Plate.getWellLocation(originalWell, originalPlateSize);
+                    newWell = Plate.getWellByCols(location, plate.getCols());
 
                     String wellString = newWell.toString();
                     r = getReaction(reactions, wellString);

@@ -4,21 +4,16 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import org.jdom.Element;
 
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Collections;
-import java.util.Date;
 
 /**
  * @author Steven Stones-Havas
@@ -44,8 +39,16 @@ public class Plate implements XMLSerializable {
         w48("48", 48),
         w96("96", 96),
         w384("384", 384);
+
+        private static Map<Integer, Size> SIZE_MAP = new HashMap<Integer, Size>();
+        static {
+            SIZE_MAP.put(w48.numberOfReactions(), w48);
+            SIZE_MAP.put(w96.numberOfReactions(), w96);
+            SIZE_MAP.put(w384.numberOfReactions(), w384);
+        }
+
         private String niceName;
-        private int size;
+        private Integer size;
 
         private Size(String s, int size) {
             this.niceName = s;
@@ -58,8 +61,25 @@ public class Plate implements XMLSerializable {
             return niceName;
         }
 
-        public int numberOfReactions() {
+        public Integer numberOfReactions() {
             return size;
+        }
+
+        public static Size sizeOf(int size) {
+            return SIZE_MAP.get(size);
+        }
+
+        public static Size sizeOf(String size) {
+            try {
+                int s = Integer.valueOf(size);
+                return SIZE_MAP.get(s);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+
+        public static Collection<Size> getSizeList() {
+             return SIZE_MAP.values();
         }
     }
 
@@ -331,6 +351,12 @@ public class Plate implements XMLSerializable {
         else {
             cols = 1+position;
         }
+        int row = position / cols;
+        int col = position % cols;
+        return new BiocodeUtilities.Well((char)(65+row), 1+col);
+    }
+
+    public static BiocodeUtilities.Well getWellByCols(int position, int cols) {
         int row = position / cols;
         int col = position % cols;
         return new BiocodeUtilities.Well((char)(65+row), 1+col);

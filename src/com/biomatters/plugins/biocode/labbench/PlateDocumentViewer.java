@@ -357,7 +357,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                             displayAction
                     ));
                 }
-                if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing && plateView.getPlate().getPlateSize() != null) {
+                if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
                     actions.addAll(Arrays.asList(
                             addTracesAction,
                             exportPlateAction
