@@ -100,7 +100,7 @@ public abstract class LimsTestCase extends Assert {
             PlateDocument plateDoc = (PlateDocument) doc.getDocumentOrNull();
             if(plateDoc.getPlate().getReactionType() == expectedType && plateName.equals(doc.getName())) {
                 Reaction[] reactions = plateDoc.getPlate().getReactions();
-                assertEquals(Plate.Size.w96.numberOfReactions(), reactions.length);
+                assertEquals((int)Plate.Size.w96.numberOfReactions(), reactions.length);
                 for(int i=0; i<expectedExtractionIds.length; i++) {
                     assertEquals(expectedExtractionIds[i], reactions[i].getExtractionId());
                 }
