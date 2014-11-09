@@ -15,8 +15,8 @@ public class PlateSizeOption extends Options.ComboBoxOption<Options.OptionValue>
     private static final Options.OptionValue[] VALUES;
 
     static {
-        Collection<Plate.Size> sizeList = Plate.Size.getSizeList();
-        VALUES = new Options.OptionValue[sizeList.size() + 1];
+        Plate.Size[] sizeList = Plate.Size.values();
+        VALUES = new Options.OptionValue[sizeList.length + 1];
         VALUES[0] = new Options.OptionValue("None", "None");
 
         int i = 0;

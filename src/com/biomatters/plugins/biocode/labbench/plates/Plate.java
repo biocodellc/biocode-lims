@@ -65,10 +65,6 @@ public class Plate implements XMLSerializable {
             return size;
         }
 
-        public static Size sizeOf(int size) {
-            return SIZE_MAP.get(size);
-        }
-
         public static Size sizeOf(String size) {
             try {
                 int s = Integer.valueOf(size);
@@ -76,10 +72,6 @@ public class Plate implements XMLSerializable {
             } catch (NumberFormatException e) {
                 return null;
             }
-        }
-
-        public static Collection<Size> getSizeList() {
-             return SIZE_MAP.values();
         }
     }
 
@@ -176,7 +168,7 @@ public class Plate implements XMLSerializable {
     }
 
     public List<GelImage> getImages() {
-        return images != null ? images : Collections.EMPTY_LIST;
+        return images != null ? images : Collections.<GelImage>emptyList();
     }
 
     public boolean gelImagesHaveBeenDownloaded() {
@@ -300,10 +292,6 @@ public class Plate implements XMLSerializable {
         return getReaction(cols * row + col);
     }
 
-    public BiocodeUtilities.Well getWell(int row, int col) {
-        return new BiocodeUtilities.Well(getWellName(row, col));
-    }
-
     public Reaction getReaction(BiocodeUtilities.Well well) {
         int index = cols * well.row() + well.col();
         Reaction reaction = getReaction(index);
@@ -351,9 +339,7 @@ public class Plate implements XMLSerializable {
         else {
             cols = 1+position;
         }
-        int row = position / cols;
-        int col = position % cols;
-        return new BiocodeUtilities.Well((char)(65+row), 1+col);
+        return getWellByCols(position, cols);
     }
 
     public static BiocodeUtilities.Well getWellByCols(int position, int cols) {
