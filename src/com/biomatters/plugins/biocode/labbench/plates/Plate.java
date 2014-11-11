@@ -4,16 +4,21 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.jdom.Element;
 
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
+import java.util.Date;
 
 /**
  * @author Steven Stones-Havas
@@ -39,16 +44,8 @@ public class Plate implements XMLSerializable {
         w48("48", 48),
         w96("96", 96),
         w384("384", 384);
-
-        private static Map<Integer, Size> SIZE_MAP = new HashMap<Integer, Size>();
-        static {
-            SIZE_MAP.put(w48.numberOfReactions(), w48);
-            SIZE_MAP.put(w96.numberOfReactions(), w96);
-            SIZE_MAP.put(w384.numberOfReactions(), w384);
-        }
-
         private String niceName;
-        private Integer size;
+        private int size;
 
         private Size(String s, int size) {
             this.niceName = s;
@@ -61,17 +58,8 @@ public class Plate implements XMLSerializable {
             return niceName;
         }
 
-        public Integer numberOfReactions() {
+        public int numberOfReactions() {
             return size;
-        }
-
-        public static Size sizeOf(String size) {
-            try {
-                int s = Integer.valueOf(size);
-                return SIZE_MAP.get(s);
-            } catch (NumberFormatException e) {
-                return null;
-            }
         }
     }
 
@@ -168,7 +156,7 @@ public class Plate implements XMLSerializable {
     }
 
     public List<GelImage> getImages() {
-        return images != null ? images : Collections.<GelImage>emptyList();
+        return images != null ? images : Collections.EMPTY_LIST;
     }
 
     public boolean gelImagesHaveBeenDownloaded() {
@@ -292,6 +280,10 @@ public class Plate implements XMLSerializable {
         return getReaction(cols * row + col);
     }
 
+    public BiocodeUtilities.Well getWell(int row, int col) {
+        return new BiocodeUtilities.Well(getWellName(row, col));
+    }
+
     public Reaction getReaction(BiocodeUtilities.Well well) {
         int index = cols * well.row() + well.col();
         Reaction reaction = getReaction(index);
@@ -339,10 +331,6 @@ public class Plate implements XMLSerializable {
         else {
             cols = 1+position;
         }
-        return getWellByCols(position, cols);
-    }
-
-    public static BiocodeUtilities.Well getWellByCols(int position, int cols) {
         int row = position / cols;
         int col = position % cols;
         return new BiocodeUtilities.Well((char)(65+row), 1+col);
