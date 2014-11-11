@@ -19,10 +19,13 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import jebl.util.ProgressListener;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
+import javax.annotation.Nullable;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
@@ -167,9 +170,15 @@ public class ReactionUtilities {
         final DocumentField finalField = field;
         Runnable runnable = new Runnable() {
             public void run() {
+                final ImportTracesResult result;
+                try {
+                    result = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue(), filterOption.getValue());
+                } catch (DocumentOperationException.Canceled canceled) {
+                    return;
+                }
+
                 Runnable runnable = new Runnable() {
                     public void run() {
-                        ImportTracesResult result = importAndAddTraces(reactions, separatorString, platePart, wellPart, finalField, checkPlate, folder, plate.getPlateSize(), plateBackwards.getValue(), fixNames.getValue(), filterOption.getValue());
                         ThreadUtilities.sleep(100);
                         String message = "<html>Imported <strong>" + result.getSuccessfullyImported() + "</strong> traces";
                         if(result.getAnyProblems() != null) {
@@ -245,7 +254,7 @@ public class ReactionUtilities {
      * @param checkNames
      * @param filterText
      */
-    private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, final String separatorString, int platePart, final int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, final Plate.Size plateSize, boolean flipPlate, boolean checkNames, String filterText) {
+    private static ImportTracesResult importAndAddTraces(List<CycleSequencingReaction> reactions, final String separatorString, int platePart, final int partToMatch, DocumentField fieldToCheck, boolean checkPlate, File folder, final Plate.Size plateSize, boolean flipPlate, boolean checkNames, String filterText) throws DocumentOperationException.Canceled {
         try {
             BiocodeUtilities.downloadTracesForReactions(reactions, ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
@@ -261,11 +270,25 @@ public class ReactionUtilities {
 
         int count = 0;
         Map<File, String> failed = new HashMap<File, String>();
-        Plate.Size originalPlateSize = null;
 
-        boolean isFirstTime = true;
-        boolean useSameWell = false;
-        final List<File> validFiles = filterFiles(folder.listFiles(), filterText);
+        final AtomicReference<WellAssigningMethod> action = new AtomicReference<WellAssigningMethod>();
+
+        final Collection<File> validFiles = Collections2.filter(Arrays.asList(folder.listFiles()), getValidTraceFilePredicate(filterText));
+        final Plate.Size detectedPlateSize = detectPlateSize(validFiles, separatorString, partToMatch);
+        if ((detectedPlateSize == null || detectedPlateSize != plateSize)) {
+            ThreadUtilities.invokeNowOrWait(new Runnable() {
+                @Override
+                public void run() {
+                    action.set(askUserWhatToDoWithPlateConflict(detectedPlateSize, validFiles, separatorString, partToMatch));
+                }
+            });
+            if(action.get() == null) {
+                throw new DocumentOperationException.Canceled();
+            }
+        } else {
+            action.set(new WellAssigningMethod(false, detectedPlateSize));
+        }
+
         for(File f : validFiles) {
             BiocodeUtilities.Well originalWell = null;
             BiocodeUtilities.Well newWell = null;
@@ -284,116 +307,13 @@ public class ReactionUtilities {
                     }
                 }
                 else {
-                    if (isFirstTime) {
-                        isFirstTime = false;
-                        originalPlateSize = detectPlateSize(validFiles, separatorString, partToMatch);
-                        if ((originalPlateSize == null || originalPlateSize != plateSize)) {
-                            //if there is a conflict in plate size, try to get original plate size from user
-                            JRadioButton btn1 = new JRadioButton("Reflow traces onto this plate sequentially. The size of my original plate is : ");
-
-                            //plate size options
-                            final JComboBox box = new JComboBox();
-                            Plate.Size[] sizeList = Plate.Size.values();
-                            box.addItem("None");
-                            for (Plate.Size size : sizeList) {
-                                String lable = "" + size.numberOfReactions();
-                                box.addItem(lable);
-                            }
-
-                            if (originalPlateSize != null) {
-                                box.setSelectedItem("" + originalPlateSize.numberOfReactions());
-                            }
-
-                            final JButton detectButton = new JButton("AutoDetect");
-                            detectButton.addActionListener(new ActionListener() {
-                                @Override
-                                public void actionPerformed(ActionEvent e) {
-                                    Plate.Size size = detectPlateSize(validFiles, separatorString, partToMatch);
-                                    if (size == null) {
-                                        box.setSelectedItem("None");
-                                    } else {
-                                        box.setSelectedItem("" + size.numberOfReactions());
-                                    }
-                                }
-                            });
-
-                            btn1.addActionListener(new ActionListener() {
-                                @Override
-                                public void actionPerformed(ActionEvent e) {
-                                    box.setEnabled(true);
-                                    detectButton.setEnabled(true);
-                                }
-                            });
-
-                            JRadioButton btn2 = new JRadioButton("Skip the extras. Just add traces to wells with the same name.");
-                            btn2.addActionListener(new ActionListener() {
-                                @Override
-                                public void actionPerformed(ActionEvent e) {
-                                    box.setEnabled(false);
-                                    detectButton.setEnabled(false);
-                                }
-                            });
-
-                            ButtonGroup group = new ButtonGroup();
-                            group.add(btn1);
-                            group.add(btn2);
-                            btn1.setSelected(true);
-
-                            OptionsPanel panel = new OptionsPanel(true, false);
-                            panel.setLayout(new GridBagLayout());
-
-                            GridBagConstraints c = new GridBagConstraints();
-                            c.fill = GridBagConstraints.HORIZONTAL;
-                            c.weightx = 2;
-                            c.gridx = 0;
-                            c.gridy = 0;
-                            panel.add(btn1, c);
-
-                            c = new GridBagConstraints();
-                            c.fill = GridBagConstraints.HORIZONTAL;
-                            c.weightx = 1;
-                            c.gridx = 1;
-                            c.gridy = 0;
-                            panel.add(box, c);
-
-                            c = new GridBagConstraints();
-                            c.fill = GridBagConstraints.HORIZONTAL;
-                            c.weightx = 1;
-                            c.gridx = 2;
-                            c.gridy = 0;
-                            panel.add(detectButton, c);
-
-                            c = new GridBagConstraints();
-                            c.fill = GridBagConstraints.HORIZONTAL;
-                            c.weightx = 2;
-                            c.gridx = 0;
-                            c.gridy = 1;
-                            panel.add(btn2, c);
-
-                            Dialogs.DialogOptions options = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Plate size conflicts");
-                            options.setMaxWidth(780);
-
-                            Object o = Dialogs.showDialog(options, panel);
-                            if ("OK".equals(o.toString())) {
-                                if (btn1.isSelected()) {
-                                    if (!"None".equals(box.getSelectedItem())) {
-                                        originalPlateSize = Plate.getSizeEnum(Integer.parseInt(box.getSelectedItem().toString()));
-                                    } else {
-                                        originalPlateSize = null;
-                                    }
-                                } else {
-                                    useSameWell = true;
-                                }
-                            }
-                        }
-                    }
-
                     originalWell = BiocodeUtilities.getWellFromFileName(f.getName(), separatorString, partToMatch);
                     if (originalWell == null) continue;
 
-                    if (useSameWell) {
+                    if (action.get().useSameWell) {
                         newWell = originalWell;
                     } else {
+                        Plate.Size originalPlateSize = action.get().originalPlateSize;
                         int location = flipPlate ? originalPlateSize.numberOfReactions() - Plate.getWellLocation(originalWell, originalPlateSize) - 1 : Plate.getWellLocation(originalWell, originalPlateSize);
                         newWell = Plate.getWell(location, plateSize);
                     }
@@ -459,30 +379,159 @@ public class ReactionUtilities {
         return new ImportTracesResult(count, errorString.length() == 0 ? null : errorString.toString());
     }
 
-    private static List<File> filterFiles(File[] files, String filterText) {
-        List<File> ret = new ArrayList<File>();
+    /**
+     *
+     * @param detectedPlateSize The auto-detected size of the plate the traces are coming from
+     * @param validFiles Trace files
+     * @param separatorString The separator to use when splitting the trace file name
+     * @param partToMatch The index of the part of the trace name to use to identify the well
+     * @return a {@link com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities.WellAssigningMethod} or
+     * null if the user chose to cancel
+     */
+    private static WellAssigningMethod askUserWhatToDoWithPlateConflict(Plate.Size detectedPlateSize, final Collection<File> validFiles, final String separatorString, final int partToMatch) {
+        //if there is a conflict in plate size, try to get original plate size from user
+        JRadioButton btn1 = new JRadioButton("Reflow traces onto this plate sequentially. The size of my original plate is : ");
 
-        for (File f : files) {
-            if(f.isHidden()) {
-                continue;
-            }
-            if(f.getName().startsWith(".")) { //stupid macos files
-                continue;
-            }
-            if(filterText != null && !f.getName().contains(filterText)) {
-                continue;
-            }
-            BiocodeUtilities.Well originalWell = null;
-            BiocodeUtilities.Well newWell = null;
-            if(f.getName().toLowerCase().endsWith(".ab1")) {
-                ret.add(f);
-            }
+        //plate size options
+        final JComboBox box = new JComboBox();
+        Plate.Size[] sizeList = Plate.Size.values();
+        box.addItem("None");
+        for (Plate.Size size : sizeList) {
+            String lable = "" + size.numberOfReactions();
+            box.addItem(lable);
         }
 
-        return ret;
+        if (detectedPlateSize != null) {
+            box.setSelectedItem("" + detectedPlateSize.numberOfReactions());
+        }
+
+        final JButton detectButton = new JButton("AutoDetect");
+        detectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Plate.Size size = detectPlateSize(validFiles, separatorString, partToMatch);
+                if (size == null) {
+                    box.setSelectedItem("None");
+                } else {
+                    box.setSelectedItem("" + size.numberOfReactions());
+                }
+            }
+        });
+
+        btn1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                box.setEnabled(true);
+                detectButton.setEnabled(true);
+            }
+        });
+
+        JRadioButton btn2 = new JRadioButton("Skip the extras. Just add traces to wells with the same name.");
+        btn2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                box.setEnabled(false);
+                detectButton.setEnabled(false);
+            }
+        });
+
+        ButtonGroup group = new ButtonGroup();
+        group.add(btn1);
+        group.add(btn2);
+        btn1.setSelected(true);
+
+        OptionsPanel panel = new OptionsPanel(true, false);
+        panel.setLayout(new GridBagLayout());
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 2;
+        c.gridx = 0;
+        c.gridy = 0;
+        panel.add(btn1, c);
+
+        c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        c.gridx = 1;
+        c.gridy = 0;
+        panel.add(box, c);
+
+        c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        c.gridx = 2;
+        c.gridy = 0;
+        panel.add(detectButton, c);
+
+        c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 2;
+        c.gridx = 0;
+        c.gridy = 1;
+        panel.add(btn2, c);
+
+        Dialogs.DialogOptions options = new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Plate Size Conflict");
+        options.setMaxWidth(780);
+        panel.setBorder(new EmptyBorder(5, 0, 0, 0));
+
+        GPanel panelToShow = new GPanel(new BorderLayout());
+        panelToShow.setBorder(new EmptyBorder(5, 10, 5, 10 ));
+        panelToShow.add(new GLabel(
+                "<html>The traces you are adding include well numbers that do not match the plate size.<br><br>" +
+                "How do you want your traces to be added?</html>"), BorderLayout.NORTH);
+        panelToShow.add(panel, BorderLayout.CENTER);
+        Object o = Dialogs.showDialog(options, panelToShow);
+
+        if (o == Dialogs.CANCEL) {
+            return null;
+        }
+
+        if (btn1.isSelected()) {
+            Plate.Size toUse;
+            if (!"None".equals(box.getSelectedItem())) {
+                toUse = Plate.getSizeEnum(Integer.parseInt(box.getSelectedItem().toString()));
+            } else {
+                toUse = null;
+            }
+            return new WellAssigningMethod(false, toUse);
+        } else {
+            return new WellAssigningMethod(true, detectedPlateSize);
+        }
     }
 
-    private static Plate.Size detectPlateSize(List<File> files, String separatorString, int partToMatch) {
+    private static class WellAssigningMethod {
+        private boolean useSameWell;
+        private Plate.Size originalPlateSize;
+
+        private WellAssigningMethod(boolean useSameWell, Plate.Size originalPlateSize) {
+            this.useSameWell = useSameWell;
+            this.originalPlateSize = originalPlateSize;
+        }
+    }
+
+    private static Predicate<? super File> getValidTraceFilePredicate(final String filterText) {
+        return new Predicate<File>() {
+            @Override
+            public boolean apply(@Nullable File f) {
+                if(f == null || f.isHidden()) {
+                    return false;
+                }
+                if(f.getName().startsWith(".")) { //stupid macos files
+                    return false;
+                }
+                if(filterText != null && !f.getName().contains(filterText)) {
+                    return false;
+                }
+                if(f.getName().toLowerCase().endsWith(".ab1")) {
+                    return true;
+                }
+                return false;
+            }
+        };
+    }
+
+    private static Plate.Size detectPlateSize(Collection<File> files, String separatorString, int partToMatch) {
         int maxCols = Integer.MIN_VALUE;
         for (File file : files) {
             BiocodeUtilities.Well well = BiocodeUtilities.getWellFromFileName(file.getName(), separatorString, partToMatch);
