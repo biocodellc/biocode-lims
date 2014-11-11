@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.labbench.connection.Connection;
 import com.biomatters.plugins.biocode.labbench.fims.*;
 import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.*;
+import com.biomatters.plugins.biocode.server.security.ConnectionSettingsConstants;
 import com.biomatters.plugins.biocode.server.security.LDAPConfiguration;
 import com.biomatters.plugins.biocode.server.security.Projects;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
@@ -132,18 +133,21 @@ public class LIMSInitializationListener implements ServletContextListener {
     }
 
     private void setLdapAuthenticationSettings(Properties config) {
-        boolean isLdapEnabled = Boolean.parseBoolean(config.getProperty("ldap.enabled"));
+        boolean isLdapEnabled = Boolean.parseBoolean((String)config.get(ConnectionSettingsConstants.LDAP_ENABLED_SETTING_NAME));
 
-        String server =             (String)config.get("ldap.server");
-        String port =               (String)config.get("ldap.port");
-        String userDNPattern =      (String)config.get("ldap.userDNPattern");
-        String userSearchBase =     (String)config.get("ldap.userSearchBase");
-        String userSearchFilter =   (String)config.get("ldap.userSearchFilter");
-        String groupSearchBase =    (String)config.get("ldap.groupSearchBase");
-        String groupSearchFilter =  (String)config.get("ldap.groupSearchFilter");
-        String groupRoleAttribute = (String)config.get("ldap.groupRoleAttribute");
-        String rolePrefix =         (String)config.get("ldap.rolePrefix");
-        String adminAuthority =     (String)config.get("ldap.adminAuthority");
+        String server =             (String)config.get(ConnectionSettingsConstants.LDAP_SERVER_SETTING_NAME);
+        String port =               (String)config.get(ConnectionSettingsConstants.LDAP_PORT_SETTING_NAME);
+        String userDNPattern =      (String)config.get(ConnectionSettingsConstants.LDAP_USER_DN_PATTERN_SETTING_NAME);
+        String userSearchBase =     (String)config.get(ConnectionSettingsConstants.LDAP_USER_SEARCH_BASE_PATTERN_SETTING_NAME);
+        String userSearchFilter =   (String)config.get(ConnectionSettingsConstants.LDAP_USER_SEARCH_FILTER_SETTING_NAME);
+        String groupSearchBase =    (String)config.get(ConnectionSettingsConstants.LDAP_GROUP_SEARCH_BASE_SETTING_NAME);
+        String groupSearchFilter =  (String)config.get(ConnectionSettingsConstants.LDAP_GROUP_SEARCH_FILTER_SETTING_NAME);
+        String groupRoleAttribute = (String)config.get(ConnectionSettingsConstants.LDAP_GROUP_ROLE_ATTRIBUTE_SETTING_NAME);
+        String rolePrefix =         (String)config.get(ConnectionSettingsConstants.LDAP_ROLE_PREFIX_SETTING_NAME);
+        String adminAuthority =     (String)config.get(ConnectionSettingsConstants.LDAP_ADMIN_AUTHORITY_SETTING_NAME);
+        String firstnameAttribute = (String)config.get(ConnectionSettingsConstants.LDAP_FIRST_NAME_ATTRIBUTE_SETTING_NAME);
+        String lastnameAttribute =  (String)config.get(ConnectionSettingsConstants.LDAP_LAST_NAME_ATTRIBUTE_SETTING_NAME);
+        String emailAttribute =     (String)config.get(ConnectionSettingsConstants.LDAP_EMAIL_ATTRIBUTE_SETTING_NAME);
 
         if (isLdapEnabled) {
             int portAsInt;
@@ -155,22 +159,32 @@ public class LIMSInitializationListener implements ServletContextListener {
                 return;
             }
 
-            LDAPConfiguration = new LDAPConfiguration(server,
-                                                      portAsInt,
-                                                      userDNPattern,
-                                                      userSearchBase,
-                                                      userSearchFilter,
-                                                      groupSearchBase,
-                                                      groupSearchFilter,
-                                                      groupRoleAttribute,
-                                                      rolePrefix,
-                                                      adminAuthority);
+            LDAPConfiguration = new LDAPConfiguration(
+                    server,
+                    portAsInt,
+                    userDNPattern,
+                    userSearchBase,
+                    userSearchFilter,
+                    groupSearchBase,
+                    groupSearchFilter,
+                    groupRoleAttribute,
+                    rolePrefix,
+                    adminAuthority,
+                    firstnameAttribute,
+                    lastnameAttribute,
+                    emailAttribute
+            );
         }
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         stopProjectPopulatingThread();
+
+        if (LDAPConfiguration != null) {
+            LDAPConfiguration = null;
+        }
+
         BiocodeService.getInstance().logOut();
     }
 

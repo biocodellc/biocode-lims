@@ -5,7 +5,7 @@ package com.biomatters.plugins.biocode.server.security;
  *         Created on 14/10/14 3:56 PM
  */
 public class LDAPConfiguration {
-    private static final String ROLE_PREFIX = "ROLE_";
+    public static final String LDAP_DEFAULT_ROLE_PREFIX = "ROLE_";
 
     private String server;
     private int port;
@@ -17,6 +17,9 @@ public class LDAPConfiguration {
     private String groupRoleAttribute;
     private String rolePrefix;
     private String adminAuthority;
+    private String firstnameAttribute;
+    private String lastnameAttribute;
+    private String emailAttribute;
 
     public LDAPConfiguration(String server,
                              int port,
@@ -27,7 +30,10 @@ public class LDAPConfiguration {
                              String groupSearchFilter,
                              String groupRoleAttribute,
                              String rolePrefix,
-                             String adminAuthority) {
+                             String adminAuthority,
+                             String firstnameAttribute,
+                             String lastnameAttribute,
+                             String emailAttribute) {
         this.server = server;
         this.port = port;
         this.userDNPattern = userDNPattern;
@@ -36,8 +42,11 @@ public class LDAPConfiguration {
         this.groupSearchBase = groupSearchBase;
         this.groupSearchFilter = groupSearchFilter;
         this.groupRoleAttribute = groupRoleAttribute;
-        this.rolePrefix = rolePrefix;
+        this.rolePrefix = rolePrefix == null ? LDAP_DEFAULT_ROLE_PREFIX : rolePrefix;
         this.adminAuthority = adminAuthority;
+        this.firstnameAttribute = firstnameAttribute;
+        this.lastnameAttribute = lastnameAttribute;
+        this.emailAttribute = emailAttribute;
     }
 
     public String getServer() {
@@ -77,6 +86,18 @@ public class LDAPConfiguration {
     }
 
     public String getAdminAuthority() {
-        return adminAuthority == null ? null : ROLE_PREFIX + adminAuthority.toUpperCase();
+        return adminAuthority == null ? null : (rolePrefix + adminAuthority).toUpperCase();
+    }
+
+    public String getFirstnameAttribute() {
+        return firstnameAttribute;
+    }
+
+    public String getLastnameAttribute() {
+        return lastnameAttribute;
+    }
+
+    public String getEmailAttribute() {
+        return emailAttribute;
     }
 }

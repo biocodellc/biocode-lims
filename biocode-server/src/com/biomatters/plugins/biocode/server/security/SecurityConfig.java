@@ -89,21 +89,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
             if (!StringVerificationUtilities.isStringNULLOrEmpty(LDAPAdminAuthority)) {
                 http.authorizeRequests()
-                    .antMatchers(PROJECTS_URL + "/**").hasAuthority(LDAPAdminAuthority)
-                    .antMatchers(USERS_URL + "/**").hasAuthority(LDAPAdminAuthority)
-                    .antMatchers(BCIDROOTS_URL + "/**").hasAuthority(LDAPAdminAuthority);
+                    .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**").hasAuthority(LDAPAdminAuthority);
             }
         }
     }
 
     @Bean
-    AuthenticationFilter filter() throws Exception {
-        AuthenticationFilter filter = new AuthenticationFilter();
+    CustomAuthenticationFilter filter() throws Exception {
+        return new CustomAuthenticationFilter(super.authenticationManager(), new BasicAuthenticationEntryPoint());
+    }
 
-        filter.setAuthenticationManager(super.authenticationManager());
-        filter.setAuthenticationEntryPoint(new BasicAuthenticationEntryPoint());
-
-        return filter;
+    @Bean
+    CustomLdapUserDetailsMapper userDetailsMapper() {
+        return new CustomLdapUserDetailsMapper();
     }
 
     private void initializeAdminUserIfNecessary(DataSource dataSource) throws SQLException {
@@ -139,9 +137,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         try {
             connection = dataSource.getConnection();
             Set<String> tables = SqlUtilities.getDatabaseTableNamesLowerCase(connection);
+
             if(!tables.contains(LimsDatabaseConstants.USERS_TABLE_NAME.toLowerCase())) {
                 setupTables(connection);
             }
+
             return false;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -157,14 +157,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private static void setupTables(Connection connection) throws SQLException, IOException {
         String scriptName = "add_access_control.sql";
         InputStream script = SecurityConfig.class.getResourceAsStream(scriptName);
+
         if(script == null) {
             throw new IllegalStateException("Missing " + scriptName + ".  Cannot set up security.");
         }
+
         DatabaseScriptRunner.runScript(connection, script, false, false);
     }
 
     private AuthenticationManagerBuilder authenticateWithLDAP(AuthenticationManagerBuilder auth, final LDAPConfiguration config) throws Exception {
-        StringVerificationUtilities.throwExceptionIfExistsNULLOrEmptyStrings(new HashMap<String, String>() {{
+        StringVerificationUtilities.throwExceptionIfAllNULLOrEmptyStrings(new HashMap<String, String>() {{
             put("server", config.getServer());
         }});
 
@@ -173,10 +175,23 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             put("userSearchFilter", config.getUserSearchFilter());
         }});
 
+        StringVerificationUtilities.throwExceptionIfAllNULLOrEmptyStrings(new HashMap<String, String>() {{
+            put("groupSearchBase", config.getGroupSearchBase());
+            put("groupSearchFilter", config.getGroupSearchFilter());
+        }});
+
         LdapAuthenticationProviderConfigurer<AuthenticationManagerBuilder> ldapAuthenticationProviderConfigurer = auth.ldapAuthentication();
 
         ldapAuthenticationProviderConfigurer.contextSource().url(config.getServer());
         ldapAuthenticationProviderConfigurer.contextSource().port(config.getPort());
+
+        CustomLdapUserDetailsMapper mapper = userDetailsMapper();
+
+        mapper.setFirstnameAttribute(config.getFirstnameAttribute());
+        mapper.setLastnameAttribute(config.getLastnameAttribute());
+        mapper.setEmailAttribute(config.getEmailAttribute());
+
+        ldapAuthenticationProviderConfigurer.userDetailsContextMapper(mapper);
 
         if (!StringVerificationUtilities.isStringNULLOrEmpty(config.getUserDNPattern())) {
             ldapAuthenticationProviderConfigurer.userDnPatterns(config.getUserDNPattern());

@@ -40,6 +40,7 @@ public class Users {
     @Produces({"application/json;qs=1", "application/xml;qs=0.5"})
     public Response list() {
         Connection connection = null;
+
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
@@ -72,7 +73,8 @@ public class Users {
 
         while (resultSet.next()) {
             User user = createUserFromResultSetRow(resultSet);
-            if(user != null) {
+
+            if (user != null) {
                 users.add(user);
             }
         }
@@ -87,9 +89,11 @@ public class Users {
     @Path("{username}")
     public User getUser(@PathParam("username")String username) {
         User user = getUserForUsername(username);
-        if(user == null) {
+
+        if (user == null) {
             throw new NotFoundException("No user for " + username);
         }
+
         return user;
     }
 
@@ -199,6 +203,7 @@ public class Users {
 
                 if(insertedAuth == 1) {
                     SqlUtilities.commitTransaction(connection);
+
                     return "User added.";
                 } else {
                     throw new InternalServerErrorException("Failed to add user account. " +
@@ -225,6 +230,7 @@ public class Users {
         }
 
         Connection connection = null;
+
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
@@ -242,9 +248,11 @@ public class Users {
             PreparedStatement statement = connection.prepareStatement(updateUserQuery);
 
             int i = 1;
+
             statement.setObject(i++, user.username);
-            if (user.password != null)
+            if (user.password != null) {
                 statement.setObject(i++, encoder.encode(user.password));
+            }
             statement.setObject(i++, user.firstname);
             statement.setObject(i++, user.lastname);
             statement.setObject(i++, user.email);
@@ -259,13 +267,17 @@ public class Users {
                                               "WHERE "  + LimsDatabaseConstants.USERNAME_COLUMN_NAME_AUTHORITIES_TABLE + "=?";
 
                 PreparedStatement updateAuth = connection.prepareStatement(updateAuthorityQuery);
+
                 updateAuth.setObject(1, user.isAdministrator ?
                         LimsDatabaseConstants.AUTHORITY_ADMIN_CODE :
                         LimsDatabaseConstants.AUTHORITY_USER_CODE);
                 updateAuth.setObject(2, user.username);
+
                 int updatedAuth = updateAuth.executeUpdate();
-                if(updatedAuth == 1) {
+
+                if (updatedAuth == 1) {
                     SqlUtilities.commitTransaction(connection);
+
                     return "User account '" + username + "' updated.";
                 } else {
                     throw new InternalServerErrorException("Failed to update user account '" + username + "'. " +
@@ -287,6 +299,7 @@ public class Users {
     @Produces("text/plain")
     public String deleteUser(@PathParam("username")String username) {
         Connection connection = null;
+
         try {
             if (!isAdmin(getLoggedInUser())) {
                 throw new ForbiddenException("Action denied: insufficient permissions.");
@@ -297,6 +310,7 @@ public class Users {
             }
 
             connection = LIMSInitializationListener.getDataSource().getConnection();
+
             SqlUtilities.beginTransaction(connection);
 
             String query = "DELETE FROM " + LimsDatabaseConstants.USERS_TABLE_NAME + " " +
@@ -310,6 +324,7 @@ public class Users {
 
             if (deleted == 1) {
                 SqlUtilities.commitTransaction(connection);
+
                 return "User account '" + username + "' deleted.";
             } else {
                 throw new InternalServerErrorException("Failed to delete user account '" + username + "'. " +
@@ -339,6 +354,7 @@ public class Users {
         String username = user.username;
 
         Connection connection = null;
+
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
@@ -366,13 +382,28 @@ public class Users {
 
     public static void handleLDAPUserLogin() {
         UserDetails loggedInUserDetails = getLoggedInUserDetails();
+
         if (isLDAPUser(loggedInUserDetails)) {
+            String username = loggedInUserDetails.getUsername();
+            boolean isAdministrator = hasAuthority(loggedInUserDetails, LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority());
+            String firstname = "";
+            String lastname = "";
+            String email = "";
+
+            if (loggedInUserDetails instanceof CustomLdapUserDetailsImpl) {
+                CustomLdapUserDetailsImpl customLdapUserDetails = (CustomLdapUserDetailsImpl)loggedInUserDetails;
+
+                firstname = customLdapUserDetails.getFirstname();
+                lastname = customLdapUserDetails.getLastname();
+                email = customLdapUserDetails.getEmail();
+            }
+
             try {
                 if (getLoggedInUser() == null) {
-                    addLDAPUser(loggedInUserDetails.getUsername(), hasAuthority(loggedInUserDetails, LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority()));
+                    addLDAPUser(username, firstname, lastname, email, isAdministrator);
                 }
             } catch (NotFoundException e) {
-                addLDAPUser(loggedInUserDetails.getUsername(), hasAuthority(loggedInUserDetails, LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority()));
+                addLDAPUser(username, firstname, lastname, email, isAdministrator);
             }
         }
     }
@@ -399,22 +430,25 @@ public class Users {
         return userDetails.getUsername();
     }
 
-    private static boolean addLDAPUser(String username, boolean isAdministrator) {
+    private static boolean addLDAPUser(String username, String firstname, String lastname, String email, boolean isAdministrator) {
         Connection connection = null;
+
         try {
             connection = LIMSInitializationListener.getDataSource().getConnection();
 
             SqlUtilities.beginTransaction(connection);
 
             String addUserQuery = "INSERT INTO " + LimsDatabaseConstants.USERS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?)";
+
             String usernameWithLDAPIdentifier = appendWithLDAPIdentifier(username);
+
             PreparedStatement statement = connection.prepareStatement(addUserQuery);
 
             statement.setObject(1, usernameWithLDAPIdentifier);
             statement.setObject(2, "");
-            statement.setObject(3, "");
-            statement.setObject(4, "");
-            statement.setObject(5, "");
+            statement.setObject(3, firstname);
+            statement.setObject(4, lastname);
+            statement.setObject(5, email);
             statement.setObject(6, true);
             statement.setObject(7, true);
 
@@ -422,6 +456,7 @@ public class Users {
 
             if (inserted == 1) {
                 String addAuthorityQuery = "INSERT INTO " + LimsDatabaseConstants.AUTHORITIES_TABLE_NAME + " VALUES (?,?)";
+
                 PreparedStatement insertAuth = connection.prepareStatement(addAuthorityQuery);
 
                 insertAuth.setObject(1, usernameWithLDAPIdentifier);
@@ -431,14 +466,13 @@ public class Users {
 
                 if (insertedAuth == 1) {
                     SqlUtilities.commitTransaction(connection);
+
                     return true;
                 } else {
-                    throw new InternalServerErrorException("Failed to add user account. " +
-                            "Rows inserted into authorities database, expected: 1, actual: " + insertedAuth);
+                    throw new InternalServerErrorException("Failed to add user account. Rows inserted into authorities database, expected: 1, actual: " + insertedAuth);
                 }
             } else {
-                throw new InternalServerErrorException("Failed to add user account. " +
-                        "Rows inserted into users database, expected: 1, actual: " + inserted);
+                throw new InternalServerErrorException("Failed to add user account. Rows inserted into users database, expected: 1, actual: " + inserted);
             }
         } catch (SQLException e) {
             throw new InternalServerErrorException("Failed to add user.", e);
@@ -457,6 +491,7 @@ public class Users {
                 return true;
             }
         }
+
         return false;
     }
 }

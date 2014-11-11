@@ -2,6 +2,8 @@ package com.biomatters.plugins.biocode.server;
 
 import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
 import com.biomatters.plugins.biocode.labbench.lims.LimsDatabaseConstants;
+import com.biomatters.plugins.biocode.server.security.User;
+import com.biomatters.plugins.biocode.server.security.Users;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 
 import javax.ws.rs.*;
@@ -69,7 +71,10 @@ public class BCIDRoots {
 
     @POST
     @Consumes({"application/json", "application/xml"})
-    public synchronized void add(BCIDRoot bcidRoot) {
+    public synchronized void add(BCIDRoot bcidRoot) throws InternalServerErrorException {
+        if (!hasPrivilegesToModify()) {
+            throw new InternalServerErrorException("Insufficient privileges to add BCID roots.");
+        }
         Connection connection = null;
         PreparedStatement addBCIDRootStatement = null;
         try {
@@ -104,6 +109,9 @@ public class BCIDRoots {
     @Path("{type}")
     @Consumes({"application/json", "application/xml"})
     public synchronized void update(@PathParam("type")String type, BCIDRoot bcidRoot) throws InternalServerErrorException {
+        if (!hasPrivilegesToModify()) {
+            throw new InternalServerErrorException("Insufficient privileges to modify BCID roots.");
+        }
         if (!BCIDRootsCache.containsKey(type)) {
             throw new InternalServerErrorException("Could not find " + type + " BCID root.");
         }
@@ -149,7 +157,11 @@ public class BCIDRoots {
 
     @DELETE
     @Path("{type}")
-    public synchronized void delete(@PathParam("type")String type) {
+    public synchronized void delete(@PathParam("type")String type) throws InternalServerErrorException {
+        if (!hasPrivilegesToModify()) {
+            throw new InternalServerErrorException("Insufficient privileges to delete BCID roots");
+        }
+
         Connection connection = null;
         PreparedStatement deleteBCIDRootStatement = null;
         try {
@@ -178,5 +190,10 @@ public class BCIDRoots {
             }
             SqlUtilities.closeConnection(connection);
         }
+    }
+
+    private boolean hasPrivilegesToModify() {
+        User loggedInUser = Users.getLoggedInUser();
+        return loggedInUser != null && loggedInUser.isAdministrator;
     }
 }
