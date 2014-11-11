@@ -4,14 +4,12 @@ import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
-import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
 import javax.ws.rs.ProcessingException;
@@ -101,7 +99,8 @@ import java.util.prefs.Preferences;
             });
 
         } catch (DatabaseServiceException e) {
-            Dialogs.showMessageDialog("Failed to load project list from " + BiocodeFIMSConnection.HOST + ": " + e.getMessage());
+            BiocodeUtilities.displayExceptionDialog("Failed to Load Projects",
+                    "Failed to load project list from " + BiocodeFIMSConnection.HOST + ": " + e.getMessage(), e, null);
         }
     }
 

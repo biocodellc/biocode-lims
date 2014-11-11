@@ -593,14 +593,14 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             }
             String title = "Connection Failure";
             String message = "Geneious could not connect to the LIMS database";
-            showErrorDialog(e1, title, message);
+            BiocodeUtilities.displayExceptionDialog(title, message + ": " + e1.getMessage(), e1, null);
             return;
         } catch (DatabaseServiceException e3) {
             logOut();
             progressListener.setProgress(1.0);
             String title = "Connection Failure";
             String message = "Geneious could not connect to the LIMS database";
-            showErrorDialog(e3, title, message);
+            BiocodeUtilities.displayExceptionDialog(title, message + ": " + e3.getMessage(), e3, null);
         } finally {
             progressListener.setProgress(1.0);
         }
@@ -625,20 +625,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
 
         return error;
-    }
-
-    private void showErrorDialog(Throwable e1, String title, String message) {
-        Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[]{"OK"}, title);
-        dialogOptions.setMoreOptionsButtonText("Show details", "Hide details");
-        if(e1.getMessage() == null) {
-            Dialogs.showMessageDialog(message, title);
-        }
-        else if(e1.getMessage().contains("\n")) {
-            Dialogs.showMoreOptionsDialog(dialogOptions, message, e1.getMessage());
-        }
-        else {
-            Dialogs.showMessageDialog(message+": "+e1.getMessage(), title);
-        }
     }
 
     public void updateStatus() {

@@ -70,20 +70,21 @@ public class BiocodeFIMSUtils {
         } catch(ProcessingException e) {
             // Unfortunately the BCID service doesn't use HTTP error codes and reports errors by returning JSON in a
             // different format than the regular result.  So we have to do some special parsing.
-            List<String> errors;
             try {
-                errors = request.get(new GenericType<List<String>>() { });
-            } catch (ProcessingException ex) {
-                throw new DatabaseServiceException(ex.getMessage(), false);
-            } catch (WebApplicationException ex) {
-                throw new DatabaseServiceException(ex.getMessage(), false);
-            }
-            if(errors != null && !errors.isEmpty()) {
-                if(errors.size() == 1) {
-                    throw new DatabaseServiceException(errors.get(0), false);
-                } else {
-                    throw new DatabaseServiceException("Service returned: " + StringUtilities.join("\n", errors), false);
+                List<String> errors = request.get(new GenericType<List<String>>() { });
+                if(errors != null && !errors.isEmpty()) {
+                    // Don't include ProcessingException cause here because it isn't the cause of the problem.  It was
+                    // indicating that Jersey couldn't parse the returned value.
+                    if(errors.size() == 1) {
+                        throw new DatabaseServiceException(errors.get(0), false);
+                    } else {
+                        throw new DatabaseServiceException("Service returned: " + StringUtilities.join("\n", errors), false);
+                    }
                 }
+            } catch (ProcessingException ex) {
+                // Ignore, we'll throw the original exception below
+            } catch (WebApplicationException ex) {
+                // Ignore, we'll throw the original exception below
             }
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
