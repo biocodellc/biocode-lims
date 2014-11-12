@@ -71,9 +71,9 @@ public class BCIDRoots {
 
     @POST
     @Consumes({"application/json", "application/xml"})
-    public synchronized void add(BCIDRoot bcidRoot) throws InternalServerErrorException {
+    public synchronized void add(BCIDRoot bcidRoot) throws ForbiddenException, InternalServerErrorException {
         if (!hasPrivilegesToModify()) {
-            throw new InternalServerErrorException("Insufficient privileges to add BCID roots.");
+            throw new ForbiddenException("Insufficient privileges to add BCID roots.");
         }
         Connection connection = null;
         PreparedStatement addBCIDRootStatement = null;
@@ -108,9 +108,9 @@ public class BCIDRoots {
     @PUT
     @Path("{type}")
     @Consumes({"application/json", "application/xml"})
-    public synchronized void update(@PathParam("type")String type, BCIDRoot bcidRoot) throws InternalServerErrorException {
+    public synchronized void update(@PathParam("type")String type, BCIDRoot bcidRoot) throws ForbiddenException, InternalServerErrorException {
         if (!hasPrivilegesToModify()) {
-            throw new InternalServerErrorException("Insufficient privileges to modify BCID roots.");
+            throw new ForbiddenException("Insufficient privileges to modify BCID roots.");
         }
         if (!BCIDRootsCache.containsKey(type)) {
             throw new InternalServerErrorException("Could not find " + type + " BCID root.");
@@ -157,9 +157,9 @@ public class BCIDRoots {
 
     @DELETE
     @Path("{type}")
-    public synchronized void delete(@PathParam("type")String type) throws InternalServerErrorException {
+    public synchronized void delete(@PathParam("type")String type) throws ForbiddenException, InternalServerErrorException {
         if (!hasPrivilegesToModify()) {
-            throw new InternalServerErrorException("Insufficient privileges to delete BCID roots");
+            throw new ForbiddenException("Insufficient privileges to delete BCID roots");
         }
 
         Connection connection = null;

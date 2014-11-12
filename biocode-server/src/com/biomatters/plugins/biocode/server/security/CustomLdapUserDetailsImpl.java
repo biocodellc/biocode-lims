@@ -33,14 +33,10 @@ public class CustomLdapUserDetailsImpl extends LdapUserDetailsImpl {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(super.toString());
-        sb.append("Firstname: ").append(firstname).append("; ");
-        sb.append("Lastname: ").append(lastname).append("; ");
-        sb.append("Email: ").append(email).append("; ");
-
-        return sb.toString();
+        return super.toString() +
+                "Firstname: " + firstname + "; " +
+                "Lastname: " + lastname + "; " +
+                "Email: " + email + "; ";
     }
 
     public static class Essence extends LdapUserDetailsImpl.Essence {
