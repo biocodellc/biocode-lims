@@ -71,7 +71,7 @@ public class BCIDRoots {
 
     @POST
     @Consumes({"application/json", "application/xml"})
-    public synchronized void add(BCIDRoot bcidRoot) throws ForbiddenException, InternalServerErrorException {
+    public synchronized void add(BCIDRoot bcidRoot) {
         if (!hasPrivilegesToModify()) {
             throw new ForbiddenException("Insufficient privileges to add BCID roots.");
         }
@@ -108,7 +108,7 @@ public class BCIDRoots {
     @PUT
     @Path("{type}")
     @Consumes({"application/json", "application/xml"})
-    public synchronized void update(@PathParam("type")String type, BCIDRoot bcidRoot) throws ForbiddenException, InternalServerErrorException {
+    public synchronized void update(@PathParam("type")String type, BCIDRoot bcidRoot) {
         if (!hasPrivilegesToModify()) {
             throw new ForbiddenException("Insufficient privileges to modify BCID roots.");
         }
@@ -157,7 +157,7 @@ public class BCIDRoots {
 
     @DELETE
     @Path("{type}")
-    public synchronized void delete(@PathParam("type")String type) throws ForbiddenException, InternalServerErrorException {
+    public synchronized void delete(@PathParam("type")String type) {
         if (!hasPrivilegesToModify()) {
             throw new ForbiddenException("Insufficient privileges to delete BCID roots");
         }
