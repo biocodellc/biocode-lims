@@ -24,14 +24,6 @@ public class CustomLdapUserDetailsImpl extends LdapUserDetailsImpl {
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof CustomLdapUserDetailsImpl) {
-            return super.getDn().equals(((CustomLdapUserDetailsImpl) obj).getDn());
-        }
-        return false;
-    }
-
-    @Override
     public String toString() {
         return super.toString() +
                 "Firstname: " + firstname + "; " +
