@@ -240,7 +240,7 @@ public class ServerLimsConnection extends LIMSConnection {
     public List<AssembledSequence> getAssemblySequences_(Collection<Integer> sequenceIds, Cancelable cancelable, boolean includeFailed) throws DatabaseServiceException {
         try {
             return target.path("sequences").
-                    queryParam("includeFailed", sequenceIds).
+                    queryParam("includeFailed", includeFailed).
                     queryParam("ids", StringUtilities.join(",", sequenceIds)).
                     request(MediaType.APPLICATION_XML_TYPE).get(
                     new GenericType<List<AssembledSequence>>() {
