@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.rest.client;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
@@ -65,6 +66,11 @@ public class ServerFimsConnection extends FIMSConnection {
         }
         RESTConnectionOptions connetionOptions = (RESTConnectionOptions) options;
         String host = connetionOptions.getHost();
+        if (host == null || host.trim().length() == 0) {
+            Dialogs.showMessageDialog("Host can not be empty");
+            return;
+        }
+
         if (!host.matches("https?://.*")) {
             host = "http://" + host;
         }
