@@ -79,7 +79,7 @@ public abstract class LimsTestCase extends Assert {
     }
 
     @After
-    public void logoutAndDeleteLIMS() throws IOException {
+    public void cleanUpTestResources() throws IOException {
         BiocodeService.getInstance().logOut();
     }
 
