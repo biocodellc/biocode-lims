@@ -1,3 +1,7 @@
+==Biocode Plugin 2.8.3 - 19 November 2014==
+* Add the ability to bulk add traces to plates of any size.
+* Provide more information for connection errors.
+
 ==Biocode Plugin 2.8.2 - 28 October 2014==
 * Fixed a bug that was causing the Sequencing Primer document note to sometimes not show up on downloaded sequences.
 * Fixed a bug where traces downloaded directly from the plate viewer would not be annotated with FIMS information.
