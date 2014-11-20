@@ -1,7 +1,10 @@
 <PluginVersions>
-    <LatestVersion>2.8.3</LatestVersion>
+    <LatestVersion>2.8.4</LatestVersion>
     <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_3.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 2.8.3 - 19 November 2014==
+    <ReleaseNotes>==Biocode Plugin 2.8.4 - 20 November 2014==
+* Remove development changes that were accidentally included in 2.8.3.
+
+==Biocode Plugin 2.8.3 - 19 November 2014==
 * Add the ability to bulk add traces to plates of any size.
 * Provide more information for connection errors.
 
