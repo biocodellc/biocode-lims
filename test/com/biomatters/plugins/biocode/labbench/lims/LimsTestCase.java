@@ -49,7 +49,7 @@ public abstract class LimsTestCase extends Assert {
     public void createDatabaseAndInitializeConnections() throws IOException, SQLException, ConnectionException, DatabaseServiceException {
         TestGeneious.initialize();
 
-        File temp = FileUtilities.createTempDir(true);
+        File temp = FileUtilities.createTempDir(false);
         BiocodeService biocodeeService = BiocodeService.getInstance();
         biocodeeService.setDataDirectory(temp);
         LocalLIMSConnectionOptions.createDatabase(DATABASE_NAME);
@@ -81,6 +81,7 @@ public abstract class LimsTestCase extends Assert {
     @After
     public void logoutAndDeleteLIMS() throws IOException {
         BiocodeService.getInstance().logOut();
+        LocalLIMSConnectionOptions.deleteDatabase(DATABASE_NAME);
     }
 
     /**
