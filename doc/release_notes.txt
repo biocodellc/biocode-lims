@@ -7,9 +7,20 @@
   Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
   The schema upgrade script can be found at http://software.mooreabiocode.org
 
+==Biocode Plugin 2.8.4 - 20 November 2014==
+* Remove development changes that were accidentally included in 2.8.3.
+
 ==Biocode Plugin 2.8.3 - 19 November 2014==
 * Add the ability to bulk add traces to plates of any size.
 * Provide more information for connection errors.
+
+'''Warning'''
+ This version was accidentally released with some development changes included.  The plugin requires a
+ database schema from the beta version (2.99.x).  This schema is still compatible with the release version and there
+ will have been no data loss caused by applying it.
+
+ However since the development changes have not yet undergone our normal testing process, it is advised that all users
+ use 2.8.4 instead of this release as it may contain undiscovered bugs and instability.
 
 ==Biocode Plugin 2.8.2 - 28 October 2014==
 * Fixed a bug that was causing the Sequencing Primer document note to sometimes not show up on downloaded sequences.
