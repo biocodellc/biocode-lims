@@ -535,6 +535,8 @@ public class ReactionUtilities {
         int maxCols = Integer.MIN_VALUE;
         for (File file : files) {
             BiocodeUtilities.Well well = BiocodeUtilities.getWellFromFileName(file.getName(), separatorString, partToMatch);
+            if (well == null) continue;
+
             maxCols = maxCols > well.number ? maxCols : well.number;
         }
 
