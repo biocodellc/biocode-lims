@@ -273,23 +273,32 @@ public class AnnotateUtilities {
             annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);
         }
         StringBuilder taxonomy = new StringBuilder();
+        StringBuilder subspeciesBuilder = new StringBuilder();
         String genus = null;
         String species = null;
         for (DocumentField documentField : fimsData.fimsSample.getTaxonomyAttributes()) {
             Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
-            if(taxon != null && !(taxon instanceof String)) {
-                throw new DocumentOperationException("The tissue record "+fimsData.fimsSample.getId()+" has an invalid taxon value ("+taxon+") for the taxon field "+documentField.getName());
+            if (taxon != null && !(taxon instanceof String)) {
+                throw new DocumentOperationException("The tissue record " + fimsData.fimsSample.getId() + " has an invalid taxon value (" + taxon + ") for the taxon field " + documentField.getName());
             }
             annotatedDocument.setFieldValue(new DocumentField(documentField.getName(), documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
-            if (documentField.getName().equalsIgnoreCase("genus")) {
-                genus = (String) taxon;
-            }
-            if (documentField.getName().toLowerCase().contains("speci")) {
-                species = (String) taxon;
-                break;
-            }
-            if (taxon != null) {
-                taxonomy.append(taxon).append("; ");
+            if (species == null) {
+                if (documentField.getName().equalsIgnoreCase("genus")) {
+                    genus = (String)taxon;
+                }
+                if (documentField.getName().toLowerCase().contains("speci")) {
+                    species = (String)taxon;
+                    continue;
+                }
+                if (taxon != null) {
+                    taxonomy.append(taxon).append("; ");
+                }
+            } else {
+                if (subspeciesBuilder.length() != 0) {
+                    subspeciesBuilder.append(" ");
+                }
+
+                subspeciesBuilder.append(taxon);
             }
         }
         if (taxonomy.length() > 0) {
@@ -304,7 +313,7 @@ public class AnnotateUtilities {
             organism = null;
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         } else if (organism == null && genus != null && species != null) {
-            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + " " + species);
+            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + " " + species + " " + subspeciesBuilder.toString());
         } else {
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         }
