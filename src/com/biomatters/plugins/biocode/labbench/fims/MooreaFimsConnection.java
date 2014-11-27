@@ -244,11 +244,6 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
-        return getTissueIdsMatchingQuery(query, projectsToMatch, false);
-    }
-
-    @Override
-    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmpty) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
 
         queryBuilder.append("SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID ");
@@ -260,13 +255,9 @@ public class MooreaFimsConnection extends FIMSConnection{
             queryBuilder.append(BIOCODE_PROJECT_FIELD.getCode()).append(" IN ");
             SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
         } else if(sqlString == null) {
-            if (allowEmpty) {
-                if (!Dialogs.showContinueCancelDialog("The Moorea FIMS contains a large number of tissue records.  " +
-                        "This search may take a long time and cause Geneious to become slow.\n\n" +
-                        "Are you sure you want to continue?", "Large Number of Tissues", null, Dialogs.DialogIcon.INFORMATION)) {
-                    return Collections.emptyList();
-                }
-            } else {
+            if (!Dialogs.showContinueCancelDialog("The Moorea FIMS contains a large number of tissue records.  " +
+                    "This search may take a long time and cause Geneious to become slow.\n\n" +
+                    "Are you sure you want to continue?", "Large Number of Tissues", null, Dialogs.DialogIcon.INFORMATION)) {
                 return Collections.emptyList();
             }
         }

@@ -206,11 +206,6 @@ public class TAPIRFimsConnection extends FIMSConnection{
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
-        return getTissueIdsMatchingQuery(query, projectsToMatch);
-    }
-
-    @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
         Query[] queries = new Query[tissueIds.size()];
         int i = 0;

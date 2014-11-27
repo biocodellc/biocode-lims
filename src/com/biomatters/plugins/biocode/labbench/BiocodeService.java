@@ -710,13 +710,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         retrieve(query, callback, urnsToNotRetrieve, false);
     }
 
-    public void retrieve(Query query, RetrieveCallback callback, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
-        retrieve(query, callback, urnsToNotRetrieve, false, false);
-    }
-
     private Set<BiocodeCallback> activeCallbacks = new HashSet<BiocodeCallback>();
 
-    public void retrieve(Query query, RetrieveCallback rc, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect, boolean allowEmptyQuery) throws DatabaseServiceException {
+    private void retrieve(Query query, RetrieveCallback rc, URN[] urnsToNotRetrieve, boolean hasAlreadyTriedReconnect) throws DatabaseServiceException {
         BiocodeCallback callback = null;
         if(rc != null) {
             callback = new BiocodeCallback(rc);
@@ -760,7 +756,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         return;
                     }
 
-                    tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith, null, allowEmptyQuery);
+                    tissueIdsMatchingFimsQuery = activeFIMSConnection.getTissueIdsMatchingQuery(toSearchFimsWith, null);
                 } catch (ConnectionException e) {
                     throw new DatabaseServiceException(e, e.getMessage(), false);
                 }
