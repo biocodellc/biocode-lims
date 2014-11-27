@@ -22,12 +22,24 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class AnnotateUtilities {
-    public static final List<String> FIELDS_TO_NOT_COPY = Arrays.asList(DocumentField.AMBIGUITIES.getCode(),
-                DocumentField.BIN.getCode(), DocumentField.CREATED_FIELD.getCode(), DocumentField.DESCRIPTION_FIELD.getCode(),
-                DocumentField.FIRST_SEQUENCE_RESIDUES.getCode(), DocumentField.HIGH_QUALITY_PERCENT.getCode(), DocumentField.LOW_QUALITY_PERCENT.getCode(),
-                DocumentField.MEDIMUM_QUALITY_PERCENT.getCode(), DocumentField.NAME_FIELD.getCode(), DocumentField.POST_TRIM_LENGTH.getCode(),
-                DocumentField.SEQUENCE_LENGTH.getCode(), DocumentField.TOPOLOGY_FIELD.getCode(), DocumentField.UNREAD_FIELD.getCode(),
-                PluginDocument.MODIFIED_DATE_FIELD.getCode(), "document_size", DocumentField.SEQUENCE_COUNT.getCode());
+    public static final List<String> FIELDS_TO_NOT_COPY = Arrays.asList(
+            DocumentField.AMBIGUITIES.getCode(),
+            DocumentField.BIN.getCode(),
+            DocumentField.CREATED_FIELD.getCode(),
+            DocumentField.DESCRIPTION_FIELD.getCode(),
+            DocumentField.FIRST_SEQUENCE_RESIDUES.getCode(),
+            DocumentField.HIGH_QUALITY_PERCENT.getCode(),
+            DocumentField.LOW_QUALITY_PERCENT.getCode(),
+            DocumentField.MEDIMUM_QUALITY_PERCENT.getCode(),
+            DocumentField.NAME_FIELD.getCode(),
+            DocumentField.POST_TRIM_LENGTH.getCode(),
+            DocumentField.SEQUENCE_LENGTH.getCode(),
+            DocumentField.TOPOLOGY_FIELD.getCode(),
+            DocumentField.UNREAD_FIELD.getCode(),
+            PluginDocument.MODIFIED_DATE_FIELD.getCode(),
+            "document_size",
+            DocumentField.SEQUENCE_COUNT.getCode()
+    );
 
     public static final DocumentField NOTES_FIELD = new DocumentField("Assembly Notes", "", "assemblyNotes", String.class, false, false);
     public static final DocumentField PROGRESS_FIELD = new DocumentField("Progress", "", "progress", String.class, true, false);
@@ -325,21 +337,10 @@ public class AnnotateUtilities {
 
         if (taxonomyFieldValuesBuilder.length() > 0) {
             annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomyFieldValuesBuilder.toString());
-        } else {
-            annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, null);
         }
 
-        Object organism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
-        if (organism != null && !((String) organism).contains(" ")) {
-            //the database seems to have cases where just the Genus has been entered in the organism column even though
-            // the species has been entered in the taxonomy columns -> Throw that crap away
-            //noinspection UnusedAssignment
-            organism = null;
-            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
-        } else if (organism == null && genus != null && speciesBuilder.length() > 0) {
+        if (genus != null) {
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + ORGANISM_FIELD_INTRA_SEPARATOR + speciesBuilder.toString());
-        } else {
-            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
         }
 
         //annotate the primers...
