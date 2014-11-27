@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *          Created on 20/03/14 3:18 PM
  */
 public class LIMSInitializationListener implements ServletContextListener {
+    public static final String JNDI_PREFIX = "java:/comp/env/";
+
     private static final String settingsFolderName = ".biocode-lims";
     private static final String defaultPropertiesFile = "default_connection.properties";
     private static final String propertiesFile = "connection.properties";
@@ -53,10 +55,16 @@ public class LIMSInitializationListener implements ServletContextListener {
         return fimsConnection;
     }
 
-    private static DataSource dataSource;
-
     public static DataSource getDataSource() {
-        return dataSource;
+        try {
+            if(limsConnection instanceof SqlLimsConnection) {
+                return ((SqlLimsConnection) limsConnection).getDataSource();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     private static LDAPConfiguration LDAPConfiguration;
@@ -112,15 +120,13 @@ public class LIMSInitializationListener implements ServletContextListener {
             limsConnection = biocodeeService.getActiveLIMSConnection();
             if(limsConnection == null) {
                 connectLims(connectionConfig); // to get error message.  In the future BiocodeService should be changed to expose it's connection errors
-            } else if(limsConnection instanceof SqlLimsConnection) {
-                dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
-            } else {
+            } else if(!(limsConnection instanceof SqlLimsConnection)) {
                 throw new IllegalStateException("LIMSConnection was not a SqlLimsConnection.  Was " + limsConnection.getClass());
             }
 
             startProjectPopulatingThread();
 
-            createBCIDRootsTableIfNecessary(dataSource);
+            createBCIDRootsTableIfNecessary(getDataSource());
         } catch (IOException e) {
             initializationErrors.add(new IntializationError("Configuration Error",
                     "Failed to load properties file from " + connectionPropertiesFile.getAbsolutePath() + ": " + e.getMessage()));
@@ -197,7 +203,7 @@ public class LIMSInitializationListener implements ServletContextListener {
                 int failureCount = 0;
                 while (updatingProjects.get()) {
                     try {
-                        Projects.updateProjectsFromFims(dataSource, fimsConnection);
+                        Projects.updateProjectsFromFims(getDataSource(), fimsConnection);
                     } catch (DatabaseServiceException e) {
                         System.err.println("Encountered problem updating projects from FIMS: " + e.getMessage());
                         e.printStackTrace();
@@ -251,19 +257,25 @@ public class LIMSInitializationListener implements ServletContextListener {
         if(limsType.equals(LIMSConnection.AvailableLimsTypes.remote.name())) {
             MySqlLIMSConnectionOptions limsOptions = (MySqlLIMSConnectionOptions) _limsOptions;
 
-            List<String> missing = new ArrayList<String>();
-            for (String optionName : new String[]{"server", "port", "database", "username", "password"}) {
-                String propertyKey = "lims." + optionName;
-                String value = config.getProperty(propertyKey);
-                if(value == null) {
-                    missing.add(propertyKey);
-                } else {
-                    limsOptions.setValue(optionName, value);
+            if (config.getProperty("lims.jndi") == null) {
+                List<String> missing = new ArrayList<String>();
+                for (String optionName : new String[]{"server", "port", "database", "username", "password"}) {
+                    String propertyKey = "lims." + optionName;
+                    String value = config.getProperty(propertyKey);
+                    if(value == null) {
+                        missing.add(propertyKey);
+                    } else {
+                        limsOptions.setValue(optionName, value);
+                    }
                 }
+                if(!missing.isEmpty()) {
+                    throw new MissingPropertyException(missing.toArray(new String[missing.size()]));
+                }
+            } else {
+                limsOptions.addStringOption("jndi", "JNDI :", "");
+                limsOptions.setStringValue("jndi", JNDI_PREFIX + config.getProperty("lims.jndi"));
             }
-            if(!missing.isEmpty()) {
-                throw new MissingPropertyException(missing.toArray(new String[missing.size()]));
-            }
+
         } else if(limsType.equals(LIMSConnection.AvailableLimsTypes.local.name())) {
             LocalLIMSConnectionOptions options = (LocalLIMSConnectionOptions) _limsOptions;
             String name = config.getProperty("lims.name", "BiocodeLIMS");  // Use a default
@@ -281,19 +293,32 @@ public class LIMSInitializationListener implements ServletContextListener {
         PasswordOptions fimsOptions = connectionConfig.getFimsOptions();
         String username = config.getProperty("fims.username");
         String password = config.getProperty("fims.password");
-        if(!isExcel &&!isTapir && (username == null || password == null)) {
+        String jndi = config.getProperty("fims.jndi");
+
+        if((type.equals("biocode") && jndi == null || type.equals("MySql") && jndi == null || type.equals("biocode-fims"))  && (username == null || password == null) ) {
             throw new MissingPropertyException("fims.username", "fims.password");
         }
+
         if(type.equals("biocode")) {
-            fimsOptions.setValue("username", username);
-            fimsOptions.setValue("password", password);
+            if (jndi != null) {
+                fimsOptions.addStringOption("jndi", "JNDI", "");
+                fimsOptions.setStringValue("jndi", JNDI_PREFIX + jndi);
+            } else {
+                fimsOptions.setValue("username", username);
+                fimsOptions.setValue("password", password);
+            }
         } else if(type.equals("MySql")) {
-            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".username", username);
-            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".password", password);
-            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverUrl", config.getProperty("fims.server"));
-            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverPort", config.getProperty("fims.port"));
-            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".database", config.getProperty("fims.database"));
-            fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".table", config.getProperty("fims.table"));
+            if (jndi != null) {
+                fimsOptions.addStringOption("jndi", "JNDI", "");
+                fimsOptions.setStringValue("jndi", JNDI_PREFIX + jndi);
+            } else {
+                fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".username", username);
+                fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".password", password);
+                fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverUrl", config.getProperty("fims.server"));
+                fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".serverPort", config.getProperty("fims.port"));
+                fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".database", config.getProperty("fims.database"));
+                fimsOptions.setValue(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY + ".table", config.getProperty("fims.table"));
+            }
 
             setupTableFims(config, fimsOptions);
         } else if (isExcel) {
@@ -501,7 +526,7 @@ public class LIMSInitializationListener implements ServletContextListener {
 
         PreparedStatement selectBCIDRootsTableStatement = null;
         PreparedStatement createBCIDRootsTableStatement = null;
-        PreparedStatement populateBCIDRootsTableStatement = null;
+        PreparedStatement populateBCIDRootsTableStatement;
         try {
             connection = dataSource.getConnection();
 

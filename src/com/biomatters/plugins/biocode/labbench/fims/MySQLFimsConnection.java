@@ -2,6 +2,7 @@ package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
@@ -9,6 +10,8 @@ import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 
+import javax.naming.NamingException;
+import javax.sql.DataSource;
 import java.util.*;
 import java.util.Date;
 import java.io.IOException;
@@ -22,6 +25,14 @@ public class MySQLFimsConnection extends TableFimsConnection {
     private Connection connection;
     private Driver driver;
     private String tableName;
+    private String jndi;
+    private boolean isClosed = true;
+    private String username;
+    private String password;
+    private String serverUrl;
+    private String serverPort;
+    private String database;
+
     public static final String FIELD_PREFIX = "MYSQLFIMS:";
 
     public String getLabel() {
@@ -41,42 +52,59 @@ public class MySQLFimsConnection extends TableFimsConnection {
     }
 
     private Statement createStatement() throws SQLException {
-        if(connection == null) {
-            throw new SQLException("Not logged into the FIMS");
-        }
-        Statement statement = connection.createStatement();
+        Statement statement = getConnection().createStatement();
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
 
     private PreparedStatement prepareStatement(String query) throws SQLException{
-        if(connection == null) {
-            throw new SQLException("You are not connected to the FIMS database");
-        }
-        PreparedStatement statement = connection.prepareStatement(query);
+        PreparedStatement statement = getConnection().prepareStatement(query);
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
 
     public void _connect(TableFimsConnectionOptions optionsa) throws ConnectionException {
+        isClosed = false;
         MooreaFimsConnectionOptions connectionOptions = (MooreaFimsConnectionOptions)optionsa.getChildOptions().get(TableFimsConnectionOptions.CONNECTION_OPTIONS_KEY);
+
+        jndi = optionsa.getValueAsString("jndi");
+        username = connectionOptions.getValueAsString("username");
+        password = ((PasswordOption)connectionOptions.getOption("password")).getPassword();
+        serverUrl = connectionOptions.getValueAsString("serverUrl");
+        serverPort = connectionOptions.getValueAsString("serverPort");
+        database = connectionOptions.getValueAsString("database");
 
         driver = BiocodeService.getInstance().getDriver();
         tableName = connectionOptions.getValueAsString("table");
+    }
 
-        Properties properties = new Properties();
-        properties.put("user", connectionOptions.getValueAsString("username"));
-        properties.put("password", ((PasswordOption)connectionOptions.getOption("password")).getPassword());
+    private Connection getConnection() throws SQLException {
+        if (isClosed) {
+            connection = null;
+            isClosed = true;
+            return null;
+        }
+
         try {
-            DriverManager.setLoginTimeout(20);
-            String connectionStringring = "jdbc:mysql://" + connectionOptions.getValueAsString("serverUrl") + ":" +
-                    connectionOptions.getValueAsString("serverPort") + "/" + connectionOptions.getValueAsString("database");
-            connection = DriverManager.getConnection(connectionStringring, properties);
-            if(connection == null) {
-                throw new SQLException("The driver "+driver.getClass().getName()+" is not the right kind of driver to connect to "+connectionOptions.getValueAsString("serverUrl"));
+            if (jndi != null && jndi.trim().length() > 0) {
+                DataSource dataSource = BiocodeUtilities.getDataSourceByJNDI(jndi);
+                connection = dataSource.getConnection();
+            } else if (connection == null) {
+                Properties properties = new Properties();
+                properties.put("user", username);
+                properties.put("password", password);
+
+                DriverManager.setLoginTimeout(20);
+                String connectionStringring = "jdbc:mysql://" + serverUrl + ":" + serverPort + "/" + database;
+                connection = DriverManager.getConnection(connectionStringring, properties);
+                if(connection == null) {
+                    throw new SQLException("The driver " + driver.getClass().getName() + " is not the right kind of driver to connect to " + serverUrl);
+                }
             }
-        } catch (SQLException e1) {
-            throw new ConnectionException("Failed to connect to the MySQL database: "+e1.getMessage());
+
+            return connection;
+        } catch (NamingException e) {
+            throw new SQLException("Failed to connect to the MySQL database: " + e.getMessage());
         }
     }
 
@@ -86,13 +114,13 @@ public class MySQLFimsConnection extends TableFimsConnection {
             ResultSet resultSet = statement.executeQuery("DESCRIBE "+tableName);
             List<DocumentField> results = new ArrayList<DocumentField>();
 
-            while(resultSet.next() && connection != null) {
+            while(resultSet.next() && getConnection() != null) {
                 DocumentField field = SqlUtilities.getDocumentField(resultSet, false);
                 if(field != null) {
                     results.add(field);
                 }
             }
-            if(connection == null) {
+            if(getConnection() == null) {
                 throw new SQLException("You are not connected to the database");
             }
 
@@ -108,6 +136,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
     public void _disconnect() {
         //we used to call connection.close(), but this can cause problems when the user disconnects while we're in the
         // middle of a search - instead set it to null and let the garbage collector deal with it when the queries have finished
+        isClosed = true;
         driver = null;
         connection = null;
     }
@@ -188,7 +217,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
 
             ResultSet resultSet = statement.executeQuery();
             List<FimsSample> samples = new ArrayList<FimsSample>();
-            while(resultSet.next() && connection != null){
+            while(resultSet.next() && getConnection() != null){
                 Map<String, Object> data = new HashMap<String, Object>();
                 for(DocumentField f : getSearchAttributes()) {
                     if(String.class.isAssignableFrom(f.getValueType()) ) {
@@ -231,7 +260,7 @@ public class MySQLFimsConnection extends TableFimsConnection {
                 }
             }
             resultSet.close();
-            if(connection == null) {
+            if(getConnection() == null) {
                 throw new SQLException("You are not connected to the database");
             }
             return samples;

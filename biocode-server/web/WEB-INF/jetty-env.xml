@@ -1,0 +1,43 @@
+<?xml version="1.0"  encoding="ISO-8859-1"?>
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure.dtd">
+<Configure id="wac" class="org.eclipse.jetty.webapp.WebAppContext">
+    <New id="DSTest" class="org.eclipse.jetty.plus.jndi.Resource">
+        <Arg></Arg>
+        <Arg>jdbc/BioDS1</Arg>
+        <Arg>
+            <New class="org.apache.commons.dbcp.BasicDataSource">
+                <Set name="driverClassName">com.mysql.jdbc.Driver</Set>
+                <Set name="url">jdbc:mysql://127.0.0.1:3306/labbench</Set>
+                <Set name="username">root</Set>
+                <Set name="password"></Set>
+                <Set name="validationQuery">SELECT 1</Set>
+            </New>
+        </Arg>
+    </New>
+    <New id="DSTest2" class="org.eclipse.jetty.plus.jndi.Resource">
+        <Arg></Arg>
+        <Arg>jdbc/BioDS2</Arg>
+        <Arg>
+            <New class="org.apache.commons.dbcp.BasicDataSource">
+                <Set name="driverClassName">com.mysql.jdbc.Driver</Set>
+                <Set name="url">jdbc:mysql://127.0.0.1:3306/labbench</Set>
+                <Set name="username">root</Set>
+                <Set name="password"></Set>
+                <Set name="validationQuery">SELECT 1</Set>
+            </New>
+        </Arg>
+    </New>
+    <New id="DSTest3" class="org.eclipse.jetty.plus.jndi.Resource">
+        <Arg></Arg>
+        <Arg>jdbc/BioDS3</Arg>
+        <Arg>
+            <New class="org.apache.commons.dbcp.BasicDataSource">
+                <Set name="driverClassName">com.mysql.jdbc.Driver</Set>
+                <Set name="url">jdbc:mysql://127.0.0.1:3306/labbench</Set>
+                <Set name="username">root</Set>
+                <Set name="password"></Set>
+                <Set name="validationQuery">SELECT 1</Set>
+            </New>
+        </Arg>
+    </New>
+</Configure>

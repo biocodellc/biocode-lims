@@ -5,6 +5,7 @@ import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -19,6 +20,8 @@ import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
 
+import javax.naming.NamingException;
+import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -34,9 +37,16 @@ import java.util.Date;
 @SuppressWarnings({"ConstantConditions"})
 public class MooreaFimsConnection extends FIMSConnection{
 
-    @SuppressWarnings({"FieldCanBeLocal"})
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private Driver driver;
     private Connection connection;
+    private String jndi;
+    private boolean isClosed = true;
+    private String username;
+    private String password;
+    private String serverUrl;
+    private String serverPort;
+
 
     public static final DocumentField MOOREA_TISSUE_ID_FIELD = new DocumentField("Tissue ID", "", "tissueId", String.class, true, false);
     private static final DocumentField MOOREA_PLATE_NAME_FIELD = new DocumentField("Plate Name (FIMS)", "", "biocode_tissue.format_name96", String.class, true, false);
@@ -66,38 +76,63 @@ public class MooreaFimsConnection extends FIMSConnection{
     }
 
     public void _connect(Options options) throws ConnectionException {
-
         //instantiate the driver class
         driver = BiocodeService.getInstance().getDriver();
+        jndi = options.getValueAsString("jndi");
+        username = options.getValueAsString("username");
+        password = ((PasswordOption)options.getOption("password")).getPassword();
+        serverUrl = options.getValueAsString("serverUrl");
+        serverPort = options.getValueAsString("serverPort");
+
+        isClosed = false;
 
         //connect
-        Properties properties = new Properties();
-        properties.put("user", options.getValueAsString("username"));
-        properties.put("password", ((PasswordOption)options.getOption("password")).getPassword());
         try {
             DriverManager.setLoginTimeout(20);
-            connection = DriverManager.getConnection("jdbc:mysql://"+options.getValueAsString("serverUrl")+":"+options.getValueAsString("serverPort"), properties);
-            Statement statement = connection.createStatement();
+            Statement statement = getConnection().createStatement();
             statement.execute("USE biocode");
         } catch (SQLException e1) {
-            throw new ConnectionException("Failed to connect to the LIMS database: "+e1.getMessage());
+            throw new ConnectionException("Failed to connect to the LIMS database: " + e1.getMessage());
         }
     }
 
-    private Statement createStatement() throws SQLException{
-        if(connection == null) {
-            throw new SQLException("You are not connected to the FIMS database");
+    public Connection getConnection() throws SQLException {
+        if (isClosed) {
+            connection = null;
+            return null;
         }
-        Statement statement = connection.createStatement();
+
+        try {
+            if (jndi != null && jndi.trim().length() > 0) {
+                DataSource dataSource = BiocodeUtilities.getDataSourceByJNDI(jndi);
+                connection = dataSource.getConnection();
+            } else if (connection == null) {
+                Properties properties = new Properties();
+                properties.put("user", username);
+                properties.put("password", password);
+                connection = DriverManager.getConnection("jdbc:mysql://" + serverUrl + ":" + serverPort, properties);
+            }
+
+            if (connection == null) {
+                throw new SQLException("You are not connected to the FIMS database");
+            }
+        } catch (NamingException e) {
+            throw new SQLException("Failed to connect to the FIMS database: " + e.getMessage());
+        } catch (SQLException e) {
+            throw new SQLException("Failed to connect to the FIMS database: " + e.getMessage());
+        }
+
+        return connection;
+    }
+
+    private Statement createStatement() throws SQLException{
+        Statement statement = getConnection().createStatement();
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
 
     private PreparedStatement prepareStatement(String query) throws SQLException{
-        if(connection == null) {
-            throw new SQLException("You are not connected to the FIMS database");
-        }
-        PreparedStatement statement = connection.prepareStatement(query);
+        PreparedStatement statement = getConnection().prepareStatement(query);
         statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
         return statement;
     }
@@ -113,6 +148,7 @@ public class MooreaFimsConnection extends FIMSConnection{
 //        }
         //we used to explicitly close the SQL connection, but this was causing crashes if the user logged out while a query was in progress.
         //now we remove all references to it and let the garbage collector close it when the queries have finished.
+        isClosed = true;
         connection = null;
     }
 
@@ -326,7 +362,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         SqlUtilities.printSql(queryBuilder.toString(), parameters);
         PreparedStatement select = null;
         try {
-            select = connection.prepareStatement(queryBuilder.toString());
+            select = getConnection().prepareStatement(queryBuilder.toString());
             for (int index=1; index<=parameters.size(); index++) {
                 select.setObject(index, parameters.get(index - 1));
             }

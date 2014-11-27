@@ -7,4 +7,24 @@
     <listener>
         <listener-class>com.biomatters.plugins.biocode.server.LIMSInitializationListener</listener-class>
     </listener>
+
+    <!--5 pre-defined datasource used by lims or fims connection-->
+    <resource-ref>
+        <description>Biocode DataSource Reference1</description>
+        <res-ref-name>jdbc/BioDS1</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+        <res-auth>Container</res-auth>
+    </resource-ref>
+    <resource-ref>
+        <description>Biocode DataSource Reference2</description>
+        <res-ref-name>jdbc/BioDS2</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+        <res-auth>Container</res-auth>
+    </resource-ref>
+    <resource-ref>
+        <description>Biocode DataSource Reference3</description>
+        <res-ref-name>jdbc/BioDS3</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+        <res-auth>Container</res-auth>
+    </resource-ref>
 </web-app>

@@ -25,6 +25,9 @@ import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import jebl.util.Cancelable;
 import jebl.util.ProgressListener;
 
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
+import javax.sql.DataSource;
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
@@ -658,5 +661,10 @@ public class BiocodeUtilities {
 
     private static int signum(int i) {
         return (i == 0) ? 0 : ((i > 0) ? 1 : -1);
+    }
+
+    public static DataSource getDataSourceByJNDI(String jndi) throws NamingException {
+        InitialContext ctx = new InitialContext();
+        return (DataSource)ctx.lookup(jndi);
     }
 }
