@@ -284,7 +284,7 @@ public class AnnotateUtilities {
         }
 
         final String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
-        final String ORGANISM_FIELD_INTRA_SEPARATOR = "; ";
+        final String ORGANISM_FIELD_INTRA_SEPARATOR = " ";
         StringBuilder taxonomyFieldValuesBuilder = new StringBuilder();
         StringBuilder speciesBuilder = new StringBuilder();
         String genus = null;
