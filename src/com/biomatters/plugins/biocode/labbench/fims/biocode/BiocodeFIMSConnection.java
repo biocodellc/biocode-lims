@@ -19,8 +19,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Connection to the new Biocode FIMS
@@ -66,6 +64,11 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             ids.add(sample.getId());
         }
         return ids;
+    }
+
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
+        return getTissueIdsMatchingQuery(query, projectsToMatch);
     }
 
     private List<FimsSample> getSamplesForQuery(Query query) throws ConnectionException {

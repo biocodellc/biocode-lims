@@ -268,6 +268,11 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         return results;
     }
 
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
+        return getTissueIdsMatchingQuery(query, projectsToMatch);
+    }
+
     private String getRowValue(List<Object> row, int index) {
         Object element = row.get(index);
         return element == null ? "" : element.toString().replaceAll("\"\"", "\"");

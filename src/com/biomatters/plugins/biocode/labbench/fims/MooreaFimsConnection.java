@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
@@ -243,6 +244,11 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     @Override
     public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch) throws ConnectionException {
+        return getTissueIdsMatchingQuery(query, projectsToMatch, false);
+    }
+
+    @Override
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmpty) throws ConnectionException {
         StringBuilder queryBuilder = new StringBuilder();
 
         queryBuilder.append("SELECT biocode_tissue.bnhm_id, biocode_tissue.tissue_num FROM biocode, biocode_collecting_event, biocode_tissue WHERE biocode.bnhm_id = biocode_tissue.bnhm_id AND biocode.coll_eventID = biocode_collecting_event.EventID ");
@@ -254,7 +260,13 @@ public class MooreaFimsConnection extends FIMSConnection{
             queryBuilder.append(BIOCODE_PROJECT_FIELD.getCode()).append(" IN ");
             SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
         } else if(sqlString == null) {
-            return Collections.emptyList();
+            if (allowEmpty) {
+                if (!Dialogs.showOkCancelDialog("This operation may cost long time and cause Geneious slow, are you sure to continue?", "", null)) {
+                    return Collections.emptyList();
+                }
+            } else {
+                return Collections.emptyList();
+            }
         }
 
         if(sqlString != null) {

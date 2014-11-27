@@ -168,6 +168,11 @@ public class MySQLFimsConnection extends TableFimsConnection {
     }
 
     @Override
+    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
+        return getTissueIdsMatchingQuery(query, projectsToMatch);
+    }
+
+    @Override
     protected String getTissueCol() {
         return super.getTissueCol().replace(FIELD_PREFIX, "");
     }
