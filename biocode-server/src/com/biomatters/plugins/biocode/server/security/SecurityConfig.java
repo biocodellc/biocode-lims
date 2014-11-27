@@ -48,7 +48,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
         LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
 
-        boolean needMemoryUsers = false;
+        boolean needMemoryUsers = true;
 
         boolean hasDatabaseConnection = limsConnection instanceof SqlLimsConnection;
 
@@ -56,6 +56,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
         if (ldapConfiguration != null) {
             authenticateWithLDAP(auth, ldapConfiguration);
+            needMemoryUsers = false;
         } else if (hasDatabaseConnection) {
             DataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
 
