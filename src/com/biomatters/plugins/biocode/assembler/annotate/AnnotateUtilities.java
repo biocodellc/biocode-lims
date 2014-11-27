@@ -339,7 +339,7 @@ public class AnnotateUtilities {
             annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomyFieldValuesBuilder.toString());
         }
 
-        if (genus != null) {
+        if (genus != null && speciesBuilder.length() == 0) {
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + ORGANISM_FIELD_INTRA_SEPARATOR + speciesBuilder.toString());
         }
 
