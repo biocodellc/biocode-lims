@@ -1,35 +1,33 @@
 package com.biomatters.plugins.biocode.labbench.lims;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
+import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
+import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
+import com.biomatters.geneious.publicapi.documents.DocumentField;
+import com.biomatters.geneious.publicapi.documents.PluginDocument;
 import com.biomatters.geneious.publicapi.documents.URN;
-import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.FimsSample;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeCallback;
+import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingCocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.PCRCocktail;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
-import com.biomatters.plugins.biocode.utilities.SqlUtilities;
-import com.biomatters.geneious.publicapi.documents.DocumentField;
-import com.biomatters.geneious.publicapi.documents.PluginDocument;
-import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
-import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.plugins.biocode.labbench.reporting.PrimerSet;
+import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import jebl.util.ProgressListener;
+import org.virion.jam.util.SimpleListener;
 
 import java.sql.*;
 import java.util.*;
 import java.util.Date;
-
-import org.virion.jam.util.SimpleListener;
 
 /**
  * @author Steve
@@ -368,7 +366,7 @@ public class FimsToLims {
             };
 
             BiocodeService.getInstance().retrieve(Query.Factory.createExtendedQuery("",
-                    BiocodeService.getSearchDownloadOptions(true, false, false, false)), callback, new URN[0]);
+                    BiocodeService.getSearchDownloadOptions(true, false, false, false)), callback, new URN[0], false, true);
             try {
                 copyFimsSet(fimsSamples, lims, fields);
                 fimsSamples.clear();
