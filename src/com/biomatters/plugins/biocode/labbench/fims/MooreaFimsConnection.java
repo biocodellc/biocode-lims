@@ -261,7 +261,9 @@ public class MooreaFimsConnection extends FIMSConnection{
             SqlUtilities.appendSetOfQuestionMarks(queryBuilder, projectsToMatch.size());
         } else if(sqlString == null) {
             if (allowEmpty) {
-                if (!Dialogs.showOkCancelDialog("This operation may cost long time and cause Geneious slow, are you sure to continue?", "", null)) {
+                if (!Dialogs.showContinueCancelDialog("The Moorea FIMS contains a large number of tissue records.  " +
+                        "This search may take a long time and cause Geneious to become slow.\n\n" +
+                        "Are you sure you want to continue?", "Large Number of Tissues", null, Dialogs.DialogIcon.INFORMATION)) {
                     return Collections.emptyList();
                 }
             } else {

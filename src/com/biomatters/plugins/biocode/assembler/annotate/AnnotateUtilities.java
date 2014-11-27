@@ -283,7 +283,8 @@ public class AnnotateUtilities {
             annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);
         }
 
-        final String DOCUMENT_FIELD_INTRA_SEPARATOR = "; ";
+        final String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
+        final String ORGANISM_FIELD_INTRA_SEPARATOR = " ";
         StringBuilder taxonomyFieldValuesBuilder = new StringBuilder();
         StringBuilder speciesBuilder = new StringBuilder();
         String genus = null;
@@ -308,14 +309,14 @@ public class AnnotateUtilities {
                     genus = taxonString;
                 } else {
                     if (taxonomyFieldValuesBuilder.length() != 0) {
-                        taxonomyFieldValuesBuilder.append(DOCUMENT_FIELD_INTRA_SEPARATOR);
+                        taxonomyFieldValuesBuilder.append(TAXONOMY_FIELD_INTRA_SEPARATOR);
                     }
 
                     taxonomyFieldValuesBuilder.append(taxonString);
                 }
             } else {
                 if (speciesBuilder.length() != 0) {
-                    speciesBuilder.append(DOCUMENT_FIELD_INTRA_SEPARATOR);
+                    speciesBuilder.append(ORGANISM_FIELD_INTRA_SEPARATOR);
                 }
 
                 speciesBuilder.append(taxonString);
@@ -323,13 +324,23 @@ public class AnnotateUtilities {
         }
 
         if (taxonomyFieldValuesBuilder.length() > 0) {
-            annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomyFieldValuesBuilder.substring(0, taxonomyFieldValuesBuilder.length() - 2));
+            annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomyFieldValuesBuilder.toString());
         } else {
             annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, null);
         }
 
-        String organism = genus == null ? null : genus + DOCUMENT_FIELD_INTRA_SEPARATOR + speciesBuilder.toString();
-        annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, organism);
+        Object organism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
+        if (organism != null && !((String) organism).contains(" ")) {
+            //the database seems to have cases where just the Genus has been entered in the organism column even though
+            // the species has been entered in the taxonomy columns -> Throw that crap away
+            //noinspection UnusedAssignment
+            organism = null;
+            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
+        } else if (organism == null && genus != null && speciesBuilder.length() > 0) {
+            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + ORGANISM_FIELD_INTRA_SEPARATOR + speciesBuilder.toString());
+        } else {
+            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
+        }
 
         //annotate the primers...
         AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
