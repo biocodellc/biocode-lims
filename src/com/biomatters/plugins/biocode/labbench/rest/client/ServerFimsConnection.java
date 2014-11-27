@@ -207,11 +207,6 @@ public class ServerFimsConnection extends FIMSConnection {
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
-        return getTissueIdsMatchingQuery(query, projectsToMatch);
-    }
-
-    @Override
     protected List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
         if (tissueIds.isEmpty()) {
             return Collections.emptyList();

@@ -66,11 +66,6 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return ids;
     }
 
-    @Override
-    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
-        return getTissueIdsMatchingQuery(query, projectsToMatch);
-    }
-
     private List<FimsSample> getSamplesForQuery(Query query) throws ConnectionException {
         StringBuilder filterText = new StringBuilder();
         Form form = new Form();

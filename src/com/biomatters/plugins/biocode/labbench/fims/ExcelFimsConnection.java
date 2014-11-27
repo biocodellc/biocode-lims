@@ -302,11 +302,6 @@ public class ExcelFimsConnection extends TableFimsConnection{
     }
 
     @Override
-    public List<String> getTissueIdsMatchingQuery(Query query, List<FimsProject> projectsToMatch, boolean allowEmptyQuery) throws ConnectionException {
-        return getTissueIdsMatchingQuery(query, projectsToMatch);
-    }
-
-    @Override
     public List<FimsSample> _retrieveSamplesForTissueIds(List<String> tissueIds, RetrieveCallback callback) throws ConnectionException {
         List<FimsSample> results = new ArrayList<FimsSample>();
 
