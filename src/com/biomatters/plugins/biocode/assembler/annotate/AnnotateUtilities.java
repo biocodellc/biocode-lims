@@ -242,12 +242,14 @@ public class AnnotateUtilities {
      * @throws DocumentOperationException
      */
     public static Set<DocumentField> annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument, boolean updateModifiedDate) throws DocumentOperationException {
-        FimsData fimsData;
-        fimsData = fimsDataGetter.getFimsData(annotatedDocument);
+        FimsData fimsData = fimsDataGetter.getFimsData(annotatedDocument);
+
         if (fimsData == null || fimsData.fimsSample == null) {
             failBlog.add(annotatedDocument.getName());
+
             return Collections.emptySet();
         }
+
         HashSet<DocumentField> fields = new HashSet<DocumentField>();
         fields.addAll(fimsData.fimsSample.getFimsAttributes());
         fields.addAll(fimsData.fimsSample.getTaxonomyAttributes());
@@ -255,70 +257,79 @@ public class AnnotateUtilities {
         for (DocumentField documentField : fimsData.fimsSample.getFimsAttributes()) {
             annotatedDocument.setFieldValue(documentField, fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
         }
-        if(fimsData.sequencingPlateName != null) {
+
+        if (fimsData.sequencingPlateName != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
         }
-        if(fimsData.reactionStatus != null) {
+
+        if (fimsData.reactionStatus != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus);
         }
-        if(fimsData.sequencingPlateName != null && fimsData.well != null) {
+
+        if (fimsData.sequencingPlateName != null && fimsData.well != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
             annotatedDocument.setFieldValue(BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString());
         }
+
         if (fimsData.workflow != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
         }
+
         if (fimsData.extractionId != null) {
             annotatedDocument.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId);
         }
-        if(fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0) {
+
+        if (fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0) {
             annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);
         }
-        StringBuilder taxonomy = new StringBuilder();
-        StringBuilder subspeciesBuilder = new StringBuilder();
+
+        final String DOCUMENT_FIELD_INTRA_SEPARATOR = "; ";
+        StringBuilder taxonomyFieldValuesBuilder = new StringBuilder();
+        StringBuilder speciesBuilder = new StringBuilder();
         String genus = null;
-        String species = null;
+
         for (DocumentField documentField : fimsData.fimsSample.getTaxonomyAttributes()) {
+            String documentFieldName = documentField.getName();
+
             Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
             if (taxon != null && !(taxon instanceof String)) {
                 throw new DocumentOperationException("The tissue record " + fimsData.fimsSample.getId() + " has an invalid taxon value (" + taxon + ") for the taxon field " + documentField.getName());
             }
-            annotatedDocument.setFieldValue(new DocumentField(documentField.getName(), documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
-            if (species == null) {
-                if (documentField.getName().equalsIgnoreCase("genus")) {
-                    genus = (String)taxon;
-                }
-                if (documentField.getName().toLowerCase().contains("speci")) {
-                    species = (String)taxon;
-                    continue;
-                }
-                if (taxon != null) {
-                    taxonomy.append(taxon).append("; ");
+
+            String taxonString = String.valueOf(taxon);
+
+            if (taxonString.isEmpty()) {
+                continue;
+            }
+
+            annotatedDocument.setFieldValue(new DocumentField(documentFieldName, documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
+            if (genus == null) {
+                if (documentFieldName.equalsIgnoreCase("genus")) {
+                    genus = taxonString;
+                } else {
+                    if (taxonomyFieldValuesBuilder.length() != 0) {
+                        taxonomyFieldValuesBuilder.append(DOCUMENT_FIELD_INTRA_SEPARATOR);
+                    }
+
+                    taxonomyFieldValuesBuilder.append(taxonString);
                 }
             } else {
-                if (subspeciesBuilder.length() != 0) {
-                    subspeciesBuilder.append(" ");
+                if (speciesBuilder.length() != 0) {
+                    speciesBuilder.append(DOCUMENT_FIELD_INTRA_SEPARATOR);
                 }
 
-                subspeciesBuilder.append(taxon);
+                speciesBuilder.append(taxonString);
             }
         }
-        if (taxonomy.length() > 0) {
-            annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy.substring(0, taxonomy.length() - 2));
+
+        if (taxonomyFieldValuesBuilder.length() > 0) {
+            annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomyFieldValuesBuilder.substring(0, taxonomyFieldValuesBuilder.length() - 2));
         } else {
             annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, null);
         }
-        Object organism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
-        if (organism != null && !((String) organism).contains(" ")) {
-            //the database seems to have cases where just the Genus has been entered in the organism column eventhough the species has been entered in the taxonomy columns -> Throw that crap away
-            //noinspection UnusedAssignment
-            organism = null;
-            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
-        } else if (organism == null && genus != null && species != null) {
-            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, genus + " " + species + " " + subspeciesBuilder.toString());
-        } else {
-            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
-        }
+
+        String organism = genus == null ? null : genus + DOCUMENT_FIELD_INTRA_SEPARATOR + speciesBuilder.toString();
+        annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, organism);
 
         //annotate the primers...
         AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
