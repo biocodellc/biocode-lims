@@ -319,13 +319,11 @@ public class AnnotateUtilities {
             if (organismBuilder.length() == 0) {
                 if (documentFieldName.equalsIgnoreCase("genus")) {
                     organismBuilder.append(taxonAsString);
-                } else {
-                    if (taxonomyFieldValuesBuilder.length() != 0) {
-                        taxonomyFieldValuesBuilder.append(TAXONOMY_FIELD_INTRA_SEPARATOR);
-                    }
-
-                    taxonomyFieldValuesBuilder.append(taxonAsString);
                 }
+                if (taxonomyFieldValuesBuilder.length() != 0) {
+                    taxonomyFieldValuesBuilder.append(TAXONOMY_FIELD_INTRA_SEPARATOR);
+                }
+                taxonomyFieldValuesBuilder.append(taxonAsString);
             } else {
                 organismBuilder.append(ORGANISM_FIELD_INTRA_SEPARATOR).append(taxonAsString);
             }
@@ -336,10 +334,12 @@ public class AnnotateUtilities {
         }
 
         Object organism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
-        if (!(organism instanceof String && !((String)organism).contains(" ")) && organismBuilder.toString().contains(ORGANISM_FIELD_INTRA_SEPARATOR)) {
-            /* the database seems to have cases where just the Genus has been entered in the organism column even though
-             * the species has been entered in the taxonomy columns -> Throw that crap away.
-             */
+        if (organism != null && !((String) organism).contains(" ")) {
+            //the database seems to have cases where just the Genus has been entered in the organism column even though
+            // the species has been entered in the taxonomy columns -> Throw that crap away
+            annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, null);
+        } else if (organism == null && organismBuilder.length() > 0) {
+            // If the document did not have an organism field, populate it with values from the FIMS if we can
             annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, organismBuilder.toString());
         }
 
