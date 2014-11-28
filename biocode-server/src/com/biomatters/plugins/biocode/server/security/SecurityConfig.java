@@ -46,18 +46,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
-
-        boolean needMemoryUsers = true;
-
-        boolean hasDatabaseConnection = limsConnection instanceof SqlLimsConnection;
-
         LDAPConfiguration ldapConfiguration = LIMSInitializationListener.getLDAPConfiguration();
+        LIMSConnection limsConnection = LIMSInitializationListener.getLimsConnection();
+        boolean needMemoryUsers = true;
 
         if (ldapConfiguration != null) {
             authenticateWithLDAP(auth, ldapConfiguration);
             needMemoryUsers = false;
-        } else if (hasDatabaseConnection) {
+        } else if (limsConnection instanceof SqlLimsConnection) {
             DataSource dataSource = ((SqlLimsConnection) limsConnection).getDataSource();
 
             needMemoryUsers = createUserTablesIfNecessary(dataSource);
@@ -87,7 +83,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
         if (LIMSInitializationListener.getLDAPConfiguration() != null) {
             String LDAPAdminAuthority = LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority();
-
             if (!StringVerificationUtilities.isStringNULLOrEmpty(LDAPAdminAuthority)) {
                 http.authorizeRequests()
                     .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**").hasAuthority(LDAPAdminAuthority);
