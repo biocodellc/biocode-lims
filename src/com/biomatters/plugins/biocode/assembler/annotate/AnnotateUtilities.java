@@ -319,13 +319,13 @@ public class AnnotateUtilities {
             if (organismBuilder.length() == 0) {
                 if (documentFieldName.equalsIgnoreCase("genus")) {
                     organismBuilder.append(taxonAsString);
-                } else {
-                    if (taxonomyFieldValuesBuilder.length() != 0) {
-                        taxonomyFieldValuesBuilder.append(TAXONOMY_FIELD_INTRA_SEPARATOR);
-                    }
-
-                    taxonomyFieldValuesBuilder.append(taxonAsString);
                 }
+
+                if (taxonomyFieldValuesBuilder.length() != 0) {
+                    taxonomyFieldValuesBuilder.append(TAXONOMY_FIELD_INTRA_SEPARATOR);
+                }
+
+                taxonomyFieldValuesBuilder.append(taxonAsString);
             } else {
                 organismBuilder.append(ORGANISM_FIELD_INTRA_SEPARATOR).append(taxonAsString);
             }
@@ -334,12 +334,8 @@ public class AnnotateUtilities {
         String taxonomy = taxonomyFieldValuesBuilder.length() == 0 ? null : taxonomyFieldValuesBuilder.toString();
         annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy);
 
-        Object oldOrganism = annotatedDocument.getFieldValue(DocumentField.ORGANISM_FIELD);
-        /* the database seems to have cases where just the Genus has been entered in the organism column even though
-         * the species has been entered in the taxonomy columns -> Throw that crap away.
-         */
-        String newOrganism = !(oldOrganism instanceof String && !((String)oldOrganism).contains(" ")) && organismBuilder.toString().contains(ORGANISM_FIELD_INTRA_SEPARATOR) ? null : organismBuilder.toString();
-        annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, newOrganism);
+        String organism = organismBuilder.length() == 0 ? null : organismBuilder.toString();
+        annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, organism);
 
         //annotate the primers...
         AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
