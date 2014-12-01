@@ -1,21 +1,20 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.xml.FastSaxBuilder;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 
+import javax.swing.*;
 import javax.xml.bind.annotation.XmlElement;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Matthew Cheung
@@ -42,16 +41,32 @@ public class Project {
 
     private final Object fieldLock = new Object();
     public List<Field> getFields() {
-        DatabaseServiceException exception = null;
-        synchronized (fieldLock) {
-            if (fields == null) {
-                try {
-                    fields = retrieveFieldsFromXmlConfigurationFile();
-                } catch (DatabaseServiceException e) {
-                    exception = e;
+
+        SwingWorker<DatabaseServiceException, String> swingWorker = new SwingWorker<DatabaseServiceException, String>() {
+            @Override
+            protected DatabaseServiceException doInBackground() throws Exception {
+                synchronized (fieldLock) {
+                    if (fields == null) {
+                        try {
+                            fields = retrieveFieldsFromXmlConfigurationFile();
+                        } catch (DatabaseServiceException e) {
+                            return e;
+                        }
+                    }
+                    return null;
                 }
             }
+        };
+
+        swingWorker.execute();
+
+        Exception exception;
+        try {
+            exception = swingWorker.get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            exception = e;
         }
+
         if(exception != null) {
             BiocodeUtilities.displayExceptionDialog("Failed to Load FIMS Fields", exception.getMessage(), exception, null);
             return Collections.emptyList();
