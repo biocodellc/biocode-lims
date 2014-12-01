@@ -261,7 +261,8 @@ public class PlateBulkEditor {
                                 }
                                 String wellString = data[0].trim();
                                 String barcode = data[1].trim();
-                                if(wellString.charAt(wellString.length()-1) == ';') {
+
+                                if(wellString.length() != 0 && wellString.charAt(wellString.length()-1) == ';') {
                                     wellString = wellString.substring(0, wellString.length()-1);
                                 }
                                 BiocodeUtilities.Well well;
