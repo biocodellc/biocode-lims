@@ -68,7 +68,7 @@ public class Project {
         }
 
         if(exception != null) {
-            BiocodeUtilities.displayExceptionDialog("Failed to Load FIMS Fields", exception.getMessage(), exception, null);
+            BiocodeUtilities.displayExceptionDialog("Failed to Load FIMS Fields", "Failed to Load FIMS Fields: " + exception.getMessage(), exception, null);
             return Collections.emptyList();
         } else {
             return fields;
