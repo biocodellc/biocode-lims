@@ -142,7 +142,29 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             throw new DatabaseServiceException("Specimen Document Field not set.", false);
         }
 
-        return new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
+        List<DocumentField> searchAttributes = getSearchAttributes();
+
+        //hard code to add CollectionTime for Barcode of Wildlife Training project
+        Object yearValue = values.get("TABLEFIMS:urn:yearCollected");
+        Object monthValue = values.get("TABLEFIMS:urn:monthCollected");
+        Object dayValue = values.get("TABLEFIMS:urn:dayCollected");
+        if ("Barcode of Wildlife Training".equals(project.title)
+                && yearValue != null && yearValue.toString().trim().length() > 0
+                && monthValue != null&& monthValue.toString().trim().length() > 0
+                && dayValue != null && dayValue.toString().trim().length() > 0) {
+            DocumentField collectTimeField = new DocumentField("Collection time", "", "TABLEFIMS:urn:collectionTime", Date.class, true, false);
+            searchAttributes.add(collectTimeField);
+            int year = Integer.parseInt(yearValue.toString());
+            int month = Integer.parseInt(monthValue.toString());
+            int day = Integer.parseInt(dayValue.toString());
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(year, month, day, 0, 0, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            values.put(collectTimeField.getCode(), cal.getTime());
+        }
+
+        return new TableFimsSample(searchAttributes, getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
     }
 
     @Override
