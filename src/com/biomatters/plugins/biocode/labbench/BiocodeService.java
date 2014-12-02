@@ -456,6 +456,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public void connect(Connection connection, boolean block) {
+        connect(connection, block, false);
+    }
+
+    public void connect(Connection connection, boolean block, boolean needDisconnectionThread) {
         synchronized (this) {
             loggingIn = true;
         }
@@ -582,8 +586,11 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             if(reportingService != null) {
                 reportingService.notifyLoginStatusChanged();
             }
-            disconnectCheckingThread = new DisconnectCheckingThread();
-            disconnectCheckingThread.start();
+
+            if (needDisconnectionThread) {
+                disconnectCheckingThread = new DisconnectCheckingThread();
+                disconnectCheckingThread.start();
+            }
         } catch (ConnectionException e1) {
             // todo Surface exception in server.  The current error handling swallows the exception when there is no GUI.  ie Server mode
             progressListener.setProgress(1.0);

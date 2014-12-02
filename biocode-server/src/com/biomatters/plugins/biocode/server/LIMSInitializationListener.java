@@ -112,7 +112,7 @@ public class LIMSInitializationListener implements ServletContextListener {
 
             setLimsOptionsFromConfigFile(connectionConfig, config);
 
-            biocodeeService.connect(connectionConfig, false);
+            biocodeeService.connect(connectionConfig, false, false);
             fimsConnection = biocodeeService.getActiveFIMSConnection();
             if(fimsConnection == null) {
                 connectFims(connectionConfig); // to get error message.  In the future BiocodeService should be changed to expose it's connection errors
