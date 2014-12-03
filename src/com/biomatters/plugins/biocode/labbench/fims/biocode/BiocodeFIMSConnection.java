@@ -148,9 +148,8 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         Object yearValue = values.get("TABLEFIMS:urn:yearCollected");
         Object monthValue = values.get("TABLEFIMS:urn:monthCollected");
         Object dayValue = values.get("TABLEFIMS:urn:dayCollected");
-        if ("Barcode of Wildlife Training".equals(project.title)
-                && yearValue != null && yearValue.toString().trim().length() > 0
-                && monthValue != null&& monthValue.toString().trim().length() > 0
+        if (yearValue != null && yearValue.toString().trim().length() > 0
+                && monthValue != null && monthValue.toString().trim().length() > 0
                 && dayValue != null && dayValue.toString().trim().length() > 0) {
             DocumentField collectTimeField = new DocumentField("Collection time", "", "TABLEFIMS:urn:collectionTime", Date.class, true, false);
             searchAttributes.add(collectTimeField);
@@ -159,7 +158,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             int day = Integer.parseInt(dayValue.toString());
 
             Calendar cal = Calendar.getInstance();
-            cal.set(year, month, day, 0, 0, 0);
+            cal.set(year, month - 1, day, 0, 0, 0);
             cal.set(Calendar.MILLISECOND, 0);
             values.put(collectTimeField.getCode(), cal.getTime());
         }
