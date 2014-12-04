@@ -44,10 +44,14 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     protected void _connect(PasswordOptions options) throws ConnectionException {
-        if (!(options instanceof RESTConnectionOptions)) {
-            throw new IllegalArgumentException("Expected instance of " + RESTConnectionOptions.class.getSimpleName() + " but was " + options.getClass().getName());
+        LimsConnectionOptions allLimsOptions = (LimsConnectionOptions)options;
+        PasswordOptions selectedLimsOptions = allLimsOptions.getSelectedLIMSOptions();
+
+        if (!(selectedLimsOptions instanceof RESTConnectionOptions)) {
+            throw new IllegalArgumentException("Expected instance of " + RESTConnectionOptions.class.getSimpleName() + " but was " + selectedLimsOptions.getClass().getName());
         }
-        RESTConnectionOptions connectionOptions = (RESTConnectionOptions) options;
+
+        RESTConnectionOptions connectionOptions = (RESTConnectionOptions)selectedLimsOptions;
         this.username = connectionOptions.getUsername();
         String host = connectionOptions.getHost();
         if (!host.matches("https?://.*")) {
