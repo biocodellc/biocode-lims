@@ -2,7 +2,6 @@ package com.biomatters.plugins.biocode.labbench.connection;
 
 import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.components.GPanel;
-import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -13,9 +12,6 @@ import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.rest.client.RESTConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.rest.client.ServerFimsConnection;
-import com.biomatters.plugins.biocode.labbench.rest.client.ServerLimsConnection;
 import org.jdom.Attribute;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -26,57 +22,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* @author Matthew Cheung
-* @version $Id$
-*          <p/>
-*          Created on 25/03/14 2:55 PM
-*/
+ * @author Matthew Cheung
+ * @version $Id$
+ *          <p/>
+ *          Created on 25/03/14 2:55 PM
+ */
 public class Connection implements XMLSerializable {
-    private LoginOptions directOptions;
-    private RESTConnectionOptions serverOptions;
+    private LoginOptions connectionOptions;
     private String name;
-    private ConnectionType type = ConnectionType.direct;
 
     // A decision was made a long time ago to handle preferences within the plugin rather than taking advantage of
     // Geneious core.  Unfortunately this means the connection Options are all stored in a giant XML
     // element stored on disk rather than taking advantage of having different nodes in preferences.  So we have to
     // keep track of the original XML elements for all Options when we re-serialize.
-    private Element originalDirectOptionsXml;
-    private Element originalServerOptionsXml;
+    private Element originalConnectionOptionsXml;
 
     private List<SimpleListener> nameChangedListeners = new ArrayList<SimpleListener>();
     protected String CONNECTION_OPTIONS_ELEMENT_NAME = "connectionOptions";
-    private static final String SERVER_OPTIONS = "serverConnectionOptions";
 
     public Connection(String name) {
         this.name = name;
-        serverOptions = new RESTConnectionOptions();
     }
 
     public Connection(Element e) throws XMLSerializationException {
         if(e == null) {
             throw new XMLSerializationException("You cannot create a new connection with a null element");
         }
-        originalDirectOptionsXml = e.getChild(CONNECTION_OPTIONS_ELEMENT_NAME);
-        if(originalDirectOptionsXml == null) {
+        originalConnectionOptionsXml = e.getChild(CONNECTION_OPTIONS_ELEMENT_NAME);
+        if(originalConnectionOptionsXml == null) {
             throw new XMLSerializationException("The child element "+CONNECTION_OPTIONS_ELEMENT_NAME+" does not exist");
         }
-        correctElementForBackwardsCompatibility(originalDirectOptionsXml);
+        correctElementForBackwardsCompatibility(originalConnectionOptionsXml);
         name = e.getChildText(CONN_NAME);
-        String typeText = e.getChildText(CONN_TYPE);
-        if(typeText != null) {
-            type = ConnectionType.valueOf(typeText);
-        }
-
-        serverOptions = new RESTConnectionOptions();
-        Element serverOptionsElement = e.getChild(SERVER_OPTIONS);
-        //noinspection StatementWithEmptyBody
-        if(serverOptionsElement != null) {
-            serverOptions.valuesFromXML(serverOptionsElement);
-        } else {
-            // Probably an old serialized Connection from before server connections were an option.
-        }
-
     }
 
     /**
@@ -91,9 +68,9 @@ public class Connection implements XMLSerializable {
         }
         Connection toReturn = new Connection(name);
         correctElementForBackwardsCompatibility(oldFormatElement);
-        toReturn.directOptions = new LoginOptions(ConnectionManager.class);
-        toReturn.directOptions.valuesFromXML(oldFormatElement);
-        toReturn.originalDirectOptionsXml = oldFormatElement;
+        toReturn.connectionOptions = new LoginOptions(ConnectionManager.class);
+        toReturn.connectionOptions.valuesFromXML(oldFormatElement);
+        toReturn.originalConnectionOptionsXml = oldFormatElement;
 
         return toReturn;
     }
@@ -176,7 +153,7 @@ public class Connection implements XMLSerializable {
     }
 
     public boolean optionsCreated() {
-        return directOptions != null;
+        return connectionOptions != null;
     }
 
     public void addNameChangedListener(SimpleListener l) {
@@ -194,7 +171,7 @@ public class Connection implements XMLSerializable {
     }
 
     public Options getEnterPasswordOptions() {
-        if (directOptions == null) {
+        if (connectionOptions == null) {
             createLoginOptions();
         }
         int count = 0;
@@ -223,7 +200,7 @@ public class Connection implements XMLSerializable {
     public void setPasswordsFromOptions(final Options enterPasswordOptions) {
         Runnable runnable = new Runnable() {
             public void run() {
-                directOptions.getPanel(); //we need to create the panel first so that password options keep their save/don't save status
+                connectionOptions.getPanel(); //we need to create the panel first so that password options keep their save/don't save status
                 Options fimsOptions = enterPasswordOptions.getChildOptions().get("fimsOptions");
                 Options limsOptions = enterPasswordOptions.getChildOptions().get("limsOptions");
                 if (fimsOptions != null) {
@@ -238,14 +215,11 @@ public class Connection implements XMLSerializable {
     }
 
     private static final String METHOD = "method";
-    private static final Options.OptionValue DIRECT = new Options.OptionValue(ConnectionType.direct.name(), "Direct FIMS/LIMS");
-    private static final Options.OptionValue SERVER = new Options.OptionValue(ConnectionType.server.name(), "Through Biocode Server");
 
     public JPanel getConnectionOptionsPanel(final JButton button) {  //we only set the values when the panel is actually required - constructing the options can take some time for large excel files...
         final JPanel panel = new GPanel(new BorderLayout());
         final Options overallOptions = new Options(ConnectionManager.class);
         final Options.StringOption nameOption = overallOptions.addStringOption("name", "Connection Name: ", "");
-        final Options.ComboBoxOption<Options.OptionValue> typeOption = overallOptions.addComboBoxOption(METHOD, "Connection Method:", new Options.OptionValue[]{DIRECT, SERVER}, DIRECT);
 
         nameOption.setValue(name);
         nameOption.addChangeListener(new SimpleListener(){
@@ -254,30 +228,10 @@ public class Connection implements XMLSerializable {
             }
         });
 
-        Options.OptionValue typeValue = type == ConnectionType.direct ? DIRECT : SERVER;
-        typeOption.setValue(typeValue);
-        typeOption.addChangeListener(new SimpleListener() {
-            public void objectChanged() {
-                type = ConnectionType.valueOf(typeOption.getValue().getName());
-            }
-        });
-
-        final SimpleListener visListener = new SimpleListener() {
-            @Override
-            public void objectChanged() {
-                boolean direct = overallOptions.getValue(METHOD) == DIRECT;
-                JPanel toAdd = direct ? directOptions.getPanel() : serverOptions.getPanel();
-                JPanel toRemove = direct ? serverOptions.getPanel() : directOptions.getPanel();
-                panel.remove(toRemove);
-                panel.add(toAdd, BorderLayout.CENTER);
-                ConnectionManager.packAncestor(panel);
-            }
-        };
-        typeOption.addChangeListener(visListener);
-
-        if(directOptions != null) {
+        if(connectionOptions != null) {
             panel.add(overallOptions.getPanel(), BorderLayout.NORTH);
-            visListener.objectChanged();
+            panel.add(connectionOptions.getPanel(), BorderLayout.CENTER);
+            ConnectionManager.packAncestor(connectionOptions.getPanel());
             if(button != null) {
                 button.setEnabled(true);
             }
@@ -296,12 +250,13 @@ public class Connection implements XMLSerializable {
                     createLoginOptions();
                     Runnable runnable = new Runnable() {
                         public void run() {
-                            if(originalDirectOptionsXml != null) {
+                            if(originalConnectionOptionsXml != null) {
                                 createLoginOptions();
                             }
                             panel.removeAll();
                             panel.add(overallOptions.getPanel(), BorderLayout.NORTH);
-                            visListener.objectChanged();
+                            panel.add(connectionOptions.getPanel(), BorderLayout.CENTER);
+                            ConnectionManager.packAncestor(connectionOptions.getPanel());
                             panel.revalidate();
                             panel.invalidate();
                             ConnectionManager.packAncestor(panel);
@@ -335,20 +290,17 @@ public class Connection implements XMLSerializable {
     }
 
     private static final String CONN_NAME = "Name";
-    private static final String CONN_TYPE = "Type";
 
     public Element getXml(boolean reserializeOptionsIfTheyExist) {
         Element connectionElement = new Element("Connection");
 
-        if(directOptions == null) {
-            directOptions = new LoginOptions(ConnectionManager.class);
-            directOptions.restoreDefaults();
+        if(connectionOptions == null) {
+            connectionOptions = new LoginOptions(ConnectionManager.class);
+            connectionOptions.restoreDefaults();
         }
-        saveOptionValuesXml(connectionElement, CONNECTION_OPTIONS_ELEMENT_NAME, directOptions, originalDirectOptionsXml, reserializeOptionsIfTheyExist);
-        saveOptionValuesXml(connectionElement, SERVER_OPTIONS, serverOptions, originalServerOptionsXml, reserializeOptionsIfTheyExist);
+        saveOptionValuesXml(connectionElement, CONNECTION_OPTIONS_ELEMENT_NAME, connectionOptions, originalConnectionOptionsXml, reserializeOptionsIfTheyExist);
 
         connectionElement.addContent(new Element(CONN_NAME).setText(name));
-        connectionElement.addContent(new Element(CONN_TYPE).setText(type.name()));
 
         return connectionElement;
     }
@@ -370,13 +322,10 @@ public class Connection implements XMLSerializable {
     }
 
     public FIMSConnection getFimsConnection() {
-        if(type == ConnectionType.server) {
-            return new ServerFimsConnection();
-        }
-        if(directOptions == null) {
+        if(connectionOptions == null) {
             createLoginOptions();
         }
-        Options fimsOptions = directOptions.getChildOptions().get("fims");
+        Options fimsOptions = connectionOptions.getChildOptions().get("fims");
         String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
         FIMSConnection activeFIMSConnection = null;
         for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
@@ -395,49 +344,41 @@ public class Connection implements XMLSerializable {
      * @return
      */
     public PasswordOptions getFimsOptions() {
-        if(type == ConnectionType.server) {
-            return serverOptions;
-        }
-
-        if(directOptions == null) {
+        if(connectionOptions == null) {
             createLoginOptions();
         }
-        Options fimsOptions = directOptions.getChildOptions().get("fims");
+        Options fimsOptions = connectionOptions.getChildOptions().get("fims");
         String selectedFimsServiceName = fimsOptions.getValueAsString("fims");
         return (PasswordOptions)fimsOptions.getChildOptions().get(selectedFimsServiceName);
     }
 
     public void setFims(String name) {
-        if(directOptions == null) {
+        if(connectionOptions == null) {
             createLoginOptions();
         }
-        directOptions.setValue("fims.fims", name);
+        connectionOptions.setValue("fims.fims", name);
     }
 
     private void createLoginOptions() {
-        directOptions = new LoginOptions(ConnectionManager.class);
-        if(originalDirectOptionsXml != null) {
-            final Element loginOptionsValuesLocal = originalDirectOptionsXml;
+        connectionOptions = new LoginOptions(ConnectionManager.class);
+        if(originalConnectionOptionsXml != null) {
+            final Element loginOptionsValuesLocal = originalConnectionOptionsXml;
             ThreadUtilities.invokeNowOrWait(new Runnable() {
                 public void run() {
-                    directOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                    connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
                     try {
-                        directOptions.updateOptions();
+                        connectionOptions.updateOptions();
                     } catch (ConnectionException e) {
                         //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
                         e.printStackTrace();
                     }
-                    directOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                    connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
                 }
             });
         }
     }
 
     public LIMSConnection getLIMSConnection() throws ConnectionException {
-        if(type == ConnectionType.server) {
-            return new ServerLimsConnection();
-        }
-
         LimsConnectionOptions limsOptions = (LimsConnectionOptions) getLimsOptions();
 
         try {
@@ -454,25 +395,16 @@ public class Connection implements XMLSerializable {
      * @return the parent Options that contains all the child LIMSOptions
      */
     public PasswordOptions getLimsOptions() {
-        if(type == ConnectionType.server) {
-            return serverOptions;
-        }
-
-        if(directOptions == null) {
+        if(connectionOptions == null) {
             createLoginOptions();
         }
-        return (PasswordOptions) directOptions.getChildOptions().get("lims");
+        return (PasswordOptions) connectionOptions.getChildOptions().get("lims");
     }
 
     public void updateNowThatWeHaveAPassword() throws ConnectionException {
-        directOptions.updateOptions();
-        if(originalDirectOptionsXml != null) {
-            directOptions.valuesFromXML(originalDirectOptionsXml);
+        connectionOptions.updateOptions();
+        if(originalConnectionOptionsXml != null) {
+            connectionOptions.valuesFromXML(originalConnectionOptionsXml);
         }
-    }
-
-    private static enum ConnectionType {
-        direct,
-        server
     }
 }

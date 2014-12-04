@@ -7,6 +7,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.lims.BCIDRoot;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LimsSearchResult;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -369,7 +370,7 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public PasswordOptions getConnectionOptions() {
-        return null;
+        return new RESTConnectionOptions();
     }
 
     @Override
