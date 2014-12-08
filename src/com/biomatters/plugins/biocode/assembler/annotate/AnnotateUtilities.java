@@ -304,9 +304,15 @@ public class AnnotateUtilities {
             String documentFieldName = documentField.getName();
 
             Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
+
+            if (taxon == null) {
+                continue;
+            }
+
             if (taxon != null && !(taxon instanceof String)) {
                 throw new DocumentOperationException("The tissue record " + fimsData.fimsSample.getId() + " has an invalid taxon value (" + taxon + ") for the taxon field " + documentField.getName());
             }
+
 
             String taxonAsString = String.valueOf(taxon);
 
