@@ -271,22 +271,26 @@ public class ReactionUtilities {
         int count = 0;
         Map<File, String> failed = new HashMap<File, String>();
 
-        final AtomicReference<WellAssigningMethod> action = new AtomicReference<WellAssigningMethod>();
-
         final Collection<File> validFiles = Collections2.filter(Arrays.asList(folder.listFiles()), getValidTraceFilePredicate(filterText));
-        final Plate.Size detectedPlateSize = detectPlateSize(validFiles, separatorString, partToMatch);
-        if ((detectedPlateSize == null || detectedPlateSize != plateSize)) {
-            ThreadUtilities.invokeNowOrWait(new Runnable() {
-                @Override
-                public void run() {
-                    action.set(askUserWhatToDoWithPlateConflict(detectedPlateSize, validFiles, separatorString, partToMatch));
+
+        final AtomicReference<WellAssigningMethod> action = new AtomicReference<WellAssigningMethod>();
+        if(fieldToCheck == null) {
+            final Plate.Size detectedPlateSize = detectPlateSize(validFiles, separatorString, partToMatch);
+            if ((detectedPlateSize == null || detectedPlateSize != plateSize)) {
+                ThreadUtilities.invokeNowOrWait(new Runnable() {
+                    @Override
+                    public void run() {
+                        action.set(askUserWhatToDoWithPlateConflict(detectedPlateSize, validFiles, separatorString, partToMatch));
+                    }
+                });
+                if (action.get() == null) {
+                    throw new DocumentOperationException.Canceled();
                 }
-            });
-            if(action.get() == null) {
-                throw new DocumentOperationException.Canceled();
+            } else {
+                action.set(new WellAssigningMethod(false, detectedPlateSize));
             }
         } else {
-            action.set(new WellAssigningMethod(false, detectedPlateSize));
+            action.set(new WellAssigningMethod(true, plateSize));
         }
 
         for(File f : validFiles) {
@@ -295,6 +299,7 @@ public class ReactionUtilities {
             { //let's do some actual work...
                 String[] nameParts = f.getName().split(separatorString);
                 CycleSequencingReaction r = null;
+
                 if(fieldToCheck != null && nameParts.length > partToMatch) {
                     String fieldValue = nameParts[partToMatch];
 
