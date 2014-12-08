@@ -2,7 +2,7 @@
 * Added cytB to the example loci list.
 * Fixed a bug where taxonomy fields that are below the species field on the connection options were not being incorporated into the values of annotated taxonomy fields.
 * Fixed a bug where the reporting module could not copy records from FIMS into MySQL based LIMS.
-* Other minor bug fixes.
+* Other minor fixes.
 
 ==Biocode Plugin 2.8.4 - 20 November 2014==
 * Remove development changes that were accidentally included in 2.8.3.
