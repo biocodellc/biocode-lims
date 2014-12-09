@@ -239,8 +239,7 @@ public class CycleSequencingOptions extends ReactionOptions<CycleSequencingReact
         //todo interface for user to pick the sample
         addStringOption("extractionId", "Extraction ID", "");
         addStringOption(WORKFLOW_ID, "Workflow ID", "");
-        String[] sampleLoci = new String[] {"None", "COI", "16s", "18s", "ITS", "ITS1", "ITS2", "28S", "12S", "rbcl", "matK", "trnH-psba"};
-        addEditableComboBoxOption(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "Locus", "None", sampleLoci);
+        addEditableComboBoxOption(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), "Locus", "None", SAMPLE_LOCI);
         addDateOption("date", "Date", new Date());
 
 

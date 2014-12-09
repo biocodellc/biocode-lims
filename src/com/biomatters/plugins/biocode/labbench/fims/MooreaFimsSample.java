@@ -163,7 +163,8 @@ public class MooreaFimsSample implements FimsSample {
             int day = (Integer)values.get("biocode_collecting_event.DayCollected");
 
             Calendar cal = Calendar.getInstance();
-            cal.set(year, month, day, 0, 0, 0);
+            //noinspection MagicConstant
+            cal.set(year, month - 1, day, 0, 0, 0);
             cal.set(Calendar.MILLISECOND, 0);
             return cal.getTime();
         }

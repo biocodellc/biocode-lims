@@ -28,6 +28,9 @@ import java.util.*;
  */
 public class BiocodeFIMSConnection extends TableFimsConnection {
 
+    private static final DocumentField COLLECTION_DATE_FIELD = new DocumentField("Collection Date", "",
+            "TABLEFIMS:urn:collectionDate", Date.class, true, false);
+
     static final String HOST = "http://biscicol.org";
 
     @Override
@@ -148,7 +151,32 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             throw new DatabaseServiceException("Specimen Document Field not set.", false);
         }
 
-        return new TableFimsSample(getSearchAttributes(), getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
+        List<DocumentField> searchAttributes = getSearchAttributes();
+
+        //hard code to add CollectionTime for Barcode of Wildlife Training project
+        Object yearValue = values.get("TABLEFIMS:urn:yearCollected");
+        Object monthValue = values.get("TABLEFIMS:urn:monthCollected");
+        Object dayValue = values.get("TABLEFIMS:urn:dayCollected");
+        if (yearValue != null && yearValue.toString().trim().length() > 0
+                && monthValue != null && monthValue.toString().trim().length() > 0
+                && dayValue != null && dayValue.toString().trim().length() > 0) {
+            searchAttributes.add(COLLECTION_DATE_FIELD);
+            try {
+                int year = Integer.parseInt(yearValue.toString().trim());
+                int month = Integer.parseInt(monthValue.toString().trim());
+                int day = Integer.parseInt(dayValue.toString().trim());
+
+                Calendar cal = Calendar.getInstance();
+                //noinspection MagicConstant
+                cal.set(year, month - 1, day, 0, 0, 0);
+                cal.set(Calendar.MILLISECOND, 0);
+                values.put(COLLECTION_DATE_FIELD.getCode(), cal.getTime());
+            } catch (NumberFormatException e) {
+                // Ignore value.  One of the fields was not an integer.
+            }
+        }
+
+        return new TableFimsSample(searchAttributes, getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
     }
 
     @Override

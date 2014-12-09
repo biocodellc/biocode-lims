@@ -231,10 +231,10 @@ public class FimsToLims {
     private String getColumnDefinition(Class fieldClass) {
         //todo: more types...
         if(fieldClass == null) {
-            return lims.isLocal() ? "LONGVARCHAR" : "LONGTEXT";
+            return lims.isLocal() ? "LONGVARCHAR" : "VARCHAR(255)";
         }
         if(String.class.isAssignableFrom(fieldClass)) {
-            return lims.isLocal() ? "LONGVARCHAR" : "LONGTEXT";
+            return lims.isLocal() ? "LONGVARCHAR" : "VARCHAR(255)";
         }
         if(Integer.class.isAssignableFrom(fieldClass)) {
             return "INTEGER";
@@ -245,7 +245,7 @@ public class FimsToLims {
         if(Date.class.isAssignableFrom(fieldClass)) {
             return "DATE";
         }
-        return lims.isLocal() ? "LONGVARCHAR" : "LONGTEXT";
+        return lims.isLocal() ? "LONGVARCHAR" : "VARCHAR(255)";
     }
 
     private BiMap<String, Integer> pcrCocktailMap;

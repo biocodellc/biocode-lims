@@ -7,6 +7,12 @@
   Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
   The schema upgrade script can be found at http://software.mooreabiocode.org
 
+==Biocode Plugin 2.8.5 - 9 December 2014==
+* Added cytB to the example loci list.
+* Fixed a bug where taxonomy fields that are below the species field on the connection options were not being incorporated into the values of annotated taxonomy fields.
+* Fixed a bug where the reporting module could not copy records from FIMS into MySQL based LIMS.
+* Other minor fixes.
+
 ==Biocode Plugin 2.8.4 - 20 November 2014==
 * Remove development changes that were accidentally included in 2.8.3.
 
