@@ -122,7 +122,7 @@ public class TableFimsSample implements FimsSample {
             }
             entryElement.addContent(new Element("key").setText(key.toString()));
             Object value = entry.getValue();
-            entryElement.addContent(new Element("value").setText(value != null ? XmlUtilities.encodeXMLChars(value.toString()) : ""));
+            entryElement.addContent(new Element("value").setText(value != null ? valueToXmlStorage(value) : ""));
             values.addContent(entryElement);
         }
         e.addContent(values);
@@ -130,6 +130,32 @@ public class TableFimsSample implements FimsSample {
         return e;
     }
 
+    private static final String XML_DATE_PREFIX = "XML_Date_Value:";
+
+    private static String valueToXmlStorage(Object value) {
+        if(value instanceof Date) {
+            return XML_DATE_PREFIX + String.valueOf(((Date)value).getTime());
+        }
+        // Crash here for developers.
+        assert value instanceof String : "TableFimsSample only supports serializing Strings or Dates to XML.  " +
+                "If you've added a new type of DocumentField then you will need to add support for serializing it.  " +
+                "Otherwise Geneious core will have a heart attack when it discovers that the value after fromXML() is a " +
+                "String but the DocumentField is of another type";
+        return XmlUtilities.encodeXMLChars(value.toString());
+    }
+
+
+    private static Object valueFromXmlStorage(String elementText) {
+        if(elementText.startsWith(XML_DATE_PREFIX)) {
+            String longValueText = elementText.substring(XML_DATE_PREFIX.length());
+            try {
+                return new Date(Long.valueOf(longValueText));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return XmlUtilities.decodeXMLChars(elementText);
+    }
 
     public void fromXML(Element element) throws XMLSerializationException {
         try {
@@ -159,7 +185,8 @@ public class TableFimsSample implements FimsSample {
                 if(field == null) {
                     throw new IllegalStateException("The DocumentField "+e.getChildText("key")+" was not found!");
                 }
-                String value = XmlUtilities.decodeXMLChars(e.getChildText("value"));
+                String valueText = e.getChildText("value");
+                Object value = valueFromXmlStorage(valueText);
                 values.put(field.getCode(), value);
             }
         } catch (Exception e) {

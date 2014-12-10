@@ -1,3 +1,6 @@
+==Biocode 2.8.6 - TBD ==
+* Fixed a bug that caused a crash when annotating documents using the new Biocode FIMS.
+
 ==Biocode Plugin 2.8.5 - 8 December 2014==
 * Added cytB to the example loci list.
 * Fixed a bug where taxonomy fields that are below the species field on the connection options were not being incorporated into the values of annotated taxonomy fields.
