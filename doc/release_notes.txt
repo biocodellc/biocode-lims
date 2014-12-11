@@ -1,5 +1,7 @@
-==Biocode 2.8.6 - TBD ==
-* Fixed a bug that caused a crash when annotating documents using the new Biocode FIMS.
+==Biocode 2.8.6 - 12 December 2014 ==
+* Fixed a bug that caused Geneious to crash trying to index sequences or traces that had been downloaded or annotated while using the new Biocode FIMS.
+
+'''Note''': Documents that have already been annotated with 2.8.5 will need to be re-annotated with 2.8.6 to avoid these errors from occurring.
 
 ==Biocode Plugin 2.8.5 - 8 December 2014==
 * Added cytB to the example loci list.
