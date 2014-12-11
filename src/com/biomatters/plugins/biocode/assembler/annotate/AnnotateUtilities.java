@@ -341,15 +341,6 @@ public class AnnotateUtilities {
         String organism = organismBuilder.length() == 0 ? null : organismBuilder.toString();
         annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, organism);
 
-        //annotate the primers...
-        AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
-        DocumentNote note = notes.getNote("sequencingPrimer");
-        if (note == null) {
-            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType("sequencingPrimer");
-            if (sequencingPrimerType != null) {
-                note = sequencingPrimerType.createDocumentNote();
-            }
-        }
         boolean savedDocument = false;
         if (fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
