@@ -147,6 +147,7 @@ public class BiocodePlugin extends GeneiousPlugin {
             JScrollPane scrollPane = releaseNotesDisplay.getComponent();
             Component component = scrollPane.getViewport().getComponent(0);
             ((JTextArea)component).setEditable(false);
+            ((JTextArea)component).setCaretPosition(0);
             return panel;
         }
     }
