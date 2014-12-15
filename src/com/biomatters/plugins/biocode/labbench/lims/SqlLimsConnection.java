@@ -174,7 +174,10 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             connection = getConnection();
             populateFailureReasons(connection);
 
-            updateFkTracesConstraintIfNecessary(getDataSource(), progressListener);
+            progressListener.setMessage("Correcting database schema (this may take some time but only needs to be done once)...");
+            updateFkTracesConstraintIfNecessary(getDataSource());
+
+            progressListener.setMessage("Creating BCID database table");
 
             new Thread() {
                 public void run() {
@@ -218,7 +221,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             setProperty(BACKGROUND_TASKS_STARTED_KEY, String.valueOf(System.currentTimeMillis()));
             connection.endTransaction();
 
-            System.out.println("Updating orphaned links between reactions and sequences...");
+            System.out.println("Updating orphaned links between reactions and seqeunces...");
             linkOrphanedSequences(connection);
 
             System.out.println("Updating workflows for sequences...");
@@ -494,7 +497,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    private void updateFkTracesConstraintIfNecessary(DataSource dataSource, ProgressListener progressListener) throws SQLException {
+    private void updateFkTracesConstraintIfNecessary(DataSource dataSource) throws SQLException {
         if (isLocal()) {
             return;
         }
@@ -524,7 +527,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
 
             if (!selectFkTracesContraintResult.next())             {
-                progressListener.setMessage("Invalid database schema.  Missing constraint between traces and cyclesequencing tables.");
+                System.out.println("Invalid database schema.  Missing constraint between traces and cyclesequencing tables.");
                 return;
             }
 
@@ -593,23 +596,23 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
             addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
 
-            progressListener.setMessage("Updating database schema, this might take a while...");
+            System.out.println("Updating database schema, this might take a while...");
 
             dropExistingFkTracesConstraintStatement.executeUpdate();
             addNewFkTracesConstraintStatement.executeUpdate();
             selectFkTracesConstraintAfterCorrectionResult = selectFkTracesConstraintStatement.executeQuery();
 
             if (!selectFkTracesConstraintAfterCorrectionResult.next()) {
-                progressListener.setMessage("Failed to update database schema.");
+                System.out.println("Failed to update database schema.");
                 return;
             }
 
             if (!selectFkTracesConstraintAfterCorrectionResult.getString("DELETE_RULE").equals("CASCADE") || !selectFkTracesConstraintAfterCorrectionResult.getString("UPDATE_RULE").equals("CASCADE")) {
-                progressListener.setMessage("Failed to update database schema.");
+                System.out.println("Failed to update database schema.");
                 return;
             }
 
-            progressListener.setMessage("Successfully updated database schema.");
+            System.out.println("Successfully updated database schema.");
         } catch(SQLException e) {
             StringWriter stacktrace = new StringWriter();
             e.printStackTrace(new PrintWriter(stacktrace));
