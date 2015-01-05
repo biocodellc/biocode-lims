@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleot
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -557,6 +558,20 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         if (!fimsSuccessfullyConnected.get()) {
             return;
+        }
+
+        String duplicateFieldNames = StringUtilities.join("\n", getNamesOfDuplicateDocumentFields(activeFIMSConnection.getSearchAttributes()));
+        if (!duplicateFieldNames.isEmpty()) {
+            if (!Dialogs.showYesNoDialog(
+                    "Duplicates of the following document fields were detected in the FIMS:\n\n" + duplicateFieldNames + "\n\nDo you wish to continue?",
+                    "Duplicate document fields detected",
+                    null,
+                    Dialogs.DialogIcon.WARNING
+            )) {
+                logOut();
+                progressListener.setProgress(1.0);
+                return;
+            }
         }
 
         try {
@@ -1780,5 +1795,18 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             e.printStackTrace();
             throw new DatabaseServiceException(e, "Failed to download plate " + plateName + ": " + e.getMessage(), false);
         }
+    }
+
+    private Set<String> getNamesOfDuplicateDocumentFields(Collection<DocumentField> fields) {
+        Set<String> uniqueFieldNames = new HashSet<String>();
+        Set<String> duplicateFieldNames = new HashSet<String>();
+
+        for (DocumentField field : fields) {
+            if (!uniqueFieldNames.add(field.getName())) {
+                duplicateFieldNames.add(field.getName());
+            }
+        }
+
+        return duplicateFieldNames;
     }
 }
