@@ -3410,7 +3410,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             SqlUtilities.appendSetOfQuestionMarks(getTracesQuery, reactionIDs.size());
             PreparedStatement getTracesStatement = connection.getInternalConnection().prepareStatement(getTracesQuery.toString(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
-            for (int i = 0, reactionID; i < reactionIDs.size(); i++) {
+            for (int i = 1, reactionID; i <= reactionIDs.size(); i++) {
                 reactionID = reactionIDs.get(i);
                 getTracesCountStatement.setObject(i, reactionID);
                 getTracesStatement.setObject(i, reactionID);
