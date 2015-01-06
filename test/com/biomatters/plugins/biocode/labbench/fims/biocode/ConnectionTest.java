@@ -1,6 +1,7 @@
 package com.biomatters.plugins.biocode.labbench.fims.biocode;
 
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.utilities.SharedCookieHandler;
 import org.junit.After;
 import org.junit.Assert;
@@ -32,16 +33,22 @@ public class ConnectionTest extends Assert {
     }
 
     @Test
-    public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException {
-        BiocodeFIMSUtils.login("http://" + HOST, "demo", "demo");
+    public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException, ConnectionException {
+        BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "demo", "demo");
         for (Project project : BiocodeFIMSUtils.getProjects()) {
             System.out.println(project);
         }
     }
 
+    @Test(expected = Exception.class)
+    public void checkLoginCanFail() throws MalformedURLException, ConnectionException {
+        BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "a", "bc");
+        fail("login should have thrown a ConnectionException because we used incorrect credentials");
+    }
+
     @Test
-    public void getProjects() throws DatabaseServiceException, MalformedURLException {
-        BiocodeFIMSUtils.login("http://" + HOST, "demo", "demo");
+    public void getProjects() throws DatabaseServiceException, MalformedURLException, ConnectionException {
+        BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "demo", "demo");
         List<Project> projects = BiocodeFIMSUtils.getProjects();
         assertFalse("There should be some projects", projects.isEmpty());
         for (Project project : projects) {
@@ -57,14 +64,13 @@ public class ConnectionTest extends Assert {
         BiocodeFIMSUtils.getProjects();
     }
 
-    private static final String HOST = "biscicol.org";
     @Before
     public void shareSessionsForBiSciCol() {
-        SharedCookieHandler.registerHost(HOST);
+        SharedCookieHandler.registerHost(BiocodeFIMSUtils.HOST);
     }
 
     @After
     public void logoutAfterTestDone() {
-        SharedCookieHandler.unregisterHost(HOST);
+        SharedCookieHandler.unregisterHost(BiocodeFIMSUtils.HOST);
     }
 }
