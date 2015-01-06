@@ -562,8 +562,10 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         String duplicateFieldNames = StringUtilities.join("\n", getNamesOfDuplicateDocumentFields(activeFIMSConnection.getSearchAttributes()));
         if (!duplicateFieldNames.isEmpty()) {
-            if (!Dialogs.showYesNoDialog(
-                    "Duplicates of the following document fields were detected in the FIMS:\n\n" + duplicateFieldNames + "\n\nDo you wish to continue?",
+            if (!Dialogs.showContinueCancelDialog(
+                    "Multiple copies of the following document fields were detected in the FIMS:\n\n"
+                            + duplicateFieldNames
+                            + "\n\nThey shall be truncated in an arbitrary manner each time they are accessed to eliminate duplication.",
                     "Duplicate document fields detected",
                     null,
                     Dialogs.DialogIcon.WARNING
@@ -571,7 +573,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 logOut();
                 progressListener.setProgress(1.0);
                 return;
-            }
+            } else
+                activeFIMSConnection.setRemoveDuplicateSearchAttributes(true);
         }
 
         try {

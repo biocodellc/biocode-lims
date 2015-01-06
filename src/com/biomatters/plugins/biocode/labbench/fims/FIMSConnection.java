@@ -27,6 +27,7 @@ import java.io.IOException;
  * Time: 6:16:57 PM
  */
 public abstract class FIMSConnection {
+    private boolean removeDuplicateSearchAttributes = false;
 
     protected static String getProjectForSample(List<DocumentField> projectsLowestToHighest, FimsSample sample) {
         for (DocumentField projectField : projectsLowestToHighest) {
@@ -220,14 +221,28 @@ public abstract class FIMSConnection {
      */
     public final List<DocumentField> getSearchAttributes() {
         List<DocumentField> list = new ArrayList<DocumentField>(_getSearchAttributes());
+
+        if (removeDuplicateSearchAttributes)
+            list = new ArrayList<DocumentField>(new HashSet<DocumentField>(list));
+
         Collections.sort(list, new Comparator<DocumentField>() {
             @Override
             public int compare(DocumentField o1, DocumentField o2) {
                 return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
             }
         });
+
         return list;
     }
+
+    public final void setRemoveDuplicateSearchAttributes(boolean removeDuplicateSearchAttributes) {
+        this.removeDuplicateSearchAttributes = removeDuplicateSearchAttributes;
+    }
+
+    public final boolean getRemoveDuplicateSearchAttributes() {
+        return removeDuplicateSearchAttributes;
+    }
+
     public abstract List<DocumentField> _getSearchAttributes();
 
     public DocumentField getLatitudeField() { return null; }
