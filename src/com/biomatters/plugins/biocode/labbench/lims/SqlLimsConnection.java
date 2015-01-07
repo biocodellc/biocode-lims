@@ -3411,7 +3411,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             PreparedStatement getTracesStatement = connection.getInternalConnection().prepareStatement(getTracesQuery.toString(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
             for (int i = 1, reactionID; i <= reactionIDs.size(); i++) {
-                reactionID = reactionIDs.get(i);
+                reactionID = reactionIDs.get(i - 1);
                 getTracesCountStatement.setObject(i, reactionID);
                 getTracesStatement.setObject(i, reactionID);
             }
