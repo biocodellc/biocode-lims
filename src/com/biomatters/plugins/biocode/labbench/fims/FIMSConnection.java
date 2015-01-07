@@ -338,11 +338,23 @@ public abstract class FIMSConnection {
         return s.substring(0, 1).toUpperCase() + s.substring(1);
     }
 
-    public abstract List<DocumentField> _getCollectionAttributes();
+    /**
+     *
+     * @see #getCollectionAttributes()
+     */
+    protected abstract List<DocumentField> _getCollectionAttributes();
 
-    public abstract List<DocumentField> _getTaxonomyAttributes();
+    /**
+     *
+     * @see #getTaxonomyAttributes()
+     */
+    protected abstract List<DocumentField> _getTaxonomyAttributes();
 
-    public abstract List<DocumentField> _getSearchAttributes();
+    /**
+     *
+     * @see #getSearchAttributes()
+     */
+    protected abstract List<DocumentField> _getSearchAttributes();
 
     public DocumentField getLatitudeField() { return null; }
     public DocumentField getLongitudeField() { return null; }
