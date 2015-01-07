@@ -41,13 +41,13 @@ public class ConnectionTest extends Assert {
     }
 
     @Test(expected = Exception.class)
-    public void checkLoginCanFail() throws MalformedURLException, ConnectionException {
+    public void checkLoginCanFail() throws MalformedURLException, DatabaseServiceException {
         BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "a", "bc");
         fail("login should have thrown a ConnectionException because we used incorrect credentials");
     }
 
     @Test
-    public void getProjects() throws DatabaseServiceException, MalformedURLException, ConnectionException {
+    public void getProjects() throws DatabaseServiceException, MalformedURLException {
         BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "demo", "demo");
         List<Project> projects = BiocodeFIMSUtils.getProjects();
         assertFalse("There should be some projects", projects.isEmpty());
