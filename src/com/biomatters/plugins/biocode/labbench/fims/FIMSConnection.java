@@ -18,7 +18,6 @@ import com.google.common.collect.Multimap;
 import java.util.*;
 import java.lang.ref.SoftReference;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -29,9 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Time: 6:16:57 PM
  */
 public abstract class FIMSConnection {
-    AtomicBoolean hasCheckedForDuplicateCollectionAttributes = new AtomicBoolean(false);
-    AtomicBoolean hasCheckedForDuplicateTaxonomyAttributes = new AtomicBoolean(false);
-    AtomicBoolean hasCheckedForDuplicateSearchAttributes = new AtomicBoolean(false);
 
     protected static String getProjectForSample(List<DocumentField> projectsLowestToHighest, FimsSample sample) {
         for (DocumentField projectField : projectsLowestToHighest) {
@@ -86,9 +82,11 @@ public abstract class FIMSConnection {
                 throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a plate field.  Please check your FIMS connection options");
             }
             if(getWellDocumentField() == null) {
-                throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a well field.  Please check your FIMS connection options");    
+                throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a well field.  Please check your FIMS connection options");
             }
         }
+
+        checkForDuplicateFields();
     }
 
     /**
@@ -213,7 +211,7 @@ public abstract class FIMSConnection {
      * @return list of non-taxonomy fields
      */
     public final List<DocumentField> getCollectionAttributes() {
-        return sortAndRemoveDuplicates(_getCollectionAttributes(), hasCheckedForDuplicateCollectionAttributes, "collection attributes");
+        return sortAndRemoveDuplicates(_getCollectionAttributes());
     }
 
     /**
@@ -221,31 +219,35 @@ public abstract class FIMSConnection {
      * @return list of taxonomy fields in order of highest level (eg kingdom) to lowest (eg. species).
      */
     public final List<DocumentField> getTaxonomyAttributes() {
-        return sortAndRemoveDuplicates(_getTaxonomyAttributes(), hasCheckedForDuplicateTaxonomyAttributes, "taxonomy attributes");
+        return sortAndRemoveDuplicates(_getTaxonomyAttributes());
     }
 
     /**
      * @return list of all attributes that can be searched
      */
     public final List<DocumentField> getSearchAttributes() {
-        return sortAndRemoveDuplicates(_getSearchAttributes(), hasCheckedForDuplicateSearchAttributes, "search attributes");
+        return sortAndRemoveDuplicates(_getSearchAttributes());
     }
 
-    private List<DocumentField> sortAndRemoveDuplicates(List<DocumentField> fields, AtomicBoolean hasNotifiedUserOfDuplicates, String documentFieldType) {
-        if (!hasNotifiedUserOfDuplicates.get()) {
-            hasNotifiedUserOfDuplicates.set(true);
+    private void checkForDuplicateFields() throws ConnectionException {
+        String duplicateDocumentFieldsList = generateListOfDuplicateDocumentFields(_getSearchAttributes());
+        if (!duplicateDocumentFieldsList.isEmpty()) {
+            String cancel = "Cancel";
+            String[] buttons = {"Ignore Duplicates", cancel};
 
-            String duplicateDocumentFieldsList = generateListOfDuplicateDocumentFields(fields);
-
-            if (!duplicateDocumentFieldsList.isEmpty())
-                Dialogs.showMessageDialog(
-                        getStringWithFirstCharacterCapitalized(documentFieldType) + " with the same code were detected:\n\n"
-                                + duplicateDocumentFieldsList + "\n\n"
-                                + "Duplicates shall be arbitrarily truncated each time they are accessed.",
-                        "Duplicate " + documentFieldType + " detected in FIMS"
-                );
+            Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(buttons, "Duplicate FIMS Fields");
+            Object chosenButton = Dialogs.showDialog(dialogOptions,
+                    "FIMS fields with the same code were detected:\n\n"
+                            + duplicateDocumentFieldsList + "\n\n"
+                            + "Do you wish to ignore duplicate fields?"
+            );
+            if (cancel.equals(chosenButton)) {
+                throw ConnectionException.NO_DIALOG;
+            }
         }
+    }
 
+    private List<DocumentField> sortAndRemoveDuplicates(List<DocumentField> fields) {
         fields = removeDuplicates(fields);
 
         Collections.sort(fields, new Comparator<DocumentField>() {
@@ -264,7 +266,7 @@ public abstract class FIMSConnection {
 
         for (List<DocumentField> group : fieldsGroupedByCode) {
             while (group.size() > 1)
-                group.remove(0);
+                group.remove(group.size()-1);  // Remove all but the the first
 
             fieldsWithoutDuplicates.add(group.get(0));
         }
@@ -332,10 +334,6 @@ public abstract class FIMSConnection {
             if (field.getCode().equals(code))
                 return true;
         return false;
-    }
-
-    private String getStringWithFirstCharacterCapitalized(String s) {
-        return s.substring(0, 1).toUpperCase() + s.substring(1);
     }
 
     /**
