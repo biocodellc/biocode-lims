@@ -1716,30 +1716,39 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public List<WorkflowDocument> getWorkflowDocumentsForNames(List<String> workflowNames) throws DatabaseServiceException {
-        List<WorkflowDocument> workflows;
-        workflows = new ArrayList<WorkflowDocument>();
+        if (workflowNames.isEmpty()) {
+            return Collections.emptyList();
+        }
 
+        List<WorkflowDocument> workflows = new ArrayList<WorkflowDocument>();
         Query workflowQuery;
         Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false);
+
         if (workflowNames.size() == 1) {
             workflowQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, new Object[]{workflowNames.get(0)}, options);
-        } else {
+        }
+        else {
             List<Query> subQueries = new ArrayList<Query>();
+
             for (String id : workflowNames) {
                 subQueries.add(Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, id));
             }
+
             workflowQuery = Query.Factory.createOrQuery(subQueries.toArray(new Query[subQueries.size()]), options);
         }
 
         List<AnnotatedPluginDocument> results = BiocodeService.getInstance().retrieve(workflowQuery, ProgressListener.EMPTY);
+
         for (AnnotatedPluginDocument result : results) {
             if (WorkflowDocument.class.isAssignableFrom(result.getDocumentClass())) {
                 PluginDocument doc = result.getDocumentOrNull();
+
                 if (doc instanceof WorkflowDocument) {
                     workflows.add((WorkflowDocument) doc);
                 }
             }
         }
+
         return workflows;
     }
 
