@@ -289,8 +289,10 @@ public abstract class FIMSConnection {
         }
 
         /* Remove trailing new line characters. */
-        listBuilder.deleteCharAt(listBuilder.length() - 1);
-        listBuilder.deleteCharAt(listBuilder.length() - 1);
+        if (listBuilder.length() > 0) {
+            listBuilder.deleteCharAt(listBuilder.length() - 1);
+            listBuilder.deleteCharAt(listBuilder.length() - 1);
+        }
 
         return listBuilder.toString();
     }
