@@ -11,7 +11,6 @@ import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleot
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
-import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -558,23 +557,6 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         if (!fimsSuccessfullyConnected.get()) {
             return;
-        }
-
-        String duplicateFieldNames = StringUtilities.join("\n", getNamesOfDuplicateDocumentFields(activeFIMSConnection.getSearchAttributes()));
-        if (!duplicateFieldNames.isEmpty()) {
-            if (!Dialogs.showContinueCancelDialog(
-                    "Multiple copies of the following document fields were detected in the FIMS:\n\n"
-                            + duplicateFieldNames
-                            + "\n\nThey shall be truncated in an arbitrary manner each time they are accessed to eliminate duplication.",
-                    "Duplicate document fields detected",
-                    null,
-                    Dialogs.DialogIcon.WARNING
-            )) {
-                logOut();
-                progressListener.setProgress(1.0);
-                return;
-            } else
-                activeFIMSConnection.setRemoveDuplicateSearchAttributes(true);
         }
 
         try {
@@ -1739,9 +1721,8 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         Query workflowQuery;
         Map<String, Object> options = BiocodeService.getSearchDownloadOptions(false, true, false, false);
-        if(workflowNames.size() == 1) {
-            workflowQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL,
-                    new Object[]{workflowNames.get(0)}, options);
+        if (workflowNames.size() == 1) {
+            workflowQuery = Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_NAME_FIELD, Condition.EQUAL, new Object[]{workflowNames.get(0)}, options);
         } else {
             List<Query> subQueries = new ArrayList<Query>();
             for (String id : workflowNames) {
@@ -1752,12 +1733,12 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
         List<AnnotatedPluginDocument> results = BiocodeService.getInstance().retrieve(workflowQuery, ProgressListener.EMPTY);
         for (AnnotatedPluginDocument result : results) {
-           if(WorkflowDocument.class.isAssignableFrom(result.getDocumentClass())) {
-               PluginDocument doc = result.getDocumentOrNull();
-               if(doc instanceof WorkflowDocument) {
-                   workflows.add((WorkflowDocument)doc);
-               }
-           }
+            if (WorkflowDocument.class.isAssignableFrom(result.getDocumentClass())) {
+                PluginDocument doc = result.getDocumentOrNull();
+                if (doc instanceof WorkflowDocument) {
+                    workflows.add((WorkflowDocument) doc);
+                }
+            }
         }
         return workflows;
     }
@@ -1798,18 +1779,5 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             e.printStackTrace();
             throw new DatabaseServiceException(e, "Failed to download plate " + plateName + ": " + e.getMessage(), false);
         }
-    }
-
-    private Set<String> getNamesOfDuplicateDocumentFields(Collection<DocumentField> fields) {
-        Set<String> uniqueFieldNames = new HashSet<String>();
-        Set<String> duplicateFieldNames = new HashSet<String>();
-
-        for (DocumentField field : fields) {
-            if (!uniqueFieldNames.add(field.getName())) {
-                duplicateFieldNames.add(field.getName());
-            }
-        }
-
-        return duplicateFieldNames;
     }
 }

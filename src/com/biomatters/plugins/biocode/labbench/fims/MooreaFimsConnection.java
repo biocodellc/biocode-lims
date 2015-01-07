@@ -117,7 +117,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         connection = null;
     }
 
-    public List<DocumentField> getTaxonomyAttributes() {
+    public List<DocumentField> _getTaxonomyAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
         fields.add(new DocumentField("Kingdom", "", "biocode.Kingdom", String.class, false, false));
         fields.add(new DocumentField("Phylum", "", "biocode.Phylum", String.class, false, false));
@@ -146,7 +146,7 @@ public class MooreaFimsConnection extends FIMSConnection{
         return MOOREA_TISSUE_ID_FIELD;
     }
 
-    public List<DocumentField> getCollectionAttributes() {
+    public List<DocumentField> _getCollectionAttributes() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
 
         fields.add(MOOREA_TISSUE_ID_FIELD);

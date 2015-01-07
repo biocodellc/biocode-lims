@@ -125,11 +125,11 @@ public class TAPIRFimsConnection extends FIMSConnection{
         return false;
     }
 
-    public List<DocumentField> getCollectionAttributes() {
+    public List<DocumentField> _getCollectionAttributes() {
         return searchAttributes;
     }
 
-    public List<DocumentField> getTaxonomyAttributes() {
+    public List<DocumentField> _getTaxonomyAttributes() {
         return taxonomyAttributes;
     }
 

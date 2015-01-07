@@ -166,11 +166,11 @@ public abstract class TableFimsConnection extends FIMSConnection{
         return getTableCol(specimenCol);
     }
 
-    public final List<DocumentField> getCollectionAttributes() {
+    public final List<DocumentField> _getCollectionAttributes() {
         return new ArrayList<DocumentField>(fields);
     }
 
-    public final List<DocumentField> getTaxonomyAttributes() {
+    public final List<DocumentField> _getTaxonomyAttributes() {
         return isConnected() ? new ArrayList<DocumentField>(taxonomyFields) : Collections.<DocumentField>emptyList();
     }
 

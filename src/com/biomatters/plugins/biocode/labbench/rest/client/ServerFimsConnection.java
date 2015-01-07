@@ -160,7 +160,7 @@ public class ServerFimsConnection extends FIMSConnection {
     }
 
     @Override
-    public List<DocumentField> getCollectionAttributes() {
+    public List<DocumentField> _getCollectionAttributes() {
         return collectionFields;
     }
 
@@ -175,7 +175,7 @@ public class ServerFimsConnection extends FIMSConnection {
     }
 
     @Override
-    public List<DocumentField> getTaxonomyAttributes() {
+    public List<DocumentField> _getTaxonomyAttributes() {
         return taxonFields;
     }
 

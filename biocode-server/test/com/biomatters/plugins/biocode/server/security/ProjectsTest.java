@@ -364,12 +364,12 @@ public class ProjectsTest extends Assert {
         }
 
         @Override
-        public List<DocumentField> getCollectionAttributes() {
+        public List<DocumentField> _getCollectionAttributes() {
             return null;
         }
 
         @Override
-        public List<DocumentField> getTaxonomyAttributes() {
+        public List<DocumentField> _getTaxonomyAttributes() {
             return null;
         }
 

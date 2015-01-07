@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
@@ -17,6 +18,7 @@ import com.google.common.collect.Multimap;
 import java.util.*;
 import java.lang.ref.SoftReference;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -27,7 +29,9 @@ import java.io.IOException;
  * Time: 6:16:57 PM
  */
 public abstract class FIMSConnection {
-    private boolean removeDuplicateSearchAttributes = false;
+    AtomicBoolean hasCheckedForDuplicateCollectionAttributes = new AtomicBoolean(false);
+    AtomicBoolean hasCheckedForDuplicateTaxonomyAttributes = new AtomicBoolean(false);
+    AtomicBoolean hasCheckedForDuplicateSearchAttributes = new AtomicBoolean(false);
 
     protected static String getProjectForSample(List<DocumentField> projectsLowestToHighest, FimsSample sample) {
         for (DocumentField projectField : projectsLowestToHighest) {
@@ -208,40 +212,133 @@ public abstract class FIMSConnection {
     /**
      * @return list of non-taxonomy fields
      */
-    public abstract List<DocumentField> getCollectionAttributes();
+    public final List<DocumentField> getCollectionAttributes() {
+        return sortAndRemoveDuplicates(_getCollectionAttributes(), hasCheckedForDuplicateCollectionAttributes, "collection attributes");
+    }
 
     /**
      *
      * @return list of taxonomy fields in order of highest level (eg kingdom) to lowest (eg. species).
      */
-    public abstract List<DocumentField> getTaxonomyAttributes();
+    public final List<DocumentField> getTaxonomyAttributes() {
+        return sortAndRemoveDuplicates(_getTaxonomyAttributes(), hasCheckedForDuplicateTaxonomyAttributes, "taxonomy attributes");
+    }
 
     /**
      * @return list of all attributes that can be searched
      */
     public final List<DocumentField> getSearchAttributes() {
-        List<DocumentField> list = new ArrayList<DocumentField>(_getSearchAttributes());
+        return sortAndRemoveDuplicates(_getSearchAttributes(), hasCheckedForDuplicateSearchAttributes, "search attributes");
+    }
 
-        if (removeDuplicateSearchAttributes)
-            list = new ArrayList<DocumentField>(new HashSet<DocumentField>(list));
+    private List<DocumentField> sortAndRemoveDuplicates(List<DocumentField> fields, AtomicBoolean hasNotifiedUserOfDuplicates, String documentFieldType) {
+        if (!hasNotifiedUserOfDuplicates.get()) {
+            hasNotifiedUserOfDuplicates.set(true);
 
-        Collections.sort(list, new Comparator<DocumentField>() {
+            String duplicateDocumentFieldsList = generateListOfDuplicateDocumentFields(fields);
+
+            if (!duplicateDocumentFieldsList.isEmpty())
+                Dialogs.showMessageDialog(
+                        getStringWithFirstCharacterCapitalized(documentFieldType) + " with the same code were detected:\n\n"
+                                + duplicateDocumentFieldsList + "\n\n"
+                                + "Duplicates shall be arbitrarily truncated each time they are accessed.",
+                        "Duplicate " + documentFieldType + " detected in FIMS"
+                );
+        }
+
+        fields = removeDuplicates(fields);
+
+        Collections.sort(fields, new Comparator<DocumentField>() {
             @Override
             public int compare(DocumentField o1, DocumentField o2) {
                 return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
             }
         });
 
-        return list;
+        return fields;
     }
 
-    public final void setRemoveDuplicateSearchAttributes(boolean removeDuplicateSearchAttributes) {
-        this.removeDuplicateSearchAttributes = removeDuplicateSearchAttributes;
+    private List<DocumentField> removeDuplicates(List<DocumentField> fields) {
+        List<DocumentField> fieldsWithoutDuplicates = new ArrayList<DocumentField>();
+        List<List<DocumentField>> fieldsGroupedByCode = groupDocumentFieldsByCode(fields);
+
+        for (List<DocumentField> group : fieldsGroupedByCode) {
+            while (group.size() > 1)
+                group.remove(0);
+
+            fieldsWithoutDuplicates.add(group.get(0));
+        }
+
+        return fieldsWithoutDuplicates;
     }
 
-    public final boolean getRemoveDuplicateSearchAttributes() {
-        return removeDuplicateSearchAttributes;
+    private String generateListOfDuplicateDocumentFields(Collection<DocumentField> fields) {
+        StringBuilder listBuilder = new StringBuilder();
+        List<List<DocumentField>> interGroupIterator = groupDocumentFieldsByCode(fields);
+
+        for (List<DocumentField> group : interGroupIterator) {
+            if (group.size() > 1) {
+                Iterator<DocumentField> intraGroupIterator = group.iterator();
+                listBuilder.append("Document fields with code [").append(group.get(0).getCode()).append("]:\n");
+
+                while (intraGroupIterator.hasNext())
+                    listBuilder.append(intraGroupIterator.next().getName()).append(intraGroupIterator.hasNext() ? ", " : "");
+
+                listBuilder.append("\n\n");
+            }
+        }
+
+        /* Remove trailing new line characters. */
+        listBuilder.deleteCharAt(listBuilder.length() - 1);
+        listBuilder.deleteCharAt(listBuilder.length() - 1);
+
+        return listBuilder.toString();
     }
+
+    private List<List<DocumentField>> groupDocumentFieldsByCode(Collection<DocumentField> fields) {
+        List<List<DocumentField>> fieldsGroupedByCode = new ArrayList<List<DocumentField>>();
+        String fieldCode;
+        boolean foundGroupContainingFieldsWithCode;
+
+        for (DocumentField field : fields) {
+            fieldCode = field.getCode();
+            foundGroupContainingFieldsWithCode = false;
+
+            for (List<DocumentField> group : fieldsGroupedByCode)
+                if (containsDocumentFieldWithCode(group, fieldCode)) {
+                    group.add(field);
+
+                    foundGroupContainingFieldsWithCode = true;
+
+                    break;
+                }
+
+            if (!foundGroupContainingFieldsWithCode) {
+                List<DocumentField> groupToContainFieldsWithCode = new ArrayList<DocumentField>();
+
+                groupToContainFieldsWithCode.add(field);
+
+                fieldsGroupedByCode.add(groupToContainFieldsWithCode);
+            }
+        }
+
+        return fieldsGroupedByCode;
+    }
+
+    private boolean containsDocumentFieldWithCode(Collection<DocumentField> fields, String code) {
+        for (DocumentField field : fields)
+            if (field.getCode().equals(code))
+                return true;
+        return false;
+    }
+
+    private String getStringWithFirstCharacterCapitalized(String s) {
+        return s.substring(0, 1).toUpperCase() + s.substring(1);
+    }
+
+    public abstract List<DocumentField> _getCollectionAttributes();
+
+    public abstract List<DocumentField> _getTaxonomyAttributes();
 
     public abstract List<DocumentField> _getSearchAttributes();
 
