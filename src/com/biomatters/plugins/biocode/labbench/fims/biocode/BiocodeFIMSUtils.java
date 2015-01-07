@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import org.glassfish.jersey.filter.LoggingFilter;
 
 import javax.ws.rs.NotFoundException;
@@ -45,9 +44,9 @@ public class BiocodeFIMSUtils {
      * @param password The password to use to authenticate
      * @throws MalformedURLException If the url specified was not a valid URL
      * @throws ProcessingException If a problem occurs accessing the webservice to login
-     * @throws ConnectionException If the server returned an error when we tried to authenticate
+     * @throws com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException If the server returned an error when we tried to authenticate
      */
-    static void login(String url, String username, String password) throws MalformedURLException, ProcessingException, ConnectionException {
+    static void login(String url, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
         WebTarget path = getFimsWebTarget(url).path("id/authenticationService/login");
         Invocation.Builder request = path.request();
         Form formToPost = new Form().param("username", username).param("password", password);
@@ -63,14 +62,16 @@ public class BiocodeFIMSUtils {
      * @param resultType The class of the entity that should be returned from the method
      * @param response The response from the method call
      * @return The result entity
-     * @throws WebApplicationException if an error was returned by the server
+     * @throws com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException if an error was returned by the server
      */
-    static <T> T getRestServiceResult(Class<T> resultType, Response response) throws WebApplicationException {
+    static <T> T getRestServiceResult(Class<T> resultType, Response response) throws DatabaseServiceException {
         try {
             int statusCode = response.getStatus();
             if (statusCode != 200) {
                 ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
-                throw new WebApplicationException(errorResponse.usrMessage, errorResponse.httpStatusCode);
+                throw new DatabaseServiceException(
+                        new WebApplicationException(errorResponse.developerMessage, errorResponse.httpStatusCode),
+                        "Server returned an error: " + errorResponse.usrMessage, false);
             } else {
                 return response.readEntity(resultType);
             }

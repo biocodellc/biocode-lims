@@ -6,7 +6,6 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
@@ -55,8 +54,8 @@ import java.util.prefs.Preferences;
                                     "There was a problem communicating with the server: " + e.getMessage(),
                                     "Connection Error"
                             );
-                        } catch (ConnectionException e) {
-                            Dialogs.showMessageDialog("Server returned the following message: " + e.getMessage(), "Login Failed");
+                        } catch (DatabaseServiceException e) {
+                            Dialogs.showMessageDialog(e.getMessage(), "Login Failed");
                         }
                         progressFrame.setComplete();
                     }
@@ -78,7 +77,7 @@ import java.util.prefs.Preferences;
         projectOption = addComboBoxOption("project", "Project:", projectOptions, projectOptions.get(0));
     }
 
-    public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, ConnectionException {
+    public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
         URL url = new URL(host);
         SharedCookieHandler.registerHost(url.getHost());
         BiocodeFIMSUtils.login(host, username, password);
