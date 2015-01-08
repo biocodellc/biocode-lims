@@ -230,16 +230,11 @@ public abstract class FIMSConnection {
     }
 
     private void checkForDuplicateDocumentFields() throws ConnectionException {
-        String duplicateCollectionAttributesList = generateListOfDuplicateDocumentFields(_getCollectionAttributes());
-        String duplicateTaxonomyAttributesList = generateListOfDuplicateDocumentFields(_getTaxonomyAttributes());
         String duplicateSearchAttributesList = generateListOfDuplicateDocumentFields(_getSearchAttributes());
-
-        String duplicateDocumentFieldsFoundMessage = (duplicateCollectionAttributesList.isEmpty() ? "" : "Collection attributes with the same code:\n" + duplicateCollectionAttributesList + "\n\n")
-                + (duplicateTaxonomyAttributesList.isEmpty() ? "" : "Taxonomy attributes with the same code:\n" + duplicateTaxonomyAttributesList + "\n\n")
-                + (duplicateSearchAttributesList.isEmpty() ? "" : "Search attributes with the same code:\n" + duplicateSearchAttributesList + "\n\n");
-
-        if (!duplicateDocumentFieldsFoundMessage.isEmpty() && !Dialogs.showOkCancelDialog(
-                duplicateDocumentFieldsFoundMessage + "Continue? Fields shall be filtered arbitrarily each time they are accessed to eliminate the duplication.", "Duplicate fields detected in FIMS", null, Dialogs.DialogIcon.WARNING))
+        if (!duplicateSearchAttributesList.isEmpty() && !Dialogs.showContinueCancelDialog(
+                "The following duplicate fields have been detected in your FIMS.\n\n" + duplicateSearchAttributesList + "\n\n" +
+                        "Duplicate fields and their values will be ignored.\nDo you wish to continue?",
+                "Duplicate FIMS Fields", null, Dialogs.DialogIcon.WARNING))
             throw ConnectionException.NO_DIALOG;
     }
 
@@ -345,6 +340,8 @@ public abstract class FIMSConnection {
     protected abstract List<DocumentField> _getTaxonomyAttributes();
 
     /**
+     * A complete list of all attributes provided by the FIMSConnection.  Implementations MUST include the results of
+     * {@link #_getCollectionAttributes()} and {@link #getTaxonomyAttributes()} in the returned list.
      *
      * @see #getSearchAttributes()
      */

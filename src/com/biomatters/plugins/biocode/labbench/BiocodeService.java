@@ -549,6 +549,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 if (!timedOutOrExceptionMet.getAndSet(true)) {
                     logOut();
                     Dialogs.showMessageDialog("Connection attempt timed out", "Error connecting to FIMS");
+                    progressListener.setProgress(1.0);
                 }
                 return;
             }
