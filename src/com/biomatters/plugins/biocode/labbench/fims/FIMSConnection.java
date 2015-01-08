@@ -86,7 +86,7 @@ public abstract class FIMSConnection {
             }
         }
 
-        checkForDuplicateFields();
+        checkForDuplicateDocumentFields();
     }
 
     /**
@@ -229,22 +229,18 @@ public abstract class FIMSConnection {
         return sortAndRemoveDuplicates(_getSearchAttributes());
     }
 
-    private void checkForDuplicateFields() throws ConnectionException {
-        String duplicateDocumentFieldsList = generateListOfDuplicateDocumentFields(_getSearchAttributes());
-        if (!duplicateDocumentFieldsList.isEmpty()) {
-            String cancel = "Cancel";
-            String[] buttons = {"Ignore Duplicates", cancel};
+    private void checkForDuplicateDocumentFields() throws ConnectionException {
+        String duplicateCollectionAttributesList = generateListOfDuplicateDocumentFields(_getCollectionAttributes());
+        String duplicateTaxonomyAttributesList = generateListOfDuplicateDocumentFields(_getTaxonomyAttributes());
+        String duplicateSearchAttributesList = generateListOfDuplicateDocumentFields(_getSearchAttributes());
 
-            Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(buttons, "Duplicate FIMS Fields");
-            Object chosenButton = Dialogs.showDialog(dialogOptions,
-                    "FIMS fields with the same code were detected:\n\n"
-                            + duplicateDocumentFieldsList + "\n\n"
-                            + "Do you wish to ignore duplicate fields?"
-            );
-            if (cancel.equals(chosenButton)) {
-                throw ConnectionException.NO_DIALOG;
-            }
-        }
+        String duplicateDocumentFieldsFoundMessage = (duplicateCollectionAttributesList.isEmpty() ? "" : "Collection attributes with the same code:\n" + duplicateCollectionAttributesList + "\n\n")
+                + (duplicateTaxonomyAttributesList.isEmpty() ? "" : "Taxonomy attributes with the same code:\n" + duplicateTaxonomyAttributesList + "\n\n")
+                + (duplicateSearchAttributesList.isEmpty() ? "" : "Search attributes with the same code:\n" + duplicateSearchAttributesList + "\n\n");
+
+        if (!duplicateDocumentFieldsFoundMessage.isEmpty() && !Dialogs.showOkCancelDialog(
+                duplicateDocumentFieldsFoundMessage + "Continue? Fields shall be filtered arbitrarily each time they are accessed to eliminate the duplication.", "Duplicate fields detected in FIMS", null, Dialogs.DialogIcon.WARNING))
+            throw ConnectionException.NO_DIALOG;
     }
 
     private List<DocumentField> sortAndRemoveDuplicates(List<DocumentField> fields) {
@@ -266,7 +262,7 @@ public abstract class FIMSConnection {
 
         for (List<DocumentField> group : fieldsGroupedByCode) {
             while (group.size() > 1)
-                group.remove(group.size()-1);  // Remove all but the the first
+                group.remove(group.size() - 1);  // Remove all but the the first
 
             fieldsWithoutDuplicates.add(group.get(0));
         }
@@ -276,9 +272,9 @@ public abstract class FIMSConnection {
 
     private String generateListOfDuplicateDocumentFields(Collection<DocumentField> fields) {
         StringBuilder listBuilder = new StringBuilder();
-        List<List<DocumentField>> interGroupIterator = groupDocumentFieldsByCode(fields);
+        List<List<DocumentField>> fieldsGroupedByCode = groupDocumentFieldsByCode(fields);
 
-        for (List<DocumentField> group : interGroupIterator) {
+        for (List<DocumentField> group : fieldsGroupedByCode) {
             if (group.size() > 1) {
                 Iterator<DocumentField> intraGroupIterator = group.iterator();
                 listBuilder.append("Document fields with code [").append(group.get(0).getCode()).append("]:\n");
@@ -290,8 +286,8 @@ public abstract class FIMSConnection {
             }
         }
 
-        /* Remove trailing new line characters. */
         if (listBuilder.length() > 0) {
+            /* Remove trailing new line characters. */
             listBuilder.deleteCharAt(listBuilder.length() - 1);
             listBuilder.deleteCharAt(listBuilder.length() - 1);
         }
