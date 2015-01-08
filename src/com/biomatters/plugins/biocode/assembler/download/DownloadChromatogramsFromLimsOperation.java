@@ -114,7 +114,10 @@ public class DownloadChromatogramsFromLimsOperation extends DocumentOperation {
                             }
                         }
 
-                        fimsDataForReactions.put((CycleSequencingReaction)reaction, new FimsData(reaction.getFimsSample(), plate.getName(), well));
+                        FimsSample fimsSample = reaction.getFimsSample();
+                        if(fimsSample != null) {
+                            fimsDataForReactions.put((CycleSequencingReaction) reaction, new FimsData(fimsSample, plate.getName(), well));
+                        }
                     }
                 }
             }

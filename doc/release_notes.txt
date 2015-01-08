@@ -1,5 +1,6 @@
 ==Biocode Plugin 2.8.7 - TBD ==
 * Updated Biocode FIMS connector to be compatible with API changes being introduced.
+* Fixed a bug that would cause the Download Traces from LIMS operation to take a very long time if the chosen plate had no workflows attached.
 
 ==Biocode Plugin 2.8.6 - 12 December 2014 ==
 * Fixed a bug that caused Geneious to crash trying to index sequences or traces that had been downloaded or annotated while using the new Biocode FIMS.
