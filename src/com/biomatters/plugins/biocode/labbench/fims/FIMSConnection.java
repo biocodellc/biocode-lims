@@ -231,10 +231,13 @@ public abstract class FIMSConnection {
 
     private void checkForDuplicateDocumentFields() throws ConnectionException {
         String duplicateSearchAttributesList = generateListOfDuplicateDocumentFields(_getSearchAttributes());
-        if (!duplicateSearchAttributesList.isEmpty() && !Dialogs.showContinueCancelDialog(
-                "The following duplicate fields have been detected in your FIMS.\n\n" + duplicateSearchAttributesList + "\n\n" +
-                        "Duplicate fields and their values will be ignored.\nDo you wish to continue?",
-                "Duplicate FIMS Fields", null, Dialogs.DialogIcon.WARNING))
+        if (!duplicateSearchAttributesList.isEmpty() && !Dialogs.showYesNoDialog(
+                "The following duplications in document fields were detected in the FIMS:\n\n" +
+                        duplicateSearchAttributesList + "\n\n" +
+                        "Document fields will be filtered arbitrarily to eliminate the duplications.\nDo you wish to continue?",
+                "Duplicate Document Fields Detected in FIMS",
+                null,
+                Dialogs.DialogIcon.WARNING))
             throw ConnectionException.NO_DIALOG;
     }
 
