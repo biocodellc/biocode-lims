@@ -527,7 +527,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                         if (e != ConnectionException.NO_DIALOG) {
                             String message = e.getMainMessage() == null ? "There was an error connecting to " + activeFIMSConnection.getLabel() : e.getMainMessage();
                             if (e.getMessage() != null) {
-                                Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Error connecting to FIMS"), message, e.getMessage());
+                                Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[]{"OK"}, "Error connecting to FIMS");
+                                dialogOptions.setMoreOptionsButtonText("Show Details", "Hide Details");
+                                Dialogs.showMoreOptionsDialog(dialogOptions, message, e.getMessage());
                             } else {
                                 Dialogs.showMessageDialog(message, "Error connecting to FIMS");
                             }
