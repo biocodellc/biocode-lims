@@ -9,7 +9,7 @@
 
 '''Note''': Documents that have already been annotated with 2.8.5 will need to be re-annotated with 2.8.6 to avoid these errors from occurring.
 
-==Biocode Plugin 2.8.5 - 9 December 2014==
+==Biocode Plugin 2.8.5 - 8 December 2014==
 * Added cytB to the example loci list.
 * Fixed a bug where taxonomy fields that are below the species field on the connection options were not being incorporated into the values of annotated taxonomy fields.
 * Fixed a bug where the reporting module could not copy records from FIMS into MySQL based LIMS.
