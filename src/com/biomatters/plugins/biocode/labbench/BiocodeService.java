@@ -1716,7 +1716,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         activeCallbacks.remove(callback);
     }
 
-    public List<WorkflowDocument> getWorkflowDocumentsForNames(Collection<String> workflowNames) throws DatabaseServiceException {
+    public List<WorkflowDocument> getWorkflowDocumentsForNames(List<String> workflowNames) throws DatabaseServiceException {
         if (workflowNames.isEmpty()) {
             return Collections.emptyList();
         }
