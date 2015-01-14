@@ -47,13 +47,15 @@ import java.util.prefs.Preferences;
                     public void run() {
                         try {
                             login(hostOption.getValue(), usernameOption.getValue(), passwordOption.getPassword());
-                        } catch (MalformedURLException e1) {
-                            Dialogs.showMessageDialog("Could not connect to server.  Invalid URL: " + e1.getMessage(), "Invalid URL");
+                        } catch (MalformedURLException e) {
+                            Dialogs.showMessageDialog("Could not connect to server.  Invalid URL: " + e.getMessage(), "Invalid URL");
                         } catch (ProcessingException e) {
                             Dialogs.showMessageDialog(
                                     "There was a problem communicating with the server: " + e.getMessage(),
                                     "Connection Error"
                             );
+                        } catch (DatabaseServiceException e) {
+                            Dialogs.showMessageDialog(e.getMessage(), "Login Failed");
                         }
                         progressFrame.setComplete();
                     }
@@ -75,7 +77,7 @@ import java.util.prefs.Preferences;
         projectOption = addComboBoxOption("project", "Project:", projectOptions, projectOptions.get(0));
     }
 
-    public void login(String host, String username, String password) throws MalformedURLException, ProcessingException {
+    public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
         URL url = new URL(host);
         SharedCookieHandler.registerHost(url.getHost());
         BiocodeFIMSUtils.login(host, username, password);

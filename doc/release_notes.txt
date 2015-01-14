@@ -1,13 +1,10 @@
-==Biocode Plugin 3.0.0 - TBD==
+==Biocode Plugin 2.8.7 - 14 January 2015==
+* Added modifications in response to upcoming changes that will be made to the Biocode FIMS REST service.
+* Added the handling of the presence of duplicate document fields in the FIMS.
+* Fixed slow trace downloads from plates without workflows.
+* Other improvements and fixes.
 
-'''Additional Notes'''
-* This version includes an update to the LIMS database format.  This version can still be used by older versions of the
-  LIMS plugin.
-  Built-in MySQL users will be upgraded automatically.
-  Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
-  The schema upgrade script can be found at http://software.mooreabiocode.org
-
-==Biocode Plugin 2.8.6 - 12 December 2014 ==
+==Biocode Plugin 2.8.6 - 12 December 2014==
 * Fixed a bug that caused Geneious to crash trying to index sequences or traces that had been downloaded or annotated while using the new Biocode FIMS.
 
 '''Note''': Documents that have already been annotated with 2.8.5 will need to be re-annotated with 2.8.6 to avoid these errors from occurring.

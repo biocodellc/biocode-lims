@@ -174,10 +174,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             connection = getConnection();
             populateFailureReasons(connection);
 
-            progressListener.setMessage("Correcting database schema (this may take some time but only needs to be done once)...");
-            updateFkTracesConstraintIfNecessary(getDataSource());
-
-            progressListener.setMessage("Creating BCID database table");
+            updateFkTracesConstraintIfNecessary(dataSource, progressListener);
 
             new Thread() {
                 public void run() {
@@ -497,7 +494,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-    private void updateFkTracesConstraintIfNecessary(DataSource dataSource) throws SQLException {
+    private void updateFkTracesConstraintIfNecessary(DataSource dataSource, ProgressListener progressListener) throws SQLException {
         if (isLocal()) {
             return;
         }
@@ -527,7 +524,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             selectFkTracesContraintResult = selectFkTracesConstraintStatement.executeQuery();
 
             if (!selectFkTracesContraintResult.next())             {
-                System.out.println("Invalid database schema.  Missing constraint between traces and cyclesequencing tables.");
+                System.err.println("Invalid database schema: missing constraint 'Fktraces' between the traces table and the cyclesequencing table.");
                 return;
             }
 
@@ -596,19 +593,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             dropExistingFkTracesConstraintStatement = connection.prepareStatement(dropExistingFkTracesConstraintQuery);
             addNewFkTracesConstraintStatement = connection.prepareStatement(addNewFkTracesConstraintQuery);
 
-            System.out.println("Updating database schema, this might take a while...");
+            progressListener.setMessage("Updating database schema, this might take a while...");
 
             dropExistingFkTracesConstraintStatement.executeUpdate();
             addNewFkTracesConstraintStatement.executeUpdate();
             selectFkTracesConstraintAfterCorrectionResult = selectFkTracesConstraintStatement.executeQuery();
 
             if (!selectFkTracesConstraintAfterCorrectionResult.next()) {
-                System.out.println("Failed to update database schema.");
+                System.err.println("Failed to update database schema.");
                 return;
             }
 
             if (!selectFkTracesConstraintAfterCorrectionResult.getString("DELETE_RULE").equals("CASCADE") || !selectFkTracesConstraintAfterCorrectionResult.getString("UPDATE_RULE").equals("CASCADE")) {
-                System.out.println("Failed to update database schema.");
+                System.err.println("Failed to update database schema.");
                 return;
             }
 
@@ -3419,47 +3416,48 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     @Override
-    public Map<Integer, List<MemoryFile>> downloadTraces(List<Integer> reactionIds, ProgressListener progressListener) throws DatabaseServiceException {
+    public Map<Integer, List<MemoryFile>> downloadTraces(List<Integer> reactionIDs, ProgressListener progressListener) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
 
-            StringBuilder getCountQuery = new StringBuilder("SELECT COUNT(id) FROM traces WHERE reaction IN ");
-            SqlUtilities.appendSetOfQuestionMarks(getCountQuery, reactionIds.size());
-            PreparedStatement getCount = connection.prepareStatement(getCountQuery.toString());
+            StringBuilder getTracesCountQuery = new StringBuilder("SELECT COUNT(id) FROM traces WHERE reaction IN ");
+            SqlUtilities.appendSetOfQuestionMarks(getTracesCountQuery, reactionIDs.size());
+            PreparedStatement getTracesCountStatement = connection.prepareStatement(getTracesCountQuery.toString());
 
             StringBuilder getTracesQuery = new StringBuilder("SELECT * FROM traces WHERE reaction IN ");
-            SqlUtilities.appendSetOfQuestionMarks(getTracesQuery, reactionIds.size());
-            PreparedStatement getTraces = connection.prepareStatement(getTracesQuery.toString());
-            int index = 1;
-            for (int reactionId : reactionIds) {
-                getCount.setObject(index, reactionId);
-                getTraces.setObject(index++, reactionId);
+            SqlUtilities.appendSetOfQuestionMarks(getTracesQuery, reactionIDs.size());
+            PreparedStatement getTracesStatement = connection.getInternalConnection().prepareStatement(getTracesQuery.toString(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+
+            for (int i = 1, reactionID; i <= reactionIDs.size(); i++) {
+                reactionID = reactionIDs.get(i - 1);
+                getTracesCountStatement.setObject(i, reactionID);
+                getTracesStatement.setObject(i, reactionID);
             }
 
-            if(!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
-                getCount.setFetchSize(Integer.MIN_VALUE);
+            if (!BiocodeService.getInstance().getActiveLIMSConnection().isLocal()) {
+                getTracesStatement.setFetchSize(Integer.MIN_VALUE);
             }
-            SqlUtilities.printSql(getCountQuery.toString(), reactionIds);
-            ResultSet countResultSet = getCount.executeQuery();
+
+            SqlUtilities.printSql(getTracesCountQuery.toString(), reactionIDs);
+            ResultSet countResultSet = getTracesCountStatement.executeQuery();
             countResultSet.next();
             int count = countResultSet.getInt(1);
             countResultSet.close();
 
-            SqlUtilities.printSql(getTracesQuery.toString(), reactionIds);
-            getTraces.setQueryTimeout(0);
-            ResultSet resultSet = getTraces.executeQuery();
+            SqlUtilities.printSql(getTracesQuery.toString(), reactionIDs);
+            ResultSet traces = getTracesStatement.executeQuery();
             Map<Integer, List<MemoryFile>> results = new HashMap<Integer, List<MemoryFile>>();
             double pos = 0;
             long bytes = 0;
-            while(resultSet.next()) {
+            while(traces.next()) {
                 if (progressListener.isCanceled()) break;
                 progressListener.setMessage("downloaded "+BiocodeUtilities.formatSize(bytes, 2));
                 progressListener.setProgress(pos/count);
                 pos++;
-                MemoryFile memoryFile = new MemoryFile(resultSet.getInt("id"), resultSet.getString("name"), resultSet.getBytes("data"));
+                MemoryFile memoryFile = new MemoryFile(traces.getInt("id"), traces.getString("name"), traces.getBytes("data"));
                 bytes += memoryFile.getData().length;
-                int id = resultSet.getInt("reaction");
+                int id = traces.getInt("reaction");
                 List<MemoryFile> files = results.get(id);
                 if(files == null) {
                     files = new ArrayList<MemoryFile>();
@@ -3467,7 +3465,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 }
                 files.add(memoryFile);
             }
-            resultSet.close();
+            traces.close();
             return results;
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
