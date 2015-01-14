@@ -261,7 +261,7 @@ public class GenerateBOLDTraceSubmissionOperation extends DocumentOperation {
         getFieldValuesFromDocs(inputDocs, BiocodeUtilities.SEQUENCING_PLATE_FIELD);
 
         try {
-            List<WorkflowDocument> workflowDocs = BiocodeService.getInstance().getWorkflowDocumentsForNames(workflowToDocument.keySet());
+            List<WorkflowDocument> workflowDocs = BiocodeService.getInstance().getWorkflowDocumentsForNames(new ArrayList<String>(workflowToDocument.keySet()));
             for (WorkflowDocument workflowDoc : workflowDocs) {
                 for (AnnotatedPluginDocument document : workflowToDocument.get(workflowDoc.getName())) {
                     Reaction cyclesequencingReaction = getSequencingReactionForDoc(workflowDoc, document);
