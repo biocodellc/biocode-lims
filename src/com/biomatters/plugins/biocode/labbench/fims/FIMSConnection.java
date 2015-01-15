@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.databaseservice.Query;
 import com.biomatters.geneious.publicapi.databaseservice.RetrieveCallback;
@@ -81,9 +82,11 @@ public abstract class FIMSConnection {
                 throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a plate field.  Please check your FIMS connection options");
             }
             if(getWellDocumentField() == null) {
-                throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a well field.  Please check your FIMS connection options");    
+                throw new ConnectionException("You have specified that your FIMS connection contains plate information, but you have not specified a well field.  Please check your FIMS connection options");
             }
         }
+
+        checkForDuplicateDocumentFields();
     }
 
     /**
@@ -207,28 +210,145 @@ public abstract class FIMSConnection {
     /**
      * @return list of non-taxonomy fields
      */
-    public abstract List<DocumentField> getCollectionAttributes();
+    public final List<DocumentField> getCollectionAttributes() {
+        return sortAndRemoveDuplicates(_getCollectionAttributes());
+    }
 
     /**
      *
      * @return list of taxonomy fields in order of highest level (eg kingdom) to lowest (eg. species).
      */
-    public abstract List<DocumentField> getTaxonomyAttributes();
+    public final List<DocumentField> getTaxonomyAttributes() {
+        return sortAndRemoveDuplicates(_getTaxonomyAttributes());
+    }
 
     /**
      * @return list of all attributes that can be searched
      */
     public final List<DocumentField> getSearchAttributes() {
-        List<DocumentField> list = new ArrayList<DocumentField>(_getSearchAttributes());
-        Collections.sort(list, new Comparator<DocumentField>() {
+        return sortAndRemoveDuplicates(_getSearchAttributes());
+    }
+
+    private void checkForDuplicateDocumentFields() throws ConnectionException {
+        String duplicateSearchAttributesList = generateListOfDuplicateDocumentFields(_getSearchAttributes());
+        if (!duplicateSearchAttributesList.isEmpty() && !Dialogs.showYesNoDialog(
+                "The following duplications in document fields were detected in the FIMS:\n\n" +
+                        duplicateSearchAttributesList + "\n\n" +
+                        "Document fields will be filtered arbitrarily to eliminate the duplications.\nDo you wish to continue?",
+                "Duplicate Document Fields Detected in FIMS",
+                null,
+                Dialogs.DialogIcon.WARNING))
+            throw ConnectionException.NO_DIALOG;
+    }
+
+    private List<DocumentField> sortAndRemoveDuplicates(List<DocumentField> fields) {
+        fields = removeDuplicates(fields);
+
+        Collections.sort(fields, new Comparator<DocumentField>() {
             @Override
             public int compare(DocumentField o1, DocumentField o2) {
                 return o1.getName().toLowerCase().compareTo(o2.getName().toLowerCase());
             }
         });
-        return list;
+
+        return fields;
     }
-    public abstract List<DocumentField> _getSearchAttributes();
+
+    private List<DocumentField> removeDuplicates(List<DocumentField> fields) {
+        List<DocumentField> fieldsWithoutDuplicates = new ArrayList<DocumentField>();
+        List<List<DocumentField>> fieldsGroupedByCode = groupDocumentFieldsByCode(fields);
+
+        for (List<DocumentField> group : fieldsGroupedByCode) {
+            while (group.size() > 1)
+                group.remove(group.size() - 1);  // Remove all but the the first
+
+            fieldsWithoutDuplicates.add(group.get(0));
+        }
+
+        return fieldsWithoutDuplicates;
+    }
+
+    private String generateListOfDuplicateDocumentFields(Collection<DocumentField> fields) {
+        StringBuilder listBuilder = new StringBuilder();
+        List<List<DocumentField>> fieldsGroupedByCode = groupDocumentFieldsByCode(fields);
+
+        for (List<DocumentField> group : fieldsGroupedByCode) {
+            if (group.size() > 1) {
+                Iterator<DocumentField> intraGroupIterator = group.iterator();
+                listBuilder.append("Document fields with code [").append(group.get(0).getCode()).append("]:\n");
+
+                while (intraGroupIterator.hasNext())
+                    listBuilder.append(intraGroupIterator.next().getName()).append(intraGroupIterator.hasNext() ? ", " : "");
+
+                listBuilder.append("\n\n");
+            }
+        }
+
+        if (listBuilder.length() > 0) {
+            /* Remove trailing new line characters. */
+            listBuilder.deleteCharAt(listBuilder.length() - 1);
+            listBuilder.deleteCharAt(listBuilder.length() - 1);
+        }
+
+        return listBuilder.toString();
+    }
+
+    private List<List<DocumentField>> groupDocumentFieldsByCode(Collection<DocumentField> fields) {
+        List<List<DocumentField>> fieldsGroupedByCode = new ArrayList<List<DocumentField>>();
+        String fieldCode;
+        boolean foundGroupContainingFieldsWithCode;
+
+        for (DocumentField field : fields) {
+            fieldCode = field.getCode();
+            foundGroupContainingFieldsWithCode = false;
+
+            for (List<DocumentField> group : fieldsGroupedByCode)
+                if (containsDocumentFieldWithCode(group, fieldCode)) {
+                    group.add(field);
+
+                    foundGroupContainingFieldsWithCode = true;
+
+                    break;
+                }
+
+            if (!foundGroupContainingFieldsWithCode) {
+                List<DocumentField> groupToContainFieldsWithCode = new ArrayList<DocumentField>();
+
+                groupToContainFieldsWithCode.add(field);
+
+                fieldsGroupedByCode.add(groupToContainFieldsWithCode);
+            }
+        }
+
+        return fieldsGroupedByCode;
+    }
+
+    private boolean containsDocumentFieldWithCode(Collection<DocumentField> fields, String code) {
+        for (DocumentField field : fields)
+            if (field.getCode().equals(code))
+                return true;
+        return false;
+    }
+
+    /**
+     *
+     * @see #getCollectionAttributes()
+     */
+    protected abstract List<DocumentField> _getCollectionAttributes();
+
+    /**
+     *
+     * @see #getTaxonomyAttributes()
+     */
+    protected abstract List<DocumentField> _getTaxonomyAttributes();
+
+    /**
+     * A complete list of all attributes provided by the FIMSConnection.  Implementations MUST include the results of
+     * {@link #_getCollectionAttributes()} and {@link #getTaxonomyAttributes()} in the returned list.
+     *
+     * @see #getSearchAttributes()
+     */
+    protected abstract List<DocumentField> _getSearchAttributes();
 
     public DocumentField getLatitudeField() { return null; }
     public DocumentField getLongitudeField() { return null; }

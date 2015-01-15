@@ -12,10 +12,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Form;
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.core.*;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
@@ -30,21 +27,57 @@ import java.util.logging.Logger;
  */
 public class BiocodeFIMSUtils {
 
-    private static final String BISCICOL_URL = "http://biscicol.org";
+    static final String HOST = "biscicol.org";
+    static final int PORT = 80;
+    static final String BISCICOL_URL = "http://" + HOST + ":" + PORT;
 
     static WebTarget getFimsWebTarget(String hostname) {
         return ClientBuilder.newClient().target(hostname)
                             .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
     }
 
-    static void login(String hostname, String username, String password) throws MalformedURLException, ProcessingException {
-            WebTarget path = getFimsWebTarget(hostname).path("id/authenticationService/login");
-            Invocation.Builder request = path
-                    .request(MediaType.TEXT_HTML_TYPE);
-            Form formToPost = new Form().param("username", username).param("password", password);
-            Response response = request.post(
-                        Entity.entity(formToPost, MediaType.TEXT_PLAIN_TYPE));
-            response.close();  // Unfortunately the login service doesn't provide any meaningful response.  It just redirects to the main page.
+
+    /**
+     *
+     * @param url The URL of the BiSciCol server
+     * @param username The username to use to authenticate
+     * @param password The password to use to authenticate
+     * @throws MalformedURLException If the url specified was not a valid URL
+     * @throws ProcessingException If a problem occurs accessing the webservice to login
+     * @throws com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException If the server returned an error when we tried to authenticate
+     */
+    static void login(String url, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
+        WebTarget path = getFimsWebTarget(url).path("id/authenticationService/login");
+        Invocation.Builder request = path.request();
+        Form formToPost = new Form().param("username", username).param("password", password);
+        Response response = request.post(
+                    Entity.entity(formToPost, MediaType.TEXT_PLAIN_TYPE));
+        // Ignore the actual result.  It will be a redirection URL which is irrelevant for us
+        getRestServiceResult(String.class, response);
+    }
+
+    /**
+     * Retrieves the result of a REST method call to either the BiSciCol or Biocode-FIMS services.
+     *
+     * @param resultType The class of the entity that should be returned from the method
+     * @param response The response from the method call
+     * @return The result entity
+     * @throws com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException if an error was returned by the server
+     */
+    static <T> T getRestServiceResult(Class<T> resultType, Response response) throws DatabaseServiceException {
+        try {
+            int statusCode = response.getStatus();
+            if (statusCode != 200) {
+                ErrorResponse errorResponse = response.readEntity(ErrorResponse.class);
+                throw new DatabaseServiceException(
+                        new WebApplicationException(errorResponse.developerMessage, errorResponse.httpStatusCode),
+                        "Server returned an error: " + errorResponse.usrMessage, false);
+            } else {
+                return response.readEntity(resultType);
+            }
+        } finally {
+            response.close();
+        }
     }
 
     static WebTarget getQueryTarget() {
@@ -57,7 +90,8 @@ public class BiocodeFIMSUtils {
         WebTarget target = getFimsWebTarget(BISCICOL_URL);
         Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
         try {
-            ProjectList fromService = request.get(ProjectList.class);
+            Response response = request.get();
+            ProjectList fromService = getRestServiceResult(ProjectList.class, response);
             List<Project> returnList = new ArrayList<Project>();
             for (Project project : fromService.getProjects()) {
                 if(project.code != null) {
@@ -66,26 +100,8 @@ public class BiocodeFIMSUtils {
             }
             return returnList;
         } catch(WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
+            throw new DatabaseServiceException(e, "Error message from server: " + HOST + ": " + e.getMessage(), true);
         } catch(ProcessingException e) {
-            // Unfortunately the BCID service doesn't use HTTP error codes and reports errors by returning JSON in a
-            // different format than the regular result.  So we have to do some special parsing.
-            try {
-                List<String> errors = request.get(new GenericType<List<String>>() { });
-                if(errors != null && !errors.isEmpty()) {
-                    // Don't include ProcessingException cause here because it isn't the cause of the problem.  It was
-                    // indicating that Jersey couldn't parse the returned value.
-                    if(errors.size() == 1) {
-                        throw new DatabaseServiceException(errors.get(0), false);
-                    } else {
-                        throw new DatabaseServiceException("Service returned: " + StringUtilities.join("\n", errors), false);
-                    }
-                }
-            } catch (ProcessingException ex) {
-                // Ignore, we'll throw the original exception below
-            } catch (WebApplicationException ex) {
-                // Ignore, we'll throw the original exception below
-            }
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
     }
@@ -94,11 +110,12 @@ public class BiocodeFIMSUtils {
         try {
             WebTarget target = getFimsWebTarget(BISCICOL_URL);
             Invocation.Builder request = target.path("id/projectService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
-            return request.get(GraphList.class).getData();
+            Response response = request.get();
+            return getRestServiceResult(GraphList.class, response).getData();
         } catch(WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Problem contacting biscicol.org: " + e.getMessage(), true);
+            throw new DatabaseServiceException(e, "Error message from server: " + HOST + ": " + e.getMessage(), true);
         } catch(ProcessingException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), true);  // todo
+            throw new DatabaseServiceException(e, e.getMessage(), true);
         }
     }
 
@@ -109,7 +126,7 @@ public class BiocodeFIMSUtils {
             try {
                 filter = URLEncoder.encode(filter, "UTF-8");
             } catch(UnsupportedEncodingException e) {
-                // todo
+                // Go with default encoding
                 e.printStackTrace();
             }
         }
@@ -159,8 +176,7 @@ public class BiocodeFIMSUtils {
                     }
                 }
                 Response response = request.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-//                System.out.println(response.readEntity(String.class));
-                return response.readEntity(BiocodeFimsData.class);
+                return getRestServiceResult(BiocodeFimsData.class, response);
             }
         } catch (NotFoundException e) {
             throw new DatabaseServiceException("No data found.", false);

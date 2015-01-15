@@ -1,10 +1,16 @@
 <PluginVersions>
-    <LatestVersion>2.8.6</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_6.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 2.8.6 - 12 December 2014 ==
+    <LatestVersion>2.8.7</LatestVersion>
+    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_7.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 2.8.7 - 14 January 2015==
+* Added modifications in response to upcoming changes that will be made to the Biocode FIMS REST service.
+* Added the handling of the presence of duplicate document fields in the FIMS.
+* Fixed slow trace downloads from plates without workflows.
+* Other improvements and fixes.
+
+==Biocode Plugin 2.8.6 - 12 December 2014==
 * Fixed a bug that caused Geneious to crash trying to index sequences or traces that had been downloaded or annotated while using the new Biocode FIMS.
 
-==Biocode Plugin 2.8.5 - 9 December 2014==
+==Biocode Plugin 2.8.5 - 8 December 2014==
 * Added cytB to the example loci list.
 * Fixed a bug where taxonomy fields that are below the species field on the connection options were not being incorporated into the values of annotated taxonomy fields.
 * Fixed a bug where the reporting module could not copy records from FIMS into MySQL based LIMS.

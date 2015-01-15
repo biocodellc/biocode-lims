@@ -31,6 +31,9 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     private static final DocumentField COLLECTION_DATE_FIELD = new DocumentField("Collection Date", "",
             "TABLEFIMS:urn:collectionDate", Date.class, true, false);
 
+    private static final DocumentField IDENTIFICATION_DATE_FIELD = new DocumentField("Identification Date", "",
+                "TABLEFIMS:urn:identificationDate", Date.class, true, false);
+
     static final String HOST = "http://biscicol.org";
 
     @Override
@@ -153,14 +156,21 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
         List<DocumentField> searchAttributes = getSearchAttributes();
 
-        //hard code to add CollectionTime for Barcode of Wildlife Training project
-        Object yearValue = values.get("TABLEFIMS:urn:yearCollected");
-        Object monthValue = values.get("TABLEFIMS:urn:monthCollected");
-        Object dayValue = values.get("TABLEFIMS:urn:dayCollected");
+        //hard code to add CollectionTime for Barcode of Wildlife Project
+        addDuplicateDateField(values, searchAttributes, "TABLEFIMS:urn:yearCollected", "TABLEFIMS:urn:monthCollected", "TABLEFIMS:urn:dayCollected", COLLECTION_DATE_FIELD);
+        addDuplicateDateField(values, searchAttributes, "TABLEFIMS:urn:yearIdentified", "TABLEFIMS:urn:monthIdentified", "TABLEFIMS:urn:dayIdentified", IDENTIFICATION_DATE_FIELD);
+
+        return new TableFimsSample(searchAttributes, getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
+    }
+
+    private void addDuplicateDateField(Map<String, Object> values, List<DocumentField> searchAttributes, String yearKey, String monthKey, String dayKey, DocumentField dateField) {
+        Object yearValue = values.get(yearKey);
+        Object monthValue = values.get(monthKey);
+        Object dayValue = values.get(dayKey);
         if (yearValue != null && yearValue.toString().trim().length() > 0
                 && monthValue != null && monthValue.toString().trim().length() > 0
                 && dayValue != null && dayValue.toString().trim().length() > 0) {
-            searchAttributes.add(COLLECTION_DATE_FIELD);
+            searchAttributes.add(dateField);
             try {
                 int year = Integer.parseInt(yearValue.toString().trim());
                 int month = Integer.parseInt(monthValue.toString().trim());
@@ -170,13 +180,11 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
                 //noinspection MagicConstant
                 cal.set(year, month - 1, day, 0, 0, 0);
                 cal.set(Calendar.MILLISECOND, 0);
-                values.put(COLLECTION_DATE_FIELD.getCode(), cal.getTime());
+                values.put(dateField.getCode(), cal.getTime());
             } catch (NumberFormatException e) {
                 // Ignore value.  One of the fields was not an integer.
             }
         }
-
-        return new TableFimsSample(searchAttributes, getTaxonomyAttributes(), values, getTissueSampleDocumentField().getCode(), getSpecimenDocumentField().getCode());
     }
 
     @Override
