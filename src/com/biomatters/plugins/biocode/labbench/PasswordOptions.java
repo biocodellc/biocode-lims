@@ -40,4 +40,5 @@ public class PasswordOptions extends Options{
      */
     public void update() throws ConnectionException {}
 
+    public void preUpdate() throws ConnectionException {}
 }

@@ -33,7 +33,8 @@ public class LoginOptions extends Options {
     private void init() {
         Options fimsOptions = new Options(ConnectionManager.class);
         for (FIMSConnection connection : BiocodeService.getFimsConnections()) {
-            fimsOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connection.getConnectionOptions() != null ? connection.getConnectionOptions() : new PasswordOptions(BiocodeService.class));
+            PasswordOptions connectionOptions = connection.getConnectionOptions();
+            fimsOptions.addChildOptions(connection.getName(), connection.getLabel(), connection.getDescription(), connectionOptions != null ? connectionOptions : new PasswordOptions(BiocodeService.class));
         }
         Option chooser = fimsOptions.addChildOptionsPageChooser("fims", "Field Database Connection", Collections.<String>emptyList(), PageChooserType.COMBO_BOX, false);
 
@@ -51,6 +52,12 @@ public class LoginOptions extends Options {
         Options fimsOptions = getChildOptions().get("fims");
         PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
         activeFimsOptions.update();
+    }
+
+    public void preUpdateOptions() throws ConnectionException{
+        Options fimsOptions = getChildOptions().get("fims");
+        PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
+        activeFimsOptions.preUpdate();
     }
 //
 //    @Override

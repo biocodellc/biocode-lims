@@ -1,26 +1,24 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.plugin.Geneious;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.plugins.biocode.labbench.PasswordOptions;
-import com.biomatters.plugins.biocode.labbench.ConnectionException;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
-
-import java.util.*;
-import java.io.IOException;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
-import java.awt.*;
-import java.util.List;
-
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import jebl.util.ProgressListener;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.util.*;
+import java.util.List;
 
 /**
  * @author Steve
@@ -43,6 +41,8 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     public static final String PROJECT_COLUMN = "projectColumn";
     public static final String PROJECT_FIELDS = "projectFields";
 
+    private PasswordOptions connectionOptions;
+
     protected abstract PasswordOptions getConnectionOptions();
 
     final List<OptionValue> getTableColumns() throws IOException {
@@ -61,10 +61,15 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     protected abstract boolean updateAutomatically();
 
 
+    @Override
+    public void preUpdate() throws ConnectionException {
+        connectionOptions.preUpdate();
+    }
+
     public TableFimsConnectionOptions() {
         super(FusionTablesFimsConnectionOptions.class);
 
-        final PasswordOptions connectionOptions = getConnectionOptions();
+        connectionOptions = getConnectionOptions();
         addChildOptions(CONNECTION_OPTIONS_KEY, "", "", connectionOptions);
         restorePreferences(); //to make sure that the field chooser boxes start out with the right values
         List<OptionValue> cols = NO_FIELDS;
@@ -131,7 +136,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
                     if(Geneious.isHeadless()) {
                         doUpdate.run();
                     } else {
-                        new Thread(doUpdate).start();
+                        ThreadUtilities.invokeNowOrLater(doUpdate);
                     }
                 }
             });

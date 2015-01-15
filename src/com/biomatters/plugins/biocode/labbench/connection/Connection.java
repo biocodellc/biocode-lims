@@ -367,6 +367,8 @@ public class Connection implements XMLSerializable {
                 public void run() {
                     connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
                     try {
+                        connectionOptions.preUpdateOptions();
+                        connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
                         connectionOptions.updateOptions();
                     } catch (ConnectionException e) {
                         //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority

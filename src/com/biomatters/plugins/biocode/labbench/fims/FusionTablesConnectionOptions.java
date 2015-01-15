@@ -51,6 +51,11 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
     }
 
     @Override
+    public void preUpdate() throws ConnectionException {
+        update();
+    }
+
+    @Override
     protected JPanel createPanel() {
         JPanel wrapperPanel = new JPanel(new BorderLayout()){
             boolean firstPaint = true;
@@ -128,14 +133,9 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
             }
         });
 
-        List<OptionValue> tables = null;
-        tables = getTables();
-
-        if(tables.size() == 0) {
-            tables = Collections.singletonList(
-                    FusionTablesConnectionOptions.NO_TABLE
-            );
-        }
+        List<OptionValue> tables = Collections.singletonList(
+                FusionTablesConnectionOptions.NO_TABLE
+        );
         addDivider(" ");
         beginAlignHorizontally("Your Tables:", false);
         addComboBoxOption(TableFimsConnectionOptions.TABLE_ID, "", tables, tables.get(0));
@@ -152,16 +152,6 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
             }
         });
         endAlignHorizontally();
-
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    update();
-                } catch (ConnectionException ignore) {}
-            }
-        }.start();
-
     }
 
     @Override
