@@ -40,5 +40,17 @@ public class PasswordOptions extends Options{
      */
     public void update() throws ConnectionException {}
 
+    /**
+     * Retrieves updated list of option values and then populates possible values for Options. This is for the options which are depend by others.
+     *
+     * @throws ConnectionException if a problem occurs
+     */
     public void preUpdate() throws ConnectionException {}
+
+    /**
+     * Initialize the data which are time consuming, this method is supposed to be invoked outside swing thread.
+     *
+     * @throws ConnectionException if a problem occurs
+     */
+    public void prepare() throws ConnectionException {}
 }

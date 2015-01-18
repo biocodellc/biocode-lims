@@ -66,6 +66,11 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         connectionOptions.preUpdate();
     }
 
+    @Override
+    public void prepare() throws ConnectionException {
+        connectionOptions.prepare();
+    }
+
     public TableFimsConnectionOptions() {
         super(FusionTablesFimsConnectionOptions.class);
 

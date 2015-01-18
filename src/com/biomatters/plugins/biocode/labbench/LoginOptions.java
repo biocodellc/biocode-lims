@@ -59,6 +59,12 @@ public class LoginOptions extends Options {
         PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
         activeFimsOptions.preUpdate();
     }
+
+    public void prepare() throws ConnectionException{
+        Options fimsOptions = getChildOptions().get("fims");
+        PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
+        activeFimsOptions.prepare();
+    }
 //
 //    @Override
 //    public String verifyOptionsAreValid() {

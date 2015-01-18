@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class FusionTablesConnectionOptions extends PasswordOptions {
     static final OptionValue NO_TABLE = new OptionValue("%NONE%", "<html><i>None</i></html>");
 
+    private List<OptionValue> tables = null;
+
     private JButton dialogOkButton;
 
     public FusionTablesConnectionOptions() {
@@ -52,7 +54,12 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
 
     @Override
     public void preUpdate() throws ConnectionException {
-        update();
+        update(true);
+    }
+
+    @Override
+    public void prepare() throws ConnectionException {
+        getTables(false);
     }
 
     @Override
@@ -112,7 +119,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
 
                             //read data from the server...
                             try {
-                                update();
+                                update(false);
                             } catch (ConnectionException ignore) {}
 
                             //update the UI
@@ -167,11 +174,15 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
 
     @Override
     public void update() throws ConnectionException {
+        update(true);
+    }
+
+    public void update(boolean useCache) throws ConnectionException {
         super.update();
         final AtomicReference<List<OptionValue>> tableValues = new AtomicReference<List<OptionValue>>();
         final AtomicReference<String> accountName = new AtomicReference<String>();
         try {
-            tableValues.set(getTables());
+            tableValues.set(getTables(useCache));
             accountName.set(FusionTableUtils.getAccountName());
         } catch (IOException e) {
             e.printStackTrace();
@@ -193,16 +204,21 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
                 }
             }
         };
-        ThreadUtilities.invokeNowOrLater(runnable);
 
+        ThreadUtilities.invokeNowOrLater(runnable);
     }
 
-    private List<OptionValue> getTables() {
+
+
+    private List<OptionValue> getTables(boolean useCache) {
         try {
+            if (useCache && tables != null) {
+                return tables;
+            }
+
             List<Table> tableJson = FusionTableUtils.listTables();
 
-            List<OptionValue> tables = new ArrayList<OptionValue>();
-
+            tables = new ArrayList<OptionValue>();
             for(Table table : tableJson) {
                 tables.add(new OptionValue(table.getTableId(), table.getName()));
             }
@@ -210,6 +226,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
             if(tables.size() == 0) {
                 return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);
             }
+
             return tables;
         } catch (IOException e) {
             return Collections.singletonList(FusionTablesConnectionOptions.NO_TABLE);

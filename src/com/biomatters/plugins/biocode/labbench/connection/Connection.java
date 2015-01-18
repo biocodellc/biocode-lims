@@ -1,9 +1,12 @@
 package com.biomatters.plugins.biocode.labbench.connection;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.components.GLabel;
 import com.biomatters.geneious.publicapi.components.GPanel;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.documents.XMLSerializable;
 import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
+import com.biomatters.geneious.publicapi.plugin.Geneious;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.*;
@@ -12,6 +15,7 @@ import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnectionOptions;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LimsConnectionOptions;
+import jebl.util.ProgressListener;
 import org.jdom.Attribute;
 import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
@@ -247,12 +251,9 @@ public class Connection implements XMLSerializable {
             Runnable runnable = new Runnable() {
                 public void run() {
                     ThreadUtilities.sleep(100); //let's give the UI a chance to update before we use up all the CPU
-                    createLoginOptions();
                     Runnable runnable = new Runnable() {
                         public void run() {
-                            if(originalConnectionOptionsXml != null) {
-                                createLoginOptions();
-                            }
+                            createLoginOptions(panel, overallOptions.getPanel(), button);
                             panel.removeAll();
                             panel.add(overallOptions.getPanel(), BorderLayout.NORTH);
                             panel.add(connectionOptions.getPanel(), BorderLayout.CENTER);
@@ -359,25 +360,66 @@ public class Connection implements XMLSerializable {
         connectionOptions.setValue("fims.fims", name);
     }
 
-    private void createLoginOptions() {
+    private void createLoginOptions(final JPanel panel, final JPanel overallPanel, final JButton button) {
         connectionOptions = new LoginOptions(ConnectionManager.class);
+
         if(originalConnectionOptionsXml != null) {
             final Element loginOptionsValuesLocal = originalConnectionOptionsXml;
-            ThreadUtilities.invokeNowOrWait(new Runnable() {
+            connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+
+            new Thread() {
+                @Override
                 public void run() {
-                    connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                    final ProgressListener progress;
+                    if(Geneious.isHeadless()) {
+                        progress = ProgressListener.EMPTY;
+                    } else {
+                        ProgressFrame progressFrame = new ProgressFrame("Updating Fields...", "", 0, true, Dialogs.getCurrentModalDialog());
+                        progressFrame.setCancelable(false);
+                        progress = progressFrame;
+                    }
+
+                    progress.setIndeterminateProgress();
                     try {
-                        connectionOptions.preUpdateOptions();
-                        connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
-                        connectionOptions.updateOptions();
+                        connectionOptions.prepare();
                     } catch (ConnectionException e) {
-                        //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
                         e.printStackTrace();
                     }
-                    connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+
+                    EventQueue.invokeLater(new Runnable() {
+                        public void run() {
+                            try {
+                                connectionOptions.preUpdateOptions();
+                                connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                                connectionOptions.updateOptions();
+                                connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                            } catch (ConnectionException e) {
+                                //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
+                                e.printStackTrace();
+                            } finally {
+                                progress.setProgress(1.0);
+                                if (panel != null && overallPanel != null) {
+                                    panel.removeAll();
+                                    panel.add(overallPanel, BorderLayout.NORTH);
+                                    panel.add(connectionOptions.getPanel(), BorderLayout.CENTER);
+                                    ConnectionManager.packAncestor(connectionOptions.getPanel());
+                                    panel.revalidate();
+                                    panel.invalidate();
+                                    ConnectionManager.packAncestor(panel);
+                                    if(button != null && panel.isShowing()) {
+                                        button.setEnabled(true);
+                                    }
+                                }
+                            }
+                        }
+                    });
                 }
-            });
+            }.start();
         }
+    }
+
+    private void createLoginOptions() {
+        createLoginOptions(null, null, null);
     }
 
     public LIMSConnection getLIMSConnection() throws ConnectionException {
