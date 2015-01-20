@@ -46,6 +46,9 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
     protected abstract PasswordOptions getConnectionOptions();
 
     final List<OptionValue> getTableColumns() throws IOException {
+        assert !EventQueue.isDispatchThread() || Geneious.isHeadless() :
+                "getTableColumns() can perform network I/O and should always be in a background thread";
+
         List<OptionValue> list = new ArrayList<OptionValue>(_getTableColumns());
         Collections.sort(list, new Comparator<OptionValue>() {
             @Override
@@ -116,33 +119,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
         if(updateAutomatically()) {
             connectionOptions.addChangeListener(new SimpleListener() {
                 public void objectChanged() {
-
-                    final ProgressListener progress;
-                    if(Geneious.isHeadless()) {
-                        progress = ProgressListener.EMPTY;
-                    } else {
-                        ProgressFrame progressFrame = new ProgressFrame("Updating Fields...", "", 1000, true, Dialogs.getCurrentModalDialog());
-                        progressFrame.setCancelable(false);
-                        progress = progressFrame;
-                    }
-
-                    progress.setIndeterminateProgress();
-                    Runnable doUpdate = new Runnable() {
-                        public void run() {
-                            try {
-                                update();
-                            } catch (ConnectionException e) {
-                                Dialogs.showMessageDialog(e.getMessage());
-                            }
-                            progress.setProgress(1.0);
-                        }
-                    };
-
-                    if(Geneious.isHeadless()) {
-                        doUpdate.run();
-                    } else {
-                        ThreadUtilities.invokeNowOrLater(doUpdate);
-                    }
+                    updateOptionsInBackground();
                 }
             });
         }
@@ -150,14 +127,7 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
             ButtonOption updateButton = addButtonOption("update", "", "Update Columns");
             updateButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent ev) {
-                    try {
-                        update();
-                        if(connectionOptions != null) {
-                            connectionOptions.update();
-                        }
-                    } catch (ConnectionException e) {
-                        Dialogs.showMessageDialog(e.getMessage());
-                    }
+                    updateOptionsInBackground();
                 }
             });
         }
@@ -170,6 +140,39 @@ public abstract class TableFimsConnectionOptions extends PasswordOptions {
 
 
         addHiddenProjectOptions(cols);
+    }
+
+    private void updateOptionsInBackground() {
+        final ProgressListener progress;
+        if(Geneious.isHeadless()) {
+            progress = ProgressListener.EMPTY;
+        } else {
+            ProgressFrame progressFrame = new ProgressFrame("Updating Fields...", "", 500, true, Dialogs.getCurrentModalDialog());
+            progressFrame.setCancelable(false);
+            progress = progressFrame;
+        }
+
+        progress.setIndeterminateProgress();
+        Runnable doUpdate = new Runnable() {
+            public void run() {
+                try {
+                    update();
+                    if(connectionOptions != null) {
+                        connectionOptions.update();
+                    }
+                } catch (ConnectionException e) {
+                    Dialogs.showMessageDialog(e.getMessage());
+                } finally {
+                    progress.setProgress(1.0);
+                }
+            }
+        };
+
+        if(Geneious.isHeadless()) {
+            doUpdate.run();
+        } else {
+            new Thread(doUpdate).start();
+        }
     }
 
     private static final boolean SHOW_HIDDEN_PROJECT_OPTIONS = false;  // Set to true for debugging via plugin

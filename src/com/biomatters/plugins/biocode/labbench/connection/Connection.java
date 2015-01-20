@@ -254,16 +254,6 @@ public class Connection implements XMLSerializable {
                     Runnable runnable = new Runnable() {
                         public void run() {
                             createLoginOptions(panel, overallOptions.getPanel(), button);
-                            panel.removeAll();
-                            panel.add(overallOptions.getPanel(), BorderLayout.NORTH);
-                            panel.add(connectionOptions.getPanel(), BorderLayout.CENTER);
-                            ConnectionManager.packAncestor(connectionOptions.getPanel());
-                            panel.revalidate();
-                            panel.invalidate();
-                            ConnectionManager.packAncestor(panel);
-                            if(button != null && panel.isShowing()) {
-                                button.setEnabled(true);
-                            }
                         }
                     };
                     ThreadUtilities.invokeNowOrLater(runnable);
@@ -364,58 +354,88 @@ public class Connection implements XMLSerializable {
         connectionOptions = new LoginOptions(ConnectionManager.class);
 
         if(originalConnectionOptionsXml != null) {
+            final ProgressListener progress;
+            if(Geneious.isHeadless()) {
+                progress = ProgressListener.EMPTY;
+            } else {
+                ProgressFrame progressFrame = new ProgressFrame("Loading Connection Options...", "", 0, true, Dialogs.getCurrentModalDialog());
+                progressFrame.setCancelable(false);
+                progress = progressFrame;
+            }
+
+            progress.setIndeterminateProgress();
+
             final Element loginOptionsValuesLocal = originalConnectionOptionsXml;
             connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
 
-            new Thread() {
+            final Runnable finalPanelUpdate = new Runnable() {
+                public void run() {
+                    connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                    if (panel != null && overallPanel != null) {
+                        panel.removeAll();
+                        panel.add(overallPanel, BorderLayout.NORTH);
+                        panel.add(connectionOptions.getPanel(), BorderLayout.CENTER);
+                        ConnectionManager.packAncestor(connectionOptions.getPanel());
+                        panel.revalidate();
+                        panel.invalidate();
+                        ConnectionManager.packAncestor(panel);
+                        if (button != null && panel.isShowing()) {
+                            button.setEnabled(true);
+                        }
+                    }
+                    progress.setProgress(1.0);
+                }
+            };
+
+
+            // This loads the top level connection options if they are necessary.  For example the selected table in a Fusion Tables connection.
+            Runnable loadTopLevelOptions = new Runnable() {
                 @Override
                 public void run() {
-                    final ProgressListener progress;
-                    if(Geneious.isHeadless()) {
-                        progress = ProgressListener.EMPTY;
-                    } else {
-                        ProgressFrame progressFrame = new ProgressFrame("Updating Fields...", "", 0, true, Dialogs.getCurrentModalDialog());
-                        progressFrame.setCancelable(false);
-                        progress = progressFrame;
-                    }
-
-                    progress.setIndeterminateProgress();
                     try {
                         connectionOptions.prepare();
+                        connectionOptions.preUpdateOptions();
                     } catch (ConnectionException e) {
+                        //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
                         e.printStackTrace();
                     }
-
-                    EventQueue.invokeLater(new Runnable() {
-                        public void run() {
-                            try {
-                                connectionOptions.preUpdateOptions();
-                                connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
-                                connectionOptions.updateOptions();
-                                connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
-                            } catch (ConnectionException e) {
-                                //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
-                                e.printStackTrace();
-                            } finally {
-                                progress.setProgress(1.0);
-                                if (panel != null && overallPanel != null) {
-                                    panel.removeAll();
-                                    panel.add(overallPanel, BorderLayout.NORTH);
-                                    panel.add(connectionOptions.getPanel(), BorderLayout.CENTER);
-                                    ConnectionManager.packAncestor(connectionOptions.getPanel());
-                                    panel.revalidate();
-                                    panel.invalidate();
-                                    ConnectionManager.packAncestor(panel);
-                                    if(button != null && panel.isShowing()) {
-                                        button.setEnabled(true);
-                                    }
-                                }
-                            }
-                        }
-                    });
                 }
-            }.start();
+            };
+
+            final Runnable loadPossibleColumns = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        connectionOptions.updateOptions();
+                    } catch (ConnectionException e) {
+                        //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
+                        e.printStackTrace();
+                    }
+                }
+            };
+
+
+            Runnable setSavedColumnValuesAndDoFinalPanelUpdate = new Runnable() {
+                @Override
+                public void run() {
+                    connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                    doSomethingInTheBackgroundThenSomethingElseInSwingThread(loadPossibleColumns, finalPanelUpdate);
+                }
+            };
+
+            doSomethingInTheBackgroundThenSomethingElseInSwingThread(loadTopLevelOptions, setSavedColumnValuesAndDoFinalPanelUpdate);
         }
+    }
+
+    private void doSomethingInTheBackgroundThenSomethingElseInSwingThread(final Runnable backgroundSomething, final Runnable swingSomethingElse) {
+        Runnable backgroundRunnableWrapper = new Runnable() {
+            @Override
+            public void run() {
+                backgroundSomething.run();
+                ThreadUtilities.invokeNowOrLater(swingSomethingElse);
+            }
+        };
+        new Thread(backgroundRunnableWrapper, "Biocode: Background Task").start();
     }
 
     private void createLoginOptions() {

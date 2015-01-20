@@ -36,6 +36,8 @@ public class PasswordOptions extends Options{
      * on the dispatch thread if {@link com.biomatters.geneious.publicapi.plugin.Geneious#isHeadless()} returns false,
      * otherwise it is done immediately after retrieving the new values.
      *
+     * <strong>Note</strong>: The retrieval may take some time, so it is best to call this method from a non UI thread.
+     *
      * @throws ConnectionException if a problem occurs retrieving the column list from the FIMS
      */
     public void update() throws ConnectionException {}

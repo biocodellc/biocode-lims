@@ -48,18 +48,27 @@ public class LoginOptions extends Options {
         super(element);
     }
 
+    /**
+     * @see PasswordOptions#update()
+     */
     public void updateOptions() throws ConnectionException{
         Options fimsOptions = getChildOptions().get("fims");
         PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
         activeFimsOptions.update();
     }
 
+    /**
+     * @see PasswordOptions#preUpdate()
+     */
     public void preUpdateOptions() throws ConnectionException{
         Options fimsOptions = getChildOptions().get("fims");
         PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
         activeFimsOptions.preUpdate();
     }
 
+    /**
+     * @see PasswordOptions#prepare()
+     */
     public void prepare() throws ConnectionException{
         Options fimsOptions = getChildOptions().get("fims");
         PasswordOptions activeFimsOptions = (PasswordOptions)fimsOptions.getChildOptions().get(fimsOptions.getValueAsString("fims"));
