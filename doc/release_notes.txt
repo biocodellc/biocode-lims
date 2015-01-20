@@ -1,3 +1,16 @@
+==Biocode Plugin 3.0.0 - TBD==
+* 'BOLD Trace submission': New function to create packages for submission of traces to BOLD.
+* Search performance improvements.
+* Faster download of sequences.  Download of workflow documents is no longer required when downloading sequences.
+* Many other bug fixes and improvements.
+
+'''Additional Notes'''
+This version includes an update to the LIMS database format.  This version can still be used by older versions of the
+LIMS plugin back to version 2.1.
+* Built-in MySQL users will be upgraded automatically.
+* Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
+The schema upgrade script can be found at http://software.mooreabiocode.org
+
 ==Biocode Plugin 2.8.7 - 14 January 2015==
 * Added modifications in response to upcoming changes that will be made to the Biocode FIMS REST service.
 * Added the handling of the presence of duplicate document fields in the FIMS.
