@@ -8,6 +8,7 @@ import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceD
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.WorkflowBuilder;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
@@ -94,6 +95,7 @@ public class AnnotateUtilities {
                     }
                 }
                 copyMatchingFieldsToContigAndSave(annotatedDocument);
+                copyMatchingDocumentNotesToContig(annotatedDocument);
             } else {
                 newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument, true));
             }
@@ -191,6 +193,114 @@ public class AnnotateUtilities {
             b.append("</html>");
             throw new DocumentOperationException(b.toString());
         }
+    }
+
+    /**
+     * copied from AssemblyOperation
+     *
+     * @param annotatedContig
+     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
+     *
+     */
+    private static final String SEQ_PRIMER_NOTE_TYPE = "sequencingPrimer";
+    private static void copyMatchingDocumentNotesToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
+        SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
+        Map<String, DocumentNote> documentNotesToCopy = null;
+        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
+            if (i == contig.getContigReferenceSequenceIndex()) {
+                continue;
+            }
+            AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
+            if (referencedDocument == null) {
+                return; //one sequence doesn't have a reference so bail on the whole thing
+            }
+            if (documentNotesToCopy == null) {
+                documentNotesToCopy = new LinkedHashMap<String, DocumentNote>();
+                AnnotatedPluginDocument.DocumentNotes documentNotes = referencedDocument.getDocumentNotes(false);
+                for (DocumentNote note : documentNotes.getAllNotes()) {
+                    documentNotesToCopy.put(note.getNoteTypeCode(), note);
+                }
+            } else {
+                for (Map.Entry<String, DocumentNote> entry : new LinkedHashSet<Map.Entry<String, DocumentNote>>(documentNotesToCopy.entrySet())) {
+                    DocumentNote note = referencedDocument.getDocumentNotes(false).getNote(entry.getKey());
+                    if (!notesAreEqual(note, entry.getValue())) {
+                        documentNotesToCopy.remove(entry.getKey());
+                    }
+                }
+            }
+        }
+
+        //hack for the sequencing primer note
+        List<Object> values = new ArrayList<Object>();
+        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
+            if (i == contig.getContigReferenceSequenceIndex()) {
+                continue;
+            }
+            if (documentNotesToCopy.get(SEQ_PRIMER_NOTE_TYPE) != null) {
+                continue; //no need to do this if the note is already being copied...
+            }
+            AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
+            DocumentNote sequencingPrimerNote = referencedDocument.getDocumentNotes(false).getNote(SEQ_PRIMER_NOTE_TYPE);
+            if (sequencingPrimerNote == null) {
+                break;
+            }
+            for (int i1 = 0; i1 < sequencingPrimerNote.getFields().size(); i1++) {
+                DocumentNoteField field = sequencingPrimerNote.getFields().get(i1);
+                Object fieldValue = sequencingPrimerNote.getFieldValue(field.getCode());
+                if (values.size() < i1 + 1) {
+                    values.add(sequencingPrimerNote.getFieldValue(field.getCode()));
+                }
+                if (values.get(i1) != null && !values.get(i1).equals(fieldValue)) {
+                    continue;
+                }
+                if (fieldValue != null) {
+                    values.set(i1, fieldValue);
+                }
+            }
+            if (i == contig.getNumberOfSequences() - 1) { //once we've been through everything
+                DocumentNoteType noteType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
+                if (noteType != null) {
+                    DocumentNote note = noteType.createDocumentNote();
+                    for (int i1 = 0; i1 < note.getFields().size(); i1++) {
+                        DocumentNoteField field = note.getFields().get(i1);
+                        Object value = values.get(i1);
+                        if (value != null) {
+                            note.setFieldValue(field.getCode(), value);
+                        }
+                    }
+                    documentNotesToCopy.put(noteType.getCode(), note);
+                }
+            }
+        }
+
+        if (documentNotesToCopy == null || documentNotesToCopy.isEmpty()) return;
+
+        AnnotatedPluginDocument.DocumentNotes contigNotes = annotatedContig.getDocumentNotes(true);
+        for (Map.Entry<String, DocumentNote> noteToCopy : documentNotesToCopy.entrySet()) {
+            DocumentNote existingNote = noteToCopy.getValue();
+            contigNotes.setNote(existingNote);
+        }
+        contigNotes.saveNotes();
+    }
+
+    private static boolean notesAreEqual(DocumentNote note1, DocumentNote note2) {
+        if(note1 == null || note2 == null) {
+            return false;
+        }
+        if(!note1.getNoteTypeCode().equals(note2.getNoteTypeCode())) {
+            return false;
+        }
+
+        List<DocumentNoteField> fields1 = note1.getFields();
+
+        for (DocumentNoteField fields : fields1) {
+            Object value1 = note1.getFieldValue(fields.getCode());
+            Object value2 = note2.getFieldValue(fields.getCode());
+            if(!GeneralUtilities.safeEquals(value1, value2)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -345,15 +455,15 @@ public class AnnotateUtilities {
 
         //annotate the primers...
         AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
-        DocumentNote note = notes.getNote("sequencingPrimer");
-        if (note == null) {
+        DocumentNote sequencingPrimerNote = notes.getNote("sequencingPrimer");
+        if (sequencingPrimerNote == null) {
             DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType("sequencingPrimer");
             if (sequencingPrimerType != null) {
-                note = sequencingPrimerType.createDocumentNote();
+                sequencingPrimerNote = sequencingPrimerType.createDocumentNote();
             }
         }
         boolean savedDocument = false;
-        if (note != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
+        if (sequencingPrimerNote != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
             Boolean directionForTrace = getDirectionForTrace(annotatedDocument);
 
@@ -361,16 +471,16 @@ public class AnnotateUtilities {
             AnnotatedPluginDocument reversePrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
 
             if (forwardPrimer != null && (directionForTrace == null || directionForTrace)) {
-                note.setFieldValue("fwd_primer_name", forwardPrimer.getName());
+                sequencingPrimerNote.setFieldValue("fwd_primer_name", forwardPrimer.getName());
                 OligoSequenceDocument sequence = (OligoSequenceDocument) forwardPrimer.getDocument();
-                note.setFieldValue("fwd_primer_seq", sequence.getBindingSequence().toString());
+                sequencingPrimerNote.setFieldValue("fwd_primer_seq", sequence.getBindingSequence().toString());
             }
             if (reversePrimer != null && (directionForTrace == null || !directionForTrace)) {
-                note.setFieldValue("rev_primer_name", reversePrimer.getName());
+                sequencingPrimerNote.setFieldValue("rev_primer_name", reversePrimer.getName());
                 OligoSequenceDocument sequence = (OligoSequenceDocument) reversePrimer.getDocument();
-                note.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
+                sequencingPrimerNote.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
             }
-            notes.setNote(note);
+            notes.setNote(sequencingPrimerNote);
             notes.saveNotes();
             savedDocument = true;
         }
