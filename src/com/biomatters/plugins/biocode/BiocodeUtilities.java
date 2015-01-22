@@ -282,10 +282,10 @@ public class BiocodeUtilities {
                     if (i == contig.getContigReferenceSequenceIndex()) continue;
                     AnnotatedPluginDocument traceDoc = contig.getReferencedDocument(i);
                     if (traceDoc == null) {
-                        throw new DocumentOperationException("The reference document of sequence annotation <strong>" + contig.getSequence(i).getName() + "</strong> " +
-                                "in contig <strong>" + document.getName() + "</strong> is missing.<br><br>" +
-                                "Extract " + contig.getSequence(i).getName() + " and try again.<br><br>" +
-                                "For more assistance, contact support at Biomatters."
+                        throw new DocumentOperationException("There is no reference document for sequence <strong>" + contig.getSequence(i).getName() + "</strong> " +
+                                "in contig assembly <strong>" + document.getName() + "</strong>.<br><br>" +
+                                "Extract " + contig.getSequence(i).getName() + " to create a new reference document for it and try again.<br><br>" +
+                                "For more assistance, contact " + BiocodePlugin.SUPPORT_EMAIL + "."
                         );
                     }
                     traceDocs.add(traceDoc);
