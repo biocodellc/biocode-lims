@@ -196,13 +196,22 @@ public class AnnotateUtilities {
     }
 
     /**
-     * copied from AssemblyOperation
-     *
-     * @param annotatedContig
-     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
-     *
+     * Code for Sequencing Primer note type defined in GenBank Submission plugin
      */
     private static final String SEQ_PRIMER_NOTE_TYPE = "sequencingPrimer";
+
+    /**
+     * Copies matching document notes from sequences referenced by an assembly to the assembly itself.  Only copies the
+     * note if all field values are the same.  The only exception is the Sequencing Primer note type defined by the GenBank
+     * submission plugin.  This gets merged so that any non-null field values are copied across if all sequences have the
+     * same value.
+     * <br><br>
+     * <b>Note</b>: This method was originally written for the Moorea Biocode Project.  It is duplicated in the AssemblyOperation in
+     * the Alignment Plugin.  Any changes to this method need to be made there too.
+     *
+     * @param annotatedContig The contig assembly to copy notes to from it's references
+     * @throws DocumentOperationException if documents cannot be loaded or edited
+     */
     private static void copyMatchingDocumentNotesToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
         SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
         Map<String, DocumentNote> documentNotesToCopy = null;
@@ -457,9 +466,9 @@ public class AnnotateUtilities {
 
         //annotate the primers...
         AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
-        DocumentNote sequencingPrimerNote = notes.getNote("sequencingPrimer");
+        DocumentNote sequencingPrimerNote = notes.getNote(SEQ_PRIMER_NOTE_TYPE);
         if (sequencingPrimerNote == null) {
-            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType("sequencingPrimer");
+            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
             if (sequencingPrimerType != null) {
                 sequencingPrimerNote = sequencingPrimerType.createDocumentNote();
             }
