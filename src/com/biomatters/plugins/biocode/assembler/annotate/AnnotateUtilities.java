@@ -82,6 +82,7 @@ public class AnnotateUtilities {
             }
             realProgress.beginSubtask("Annotating " + annotatedDocument.getName());
             if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
+                Set<DocumentField> fieldsAdded = new HashSet<DocumentField>();
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument) annotatedDocument.getDocument();
                 CompositeProgressListener progressForAlignment = new CompositeProgressListener(realProgress, alignment.getNumberOfSequences());
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++)  {
@@ -89,13 +90,14 @@ public class AnnotateUtilities {
                     AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
                     if (referencedDocument != null) {
                         docsAnnotated.add(referencedDocument);
-                        newFields.addAll(annotateDocument(fimsDataGetter, failBlog, referencedDocument, true));
+                        fieldsAdded.addAll(annotateDocument(fimsDataGetter, failBlog, referencedDocument, true));
                     } else {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
-                copyMatchingFieldsToContig(annotatedDocument);
+                copyMatchingFieldsToContig(annotatedDocument, fieldsAdded);
                 copyMatchingDocumentNotesToContig(annotatedDocument);
+                newFields.addAll(fieldsAdded);
             } else {
                 newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument, true));
             }
@@ -313,24 +315,28 @@ public class AnnotateUtilities {
     }
 
     /**
-     * This method was copied from com.biomatters.plugins.alignment.assembly.AssemblyOperation and should be kept up to
-     * date with the original.
+     * This method is a copy of the method with the same name in
+     * com.biomatters.plugins.alignment.assembly.AssemblyOperation and should be kept up to date with the original.
      *
      * @param annotatedContig
      * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      *
      */
-    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
+    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig, Set<DocumentField> overridableFields) throws DocumentOperationException {
         SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
         Map<DocumentField, Object> displayableFieldsToCopy = null;
-        for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
+
+        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
             if (i == contig.getContigReferenceSequenceIndex()) {
                 continue;
             }
+
             AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
+
             if (referencedDocument == null) {
                 return; //one sequence doesn't have a reference so bail on the whole thing
             }
+
             if (displayableFieldsToCopy == null) {
                 displayableFieldsToCopy = new LinkedHashMap<DocumentField, Object>();
                 for (DocumentField field : referencedDocument.getDisplayableFields()) {
@@ -345,21 +351,26 @@ public class AnnotateUtilities {
                     }
                 }
             } else {
-                for (Map.Entry<DocumentField, Object> fieldToCopy : new LinkedHashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
+                for (Map.Entry<DocumentField, Object> fieldToCopy : displayableFieldsToCopy.entrySet()) {
                     Object value = referencedDocument.getFieldValue(fieldToCopy.getKey());
                     if (value == null || !value.equals(fieldToCopy.getValue())) {
                         displayableFieldsToCopy.remove(fieldToCopy.getKey());
                     }
                 }
             }
-            if (displayableFieldsToCopy.isEmpty()) break;
-        }
-        if (displayableFieldsToCopy == null || displayableFieldsToCopy.isEmpty()) return;
 
-        for (Map.Entry<DocumentField, Object> fieldToCopy : displayableFieldsToCopy.entrySet()) {
-            if (annotatedContig.getFieldValue(fieldToCopy.getKey())==null)
-                annotatedContig.setFieldValue(fieldToCopy.getKey(), fieldToCopy.getValue());
+            if (displayableFieldsToCopy == null || displayableFieldsToCopy.isEmpty()) {
+                return;
+            }
         }
+
+        for (Map.Entry<DocumentField, Object> fieldAndValue : displayableFieldsToCopy.entrySet()) {
+            DocumentField field = fieldAndValue.getKey();
+            if (annotatedContig.getFieldValue(field) == null || overridableFields.contains(field)) {
+                annotatedContig.setFieldValue(field, fieldAndValue.getValue());
+            }
+        }
+
         annotatedContig.save();
     }
 
