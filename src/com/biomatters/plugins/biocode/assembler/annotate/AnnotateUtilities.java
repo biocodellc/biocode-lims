@@ -94,7 +94,7 @@ public class AnnotateUtilities {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
-                copyMatchingFieldsToContigAndSave(annotatedDocument);
+                copyMatchingFieldsToContig(annotatedDocument);
                 copyMatchingDocumentNotesToContig(annotatedDocument);
             } else {
                 newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument, true));
@@ -304,16 +304,17 @@ public class AnnotateUtilities {
     }
 
     /**
-     * copied from AssemblyOperationj
+     * This method was copied from com.biomatters.plugins.alignment.assembly.AssemblyOperation and should be kept up to
+     * date with the original.
      *
      * @param annotatedContig
      * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      *
      */
-    private static void copyMatchingFieldsToContigAndSave(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
-        SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
+    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
+        SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
         Map<DocumentField, Object> displayableFieldsToCopy = null;
-        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
+        for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
             if (i == contig.getContigReferenceSequenceIndex()) {
                 continue;
             }
@@ -322,7 +323,7 @@ public class AnnotateUtilities {
                 return; //one sequence doesn't have a reference so bail on the whole thing
             }
             if (displayableFieldsToCopy == null) {
-                displayableFieldsToCopy = new HashMap<DocumentField, Object>();
+                displayableFieldsToCopy = new LinkedHashMap<DocumentField, Object>();
                 for (DocumentField field : referencedDocument.getDisplayableFields()) {
 //                    if (field.getCode().startsWith("biocode") || field.getCode().equalsIgnoreCase("tissueid")
 //                            || field.getCode().equals(DocumentField.TAXONOMY_FIELD.getCode())
@@ -335,7 +336,7 @@ public class AnnotateUtilities {
                     }
                 }
             } else {
-                for (Map.Entry<DocumentField, Object> fieldToCopy : new HashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
+                for (Map.Entry<DocumentField, Object> fieldToCopy : new LinkedHashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
                     Object value = referencedDocument.getFieldValue(fieldToCopy.getKey());
                     if (value == null || !value.equals(fieldToCopy.getValue())) {
                         displayableFieldsToCopy.remove(fieldToCopy.getKey());
@@ -347,7 +348,8 @@ public class AnnotateUtilities {
         if (displayableFieldsToCopy == null || displayableFieldsToCopy.isEmpty()) return;
 
         for (Map.Entry<DocumentField, Object> fieldToCopy : displayableFieldsToCopy.entrySet()) {
-            annotatedContig.setFieldValue(fieldToCopy.getKey(), fieldToCopy.getValue());
+            if (annotatedContig.getFieldValue(fieldToCopy.getKey())==null)
+                annotatedContig.setFieldValue(fieldToCopy.getKey(), fieldToCopy.getValue());
         }
         annotatedContig.save();
     }
