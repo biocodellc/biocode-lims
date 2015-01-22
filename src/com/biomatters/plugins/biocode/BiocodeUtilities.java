@@ -287,7 +287,7 @@ public class BiocodeUtilities {
                                 "Sequence <strong>" + nameOfSequenceWithoutReferenceDocument + "</strong> " +
                                 "of contig assembly <strong>" + contig.getName() + "</strong> does not point to a document.<br><br>" +
                                 "Extract <strong>" + nameOfSequenceWithoutReferenceDocument + "</strong> and try again.<br><br>" +
-                                "For more assistance, contact Moorea Biocode support via " + BiocodePlugin.SUPPORT_EMAIL + "."
+                                "For further assistance, contact Moorea Biocode support via " + BiocodePlugin.SUPPORT_EMAIL + "."
                         );
                     }
                     traceDocs.add(traceDoc);
