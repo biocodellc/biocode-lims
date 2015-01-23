@@ -88,6 +88,8 @@ public class SequencingResult implements XMLSerializable {
         return status;
     }
 
+    public boolean isPass() { return status.equals(Status.PASS); }
+
     public Date getDate() {
         return date;
     }

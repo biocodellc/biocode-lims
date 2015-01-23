@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *          <p/>
  *          Created on 18/06/2009 4:06:40 PM
  */
-public class WorkflowDocument extends MuitiPartDocument {
+public class  WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
     private List<ReactionPart> parts;
     Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>(){
@@ -93,25 +93,33 @@ public class WorkflowDocument extends MuitiPartDocument {
 
     public List<DocumentField> getDisplayableFields() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
-        if(getFimsSample() != null) {
+
+        if (getFimsSample() != null) {
             fields.addAll(getFimsSample().getFimsAttributes());
             fields.addAll(getFimsSample().getTaxonomyAttributes());
         }
-        fields.addAll(Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
-                                    LIMSConnection.WORKFLOW_LOCUS_FIELD,
-                                    LIMSConnection.WORKFLOW_BCID_FIELD));
+
+        fields.addAll(Arrays.asList(
+                new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
+                LIMSConnection.WORKFLOW_LOCUS_FIELD,
+                LIMSConnection.WORKFLOW_BCID_FIELD,
+                LIMSConnection.SEQUENCE_PROGRESS,
+                CycleSequencingReaction.NUM_TRACES_FIELD,
+                CycleSequencingReaction.NUM_SEQS_FIELD,
+                CycleSequencingReaction.NUM_PASSED_SEQS_FIELD
+        ));
 
         return fields;
     }
 
     public Object getFieldValue(String fieldCodeName) {
-        if("locus".equals(fieldCodeName)) {
+        if (fieldCodeName.equals("locus")) {
             return workflow.getLocus();
-        } else if("numberOfParts".equals(fieldCodeName)) {
+        } else if (fieldCodeName.equals("numberOfParts")) {
             return getNumberOfParts();
-        } else if(PluginDocument.MODIFIED_DATE_FIELD.getCode().equals(fieldCodeName)) {
+        } else if (fieldCodeName.equals(PluginDocument.MODIFIED_DATE_FIELD)) {
             return new Date(workflow.getLastModified().getTime());
-        } else if (LIMSConnection.WORKFLOW_BCID_FIELD.getCode().equals(fieldCodeName)) {
+        } else if (fieldCodeName.equals(LIMSConnection.WORKFLOW_BCID_FIELD.getCode())) {
             LIMSConnection limsConnection;
             try {
                 limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
@@ -126,9 +134,45 @@ public class WorkflowDocument extends MuitiPartDocument {
             } catch (DatabaseServiceException e) {
                 return "";
             }
-        } else if(getFimsSample() != null) {
+        } else if (fieldCodeName.equals(LIMSConnection.SEQUENCE_PROGRESS.getCode())) {
+            for (Reaction reaction : getReactions()) {
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing) && ((CycleSequencingReaction)reaction)._getOptions().getValueAsString(ReactionOptions.RUN_STATUS).equals("passed")) {
+                    return "passed";
+                }
+            }
+            return "failed";
+        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_TRACES_FIELD.getCode())) {
+            int numOfTraces = 0;
+            for (Reaction reaction : getReactions()) {
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
+                    numOfTraces += ((CycleSequencingReaction)reaction).getTraces().size();
+                }
+            }
+            return numOfTraces;
+        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_SEQS_FIELD.getCode())) {
+            Set<Integer> uniqueSequenceIDs = new HashSet<Integer>();
+            for (Reaction reaction : getReactions()) {
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
+                    for (SequencingResult sequencingResult : ((CycleSequencingReaction)reaction).getSequencingResults()) {
+                        uniqueSequenceIDs.add(sequencingResult.getSequenceId());
+                    }
+                }
+            }
+            return uniqueSequenceIDs.size();
+        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getCode())) {
+            Set<Integer> uniqueSequenceIDs = new HashSet<Integer>();
+            for (Reaction reaction : getReactions()) {
+                for (SequencingResult sequencingResult : ((CycleSequencingReaction)reaction).getSequencingResults()) {
+                    if (sequencingResult.isPass()) {
+                        uniqueSequenceIDs.add(sequencingResult.getSequenceId());
+                    }
+                }
+            }
+            return uniqueSequenceIDs.size();
+        } else if (getFimsSample() != null) {
             return getFimsSample().getFimsAttributeValue(fieldCodeName);
         }
+
         return null;
     }
 
