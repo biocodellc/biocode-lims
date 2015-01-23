@@ -32,19 +32,19 @@ import java.util.concurrent.atomic.AtomicReference;
  *          <p/>
  *          Created on 18/06/2009 4:06:40 PM
  */
-public class  WorkflowDocument extends MuitiPartDocument {
+public class WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
     private List<ReactionPart> parts;
     Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>(){
-            public int compare(ReactionPart o1, ReactionPart o2) {
-                if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
-                    return -Integer.MAX_VALUE;
-                } else if(o2.getReaction() instanceof ExtractionReaction && !(o1.getReaction() instanceof ExtractionReaction)) {
-                    return Integer.MAX_VALUE;
-                }
-                return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
+        public int compare(ReactionPart o1, ReactionPart o2) {
+            if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
+                return -Integer.MAX_VALUE;
+            } else if(o2.getReaction() instanceof ExtractionReaction && !(o1.getReaction() instanceof ExtractionReaction)) {
+                return Integer.MAX_VALUE;
             }
-        };
+            return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
+        }
+    };
 
     @Override
     public boolean equals(Object o) {
@@ -74,7 +74,7 @@ public class  WorkflowDocument extends MuitiPartDocument {
         for(Reaction r : reactions) {
             parts.add(new ReactionPart(r));
         }
-        sortReactions();     
+        sortReactions();
     }
 
     public void sortReactions() {
@@ -93,33 +93,25 @@ public class  WorkflowDocument extends MuitiPartDocument {
 
     public List<DocumentField> getDisplayableFields() {
         List<DocumentField> fields = new ArrayList<DocumentField>();
-
-        if (getFimsSample() != null) {
+        if(getFimsSample() != null) {
             fields.addAll(getFimsSample().getFimsAttributes());
             fields.addAll(getFimsSample().getTaxonomyAttributes());
         }
-
-        fields.addAll(Arrays.asList(
-                new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
+        fields.addAll(Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
                 LIMSConnection.WORKFLOW_LOCUS_FIELD,
-                LIMSConnection.WORKFLOW_BCID_FIELD,
-                LIMSConnection.SEQUENCE_PROGRESS,
-                CycleSequencingReaction.NUM_TRACES_FIELD,
-                CycleSequencingReaction.NUM_SEQS_FIELD,
-                CycleSequencingReaction.NUM_PASSED_SEQS_FIELD
-        ));
+                LIMSConnection.WORKFLOW_BCID_FIELD));
 
         return fields;
     }
 
     public Object getFieldValue(String fieldCodeName) {
-        if (fieldCodeName.equals("locus")) {
+        if("locus".equals(fieldCodeName)) {
             return workflow.getLocus();
-        } else if (fieldCodeName.equals("numberOfParts")) {
+        } else if("numberOfParts".equals(fieldCodeName)) {
             return getNumberOfParts();
-        } else if (fieldCodeName.equals(PluginDocument.MODIFIED_DATE_FIELD)) {
+        } else if(PluginDocument.MODIFIED_DATE_FIELD.getCode().equals(fieldCodeName)) {
             return new Date(workflow.getLastModified().getTime());
-        } else if (fieldCodeName.equals(LIMSConnection.WORKFLOW_BCID_FIELD.getCode())) {
+        } else if (LIMSConnection.WORKFLOW_BCID_FIELD.getCode().equals(fieldCodeName)) {
             LIMSConnection limsConnection;
             try {
                 limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
@@ -134,45 +126,9 @@ public class  WorkflowDocument extends MuitiPartDocument {
             } catch (DatabaseServiceException e) {
                 return "";
             }
-        } else if (fieldCodeName.equals(LIMSConnection.SEQUENCE_PROGRESS.getCode())) {
-            for (Reaction reaction : getReactions()) {
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing) && ((CycleSequencingReaction)reaction)._getOptions().getValueAsString(ReactionOptions.RUN_STATUS).equals("passed")) {
-                    return "passed";
-                }
-            }
-            return "failed";
-        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_TRACES_FIELD.getCode())) {
-            int numOfTraces = 0;
-            for (Reaction reaction : getReactions()) {
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
-                    numOfTraces += ((CycleSequencingReaction)reaction).getTraces().size();
-                }
-            }
-            return numOfTraces;
-        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_SEQS_FIELD.getCode())) {
-            Set<Integer> uniqueSequenceIDs = new HashSet<Integer>();
-            for (Reaction reaction : getReactions()) {
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
-                    for (SequencingResult sequencingResult : ((CycleSequencingReaction)reaction).getSequencingResults()) {
-                        uniqueSequenceIDs.add(sequencingResult.getSequenceId());
-                    }
-                }
-            }
-            return uniqueSequenceIDs.size();
-        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getCode())) {
-            Set<Integer> uniqueSequenceIDs = new HashSet<Integer>();
-            for (Reaction reaction : getReactions()) {
-                for (SequencingResult sequencingResult : ((CycleSequencingReaction)reaction).getSequencingResults()) {
-                    if (sequencingResult.isPass()) {
-                        uniqueSequenceIDs.add(sequencingResult.getSequenceId());
-                    }
-                }
-            }
-            return uniqueSequenceIDs.size();
-        } else if (getFimsSample() != null) {
+        } else if(getFimsSample() != null) {
             return getFimsSample().getFimsAttributeValue(fieldCodeName);
         }
-
         return null;
     }
 
@@ -222,7 +178,7 @@ public class  WorkflowDocument extends MuitiPartDocument {
                 element.addContent(XMLSerializer.classToXML("reaction", part.getReaction()));
             }
         }
-        
+
         return element;
     }
 
@@ -325,50 +281,50 @@ public class  WorkflowDocument extends MuitiPartDocument {
                     Reaction r = new ExtractionReaction(resultSet);
                     addReaction(r);
                 }
-            break;
-        case PCR :
-            reactionId = resultSet.getInt("pcr.id");
-            if(resultSet.wasNull()) {
-                return;  // Plate has no reactions
-            }
-            //check we don't already have it
-            alreadyThere = false;
-            for(ReactionPart part : parts) {
-                Reaction r = part.getReaction();
-                if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
-                    alreadyThere = true;
+                break;
+            case PCR :
+                reactionId = resultSet.getInt("pcr.id");
+                if(resultSet.wasNull()) {
+                    return;  // Plate has no reactions
                 }
-            }
-            if(!alreadyThere) {
-                Reaction r = new PCRReaction(resultSet);
-                addReaction(r);
-            }
-            break;
-        case CycleSequencing :
-            reactionId = resultSet.getInt("cyclesequencing.id");
-            if(resultSet.wasNull()) {
-                return;  // Plate has no reactions
-            }
-            //check we don't already have it
-            alreadyThere = false;
-            for(ReactionPart part : parts) {
-                Reaction r = part.getReaction();
-                if(r.getType() == Reaction.Type.CycleSequencing && r.getId() == reactionId) {
-                    // Note: This happens because we can have multiple pass/fail entries per reaction.  Since we order
-                    // by date descending we'll always be taking the most recent entry from the database.  In the future
-                    // we may want to display more than just the most recent entry.
-                    alreadyThere = true;
-                    SequencingResult seqResult = SequencingResult.fromResultSet(resultSet);
-                    if(seqResult != null) {
-                        ((CycleSequencingReaction)r).addSequencingResults(Collections.singletonList(seqResult));
+                //check we don't already have it
+                alreadyThere = false;
+                for(ReactionPart part : parts) {
+                    Reaction r = part.getReaction();
+                    if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
+                        alreadyThere = true;
                     }
                 }
-            }
-            if(!alreadyThere) {
-                Reaction r = new CycleSequencingReaction(resultSet);
-                addReaction(r);
-            }
-            break;
+                if(!alreadyThere) {
+                    Reaction r = new PCRReaction(resultSet);
+                    addReaction(r);
+                }
+                break;
+            case CycleSequencing :
+                reactionId = resultSet.getInt("cyclesequencing.id");
+                if(resultSet.wasNull()) {
+                    return;  // Plate has no reactions
+                }
+                //check we don't already have it
+                alreadyThere = false;
+                for(ReactionPart part : parts) {
+                    Reaction r = part.getReaction();
+                    if(r.getType() == Reaction.Type.CycleSequencing && r.getId() == reactionId) {
+                        // Note: This happens because we can have multiple pass/fail entries per reaction.  Since we order
+                        // by date descending we'll always be taking the most recent entry from the database.  In the future
+                        // we may want to display more than just the most recent entry.
+                        alreadyThere = true;
+                        SequencingResult seqResult = SequencingResult.fromResultSet(resultSet);
+                        if(seqResult != null) {
+                            ((CycleSequencingReaction)r).addSequencingResults(Collections.singletonList(seqResult));
+                        }
+                    }
+                }
+                if(!alreadyThere) {
+                    Reaction r = new CycleSequencingReaction(resultSet);
+                    addReaction(r);
+                }
+                break;
         }
     }
 
@@ -532,15 +488,15 @@ public class  WorkflowDocument extends MuitiPartDocument {
                     }
                     else {
                         if(reaction instanceof CycleSequencingReaction) {
-                        List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
-                        if(traces != null && traces.size() > 0) {
-                            List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(traces);
-                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
-                            DocumentViewerFactory factory = SequencesEditor.getViewerFactory(sequenceList);
-                            DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
-                            ExtendedPrintable printable = viewer.getExtendedPrintable();
-                            Options op = printable.getOptions(false);
-                            return printable.print(graphics, dimensions, pageIndex-2, op);
+                            List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
+                            if(traces != null && traces.size() > 0) {
+                                List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(traces);
+                                DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+                                DocumentViewerFactory factory = SequencesEditor.getViewerFactory(sequenceList);
+                                DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
+                                ExtendedPrintable printable = viewer.getExtendedPrintable();
+                                Options op = printable.getOptions(false);
+                                return printable.print(graphics, dimensions, pageIndex-2, op);
                             }
                         }
                     }
