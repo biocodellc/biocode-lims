@@ -146,7 +146,8 @@ public class WorkflowDocument extends MuitiPartDocument {
             int numOfTraces = 0;
             for (Reaction reaction : getReactions()) {
                 if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
-                    numOfTraces += ((CycleSequencingReaction)reaction).getTraces().size();
+                    List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
+                    numOfTraces += traces == null ? 0 : traces.size();
                 }
             }
             return numOfTraces;
