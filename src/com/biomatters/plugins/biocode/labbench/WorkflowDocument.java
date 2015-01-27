@@ -137,8 +137,12 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
         } else if (fieldCodeName.equals(LIMSConnection.SEQUENCE_PROGRESS.getCode())) {
             for (Reaction reaction : getReactions()) {
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing) && ((CycleSequencingReaction)reaction)._getOptions().getValueAsString(ReactionOptions.RUN_STATUS).equals("passed")) {
-                    return "passed";
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
+                    for (SequencingResult sequencingResult : ((CycleSequencingReaction) reaction).getSequencingResults()) {
+                        if (sequencingResult.isPass()) {
+                            return "pass";
+                        }
+                    }
                 }
             }
             return "failed";
@@ -146,8 +150,7 @@ public class WorkflowDocument extends MuitiPartDocument {
             int numOfTraces = 0;
             for (Reaction reaction : getReactions()) {
                 if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
-                    List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
-                    numOfTraces += traces == null ? 0 : traces.size();
+                    numOfTraces += (Integer)((CycleSequencingReaction)reaction).getFieldValue(CycleSequencingReaction.NUM_TRACES_FIELD.getCode());
                 }
             }
             return numOfTraces;
