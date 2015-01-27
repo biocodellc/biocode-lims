@@ -361,7 +361,7 @@ public class AnnotateUtilities {
                     }
                 }
             } else {
-                for (Map.Entry<DocumentField, Object> fieldToCopy : new LinkedHashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
+                for (Map.Entry<DocumentField, Object> fieldToCopy : displayableFieldsToCopy.entrySet()) {
                     Object value = referencedDocument.getFieldValue(fieldToCopy.getKey());
                     if (value == null || !value.equals(fieldToCopy.getValue())) {
                         displayableFieldsToCopy.remove(fieldToCopy.getKey());
