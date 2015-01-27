@@ -4,12 +4,14 @@ import com.biomatters.geneious.publicapi.plugin.DocumentSelectionSignature;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
+import java.awt.*;
 import java.util.List;
 
 /**
@@ -18,7 +20,25 @@ import java.util.List;
  *          <p/>
  *          Created on 28/06/2009 5:27:11 PM
  */
-public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFactory{
+public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFactory {
+    private static String[] columnNames = new String[] {
+            "Extraction",
+            "PCR forward primer",
+            "PCR reverse primer",
+            "PCR plate",
+            "PCR status",
+            "Cycle Sequencing primer (forward)",
+            "Cycle Sequencing Plate (forward)",
+            "Cycle sequencing status (forward)",
+            "Cycle Sequencing primer (reverse)",
+            "Cycle Sequencing Plate (reverse)",
+            "Cycle sequencing status (reverse)",
+            LIMSConnection.SEQUENCE_PROGRESS.getName(),
+            CycleSequencingReaction.NUM_TRACES_FIELD.getName(),
+            CycleSequencingReaction.NUM_SEQS_FIELD.getName(),
+            CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getName()
+    };
+
     public String getName() {
         return "Primer Overview";
     }
@@ -37,18 +57,17 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
 
     @Override
     protected boolean columnVisibleByDefault(int columnIndex, AnnotatedPluginDocument[] selectedDocuments) {
-        if(columnIndex == 0) {
+        if (columnIndex == 0) {
             return true;
         }
-        final List<WorkflowDocument> workflowDocuments = BiocodeUtilities.getWorkflowDocuments(selectedDocuments);
-        final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflowDocuments);
-        return columnIndex > fimsFields.size()+1;
+        final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(BiocodeUtilities.getWorkflowDocuments(selectedDocuments));
+        return columnIndex > fimsFields.size() + 1;
     }
 
     public TableModel getTableModel(final AnnotatedPluginDocument[] docs, Options options) {
         final List<WorkflowDocument> workflowDocuments = BiocodeUtilities.getWorkflowDocuments(docs);
         final List<DocumentField> fimsFields = BiocodeUtilities.getFimsFields(workflowDocuments);
-        if(workflowDocuments.size() == 0) {
+        if (workflowDocuments.size() == 0) {
             return null;
         }
         return new TableModel(){
@@ -57,28 +76,32 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             }
 
             public int getColumnCount() {
-                return 12+fimsFields.size();
+                return columnNames.length + fimsFields.size() + 1;
             }
 
             public String getColumnName(int columnIndex) {
-                if(columnIndex == 0) {
+                if (columnIndex == 0) {
                     return "Name";
                 }
-                if(columnIndex <= fimsFields.size()) {
-                    return fimsFields.get(columnIndex-1).getName();
+
+                if (columnIndex <= fimsFields.size()) {
+                    return fimsFields.get(columnIndex - 1).getName();
                 }
-                String[] names = new String[] {"Extraction", "PCR forward primer", "PCR reverse primer", "PCR plate", "PCR status", "Cycle Sequencing primer (forward)", "Cycle Sequencing Plate (forward)", "Cycle sequencing status (forward)", "Cycle Sequencing primer (reverse)", "Cycle Sequencing Plate (reverse)", "Cycle sequencing status (reverse)"};
-                return names[columnIndex-fimsFields.size()-1];
+
+                return columnNames[columnIndex - fimsFields.size() - 1];
             }
 
             public Class<?> getColumnClass(int columnIndex) {
-                if(columnIndex == 0) {
+                if (columnIndex == 0) {
                     return String.class;
+                } else if (columnIndex <= fimsFields.size()) {
+                    return fimsFields.get(columnIndex - 1).getValueType();
+                } else if (columnIndex < fimsFields.size() + 2) {
+                    return String.class;
+                } else if (columnIndex < fimsFields.size() + 13) {
+                    return ObjectAndColor.class;
                 }
-                if(columnIndex <= fimsFields.size()) {
-                    return fimsFields.get(columnIndex-1).getValueType();
-                }
-                return columnIndex < fimsFields.size()+2 ? String.class : ObjectAndColor.class;
+                return String.class;
             }
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -91,17 +114,18 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                 Reaction recentPCR = doc.getMostRecentReaction(Reaction.Type.PCR);
                 Reaction recentCycleSequencingForward = doc.getMostRecentSequencingReaction(true);
                 Reaction recentCycleSequencingReverse = doc.getMostRecentSequencingReaction(false);
-                if(columnIndex == 0) {
+                if (columnIndex == 0) {
                     return doc.getName();
                 }
-                if(columnIndex <= fimsFields.size()) {
+                if (columnIndex <= fimsFields.size()) {
                     FimsSample fimsSample = doc.getFimsSample();
-                    if(fimsSample == null) {
+                    if (fimsSample == null) {
                         return null;
                     }
-                    return fimsSample.getFimsAttributeValue(fimsFields.get(columnIndex-1).getCode());
+                    return fimsSample.getFimsAttributeValue(fimsFields.get(columnIndex - 1).getCode());
                 }
-                int adjustedColumnIndex = columnIndex-fimsFields.size();
+
+                int adjustedColumnIndex = columnIndex - fimsFields.size();
 
                 switch(adjustedColumnIndex) {
                     case 1 :
@@ -134,6 +158,15 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                         return recentCycleSequencingReverse != null ? new ObjectAndColor(recentCycleSequencingReverse.getPlateName()+" "+recentCycleSequencingReverse.getLocationString(), recentCycleSequencingReverse.getBackgroundColor()) : null;
                     case 11 :
                         return recentCycleSequencingReverse != null ? new ObjectAndColor(recentCycleSequencingReverse.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingReverse.getBackgroundColor()) : null;
+                    case 12:
+                        Object sequenceProgress = doc.getFieldValue(LIMSConnection.SEQUENCE_PROGRESS.getCode());
+                        return new ObjectAndColor(sequenceProgress, sequenceProgress.equals(LIMSConnection.SEQUENCE_PROGRESS.getEnumerationValues()[0]) ? Color.GREEN : Color.RED);
+                    case 13:
+                        return doc.getFieldValue(CycleSequencingReaction.NUM_TRACES_FIELD.getCode());
+                    case 14:
+                        return doc.getFieldValue(CycleSequencingReaction.NUM_SEQS_FIELD.getCode());
+                    case 15:
+                        return doc.getFieldValue(CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getCode());
                 }
                 return null;
             }

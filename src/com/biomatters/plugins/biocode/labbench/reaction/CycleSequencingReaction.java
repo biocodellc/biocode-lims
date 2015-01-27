@@ -37,7 +37,7 @@ import org.jdom.Element;
  */
 public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
     public static final DocumentField NUM_TRACES_FIELD = DocumentField.createIntegerField("# Traces", "Number of traces attached to reaction", "numTraces");
-    public static final DocumentField NUM_PASSED_SEQS_FIELD = DocumentField.createIntegerField("# Passed", "Number of passed sequences attached to reaction", "numPassedSeqs");
+    public static final DocumentField NUM_PASSED_SEQS_FIELD = DocumentField.createIntegerField("# Passed Sequences", "Number of passed sequences attached to reaction", "numPassedSeqs");
     public static final DocumentField NUM_SEQS_FIELD = DocumentField.createIntegerField("# Sequences", "Total number of sequencing results attached to reaction", "totalNumSeqs");
 
     private CycleSequencingOptions options;
