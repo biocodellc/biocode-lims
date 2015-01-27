@@ -16,6 +16,7 @@ import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.google.common.collect.HashMultimap;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -204,8 +205,8 @@ public class AnnotateUtilities {
 
     /**
      * Copies matching document notes from sequences referenced by an assembly to the assembly itself.  Only copies the
-     * note if all field values are the same.  The only exception is the Sequencing Primer note type defined by the GenBank
-     * submission plugin.  This gets merged so that any non-null field values are copied across if all sequences have the
+     * note if all values are the same.  The only exception is the Sequencing Primer note type defined by the GenBank
+     * submission plugin that gets merged so that any non-null field values are copied across if all sequences have the
      * same value.
      * <br><br>
      * <b>Note</b>: This method was originally written for the Moorea Biocode Project.  It is duplicated in the AssemblyOperation in
@@ -215,9 +216,9 @@ public class AnnotateUtilities {
      * @throws DocumentOperationException if documents cannot be loaded or edited
      */
     private static void copyMatchingDocumentNotesToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
-        SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
+        SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
         Map<String, DocumentNote> documentNotesToCopy = null;
-        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
+        for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
             if (i == contig.getContigReferenceSequenceIndex()) {
                 continue;
             }
@@ -234,57 +235,27 @@ public class AnnotateUtilities {
             } else {
                 for (Map.Entry<String, DocumentNote> entry : new LinkedHashSet<Map.Entry<String, DocumentNote>>(documentNotesToCopy.entrySet())) {
                     DocumentNote note = referencedDocument.getDocumentNotes(false).getNote(entry.getKey());
-                    if (!notesAreEqual(note, entry.getValue())) {
-                        documentNotesToCopy.remove(entry.getKey());
+                    if(!notesAreEqual(note, entry.getValue())) {
+                       documentNotesToCopy.remove(entry.getKey());
                     }
                 }
             }
         }
-
-        //hack for the sequencing primer note
-        List<Object> values = new ArrayList<Object>();
-        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
-            if (i == contig.getContigReferenceSequenceIndex()) {
-                continue;
-            }
-            if (documentNotesToCopy.get(SEQ_PRIMER_NOTE_TYPE) != null) {
-                continue; //no need to do this if the note is already being copied...
-            }
-            AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
-            DocumentNote sequencingPrimerNote = referencedDocument.getDocumentNotes(false).getNote(SEQ_PRIMER_NOTE_TYPE);
-            if (sequencingPrimerNote == null) {
-                break;
-            }
-            for (int i1 = 0; i1 < sequencingPrimerNote.getFields().size(); i1++) {
-                DocumentNoteField field = sequencingPrimerNote.getFields().get(i1);
-                Object fieldValue = sequencingPrimerNote.getFieldValue(field.getCode());
-                if (values.size() < i1 + 1) {
-                    values.add(sequencingPrimerNote.getFieldValue(field.getCode()));
-                }
-                if (values.get(i1) != null && !values.get(i1).equals(fieldValue)) {
-                    continue;
-                }
-                if (fieldValue != null) {
-                    values.set(i1, fieldValue);
-                }
-            }
-            if (i == contig.getNumberOfSequences() - 1) { //once we've been through everything
-                DocumentNoteType noteType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
-                if (noteType != null) {
-                    DocumentNote note = noteType.createDocumentNote();
-                    for (int i1 = 0; i1 < note.getFields().size(); i1++) {
-                        DocumentNoteField field = note.getFields().get(i1);
-                        Object value = values.get(i1);
-                        if (value != null) {
-                            note.setFieldValue(field.getCode(), value);
-                        }
-                    }
-                    documentNotesToCopy.put(noteType.getCode(), note);
-                }
-            }
+        if(documentNotesToCopy == null) {
+            return;  // Contig had no sequences to copy from
         }
 
-        if (documentNotesToCopy == null || documentNotesToCopy.isEmpty()) return;
+        //noinspection StatementWithEmptyBody
+        if(documentNotesToCopy.get(SEQ_PRIMER_NOTE_TYPE) == null) {
+            DocumentNote sequencingPrimerNote = hackToGetSequencingPrimerNoteToCopy(contig);
+            if(sequencingPrimerNote != null) {
+                documentNotesToCopy.put(sequencingPrimerNote.getNoteTypeCode(), sequencingPrimerNote);
+            }
+        } else {
+            //no need to do this if the note is already being copied...
+        }
+
+        if (documentNotesToCopy.isEmpty()) return;
 
         AnnotatedPluginDocument.DocumentNotes contigNotes = annotatedContig.getDocumentNotes(true);
         for (Map.Entry<String, DocumentNote> noteToCopy : documentNotesToCopy.entrySet()) {
@@ -292,6 +263,45 @@ public class AnnotateUtilities {
             contigNotes.setNote(existingNote);
         }
         contigNotes.saveNotes();
+
+
+    }
+
+    private static DocumentNote hackToGetSequencingPrimerNoteToCopy(SequenceAlignmentDocument contig) {
+        DocumentNoteType sequencingPrimerNoteType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
+        if(sequencingPrimerNoteType == null) {
+            return null;  // GenBank Submission plugin not initialized
+        }
+
+        HashMultimap<String, Object> seenFieldValues = HashMultimap.create();
+        for (AnnotatedPluginDocument refDoc : contig.getReferencedDocuments()) {
+            if(refDoc == null) {
+                continue;
+            }
+
+            DocumentNote noteOnRef = refDoc.getDocumentNotes(false).getNote(SEQ_PRIMER_NOTE_TYPE);
+            if(noteOnRef == null) {
+                continue;
+            }
+            for (DocumentNoteField field : sequencingPrimerNoteType.getFields()) {
+                Object value = noteOnRef.getFieldValue(field.getCode());
+                if(value != null) {
+                    seenFieldValues.put(field.getCode(), value);
+                }
+            }
+        }
+        if(seenFieldValues.isEmpty()) {
+            return null;
+        }
+
+        DocumentNote newNote = sequencingPrimerNoteType.createDocumentNote();
+        for (Map.Entry<String, Collection<Object>> entry : seenFieldValues.asMap().entrySet()) {
+            Collection<Object> valuesForField = entry.getValue();
+            if(valuesForField.size() == 1) {
+                newNote.setFieldValue(entry.getKey(), valuesForField.iterator().next());
+            }
+        }
+        return newNote;
     }
 
     private static boolean notesAreEqual(DocumentNote note1, DocumentNote note2) {
