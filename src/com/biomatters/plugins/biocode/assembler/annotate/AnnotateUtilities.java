@@ -361,7 +361,7 @@ public class AnnotateUtilities {
                     }
                 }
             } else {
-                for (Map.Entry<DocumentField, Object> fieldToCopy : displayableFieldsToCopy.entrySet()) {
+                for (Map.Entry<DocumentField, Object> fieldToCopy : new LinkedHashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
                     Object value = referencedDocument.getFieldValue(fieldToCopy.getKey());
                     if (value == null || !value.equals(fieldToCopy.getValue())) {
                         displayableFieldsToCopy.remove(fieldToCopy.getKey());
@@ -414,27 +414,40 @@ public class AnnotateUtilities {
 
         if (fimsData.sequencingPlateName != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
+
+            fields.add(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
         }
 
         if (fimsData.reactionStatus != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus);
+
+            fields.add(BiocodeUtilities.REACTION_STATUS_FIELD);
         }
 
         if (fimsData.sequencingPlateName != null && fimsData.well != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
             annotatedDocument.setFieldValue(BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString());
+
+            fields.add(BiocodeUtilities.SEQUENCING_WELL_FIELD);
+            fields.add(BiocodeUtilities.TRACE_ID_FIELD);
         }
 
         if (fimsData.workflow != null) {
             annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
+
+            fields.add(BiocodeUtilities.WORKFLOW_NAME_FIELD);
         }
 
         if (fimsData.extractionId != null) {
             annotatedDocument.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId);
+
+            fields.add(LIMSConnection.EXTRACTION_ID_FIELD);
         }
 
         if (fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0) {
             annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);
+
+            fields.add(BiocodeUtilities.EXTRACTION_BARCODE_FIELD);
         }
 
         final String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
