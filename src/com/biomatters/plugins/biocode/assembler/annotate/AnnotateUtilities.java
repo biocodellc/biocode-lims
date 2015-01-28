@@ -83,7 +83,7 @@ public class AnnotateUtilities {
             }
             realProgress.beginSubtask("Annotating " + annotatedDocument.getName());
             if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
-                Set<DocumentField> fieldsAdded = new HashSet<DocumentField>();
+                Set<DocumentField> fieldsAnnotated = new HashSet<DocumentField>();
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument) annotatedDocument.getDocument();
                 CompositeProgressListener progressForAlignment = new CompositeProgressListener(realProgress, alignment.getNumberOfSequences());
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++)  {
@@ -91,14 +91,14 @@ public class AnnotateUtilities {
                     AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
                     if (referencedDocument != null) {
                         docsAnnotated.add(referencedDocument);
-                        fieldsAdded.addAll(annotateDocument(fimsDataGetter, failBlog, referencedDocument, true));
+                        fieldsAnnotated = annotateDocument(fimsDataGetter, failBlog, referencedDocument, true);
                     } else {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
-                copyMatchingFieldsToContig(annotatedDocument, fieldsAdded);
+                copyMatchingFieldsToContig(annotatedDocument, getDocumentFieldCodesWithoutDuplicates(fieldsAnnotated));
                 copyMatchingDocumentNotesToContig(annotatedDocument);
-                newFields.addAll(fieldsAdded);
+                newFields.addAll(fieldsAnnotated);
             } else {
                 newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument, true));
             }
@@ -196,6 +196,21 @@ public class AnnotateUtilities {
             b.append("</html>");
             throw new DocumentOperationException(b.toString());
         }
+    }
+
+    /**
+     * Returns the codes of the supplied fields (without duplicates).
+     *
+     * @param fields Fields that returned codes are of.
+     * @return Codes of the supplied fields (without duplicates).
+     */
+    private static Set<String> getDocumentFieldCodesWithoutDuplicates(Set<DocumentField> fields) {
+        Set<String> uniqueCodesFromFields = new HashSet<String>();
+
+        for (DocumentField field : fields)
+            uniqueCodesFromFields.add(field.getCode());
+
+        return uniqueCodesFromFields;
     }
 
     /**
@@ -325,14 +340,16 @@ public class AnnotateUtilities {
     }
 
     /**
-     * This method is a copy of the method with the same name in
-     * com.biomatters.plugins.alignment.assembly.AssemblyOperation and should be kept up to date with the original.
+     * With the exception of an additional codesOfOverridableFields parameter, this method is identical to the method
+     * with the same name inside the com.biomatters.plugins.alignment.assembly.AssemblyOperation class. Until further
+     * established upon, while taking the codesOfOverridableFields parameter into account, changes that are made to
+     * either of the two methods should also be made in the other.
      *
      * @param annotatedContig
      * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
      *
      */
-    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig, Set<DocumentField> overridableFields) throws DocumentOperationException {
+    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig, Set<String> codesOfOverridableFields) throws DocumentOperationException {
         SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
         Map<DocumentField, Object> displayableFieldsToCopy = null;
 
@@ -376,7 +393,7 @@ public class AnnotateUtilities {
 
         for (Map.Entry<DocumentField, Object> fieldAndValue : displayableFieldsToCopy.entrySet()) {
             DocumentField field = fieldAndValue.getKey();
-            if (annotatedContig.getFieldValue(field) == null || overridableFields.contains(field)) {
+            if (annotatedContig.getFieldValue(field) == null || codesOfOverridableFields.contains(field.getCode())) {
                 annotatedContig.setFieldValue(field, fieldAndValue.getValue());
             }
         }
@@ -392,7 +409,7 @@ public class AnnotateUtilities {
      * @param failBlog To add failure messages to, for example when there are no FIMs fields associated with the document
      * @param annotatedDocument The document to annotate
      * @param updateModifiedDate true to update the modified date when saving.  False to leave it as is.
-     * @return The set of FIMS {@link DocumentField}s that were annotated onto the document
+     * @return All FIMS/LIMS fields {@link DocumentField}s that were annotated onto the document
      * @throws DocumentOperationException
      */
     public static Set<DocumentField> annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument, boolean updateModifiedDate) throws DocumentOperationException {
@@ -404,54 +421,33 @@ public class AnnotateUtilities {
             return Collections.emptySet();
         }
 
-        HashSet<DocumentField> fields = new HashSet<DocumentField>();
-        fields.addAll(fimsData.fimsSample.getFimsAttributes());
-        fields.addAll(fimsData.fimsSample.getTaxonomyAttributes());
+        HashSet<DocumentField> fieldsAnnotated = new HashSet<DocumentField>();
 
-        for (DocumentField documentField : fimsData.fimsSample.getFimsAttributes()) {
-            annotatedDocument.setFieldValue(documentField, fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
-        }
+        for (DocumentField field : fimsData.fimsSample.getFimsAttributes())
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, field, fimsData.fimsSample.getFimsAttributeValue(field.getCode())));
 
-        if (fimsData.sequencingPlateName != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
+        if (fimsData.sequencingPlateName != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName));
 
-            fields.add(BiocodeUtilities.SEQUENCING_PLATE_FIELD);
-        }
-
-        if (fimsData.reactionStatus != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus);
-
-            fields.add(BiocodeUtilities.REACTION_STATUS_FIELD);
-        }
+        if (fimsData.reactionStatus != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus));
 
         if (fimsData.sequencingPlateName != null && fimsData.well != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
-            annotatedDocument.setFieldValue(BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString());
-
-            fields.add(BiocodeUtilities.SEQUENCING_WELL_FIELD);
-            fields.add(BiocodeUtilities.TRACE_ID_FIELD);
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString()));
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString()));
         }
 
-        if (fimsData.workflow != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
+        if (fimsData.workflow != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName()));
 
-            fields.add(BiocodeUtilities.WORKFLOW_NAME_FIELD);
-        }
+        if (fimsData.extractionId != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId));
 
-        if (fimsData.extractionId != null) {
-            annotatedDocument.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId);
+        if (fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode));
 
-            fields.add(LIMSConnection.EXTRACTION_ID_FIELD);
-        }
-
-        if (fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);
-
-            fields.add(BiocodeUtilities.EXTRACTION_BARCODE_FIELD);
-        }
-
-        final String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
-        final String ORGANISM_FIELD_INTRA_SEPARATOR = " ";
+        String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
+        String ORGANISM_FIELD_INTRA_SEPARATOR = " ";
         StringBuilder taxonomyFieldValuesBuilder = new StringBuilder();
         StringBuilder organismBuilder = new StringBuilder();
 
@@ -460,53 +456,50 @@ public class AnnotateUtilities {
 
             Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
 
-            if (taxon == null) {
+            if (taxon == null)
                 continue;
-            }
 
-            if (taxon != null && !(taxon instanceof String)) {
+            if (!(taxon instanceof String))
                 throw new DocumentOperationException("The tissue record " + fimsData.fimsSample.getId() + " has an invalid taxon value (" + taxon + ") for the taxon field " + documentField.getName());
-            }
-
 
             String taxonAsString = String.valueOf(taxon);
 
-            if (taxonAsString.isEmpty()) {
+            if (taxonAsString.isEmpty())
                 continue;
-            }
 
-            annotatedDocument.setFieldValue(new DocumentField(documentFieldName, documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
+            fieldsAnnotated.add(annotateDocumentAndReturnField(
+                    annotatedDocument,
+                    new DocumentField(documentFieldName, documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false),
+                    fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()))
+            );
 
             if (organismBuilder.length() == 0) {
-                if (documentFieldName.equalsIgnoreCase("genus")) {
+                if (documentFieldName.equalsIgnoreCase("genus"))
                     organismBuilder.append(taxonAsString);
-                }
 
-                if (taxonomyFieldValuesBuilder.length() != 0) {
+                if (taxonomyFieldValuesBuilder.length() != 0)
                     taxonomyFieldValuesBuilder.append(TAXONOMY_FIELD_INTRA_SEPARATOR);
-                }
 
                 taxonomyFieldValuesBuilder.append(taxonAsString);
-            } else {
+            } else
                 organismBuilder.append(ORGANISM_FIELD_INTRA_SEPARATOR).append(taxonAsString);
-            }
         }
 
         String taxonomy = taxonomyFieldValuesBuilder.length() == 0 ? null : taxonomyFieldValuesBuilder.toString();
-        annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy);
+        fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, DocumentField.TAXONOMY_FIELD, taxonomy));
 
         String organism = organismBuilder.length() == 0 ? null : organismBuilder.toString();
-        annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, organism);
+        fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, DocumentField.ORGANISM_FIELD, organism));
 
         //annotate the primers...
         AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
         DocumentNote sequencingPrimerNote = notes.getNote(SEQ_PRIMER_NOTE_TYPE);
         if (sequencingPrimerNote == null) {
             DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
-            if (sequencingPrimerType != null) {
+            if (sequencingPrimerType != null)
                 sequencingPrimerNote = sequencingPrimerType.createDocumentNote();
-            }
         }
+
         boolean savedDocument = false;
         if (sequencingPrimerNote != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
@@ -520,19 +513,27 @@ public class AnnotateUtilities {
                 OligoSequenceDocument sequence = (OligoSequenceDocument) forwardPrimer.getDocument();
                 sequencingPrimerNote.setFieldValue("fwd_primer_seq", sequence.getBindingSequence().toString());
             }
+
             if (reversePrimer != null && (directionForTrace == null || !directionForTrace)) {
                 sequencingPrimerNote.setFieldValue("rev_primer_name", reversePrimer.getName());
                 OligoSequenceDocument sequence = (OligoSequenceDocument) reversePrimer.getDocument();
                 sequencingPrimerNote.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
             }
+
             notes.setNote(sequencingPrimerNote);
             notes.saveNotes();
             savedDocument = true;
         }
-        if(!savedDocument) {
+
+        if (!savedDocument)
             annotatedDocument.save(updateModifiedDate);
-        }
-        return fields;
+
+        return fieldsAnnotated;
+    }
+
+    private static DocumentField annotateDocumentAndReturnField(AnnotatedPluginDocument document, DocumentField field, Object value) {
+        document.setFieldValue(field, value);
+        return field;
     }
 
     /**
