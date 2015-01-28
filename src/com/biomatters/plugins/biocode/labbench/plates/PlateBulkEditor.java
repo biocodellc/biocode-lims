@@ -300,6 +300,11 @@ public class PlateBulkEditor {
                         }
                     }
 
+                    List<String> duplicateBarcodes = getDuplicateStrings(barcodes);
+                    if (!duplicateBarcodes.isEmpty()) {
+                        Dialogs.showMessageDialog("Duplicate extraction barcodes were inputted:\n\n" + StringUtilities.join(",", duplicateBarcodes), "Duplicate Extraction Barcodes Detected", null, Dialogs.DialogIcon.ERROR);
+                        return;
+                    }
 
                     Runnable runnable = new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
                     BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable, null);
@@ -601,6 +606,21 @@ public class PlateBulkEditor {
             Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
         }
         return true;
+    }
+
+    public void getExtractionFromBarcodes() {
+        getExtractionsFromBarcodes.actionPerformed(null);
+    }
+
+    public static List<String> getDuplicateStrings(List<String> strings) {
+        Set<String> uniqueStrings = new HashSet<String>();
+        List<String> duplicateStrings = new ArrayList<String>();
+
+        for (String string : strings)
+            if (!uniqueStrings.add(string))
+                duplicateStrings.add(string);
+
+        return duplicateStrings;
     }
 
     private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){

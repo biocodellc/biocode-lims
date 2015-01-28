@@ -25,8 +25,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 import java.util.prefs.Preferences;
 
@@ -209,11 +208,12 @@ public class PlateViewer extends JPanel {
                     Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
                     return;
                 }
-                PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
+                final PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
                 if(editor.editPlate(selfReference)) {
                     nameField.setValue(plateView.getPlate().getName());
                     Runnable backgroundTask = new Runnable() {
                         public void run() {
+                            editor.getExtractionFromBarcodes();
                             String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
                             if(error != null && error.length() > 0) {
                                 Dialogs.showMessageDialog(error);
