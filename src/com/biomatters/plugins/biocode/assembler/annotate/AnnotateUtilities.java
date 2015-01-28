@@ -354,48 +354,41 @@ public class AnnotateUtilities {
         Map<DocumentField, Object> displayableFieldsToCopy = null;
 
         for (int i = 0; i < contig.getNumberOfSequences(); i++) {
-            if (i == contig.getContigReferenceSequenceIndex()) {
+            if (i == contig.getContigReferenceSequenceIndex())
                 continue;
-            }
 
             AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
 
-            if (referencedDocument == null) {
+            if (referencedDocument == null)
                 return; //one sequence doesn't have a reference so bail on the whole thing
-            }
 
             if (displayableFieldsToCopy == null) {
                 displayableFieldsToCopy = new LinkedHashMap<DocumentField, Object>();
-                for (DocumentField field : referencedDocument.getDisplayableFields()) {
+                for (DocumentField field : referencedDocument.getDisplayableFields())
 //                    if (field.getCode().startsWith("biocode") || field.getCode().equalsIgnoreCase("tissueid")
 //                            || field.getCode().equals(DocumentField.TAXONOMY_FIELD.getCode())
 //                            || field.getCode().equals(DocumentField.ORGANISM_FIELD.getCode())
 //                            || field.getCode().equals(DocumentField.COMMON_NAME_FIELD.getCode())) {
 //                        displayableFieldsToCopy.put(field, referencedDocument.getFieldValue(field));
 //                    }
-                    if (!FIELDS_TO_NOT_COPY.contains(field.getCode())) {
+                    if (!FIELDS_TO_NOT_COPY.contains(field.getCode()))
                         displayableFieldsToCopy.put(field, referencedDocument.getFieldValue(field));
-                    }
-                }
             } else {
                 for (Map.Entry<DocumentField, Object> fieldToCopy : new LinkedHashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
                     Object value = referencedDocument.getFieldValue(fieldToCopy.getKey());
-                    if (value == null || !value.equals(fieldToCopy.getValue())) {
+                    if (value == null || !value.equals(fieldToCopy.getValue()))
                         displayableFieldsToCopy.remove(fieldToCopy.getKey());
-                    }
                 }
-            }
-
-            if (displayableFieldsToCopy == null || displayableFieldsToCopy.isEmpty()) {
-                return;
             }
         }
 
+        if (displayableFieldsToCopy == null || displayableFieldsToCopy.isEmpty())
+            return;
+
         for (Map.Entry<DocumentField, Object> fieldAndValue : displayableFieldsToCopy.entrySet()) {
             DocumentField field = fieldAndValue.getKey();
-            if (annotatedContig.getFieldValue(field) == null || codesOfOverridableFields.contains(field.getCode())) {
+            if (annotatedContig.getFieldValue(field) == null || codesOfOverridableFields.contains(field.getCode()))
                 annotatedContig.setFieldValue(field, fieldAndValue.getValue());
-            }
         }
 
         annotatedContig.save();
