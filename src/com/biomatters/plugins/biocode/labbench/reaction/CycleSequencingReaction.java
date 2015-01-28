@@ -169,6 +169,10 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         if(result != null) {
             sequencingResults.add(result);
         }
+
+        getChromats();
+        setCacheNumTraces(tracesStrongReference.size());
+        purgeChromats();
     }
 
     public void setCacheNumTraces(int cacheNumTraces) {
@@ -252,7 +256,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         }
 
         try {
-
             Map<Integer, List<MemoryFile>> traces = BiocodeService.getInstance().getActiveLIMSConnection().downloadTraces(Collections.singletonList(getId()), ProgressListener.EMPTY);
 
             List<Trace> result = new ArrayList<Trace>();
