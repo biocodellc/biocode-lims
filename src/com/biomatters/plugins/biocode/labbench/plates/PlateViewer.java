@@ -213,7 +213,6 @@ public class PlateViewer extends JPanel {
                     nameField.setValue(plateView.getPlate().getName());
                     Runnable backgroundTask = new Runnable() {
                         public void run() {
-                            editor.getExtractionFromBarcodes();
                             String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
                             if(error != null && error.length() > 0) {
                                 Dialogs.showMessageDialog(error);
