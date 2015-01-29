@@ -114,76 +114,90 @@ public class WorkflowDocument extends MuitiPartDocument {
     }
 
     public Object getFieldValue(String fieldCodeName) {
-        if (fieldCodeName.equals("locus"))
+        if (fieldCodeName.equals("locus")) {
             return workflow.getLocus();
-        else if (fieldCodeName.equals("numberOfParts"))
+        } else if (fieldCodeName.equals("numberOfParts")) {
             return getNumberOfParts();
-        else if (fieldCodeName.equals(PluginDocument.MODIFIED_DATE_FIELD))
+        } else if (fieldCodeName.equals(PluginDocument.MODIFIED_DATE_FIELD)) {
             return new Date(workflow.getLastModified().getTime());
-        else if (fieldCodeName.equals(LIMSConnection.WORKFLOW_BCID_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(LIMSConnection.WORKFLOW_BCID_FIELD.getCode())) {
             LIMSConnection limsConnection;
             try {
                 limsConnection = BiocodeService.getInstance().getActiveLIMSConnection();
 
-                if (!(limsConnection instanceof ServerLimsConnection))
+                if (!(limsConnection instanceof ServerLimsConnection)) {
                     return "";
+                }
 
                 String workflowBCIDRoot = ((ServerLimsConnection) limsConnection).getBCIDRoots().get("workflow");
 
-                if (workflowBCIDRoot == null || workflow == null)
+                if (workflowBCIDRoot == null || workflow == null) {
                     return "";
+                }
 
                 return workflowBCIDRoot + workflow.getId();
             } catch (DatabaseServiceException e) {
                 return "";
             }
-        }
-        else if (fieldCodeName.equals(LIMSConnection.SEQUENCE_PROGRESS.getCode())) {
+        } else if (fieldCodeName.equals(LIMSConnection.SEQUENCE_PROGRESS.getCode())) {
             List<SequencingResult> sequencingResults = new ArrayList<SequencingResult>();
-            for (Reaction reaction : getReactions())
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing))
-                    sequencingResults.addAll(((CycleSequencingReaction)reaction).getSequencingResults());
 
-            if(sequencingResults.isEmpty()) {
+            for (Reaction reaction : getReactions()) {
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
+                    sequencingResults.addAll(((CycleSequencingReaction) reaction).getSequencingResults());
+                }
+            }
+
+            if (sequencingResults.isEmpty()) {
                 return null;
             }
-            for (SequencingResult sequencingResult : sequencingResults)
-                if (sequencingResult.isPass())
+
+            for (SequencingResult sequencingResult : sequencingResults) {
+                if (sequencingResult.isPass()) {
                     return "passed";
+                }
+            }
+
             return "failed";
-        }
-        else if (fieldCodeName.equals(CycleSequencingReaction.NUM_TRACES_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_TRACES_FIELD.getCode())) {
             int numOfTraces = 0;
 
-            for (Reaction reaction : getReactions())
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing))
-                    numOfTraces += (Integer)((CycleSequencingReaction)reaction).getFieldValue(CycleSequencingReaction.NUM_TRACES_FIELD.getCode());
+            for (Reaction reaction : getReactions()) {
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
+                    numOfTraces += (Integer) ((CycleSequencingReaction) reaction).getFieldValue(CycleSequencingReaction.NUM_TRACES_FIELD.getCode());
+                }
+            }
 
             return numOfTraces;
-        }
-        else if (fieldCodeName.equals(CycleSequencingReaction.NUM_SEQS_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_SEQS_FIELD.getCode())) {
             Set<Integer> uniqueSequenceIDs = new HashSet<Integer>();
 
-            for (Reaction reaction : getReactions())
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing))
-                    for (SequencingResult sequencingResult : ((CycleSequencingReaction)reaction).getSequencingResults())
+            for (Reaction reaction : getReactions()) {
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
+                    for (SequencingResult sequencingResult : ((CycleSequencingReaction) reaction).getSequencingResults()) {
                         uniqueSequenceIDs.add(sequencingResult.getSequenceId());
+                    }
+                }
+            }
 
             return uniqueSequenceIDs.size();
-        }
-        else if (fieldCodeName.equals(CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getCode())) {
             Set<Integer> uniqueSequenceIDs = new HashSet<Integer>();
 
-            for (Reaction reaction : getReactions())
-                if (reaction.getType().equals(Reaction.Type.CycleSequencing))
-                    for (SequencingResult sequencingResult : ((CycleSequencingReaction)reaction).getSequencingResults())
-                        if (sequencingResult.isPass())
+            for (Reaction reaction : getReactions()) {
+                if (reaction.getType().equals(Reaction.Type.CycleSequencing)) {
+                    for (SequencingResult sequencingResult : ((CycleSequencingReaction) reaction).getSequencingResults()) {
+                        if (sequencingResult.isPass()) {
                             uniqueSequenceIDs.add(sequencingResult.getSequenceId());
+                        }
+                    }
+                }
+            }
 
             return uniqueSequenceIDs.size();
-        }
-        else if (getFimsSample() != null)
+        } else if (getFimsSample() != null) {
             return getFimsSample().getFimsAttributeValue(fieldCodeName);
+        }
 
         return null;
     }
