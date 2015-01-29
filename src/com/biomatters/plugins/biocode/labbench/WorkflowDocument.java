@@ -139,11 +139,17 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
         }
         else if (fieldCodeName.equals(LIMSConnection.SEQUENCE_PROGRESS.getCode())) {
+            List<SequencingResult> sequencingResults = new ArrayList<SequencingResult>();
             for (Reaction reaction : getReactions())
                 if (reaction.getType().equals(Reaction.Type.CycleSequencing))
-                    for (SequencingResult sequencingResult : ((CycleSequencingReaction)reaction).getSequencingResults())
-                        if (sequencingResult.isPass())
-                            return "passed";
+                    sequencingResults.addAll(((CycleSequencingReaction)reaction).getSequencingResults());
+
+            if(sequencingResults.isEmpty()) {
+                return null;
+            }
+            for (SequencingResult sequencingResult : sequencingResults)
+                if (sequencingResult.isPass())
+                    return "passed";
             return "failed";
         }
         else if (fieldCodeName.equals(CycleSequencingReaction.NUM_TRACES_FIELD.getCode())) {

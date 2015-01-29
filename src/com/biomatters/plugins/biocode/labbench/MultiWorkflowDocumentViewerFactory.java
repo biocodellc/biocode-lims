@@ -160,7 +160,7 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                         return recentCycleSequencingReverse != null ? new ObjectAndColor(recentCycleSequencingReverse.getFieldValue(ReactionOptions.RUN_STATUS), recentCycleSequencingReverse.getBackgroundColor()) : null;
                     case 12:
                         Object sequenceProgress = doc.getFieldValue(LIMSConnection.SEQUENCE_PROGRESS.getCode());
-                        return new ObjectAndColor(sequenceProgress, sequenceProgress.equals(LIMSConnection.SEQUENCE_PROGRESS.getEnumerationValues()[0]) ? Color.GREEN : Color.RED);
+                        return sequenceProgress != null ? new ObjectAndColor(sequenceProgress, sequenceProgress.equals(LIMSConnection.SEQUENCE_PROGRESS.getEnumerationValues()[0]) ? Color.GREEN.darker() : Color.RED.darker()) : null;
                     case 13:
                         return doc.getFieldValue(CycleSequencingReaction.NUM_TRACES_FIELD.getCode());
                     case 14:
