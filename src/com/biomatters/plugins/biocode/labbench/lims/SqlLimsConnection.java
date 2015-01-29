@@ -924,9 +924,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
 
     private void setInitialTraceCountsForWorkflowDocuments(Collection<WorkflowDocument> workflows) throws SQLException {
-        if(workflows.isEmpty()) {
-            return;
-        }
         Map<Integer, CycleSequencingReaction> sequencingReactions = new HashMap<Integer, CycleSequencingReaction>();
         for (WorkflowDocument workflowDocument : workflows) {
             for (Reaction reaction : workflowDocument.getReactions(Reaction.Type.CycleSequencing)) {
@@ -937,10 +934,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     private void setInitialTraceCountsForPlates(Map<Integer, Plate> plateMap) throws SQLException {
-        if (plateMap.isEmpty()) {
-            return;
-        }
-
         Map<Integer, CycleSequencingReaction> mapping = new HashMap<Integer, CycleSequencingReaction>();
         for (Plate plate : plateMap.values()) {
             for (Reaction reaction : plate.getReactions()) {
@@ -953,6 +946,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     }
 
     private void setInitialTraceCountsForCycleSequencingReactions(Map<Integer, CycleSequencingReaction> idToReactionMap) throws SQLException {
+        if(idToReactionMap.isEmpty()) {
+            return;
+        }
         List<Integer> cyclesequencingIds = new ArrayList<Integer>(idToReactionMap.keySet());
         StringBuilder countingQuery = new StringBuilder("SELECT cyclesequencing.id, COUNT(traces.id) as traceCount FROM " +
                 "cyclesequencing LEFT JOIN traces ON cyclesequencing.id = traces.reaction WHERE cyclesequencing.id IN ");
