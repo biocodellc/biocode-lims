@@ -617,17 +617,6 @@ public class PlateBulkEditor {
         return new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
     }
 
-    public static List<String> getDuplicateStrings(List<String> strings) {
-        Set<String> uniqueStrings = new HashSet<String>();
-        List<String> duplicateStrings = new ArrayList<String>();
-
-        for (String string : strings)
-            if (!uniqueStrings.add(string))
-                duplicateStrings.add(string);
-
-        return duplicateStrings;
-    }
-
     private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){
         if(ids.size() != 4) {
             throw new IllegalArgumentException("You must have 4 maps!");
@@ -1296,12 +1285,6 @@ public class PlateBulkEditor {
         }
 
         public void run() {
-            List<String> duplicateBarcodes = getDuplicateStrings(barcodes);
-            if (!duplicateBarcodes.isEmpty()) {
-                Dialogs.showMessageDialog("Duplicate extraction barcodes were inputted:\n\n" + StringUtilities.join(",", duplicateBarcodes), "Duplicate Extraction Barcodes Detected", null, Dialogs.DialogIcon.ERROR);
-                return;
-            }
-
             DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
             DocumentField parentExtractionField = new DocumentField("Parent Extraction", "", "parentExtraction", String.class, false, false);
             DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
