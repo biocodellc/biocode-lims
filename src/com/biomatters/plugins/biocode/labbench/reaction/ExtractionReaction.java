@@ -330,7 +330,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
     private static void checkForDuplicateBarcodesAmongReactions(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions) {
-        Map<String, List<String>> extractionBarcodeToReactionLocation = new HashMap<String, List<String>>();
+        SortedMap<String, List<String>> extractionBarcodeToReactionLocation = new TreeMap<String, List<String>>();
 
         for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
             List<ExtractionReaction> groupOfNewExtractionsWithSameBarcode = extractionBarcodeAndReactions.getValue();
@@ -350,10 +350,10 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         if (!extractionBarcodeToReactionLocation.isEmpty()) {
             List<String> duplicationEntries = new ArrayList<String>();
 
-            for (Map.Entry<String, List<String>> extractionBarcodeAndReactionIDs : extractionBarcodeToReactionLocation.entrySet()) {
+            for (Map.Entry<String, List<String>> extractionBarcodeAndReactionLocation : extractionBarcodeToReactionLocation.entrySet()) {
                 duplicationEntries.add(
-                        "Extraction barcode: " + extractionBarcodeAndReactionIDs.getKey() +
-                        "\nWell numbers: " + StringUtilities.join(", ", extractionBarcodeAndReactionIDs.getValue()) + ".\n"
+                        "Extraction barcode: " + extractionBarcodeAndReactionLocation.getKey() +
+                        "\nWell numbers: " + StringUtilities.join(", ", extractionBarcodeAndReactionLocation.getValue()) + ".\n"
                 );
             }
 

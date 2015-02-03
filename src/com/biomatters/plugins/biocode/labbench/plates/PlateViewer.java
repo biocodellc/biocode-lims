@@ -431,7 +431,9 @@ public class PlateViewer extends JPanel {
 
     private static void checkForExistingExtractionsWithBarcodes(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions) throws DatabaseServiceException {
         List<ExtractionReaction> extractionsThatExist = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(new ArrayList<String>(extractionBarcodeToReactions.keySet()));
-        Map<String, ExtractionReaction> barcodeOfExtractionThatExistsToBarcodeThatExists = new HashMap<String, ExtractionReaction>();
+        SortedMap<String, ExtractionReaction> barcodeOfExtractionThatExistsToBarcodeThatExists = new TreeMap<String, ExtractionReaction>();
+
+        List<String> extractionsThatCouldNotBeOverriden = new ArrayList<String>();
 
         for (ExtractionReaction extraction : extractionsThatExist) {
             String extractionBarcode = extraction.getExtractionBarcode();
@@ -441,14 +443,24 @@ public class PlateViewer extends JPanel {
         }
 
         if (!barcodeOfExtractionThatExistsToBarcodeThatExists.isEmpty()) {
-            if (Dialogs.showYesNoDialog("Extractions associated with the following barcodes already exist: " + StringUtilities.join(", ", barcodeOfExtractionThatExistsToBarcodeThatExists.keySet()) + ".<br><br> Move existing reactions?", "Existing Extractions With Barcodes Detected", null, Dialogs.DialogIcon.QUESTION)) {
+            if (Dialogs.showYesNoDialog(
+                    "Extraction that are associated with the following extraction barcodes already exist: " + StringUtilities.join(", ", barcodeOfExtractionThatExistsToBarcodeThatExists.keySet()) +
+                            ".<br><br> Move the existing extractions to the plate and override the corresponding new extractions?",
+                    "Existing Extractions With Barcodes Detected",
+                    null,
+                    Dialogs.DialogIcon.QUESTION)) {
                 for (Map.Entry<String, ExtractionReaction> barcodeOfExtractionThatExistsAndBarcodeThatExists : barcodeOfExtractionThatExistsToBarcodeThatExists.entrySet()) {
                     String barcode = barcodeOfExtractionThatExistsAndBarcodeThatExists.getKey();
                     ExtractionReaction existingExtractionWithBarcode = barcodeOfExtractionThatExistsAndBarcodeThatExists.getValue();
 
                     for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
                         if (extractionBarcodeAndReactions.getKey().equals(barcode)) {
-                            for (ExtractionReaction newExtractionWithBarcode : extractionBarcodeAndReactions.getValue()) {
+                            List<ExtractionReaction> extractionReactionsWithBarcode = extractionBarcodeAndReactions.getValue();
+                            if (extractionReactionsWithBarcode.isEmpty()) {
+                                continue;
+                            } else if (extractionReactionsWithBarcode.size() == 1) {
+                                ExtractionReaction newExtractionWithBarcode = extractionReactionsWithBarcode.get(0);
+
                                 ReactionUtilities.copyReaction(existingExtractionWithBarcode, newExtractionWithBarcode);
                                 newExtractionWithBarcode.setPlateId(newExtractionWithBarcode.getPlateId());
                                 newExtractionWithBarcode.setPosition(newExtractionWithBarcode.getPosition());
@@ -456,8 +468,14 @@ public class PlateViewer extends JPanel {
                                 newExtractionWithBarcode.setExtractionId(existingExtractionWithBarcode.getExtractionId());
                                 newExtractionWithBarcode.setThermocycle(newExtractionWithBarcode.getThermocycle());
                                 newExtractionWithBarcode.setLocationString(newExtractionWithBarcode.getLocationString());
+                            } else {
+                                List<String> locationOfReactionsThatCouldNotBeMoved = new ArrayList<String>();
+                                for (ExtractionReaction extractionReaction : extractionReactionsWithBarcode) {
+                                    extractionReaction.setHasError(true);
+                                    locationOfReactionsThatCouldNotBeMoved.add(extractionReaction.getLocationString());
+                                }
+                                extractionsThatCouldNotBeOverriden.add("Extraction barcode: " + barcode + ".\n" + "Well number: " + StringUtilities.join(", ", locationOfReactionsThatCouldNotBeMoved) + ".");
                             }
-                            break;
                         }
                     }
                 }
@@ -471,6 +489,15 @@ public class PlateViewer extends JPanel {
                     }
                 }
             }
+        }
+
+        if (!extractionsThatCouldNotBeOverriden.isEmpty()) {
+            Dialogs.showMessageDialog(
+                    "Cannot override new reactions that are associated with the same existing barcode with one another:<br><br>" + StringUtilities.join("\n\n", extractionsThatCouldNotBeOverriden),
+                    "Multiple Extractions Associated With Same Existing Barcode",
+                    null,
+                    Dialogs.DialogIcon.WARNING
+            );
         }
     }
 
