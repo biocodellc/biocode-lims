@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleot
 import com.biomatters.geneious.publicapi.implementations.sequence.DefaultNucleotideSequence;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.GuiUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
@@ -1583,6 +1584,17 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 }
             }
         }
+
+        List<String> locationOfReactionsWithErrors = new ArrayList<String>();
+        for (Reaction reaction : plate.getReactions()) {
+            if (reaction.hasError()) {
+                locationOfReactionsWithErrors.add(reaction.getLocationString());
+            }
+        }
+        if (!locationOfReactionsWithErrors.isEmpty()) {
+            throw new BadDataException("The reactions in the following well locations are in an error state: " + StringUtilities.join(", ", locationOfReactionsWithErrors) + ".");
+        }
+
         getActiveLIMSConnection().savePlates(Collections.singletonList(plate), progress);
     }
 

@@ -73,26 +73,26 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             e.printStackTrace();
             //ignore...
         }
-        if(plateName != null) {
+        if (plateName != null) {
             setPlateName(plateName);
             setLocationString(Plate.getWell(getPosition(), Plate.getSizeEnum(r.getInt("plate.size"))).toString());
         }
 
         byte[] imageBytes = r.getBytes("extraction.gelimage");
-        if(imageBytes != null) {
+        if (imageBytes != null) {
             setGelImage(new GelImage(imageBytes, getLocationString()));
         }
         options.setValue("control", r.getString("extraction.control"));
-        
-        
-        if(workflowName != null) {
+
+
+        if (workflowName != null) {
             options.setValue("workflowId", workflowName);
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
             options.setValue("workflowId", getWorkflow().getName());
         }
 
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
-        if(fimsConnection != null) {
+        if (fimsConnection != null) {
             setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
         }
     }
@@ -165,7 +165,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Color.white;
     }
 
-
     public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent, boolean showDialogs) {
         if(!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
@@ -174,17 +173,17 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         Set<String> samplesToGet = new HashSet<String>();
 
-        Map<String, List<Reaction>> extractionBarcodeToReactions = new HashMap<String, List<Reaction>>();
+        Map<String, List<ExtractionReaction>> extractionBarcodeToReactions = new HashMap<String, List<ExtractionReaction>>();
 
         for(Reaction reaction : reactions) {
             String extractionBarcode = reaction.getOptions().getValueAsString(BiocodeUtilities.EXTRACTION_BARCODE_FIELD.getCode());
             if (extractionBarcode != null && !extractionBarcode.isEmpty()) {
-                List<Reaction> reactionsAssociatedWithExtractionBarcode = extractionBarcodeToReactions.get(extractionBarcode);
+                List<ExtractionReaction> reactionsAssociatedWithExtractionBarcode = extractionBarcodeToReactions.get(extractionBarcode);
                 if (reactionsAssociatedWithExtractionBarcode == null) {
-                    reactionsAssociatedWithExtractionBarcode = new ArrayList<Reaction>();
+                    reactionsAssociatedWithExtractionBarcode = new ArrayList<ExtractionReaction>();
                     extractionBarcodeToReactions.put(extractionBarcode, reactionsAssociatedWithExtractionBarcode);
                 }
-                reactionsAssociatedWithExtractionBarcode.add(reaction);
+                reactionsAssociatedWithExtractionBarcode.add((ExtractionReaction)reaction);
             }
 
             ReactionOptions option = reaction.getOptions();
@@ -196,40 +195,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             samplesToGet.add(tissueId);
         }
 
-        Map<String, List<String>> extractionBarcodeToReactionLocation = new HashMap<String, List<String>>();
-
-        for (Map.Entry<String, List<Reaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
-            List<Reaction> reactionsAssociatedWithCurrentExtractionBarcode = extractionBarcodeAndReactions.getValue();
-
-            if (reactionsAssociatedWithCurrentExtractionBarcode.size() > 1) {
-                List<String> idsOfReactionsAssociatedWithCurrentBarcode = new ArrayList<String>();
-
-                extractionBarcodeToReactionLocation.put(extractionBarcodeAndReactions.getKey(), idsOfReactionsAssociatedWithCurrentBarcode);
-
-                for (Reaction reaction : reactionsAssociatedWithCurrentExtractionBarcode) {
-                    reaction.setHasError(true);
-                    idsOfReactionsAssociatedWithCurrentBarcode.add(reaction.getLocationString());
-                }
-            }
-        }
-
-        if (!extractionBarcodeToReactionLocation.isEmpty()) {
-            List<String> duplicationEntries = new ArrayList<String>();
-
-            for (Map.Entry<String, List<String>> extractionBarcodeAndReactionIDs : extractionBarcodeToReactionLocation.entrySet()) {
-                duplicationEntries.add(
-                        "Extraction barcode: " + extractionBarcodeAndReactionIDs.getKey() +
-                        "\nWell numbers: " + StringUtilities.join(", ", extractionBarcodeAndReactionIDs.getValue()) + ".\n"
-                );
-            }
-
-            Dialogs.showMessageDialog(
-                    "Extraction barcodes and the well number of reactions that are associated with them:\n\n" + StringUtilities.join("\n", duplicationEntries),
-                    "Reactions that are associated with the same extraction barcode were detected",
-                    null,
-                    Dialogs.DialogIcon.WARNING
-            );
-        }
+        checkForDuplicateBarcodesAmongReactions(extractionBarcodeToReactions);
 
         if(samplesToGet.size() == 0) {
             return null;
@@ -343,7 +309,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
         }
 
-
         Set<String> namesSet = new HashSet<String>();
         for(Reaction r : reactions) {
             if(!r.isEmpty()) {
@@ -358,10 +323,46 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
         }
 
-
         if(error.length() > 0) {
             return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
         }
         return null;
+    }
+
+    private static void checkForDuplicateBarcodesAmongReactions(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions) {
+        Map<String, List<String>> extractionBarcodeToReactionLocation = new HashMap<String, List<String>>();
+
+        for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
+            List<ExtractionReaction> groupOfNewExtractionsWithSameBarcode = extractionBarcodeAndReactions.getValue();
+
+            if (groupOfNewExtractionsWithSameBarcode.size() > 1) {
+                List<String> idsOfReactionsInGroup = new ArrayList<String>();
+
+                extractionBarcodeToReactionLocation.put(extractionBarcodeAndReactions.getKey(), idsOfReactionsInGroup);
+
+                for (Reaction reaction : groupOfNewExtractionsWithSameBarcode) {
+                    reaction.setHasError(true);
+                    idsOfReactionsInGroup.add(reaction.getLocationString());
+                }
+            }
+        }
+
+        if (!extractionBarcodeToReactionLocation.isEmpty()) {
+            List<String> duplicationEntries = new ArrayList<String>();
+
+            for (Map.Entry<String, List<String>> extractionBarcodeAndReactionIDs : extractionBarcodeToReactionLocation.entrySet()) {
+                duplicationEntries.add(
+                        "Extraction barcode: " + extractionBarcodeAndReactionIDs.getKey() +
+                        "\nWell numbers: " + StringUtilities.join(", ", extractionBarcodeAndReactionIDs.getValue()) + ".\n"
+                );
+            }
+
+            Dialogs.showMessageDialog(
+                    "Reactions that are associated with the same extraction barcode were detected:\n\n" + StringUtilities.join("\n", duplicationEntries),
+                    "Reactions With Identical Barcodes Detected",
+                    null,
+                    Dialogs.DialogIcon.WARNING
+            );
+        }
     }
 }

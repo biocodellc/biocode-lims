@@ -13,10 +13,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import com.biomatters.plugins.biocode.labbench.reaction.Thermocycle;
-import com.biomatters.plugins.biocode.labbench.reaction.ThermocycleEditor;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -197,25 +194,49 @@ public class PlateViewer extends JPanel {
         };
         toolbar.addAction(gelAction);
 
-
-
         //toolbar.addSeparator(new Dimension(1, 24));
         toolbar.addAction(new GeneiousAction.Divider());
 
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit", "Paste data into the wells from a spreadsheet", BiocodePlugin.getIcons("bulkEdit_16.png")) {
             public void actionPerformed(ActionEvent e) {
-                if(!BiocodeService.getInstance().isLoggedIn()) {
+                if (!BiocodeService.getInstance().isLoggedIn()) {
                     Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
                     return;
                 }
                 final PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
-                if(editor.editPlate(selfReference)) {
+                if (editor.editPlate(selfReference)) {
                     nameField.setValue(plateView.getPlate().getName());
                     Runnable backgroundTask = new Runnable() {
                         public void run() {
-                            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
-                            if(error != null && error.length() > 0) {
-                                Dialogs.showMessageDialog(error);
+                            StringBuilder errorBuilder = new StringBuilder();
+                            String reactionCheckResult = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
+
+                            if (reactionCheckResult != null) {
+                                errorBuilder.append(reactionCheckResult);
+                            }
+
+                            if (plateView.getPlate().getReactionType().equals(Reaction.Type.Extraction)) {
+                                Map<String, List<ExtractionReaction>> barcodeToExtractionReactionsAssociatedWithBarcode = new HashMap<String, List<ExtractionReaction>>();
+
+                                for (Reaction reaction : plateView.getPlate().getReactions()) {
+                                    String extractionBarcode = reaction.getOptions().getValueAsString(BiocodeUtilities.EXTRACTION_BARCODE_FIELD.getCode());
+                                    List<ExtractionReaction> extractionReactionsAssociatedWithBarcode = barcodeToExtractionReactionsAssociatedWithBarcode.get(extractionBarcode);
+                                    if (extractionReactionsAssociatedWithBarcode == null) {
+                                        extractionReactionsAssociatedWithBarcode = new ArrayList<ExtractionReaction>();
+                                        barcodeToExtractionReactionsAssociatedWithBarcode.put(extractionBarcode, extractionReactionsAssociatedWithBarcode);
+                                    }
+                                    extractionReactionsAssociatedWithBarcode.add((ExtractionReaction)reaction);
+                                }
+
+                                try {
+                                    checkForExistingExtractionsWithBarcodes(barcodeToExtractionReactionsAssociatedWithBarcode);
+                                } catch (DatabaseServiceException e) {
+                                    errorBuilder.append("An error was encountered while trying to connect to the LIMS: " + e.getMessage());
+                                }
+                            }
+
+                            if (errorBuilder.length() > 0) {
+                                Dialogs.showMessageDialog(errorBuilder.toString());
                             }
                         }
                     };
@@ -408,7 +429,50 @@ public class PlateViewer extends JPanel {
 
     }
 
+    private static void checkForExistingExtractionsWithBarcodes(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions) throws DatabaseServiceException {
+        List<ExtractionReaction> extractionsThatExist = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(new ArrayList<String>(extractionBarcodeToReactions.keySet()));
+        Map<String, ExtractionReaction> barcodeOfExtractionThatExistsToBarcodeThatExists = new HashMap<String, ExtractionReaction>();
 
+        for (ExtractionReaction extraction : extractionsThatExist) {
+            String extractionBarcode = extraction.getExtractionBarcode();
+            if (extractionBarcode != null && !extractionBarcode.isEmpty()) {
+                barcodeOfExtractionThatExistsToBarcodeThatExists.put(extraction.getExtractionBarcode(), extraction);
+            }
+        }
+
+        if (!barcodeOfExtractionThatExistsToBarcodeThatExists.isEmpty()) {
+            if (Dialogs.showYesNoDialog("Extractions associated with the following barcodes already exist: " + StringUtilities.join(", ", barcodeOfExtractionThatExistsToBarcodeThatExists.keySet()) + ".<br><br> Move existing reactions?", "Existing Extractions With Barcodes Detected", null, Dialogs.DialogIcon.QUESTION)) {
+                for (Map.Entry<String, ExtractionReaction> barcodeOfExtractionThatExistsAndBarcodeThatExists : barcodeOfExtractionThatExistsToBarcodeThatExists.entrySet()) {
+                    String barcode = barcodeOfExtractionThatExistsAndBarcodeThatExists.getKey();
+                    ExtractionReaction existingExtractionWithBarcode = barcodeOfExtractionThatExistsAndBarcodeThatExists.getValue();
+
+                    for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
+                        if (extractionBarcodeAndReactions.getKey().equals(barcode)) {
+                            for (ExtractionReaction newExtractionWithBarcode : extractionBarcodeAndReactions.getValue()) {
+                                ReactionUtilities.copyReaction(existingExtractionWithBarcode, newExtractionWithBarcode);
+                                newExtractionWithBarcode.setPlateId(newExtractionWithBarcode.getPlateId());
+                                newExtractionWithBarcode.setPosition(newExtractionWithBarcode.getPosition());
+                                newExtractionWithBarcode.setId(existingExtractionWithBarcode.getId());
+                                newExtractionWithBarcode.setExtractionId(existingExtractionWithBarcode.getExtractionId());
+                                newExtractionWithBarcode.setThermocycle(newExtractionWithBarcode.getThermocycle());
+                                newExtractionWithBarcode.setLocationString(newExtractionWithBarcode.getLocationString());
+                            }
+                            break;
+                        }
+                    }
+                }
+            } else {
+                Set<String> barcodesThatExist = barcodeOfExtractionThatExistsToBarcodeThatExists.keySet();
+                for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
+                    if (barcodesThatExist.contains(extractionBarcodeAndReactions.getKey())) {
+                        for (ExtractionReaction extractionReaction : extractionBarcodeAndReactions.getValue()) {
+                            extractionReaction.setHasError(true);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     public static void main(String[] args) {
         TestGeneious.initialize();

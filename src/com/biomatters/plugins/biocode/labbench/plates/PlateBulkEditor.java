@@ -81,7 +81,6 @@ public class PlateBulkEditor {
         final JPanel platePanel = new JPanel();
         platePanel.setLayout(new BoxLayout(platePanel, BoxLayout.X_AXIS));
         final List<DocumentFieldEditor> editors = new ArrayList<DocumentFieldEditor>();
-        final AtomicBoolean retrievedExtractionsForExtractionPlate = new AtomicBoolean(false);
 
         //link the scrolling of all editors together
         final AtomicBoolean isAdjusting = new AtomicBoolean(false);
@@ -279,7 +278,7 @@ public class PlateBulkEditor {
                             barcodeEditor.textViewFromValues();
                         }
                         catch(IOException ex) {
-                            Dialogs.showMessageDialog("Could not read the input file! "+ex.getMessage());
+                            Dialogs.showMessageDialog("Could not read the input file! " + ex.getMessage());
                         }
                     }
                 }
@@ -288,14 +287,25 @@ public class PlateBulkEditor {
 
             getExtractionsFromBarcodes = new GeneiousAction("Fetch extractions from barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
                 public void actionPerformed(ActionEvent e) {
+                    DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+                    final DocumentFieldEditor barcodeEditor = getEditorForField(editors, extractionBarcodeField);
+                    barcodeEditor.valuesFromTextView();
+                    final List<String> barcodes = new ArrayList<String>();
+                    for(int i=0; i < plate.getRows(); i++) {
+                        for(int j=0; j < plate.getCols(); j++) {
+                            final Object value = barcodeEditor.getValue(i, j);
+                            if(value != null) {
+                                barcodes.add(value.toString());
+                            }
+                        }
+                    }
+
                     BiocodeService.block(
                             "Fetching Extractions from the database",
                             getEditorForField(editors, new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false)),
-                            getExtractionFetcherRunnable(editors),
+                            new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor),
                             null
                     );
-
-                    retrievedExtractionsForExtractionPlate.set(true);
                 }
             };
             toolsActions.add(getExtractionsFromBarcodes);
@@ -516,10 +526,6 @@ public class PlateBulkEditor {
             return false;
         }
 
-        if (!retrievedExtractionsForExtractionPlate.get()) {
-            getExtractionFetcherRunnable(editors).run();
-        }
-
         for(DocumentFieldEditor editor : editors) {
             editor.valuesFromTextView();
         }
@@ -598,23 +604,6 @@ public class PlateBulkEditor {
             Dialogs.showMessageDialog("The following workflow Ids were invalid and were not set:\n"+badWorkflows.toString());
         }
         return true;
-    }
-
-    private Runnable getExtractionFetcherRunnable(List<DocumentFieldEditor> editors) {
-        DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-        final DocumentFieldEditor barcodeEditor = getEditorForField(editors, extractionBarcodeField);
-        barcodeEditor.valuesFromTextView();
-        final List<String> barcodes = new ArrayList<String>();
-        for(int i=0; i < plate.getRows(); i++) {
-            for(int j=0; j < plate.getCols(); j++) {
-                final Object value = barcodeEditor.getValue(i, j);
-                if(value != null) {
-                    barcodes.add(value.toString());
-                }
-            }
-        }
-
-        return new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
     }
 
     private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){
