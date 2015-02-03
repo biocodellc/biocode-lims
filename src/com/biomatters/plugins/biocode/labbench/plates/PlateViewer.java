@@ -205,11 +205,11 @@ public class PlateViewer extends JPanel {
                 }
                 final PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
                 if (editor.editPlate(selfReference)) {
-                    nameField.setValue(plateView.getPlate().getName());
+                    nameField.setValue(getPlate().getName());
                     Runnable backgroundTask = new Runnable() {
                         public void run() {
                             StringBuilder errorBuilder = new StringBuilder();
-                            String reactionCheckResult = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
+                            String reactionCheckResult = getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
 
                             if (reactionCheckResult != null) {
                                 errorBuilder.append(reactionCheckResult);
@@ -229,7 +229,7 @@ public class PlateViewer extends JPanel {
                                 }
 
                                 try {
-                                    checkForExistingExtractionsWithBarcodes(barcodeToExtractionReactionsAssociatedWithBarcode);
+                                    checkForExistingExtractionsWithBarcodes(barcodeToExtractionReactionsAssociatedWithBarcode, nameField.getValue());
                                 } catch (DatabaseServiceException e) {
                                     errorBuilder.append("An error was encountered while trying to connect to the LIMS: " + e.getMessage());
                                 }
@@ -429,15 +429,14 @@ public class PlateViewer extends JPanel {
 
     }
 
-    private static void checkForExistingExtractionsWithBarcodes(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions) throws DatabaseServiceException {
+    private static void checkForExistingExtractionsWithBarcodes(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions, String plateName) throws DatabaseServiceException {
         List<ExtractionReaction> extractionsThatExist = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(new ArrayList<String>(extractionBarcodeToReactions.keySet()));
         SortedMap<String, ExtractionReaction> barcodeOfExtractionThatExistsToBarcodeThatExists = new TreeMap<String, ExtractionReaction>();
-
         List<String> extractionsThatCouldNotBeOverriden = new ArrayList<String>();
 
         for (ExtractionReaction extraction : extractionsThatExist) {
             String extractionBarcode = extraction.getExtractionBarcode();
-            if (extractionBarcode != null && !extractionBarcode.isEmpty()) {
+            if (extractionBarcode != null && !extractionBarcode.isEmpty() && !extraction.getPlateName().equals(plateName)) {
                 barcodeOfExtractionThatExistsToBarcodeThatExists.put(extraction.getExtractionBarcode(), extraction);
             }
         }
@@ -455,11 +454,11 @@ public class PlateViewer extends JPanel {
 
                     for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
                         if (extractionBarcodeAndReactions.getKey().equals(barcode)) {
-                            List<ExtractionReaction> extractionReactionsWithBarcode = extractionBarcodeAndReactions.getValue();
-                            if (extractionReactionsWithBarcode.isEmpty()) {
+                            List<ExtractionReaction> newExtractionReactionsWithBarcode = extractionBarcodeAndReactions.getValue();
+                            if (newExtractionReactionsWithBarcode.isEmpty()) {
                                 continue;
-                            } else if (extractionReactionsWithBarcode.size() == 1) {
-                                ExtractionReaction newExtractionWithBarcode = extractionReactionsWithBarcode.get(0);
+                            } else if (newExtractionReactionsWithBarcode.size() == 1) {
+                                ExtractionReaction newExtractionWithBarcode = newExtractionReactionsWithBarcode.get(0);
 
                                 ReactionUtilities.copyReaction(existingExtractionWithBarcode, newExtractionWithBarcode);
                                 newExtractionWithBarcode.setPlateId(newExtractionWithBarcode.getPlateId());
@@ -470,7 +469,7 @@ public class PlateViewer extends JPanel {
                                 newExtractionWithBarcode.setLocationString(newExtractionWithBarcode.getLocationString());
                             } else {
                                 List<String> locationOfReactionsThatCouldNotBeMoved = new ArrayList<String>();
-                                for (ExtractionReaction extractionReaction : extractionReactionsWithBarcode) {
+                                for (ExtractionReaction extractionReaction : newExtractionReactionsWithBarcode) {
                                     extractionReaction.setHasError(true);
                                     locationOfReactionsThatCouldNotBeMoved.add(extractionReaction.getLocationString());
                                 }
