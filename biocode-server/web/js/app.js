@@ -119,3 +119,7 @@ biocodeApp.config(['$routeProvider', 'ngModalDefaultsProvider',
                 redirectTo: '/home'
             });
     }]);
+
+biocodeApp.config(['$httpProvider', function ($httpProvider) {
+    $httpProvider.defaults.headers.common = { 'ignore_version_check' : 'true'};
+}]);

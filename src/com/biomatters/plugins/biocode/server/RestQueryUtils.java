@@ -1,6 +1,9 @@
 package com.biomatters.plugins.biocode.server;
 
-import com.biomatters.geneious.publicapi.databaseservice.*;
+import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm;
+import com.biomatters.geneious.publicapi.databaseservice.BasicSearchQuery;
+import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
+import com.biomatters.geneious.publicapi.databaseservice.QueryField;
 import com.biomatters.geneious.publicapi.documents.Condition;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
@@ -8,6 +11,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.rest.client.ForbiddenExceptionClientFilter;
+import com.biomatters.plugins.biocode.labbench.rest.client.VersionHeaderAddingFilter;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.glassfish.jersey.filter.LoggingFilter;
@@ -331,6 +335,7 @@ public class RestQueryUtils {
         }).withConfig(new ClientConfig());
         return clientBuilder.build().
                 register(ForbiddenExceptionClientFilter.class).
+                register(VersionHeaderAddingFilter.class).
                 register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false)).
                 register(authFeature).
                 register(XMLSerializableMessageReader.class).
