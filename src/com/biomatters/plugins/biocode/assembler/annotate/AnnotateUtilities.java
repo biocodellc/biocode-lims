@@ -13,6 +13,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.WorkflowBuilder;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
@@ -216,7 +217,7 @@ public class AnnotateUtilities {
     /**
      * Code for Sequencing Primer note type defined in GenBank Submission plugin
      */
-    private static final String SEQ_PRIMER_NOTE_TYPE = "sequencingPrimer";
+    private static final String PRIMER_NOTE_TYPE = "sequencingPrimer";
 
     /**
      * Copies matching document notes from sequences referenced by an assembly to the assembly itself.  Only copies the
@@ -261,7 +262,7 @@ public class AnnotateUtilities {
         }
 
         //noinspection StatementWithEmptyBody
-        if(documentNotesToCopy.get(SEQ_PRIMER_NOTE_TYPE) == null) {
+        if(documentNotesToCopy.get(PRIMER_NOTE_TYPE) == null) {
             DocumentNote sequencingPrimerNote = hackToGetSequencingPrimerNoteToCopy(contig);
             if(sequencingPrimerNote != null) {
                 documentNotesToCopy.put(sequencingPrimerNote.getNoteTypeCode(), sequencingPrimerNote);
@@ -283,7 +284,7 @@ public class AnnotateUtilities {
     }
 
     private static DocumentNote hackToGetSequencingPrimerNoteToCopy(SequenceAlignmentDocument contig) {
-        DocumentNoteType sequencingPrimerNoteType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
+        DocumentNoteType sequencingPrimerNoteType = DocumentNoteUtilities.getNoteType(PRIMER_NOTE_TYPE);
         if(sequencingPrimerNoteType == null) {
             return null;  // GenBank Submission plugin not initialized
         }
@@ -294,7 +295,7 @@ public class AnnotateUtilities {
                 continue;
             }
 
-            DocumentNote noteOnRef = refDoc.getDocumentNotes(false).getNote(SEQ_PRIMER_NOTE_TYPE);
+            DocumentNote noteOnRef = refDoc.getDocumentNotes(false).getNote(PRIMER_NOTE_TYPE);
             if(noteOnRef == null) {
                 continue;
             }
@@ -496,40 +497,66 @@ public class AnnotateUtilities {
 
         //annotate the primers...
         AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
-        DocumentNote sequencingPrimerNote = notes.getNote(SEQ_PRIMER_NOTE_TYPE);
-        if (sequencingPrimerNote == null) {
-            DocumentNoteType sequencingPrimerType = DocumentNoteUtilities.getNoteType(SEQ_PRIMER_NOTE_TYPE);
-            if (sequencingPrimerType != null)
-                sequencingPrimerNote = sequencingPrimerType.createDocumentNote();
+        DocumentNote primerNote = notes.getNote(PRIMER_NOTE_TYPE);
+        if (primerNote == null) {
+            DocumentNoteType primerNoteType = DocumentNoteUtilities.getNoteType(PRIMER_NOTE_TYPE);
+            if (primerNoteType != null)
+                primerNote = primerNoteType.createDocumentNote();
         }
 
         boolean savedDocument = false;
-        if (sequencingPrimerNote != null && fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
+        if (primerNote != null && fimsData.workflow != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
+            Reaction forwardSequencingReaction = fimsData.workflow.getMostRecentSequencingReaction(true);
+            Reaction reverseSequencingReaction = fimsData.workflow.getMostRecentSequencingReaction(false);
             Boolean directionForTrace = getDirectionForTrace(annotatedDocument);
 
-            AnnotatedPluginDocument forwardPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_OPTION_ID);
-            AnnotatedPluginDocument reversePrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
+            AnnotatedPluginDocument forwardPCRPrimer = null;
+            AnnotatedPluginDocument reversePCRPrimer = null;
+            AnnotatedPluginDocument forwardSequencingPrimer = null;
+            AnnotatedPluginDocument reverseSequencingPrimer = null;
 
-            if (forwardPrimer != null && (directionForTrace == null || directionForTrace)) {
-                sequencingPrimerNote.setFieldValue("fwd_primer_name", forwardPrimer.getName());
-                OligoSequenceDocument sequence = (OligoSequenceDocument) forwardPrimer.getDocument();
-                sequencingPrimerNote.setFieldValue("fwd_primer_seq", sequence.getBindingSequence().toString());
+            if (pcrReaction != null) {
+                forwardPCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_OPTION_ID);
+                reversePCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
             }
 
-            if (reversePrimer != null && (directionForTrace == null || !directionForTrace)) {
-                sequencingPrimerNote.setFieldValue("rev_primer_name", reversePrimer.getName());
-                OligoSequenceDocument sequence = (OligoSequenceDocument) reversePrimer.getDocument();
-                sequencingPrimerNote.setFieldValue("rev_primer_seq", sequence.getBindingSequence().toString());
+            if (forwardSequencingReaction != null) {
+                forwardSequencingPrimer = getPrimer(forwardSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
             }
 
-            notes.setNote(sequencingPrimerNote);
+            if (reverseSequencingReaction != null) {
+                reverseSequencingPrimer = getPrimer(reverseSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
+            }
+
+            if (forwardPCRPrimer != null && (directionForTrace == null || directionForTrace)) {
+                primerNote.setFieldValue("fwd_primer_name", forwardPCRPrimer.getName());
+                primerNote.setFieldValue("fwd_primer_seq", ((OligoSequenceDocument) forwardPCRPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            if (reversePCRPrimer != null && (directionForTrace == null || !directionForTrace)) {
+                primerNote.setFieldValue("rev_primer_name", reversePCRPrimer.getName());
+                primerNote.setFieldValue("rev_primer_seq", ((OligoSequenceDocument)reversePCRPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            if (forwardSequencingPrimer != null) {
+                primerNote.setFieldValue("seq_fwd_primer_name", forwardSequencingPrimer.getName());
+                primerNote.setFieldValue("seq_fwd_primer_seq", ((OligoSequenceDocument)forwardSequencingPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            if (reverseSequencingPrimer != null) {
+                primerNote.setFieldValue("seq_rev_primer_name", reverseSequencingPrimer.getName());
+                primerNote.setFieldValue("seq_rev_primer_seq", ((OligoSequenceDocument)reverseSequencingPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            notes.setNote(primerNote);
             notes.saveNotes();
             savedDocument = true;
         }
 
-        if (!savedDocument)
+        if (!savedDocument) {
             annotatedDocument.save(updateModifiedDate);
+        }
 
         return fieldsAnnotated;
     }
@@ -557,9 +584,9 @@ public class AnnotateUtilities {
         return directionForTrace;
     }
 
-    private static AnnotatedPluginDocument getPrimer(Reaction pcrReaction, String optionKey) {
+    private static AnnotatedPluginDocument getPrimer(Reaction pcrOrSequencingReaction, String optionKey) {
         AnnotatedPluginDocument forwardPrimer = null;
-        DocumentSelectionOption option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(optionKey);
+        DocumentSelectionOption option = (DocumentSelectionOption)pcrOrSequencingReaction.getOptions().getOption(optionKey);
         List<AnnotatedPluginDocument> value = option.getDocuments();
         if (value.size() > 0) {
             forwardPrimer = value.get(0);
