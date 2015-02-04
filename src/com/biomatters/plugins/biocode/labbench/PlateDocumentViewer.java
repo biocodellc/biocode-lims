@@ -102,6 +102,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
+                                plateView.checkReactionsForErrors(false);
                                 BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
                                     for(Reaction r : plateView.getPlate().getReactions()) {
@@ -508,13 +509,10 @@ public class PlateDocumentViewer extends DocumentViewer{
                 return;
             }
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
-            editor.editPlate(container);
-            saveAction.setEnabled(true);
-            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), container, true);
-            if(error != null && error.length() > 0) {
-                Dialogs.showMessageDialog(error, "Invalid Reactions", container, Dialogs.DialogIcon.INFORMATION);
+            if (editor.editPlate(container)) {
+                saveAction.setEnabled(true);
+                updatePanel();
             }
-            updatePanel();
         }
     };
 

@@ -28,6 +28,7 @@ import java.sql.*;
  */
 @SuppressWarnings({"ConstantConditions"})
 public class ExtractionReaction extends Reaction<ExtractionReaction>{
+    private boolean justMoved = false;
 
     public ExtractionReaction(){}
 
@@ -267,13 +268,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                         for (ExtractionReaction reaction : reactions) {
                             for (ExtractionReaction r2 : extractionsThatExist) {
                                 if (reaction.getExtractionId().equals(r2.getExtractionId())) {
-                                    ReactionUtilities.copyReaction(r2, reaction);
-                                    reaction.setPlateId(reaction.getPlateId());
-                                    reaction.setPosition(reaction.getPosition());
-                                    reaction.setId(r2.getId());
-                                    reaction.setExtractionId(r2.getExtractionId());
-                                    reaction.setThermocycle(reaction.getThermocycle());
-                                    reaction.setLocationString(reaction.getLocationString());
+                                    copyExtractionReaction(r2, reaction);
+                                    r2.setJustMoved(true);
                                 }
                             }
                         }
@@ -364,5 +360,19 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     Dialogs.DialogIcon.WARNING
             );
         }
+    }
+
+    public boolean isJustMoved() {
+        return justMoved;
+    }
+
+    public void setJustMoved(boolean justMoved) {
+        this.justMoved = justMoved;
+    }
+
+    public static void copyExtractionReaction(ExtractionReaction src, ExtractionReaction dest) {
+        ReactionUtilities.copyReaction(src, dest);
+        dest.setId(src.getId());
+        dest.setExtractionId(src.getExtractionId());
     }
 }

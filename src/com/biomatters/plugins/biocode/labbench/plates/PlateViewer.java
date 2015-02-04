@@ -35,6 +35,7 @@ public class PlateViewer extends JPanel {
     private PlateView plateView;
     private PlateViewer selfReference = this;
     private Options.StringOption nameField;
+    private JScrollPane scroller;
 
     public PlateViewer(int numberOfReactions, Reaction.Type type) {
         plateView = new PlateView(numberOfReactions, type, true);
@@ -49,7 +50,7 @@ public class PlateViewer extends JPanel {
     private void init() {
         setLayout(new BorderLayout());
 
-        final JScrollPane scroller = new JScrollPane(plateView);
+        scroller = new JScrollPane(plateView);
         scroller.setBorder(new EmptyBorder(0,0,0,0));
         scroller.getVerticalScrollBar().setUnitIncrement(20);
         scroller.getHorizontalScrollBar().setUnitIncrement(20);
@@ -99,7 +100,7 @@ public class PlateViewer extends JPanel {
             final JComboBox thermocycleCombo = new GComboBox(thermocycleModel);
             ItemListener thermocycleComboListener = new ItemListener() {
                 public void itemStateChanged(ItemEvent e) {
-                    plateView.getPlate().setThermocycle((Thermocycle) thermocycleCombo.getSelectedItem());
+                    plateView.getPlate().setThermocycle((Thermocycle)thermocycleCombo.getSelectedItem());
                 }
             };
             thermocycleCombo.addItemListener(thermocycleComboListener);
@@ -205,49 +206,7 @@ public class PlateViewer extends JPanel {
                 }
                 final PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
                 if (editor.editPlate(selfReference)) {
-                    nameField.setValue(getPlate().getName());
-                    Runnable backgroundTask = new Runnable() {
-                        public void run() {
-                            StringBuilder errorBuilder = new StringBuilder();
-                            String reactionCheckResult = getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
-
-                            if (reactionCheckResult != null) {
-                                errorBuilder.append(reactionCheckResult);
-                            }
-
-                            if (plateView.getPlate().getReactionType().equals(Reaction.Type.Extraction)) {
-                                Map<String, List<ExtractionReaction>> barcodeToExtractionReactionsAssociatedWithBarcode = new HashMap<String, List<ExtractionReaction>>();
-
-                                for (Reaction reaction : plateView.getPlate().getReactions()) {
-                                    String extractionBarcode = reaction.getOptions().getValueAsString(BiocodeUtilities.EXTRACTION_BARCODE_FIELD.getCode());
-                                    List<ExtractionReaction> extractionReactionsAssociatedWithBarcode = barcodeToExtractionReactionsAssociatedWithBarcode.get(extractionBarcode);
-                                    if (extractionReactionsAssociatedWithBarcode == null) {
-                                        extractionReactionsAssociatedWithBarcode = new ArrayList<ExtractionReaction>();
-                                        barcodeToExtractionReactionsAssociatedWithBarcode.put(extractionBarcode, extractionReactionsAssociatedWithBarcode);
-                                    }
-                                    extractionReactionsAssociatedWithBarcode.add((ExtractionReaction)reaction);
-                                }
-
-                                try {
-                                    checkForExistingExtractionsWithBarcodes(barcodeToExtractionReactionsAssociatedWithBarcode, nameField.getValue());
-                                } catch (DatabaseServiceException e) {
-                                    errorBuilder.append("An error was encountered while trying to connect to the LIMS: " + e.getMessage());
-                                }
-                            }
-
-                            if (errorBuilder.length() > 0) {
-                                Dialogs.showMessageDialog(errorBuilder.toString());
-                            }
-                        }
-                    };
-                    Runnable updateTask = new Runnable() {
-                        public void run() {
-                            plateView.invalidate();
-                            scroller.getViewport().validate();
-                            plateView.repaint();
-                        }
-                    };
-                    BiocodeService.block("Checking reactions", selfReference, backgroundTask, updateTask);
+                    updatePanel();
                 }
             }
         };
@@ -277,9 +236,7 @@ public class PlateViewer extends JPanel {
                     r.invalidateFieldWidthCache();
                 }
                 plateView.repaint();
-                plateView.invalidate();
-                scroller.getViewport().validate();
-                plateView.repaint();
+                updatePanel();
             }
         };
         toolbar.addAction(editAction);
@@ -294,9 +251,7 @@ public class PlateViewer extends JPanel {
         GeneiousAction displayAction = new GeneiousAction("Display Options", null, IconUtilities.getIcons("monitor16.png")) {
             public void actionPerformed(ActionEvent e) {
                 ReactionUtilities.showDisplayDialog(plateView.getPlate(), plateView);
-                plateView.invalidate();
-                scroller.getViewport().validate();
-                plateView.repaint();
+                updatePanel();
             }
         };
         toolbar.addAction(displayAction);
@@ -395,6 +350,7 @@ public class PlateViewer extends JPanel {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
+                                    plateView.checkReactionsForErrors(true);
                                     BiocodeService.getInstance().savePlate(plate, progress);
                                 } catch(BadDataException ex) {
                                     progress.setComplete();
@@ -413,6 +369,7 @@ public class PlateViewer extends JPanel {
                             }
                         };
                         new Thread(runnable, "Biocode plate creation thread").start();
+                        updatePanel();
                     }
                 });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);
@@ -426,78 +383,6 @@ public class PlateViewer extends JPanel {
             }
         };
         ThreadUtilities.invokeNowOrWait(runnable);
-
-    }
-
-    private static void checkForExistingExtractionsWithBarcodes(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions, String plateName) throws DatabaseServiceException {
-        List<ExtractionReaction> extractionsThatExist = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(new ArrayList<String>(extractionBarcodeToReactions.keySet()));
-        SortedMap<String, ExtractionReaction> barcodeOfExtractionThatExistsToBarcodeThatExists = new TreeMap<String, ExtractionReaction>();
-        List<String> extractionsThatCouldNotBeOverriden = new ArrayList<String>();
-
-        for (ExtractionReaction extraction : extractionsThatExist) {
-            String extractionBarcode = extraction.getExtractionBarcode();
-            if (extractionBarcode != null && !extractionBarcode.isEmpty() && !extraction.getPlateName().equals(plateName)) {
-                barcodeOfExtractionThatExistsToBarcodeThatExists.put(extraction.getExtractionBarcode(), extraction);
-            }
-        }
-
-        if (!barcodeOfExtractionThatExistsToBarcodeThatExists.isEmpty()) {
-            if (Dialogs.showYesNoDialog(
-                    "Extraction that are associated with the following extraction barcodes already exist: " + StringUtilities.join(", ", barcodeOfExtractionThatExistsToBarcodeThatExists.keySet()) +
-                            ".<br><br> Move the existing extractions to the plate and override the corresponding new extractions?",
-                    "Existing Extractions With Barcodes Detected",
-                    null,
-                    Dialogs.DialogIcon.QUESTION)) {
-                for (Map.Entry<String, ExtractionReaction> barcodeOfExtractionThatExistsAndBarcodeThatExists : barcodeOfExtractionThatExistsToBarcodeThatExists.entrySet()) {
-                    String barcode = barcodeOfExtractionThatExistsAndBarcodeThatExists.getKey();
-                    ExtractionReaction existingExtractionWithBarcode = barcodeOfExtractionThatExistsAndBarcodeThatExists.getValue();
-
-                    for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
-                        if (extractionBarcodeAndReactions.getKey().equals(barcode)) {
-                            List<ExtractionReaction> newExtractionReactionsWithBarcode = extractionBarcodeAndReactions.getValue();
-                            if (newExtractionReactionsWithBarcode.isEmpty()) {
-                                continue;
-                            } else if (newExtractionReactionsWithBarcode.size() == 1) {
-                                ExtractionReaction newExtractionWithBarcode = newExtractionReactionsWithBarcode.get(0);
-
-                                ReactionUtilities.copyReaction(existingExtractionWithBarcode, newExtractionWithBarcode);
-                                newExtractionWithBarcode.setPlateId(newExtractionWithBarcode.getPlateId());
-                                newExtractionWithBarcode.setPosition(newExtractionWithBarcode.getPosition());
-                                newExtractionWithBarcode.setId(existingExtractionWithBarcode.getId());
-                                newExtractionWithBarcode.setExtractionId(existingExtractionWithBarcode.getExtractionId());
-                                newExtractionWithBarcode.setThermocycle(newExtractionWithBarcode.getThermocycle());
-                                newExtractionWithBarcode.setLocationString(newExtractionWithBarcode.getLocationString());
-                            } else {
-                                List<String> locationOfReactionsThatCouldNotBeMoved = new ArrayList<String>();
-                                for (ExtractionReaction extractionReaction : newExtractionReactionsWithBarcode) {
-                                    extractionReaction.setHasError(true);
-                                    locationOfReactionsThatCouldNotBeMoved.add(extractionReaction.getLocationString());
-                                }
-                                extractionsThatCouldNotBeOverriden.add("Extraction barcode: " + barcode + ".\n" + "Well number: " + StringUtilities.join(", ", locationOfReactionsThatCouldNotBeMoved) + ".");
-                            }
-                        }
-                    }
-                }
-            } else {
-                Set<String> barcodesThatExist = barcodeOfExtractionThatExistsToBarcodeThatExists.keySet();
-                for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
-                    if (barcodesThatExist.contains(extractionBarcodeAndReactions.getKey())) {
-                        for (ExtractionReaction extractionReaction : extractionBarcodeAndReactions.getValue()) {
-                            extractionReaction.setHasError(true);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!extractionsThatCouldNotBeOverriden.isEmpty()) {
-            Dialogs.showMessageDialog(
-                    "Cannot override new reactions that are associated with the same existing barcode with one another:<br><br>" + StringUtilities.join("\n\n", extractionsThatCouldNotBeOverriden),
-                    "Multiple Extractions Associated With Same Existing Barcode",
-                    null,
-                    Dialogs.DialogIcon.WARNING
-            );
-        }
     }
 
     public static void main(String[] args) {
@@ -527,5 +412,11 @@ public class PlateViewer extends JPanel {
 
     public void setPlate(Plate plate) {
         plateView.setPlate(plate);
+    }
+
+    public void updatePanel() {
+        plateView.invalidate();
+        scroller.getViewport().validate();
+        plateView.repaint();
     }
 }
