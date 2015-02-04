@@ -921,11 +921,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         return queryBuilder.toString();
     }
 
-    private void setInitialTraceCountsForPlates(Map<Integer, Plate> plateMap) throws SQLException {
-        if (plateMap.isEmpty()) {
-            return;
+
+
+    private void setInitialTraceCountsForWorkflowDocuments(Collection<WorkflowDocument> workflows) throws SQLException {
+        Map<Integer, CycleSequencingReaction> sequencingReactions = new HashMap<Integer, CycleSequencingReaction>();
+        for (WorkflowDocument workflowDocument : workflows) {
+            for (Reaction reaction : workflowDocument.getReactions(Reaction.Type.CycleSequencing)) {
+                sequencingReactions.put(reaction.getId(), (CycleSequencingReaction)reaction);
+            }
         }
-        List<Object> plateIds = new ArrayList<Object>(plateMap.keySet());
+        setInitialTraceCountsForCycleSequencingReactions(sequencingReactions);
+    }
+
+    private void setInitialTraceCountsForPlates(Map<Integer, Plate> plateMap) throws SQLException {
         Map<Integer, CycleSequencingReaction> mapping = new HashMap<Integer, CycleSequencingReaction>();
         for (Plate plate : plateMap.values()) {
             for (Reaction reaction : plate.getReactions()) {
@@ -934,18 +942,25 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 }
             }
         }
+        setInitialTraceCountsForCycleSequencingReactions(mapping);
+    }
 
+    private void setInitialTraceCountsForCycleSequencingReactions(Map<Integer, CycleSequencingReaction> idToReactionMap) throws SQLException {
+        if(idToReactionMap.isEmpty()) {
+            return;
+        }
+        List<Integer> cyclesequencingIds = new ArrayList<Integer>(idToReactionMap.keySet());
         StringBuilder countingQuery = new StringBuilder("SELECT cyclesequencing.id, COUNT(traces.id) as traceCount FROM " +
-                "cyclesequencing LEFT JOIN traces ON cyclesequencing.id = traces.reaction WHERE cyclesequencing.plate IN ");
-        appendSetOfQuestionMarks(countingQuery, plateMap.size());
+                "cyclesequencing LEFT JOIN traces ON cyclesequencing.id = traces.reaction WHERE cyclesequencing.id IN ");
+        appendSetOfQuestionMarks(countingQuery, cyclesequencingIds.size());
         countingQuery.append(" GROUP BY cyclesequencing.id");
         PreparedStatement getCount = null;
         ConnectionWrapper connection = null;
         try {
             connection = getConnection();
             getCount = connection.prepareStatement(countingQuery.toString());
-            SqlUtilities.fillStatement(plateIds, getCount);
-            SqlUtilities.printSql(countingQuery.toString(), plateIds);
+            SqlUtilities.fillStatement(cyclesequencingIds, getCount);
+            SqlUtilities.printSql(countingQuery.toString(), cyclesequencingIds);
             System.out.println("Running trace counting query:");
             System.out.print("\t");
             long start = System.currentTimeMillis();
@@ -954,7 +969,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             while (countSet.next()) {
                 int reactionId = countSet.getInt("cyclesequencing.id");
                 int count = countSet.getInt("traceCount");
-                CycleSequencingReaction reaction = mapping.get(reactionId);
+                CycleSequencingReaction reaction = idToReactionMap.get(reactionId);
                 if (reaction != null) {  // Might be null if we haven't downloaded the full plate
                     reaction.setCacheNumTraces(count);
                 }
@@ -1485,13 +1500,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 }
             }
             workflowsSet.close();
+            setInitialTraceCountsForWorkflowDocuments(byId.values());
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Failed to retrieve workflow documents: " + e.getMessage(),false);
         } finally {
             SqlUtilities.cleanUpStatements(selectWorkflow);
             returnConnection(connection);
         }
-
 
         if (!workflowToSampleId.isEmpty()) {
             try {

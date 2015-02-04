@@ -169,10 +169,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         if(result != null) {
             sequencingResults.add(result);
         }
-
-        getChromats();
-        setCacheNumTraces(tracesStrongReference.size());
-        purgeChromats();
     }
 
     public void setCacheNumTraces(int cacheNumTraces) {

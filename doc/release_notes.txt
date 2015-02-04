@@ -2,6 +2,7 @@
 * 'BOLD Trace submission': New function to create packages for submission of traces to BOLD.
 * Search performance improvements.
 * Faster download of sequences.  Download of workflow documents is no longer required when downloading sequences.
+* The # Traces, # Sequences, # Passed Sequences and Sequence Progress fields now show up for workflow documents.
 * Many other bug fixes and improvements.
 
 '''Additional Notes'''
