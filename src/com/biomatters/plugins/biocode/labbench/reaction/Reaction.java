@@ -542,7 +542,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract Color _getBackgroundColor();
 
-    public abstract String areReactionsValid(List<T> reactions, JComponent dialogParent, boolean showDialogs);
+    public abstract String areReactionsValid(List<T> reactions, JComponent dialogParent);
 
     public Dimension getPreferredSize() {
         int y = PADDING+3;

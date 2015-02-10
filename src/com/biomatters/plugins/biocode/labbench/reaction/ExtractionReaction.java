@@ -98,6 +98,12 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
     }
 
+    public static void copyExtractionReaction(ExtractionReaction src, ExtractionReaction dest) {
+        ReactionUtilities.copyReaction(src, dest);
+        dest.setId(src.getId());
+        dest.setExtractionId(src.getExtractionId());
+    }
+
     public String getLocus() {
         return null; //extractions don't have a locus
     }
@@ -145,7 +151,13 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Type.Extraction;
     }
 
+    public boolean isJustMoved() {
+        return justMoved;
+    }
 
+    public void setJustMoved(boolean justMoved) {
+        this.justMoved = justMoved;
+    }
 
     public static List<DocumentField> getDefaultDisplayedFields() {
         if(BiocodeService.getInstance().isLoggedIn()) {
@@ -166,139 +178,90 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Color.white;
     }
 
-    public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent, boolean showDialogs) {
-        if(!BiocodeService.getInstance().isLoggedIn()) {
-            return "You are not logged in to the database";
+    public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent) {
+        if (!BiocodeService.getInstance().isLoggedIn()) {
+            return "You are not logged in to the database.";
         }
-        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+
+        ReactionUtilities.setReactionErrorStates(reactions, false);
+
+        StringBuilder errorBuilder = new StringBuilder();
+
+        String duplicateBarcodesAmongReactionsCheckResult = checkForDuplicateBarcodesAmongReactions(reactions);
+        if (!duplicateBarcodesAmongReactionsCheckResult.isEmpty()) {
+            errorBuilder.append(duplicateBarcodesAmongReactionsCheckResult).append("<br><br>");
+        }
+
+        try {
+            String existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult = checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(reactions);
+            if (!existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult.isEmpty()) {
+                errorBuilder.append(existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult).append("<br><br>");
+            }
+        } catch (DatabaseServiceException e) {
+            return e.getMessage();
+        }
 
         Set<String> samplesToGet = new HashSet<String>();
-
-        Map<String, List<ExtractionReaction>> extractionBarcodeToReactions = new HashMap<String, List<ExtractionReaction>>();
-
-        for(Reaction reaction : reactions) {
-            String extractionBarcode = reaction.getOptions().getValueAsString(BiocodeUtilities.EXTRACTION_BARCODE_FIELD.getCode());
-            if (extractionBarcode != null && !extractionBarcode.isEmpty()) {
-                List<ExtractionReaction> reactionsAssociatedWithExtractionBarcode = extractionBarcodeToReactions.get(extractionBarcode);
-                if (reactionsAssociatedWithExtractionBarcode == null) {
-                    reactionsAssociatedWithExtractionBarcode = new ArrayList<ExtractionReaction>();
-                    extractionBarcodeToReactions.put(extractionBarcode, reactionsAssociatedWithExtractionBarcode);
-                }
-                reactionsAssociatedWithExtractionBarcode.add((ExtractionReaction)reaction);
-            }
-
+        for (Reaction reaction : reactions) {
             ReactionOptions option = reaction.getOptions();
             String tissueId = option.getValueAsString(ExtractionOptions.TISSUE_ID);
 
-            if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
+            if (reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
                 continue;
             }
             samplesToGet.add(tissueId);
         }
 
-        checkForDuplicateBarcodesAmongReactions(extractionBarcodeToReactions);
-
-        if(samplesToGet.size() == 0) {
-            return null;
-        }
-
-        String error = "";
-        boolean emptyFimsRecord = false;
-
-        try {
-            List<FimsSample> docList = fimsConnection.retrieveSamplesForTissueIds(samplesToGet);
-            Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
-            for(FimsSample sample : docList) {
-                if(sample == null) {  //don't know how this could happen but it is a possible cause of MBP-269
-                    assert false;
-                    continue;
+        if (!samplesToGet.isEmpty()) {
+            try {
+                boolean emptyFimsRecord = false;
+                List<FimsSample> docList = BiocodeService.getInstance().getActiveFIMSConnection().retrieveSamplesForTissueIds(samplesToGet);
+                Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
+                for (FimsSample sample : docList) {
+                    if (sample == null) {  //don't know how this could happen but it is a possible cause of MBP-269
+                        assert false;
+                        continue;
+                    }
+                    if (sample.getId() == null) {
+                        emptyFimsRecord = true;
+                        errorBuilder.append("Encountered a tissue record for the specimen ").append(sample.getSpecimenId()).append(" that has no tissue id.<br><br>");
+                    } else {
+                        docMap.put(sample.getId(), sample);
+                    }
                 }
-                if(sample.getId() == null) {
-                    emptyFimsRecord = true;
-                    error += "Encountered a tissue record for the specimen "+sample.getSpecimenId()+" that has no tissue id\n";
-                }
-                else {
-                    docMap.put(sample.getId(), sample);
-                }
-            }
-            for(Reaction reaction : reactions) {
-                ReactionOptions op = reaction.getOptions();
-                String tissueId = op.getValueAsString(ExtractionOptions.TISSUE_ID);
-                reaction.isError = false;
+                for (Reaction reaction : reactions) {
+                    ReactionOptions op = reaction.getOptions();
+                    String tissueId = op.getValueAsString(ExtractionOptions.TISSUE_ID);
 
-                if(reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
-                    continue;
-                }
-                FimsSample currentFimsSample = docMap.get(tissueId);
-                if(currentFimsSample == null) {
-                    //we used to report an error here, but since we want to allow extractions to be created 'headless' and then linked to tissue samples as they are entered into the FIMS later, we're just setting the FIMS sample and not complaining
+                    if (reaction.isEmpty() || tissueId == null || tissueId.length() == 0) {
+                        continue;
+                    }
+                    FimsSample currentFimsSample = docMap.get(tissueId);
+                    if (currentFimsSample == null) {
+                        //we used to report an error here, but since we want to allow extractions to be created 'headless' and then linked to tissue samples as they are entered into the FIMS later, we're just setting the FIMS sample and not complaining
 //                    error += "The tissue sample "+tissueId+" does not exist in the database.\n";
 //                    reaction.isError = true;
-                    if(emptyFimsRecord) { //however if we've found an empty FIMS record (as in MBP-269), we should flag reactions such as this as errored so the user knows where to look.
-                        reaction.isError = true;
-                    }
-                }
-                else {
-                    reaction.setFimsSample(currentFimsSample);
-                }
-            }
-
-        } catch (ConnectionException e) {
-            return "Could not query the FIMS database.  "+e.getMessage();
-        }
-
-        try {
-            //check that the extraction id's don't already exist in the database...
-            List<String> extractionIds = new ArrayList<String>();
-            for(Reaction r : reactions) {
-                if(r.getId() < 0 && r.getExtractionId().length() > 0) {
-                    extractionIds.add(r.getExtractionId());
-                }
-            }
-            if(extractionIds.size() > 0) {
-                List<ExtractionReaction> extractionsThatExist = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsForIds(extractionIds);
-                if(extractionsThatExist.size() > 0) {
-                    //ask the user if they want to move the extractions that are already attached to a plate.
-                    StringBuilder moveMessage = new StringBuilder("The following extractions already exist in the database.\nDo you want to move them to this plate?\n\n");
-                    for(ExtractionReaction reaction : extractionsThatExist) {
-                        //noinspection StringConcatenationInsideStringBufferAppend
-                        moveMessage.append(reaction.getExtractionId()+"\n");
-                    }
-                    if(!showDialogs || Dialogs.showYesNoDialog(moveMessage.toString(), "Move existing extractions", dialogParent, Dialogs.DialogIcon.QUESTION)) {
-                        for (ExtractionReaction reaction : reactions) {
-                            for (ExtractionReaction r2 : extractionsThatExist) {
-                                if (reaction.getExtractionId().equals(r2.getExtractionId())) {
-                                    copyExtractionReaction(r2, reaction);
-                                    r2.setJustMoved(true);
-                                }
-                            }
+                        if (emptyFimsRecord) { //however if we've found an empty FIMS record (as in MBP-269), we should flag reactions such as this as errored so the user knows where to look.
+                            reaction.setHasError(true);
                         }
-                    }
-                    else {
-                        for(Reaction r : reactions) {
-                            for(Reaction r2 : extractionsThatExist) {
-                                if(r.getExtractionId().equals(r2.getExtractionId())) {
-                                    r.isError = true;
-                                    error += "The extraction "+r.getExtractionId()+" already exists in the database.\n";
-                                }
-                            }
-                        }
+                    } else {
+                        reaction.setFimsSample(currentFimsSample);
                     }
                 }
 
+            } catch (ConnectionException e) {
+                return "Could not query the FIMS database. " + e.getMessage();
             }
-        } catch (DatabaseServiceException e) {
-            return "Could not qurey the LIMS database: "+e.getMessage();
         }
 
         //give the user the option to not save reactions with no extraction id
         List<Reaction> reactionsWithNoIds = new ArrayList<Reaction>();
-        for(Reaction r : reactions) {
-            if(r.getExtractionId().length() == 0 && !r.isEmpty()) {
+        for (Reaction r : reactions) {
+            if (r.getExtractionId().length() == 0 && !r.isEmpty()) {
                 reactionsWithNoIds.add(r);
             }
         }
-        if(reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("You have added information to reactions on your plate which have no tissue data.  Would you like to discard this information so that the wells remain empty?<br>(Cases where you might not want to make the reaction blank would be where you are creating a control reaction, or if you have wells filled with cocktail, but no DNA)", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
+        if (reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("You have added information to reactions on your plate which have no tissue data.  Would you like to discard this information so that the wells remain empty?<br>(Cases where you might not want to make the reaction blank would be where you are creating a control reaction, or if you have wells filled with cocktail, but no DNA)", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
             for(Reaction r : reactionsWithNoIds) {
                 r.getOptions().restoreDefaults();
                 r.isEmpty();
@@ -306,26 +269,28 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
 
         Set<String> namesSet = new HashSet<String>();
-        for(Reaction r : reactions) {
-            if(!r.isEmpty()) {
-                if(r.getExtractionId().length() == 0) {
-                    error += "Extraction reactions cannot have empty id's.\n";
-                    r.isError = true;
+        for (Reaction r : reactions) {
+            if (!r.isEmpty()) {
+                if (r.getExtractionId().length() == 0) {
+                    errorBuilder.append("Extraction reactions cannot have empty ids.<br><br>");
+                    r.setHasError(true);
                 }
-                else if(!namesSet.add(r.getExtractionId())) {
-                    error += "You cannot add an extraction with the name '"+r.getExtractionId()+"' more than once.\n";
-                    r.isError = true;
+                else if (!namesSet.add(r.getExtractionId())) {
+                    errorBuilder.append("You cannot add an extraction with the name '").append(r.getExtractionId()).append("' more than once.<br><br>");
+                    r.setHasError(true);
                 }
             }
         }
 
-        if(error.length() > 0) {
-            return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
+        if (errorBuilder.length() > 0) {
+            return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "<br>The affected reactions have been highlighted in yellow.</html>";
         }
-        return null;
+
+        return "";
     }
 
-    private static void checkForDuplicateBarcodesAmongReactions(Map<String, List<ExtractionReaction>> extractionBarcodeToReactions) {
+    private static String checkForDuplicateBarcodesAmongReactions(Collection<ExtractionReaction> extractionReactions) {
+        Map<String, List<ExtractionReaction>> extractionBarcodeToReactions = buildAttributeToExtractionReactionsMap(extractionReactions, new ExtractionBarcodeGetter());
         SortedMap<String, List<String>> extractionBarcodeToReactionLocation = new TreeMap<String, List<String>>();
 
         for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
@@ -348,31 +313,161 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
             for (Map.Entry<String, List<String>> extractionBarcodeAndReactionLocation : extractionBarcodeToReactionLocation.entrySet()) {
                 duplicationEntries.add(
-                        "Extraction barcode: " + extractionBarcodeAndReactionLocation.getKey() +
-                        "\nWell numbers: " + StringUtilities.join(", ", extractionBarcodeAndReactionLocation.getValue()) + ".\n"
+                        "Extraction Barcode: " + extractionBarcodeAndReactionLocation.getKey() +
+                        "\nWell Locations: " + StringUtilities.join(", ", extractionBarcodeAndReactionLocation.getValue()) + ".\n"
                 );
             }
 
-            Dialogs.showMessageDialog(
-                    "Reactions that are associated with the same extraction barcode were detected:\n\n" + StringUtilities.join("\n", duplicationEntries),
-                    "Reactions With Identical Barcodes Detected",
-                    null,
-                    Dialogs.DialogIcon.WARNING
-            );
+            return "Reactions that are associated with the same extraction barcode were detected:\n\n" + StringUtilities.join("\n", duplicationEntries);
         }
+
+        return "";
     }
 
-    public boolean isJustMoved() {
-        return justMoved;
+    private static String checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
+        StringBuilder errorBuilder = new StringBuilder();
+
+        String extractionIDCheck = checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(extractionReactions);
+        if (!extractionIDCheck.isEmpty()) {
+            errorBuilder.append(extractionIDCheck).append("<br><br>");
+        }
+
+        String extractionBarcodeCheck = checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(extractionReactions);
+        if (!extractionBarcodeCheck.isEmpty()) {
+            errorBuilder.append(extractionBarcodeCheck).append("<br><br>");
+        }
+
+        setJustMoved(extractionReactions, false);
+
+        return errorBuilder.toString();
     }
 
-    public void setJustMoved(boolean justMoved) {
-        this.justMoved = justMoved;
+    private static String checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionIDGetter(), new ExtractionReactionRetrieverViaExtractionID());
     }
 
-    public static void copyExtractionReaction(ExtractionReaction src, ExtractionReaction dest) {
-        ReactionUtilities.copyReaction(src, dest);
-        dest.setId(src.getId());
-        dest.setExtractionId(src.getExtractionId());
+    private static String checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaExtractionBarcode());
+    }
+
+    private static String checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions,
+                                                                                                             ReactionAttributeGetter<String> reactionAttributeGetter,
+                                                                                                             ExtractionReactionRetriever<List<String>> extractionReactionRetriever) throws DatabaseServiceException {
+        Map<String, List<ExtractionReaction>> attributeToNewExtractionReactions = buildAttributeToExtractionReactionsMap(extractionReactions, reactionAttributeGetter);
+        Map<String, List<ExtractionReaction>> attributeToExistingExtractionReactions = buildAttributeToExtractionReactionsThatHaveNotJustBeenMovedMap(
+                extractionReactionRetriever.retrieve(BiocodeService.getInstance().getActiveLIMSConnection(), new ArrayList<String>(attributeToNewExtractionReactions.keySet())),
+                reactionAttributeGetter
+        );
+
+        Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions = buildExistingExtractionsReactionsToNewExtractionReactionsMap(
+                attributeToNewExtractionReactions,
+                attributeToExistingExtractionReactions
+        );
+
+        if (!existingExtractionReactionsToNewExtractionReactions.isEmpty()) {
+            String attributeName = reactionAttributeGetter.getAttributeName();
+            if (Dialogs.showYesNoDialog(
+                    "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + "."
+                            + "<br><br> Move the existing extraction reactions to the plate and override the corresponding new extraction reactions?",
+                    "Existing Extractions With " + attributeName + " Detected",
+                    null,
+                    Dialogs.DialogIcon.QUESTION)) {
+                return overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
+            } else {
+                List<Reaction> newExtractionReactionsAssociatedWithExistingAttributeValue = new ArrayList<Reaction>();
+
+                for (List<ExtractionReaction> groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode : existingExtractionReactionsToNewExtractionReactions.values()) {
+                    newExtractionReactionsAssociatedWithExistingAttributeValue.addAll(groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode);
+                }
+
+                ReactionUtilities.setReactionErrorStates(newExtractionReactionsAssociatedWithExistingAttributeValue, true);
+            }
+        }
+
+        return "";
+    }
+
+    private static Map<List<ExtractionReaction>, List<ExtractionReaction>> buildExistingExtractionsReactionsToNewExtractionReactionsMap(Map<String, List<ExtractionReaction>> identifierToNewExtractionReactions,
+                                                                                                                                        Map<String, List<ExtractionReaction>> identifierToExistingExtractionReactions) {
+        Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionsToNewExtractions = new HashMap<List<ExtractionReaction>, List<ExtractionReaction>>();
+
+        for (Map.Entry<String, List<ExtractionReaction>> identifierAndExtractionsThatExist : identifierToExistingExtractionReactions.entrySet()) {
+            existingExtractionsToNewExtractions.put(identifierAndExtractionsThatExist.getValue(), identifierToNewExtractionReactions.get(identifierAndExtractionsThatExist.getKey()));
+        }
+
+        return existingExtractionsToNewExtractions;
+    }
+
+    private static Map<String, List<ExtractionReaction>> buildAttributeToExtractionReactionsThatHaveNotJustBeenMovedMap(Collection<ExtractionReaction> extractionReactions, ReactionAttributeGetter<String> reactionAttributeGetter)
+            throws DatabaseServiceException {
+        Collection<ExtractionReaction> extractionReactionsThatExistAndHaveNotJustBeenMoved = new ArrayList<ExtractionReaction>();
+
+        for (ExtractionReaction extractionReaction : extractionReactions) {
+            if (!extractionReaction.isJustMoved()) {
+                extractionReactionsThatExistAndHaveNotJustBeenMoved.add(extractionReaction);
+            }
+        }
+
+        return buildAttributeToExtractionReactionsMap(extractionReactionsThatExistAndHaveNotJustBeenMoved, reactionAttributeGetter);
+    }
+
+    private static Map<String, List<ExtractionReaction>> buildAttributeToExtractionReactionsMap(Collection<ExtractionReaction> extractionReactions, ReactionAttributeGetter<String> reactionAttributeGetter) {
+        Map<String, List<ExtractionReaction>> attributeToExtractionReactions = new HashMap<String, List<ExtractionReaction>>();
+
+        for (ExtractionReaction extractionReaction : extractionReactions) {
+            String attribute = reactionAttributeGetter.get(extractionReaction);
+
+            if (attribute != null && !attribute.isEmpty()) {
+                List<ExtractionReaction> extractionReactionsAssociatedWithAttribute = attributeToExtractionReactions.get(attribute);
+
+                if (extractionReactionsAssociatedWithAttribute == null) {
+                    extractionReactionsAssociatedWithAttribute = new ArrayList<ExtractionReaction>();
+
+                    attributeToExtractionReactions.put(attribute, extractionReactionsAssociatedWithAttribute);
+                }
+
+                extractionReactionsAssociatedWithAttribute.add(extractionReaction);
+            }
+        }
+
+        return attributeToExtractionReactions;
+    }
+
+    private static String overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions,
+                                                                                                         ReactionAttributeGetter<String> reactionAttributeGetter) {
+        List<String> extractionReactionsThatCouldNotBeOverridden = new ArrayList<String>();
+
+        for (Map.Entry<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsAndNewExtractionReactions : existingExtractionReactionsToNewExtractionReactions.entrySet()) {
+            List<ExtractionReaction> newExtractionReactions = existingExtractionReactionsAndNewExtractionReactions.getValue();
+
+            if (newExtractionReactions.size() > 1) {
+                ReactionUtilities.setReactionErrorStates(newExtractionReactions, true);
+
+                extractionReactionsThatCouldNotBeOverridden.add(reactionAttributeGetter.getAttributeName() + ": " + reactionAttributeGetter.get(newExtractionReactions.get(0)) + ".\n" + "Well Locations: " + StringUtilities.join(", ", ReactionUtilities.getReactionLocations(newExtractionReactions)) + ".");
+            } else {
+                ExtractionReaction destinationReaction = newExtractionReactions.get(0);
+
+                ExtractionReaction.copyExtractionReaction(getExistingExtractionReactionToMove(existingExtractionReactionsAndNewExtractionReactions.getKey()), destinationReaction);
+
+                destinationReaction.setJustMoved(true);
+            }
+        }
+
+        if (!extractionReactionsThatCouldNotBeOverridden.isEmpty()) {
+            return "Cannot override multiple new reactions that are associated with the same" + reactionAttributeGetter.getAttributeName() + ":<br><br>" + StringUtilities.join("\n\n", extractionReactionsThatCouldNotBeOverridden);
+        }
+
+        return "";
+    }
+
+    private static ExtractionReaction getExistingExtractionReactionToMove(Collection<ExtractionReaction> existingExtractionReactions) {
+        // todo: determine how to handle when existingExtractionReactions.size() > 1;
+        return existingExtractionReactions.iterator().next();
+    }
+
+    private static void setJustMoved(Collection<ExtractionReaction> extractionReactions, boolean val) {
+        for (ExtractionReaction extractionReaction : extractionReactions) {
+            extractionReaction.setJustMoved(val);
+        }
     }
 }

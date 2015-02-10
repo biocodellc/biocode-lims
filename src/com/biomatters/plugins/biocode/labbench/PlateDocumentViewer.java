@@ -102,7 +102,6 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                plateView.checkReactionsForErrors(false);
                                 BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
                                     for(Reaction r : plateView.getPlate().getReactions()) {
@@ -242,7 +241,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         return null;
     }
 
-    private void updatePanel() {
+    public void updatePanel() {
         keyPanel.removeAll();
         keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0,0).getBackgroundColorer()));
         if(thingInsideScrollPane != null) {
@@ -510,6 +509,12 @@ public class PlateDocumentViewer extends DocumentViewer{
             }
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
             if (editor.editPlate(container)) {
+                String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView);
+
+                if (!error.isEmpty()) {
+                    Dialogs.showMessageDialog(error);
+                }
+
                 saveAction.setEnabled(true);
                 updatePanel();
             }

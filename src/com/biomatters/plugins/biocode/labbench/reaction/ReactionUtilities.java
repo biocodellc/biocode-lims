@@ -10,13 +10,17 @@ import com.biomatters.geneious.publicapi.documents.sequence.NucleotideSequenceDo
 import com.biomatters.geneious.publicapi.documents.sequence.SequenceListDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
 import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.PlateDocumentViewer;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
+import com.biomatters.plugins.biocode.labbench.plates.PlateView;
+import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
 import com.biomatters.plugins.biocode.options.NamePartOption;
 import com.biomatters.plugins.biocode.options.NameSeparatorOption;
 import com.google.common.base.Predicate;
@@ -39,6 +43,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
@@ -869,9 +874,10 @@ public class ReactionUtilities {
                     }
                 }
             }
-            if(changedOptionCount > 0) {
-                String error = reactions.get(0).areReactionsValid(reactions, owner, true);
-                if(error != null) {
+            if (changedOptionCount > 0) {
+                String error = reactions.get(0).areReactionsValid(reactions, owner);
+
+                if (!error.isEmpty()) {
                     Dialogs.showMessageDialog(error, "Invalid Reactions", owner, Dialogs.DialogIcon.INFORMATION);
                 }
             }
@@ -1137,6 +1143,22 @@ public class ReactionUtilities {
             }
         }
         return sequences;
+    }
+
+    public static void setReactionErrorStates(Collection<? extends Reaction> reactions, boolean errorState) {
+        for (Reaction reaction : reactions) {
+            reaction.setHasError(errorState);
+        }
+    }
+
+    public static Collection<String> getReactionLocations(Collection<? extends Reaction> reactions) {
+        Collection<String> reactionLocations = new ArrayList<String>();
+
+        for (Reaction reaction : reactions) {
+            reactionLocations.add(reaction.getLocationString());
+        }
+
+        return reactionLocations;
     }
 
     public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {

@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -155,7 +156,13 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             progressListener.setMessage("Checking with the database");
             progressListener.setIndeterminateProgress();
             Reaction[] plateReactions = editingPlate.getReactions();
-            plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null, true);
+
+            String reactionCheckResult = plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null);
+
+            if (!reactionCheckResult.isEmpty()) {
+                Dialogs.showMessageDialog(reactionCheckResult);
+            }
+
             for(Reaction r : plateReactions){
                 r.isError = false;
             }

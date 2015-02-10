@@ -204,8 +204,14 @@ public class PlateViewer extends JPanel {
                     Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
                     return;
                 }
-                final PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
+                final PlateBulkEditor editor = new PlateBulkEditor(getPlate(), true);
                 if (editor.editPlate(selfReference)) {
+                    String error = getPlate().getReactions()[0].areReactionsValid(Arrays.asList(getPlate().getReactions()), plateView);
+
+                    if (!error.isEmpty()) {
+                        Dialogs.showMessageDialog(error);
+                    }
+
                     updatePanel();
                 }
             }
@@ -227,14 +233,17 @@ public class PlateViewer extends JPanel {
 
         final GeneiousAction editAction = new GeneiousAction("Edit All Wells", "", StandardIcons.edit.getIcons()) {
             public void actionPerformed(ActionEvent e) {
-                List<Reaction> reactions = plateView.getSelectedReactions();
-                if (reactions.isEmpty()) {
-                    reactions = Arrays.asList(plateView.getPlate().getReactions());
+                List<Reaction> reactionsToEdit = plateView.getSelectedReactions();
+                if (reactionsToEdit.isEmpty()) {
+                    reactionsToEdit = Arrays.asList(plateView.getPlate().getReactions());
                 }
-                ReactionUtilities.editReactions(reactions, plateView, true);
-                for(Reaction r : reactions) {
+
+                ReactionUtilities.editReactions(reactionsToEdit, plateView, true);
+
+                for (Reaction r : reactionsToEdit) {
                     r.invalidateFieldWidthCache();
                 }
+
                 plateView.repaint();
                 updatePanel();
             }
@@ -350,7 +359,6 @@ public class PlateViewer extends JPanel {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    plateView.checkReactionsForErrors(true);
                                     BiocodeService.getInstance().savePlate(plate, progress);
                                 } catch(BadDataException ex) {
                                     progress.setComplete();

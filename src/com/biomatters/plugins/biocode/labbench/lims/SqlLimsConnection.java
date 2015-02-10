@@ -1365,17 +1365,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     }
 
-    private String checkReactions(Plate plate) {
-        System.out.println("Checking " + plate.getName());
-        List<Reaction> reactions = new ArrayList<Reaction>();
-        for (Reaction r : plate.getReactions()) {
-            if (r != null) {
-                reactions.add(r);
-            }
-        }
-        return reactions.get(0).areReactionsValid(reactions, null, true);
-    }
-
     private static class QueryPart {
         private String queryConditions;
         private List<Object> parameters;
@@ -1581,11 +1570,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                         }
                     };
                     ThreadUtilities.invokeNowOrWait(runnable);
-                    String error = checkReactions(prevPlate);
-                    if (error != null) {
-                        //noinspection StringConcatenationInsideStringBufferAppend
-                        totalErrors.add(error + "\n");
-                    }
                     plates.put(previousId, prevPlate);
                 }
             }
@@ -1607,12 +1591,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             Plate prevPlate = plates.get(previousId);
             if (prevPlate != null) {
                 prevPlate.initialiseReactions();
-                String error = checkReactions(prevPlate);
-                if (error != null) {
-                    //noinspection StringConcatenationInsideStringBufferAppend
-                    totalErrors.add(error + "\n");
-                }
-
                 plates.put(previousId, prevPlate);
 
             }
@@ -1628,8 +1606,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 public void run() {
                     if (sb.toString().contains("connection")) {
                         Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", sb.toString());
-                    } else {
-                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n" + sb, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
                     }
                 }
             };

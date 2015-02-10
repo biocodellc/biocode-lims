@@ -277,14 +277,17 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return getTraces() != null;
     }
 
-    public String areReactionsValid(List<CycleSequencingReaction> reactions, JComponent dialogParent, boolean showDialogs) {
-        if(!BiocodeService.getInstance().isLoggedIn()) {
+    public String areReactionsValid(List<CycleSequencingReaction> reactions, JComponent dialogParent) {
+        if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }
+
+        ReactionUtilities.setReactionErrorStates(reactions, false);
+
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
-        String error = "";
+        StringBuilder errorBuilder = new StringBuilder();
 
         //List<Query> queries = new ArrayList<Query>();
         Set<String> samplesToGet = new HashSet<String>();
@@ -296,34 +299,34 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             return "Could not connect to the LIMS database";
         }
 
-        for(Reaction reaction : reactions) {
-            if(reaction.isEmpty()) {
+        for (Reaction reaction : reactions) {
+            if (reaction.isEmpty()) {
                 continue;
             }
-            reaction.isError = false;
+
             Options option = reaction.getOptions();
             String tissue = tissueMapping.get(option.getValueAsString("extractionId"));
-            if(tissue != null) {
+            if (tissue != null) {
                 samplesToGet.add(tissue);
             }
         }
 
-        if(samplesToGet.size() == 0) {
-            return  error.length() == 0 ? null : error;
+        if (samplesToGet.size() == 0) {
+            return "";
         }
 
         try {
             List<FimsSample> docList = fimsConnection.retrieveSamplesForTissueIds(samplesToGet);
             Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
-            for(FimsSample sample : docList) {
+            for (FimsSample sample : docList) {
                 docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
             }
 
-            for(Reaction reaction : reactions) {
+            for (Reaction reaction : reactions) {
                 Options op = reaction.getOptions();
                 String extractionId = op.getValueAsString("extractionId");
                 FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
-                if(currentFimsSample == null) {
+                if (currentFimsSample == null) {
 //                    error += "The tissue sample '"+tissueMapping.get(extractionId)+"' does not exist in the database.\n";
 //                    reaction.isError = true;
                 }
@@ -333,53 +336,50 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
             }
 
         } catch (ConnectionException e) {
-            return "Could not query the FIMS database.  "+e.getMessage();
+            return "Could not query the FIMS database: " + e.getMessage();
         }
-
-
 
         //check the workflows exist in the database
         Set<String> workflowIdStrings = new HashSet<String>();
-        for(Reaction reaction : reactions) {
+        for (Reaction reaction : reactions) {
             Object workflowId = reaction.getFieldValue("workflowId");
-            if(!reaction.isEmpty() && reaction.getExtractionId().length() > 0 && (reaction.getLocus() == null || reaction.getLocus().length() == 0 || reaction.getLocus().equalsIgnoreCase("none"))) {
+            if (!reaction.isEmpty() && reaction.getExtractionId().length() > 0 && (reaction.getLocus() == null || reaction.getLocus().length() == 0 || reaction.getLocus().equalsIgnoreCase("none"))) {
                 reaction.setHasError(true);
-                error += "The reaction in well "+reaction.getLocationString()+" does not have a locus set.<br>";
+                errorBuilder.append("The reaction in well ").append(reaction.getLocationString()).append(" does not have a locus set.<br>");
             }
-            if((!reaction.isEmpty() && workflowId != null && reaction.getType() != Reaction.Type.Extraction)
-            && (reaction.getWorkflow() == null || !reaction.getWorkflow().getName().equals(workflowId))){
-
+            if ((!reaction.isEmpty() && workflowId != null && reaction.getType() != Reaction.Type.Extraction) && (reaction.getWorkflow() == null || !reaction.getWorkflow().getName().equals(workflowId))){
                 reaction.setWorkflow(null);
-                if(workflowId.toString().length() > 0) {
+                if (workflowId.toString().length() > 0) {
                     workflowIdStrings.add(workflowId.toString());
                 }
                 
             }
         }
 
-        if(workflowIdStrings.size() > 0) {
+        if (workflowIdStrings.size() > 0) {
             try {
                 Map<String,Workflow> map = BiocodeService.getInstance().getWorkflows(new ArrayList<String>(workflowIdStrings));
 
-                for(Reaction reaction : reactions) {
+                for (Reaction reaction : reactions) {
                     Object workflowId = reaction.getFieldValue("workflowId");
-                    if(workflowId != null && workflowId.toString().length() > 0) {
+                    if (workflowId != null && workflowId.toString().length() > 0) {
                         Workflow workflow = map.get(workflowId.toString());
-                        if(workflow == null) {
-                            error += "The workflow "+workflowId+" does not exist in the database.\n";
+                        if (workflow == null) {
+                            errorBuilder.append("The workflow ").append(workflowId).append(" does not exist in the database.<br>");
                         }
                         reaction.setWorkflow(workflow);
                     }
                 }
             } catch (DatabaseServiceException e) {
-                return "Could not query the LIMS database.  "+e.getMessage();
+                return "Could not query the LIMS database: " + e.getMessage();
             }
         }
 
-        if(error.length() > 0) {
-            return "<html><b>There were some errors in your data:</b><br>"+error+"<br>The affected reactions have been highlighted in yellow.";
+        if (errorBuilder.length() > 0) {
+            return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "<br>The affected reactions have been highlighted in yellow.";
         }
-        return null;
+
+        return "";
     }
 
     /**

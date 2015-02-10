@@ -162,14 +162,17 @@ public class PCRReaction extends Reaction<PCRReaction> {
         getOptions().setValue("extractionId", s);
     }
 
-    public String areReactionsValid(List<PCRReaction> reactions, JComponent dialogParent, boolean showDialogs) {
-        if(!BiocodeService.getInstance().isLoggedIn()) {
+    public String areReactionsValid(List<PCRReaction> reactions, JComponent dialogParent) {
+        if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";
         }
+
+        ReactionUtilities.setReactionErrorStates(reactions, false);
+
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         DocumentField tissueField = fimsConnection.getTissueSampleDocumentField();
 
-        String error = "";            
+        StringBuilder errorBuilder = new StringBuilder();
 
         Set<String> samplesToGet = new HashSet<String>();
 
@@ -179,47 +182,46 @@ public class PCRReaction extends Reaction<PCRReaction> {
             tissueMapping = BiocodeService.getInstance().getReactionToTissueIdMapping("extraction", reactions);
         } catch (DatabaseServiceException e) {
             e.printStackTrace();
-            return "Could not connect to the LIMS database: "+e.getMessage();
+            return "Could not connect to the LIMS database: " + e.getMessage();
         }
-        for(Reaction reaction : reactions) {
+        for (Reaction reaction : reactions) {
             ReactionOptions option = reaction.getOptions();
             String extractionid = option.getValueAsString("extractionId");
-            if(reaction.isEmpty() || extractionid == null || extractionid.length() == 0) {
+            if (reaction.isEmpty() || extractionid == null || extractionid.length() == 0) {
                 continue;
             }
-            reaction.isError = false;
 
             String tissue = tissueMapping.get(extractionid);
-            if(tissue == null) {
-                error += "The extraction '"+option.getOption("extractionId").getValue()+"' does not exist in the database!\n";
-                reaction.isError = true;
+            if (tissue == null) {
+                errorBuilder.append("The extraction '").append(option.getOption("extractionId").getValue()).append("' does not exist in the database!<br>");
+                reaction.setHasError(true);
             }
             else {
                 samplesToGet.add(tissue);
             }
-            if(reaction.getLocus() == null || reaction.getLocus().length() == 0 || reaction.getLocus().equalsIgnoreCase("none")) {
-                error += "The reaction in well '"+reaction.getLocationString()+"' does not have a valid locus\n";
-                reaction.isError = true;
+            if (reaction.getLocus() == null || reaction.getLocus().length() == 0 || reaction.getLocus().equalsIgnoreCase("none")) {
+                errorBuilder.append("The reaction in well '").append(reaction.getLocationString()).append("' does not have a valid locus.<br>");
+                reaction.setHasError(true);
             }
         }
 
 
         //add FIMS data to the reaction...
-        if(samplesToGet.size() > 0) {
+        if (samplesToGet.size() > 0) {
             try {
                 List<FimsSample> docList = fimsConnection.retrieveSamplesForTissueIds(samplesToGet);
                 Map<String, FimsSample> docMap = new HashMap<String, FimsSample>();
-                for(FimsSample sample : docList) {
+                for (FimsSample sample : docList) {
                     docMap.put(sample.getFimsAttributeValue(tissueField.getCode()).toString(), sample);
                 }
-                for(Reaction reaction : reactions) {
+                for (Reaction reaction : reactions) {
                     ReactionOptions op = reaction.getOptions();
                     String extractionId = op.getValueAsString("extractionId");
-                    if(extractionId == null || extractionId.length() == 0) {
+                    if (extractionId == null || extractionId.length() == 0) {
                         continue;
                     }
                     FimsSample currentFimsSample = docMap.get(tissueMapping.get(extractionId));
-                    if(currentFimsSample != null) {
+                    if (currentFimsSample != null) {
                         reaction.setFimsSample(currentFimsSample);
                     }
                 }
@@ -230,25 +232,25 @@ public class PCRReaction extends Reaction<PCRReaction> {
 
         //check the workflows exist in the database
         Set<String> workflowIdStrings = new HashSet<String>();
-        for(Reaction reaction : reactions) {
+        for (Reaction reaction : reactions) {
             Object workflowId = reaction.getFieldValue("workflowId");
-            if(reaction.getWorkflow() != null && !reaction.getWorkflow().getName().equals(workflowId)) {
+            if (reaction.getWorkflow() != null && !reaction.getWorkflow().getName().equals(workflowId)) {
                 reaction.setWorkflow(null);
             }
-            if(!reaction.isEmpty() && reaction.getExtractionId().length() != 0 && (reaction.getLocus() == null || reaction.getLocus().length() == 0)) {
+            if (!reaction.isEmpty() && reaction.getExtractionId().length() != 0 && (reaction.getLocus() == null || reaction.getLocus().length() == 0)) {
                 reaction.setHasError(true);
-                error += "The reaction "+reaction.getExtractionId()+" does not have a locus set.<br>";   
+                errorBuilder.append("The reaction ").append(reaction.getExtractionId()).append(" does not have a locus set.<br>");
             }
-            if(!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
-                if(reaction.getWorkflow() != null){
+            if (!reaction.isEmpty() && workflowId != null && workflowId.toString().length() > 0 && reaction.getType() != Reaction.Type.Extraction) {
+                if (reaction.getWorkflow() != null){
                     String extractionId = reaction.getExtractionId();
-                    if(reaction.getWorkflow().getExtractionId() != null && !reaction.getWorkflow().getExtractionId().equals(extractionId)) {
+                    if (reaction.getWorkflow().getExtractionId() != null && !reaction.getWorkflow().getExtractionId().equals(extractionId)) {
                         reaction.setHasError(true);
-                        error += "The workflow "+workflowId+" does not match the extraction "+extractionId;
+                        errorBuilder.append("The workflow ").append(workflowId).append(" does not match the extraction ").append(extractionId).append("<br>");
                     }
-                    if(!reaction.getWorkflow().getLocus().equals(reaction.getLocus())) {
+                    if (!reaction.getWorkflow().getLocus().equals(reaction.getLocus())) {
                         reaction.setHasError(true);
-                        error += "The locus of the workflow "+workflowId+" ("+reaction.getWorkflow().getLocus()+") does not match the reaction's locus ("+reaction.getLocus()+")<br>";    
+                        errorBuilder.append("The locus of the workflow ").append(workflowId).append(" (").append(reaction.getWorkflow().getLocus()).append(") does not match the reaction's locus (").append(reaction.getLocus()).append(")<br>");
                     }
 //                  ssh: commenting out because this appears to have no effect  
 //                    if(reaction.getWorkflow().getName().equals(workflowId)) {
@@ -263,20 +265,20 @@ public class PCRReaction extends Reaction<PCRReaction> {
         }
 
         //do the same check for reactions that have a workflow id, but not a workflow object set.
-        if(workflowIdStrings.size() > 0) {
+        if (workflowIdStrings.size() > 0) {
             try {
                 Map<String,Workflow> map = BiocodeService.getInstance().getWorkflows(new ArrayList<String>(workflowIdStrings));
 
                 for(Reaction reaction : reactions) {
                     Object workflowId = reaction.getFieldValue("workflowId");
-                    if(workflowId != null && workflowId.toString().length() > 0 && reaction.getWorkflow() == null && reaction.getType() != Reaction.Type.Extraction) {
+                    if (workflowId != null && workflowId.toString().length() > 0 && reaction.getWorkflow() == null && reaction.getType() != Reaction.Type.Extraction) {
                         Workflow workflow = map.get(workflowId.toString());
                         String extractionId = reaction.getExtractionId();
-                        if(workflow == null) {
-                            error += "The workflow "+workflowId+" does not exist in the database.\n";    
+                        if (workflow == null) {
+                            errorBuilder.append("The workflow ").append(workflowId).append(" does not exist in the database.<br>");
                         }
-                        else if(!workflow.getExtractionId().equals(extractionId)) {
-                            error += "The workflow "+workflowId+" does not match the extraction "+extractionId;       
+                        else if (!workflow.getExtractionId().equals(extractionId)) {
+                            errorBuilder.append("The workflow ").append(workflowId).append(" does not match the extraction ").append(extractionId).append("<br>");
                         }
                         else {
                             reaction.setWorkflow(workflow);
@@ -284,14 +286,15 @@ public class PCRReaction extends Reaction<PCRReaction> {
                     }
                 }
             } catch (DatabaseServiceException e) {
-                return "Could not query the LIMS database.  "+e.getMessage();
+                return "Could not query the LIMS database: " + e.getMessage();
             }
         }
 
-        if(error.length() > 0) {
-            return "<html><b>There were some errors in your data.</b><br><br><b>The affected reactions have been highlighted in yellow.</b><br><br>"+error;
+        if (errorBuilder.length() > 0) {
+            return "<html><b>There were some errors in your data.</b><br><br><b>The affected reactions have been highlighted in yellow.</b><br><br>" + errorBuilder.toString();
         }
-        return null;
+
+        return "";
     }
 
     public Color _getBackgroundColor() {
