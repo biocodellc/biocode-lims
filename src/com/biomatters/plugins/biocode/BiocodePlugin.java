@@ -160,8 +160,7 @@ public class BiocodePlugin extends GeneiousPlugin {
         };
         new Thread(r).start();
 
-        Geneious.MajorVersion majorVersion = Geneious.getMajorVersion();
-        if (majorVersion.compareTo(Geneious.MajorVersion.forVersion("8.1")) < 0) {
+        if (compareVersions(Geneious.getVersion(), "8.1.0") < 0) {
             checkUpdate();
         }
     }
