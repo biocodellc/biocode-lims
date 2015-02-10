@@ -1,8 +1,6 @@
 package com.biomatters.plugins.biocode;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.plugin.*;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.assembler.BatchChromatogramExportOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateFimsDataOperation;
 import com.biomatters.plugins.biocode.assembler.annotate.AnnotateLimsDataOperation;
@@ -14,20 +12,12 @@ import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyExporter;
 import com.biomatters.plugins.biocode.assembler.verify.VerifyTaxonomyOperation;
 import com.biomatters.plugins.biocode.labbench.*;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
 
 import javax.swing.*;
-import java.awt.*;
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.prefs.Preferences;
 
 /**
  * @version $Id: BiocodePlugin.java 22212 2008-09-17 02:57:52Z richard $
@@ -89,76 +79,8 @@ public class BiocodePlugin extends GeneiousPlugin {
         return "4.611";  // We require ProgressFrame.setCancelable.  If we ever make this require 4.700 or later, make VerifyTaxonomyOperation not modify input documents when PluginUtilities.isRunningFromScript() and remove the exclusion for VerifyTaxonomyOperation in WorkflowSupportTest
     }
 
-    private class NewVersionAvailableDialogOptions extends Options {
-        private MultipleLineStringOption releaseNotesDisplay;
-
-        NewVersionAvailableDialogOptions(String latestVersion,
-                                         String latestVersionURL,
-                                         String releaseNotes,
-                                         String extraInformation) throws IOException, JDOMException {
-
-            addLabel("<html>There is a new version of the Biocode plugin available (" + latestVersion + "). " +
-                     "You are<br> " +
-                     "using " + getVersion() + ". If you would like to upgrade, please visit:<br> " +
-                     "<a href=\"" + latestVersionURL + "\">" + latestVersionURL + "</a><br><br></html>");
-
-            releaseNotesDisplay = addMultipleLineStringOption("releaseNotes", "", releaseNotes, 10, true);
-
-            if (!extraInformation.isEmpty()) {
-                addLabel(createHtmlWithWidth(extraInformation, 70));
-            }
-        }
-
-        private String createHtmlWithWidth(String extraInformation, int width) {
-            String tmp = extraInformation.replaceAll("(\\s)+", " ");
-            if (tmp == null || tmp.length() == 0)
-                return "";
-
-            StringBuilder sb = new StringBuilder("<html><br>Note: ");
-            int start = 0;
-            int end;
-            while (start < tmp.length()) {
-                end = start + width;
-                if (end >= tmp.length() - 1) {
-                    sb.append("<br>").append(tmp.substring(start));
-                    break;
-                }
-
-                int indexOfLastSpace = tmp.substring(start, end).lastIndexOf(" ");
-                if(indexOfLastSpace == -1) {
-                    // If for some reason we have a 70 length word we'll just stop here and add the rest of the text on one line
-                    sb.append("<br>").append(tmp.substring(start));
-                    break;
-                }
-                end = start + indexOfLastSpace;
-                sb.append("<br>").append(tmp.substring(start, end));
-                start = end;
-            }
-
-            sb.append("</html>");
-            return sb.toString();
-        }
-
-
-        @Override
-        protected JPanel createPanel() {
-            JPanel panel = super.createPanel();
-            JScrollPane scrollPane = releaseNotesDisplay.getComponent();
-            Component component = scrollPane.getViewport().getComponent(0);
-            ((JTextArea)component).setEditable(false);
-            return panel;
-        }
-    }
-
     @Override
     public void initialize(File pluginUserDirectory, File pluginDirectory) {
-
-        final String pluginVersionsXmlURL = "http://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?" +
-                                            "Version=" + getVersion() +
-                                            "&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" +
-                                            System.getProperty("os.version", "").replace(" ", "_") +
-                                            "&OSArch=" + System.getProperty("os.arch").replace(" ", "_");
-
         this.pluginUserDirectory = pluginUserDirectory;
         Runnable r = new Runnable(){
             public void run() {
@@ -166,48 +88,6 @@ public class BiocodePlugin extends GeneiousPlugin {
             }
         };
         new Thread(r).start();
-
-        Runnable r2 = new Runnable(){
-            public void run() {
-                try {
-                    SAXBuilder builder = new SAXBuilder();
-                    Document document = builder.build(new URL(pluginVersionsXmlURL));
-
-                    String latestVersion = document.getRootElement().getChildText("LatestVersion");
-                    String latestVersionURL = document.getRootElement().getChildText("LatestVersionURL");
-                    String releaseNotes = document.getRootElement().getChildText("ReleaseNotes");
-                    String extraInformation = document.getRootElement().getChildText("ExtraInformation");
-                    if (latestVersion != null && compareVersions(getVersion(), latestVersion) < 0) {
-                        final Dialogs.DialogOptions dialogOptions = new Dialogs.DialogOptions(new String[]{"OK"}, "New Biocode Plugin Available");
-                        final NewVersionAvailableDialogOptions newVersionAvailableDialogOptions =
-                                new NewVersionAvailableDialogOptions(latestVersion, latestVersionURL, releaseNotes, extraInformation);
-
-                        ThreadUtilities.invokeAndWait(new Runnable() {
-                              @Override
-                              public void run() {
-                                  Dialogs.showDialog(dialogOptions, newVersionAvailableDialogOptions.getPanel());
-                              }
-                        });
-                    }
-                } catch (MalformedURLException e) {
-                    throw new IllegalStateException("Invalid URL", e);
-                } catch (JDOMException e) {
-                    Dialogs.showMessageDialog("Failed to show updates for Biocode Plugin." + e.getMessage());
-                } catch (IOException e) {
-                    Dialogs.showMessageDialog("Failed to show updates for Biocode Plugin." + e.getMessage());
-                } catch (InterruptedException e) {
-                    // Thread interrupted.
-                } catch (InvocationTargetException e) {
-                    throw new RuntimeException(e.getMessage(), e);
-                }
-            }
-        };
-        long lastRun = Preferences.userNodeForPackage(BiocodePlugin.class).getLong("LastUpgradeCheck", 0);
-
-        if(System.currentTimeMillis() - lastRun > 1000 * 60 * 60 * 24) {
-            Preferences.userNodeForPackage(BiocodePlugin.class).putLong("LastUpgradeCheck", System.currentTimeMillis());
-            new Thread(r2, "Checking for update versions of the biocode plugin").start();
-        }
     }
 
 
@@ -350,7 +230,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public DocumentOperation[] getDocumentOperations() {
-        DocumentOperation[] operations = new DocumentOperation[] {
+        return new DocumentOperation[] {
 //                new FillInTaxonomyOperation(),
                 new CherryPickingDocumentOperation(),
                 new NewPlateDocumentOperation(),
@@ -367,7 +247,6 @@ public class BiocodePlugin extends GeneiousPlugin {
                 //new ImportLimsOperation()
 //                new ExportForBarstoolOperation(false)
         };
-        return operations;
     }
 
     @Override
