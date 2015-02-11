@@ -1734,9 +1734,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
             PreparedStatement statement2 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
             PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = ? WHERE id=?");
-            for(int i=0; i < reactions.size(); i++) {
-                if(progress != null) {
-                    progress.setMessage("Creating new workflow "+(i+1)+" of "+reactions.size());
+            for (int i = 0; i < reactions.size(); i++) {
+                if (progress != null) {
+                    progress.setMessage("Creating new workflow " + (i + 1) + " of " + reactions.size());
                 }
                 statement.setString(2, reactions.get(i).getExtractionId());
                 statement.setString(1, reactions.get(i).getLocus());
@@ -1744,9 +1744,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 statement.execute();
                 ResultSet resultSet = statement2.executeQuery();
                 resultSet.next();
-                int workflowId = resultSet.getInt(1);
-                workflows.add(new Workflow(workflowId, "workflow"+workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
-                statement3.setString(1, reactions.get(i).getLocus()+"_workflow"+workflowId);
+                int workflowId = resultSet.getInt(1) + 1;
+                workflows.add(new Workflow(workflowId, "workflow" + workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
+                statement3.setString(1, reactions.get(i).getLocus() + "_workflow" + workflowId);
                 statement3.setInt(2, workflowId);
                 statement3.execute();
             }
