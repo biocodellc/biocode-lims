@@ -205,14 +205,17 @@ public class PlateViewer extends JPanel {
                     return;
                 }
                 final PlateBulkEditor editor = new PlateBulkEditor(getPlate(), true);
+                List<Reaction> allReactions = Arrays.asList(getPlate().getReactions());
                 if (editor.editPlate(selfReference)) {
-                    String error = getPlate().getReactions()[0].areReactionsValid(Arrays.asList(getPlate().getReactions()), plateView);
+                    String error = allReactions.get(0).areReactionsValid(allReactions, plateView);
 
                     if (!error.isEmpty()) {
                         Dialogs.showMessageDialog(error);
                     }
 
-                    updatePanel();
+                    plateView.checkForPlateSpecificErrors();
+
+                    updatePanelAndReactions(allReactions);
                 }
             }
         };
@@ -221,31 +224,29 @@ public class PlateViewer extends JPanel {
         final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk Add Traces", "Import trace files, and attach them to wells", StandardIcons.nucleotide.getIcons()) {
             public void actionPerformed(ActionEvent e) {
                 String error = ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
-                if(error != null) {
+                if (error != null) {
                     Dialogs.showMessageDialog(error);
                     actionPerformed(e);
                 }
             }
         };
-        if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
+        if (plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
             toolbar.addAction(bulkChromatAction);
         }
 
         final GeneiousAction editAction = new GeneiousAction("Edit All Wells", "", StandardIcons.edit.getIcons()) {
             public void actionPerformed(ActionEvent e) {
                 List<Reaction> reactionsToEdit = plateView.getSelectedReactions();
+
                 if (reactionsToEdit.isEmpty()) {
                     reactionsToEdit = Arrays.asList(plateView.getPlate().getReactions());
                 }
 
-                ReactionUtilities.editReactions(reactionsToEdit, plateView, true);
+                if (ReactionUtilities.editReactions(reactionsToEdit, plateView, true)) {
+                    plateView.checkForPlateSpecificErrors();
 
-                for (Reaction r : reactionsToEdit) {
-                    r.invalidateFieldWidthCache();
+                    updatePanelAndReactions(reactionsToEdit);
                 }
-
-                plateView.repaint();
-                updatePanel();
             }
         };
         toolbar.addAction(editAction);
@@ -275,8 +276,6 @@ public class PlateViewer extends JPanel {
             };
             toolbar.addAction(exportPlateAction);
         }
-
-
 
         add(scroller, BorderLayout.CENTER);
 
@@ -424,7 +423,14 @@ public class PlateViewer extends JPanel {
 
     public void updatePanel() {
         plateView.invalidate();
+
         scroller.getViewport().validate();
+
         plateView.repaint();
+    }
+
+    public void updatePanelAndReactions(Collection<Reaction> reactionsUpdated) {
+        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactionsUpdated);
+        updatePanel();
     }
 }

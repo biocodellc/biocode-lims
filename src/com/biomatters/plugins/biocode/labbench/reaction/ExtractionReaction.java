@@ -5,7 +5,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
@@ -187,11 +187,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         StringBuilder errorBuilder = new StringBuilder();
 
-        String duplicateBarcodesAmongReactionsCheckResult = checkForDuplicateBarcodesAmongReactions(reactions);
-        if (!duplicateBarcodesAmongReactionsCheckResult.isEmpty()) {
-            errorBuilder.append(duplicateBarcodesAmongReactionsCheckResult).append("<br><br>");
-        }
-
         try {
             String existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult = checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(reactions);
             if (!existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult.isEmpty()) {
@@ -262,63 +257,21 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
         }
         if (reactionsWithNoIds.size() > 0 && reactionsWithNoIds.size() < reactions.size() && Dialogs.showYesNoDialog("You have added information to reactions on your plate which have no tissue data.  Would you like to discard this information so that the wells remain empty?<br>(Cases where you might not want to make the reaction blank would be where you are creating a control reaction, or if you have wells filled with cocktail, but no DNA)", "Extractions with no ids", dialogParent, Dialogs.DialogIcon.QUESTION)) {
-            for(Reaction r : reactionsWithNoIds) {
+            for (Reaction r : reactionsWithNoIds) {
                 r.getOptions().restoreDefaults();
                 r.isEmpty();
             }
         }
 
-        Set<String> namesSet = new HashSet<String>();
         for (Reaction r : reactions) {
-            if (!r.isEmpty()) {
-                if (r.getExtractionId().length() == 0) {
-                    errorBuilder.append("Extraction reactions cannot have empty ids.<br><br>");
-                    r.setHasError(true);
-                }
-                else if (!namesSet.add(r.getExtractionId())) {
-                    errorBuilder.append("You cannot add an extraction with the name '").append(r.getExtractionId()).append("' more than once.<br><br>");
-                    r.setHasError(true);
-                }
+            if (!r.isEmpty() && r.getExtractionId().length() == 0) {
+                errorBuilder.append("Extraction reactions cannot have empty ids.<br><br>");
+                r.setHasError(true);
             }
         }
 
         if (errorBuilder.length() > 0) {
             return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "<br>The affected reactions have been highlighted in yellow.</html>";
-        }
-
-        return "";
-    }
-
-    private static String checkForDuplicateBarcodesAmongReactions(Collection<ExtractionReaction> extractionReactions) {
-        Map<String, List<ExtractionReaction>> extractionBarcodeToReactions = buildAttributeToExtractionReactionsMap(extractionReactions, new ExtractionBarcodeGetter());
-        SortedMap<String, List<String>> extractionBarcodeToReactionLocation = new TreeMap<String, List<String>>();
-
-        for (Map.Entry<String, List<ExtractionReaction>> extractionBarcodeAndReactions : extractionBarcodeToReactions.entrySet()) {
-            List<ExtractionReaction> groupOfNewExtractionsWithSameBarcode = extractionBarcodeAndReactions.getValue();
-
-            if (groupOfNewExtractionsWithSameBarcode.size() > 1) {
-                List<String> idsOfReactionsInGroup = new ArrayList<String>();
-
-                extractionBarcodeToReactionLocation.put(extractionBarcodeAndReactions.getKey(), idsOfReactionsInGroup);
-
-                for (Reaction reaction : groupOfNewExtractionsWithSameBarcode) {
-                    reaction.setHasError(true);
-                    idsOfReactionsInGroup.add(reaction.getLocationString());
-                }
-            }
-        }
-
-        if (!extractionBarcodeToReactionLocation.isEmpty()) {
-            List<String> duplicationEntries = new ArrayList<String>();
-
-            for (Map.Entry<String, List<String>> extractionBarcodeAndReactionLocation : extractionBarcodeToReactionLocation.entrySet()) {
-                duplicationEntries.add(
-                        "Extraction Barcode: " + extractionBarcodeAndReactionLocation.getKey() +
-                        "\nWell Locations: " + StringUtilities.join(", ", extractionBarcodeAndReactionLocation.getValue()) + ".\n"
-                );
-            }
-
-            return "Reactions that are associated with the same extraction barcode were detected:\n\n" + StringUtilities.join("\n", duplicationEntries);
         }
 
         return "";
@@ -343,19 +296,19 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
     private static String checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
-        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionIDGetter(), new ExtractionReactionRetrieverViaExtractionID());
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionIDGetter(), new ExtractionReactionRetrieverViaID());
     }
 
     private static String checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
-        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaExtractionBarcode());
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaBarcode());
     }
 
     private static String checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions,
                                                                                                              ReactionAttributeGetter<String> reactionAttributeGetter,
-                                                                                                             ExtractionReactionRetriever<List<String>> extractionReactionRetriever) throws DatabaseServiceException {
-        Map<String, List<ExtractionReaction>> attributeToNewExtractionReactions = buildAttributeToExtractionReactionsMap(extractionReactions, reactionAttributeGetter);
+                                                                                                             ReactionRetriever<ExtractionReaction, LIMSConnection, List<String>> reactionRetriever) throws DatabaseServiceException {
+        Map<String, List<ExtractionReaction>> attributeToNewExtractionReactions = ReactionUtilities.buildAttributeToReactionsMap(extractionReactions, reactionAttributeGetter);
         Map<String, List<ExtractionReaction>> attributeToExistingExtractionReactions = buildAttributeToExtractionReactionsThatHaveNotJustBeenMovedMap(
-                extractionReactionRetriever.retrieve(BiocodeService.getInstance().getActiveLIMSConnection(), new ArrayList<String>(attributeToNewExtractionReactions.keySet())),
+                reactionRetriever.retrieve(BiocodeService.getInstance().getActiveLIMSConnection(), new ArrayList<String>(attributeToNewExtractionReactions.keySet())),
                 reactionAttributeGetter
         );
 
@@ -374,7 +327,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     Dialogs.DialogIcon.QUESTION)) {
                 return overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
             } else {
-                List<Reaction> newExtractionReactionsAssociatedWithExistingAttributeValue = new ArrayList<Reaction>();
+                List<ExtractionReaction> newExtractionReactionsAssociatedWithExistingAttributeValue = new ArrayList<ExtractionReaction>();
 
                 for (List<ExtractionReaction> groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode : existingExtractionReactionsToNewExtractionReactions.values()) {
                     newExtractionReactionsAssociatedWithExistingAttributeValue.addAll(groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode);
@@ -408,29 +361,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
         }
 
-        return buildAttributeToExtractionReactionsMap(extractionReactionsThatExistAndHaveNotJustBeenMoved, reactionAttributeGetter);
-    }
-
-    private static Map<String, List<ExtractionReaction>> buildAttributeToExtractionReactionsMap(Collection<ExtractionReaction> extractionReactions, ReactionAttributeGetter<String> reactionAttributeGetter) {
-        Map<String, List<ExtractionReaction>> attributeToExtractionReactions = new HashMap<String, List<ExtractionReaction>>();
-
-        for (ExtractionReaction extractionReaction : extractionReactions) {
-            String attribute = reactionAttributeGetter.get(extractionReaction);
-
-            if (attribute != null && !attribute.isEmpty()) {
-                List<ExtractionReaction> extractionReactionsAssociatedWithAttribute = attributeToExtractionReactions.get(attribute);
-
-                if (extractionReactionsAssociatedWithAttribute == null) {
-                    extractionReactionsAssociatedWithAttribute = new ArrayList<ExtractionReaction>();
-
-                    attributeToExtractionReactions.put(attribute, extractionReactionsAssociatedWithAttribute);
-                }
-
-                extractionReactionsAssociatedWithAttribute.add(extractionReaction);
-            }
-        }
-
-        return attributeToExtractionReactions;
+        return ReactionUtilities.buildAttributeToReactionsMap(extractionReactionsThatExistAndHaveNotJustBeenMoved, reactionAttributeGetter);
     }
 
     private static String overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions,
@@ -443,7 +374,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             if (newExtractionReactions.size() > 1) {
                 ReactionUtilities.setReactionErrorStates(newExtractionReactions, true);
 
-                extractionReactionsThatCouldNotBeOverridden.add(reactionAttributeGetter.getAttributeName() + ": " + reactionAttributeGetter.get(newExtractionReactions.get(0)) + ".\n" + "Well Locations: " + StringUtilities.join(", ", ReactionUtilities.getReactionLocations(newExtractionReactions)) + ".");
+                extractionReactionsThatCouldNotBeOverridden.add(reactionAttributeGetter.getAttributeName() + ": " + reactionAttributeGetter.get(newExtractionReactions.get(0)) + ".\n" + "Well Numbers: " + StringUtilities.join(", ", ReactionUtilities.getWellNumbers(newExtractionReactions)) + ".");
             } else {
                 ExtractionReaction destinationReaction = newExtractionReactions.get(0);
 
@@ -453,11 +384,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
         }
 
-        if (!extractionReactionsThatCouldNotBeOverridden.isEmpty()) {
-            return "Cannot override multiple new reactions that are associated with the same" + reactionAttributeGetter.getAttributeName() + ":<br><br>" + StringUtilities.join("\n\n", extractionReactionsThatCouldNotBeOverridden);
-        }
-
-        return "";
+        return extractionReactionsThatCouldNotBeOverridden.isEmpty() ? "" : "Cannot override multiple new reactions that are associated with the same" + reactionAttributeGetter.getAttributeName() + ":<br><br>" + StringUtilities.join("\n\n", extractionReactionsThatCouldNotBeOverridden);
     }
 
     private static ExtractionReaction getExistingExtractionReactionToMove(Collection<ExtractionReaction> existingExtractionReactions) {

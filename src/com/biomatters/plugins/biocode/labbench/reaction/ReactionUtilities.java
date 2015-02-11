@@ -71,7 +71,6 @@ public class ReactionUtilities {
         }
     };
 
-
     /**
      * Shows a dialog and tries to get chromatograms for each reaction by parsing the well name out of the abi file names
      * @param plate the cycle sequencing plate to modify
@@ -626,7 +625,6 @@ public class ReactionUtilities {
         return nucleotideDocuments;
     }
 
-
     public static void saveAbiFileFromPlate(Plate plate, JComponent owner) {
         Options options = new Options(ReactionUtilities.class);
         options.addStringOption("owner", "Owner", "");
@@ -1017,7 +1015,6 @@ public class ReactionUtilities {
         return null;
     }
 
-
     /**
      * if an existing template matches the one we're trying to create, that one is returned instead unless createNewEvenIfItMatchesExisting is true
      * @param listSelector
@@ -1151,14 +1148,42 @@ public class ReactionUtilities {
         }
     }
 
-    public static Collection<String> getReactionLocations(Collection<? extends Reaction> reactions) {
-        Collection<String> reactionLocations = new ArrayList<String>();
+    public static Collection<String> getWellNumbers(Collection<? extends Reaction> reactions) {
+        Collection<String> wellNumbers = new ArrayList<String>();
 
         for (Reaction reaction : reactions) {
-            reactionLocations.add(reaction.getLocationString());
+            wellNumbers.add(reaction.getLocationString());
         }
 
-        return reactionLocations;
+        return wellNumbers;
+    }
+
+    public static <T extends Reaction> Map<String, List<T>> buildAttributeToReactionsMap(Collection<T> reactions, ReactionAttributeGetter<String> reactionAttributeGetter) {
+        Map<String, List<T>> attributeToReactions = new HashMap<String, List<T>>();
+
+        for (T reaction : reactions) {
+            String attribute = reactionAttributeGetter.get(reaction);
+
+            if (attribute != null && !attribute.isEmpty()) {
+                List<T> reactionsAssociatedWithAttribute = attributeToReactions.get(attribute);
+
+                if (reactionsAssociatedWithAttribute == null) {
+                    reactionsAssociatedWithAttribute = new ArrayList<T>();
+
+                    attributeToReactions.put(attribute, reactionsAssociatedWithAttribute);
+                }
+
+                reactionsAssociatedWithAttribute.add(reaction);
+            }
+        }
+
+        return attributeToReactions;
+    }
+
+    public static void invalidateFieldWidthCacheOfReactions(Collection<? extends Reaction> reactions) {
+        for (Reaction reaction : reactions) {
+            reaction.invalidateFieldWidthCache();
+        }
     }
 
     public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {

@@ -243,12 +243,17 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     public void updatePanel() {
         keyPanel.removeAll();
-        keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0,0).getBackgroundColorer()));
+        keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0, 0).getBackgroundColorer()));
         if(thingInsideScrollPane != null) {
             keyPanel.invalidate();
             plateView.invalidate();
             thingInsideScrollPane.revalidate();
         }
+    }
+
+    public void updatePanelAndReactions(Collection<Reaction> reactions) {
+        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactions);
+        updatePanel();
     }
 
     private void updateThermocycleAction(boolean showDialogs){
@@ -470,16 +475,18 @@ public class PlateDocumentViewer extends DocumentViewer{
     GeneiousAction editAction = new GeneiousAction("Edit All Wells", null, StandardIcons.edit.getIcons()) {
         public void actionPerformed(ActionEvent e) {
             List<Reaction> selectedReactions = plateView.getSelectedReactions();
+
             if (selectedReactions.isEmpty()) {
                 selectedReactions = Arrays.asList(plateView.getPlate().getReactions());
             }
-            if(ReactionUtilities.editReactions(selectedReactions, plateView, false)) {
+
+            if (ReactionUtilities.editReactions(selectedReactions, plateView, false)) {
+                plateView.checkForPlateSpecificErrors();
+
+                updatePanelAndReactions(selectedReactions);
+
                 saveAction.setEnabled(true);
-                for(Reaction r : selectedReactions) {
-                    r.invalidateFieldWidthCache();
-                }
             }
-            updatePanel();
         }
     };
 
@@ -508,15 +515,19 @@ public class PlateDocumentViewer extends DocumentViewer{
                 return;
             }
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
+            List<Reaction> reactions = Arrays.asList(plateView.getPlate().getReactions());
             if (editor.editPlate(container)) {
-                String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView);
+                String error = reactions.get(0).areReactionsValid(reactions, plateView);
 
                 if (!error.isEmpty()) {
                     Dialogs.showMessageDialog(error);
                 }
 
+                plateView.checkForPlateSpecificErrors();
+
                 saveAction.setEnabled(true);
-                updatePanel();
+
+                updatePanelAndReactions(reactions);
             }
         }
     };
