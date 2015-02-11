@@ -163,9 +163,6 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 Dialogs.showMessageDialog(reactionCheckResult);
             }
 
-            for(Reaction r : plateReactions){
-                r.isError = false;
-            }
             progressListener.setProgress(1.0);
         }
         plateViewer.get().displayInFrame(true, GuiUtilities.getMainFrame());
