@@ -36,7 +36,9 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             LIMSConnection.SEQUENCE_PROGRESS.getName(),
             CycleSequencingReaction.NUM_TRACES_FIELD.getName(),
             CycleSequencingReaction.NUM_SEQS_FIELD.getName(),
-            CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getName()
+            CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getName(),
+            Reaction.REACTION_PLATE_NAME_DOCUMENT_FIELD.getName(),
+            Reaction.REACTION_WELL_DOCUMENT_FIELD.getName()
     };
 
     public String getName() {
@@ -167,6 +169,10 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
                         return doc.getFieldValue(CycleSequencingReaction.NUM_SEQS_FIELD.getCode());
                     case 15:
                         return doc.getFieldValue(CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getCode());
+                    case 16:
+                        return doc.getFieldValue(Reaction.PLATE_NAME_DOCUMENT_FIELD.getCode());
+                    case 17:
+                        return doc.getFieldValue(Reaction.WELL_DOCUMENT_FIELD.getCode());
                 }
                 return null;
             }
