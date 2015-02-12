@@ -724,19 +724,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, Cancelable cancelable) throws DatabaseServiceException {
         LimsSearchResult result = new LimsSearchResult();
 
-        Boolean downloadTissues = BiocodeService.isDownloadTissues(query);
-        Boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
-        Boolean downloadPlates = BiocodeService.isDownloadPlates(query);
-        Boolean downloadSequences = BiocodeService.isDownloadSequences(query);
+        boolean isQueryAnInstanceOfBasicSearchQuery = query instanceof BasicSearchQuery;
 
-        if (query instanceof BasicSearchQuery) {
-            query = generateAdvancedQueryFromBasicQuery(query);
-        }
+        boolean downloadTissues = BiocodeService.isDownloadTissues(query);
+        boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
+        boolean downloadPlates = BiocodeService.isDownloadPlates(query);
+        boolean downloadSequences = BiocodeService.isDownloadSequences(query);
+
+        Query processedQuery = isQueryAnInstanceOfBasicSearchQuery ? generateAdvancedQueryFromBasicQuery(query) : query;
 
         List<AdvancedSearchQueryTerm> terms = new ArrayList<AdvancedSearchQueryTerm>();
         CompoundSearchQuery.Operator operator;
-        if (query instanceof CompoundSearchQuery) {
-            CompoundSearchQuery compoundQuery = (CompoundSearchQuery) query;
+        if (processedQuery instanceof CompoundSearchQuery) {
+            CompoundSearchQuery compoundQuery = (CompoundSearchQuery)processedQuery;
             operator = compoundQuery.getOperator();
             for (Query innerQuery : compoundQuery.getChildren()) {
                 if (isCompatibleSearchQueryTerm(innerQuery)) {
@@ -744,13 +744,12 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 }
             }
         } else {
-            if (isCompatibleSearchQueryTerm(query)) {
-                AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) query;
+            if (isCompatibleSearchQueryTerm(processedQuery)) {
+                AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm)processedQuery;
                 terms.add(advancedQuery);
             }
             operator = CompoundSearchQuery.Operator.AND;
         }
-
 
         Map<String, List<AdvancedSearchQueryTerm>> tableToTerms = mapQueryTermsToTable(terms);
         List<Object> sqlValues = new ArrayList<Object>();
@@ -768,7 +767,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         if (workflowPart != null) {
             sqlValues.addAll(workflowPart.parameters);
         }
-
 
         QueryPart platePart = getQueryForTable("plate", tableToTerms, operator);
         if (platePart != null) {
@@ -789,20 +787,18 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         }
         boolean searchedForSamplesButFoundNone = tissueIdsToMatch != null && tissueIdsToMatch.isEmpty();  // samples == null when doing a browse query
-        if (searchedForSamplesButFoundNone && (operator == CompoundSearchQuery.Operator.AND ||
-                (operator == CompoundSearchQuery.Operator.OR && onlySearchingOnFIMSFields))
-        ) {
+        if (searchedForSamplesButFoundNone && (operator == CompoundSearchQuery.Operator.AND || (operator == CompoundSearchQuery.Operator.OR && onlySearchingOnFIMSFields))) {
             return result;
         }
 
-        StringBuilder workflowQuery = constructLimsQueryString(
-                tissueIdsToMatch, operator,
-                workflowPart, extractionPart, platePart, assemblyPart);
+        StringBuilder workflowQuery = constructLimsQueryString(tissueIdsToMatch, operator, workflowPart, extractionPart, platePart, assemblyPart);
         runLimsSearchQuery("LIMS query", result, workflowQuery.toString(), sqlValues, cancelable);
 
-        String noWorkflowQuery = getPcrAndSequencingPlatesWithNoWorkflowQuery(operator, workflowPart, extractionPart, platePart, assemblyPart);
-        if(noWorkflowQuery != null) {
-            runLimsSearchQuery("LIMS query (no workflow)", result, noWorkflowQuery, valuesForNoWorkflowQuery, cancelable);
+        if (isQueryAnInstanceOfBasicSearchQuery || (workflowPart == null && extractionPart == null && (tissueIdsToMatch == null || tissueIdsToMatch.isEmpty()))) {
+            String noWorkflowQuery = getPcrAndSequencingPlatesWithNoWorkflowQuery(operator, workflowPart, extractionPart, platePart, assemblyPart);
+            if (noWorkflowQuery != null) {
+                runLimsSearchQuery("LIMS query (no workflow)", result, noWorkflowQuery, valuesForNoWorkflowQuery, cancelable);
+            }
         }
 
         return result;
