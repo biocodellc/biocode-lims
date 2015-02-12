@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicReference;
  *          Created on 18/06/2009 4:06:40 PM
  */
 public class WorkflowDocument extends MuitiPartDocument {
+    static final DocumentField EXTRACTION_PLATE_NAME_DOCUMENT_FIELD = new DocumentField("Extraction Plate", "", "extractionPlate", String.class, true, false);
+    static final DocumentField EXTRACTION_WELL_DOCUMENT_FIELD = new DocumentField("Extraction Well", "", "extractionWell", String.class, true, false);
     private Workflow workflow;
     private List<ReactionPart> parts;
     Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>(){
@@ -104,12 +106,12 @@ public class WorkflowDocument extends MuitiPartDocument {
                         "Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
                         LIMSConnection.WORKFLOW_LOCUS_FIELD,
                         LIMSConnection.WORKFLOW_BCID_FIELD,
+                        EXTRACTION_PLATE_NAME_DOCUMENT_FIELD,
+                        EXTRACTION_WELL_DOCUMENT_FIELD,
                         LIMSConnection.SEQUENCE_PROGRESS,
                         CycleSequencingReaction.NUM_TRACES_FIELD,
                         CycleSequencingReaction.NUM_SEQS_FIELD,
-                        CycleSequencingReaction.NUM_PASSED_SEQS_FIELD,
-                        Reaction.EXTRACTION_PLATE_NAME_DOCUMENT_FIELD,
-                        Reaction.EXTRACTION_WELL_DOCUMENT_FIELD
+                        CycleSequencingReaction.NUM_PASSED_SEQS_FIELD
         ));
 
         return fields;
@@ -197,13 +199,13 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
 
             return uniqueSequenceIDs.size();
-        } else if (fieldCodeName.equals(Reaction.EXTRACTION_PLATE_NAME_DOCUMENT_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(EXTRACTION_PLATE_NAME_DOCUMENT_FIELD.getCode())) {
             if (parts == null || parts.size() == 0) {
                 return null;
             } else {
                 return parts.get(0).getReaction().getPlateName();
             }
-        } else if (fieldCodeName.equals(Reaction.EXTRACTION_WELL_DOCUMENT_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(EXTRACTION_WELL_DOCUMENT_FIELD.getCode())) {
             if (parts == null || parts.size() == 0) {
                 return null;
             } else {
