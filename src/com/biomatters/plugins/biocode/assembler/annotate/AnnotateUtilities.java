@@ -55,6 +55,15 @@ public class AnnotateUtilities {
     public static final DocumentField LIMS_ID = new DocumentField("id", "", "lims_id", Integer.class, false, false);
     public static final DocumentField ASSEMBLY_PARAMS_FIELD = new DocumentField("Assembly Parameters", "", "assemblyParams", String.class, false, false);
 
+    private static final String FORWARD_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE            = "fwd_primer_name";
+    private static final String FORWARD_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE        = "fwd_primer_seq";
+    private static final String REVERSE_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE            = "rev_primer_name";
+    private static final String REVERSE_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE        = "rev_primer_seq";
+    private static final String FORWARD_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE     = "seq_fwd_primer_name";
+    private static final String FORWARD_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE = "seq_fwd_primer_seq";
+    private static final String REVERSE_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE     = "seq_rev_primer_name";
+    private static final String REVERSE_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE = "seq_rev_primer_seq";
+
     private AnnotateUtilities() {
     }
 
@@ -408,7 +417,6 @@ public class AnnotateUtilities {
     /**
      * Annotates a document with data from a {@link FimsDataGetter}
      *
-     *
      * @param fimsDataGetter Used to get the FIMS fields and values
      * @param failBlog To add failure messages to, for example when there are no FIMs fields associated with the document
      * @param annotatedDocument The document to annotate
@@ -516,7 +524,7 @@ public class AnnotateUtilities {
             AnnotatedPluginDocument forwardSequencingPrimer = null;
             AnnotatedPluginDocument reverseSequencingPrimer = null;
 
-            if (pcrReaction != null) {
+            if (pcrReaction != null && hasAllSequencingPrimerNotefields(primerNote)) {
                 forwardPCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_OPTION_ID);
                 reversePCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
             }
@@ -529,24 +537,24 @@ public class AnnotateUtilities {
                 reverseSequencingPrimer = getPrimer(reverseSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
             }
 
-            if (forwardPCRPrimer != null && (directionForTrace == null || directionForTrace)) {
-                primerNote.setFieldValue("fwd_primer_name", forwardPCRPrimer.getName());
-                primerNote.setFieldValue("fwd_primer_seq", ((OligoSequenceDocument) forwardPCRPrimer.getDocument()).getBindingSequence().toString());
+            if (forwardPCRPrimer != null) {
+                primerNote.setFieldValue(FORWARD_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, forwardPCRPrimer.getName());
+                primerNote.setFieldValue(FORWARD_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument) forwardPCRPrimer.getDocument()).getBindingSequence().toString());
             }
 
-            if (reversePCRPrimer != null && (directionForTrace == null || !directionForTrace)) {
-                primerNote.setFieldValue("rev_primer_name", reversePCRPrimer.getName());
-                primerNote.setFieldValue("rev_primer_seq", ((OligoSequenceDocument)reversePCRPrimer.getDocument()).getBindingSequence().toString());
+            if (reversePCRPrimer != null) {
+                primerNote.setFieldValue(REVERSE_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, reversePCRPrimer.getName());
+                primerNote.setFieldValue(REVERSE_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument)reversePCRPrimer.getDocument()).getBindingSequence().toString());
             }
 
-            if (forwardSequencingPrimer != null) {
-                primerNote.setFieldValue("seq_fwd_primer_name", forwardSequencingPrimer.getName());
-                primerNote.setFieldValue("seq_fwd_primer_seq", ((OligoSequenceDocument)forwardSequencingPrimer.getDocument()).getBindingSequence().toString());
+            if (forwardSequencingPrimer != null && (directionForTrace == null || directionForTrace)) {
+                primerNote.setFieldValue(FORWARD_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, forwardSequencingPrimer.getName());
+                primerNote.setFieldValue(FORWARD_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument)forwardSequencingPrimer.getDocument()).getBindingSequence().toString());
             }
 
-            if (reverseSequencingPrimer != null) {
-                primerNote.setFieldValue("seq_rev_primer_name", reverseSequencingPrimer.getName());
-                primerNote.setFieldValue("seq_rev_primer_seq", ((OligoSequenceDocument)reverseSequencingPrimer.getDocument()).getBindingSequence().toString());
+            if (reverseSequencingPrimer != null && (directionForTrace == null || !directionForTrace)) {
+                primerNote.setFieldValue(REVERSE_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, reverseSequencingPrimer.getName());
+                primerNote.setFieldValue(REVERSE_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument)reverseSequencingPrimer.getDocument()).getBindingSequence().toString());
             }
 
             notes.setNote(primerNote);
@@ -559,6 +567,23 @@ public class AnnotateUtilities {
         }
 
         return fieldsAnnotated;
+    }
+
+    private static boolean hasAllSequencingPrimerNotefields(DocumentNote note) {
+        return hasDocumentNoteField(note, FORWARD_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE)
+                && hasDocumentNoteField(note, FORWARD_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE)
+                && hasDocumentNoteField(note, REVERSE_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE)
+                && hasDocumentNoteField(note, REVERSE_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE);
+    }
+
+    private static boolean hasDocumentNoteField(DocumentNote note, String code) {
+        for (DocumentNoteField documentNoteField : note.getFields()) {
+            if (documentNoteField.getCode().equals(code)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static DocumentField annotateDocumentAndReturnField(AnnotatedPluginDocument document, DocumentField field, Object value) {
