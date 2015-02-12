@@ -37,8 +37,8 @@ public class MultiWorkflowDocumentViewerFactory extends TableDocumentViewerFacto
             CycleSequencingReaction.NUM_TRACES_FIELD.getName(),
             CycleSequencingReaction.NUM_SEQS_FIELD.getName(),
             CycleSequencingReaction.NUM_PASSED_SEQS_FIELD.getName(),
-            Reaction.REACTION_PLATE_NAME_DOCUMENT_FIELD.getName(),
-            Reaction.REACTION_WELL_DOCUMENT_FIELD.getName()
+            Reaction.EXTRACTION_PLATE_NAME_DOCUMENT_FIELD.getName(),
+            Reaction.EXTRACTION_WELL_DOCUMENT_FIELD.getName()
     };
 
     public String getName() {
