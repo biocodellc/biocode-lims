@@ -1876,8 +1876,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
-                    returnConnection(connection);
-                }
+            returnConnection(connection);
+        }
     }
 
     @Override
@@ -2134,9 +2134,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
-            //check the vaidity of the plate.
-            isPlateValid(plate);
-
             connection = getConnection();
             connection.beginTransaction();
 
@@ -2269,18 +2266,18 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     public void isPlateValid(Plate plate) throws DatabaseServiceException {
         try {
-            if(plate.getName() == null || plate.getName().length() == 0) {
+            if (plate.getName() == null || plate.getName().length() == 0) {
                 throw new BadDataException("Plates cannot have empty names");
             }
-            if(plate.getId() < 0) {
+            if (plate.getId() < 0) {
                 PreparedStatement plateCheckStatement = createStatement("SELECT name FROM plate WHERE name=?");
                 plateCheckStatement.setString(1, plate.getName());
-                if(plateCheckStatement.executeQuery().next()) {
-                    throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
+                if (plateCheckStatement.executeQuery().next()) {
+                    throw new BadDataException("A plate with the name '" + plate.getName() + "' already exists");
                 }
                 plateCheckStatement.close();
             }
-            if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
+            if  (plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
                 throw new BadDataException("The plate has no thermocycle set");
             }
         } catch (BadDataException e) {
@@ -2338,45 +2335,37 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     private void saveReactions(Plate plate, ProgressListener progress) throws BadDataException, DatabaseServiceException {
-        ConnectionWrapper connection = null;
-        try {
-            connection = getConnection();
-            connection.beginTransaction();
+        isPlateValid(plate);
 
-            if(progress != null) {
-                progress.setMessage("Creating new workflows");
-            }
-
-            //create workflows if necessary
-            //int workflowCount = 0;
-            List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
-            for(Reaction reaction : plate.getReactions()) {
-                if(reaction.getType() == Reaction.Type.Extraction) {
-                    continue;
-                }
-                Object extractionId = reaction.getFieldValue("extractionId");
-                if(!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
-                    reactionsWithoutWorkflows.add(reaction);
-                }
-            }
-            if (reactionsWithoutWorkflows.size() > 0) {
-                List<Workflow> workflowList = addWorkflows(reactionsWithoutWorkflows, progress);
-                for (int i = 0; i < reactionsWithoutWorkflows.size(); i++) {
-                    Reaction reaction = reactionsWithoutWorkflows.get(i);
-                    reaction.setWorkflow(workflowList.get(i));
-                }
-            }
-            if(progress != null) {
-                progress.setMessage("Creating the plate");
-            }
-            //we need to create the plate
-            createOrUpdatePlate(plate, progress);
-            connection.endTransaction();
-        } catch (SQLException e) {
-            throw new DatabaseServiceException(e, e.getMessage(), false);
-        } finally {
-            returnConnection(connection);
+        if (progress != null) {
+            progress.setMessage("Creating new workflows");
         }
+
+        //create workflows if necessary
+        //int workflowCount = 0;
+        List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
+        for (Reaction reaction : plate.getReactions()) {
+            if (reaction.getType() == Reaction.Type.Extraction) {
+                continue;
+            }
+            Object extractionId = reaction.getFieldValue("extractionId");
+            if (!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                reactionsWithoutWorkflows.add(reaction);
+            }
+        }
+        if (reactionsWithoutWorkflows.size() > 0) {
+            List<Workflow> workflowList = addWorkflows(reactionsWithoutWorkflows, progress);
+            for (int i = 0; i < reactionsWithoutWorkflows.size(); i++) {
+                Reaction reaction = reactionsWithoutWorkflows.get(i);
+                reaction.setWorkflow(workflowList.get(i));
+            }
+        }
+        if (progress != null) {
+            progress.setMessage("Creating the plate");
+        }
+
+        //we need to create the plate
+        createOrUpdatePlate(plate, progress);
     }
 
     private void saveExtractions(Plate plate, ProgressListener progress) throws DatabaseServiceException, BadDataException {
