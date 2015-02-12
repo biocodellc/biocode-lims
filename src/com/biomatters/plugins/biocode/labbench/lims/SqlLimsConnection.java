@@ -800,12 +800,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 workflowPart, extractionPart, platePart, assemblyPart);
         runLimsSearchQuery("LIMS query", result, workflowQuery.toString(), sqlValues, cancelable);
 
-
-        String noWorkflowQuery = getPcrAndSequencingPlatesWithNoWorkflowQuery(operator, workflowPart, extractionPart, platePart, assemblyPart);
-        if(noWorkflowQuery != null) {
-            runLimsSearchQuery("LIMS query (no workflow)", result, noWorkflowQuery, valuesForNoWorkflowQuery, cancelable);
-        }
-
         return result;
     }
 
@@ -861,54 +855,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             SqlUtilities.cleanUpStatements(preparedStatement);
             returnConnection(connection);
         }
-    }
-
-
-    private String getPcrAndSequencingPlatesWithNoWorkflowQuery(CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
-                                                                QueryPart extractionQueryConditions, QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
-        if(operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || extractionQueryConditions != null)) {
-            // No point doing an AND query. Because either:
-            // 1. Retrieving workflows require workflow links which are non-existent
-            // 2. Retrieving based on extractions which are covered by the main query
-            return null;
-        }
-        if(workflowQueryConditions != null && extractionQueryConditions == null && plateQueryConditions == null && assemblyQueryConditions == null) {
-            // If workflows are the only thing that are being queried then return nothing.
-            return null;
-        }
-        StringBuilder queryBuilder = new StringBuilder(
-                "SELECT extraction.sampleId, workflow.id, plate.id AS plateId, assembly.id, assembly.date FROM ");
-
-        // Don't include extraction plates.  They are covered by the regular query
-        queryBuilder.append("(SELECT * FROM plate WHERE id NOT IN (SELECT DISTINCT plate FROM extraction)) plate");
-
-        queryBuilder.append(" LEFT OUTER JOIN pcr ON plate.id = pcr.plate");
-        queryBuilder.append(" LEFT OUTER JOIN cyclesequencing ON plate.id = cyclesequencing.plate");
-        queryBuilder.append(" LEFT OUTER JOIN sequencing_result ON sequencing_result.reaction = cyclesequencing.id");
-        queryBuilder.append(" LEFT OUTER JOIN assembly ON sequencing_result.assembly = assembly.id");
-        // The following two joins are to get the correct columns.  They should be empty since this query is retrieving
-        // pcr and cyclesquencing plates with no workflows
-        queryBuilder.append(" LEFT OUTER JOIN workflow ON pcr.workflow = workflow.id");
-        queryBuilder.append(" LEFT OUTER JOIN extraction ON workflow.extractionId = extraction.id");
-
-        queryBuilder.append(
-            " WHERE NOT EXISTS (SELECT workflow FROM pcr WHERE plate = plate.id AND workflow IS NOT NULL) " +
-            "AND NOT EXISTS (SELECT workflow FROM cyclesequencing WHERE plate = plate.id AND workflow IS NOT NULL) "
-        );
-
-        List<String> conditions = new ArrayList<String>();
-        if(plateQueryConditions != null) {
-            conditions.add("(" + plateQueryConditions + ")");
-        }
-        if(assemblyQueryConditions != null) {
-            conditions.add("(" + assemblyQueryConditions + ")");
-        }
-        if(!conditions.isEmpty()) {
-            queryBuilder.append(" AND (").append(StringUtilities.join(operator.toString(), conditions)).append(")");
-        }
-
-        queryBuilder.append(" ORDER BY assembly.date desc");
-        return queryBuilder.toString();
     }
 
     private void setInitialTraceCountsForPlates(Map<Integer, Plate> plateMap) throws SQLException {
