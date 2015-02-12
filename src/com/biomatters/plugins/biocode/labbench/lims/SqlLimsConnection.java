@@ -2322,6 +2322,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     public void savePlates(List<Plate> plates, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         for (Plate plate : plates) {
+            isPlateValid(plate);
             if (plate.getReactionType() == Reaction.Type.Extraction) {
                 saveExtractions(plate, progress);
             } else {
@@ -2335,8 +2336,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         try {
             connection = getConnection();
             connection.beginTransaction();
-
-            isPlateValid(plate);
 
             if (progress != null) {
                 progress.setMessage("Creating new workflows");
@@ -2376,7 +2375,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     private void saveExtractions(Plate plate, ProgressListener progress) throws DatabaseServiceException, BadDataException {
-        isPlateValid(plate);
         createOrUpdatePlate(plate, progress);
     }
 
