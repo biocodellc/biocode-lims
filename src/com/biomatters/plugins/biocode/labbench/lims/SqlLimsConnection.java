@@ -800,11 +800,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 workflowPart, extractionPart, platePart, assemblyPart);
         runLimsSearchQuery("LIMS query", result, workflowQuery.toString(), sqlValues, cancelable);
 
-        String noWorkflowQuery = getPcrAndSequencingPlatesWithNoWorkflowQuery(operator, workflowPart, extractionPart, platePart, assemblyPart);
-        if(noWorkflowQuery != null) {
-            runLimsSearchQuery("LIMS query (no workflow)", result, noWorkflowQuery, valuesForNoWorkflowQuery, cancelable);
-        }
-
         return result;
     }
 
