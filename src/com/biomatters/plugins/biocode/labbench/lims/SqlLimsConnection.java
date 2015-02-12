@@ -1727,33 +1727,49 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     private List<Workflow> addWorkflows(List<Reaction> reactions, ProgressListener progress) throws DatabaseServiceException {
         List<Workflow> workflows = new ArrayList<Workflow>();
         ConnectionWrapper connection = null;
+        int idToBeAssignedToFirstWorkflowToBeCreated = 1;
 
         try {
-            connection = getConnection();
             connection.beginTransaction();
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO workflow(locus, extractionId, date) VALUES (?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
-            PreparedStatement statement2 = isLocal() ? connection.prepareStatement("CALL IDENTITY();") : connection.prepareStatement("SELECT last_insert_id()");
-            PreparedStatement statement3 = connection.prepareStatement("UPDATE workflow SET name = ? WHERE id=?");
+
+            PreparedStatement getNumberOfExistingWorkflowEntriesStatement = connection.prepareStatement("SELECT COUNT(*) from workflows");
+            ResultSet numberOfExistingWorkflowEntriesRetrievalResult = getNumberOfExistingWorkflowEntriesStatement.executeQuery();
+            numberOfExistingWorkflowEntriesRetrievalResult.next();
+            int numberOfExistingWorkflowEntries = numberOfExistingWorkflowEntriesRetrievalResult.getInt(1);
+
+            if (numberOfExistingWorkflowEntries != 0) {
+                PreparedStatement getMaximumExistingWorkflowIDStatement = connection.prepareStatement("SELECT MAX(id) from workflows");
+                ResultSet maximumExistingWorkflowIDRetrievalResult = getMaximumExistingWorkflowIDStatement.executeQuery();
+                maximumExistingWorkflowIDRetrievalResult.next();
+                idToBeAssignedToFirstWorkflowToBeCreated = maximumExistingWorkflowIDRetrievalResult.getInt(1);
+            }
+
+            PreparedStatement createNewWorkflowStatement = connection.prepareStatement("INSERT INTO workflow(id, name, locus, extractionId, date) VALUES (?, ?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
             for (int i = 0; i < reactions.size(); i++) {
                 if (progress != null) {
                     progress.setMessage("Creating new workflow " + (i + 1) + " of " + reactions.size());
                 }
-                statement.setString(2, reactions.get(i).getExtractionId());
-                statement.setString(1, reactions.get(i).getLocus());
-                statement.setDate(3, new java.sql.Date(new Date().getTime()));
-                statement.execute();
-                ResultSet resultSet = statement2.executeQuery();
-                resultSet.next();
-                int workflowId = resultSet.getInt(1) + 1;
-                workflows.add(new Workflow(workflowId, "workflow" + workflowId, reactions.get(i).getExtractionId(), reactions.get(i).getLocus(), new Date()));
-                statement3.setString(1, reactions.get(i).getLocus() + "_workflow" + workflowId);
-                statement3.setInt(2, workflowId);
-                statement3.execute();
+
+                Reaction currentReaction = reactions.get(i);
+
+                int id = idToBeAssignedToFirstWorkflowToBeCreated + i;
+                String locus = currentReaction.getLocus();
+                String name = locus + "_workflow" + id;
+                String extractionID = currentReaction.getExtractionId();
+                Date date = new Date();
+
+                createNewWorkflowStatement.setInt(1, id);
+                createNewWorkflowStatement.setString(2, name);
+                createNewWorkflowStatement.setString(3, locus);
+                createNewWorkflowStatement.setString(4, extractionID);
+                createNewWorkflowStatement.setDate(5, new java.sql.Date(date.getTime()));
+
+                createNewWorkflowStatement.execute();
+
+                workflows.add(new Workflow(id, "workflow" + id, extractionID, locus, date));
             }
 
-            statement.close();
-            statement2.close();
-            statement3.close();
+            createNewWorkflowStatement.close();
             connection.endTransaction();
             return workflows;
         } catch(SQLException e) {
