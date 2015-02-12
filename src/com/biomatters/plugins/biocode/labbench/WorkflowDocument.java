@@ -200,16 +200,20 @@ public class WorkflowDocument extends MuitiPartDocument {
 
             return uniqueSequenceIDs.size();
         } else if (fieldCodeName.equals(EXTRACTION_PLATE_NAME_DOCUMENT_FIELD.getCode())) {
-            if (parts == null || parts.size() == 0) {
+            List<Reaction> extractions = getReactions(Reaction.Type.Extraction);
+            assert(extractions.size() == 1);
+            if (extractions.isEmpty()) {
                 return null;
             } else {
-                return parts.get(0).getReaction().getPlateName();
+                return extractions.get(0).getPlateName();
             }
         } else if (fieldCodeName.equals(EXTRACTION_WELL_DOCUMENT_FIELD.getCode())) {
-            if (parts == null || parts.size() == 0) {
+            List<Reaction> extractions = getReactions(Reaction.Type.Extraction);
+            assert(extractions.size() == 1);
+            if (extractions.isEmpty()) {
                 return null;
             } else {
-                return parts.get(0).getReaction().getLocationString();
+                return extractions.get(0).getLocationString();
             }
         } else if (getFimsSample() != null) {
             return getFimsSample().getFimsAttributeValue(fieldCodeName);
