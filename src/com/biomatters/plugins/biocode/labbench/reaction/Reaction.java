@@ -70,8 +70,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public static final DocumentField GEL_IMAGE_DOCUMENT_FIELD = new DocumentField("GELImage", "", "gelImage", String.class, false, false);
     public static final DocumentField PLATE_NAME_DOCUMENT_FIELD = new DocumentField("Plate", "", "_plateName_", String.class, false, false);
     public static final DocumentField WELL_DOCUMENT_FIELD = new DocumentField("Well", "", "_plateWell_", String.class, false, false);
-    public static final DocumentField REACTION_PLATE_NAME_DOCUMENT_FIELD = new DocumentField("reaction_plate", "", "_plateName_", String.class, false, false);
-    public static final DocumentField REACTION_WELL_DOCUMENT_FIELD = new DocumentField("reaction_Well", "", "_plateWell_", String.class, false, false);
+    public static final DocumentField EXTRACTION_PLATE_NAME_DOCUMENT_FIELD = new DocumentField("extraction_plate", "", "_plateName_", String.class, false, false);
+    public static final DocumentField EXTRACTION_WELL_DOCUMENT_FIELD = new DocumentField("extraction_Well", "", "_plateWell_", String.class, false, false);
 
     public abstract String getLocus();
 

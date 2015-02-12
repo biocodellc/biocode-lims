@@ -108,8 +108,8 @@ public class WorkflowDocument extends MuitiPartDocument {
                         CycleSequencingReaction.NUM_TRACES_FIELD,
                         CycleSequencingReaction.NUM_SEQS_FIELD,
                         CycleSequencingReaction.NUM_PASSED_SEQS_FIELD,
-                        Reaction.REACTION_PLATE_NAME_DOCUMENT_FIELD,
-                        Reaction.REACTION_WELL_DOCUMENT_FIELD
+                        Reaction.EXTRACTION_PLATE_NAME_DOCUMENT_FIELD,
+                        Reaction.EXTRACTION_WELL_DOCUMENT_FIELD
         ));
 
         return fields;
@@ -197,13 +197,13 @@ public class WorkflowDocument extends MuitiPartDocument {
             }
 
             return uniqueSequenceIDs.size();
-        } else if (fieldCodeName.equals(Reaction.REACTION_PLATE_NAME_DOCUMENT_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(Reaction.EXTRACTION_PLATE_NAME_DOCUMENT_FIELD.getCode())) {
             if (parts == null || parts.size() == 0) {
                 return null;
             } else {
                 return parts.get(0).getReaction().getPlateName();
             }
-        } else if (fieldCodeName.equals(Reaction.REACTION_WELL_DOCUMENT_FIELD.getCode())) {
+        } else if (fieldCodeName.equals(Reaction.EXTRACTION_WELL_DOCUMENT_FIELD.getCode())) {
             if (parts == null || parts.size() == 0) {
                 return null;
             } else {
