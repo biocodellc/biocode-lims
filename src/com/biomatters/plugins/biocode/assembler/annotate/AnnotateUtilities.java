@@ -524,16 +524,16 @@ public class AnnotateUtilities {
             AnnotatedPluginDocument forwardSequencingPrimer = null;
             AnnotatedPluginDocument reverseSequencingPrimer = null;
 
-            if (pcrReaction != null && hasAllSequencingPrimerNotefields(primerNote)) {
+            if (pcrReaction != null) {
                 forwardPCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_OPTION_ID);
                 reversePCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
             }
 
-            if (forwardSequencingReaction != null) {
+            if (forwardSequencingReaction != null && hasAllSequencingPrimerNotefields(primerNote)) {
                 forwardSequencingPrimer = getPrimer(forwardSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
             }
 
-            if (reverseSequencingReaction != null) {
+            if (reverseSequencingReaction != null && hasAllSequencingPrimerNotefields(primerNote)) {
                 reverseSequencingPrimer = getPrimer(reverseSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
             }
 
