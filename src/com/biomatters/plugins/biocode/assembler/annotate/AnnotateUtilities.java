@@ -529,12 +529,14 @@ public class AnnotateUtilities {
                 reversePCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
             }
 
-            if (forwardSequencingReaction != null && hasAllSequencingPrimerNotefields(primerNote)) {
-                forwardSequencingPrimer = getPrimer(forwardSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
-            }
+            if (hasAllSequencingPrimerNoteFields(primerNote)) {
+                if (forwardSequencingPrimer != null) {
+                    forwardSequencingPrimer = getPrimer(forwardSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
+                }
 
-            if (reverseSequencingReaction != null && hasAllSequencingPrimerNotefields(primerNote)) {
-                reverseSequencingPrimer = getPrimer(reverseSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
+                if (reverseSequencingPrimer != null) {
+                    reverseSequencingPrimer = getPrimer(reverseSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
+                }
             }
 
             if (forwardPCRPrimer != null) {
@@ -569,7 +571,7 @@ public class AnnotateUtilities {
         return fieldsAnnotated;
     }
 
-    private static boolean hasAllSequencingPrimerNotefields(DocumentNote note) {
+    private static boolean hasAllSequencingPrimerNoteFields(DocumentNote note) {
         return hasDocumentNoteField(note, FORWARD_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE)
                 && hasDocumentNoteField(note, FORWARD_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE)
                 && hasDocumentNoteField(note, REVERSE_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE)
