@@ -530,11 +530,11 @@ public class AnnotateUtilities {
             }
 
             if (hasAllSequencingPrimerNoteFields(primerNote)) {
-                if (forwardSequencingPrimer != null) {
+                if (forwardSequencingReaction != null) {
                     forwardSequencingPrimer = getPrimer(forwardSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
                 }
 
-                if (reverseSequencingPrimer != null) {
+                if (reverseSequencingReaction != null) {
                     reverseSequencingPrimer = getPrimer(reverseSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
                 }
             }
