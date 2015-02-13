@@ -67,13 +67,14 @@ import java.util.prefs.Preferences;
 
         final List<ProjectOptionValue> projectOptions = new ArrayList<ProjectOptionValue>();
         List<Project> projectCache = getProjectCache();
-        if(projectCache == null) {
+        if (projectCache == null || projectCache.isEmpty()) {
             projectOptions.add(ProjectOptionValue.NO_VALUE);
         } else {
             for (Project project : projectCache) {
                 projectOptions.add(new ProjectOptionValue(project));
             }
         }
+
         projectOption = addComboBoxOption("project", "Project:", projectOptions, projectOptions.get(0));
     }
 
