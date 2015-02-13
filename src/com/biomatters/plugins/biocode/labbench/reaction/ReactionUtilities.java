@@ -834,12 +834,10 @@ public class ReactionUtilities {
             }
         });
 
-        boolean hasChanges = false;
-        if(choice.get().equals("OK")) {
+        if (choice.get().equals("OK")) {
             int changedOptionCount = 0;
-            hasChanges = true; //todo: check if options actually have changed...
             Element optionsElement = XMLSerializer.classToXML("options", options);
-            if(reactions.size() == 1) {
+            if (reactions.size() == 1) {
                 changedOptionCount = 1;
                 Reaction reaction = reactions.get(0);
                 try {

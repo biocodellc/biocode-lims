@@ -56,6 +56,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     private JComponent thingInsideScrollPane;
     private JPanel keyPanel;
     private JPanel thermocyclePanel;
+    private boolean hasCheckedPlateForErrorsAtLeastOnce = false;
 
     public PlateDocumentViewer(PlateDocument doc, AnnotatedPluginDocument aDoc, boolean local) {
         this.annotatedDocument = aDoc;
@@ -94,7 +95,10 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Dialogs.showMessageDialog("Please log in");
                     return;
                 }
-                plateDoc.setPlate(plateView.getPlate());
+                final Plate plate = plateView.getPlate();
+                final List<Reaction> allReactionsOnPlate = Arrays.asList(plate.getReactions());
+
+                plateDoc.setPlate(plate);
                 annotatedDocument.saveDocument();
                 setEnabled(false);
                 if(!isLocal) {
@@ -102,7 +106,26 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
+                                boolean errorDetected = false;
+
+                                if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
+                                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
+
+                                    if (!reactionValidityCheckResult.isEmpty()) {
+                                        Dialogs.showMessageDialog(reactionValidityCheckResult);
+
+                                        errorDetected = true;
+                                    }
+
+                                    errorDetected = errorDetected || plateView.checkForPlateSpecificErrors();
+
+                                    hasCheckedPlateForErrorsAtLeastOnce = true;
+                                }
+
+                                if (!errorDetected) {
+                                    BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
+                                }
+
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
                                     for(Reaction r : plateView.getPlate().getReactions()) {
                                         ((CycleSequencingReaction)r).purgeChromats();
@@ -135,6 +158,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                         }
                     };
                     new Thread(runnable).start();
+                    updatePanelAndReactions(allReactionsOnPlate);
                 }
             }
         };
@@ -154,9 +178,6 @@ public class PlateDocumentViewer extends DocumentViewer{
         });
 
         cocktailCount = new HashMap<Cocktail, Integer>();
-        
-
-
 
         saveAction.setEnabled(false);
         bulkEditAction.setProOnly(true);
@@ -485,6 +506,8 @@ public class PlateDocumentViewer extends DocumentViewer{
 
                 updatePanelAndReactions(selectedReactions);
 
+                hasCheckedPlateForErrorsAtLeastOnce = true;
+
                 saveAction.setEnabled(true);
             }
         }
@@ -515,19 +538,21 @@ public class PlateDocumentViewer extends DocumentViewer{
                 return;
             }
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
-            List<Reaction> reactions = Arrays.asList(plateView.getPlate().getReactions());
+            List<Reaction> allReactionsOnPlate = Arrays.asList(plateView.getPlate().getReactions());
             if (editor.editPlate(container)) {
-                String error = reactions.get(0).areReactionsValid(reactions, plateView);
+                String reactionValidityErrorCheck = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
 
-                if (!error.isEmpty()) {
-                    Dialogs.showMessageDialog(error);
+                if (!reactionValidityErrorCheck.isEmpty()) {
+                    Dialogs.showMessageDialog(reactionValidityErrorCheck);
                 }
 
                 plateView.checkForPlateSpecificErrors();
 
-                saveAction.setEnabled(true);
+                updatePanelAndReactions(allReactionsOnPlate);
 
-                updatePanelAndReactions(reactions);
+                hasCheckedPlateForErrorsAtLeastOnce = true;
+
+                saveAction.setEnabled(true);
             }
         }
     };

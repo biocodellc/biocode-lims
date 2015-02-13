@@ -153,16 +153,6 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 copyPlateToReactionList(plate, editingPlate);
             }
 
-            progressListener.setMessage("Checking with the database");
-            progressListener.setIndeterminateProgress();
-            Reaction[] plateReactions = editingPlate.getReactions();
-
-            String reactionCheckResult = plateReactions[0].areReactionsValid(Arrays.asList(plateReactions), null);
-
-            if (!reactionCheckResult.isEmpty()) {
-                Dialogs.showMessageDialog(reactionCheckResult);
-            }
-
             progressListener.setProgress(1.0);
         }
         plateViewer.get().displayInFrame(true, GuiUtilities.getMainFrame());

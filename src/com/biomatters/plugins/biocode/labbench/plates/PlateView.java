@@ -25,6 +25,7 @@ public class PlateView extends JPanel {
     private boolean colorBackground = true;
     private boolean selectAll = false;
     boolean creating = false;
+    private boolean editted = false;
 
     private int zoom = 9;
 
@@ -180,7 +181,7 @@ public class PlateView extends JPanel {
                     }
                 }
                 if (e.getClickCount() == 2) {
-                    final AtomicBoolean editResult = new AtomicBoolean();
+                    final AtomicBoolean editResult = new AtomicBoolean(false);
                     final ProgressFrame progressFrame = BiocodeUtilities.getBlockingProgressFrame("Making changes...", selfReference);
                     new Thread() {
                         public void run() {
@@ -189,31 +190,33 @@ public class PlateView extends JPanel {
                             final List<Reaction> selectedReactions = getSelectedReactions();
 
                             if (!selectedReactions.isEmpty()) {
-                                boolean edittedReactions = ReactionUtilities.editReactions(selectedReactions, selfReference, creating);
-
-                                editResult.set(edittedReactions);
-
-                                if (edittedReactions) {
+                                if (ReactionUtilities.editReactions(selectedReactions, selfReference, creating)) {
                                     checkForPlateSpecificErrors();
-                                }
-                            }
 
-                            progressFrame.setComplete();
+                                    editResult.set(true);
 
-                            ThreadUtilities.invokeNowOrLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (editResult.get()) {
-                                        fireEditListeners();
+                                    if (!editted) {
+                                        editted = true;
                                     }
-
-                                    ReactionUtilities.invalidateFieldWidthCacheOfReactions(selectedReactions);
-
-                                    repaint();
-                                    revalidate();
-                                    repaint();
                                 }
-                            });
+
+
+                                ThreadUtilities.invokeNowOrLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (editResult.get()) {
+                                            fireEditListeners();
+                                        }
+
+                                        ReactionUtilities.invalidateFieldWidthCacheOfReactions(selectedReactions);
+
+                                        repaint();
+                                        revalidate();
+                                        repaint();
+                                    }
+                                });
+                            }
+                            progressFrame.setComplete();
                         }
                     }.start();
                 }
@@ -273,17 +276,29 @@ public class PlateView extends JPanel {
         getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_A, GuiUtilities.MENU_MASK), "select-all");
     }
 
-    public void checkForPlateSpecificErrors() {
-        checkForDuplicateAttributesAcrossReactionsOnPlate();
+    public boolean isEditted() {
+        return editted;
     }
 
-    private void checkForDuplicateAttributesAcrossReactionsOnPlate() {
+    public boolean checkForPlateSpecificErrors() {
+        boolean errorDetected = false;
+
+        errorDetected = errorDetected || checkForDuplicateAttributesAcrossReactionsOnPlate();
+
+        return errorDetected;
+    }
+
+    private boolean checkForDuplicateAttributesAcrossReactionsOnPlate() {
+        boolean errorDetected = false;
         Collection<Reaction> reactions = Arrays.asList(getPlate().getReactions());
-        checkForDuplicateAttributesAmongReactions(reactions, new ExtractionIDGetter());
-        checkForDuplicateAttributesAmongReactions(reactions, new ExtractionBarcodeGetter());
+
+        errorDetected = errorDetected || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionIDGetter()) ;
+        errorDetected = errorDetected || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionBarcodeGetter());
+
+        return errorDetected;
     }
 
-    private static void checkForDuplicateAttributesAmongReactions(Collection<Reaction> reactions, ReactionAttributeGetter<String> reactionAttributeGetter) {
+    private static boolean checkForDuplicateAttributesAmongReactions(Collection<Reaction> reactions, ReactionAttributeGetter<String> reactionAttributeGetter) {
         Map<String, List<Reaction>> attributeToReactions = ReactionUtilities.buildAttributeToReactionsMap(reactions, reactionAttributeGetter);
         List<String> duplications = new ArrayList<String>();
 
@@ -301,7 +316,11 @@ public class PlateView extends JPanel {
 
         if (!duplications.isEmpty()) {
             Dialogs.showMessageDialog("Reactions that are associated with the same " + reactionAttributeGetter.getAttributeName().toLowerCase() + " were detected on the plate:<br><br>" + StringUtilities.join("<br>", duplications));
+
+            return true;
         }
+
+        return false;
     }
 
     private void initWasSelected(Reaction[] reactions) {

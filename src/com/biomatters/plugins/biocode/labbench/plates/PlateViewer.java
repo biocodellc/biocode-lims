@@ -24,6 +24,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
 
 /**
@@ -36,6 +37,7 @@ public class PlateViewer extends JPanel {
     private PlateViewer selfReference = this;
     private Options.StringOption nameField;
     private JScrollPane scroller;
+    private boolean hasCheckedPlateForErrorsAtLeastOnce = false;
 
     public PlateViewer(int numberOfReactions, Reaction.Type type) {
         plateView = new PlateView(numberOfReactions, type, true);
@@ -205,17 +207,19 @@ public class PlateViewer extends JPanel {
                     return;
                 }
                 final PlateBulkEditor editor = new PlateBulkEditor(getPlate(), true);
-                List<Reaction> allReactions = Arrays.asList(getPlate().getReactions());
+                List<Reaction> allReactionsOnPlate = Arrays.asList(getPlate().getReactions());
                 if (editor.editPlate(selfReference)) {
-                    String error = allReactions.get(0).areReactionsValid(allReactions, plateView);
+                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
 
-                    if (!error.isEmpty()) {
-                        Dialogs.showMessageDialog(error);
+                    if (!reactionValidityCheckResult.isEmpty()) {
+                        Dialogs.showMessageDialog(reactionValidityCheckResult);
                     }
 
                     plateView.checkForPlateSpecificErrors();
 
-                    updatePanelAndReactions(allReactions);
+                    updatePanelAndReactions(allReactionsOnPlate);
+
+                    hasCheckedPlateForErrorsAtLeastOnce = true;
                 }
             }
         };
@@ -246,6 +250,8 @@ public class PlateViewer extends JPanel {
                     plateView.checkForPlateSpecificErrors();
 
                     updatePanelAndReactions(reactionsToEdit);
+
+                    hasCheckedPlateForErrorsAtLeastOnce = true;
                 }
             }
         };
@@ -350,33 +356,54 @@ public class PlateViewer extends JPanel {
                 okButton.addActionListener(new ActionListener(){
                     public void actionPerformed(ActionEvent e) {
                         final Plate plate = plateView.getPlate();
-
+                        final List<Reaction> allReactionsOnPlate = Arrays.asList(plate.getReactions());
                         final ProgressFrame progress = new ProgressFrame("Creating Plate", "", frame);
+                        final AtomicBoolean errorDetected = new AtomicBoolean(false);
                         progress.setCancelable(false);
                         progress.setIndeterminateProgress();
 
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    BiocodeService.getInstance().savePlate(plate, progress);
+                                    if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
+                                        String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
+
+                                        if (!reactionValidityCheckResult.isEmpty()) {
+                                            Dialogs.showMessageDialog(reactionValidityCheckResult);
+
+                                            errorDetected.set(true);
+                                        }
+
+                                        errorDetected.set(errorDetected.get() || plateView.checkForPlateSpecificErrors());
+
+                                        hasCheckedPlateForErrorsAtLeastOnce = true;
+                                    }
+
+                                    if (!errorDetected.get()) {
+                                        BiocodeService.getInstance().savePlate(plate, progress);
+                                    }
                                 } catch(BadDataException ex) {
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
-                                    return;
+                                    errorDetected.set(true);
                                 } catch(DatabaseServiceException ex){
                                     ex.printStackTrace();
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
-                                    return;
+                                    errorDetected.set(true);
                                 } finally {
                                     progress.setComplete();
                                 }
+
                                 nameField.getParentOptions().savePreferences();
-                                frame.dispose();
+
+                                if (!errorDetected.get()) {
+                                    frame.dispose();
+                                }
                             }
                         };
                         new Thread(runnable, "Biocode plate creation thread").start();
-                        updatePanel();
+                        updatePanelAndReactions(allReactionsOnPlate);
                     }
                 });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);
