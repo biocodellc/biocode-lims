@@ -1730,6 +1730,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         int idToBeAssignedToFirstWorkflowToBeCreated = 1;
 
         try {
+            connection = getConnection();
             connection.beginTransaction();
 
             PreparedStatement getNumberOfExistingWorkflowEntriesStatement = connection.prepareStatement("SELECT COUNT(*) from workflows");
