@@ -1742,7 +1742,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 PreparedStatement getMaximumExistingWorkflowIDStatement = connection.prepareStatement("SELECT MAX(id) from workflow");
                 ResultSet maximumExistingWorkflowIDRetrievalResult = getMaximumExistingWorkflowIDStatement.executeQuery();
                 maximumExistingWorkflowIDRetrievalResult.next();
-                idToBeAssignedToFirstWorkflowToBeCreated = maximumExistingWorkflowIDRetrievalResult.getInt(1);
+                idToBeAssignedToFirstWorkflowToBeCreated = maximumExistingWorkflowIDRetrievalResult.getInt(1) + 1;
             }
 
             PreparedStatement createNewWorkflowStatement = connection.prepareStatement("INSERT INTO workflow(id, name, locus, extractionId, date) VALUES (?, ?, ?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
