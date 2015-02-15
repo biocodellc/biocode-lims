@@ -1733,19 +1733,19 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection = getConnection();
             connection.beginTransaction();
 
-            PreparedStatement getNumberOfExistingWorkflowEntriesStatement = connection.prepareStatement("SELECT COUNT(*) from workflows");
+            PreparedStatement getNumberOfExistingWorkflowEntriesStatement = connection.prepareStatement("SELECT COUNT(*) from workflow");
             ResultSet numberOfExistingWorkflowEntriesRetrievalResult = getNumberOfExistingWorkflowEntriesStatement.executeQuery();
             numberOfExistingWorkflowEntriesRetrievalResult.next();
             int numberOfExistingWorkflowEntries = numberOfExistingWorkflowEntriesRetrievalResult.getInt(1);
 
             if (numberOfExistingWorkflowEntries != 0) {
-                PreparedStatement getMaximumExistingWorkflowIDStatement = connection.prepareStatement("SELECT MAX(id) from workflows");
+                PreparedStatement getMaximumExistingWorkflowIDStatement = connection.prepareStatement("SELECT MAX(id) from workflow");
                 ResultSet maximumExistingWorkflowIDRetrievalResult = getMaximumExistingWorkflowIDStatement.executeQuery();
                 maximumExistingWorkflowIDRetrievalResult.next();
                 idToBeAssignedToFirstWorkflowToBeCreated = maximumExistingWorkflowIDRetrievalResult.getInt(1);
             }
 
-            PreparedStatement createNewWorkflowStatement = connection.prepareStatement("INSERT INTO workflow(id, name, locus, extractionId, date) VALUES (?, ?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
+            PreparedStatement createNewWorkflowStatement = connection.prepareStatement("INSERT INTO workflow(id, name, locus, extractionId, date) VALUES (?, ?, ?, (SELECT extraction.id from extraction where extraction.extractionId = ?), ?)");
             for (int i = 0; i < reactions.size(); i++) {
                 if (progress != null) {
                     progress.setMessage("Creating new workflow " + (i + 1) + " of " + reactions.size());
