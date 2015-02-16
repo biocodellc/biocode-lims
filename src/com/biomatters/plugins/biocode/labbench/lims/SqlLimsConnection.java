@@ -19,6 +19,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.utilities.SqlUtilities;
 import com.google.common.collect.Multimap;
 import jebl.util.Cancelable;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
 import javax.sql.DataSource;
@@ -3461,6 +3462,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             SqlUtilities.appendSetOfQuestionMarks(getTracesQuery, reactionIDs.size());
             PreparedStatement getTracesStatement = connection.getInternalConnection().prepareStatement(getTracesQuery.toString(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
+            getTracesStatement.setQueryTimeout(0);
+
             for (int i = 1, reactionID; i <= reactionIDs.size(); i++) {
                 reactionID = reactionIDs.get(i - 1);
                 getTracesCountStatement.setObject(i, reactionID);
@@ -3472,39 +3475,53 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             SqlUtilities.printSql(getTracesCountQuery.toString(), reactionIDs);
+
             ResultSet countResultSet = getTracesCountStatement.executeQuery();
             countResultSet.next();
             int count = countResultSet.getInt(1);
+
             countResultSet.close();
 
+            CompositeProgressListener traceDownloadProgress = new CompositeProgressListener(progressListener, count);
+
             SqlUtilities.printSql(getTracesQuery.toString(), reactionIDs);
+
             ResultSet traces = getTracesStatement.executeQuery();
+
             Map<Integer, List<MemoryFile>> results = new HashMap<Integer, List<MemoryFile>>();
-            double pos = 0;
+            int tracesDownloaded = 0;
             long bytes = 0;
-            while(traces.next()) {
-                if (progressListener.isCanceled()) break;
-                progressListener.setMessage("downloaded "+BiocodeUtilities.formatSize(bytes, 2));
-                progressListener.setProgress(pos/count);
-                pos++;
+            while (traces.next()) {
+                if (traceDownloadProgress.isCanceled()) {
+                    break;
+                }
+
+                traceDownloadProgress.beginSubtask("Downloading trace " + tracesDownloaded + 1 + " (" + String.format("%,d", bytes) + " bytes downloaded)");
+
                 MemoryFile memoryFile = new MemoryFile(traces.getInt("id"), traces.getString("name"), traces.getBytes("data"));
-                bytes += memoryFile.getData().length;
+
                 int id = traces.getInt("reaction");
                 List<MemoryFile> files = results.get(id);
-                if(files == null) {
+
+                if (files == null) {
                     files = new ArrayList<MemoryFile>();
                     results.put(id, files);
                 }
+
                 files.add(memoryFile);
+
+                ++tracesDownloaded;
+                bytes += memoryFile.getData().length;
             }
+
             traces.close();
+
             return results;
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             returnConnection(connection);
         }
-
     }
 
     @Override
