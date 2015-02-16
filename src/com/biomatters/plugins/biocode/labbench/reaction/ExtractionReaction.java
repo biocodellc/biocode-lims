@@ -307,10 +307,12 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                                                                                                              ReactionAttributeGetter<String> reactionAttributeGetter,
                                                                                                              ReactionRetriever<ExtractionReaction, LIMSConnection, List<String>> reactionRetriever) throws DatabaseServiceException {
         Map<String, List<ExtractionReaction>> attributeToNewExtractionReactions = ReactionUtilities.buildAttributeToReactionsMap(extractionReactions, reactionAttributeGetter);
-        Map<String, List<ExtractionReaction>> attributeToExistingExtractionReactions = buildAttributeToExtractionReactionsThatHaveNotJustBeenMovedMap(
-                reactionRetriever.retrieve(BiocodeService.getInstance().getActiveLIMSConnection(), new ArrayList<String>(attributeToNewExtractionReactions.keySet())),
-                reactionAttributeGetter
-        );
+
+        Collection<ExtractionReaction> existingExtractionReactions = reactionRetriever.retrieve(BiocodeService.getInstance().getActiveLIMSConnection(), new ArrayList<String>(attributeToNewExtractionReactions.keySet()));
+
+        filterExtractionReactions(existingExtractionReactions, extractionReactions);
+
+        Map<String, List<ExtractionReaction>> attributeToExistingExtractionReactions = ReactionUtilities.buildAttributeToReactionsMap(existingExtractionReactions, reactionAttributeGetter);
 
         Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions = buildExistingExtractionsReactionsToNewExtractionReactionsMap(
                 attributeToNewExtractionReactions,
@@ -340,6 +342,19 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return "";
     }
 
+    private static void filterExtractionReactions(Collection<ExtractionReaction> extractionReactions, Collection<ExtractionReaction> extractionReactionsToExclude) {
+        Collection<ExtractionReaction> extractionReactionsToFilterOut = new ArrayList<ExtractionReaction>();
+        Collection<Integer> databaseIDsOfExtractionsAssociatedWithExtractionReactionsToExclude = ReactionUtilities.getDatabaseIDOfExtractions(extractionReactionsToExclude);
+
+        for (ExtractionReaction extractionReaction : extractionReactions) {
+            if (databaseIDsOfExtractionsAssociatedWithExtractionReactionsToExclude.contains(extractionReaction.getDatabaseIdOfExtraction()) || extractionReaction.isJustMoved()) {
+                extractionReactionsToFilterOut.add(extractionReaction);
+            }
+        }
+
+        extractionReactions.removeAll(extractionReactionsToFilterOut);
+    }
+
     private static Map<List<ExtractionReaction>, List<ExtractionReaction>> buildExistingExtractionsReactionsToNewExtractionReactionsMap(Map<String, List<ExtractionReaction>> identifierToNewExtractionReactions,
                                                                                                                                         Map<String, List<ExtractionReaction>> identifierToExistingExtractionReactions) {
         Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionsToNewExtractions = new HashMap<List<ExtractionReaction>, List<ExtractionReaction>>();
@@ -349,19 +364,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
 
         return existingExtractionsToNewExtractions;
-    }
-
-    private static Map<String, List<ExtractionReaction>> buildAttributeToExtractionReactionsThatHaveNotJustBeenMovedMap(Collection<ExtractionReaction> extractionReactions, ReactionAttributeGetter<String> reactionAttributeGetter)
-            throws DatabaseServiceException {
-        Collection<ExtractionReaction> extractionReactionsThatExistAndHaveNotJustBeenMoved = new ArrayList<ExtractionReaction>();
-
-        for (ExtractionReaction extractionReaction : extractionReactions) {
-            if (!extractionReaction.isJustMoved()) {
-                extractionReactionsThatExistAndHaveNotJustBeenMoved.add(extractionReaction);
-            }
-        }
-
-        return ReactionUtilities.buildAttributeToReactionsMap(extractionReactionsThatExistAndHaveNotJustBeenMoved, reactionAttributeGetter);
     }
 
     private static String overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions,

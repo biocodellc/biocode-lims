@@ -1180,6 +1180,19 @@ public class ReactionUtilities {
         }
     }
 
+    public static Collection<Integer> getDatabaseIDOfExtractions(Collection<? extends Reaction> reactions) {
+        Collection<Integer> databaseIdOfExtractions = new HashSet<Integer>();
+
+        for (Reaction reaction : reactions) {
+            Integer databaseIDOfExtraction = reaction.getDatabaseIdOfExtraction();
+            if (databaseIDOfExtraction != null) {
+                databaseIdOfExtractions.add(databaseIDOfExtraction);
+            }
+        }
+
+        return databaseIdOfExtractions;
+    }
+
     public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {
         private DocumentField documentField;
 
