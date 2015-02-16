@@ -3479,7 +3479,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     break;
                 }
 
-                traceDownloadProgress.beginSubtask("Downloading trace " + tracesDownloaded + 1 + " of " + numberOfTracesToDownload + " (" + String.format("%,d", bytes) + " bytes downloaded)");
+                traceDownloadProgress.beginSubtask("Downloading trace " + (tracesDownloaded + 1) + " of " + numberOfTracesToDownload + " (" + String.format("%,d", bytes) + " bytes downloaded)");
 
                 MemoryFile memoryFile = new MemoryFile(tracesResultSet.getInt("id"), tracesResultSet.getString("name"), tracesResultSet.getBytes("data"));
 
