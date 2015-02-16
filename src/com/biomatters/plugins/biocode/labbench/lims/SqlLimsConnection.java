@@ -3454,9 +3454,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         try {
             connection = getConnection();
 
-            StringBuilder getTracesCountQuery = new StringBuilder("SELECT COUNT(id) FROM traces WHERE reaction IN ");
-            SqlUtilities.appendSetOfQuestionMarks(getTracesCountQuery, reactionIDs.size());
-            PreparedStatement getTracesCountStatement = connection.prepareStatement(getTracesCountQuery.toString());
+            StringBuilder getNumberOfTracesToDownloadQuery = new StringBuilder("SELECT COUNT(id) FROM traces WHERE reaction IN ");
+            SqlUtilities.appendSetOfQuestionMarks(getNumberOfTracesToDownloadQuery, reactionIDs.size());
+            PreparedStatement getNumberOfTracesToDownloadStatement = connection.prepareStatement(getNumberOfTracesToDownloadQuery.toString());
 
             StringBuilder getTracesQuery = new StringBuilder("SELECT * FROM traces WHERE reaction IN ");
             SqlUtilities.appendSetOfQuestionMarks(getTracesQuery, reactionIDs.size());
@@ -3466,7 +3466,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             for (int i = 1, reactionID; i <= reactionIDs.size(); i++) {
                 reactionID = reactionIDs.get(i - 1);
-                getTracesCountStatement.setObject(i, reactionID);
+                getNumberOfTracesToDownloadStatement.setObject(i, reactionID);
                 getTracesStatement.setObject(i, reactionID);
             }
 
@@ -3474,15 +3474,15 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 getTracesStatement.setFetchSize(Integer.MIN_VALUE);
             }
 
-            SqlUtilities.printSql(getTracesCountQuery.toString(), reactionIDs);
+            SqlUtilities.printSql(getNumberOfTracesToDownloadQuery.toString(), reactionIDs);
 
-            ResultSet countResultSet = getTracesCountStatement.executeQuery();
-            countResultSet.next();
-            int count = countResultSet.getInt(1);
+            ResultSet numberOfTracesToDownloadResultSet = getNumberOfTracesToDownloadStatement.executeQuery();
+            numberOfTracesToDownloadResultSet.next();
+            int numberOfTracesToDownload = numberOfTracesToDownloadResultSet.getInt(1);
 
-            countResultSet.close();
+            numberOfTracesToDownloadResultSet.close();
 
-            CompositeProgressListener traceDownloadProgress = new CompositeProgressListener(progressListener, count);
+            CompositeProgressListener traceDownloadProgress = new CompositeProgressListener(progressListener, numberOfTracesToDownload);
 
             SqlUtilities.printSql(getTracesQuery.toString(), reactionIDs);
 
@@ -3496,7 +3496,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     break;
                 }
 
-                traceDownloadProgress.beginSubtask("Downloading trace " + tracesDownloaded + 1 + " (" + String.format("%,d", bytes) + " bytes downloaded)");
+                traceDownloadProgress.beginSubtask("Downloading trace " + tracesDownloaded + 1 + " of " + numberOfTracesToDownload + " (" + String.format("%,d", bytes) + " bytes downloaded)");
 
                 MemoryFile memoryFile = new MemoryFile(traces.getInt("id"), traces.getString("name"), traces.getBytes("data"));
 
