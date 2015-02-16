@@ -67,7 +67,7 @@ CREATE TABLE `assembly` (
   CONSTRAINT `FK_assembly_1` FOREIGN KEY (`workflow`) REFERENCES `workflow` (`id`),
   KEY `FK_assembly_2` (`failure_reason`),
   CONSTRAINT `FK_assembly_2` FOREIGN KEY (`failure_reason`) REFERENCES `failure_reason` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `assembly`
@@ -204,9 +204,9 @@ INSERT INTO `cyclesequencing_thermocycle` (`id`,`cycle`) VALUES
 
 DROP TABLE IF EXISTS `databaseversion`;
 CREATE TABLE `databaseversion` (
-  `version` int(10) unsigned NOT NULL auto_increment,
+  `version` int(10) unsigned NOT NULL,
   PRIMARY KEY  (`version`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `databaseversion`
