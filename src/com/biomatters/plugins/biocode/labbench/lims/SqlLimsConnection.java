@@ -3451,6 +3451,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     @Override
     public Map<Integer, List<MemoryFile>> downloadTraces(List<Integer> reactionIDs, ProgressListener progressListener) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
+        ResultSet numberOfTracesToDownloadResultSet = null;
+        ResultSet tracesResultSet = null;
         try {
             connection = getConnection();
 
@@ -3476,31 +3478,29 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
             SqlUtilities.printSql(getNumberOfTracesToDownloadQuery.toString(), reactionIDs);
 
-            ResultSet numberOfTracesToDownloadResultSet = getNumberOfTracesToDownloadStatement.executeQuery();
+            numberOfTracesToDownloadResultSet = getNumberOfTracesToDownloadStatement.executeQuery();
             numberOfTracesToDownloadResultSet.next();
             int numberOfTracesToDownload = numberOfTracesToDownloadResultSet.getInt(1);
-
-            numberOfTracesToDownloadResultSet.close();
 
             CompositeProgressListener traceDownloadProgress = new CompositeProgressListener(progressListener, numberOfTracesToDownload);
 
             SqlUtilities.printSql(getTracesQuery.toString(), reactionIDs);
 
-            ResultSet traces = getTracesStatement.executeQuery();
+            tracesResultSet = getTracesStatement.executeQuery();
 
             Map<Integer, List<MemoryFile>> results = new HashMap<Integer, List<MemoryFile>>();
             int tracesDownloaded = 0;
             long bytes = 0;
-            while (traces.next()) {
+            while (tracesResultSet.next()) {
                 if (traceDownloadProgress.isCanceled()) {
                     break;
                 }
 
                 traceDownloadProgress.beginSubtask("Downloading trace " + tracesDownloaded + 1 + " of " + numberOfTracesToDownload + " (" + String.format("%,d", bytes) + " bytes downloaded)");
 
-                MemoryFile memoryFile = new MemoryFile(traces.getInt("id"), traces.getString("name"), traces.getBytes("data"));
+                MemoryFile memoryFile = new MemoryFile(tracesResultSet.getInt("id"), tracesResultSet.getString("name"), tracesResultSet.getBytes("data"));
 
-                int id = traces.getInt("reaction");
+                int id = tracesResultSet.getInt("reaction");
                 List<MemoryFile> files = results.get(id);
 
                 if (files == null) {
@@ -3514,12 +3514,22 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 bytes += memoryFile.getData().length;
             }
 
-            traces.close();
-
             return results;
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
+            try {
+                if (numberOfTracesToDownloadResultSet != null) {
+                    numberOfTracesToDownloadResultSet.close();
+                }
+
+                if (tracesResultSet != null) {
+                    tracesResultSet.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
             returnConnection(connection);
         }
     }
