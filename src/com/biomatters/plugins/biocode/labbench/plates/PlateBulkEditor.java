@@ -66,7 +66,6 @@ public class PlateBulkEditor {
     private List<DocumentField> defaultFields;
     List<DocumentField> autoFillFields = getAutofillFields();
 
-
     public enum Direction {
         ACROSS_AND_DOWN,
         DOWN_AND_ACROSS
@@ -294,7 +293,7 @@ public class PlateBulkEditor {
                 public void actionPerformed(ActionEvent actionEvent) {
                     final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                     final DocumentFieldEditor tissueSampleIDEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
-                    final ExtractionBarcodeFieldSelection extractionBarcodeFieldSelection = new ExtractionBarcodeFieldSelection(this.getClass(), getDocumentFieldOptionValues(activeFIMSConnection.getSearchAttributes()));
+                    final ExtractionBarcodeFieldSelection extractionBarcodeFieldSelection = new ExtractionBarcodeFieldSelection(this.getClass(), BiocodeUtilities.getOptionValuesForDocumentFields(activeFIMSConnection.getSearchAttributes()));
 
                     tissueSampleIDEditor.valuesFromTextView();
 
@@ -307,9 +306,15 @@ public class PlateBulkEditor {
                                 for (int row = 0; row < plate.getRows(); row++) {
                                     for (int col = 0; col < plate.getCols(); col++) {
                                         try {
-                                            List<FimsSample> sample = activeFIMSConnection.retrieveSamplesForTissueIds(Collections.singletonList(tissueSampleIDEditor.getValue(row, col).toString()));
-                                            if (sample.size() == 1) {
-                                                extractionBarcodeEditor.setValue(row, col, sample.get(0).getFimsAttributeValue(extractionBarcodeFieldName).toString());
+                                            Object tissueID = tissueSampleIDEditor.getValue(row, col);
+                                            if (tissueID instanceof String) {
+                                                List<FimsSample> sample = activeFIMSConnection.retrieveSamplesForTissueIds(Collections.singletonList(tissueSampleIDEditor.getValue(row, col).toString()));
+                                                if (sample.size() == 1) {
+                                                    Object extractionBarcode = sample.get(0).getFimsAttributeValue(extractionBarcodeFieldName);
+                                                    if (extractionBarcode instanceof String) {
+                                                        extractionBarcodeEditor.setValue(row, col, (String)extractionBarcode);
+                                                    }
+                                                }
                                             }
                                         } catch (ConnectionException e) {
                                             System.err.println("Error retrieving sample for row " + (row + 1) + ", column " + (col + 1) + ": " + e.getMessage());
@@ -639,14 +644,14 @@ public class PlateBulkEditor {
     private static class ExtractionBarcodeFieldSelection extends Options {
         private ComboBoxOption<OptionValue> extractionBarcodeFieldSelectionComboBox;
 
-        public ExtractionBarcodeFieldSelection(Class c, Options.OptionValue[] fimsFields) {
+        public ExtractionBarcodeFieldSelection(Class c, List<Options.OptionValue> fimsFields) {
             super(c);
 
-            if (fimsFields.length == 0) {
-                throw new IllegalArgumentException("fimsFields.length == 0");
+            if (fimsFields.isEmpty()) {
+                throw new IllegalArgumentException("fimsFields is empty.");
             }
 
-            extractionBarcodeFieldSelectionComboBox = addComboBoxOption("extractionBarcodeFieldSelectionComboBox", "Extraction Barcode Field: ", fimsFields, fimsFields[0]);
+            extractionBarcodeFieldSelectionComboBox = addComboBoxOption("extractionBarcodeFieldSelectionComboBox", "Extraction Barcode Field: ", fimsFields, fimsFields.get(0));
         }
 
         public OptionValue getExtractionBarcodeFieldOptionValue() {
@@ -705,19 +710,6 @@ public class PlateBulkEditor {
             }
         };
         ThreadUtilities.invokeNowOrLater(runnable);
-    }
-
-    private static Options.OptionValue[] getDocumentFieldOptionValues(Collection<DocumentField> documentFields) {
-        Options.OptionValue[] documentFieldNames = new Options.OptionValue[documentFields.size()];
-        Iterator<DocumentField> documentFieldIterator = documentFields.iterator();
-        int i = 0;
-
-        while (documentFieldIterator.hasNext()) {
-            DocumentField documentField = documentFieldIterator.next();
-            documentFieldNames[i++] = new Options.OptionValue(documentField.getCode(), documentField.getName(), documentField.getDescription());
-        }
-
-        return documentFieldNames;
     }
 
     private static void putMappedValuesIntoEditor(DocumentFieldEditor sourceEditor, DocumentFieldEditor destEditor, Map<String, String> mappedValues, Plate plate, boolean blankUnmappedRows) {
