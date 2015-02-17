@@ -57,11 +57,11 @@ public class PlateBulkEditor {
     private GeneiousAction autoGenerateIds;
     private GeneiousAction autodetectAction;
 
-    private static DocumentField TISSUE_SAMPLE_ID_FIELD = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
-    private static DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
+    private static DocumentField TISSUE_SAMPLE_ID_FIELD = new DocumentField("Tissue Sample ID", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
+    private static DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction ID", "", "extractionId", String.class, false, false);
     private static DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-    private static DocumentField PARENT_EXTRACTION_ID_FIELD = new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false);
-    private static DocumentField WORKFLOW_ID_FIELD = new DocumentField("Workflow Id", "", "workflowId", String.class, false, false);
+    private static DocumentField PARENT_EXTRACTION_ID_FIELD = new DocumentField("Parent Extraction ID", "", "parentExtraction", String.class, true, false);
+    private static DocumentField WORKFLOW_ID_FIELD = new DocumentField("Workflow ID", "", "workflowId", String.class, false, false);
 
     private List<DocumentField> defaultFields;
     List<DocumentField> autoFillFields = getAutofillFields();
@@ -168,7 +168,7 @@ public class PlateBulkEditor {
         boolean compatiblePlate = plate.getPlateSize() != null || plate.getReactions().length < 96;
         final FIMSConnection activeFIMSConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         if (plate.getReactionType() == Reaction.Type.Extraction && compatiblePlate && activeFIMSConnection.storesPlateAndWellInformation()) {
-            archivePlateAction = new GeneiousAction("Get tissue IDs from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", IconUtilities.getIcons("database16.png")) {
+            archivePlateAction = new GeneiousAction("Get Tissue IDs From Archive Plate", "Use 2D barcode tube data to get tissue sample IDs from the FIMS", IconUtilities.getIcons("database16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
                     List<JTextField> jTextFields = new ArrayList<JTextField>();
@@ -243,7 +243,7 @@ public class PlateBulkEditor {
             toolsActions.add(archivePlateAction);
         }
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            importBarcodesFromScannerFile = new GeneiousAction("Import Extraction Barcodes from Barcode Scanner", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
+            importBarcodesFromScannerFile = new GeneiousAction("Import Extraction Barcodes from File", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     File inputFile = FileUtilities.getUserSelectedFile("Select Barcode File", new FilenameFilter(){
                         public boolean accept(File dir, String name) {
@@ -288,7 +288,8 @@ public class PlateBulkEditor {
             };
             toolsActions.add(importBarcodesFromScannerFile);
 
-            importBarcodesFromFIMS = new GeneiousAction("Generate Extraction Barcodes from Tissue IDs", "") {
+            final String actionTitle = "Import Extraction Barcodes from FIMS";
+            importBarcodesFromFIMS = new GeneiousAction(actionTitle, "Fetch extraction barcodes from your FIMS to match tissue IDs you have already entered") {
                 @Override
                 public void actionPerformed(ActionEvent actionEvent) {
                     final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
@@ -297,7 +298,8 @@ public class PlateBulkEditor {
 
                     tissueSampleIDEditor.valuesFromTextView();
 
-                    if (Dialogs.showOptionsDialog(extractionBarcodeFieldSelection, "Import Extraction Barcodes from FIMS", true, platePanel)) {
+
+                    if (Dialogs.showOptionsDialog(extractionBarcodeFieldSelection, actionTitle, true, platePanel)) {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 String extractionBarcodeFieldName = extractionBarcodeFieldSelection.getExtractionBarcodeFieldOptionValue().getName();
@@ -319,7 +321,7 @@ public class PlateBulkEditor {
                             }
                         };
 
-                        BiocodeService.block("", extractionBarcodeEditor, runnable, null);
+                        BiocodeService.block("Retrieving Extraction Barcodes from FIMS...", extractionBarcodeEditor, runnable, null);
                     }
                 }
             };
@@ -365,7 +367,7 @@ public class PlateBulkEditor {
                 toolsActions.add(specNumCollector);
             }
 
-            autoGenerateIds = new GeneiousAction("Generate Extraction IDs from Tissue IDs", "Automatically generate extraction ids based on the tissue ids you have entered") {
+            autoGenerateIds = new GeneiousAction("Generate New Extraction IDs", "Automatically generate new extraction IDs based on the tissue IDs you have entered") {
                 public void actionPerformed(ActionEvent e) {
                     final DocumentFieldEditor tissueEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
                     tissueEditor.valuesFromTextView();
@@ -427,7 +429,7 @@ public class PlateBulkEditor {
             toolsActions.add(autoGenerateIds);
         }
         else {
-            getExtractionsFromBarcodes = new GeneiousAction("Fetch extractions from barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
+            getExtractionsFromBarcodes = new GeneiousAction("Fetch Extractions from Barcodes", "Fetch extractions that already exist in your LIMS database, based on the extraction barcodes you have entered in this plate") {
                 public void actionPerformed(ActionEvent e) {
                     final DocumentFieldEditor barcodeEditor = new DocumentFieldEditor(EXTRACTION_BARCODE_FIELD, plate, swapAction.getDirection(), null);
                     final AtomicBoolean response = new AtomicBoolean(false);
