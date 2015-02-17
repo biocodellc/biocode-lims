@@ -209,7 +209,7 @@ public class PlateViewer extends JPanel {
                     Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
                     return;
                 }
-                PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), true);
+                PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate());
                 if(editor.editPlate(selfReference)) {
                     nameField.setValue(plateView.getPlate().getName());
                     Runnable backgroundTask = new Runnable() {

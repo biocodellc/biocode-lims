@@ -11,6 +11,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.FimsSample;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
@@ -47,15 +48,20 @@ import java.util.prefs.Preferences;
 @SuppressWarnings({"ConstantConditions", "ConstantConditions"})
 public class PlateBulkEditor {
     private Plate plate;
-    private boolean newPlate;
     private SwapAction swapAction;
     private GeneiousAction archivePlateAction;
-    private GeneiousAction importBarcodes;
+    private GeneiousAction importBarcodesFromScannerFile;
+    private GeneiousAction importBarcodesFromFIMS;
     private GeneiousAction getExtractionsFromBarcodes;
     private GeneiousAction specNumCollector;
     private GeneiousAction autoGenerateIds;
     private GeneiousAction autodetectAction;
 
+    private static DocumentField TISSUE_SAMPLE_ID_FIELD = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
+    private static DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
+    private static DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+    private static DocumentField PARENT_EXTRACTION_ID_FIELD = new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false);
+    private static DocumentField WORKFLOW_ID_FIELD = new DocumentField("Workflow Id", "", "workflowId", String.class, false, false);
 
     private List<DocumentField> defaultFields;
     List<DocumentField> autoFillFields = getAutofillFields();
@@ -66,10 +72,9 @@ public class PlateBulkEditor {
         DOWN_AND_ACROSS
     }
 
-    public PlateBulkEditor(Plate p, boolean newPlate) {
+    public PlateBulkEditor(Plate p) {
         plate = p;
-        this.newPlate = newPlate;
-        defaultFields = getDefaultFields(p, newPlate);
+        defaultFields = getDefaultFields(p);
     }
 
     /**
@@ -161,8 +166,9 @@ public class PlateBulkEditor {
         toolbar.addAction(swapAction);
         List<GeneiousAction> toolsActions = new ArrayList<GeneiousAction>();
         boolean compatiblePlate = plate.getPlateSize() != null || plate.getReactions().length < 96;
-        if(plate.getReactionType() == Reaction.Type.Extraction && compatiblePlate && BiocodeService.getInstance().getActiveFIMSConnection().storesPlateAndWellInformation()) {
-            archivePlateAction = new GeneiousAction("Get Tissue Id's from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", IconUtilities.getIcons("database16.png")) {
+        final FIMSConnection activeFIMSConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        if (plate.getReactionType() == Reaction.Type.Extraction && compatiblePlate && activeFIMSConnection.storesPlateAndWellInformation()) {
+            archivePlateAction = new GeneiousAction("Get tissue IDs from archive plate", "Use 2D barcode tube data to get tissue sample ids from the FIMS", IconUtilities.getIcons("database16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     //the holder for the textfields
                     List<JTextField> jTextFields = new ArrayList<JTextField>();
@@ -190,40 +196,38 @@ public class PlateBulkEditor {
                         jTextFields.add(tf1);
                         textFieldPanel.add(tf1);
                     }
-                    if (Dialogs.showInputDialog("", "Get FIMS plate", platePanel, new JLabel(" "), new JLabel("Enter the plate ID" + (size384 ? "s" : "")), textFieldPanel)) {
+                    if (Dialogs.showInputDialog("", "Get FIMS plate", platePanel, new JLabel("Enter the plate ID" + (size384 ? "s" : "")), textFieldPanel)) {
                         final List<String> plateIds = new ArrayList<String>();
                         for (JTextField field : jTextFields) {
                             plateIds.add(field.getText());
                         }
-                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
-                        final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
-
+                        final DocumentFieldEditor tissueIDEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
 
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    List<Map<String, String>> tissueIds = new ArrayList<Map<String, String>>();
-                                    for (String plateId : plateIds) {
-                                        FIMSConnection connection = BiocodeService.getInstance().getActiveFIMSConnection();
-                                        if(connection == null) {
-                                            Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE, "FIMS Connection is unavailable", tissueEditor, Dialogs.DialogIcon.INFORMATION);
-                                            return;
-                                        }
+                                    if (activeFIMSConnection == null) {
+                                        Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE, "FIMS Connection is unavailable", tissueIDEditor, Dialogs.DialogIcon.INFORMATION);
+                                        return;
+                                    }
 
-                                        tissueIds.add(connection.getTissueIdsFromFimsTissuePlate(plateId));
+                                    List<Map<String, String>> tissueIds = new ArrayList<Map<String, String>>();
+
+                                    for (String plateId : plateIds) {
+                                        tissueIds.add(activeFIMSConnection.getTissueIdsFromFimsTissuePlate(plateId));
                                     }
 
                                     for (int i = 0; i < tissueIds.size(); i++) {
-                                        if (tissueIds.get(i).size() == 0 && plateIds.get(i).length() > 0) {
-                                            Dialogs.showMessageDialog("Plate " + plateIds.get(i) + " not found in the database.", "Plate not found", tissueEditor, Dialogs.DialogIcon.INFORMATION);
+                                        if (tissueIds.get(i).isEmpty() && !plateIds.get(i).isEmpty()) {
+                                            Dialogs.showMessageDialog("Plate " + plateIds.get(i) + " not found in the database.", "Plate not found", tissueIDEditor, Dialogs.DialogIcon.INFORMATION);
                                             return;
                                         }
                                     }
 
                                     if (size384) {
-                                        populateWells384(tissueIds, tissueEditor, plate);
+                                        populateWells384(tissueIds, tissueIDEditor, plate);
                                     } else {
-                                        populateWells96(tissueIds.get(0), tissueEditor, plate, plateIds.get(0));
+                                        populateWells96(tissueIds.get(0), tissueIDEditor, plate, plateIds.get(0));
                                     }
 
                                 } catch (ConnectionException e1) {
@@ -232,14 +236,14 @@ public class PlateBulkEditor {
                                 }
                             }
                         };
-                        BiocodeService.block("Fetching tissue ID's from the FIMS database", tissueEditor, runnable, null);
+                        BiocodeService.block("Fetching tissue IDs from the FIMS database", tissueIDEditor, runnable, null);
                     }
                 }
             };
             toolsActions.add(archivePlateAction);
         }
         if(plate.getReactionType() == Reaction.Type.Extraction) {
-            importBarcodes = new GeneiousAction("Import Extraction Barcodes", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
+            importBarcodesFromScannerFile = new GeneiousAction("Import Extraction Barcodes from Barcode Scanner", "Import extraction barcodes from a barcode scanner file", BiocodePlugin.getIcons("barcode_16.png")) {
                 public void actionPerformed(ActionEvent e) {
                     File inputFile = FileUtilities.getUserSelectedFile("Select Barcode File", new FilenameFilter(){
                         public boolean accept(File dir, String name) {
@@ -248,8 +252,7 @@ public class PlateBulkEditor {
                     }, JFileChooser.FILES_ONLY);
 
                     if(inputFile != null) {
-                        DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-                        final DocumentFieldEditor barcodeEditor = getEditorForField(editors, extractionBarcodeField);
+                        final DocumentFieldEditor barcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                         //barcodeEditor.values = new String[barcodeEditor.values.length][barcodeEditor.values[0].length];//todo: make this tidier
                         try {
                             BufferedReader in = new BufferedReader(new FileReader(inputFile));
@@ -283,12 +286,48 @@ public class PlateBulkEditor {
                     }
                 }
             };
-            toolsActions.add(importBarcodes);
+            toolsActions.add(importBarcodesFromScannerFile);
+
+            importBarcodesFromFIMS = new GeneiousAction("Generate Extraction Barcodes from Tissue IDs", "") {
+                @Override
+                public void actionPerformed(ActionEvent actionEvent) {
+                    final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
+                    final DocumentFieldEditor tissueSampleIDEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
+                    final ExtractionBarcodeFieldSelection extractionBarcodeFieldSelection = new ExtractionBarcodeFieldSelection(this.getClass(), getDocumentFieldOptionValues(activeFIMSConnection.getSearchAttributes()));
+
+                    tissueSampleIDEditor.valuesFromTextView();
+
+                    if (Dialogs.showOptionsDialog(extractionBarcodeFieldSelection, "Import Extraction Barcodes from FIMS", true, platePanel)) {
+                        Runnable runnable = new Runnable() {
+                            public void run() {
+                                String extractionBarcodeFieldName = extractionBarcodeFieldSelection.getExtractionBarcodeFieldOptionValue().getName();
+
+                                for (int row = 0; row < plate.getRows(); row++) {
+                                    for (int col = 0; col < plate.getCols(); col++) {
+                                        try {
+                                            List<FimsSample> sample = activeFIMSConnection.retrieveSamplesForTissueIds(Collections.singletonList(tissueSampleIDEditor.getValue(row, col).toString()));
+                                            if (sample.size() == 1) {
+                                                extractionBarcodeEditor.setValue(row, col, sample.get(0).getFimsAttributeValue(extractionBarcodeFieldName).toString());
+                                            }
+                                        } catch (ConnectionException e) {
+                                            System.err.println("Error retrieving sample for row " + (row + 1) + ", column " + (col + 1) + ": " + e.getMessage());
+                                        }
+                                    }
+                                }
+
+                                extractionBarcodeEditor.textViewFromValues();
+                            }
+                        };
+
+                        BiocodeService.block("", extractionBarcodeEditor, runnable, null);
+                    }
+                }
+            };
+            toolsActions.add(importBarcodesFromFIMS);
 
             getExtractionsFromBarcodes = new GeneiousAction("Fetch extractions from barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
                 public void actionPerformed(ActionEvent e) {
-                    DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-                    final DocumentFieldEditor barcodeEditor = getEditorForField(editors, extractionBarcodeField);
+                    final DocumentFieldEditor barcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                     barcodeEditor.valuesFromTextView();
                     final List<String> barcodes = new ArrayList<String>();
                     for(int i=0; i < plate.getRows(); i++) {
@@ -300,7 +339,6 @@ public class PlateBulkEditor {
                         }
                     }
 
-
                     Runnable runnable = new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
                     BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable, null);
                 }
@@ -310,13 +348,10 @@ public class PlateBulkEditor {
             if(BiocodeService.getInstance().getActiveFIMSConnection() instanceof MooreaFimsConnection) {
                 specNumCollector = new GeneiousAction("Map Spec_Num_Collectors", "Convert Spec_Num_Collector values to Mbio numbers") {
                     public void actionPerformed(ActionEvent e) {
-                        DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
-                        final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+                        final DocumentFieldEditor tissueEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
                         tissueEditor.valuesFromTextView();
 
                         List<String> tissueIds = getIdsToCheck(tissueEditor, plate);
-
-
 
                         try {
                             Map<String, String> mapping = BiocodeService.getSpecNumToMbioMapping(tissueIds);
@@ -330,18 +365,15 @@ public class PlateBulkEditor {
                 toolsActions.add(specNumCollector);
             }
 
-            autoGenerateIds = new GeneiousAction("Generate Extraction Ids", "Automatically generate extraction ids based on the tissue ids you have entered") {
+            autoGenerateIds = new GeneiousAction("Generate Extraction IDs from Tissue IDs", "Automatically generate extraction ids based on the tissue ids you have entered") {
                 public void actionPerformed(ActionEvent e) {
-                    DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
-                    final DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
+                    final DocumentFieldEditor tissueEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
                     tissueEditor.valuesFromTextView();
 
-                    DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
-                    final DocumentFieldEditor extractionEditor = getEditorForField(editors, extractionField);
+                    final DocumentFieldEditor extractionEditor = getEditorForField(editors, EXTRACTION_ID_FIELD);
                     extractionEditor.valuesFromTextView();
 
-                    DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-                    final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, extractionBarcodeField);
+                    final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                     extractionBarcodeEditor.valuesFromTextView();
 
                     List<String> tissueIds = getIdsToCheck(tissueEditor, plate);
@@ -397,8 +429,7 @@ public class PlateBulkEditor {
         else {
             getExtractionsFromBarcodes = new GeneiousAction("Fetch extractions from barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
                 public void actionPerformed(ActionEvent e) {
-                    DocumentField extractionBarcodeField = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-                    final DocumentFieldEditor barcodeEditor =new DocumentFieldEditor(extractionBarcodeField, plate, swapAction.getDirection(), null);
+                    final DocumentFieldEditor barcodeEditor = new DocumentFieldEditor(EXTRACTION_BARCODE_FIELD, plate, swapAction.getDirection(), null);
                     final AtomicBoolean response = new AtomicBoolean(false);
                     Runnable barcodeEnterRunnable = new Runnable() {
                         public void run() {
@@ -603,6 +634,24 @@ public class PlateBulkEditor {
         return true;
     }
 
+    private static class ExtractionBarcodeFieldSelection extends Options {
+        private ComboBoxOption<OptionValue> extractionBarcodeFieldSelectionComboBox;
+
+        public ExtractionBarcodeFieldSelection(Class c, Options.OptionValue[] fimsFields) {
+            super(c);
+
+            if (fimsFields.length == 0) {
+                throw new IllegalArgumentException("fimsFields.length == 0");
+            }
+
+            extractionBarcodeFieldSelectionComboBox = addComboBoxOption("extractionBarcodeFieldSelectionComboBox", "Extraction Barcode Field: ", fimsFields, fimsFields[0]);
+        }
+
+        public OptionValue getExtractionBarcodeFieldOptionValue() {
+            return extractionBarcodeFieldSelectionComboBox.getValue();
+        }
+    }
+
     private static void populateWells384(final List<Map<String, String>> ids, final DocumentFieldEditor editorField, Plate p){
         if(ids.size() != 4) {
             throw new IllegalArgumentException("You must have 4 maps!");
@@ -656,6 +705,19 @@ public class PlateBulkEditor {
         ThreadUtilities.invokeNowOrLater(runnable);
     }
 
+    private static Options.OptionValue[] getDocumentFieldOptionValues(Collection<DocumentField> documentFields) {
+        Options.OptionValue[] documentFieldNames = new Options.OptionValue[documentFields.size()];
+        Iterator<DocumentField> documentFieldIterator = documentFields.iterator();
+        int i = 0;
+
+        while (documentFieldIterator.hasNext()) {
+            DocumentField documentField = documentFieldIterator.next();
+            documentFieldNames[i++] = new Options.OptionValue(documentField.getCode(), documentField.getName(), documentField.getDescription());
+        }
+
+        return documentFieldNames;
+    }
+
     private static void putMappedValuesIntoEditor(DocumentFieldEditor sourceEditor, DocumentFieldEditor destEditor, Map<String, String> mappedValues, Plate plate, boolean blankUnmappedRows) {
         for(int row=0; row < plate.getRows(); row++) {
             for(int col=0; col < plate.getCols(); col++) {
@@ -704,31 +766,13 @@ public class PlateBulkEditor {
         );
     }
 
-    private static List<DocumentField> getDefaultFields(Plate p, boolean newPlate) {
+    private static List<DocumentField> getDefaultFields(Plate p) {
         switch(p.getReactionType()) {
             case Extraction:
-                return Arrays.asList(
-                    new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false),
-                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                    new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
-                    new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
-                );
+                return Arrays.asList(TISSUE_SAMPLE_ID_FIELD, EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, PARENT_EXTRACTION_ID_FIELD);
             case PCR://drop through
             case CycleSequencing:
-                if(newPlate) {
-                    return Arrays.asList(
-                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                        LIMSConnection.WORKFLOW_LOCUS_FIELD,
-                        new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
-                    );
-                }
-                else {
-                    return Arrays.asList(
-                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                        LIMSConnection.WORKFLOW_LOCUS_FIELD,
-                        new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
-                    );
-                }
+                return Arrays.asList(EXTRACTION_ID_FIELD, LIMSConnection.WORKFLOW_LOCUS_FIELD, WORKFLOW_ID_FIELD);
             default :
                 return Collections.EMPTY_LIST;
         }
@@ -740,7 +784,7 @@ public class PlateBulkEditor {
                 return null;
             case PCR:
             case CycleSequencing:
-                return new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
+                return EXTRACTION_ID_FIELD;
             default :
                 return null;
         }
@@ -761,7 +805,7 @@ public class PlateBulkEditor {
     private static DocumentField getWorkflowField(Plate p) {
         switch(p.getReactionType()) {
             default :
-                return new DocumentField("Workflow Id", "", "workflowId", String.class, false, false);
+                return WORKFLOW_ID_FIELD;
         }
     }
 
@@ -1271,12 +1315,9 @@ public class PlateBulkEditor {
         }
 
         public void run() {
-            DocumentField extractionField = new DocumentField("Extraction Id", "", "extractionId", String.class, false, false);
-            DocumentField parentExtractionField = new DocumentField("Parent Extraction", "", "parentExtraction", String.class, false, false);
-            DocumentField tissueField = new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
-            DocumentFieldEditor tissueEditor = getEditorForField(editors, tissueField);
-            DocumentFieldEditor extractionIdEditor = getEditorForField(editors, extractionField);
-            DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, parentExtractionField);
+            DocumentFieldEditor tissueEditor = getEditorForField(editors, TISSUE_SAMPLE_ID_FIELD);
+            DocumentFieldEditor extractionIdEditor = getEditorForField(editors, EXTRACTION_ID_FIELD);
+            DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, PARENT_EXTRACTION_ID_FIELD);
 
             try {
                 List<ExtractionReaction> temp = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
