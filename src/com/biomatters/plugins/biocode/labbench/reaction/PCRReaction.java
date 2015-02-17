@@ -104,10 +104,19 @@ public class PCRReaction extends Reaction<PCRReaction> {
                 }
             }
         }
+
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
-        if(fimsConnection != null) {
-            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString("sampleId")));
+        if (fimsConnection != null) {
+            try {
+                List<FimsSample> fimsSamples = fimsConnection.retrieveSamplesForTissueIds(Collections.singletonList(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
+                if (fimsSamples.size() == 1) {
+                    setFimsSample(fimsSamples.get(0));
+                }
+            } catch (ConnectionException e) {
+                e.printStackTrace();
+            }
         }
+
     }
 
     public ReactionOptions _getOptions() {

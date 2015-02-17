@@ -1143,7 +1143,7 @@ public class ReactionUtilities {
     }
 
     public static Collection<String> getWellNumbers(Collection<? extends Reaction> reactions) {
-        Collection<String> wellNumbers = new ArrayList<String>();
+        Collection<String> wellNumbers = new HashSet<String>();
 
         for (Reaction reaction : reactions) {
             wellNumbers.add(reaction.getLocationString());
@@ -1191,6 +1191,19 @@ public class ReactionUtilities {
         }
 
         return databaseIdOfExtractions;
+    }
+
+    public static Collection<Integer> getIDs(Collection<? extends Reaction> reactions) {
+        Collection<Integer> ids = new HashSet<Integer>();
+
+        for (Reaction reaction : reactions) {
+            int id = reaction.getId();
+            if (id != -1) {
+                ids.add(id);
+            }
+        }
+
+        return ids;
     }
 
     public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {

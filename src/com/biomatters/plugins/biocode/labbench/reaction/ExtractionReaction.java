@@ -94,7 +94,14 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
         if (fimsConnection != null) {
-            setFimsSample(fimsConnection.getFimsSampleFromCache(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
+            try {
+                List<FimsSample> fimsSamples = fimsConnection.retrieveSamplesForTissueIds(Collections.singletonList(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
+                if (fimsSamples.size() == 1) {
+                    setFimsSample(fimsSamples.get(0));
+                }
+            } catch (ConnectionException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -243,7 +250,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                         reaction.setFimsSample(currentFimsSample);
                     }
                 }
-
             } catch (ConnectionException e) {
                 return "Could not query the FIMS database. " + e.getMessage();
             }
@@ -345,14 +351,27 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     private static void filterExtractionReactions(Collection<ExtractionReaction> extractionReactions, Collection<ExtractionReaction> extractionReactionsToExclude) {
         Collection<ExtractionReaction> extractionReactionsToFilterOut = new ArrayList<ExtractionReaction>();
         Collection<Integer> databaseIDsOfExtractionsAssociatedWithExtractionReactionsToExclude = ReactionUtilities.getDatabaseIDOfExtractions(extractionReactionsToExclude);
+        Collection<Integer> idsOfJustMovedExtractionReactions = ReactionUtilities.getIDs(getJustMovedExtractionReactions(extractionReactionsToExclude));
 
         for (ExtractionReaction extractionReaction : extractionReactions) {
-            if (databaseIDsOfExtractionsAssociatedWithExtractionReactionsToExclude.contains(extractionReaction.getDatabaseIdOfExtraction()) || extractionReaction.isJustMoved()) {
+            if (databaseIDsOfExtractionsAssociatedWithExtractionReactionsToExclude.contains(extractionReaction.getDatabaseIdOfExtraction()) || idsOfJustMovedExtractionReactions.contains(extractionReaction.getId())) {
                 extractionReactionsToFilterOut.add(extractionReaction);
             }
         }
 
         extractionReactions.removeAll(extractionReactionsToFilterOut);
+    }
+
+    private static Collection<ExtractionReaction> getJustMovedExtractionReactions(Collection<ExtractionReaction> extractionReactions) {
+        Collection<ExtractionReaction> justMovedExtractionReactions = new ArrayList<ExtractionReaction>();
+
+        for (ExtractionReaction extractionReaction : extractionReactions) {
+            if (extractionReaction.isJustMoved()) {
+                justMovedExtractionReactions.add(extractionReaction);
+            }
+        }
+
+        return justMovedExtractionReactions;
     }
 
     private static Map<List<ExtractionReaction>, List<ExtractionReaction>> buildExistingExtractionsReactionsToNewExtractionReactionsMap(Map<String, List<ExtractionReaction>> identifierToNewExtractionReactions,

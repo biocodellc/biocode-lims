@@ -169,6 +169,18 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         if(result != null) {
             sequencingResults.add(result);
         }
+
+        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        if (fimsConnection != null) {
+            try {
+                List<FimsSample> fimsSamples = fimsConnection.retrieveSamplesForTissueIds(Collections.singletonList(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
+                if (fimsSamples.size() == 1) {
+                    setFimsSample(fimsSamples.get(0));
+                }
+            } catch (ConnectionException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void setCacheNumTraces(int cacheNumTraces) {
