@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.geneious.publicapi.utilities.*;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.assembler.verify.Pair;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -20,6 +21,8 @@ import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -288,7 +291,7 @@ public class PlateBulkEditor {
             toolsActions.add(importBarcodesFromScannerFile);
 
             final String actionTitle = "Import Extraction Barcodes from FIMS";
-            importBarcodesFromFIMS = new GeneiousAction(actionTitle, "Fetch extraction barcodes from your FIMS to match tissue IDs you have already entered") {
+            importBarcodesFromFIMS = new GeneiousAction(actionTitle, "Fetch extraction barcodes from your FIMS to match tissue IDs you have already entered", BiocodePlugin.getIcons("barcode_16.png")) {
                 @Override
                 public void actionPerformed(ActionEvent actionEvent) {
                     final DocumentFieldEditor extractionBarcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
@@ -297,29 +300,50 @@ public class PlateBulkEditor {
 
                     tissueSampleIDEditor.valuesFromTextView();
 
-
                     if (Dialogs.showOptionsDialog(extractionBarcodeFieldSelection, actionTitle, true, platePanel)) {
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 String extractionBarcodeFieldName = extractionBarcodeFieldSelection.getExtractionBarcodeFieldOptionValue().getName();
 
+                                Map<String, Pair<Integer, Integer>> tissueIdToPosition = new HashMap<String, Pair<Integer, Integer>>();
                                 for (int row = 0; row < plate.getRows(); row++) {
                                     for (int col = 0; col < plate.getCols(); col++) {
-                                        try {
-                                            Object tissueID = tissueSampleIDEditor.getValue(row, col);
-                                            if (tissueID instanceof String) {
-                                                List<FimsSample> sample = activeFIMSConnection.retrieveSamplesForTissueIds(Collections.singletonList(tissueSampleIDEditor.getValue(row, col).toString()));
-                                                if (sample.size() == 1) {
-                                                    Object extractionBarcode = sample.get(0).getFimsAttributeValue(extractionBarcodeFieldName);
-                                                    if (extractionBarcode instanceof String) {
-                                                        extractionBarcodeEditor.setValue(row, col, (String)extractionBarcode);
-                                                    }
-                                                }
+                                        Object tissueID = tissueSampleIDEditor.getValue(row, col);
+                                        String tissueIdAsString = (String) tissueID;
+                                        if (tissueID instanceof String && !tissueIdAsString.isEmpty()) {
+                                            if(tissueIdToPosition.containsKey(tissueIdAsString)) {
+                                                Dialogs.showMessageDialog("Cannot fetch extraction barcodes because multiple wells have the same tissue ID: " + tissueIdAsString);
+                                                return;
                                             }
-                                        } catch (ConnectionException e) {
-                                            System.err.println("Error retrieving sample for row " + (row + 1) + ", column " + (col + 1) + ": " + e.getMessage());
+                                            tissueIdToPosition.put(tissueIdAsString, new Pair<Integer, Integer>(row, col));
+
                                         }
                                     }
+                                }
+                                if(tissueIdToPosition.isEmpty()) {
+                                    return;
+                                }
+
+                                try {
+                                    List<FimsSample> tissuesForSampleIds = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdToPosition.keySet());
+                                    Multimap<String, FimsSample> samplesById = ArrayListMultimap.create();
+                                    for (FimsSample fimsSample : tissuesForSampleIds) {
+                                        samplesById.put(fimsSample.getId(), fimsSample);
+                                    }
+
+                                    for (Map.Entry<String, Collection<FimsSample>> entry : samplesById.asMap().entrySet()) {
+                                        Pair<Integer, Integer> position = tissueIdToPosition.get(entry.getKey());
+                                        Collection<FimsSample> samplesForId = entry.getValue();
+                                        if (samplesForId.size() == 1) {
+                                            Object extractionBarcode = samplesForId.iterator().next().getFimsAttributeValue(extractionBarcodeFieldName);
+                                            if (extractionBarcode instanceof String) {
+                                                extractionBarcodeEditor.setValue(position.getItemA(), position.getItemB(), (String) extractionBarcode);
+                                            }
+                                        }
+                                    }
+
+                                } catch (ConnectionException e) {
+                                    BiocodeUtilities.displayExceptionDialog("FIMS Connection Problem", "Failed to retrieve tissues from FIMS: " + e.getMessage(), e, Dialogs.getCurrentModalDialog());
                                 }
 
                                 extractionBarcodeEditor.textViewFromValues();
@@ -332,7 +356,7 @@ public class PlateBulkEditor {
             };
             toolsActions.add(importBarcodesFromFIMS);
 
-            getExtractionsFromBarcodes = new GeneiousAction("Fetch extractions from barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
+            getExtractionsFromBarcodes = new GeneiousAction("Fetch Extractions from Barcodes", "Fetch extractons that already exist in your database, based on the extraction barcodes you have entered in this plate") {
                 public void actionPerformed(ActionEvent e) {
                     final DocumentFieldEditor barcodeEditor = getEditorForField(editors, EXTRACTION_BARCODE_FIELD);
                     barcodeEditor.valuesFromTextView();
