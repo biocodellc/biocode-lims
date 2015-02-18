@@ -41,6 +41,11 @@ public class Plate implements XMLSerializable {
     private int thermocycleId = -1;
 
     public enum Size {
+        w8("8", 8),
+        w16("16", 16),
+        w24("24", 24),
+        w32("32", 32),
+        w40("40", 40),
         w48("48", 48),
         w96("96", 96),
         w384("384", 384);
@@ -51,7 +56,6 @@ public class Plate implements XMLSerializable {
             this.niceName = s;
             this.size = size;
         }
-
 
         @Override
         public String toString() {
@@ -104,16 +108,26 @@ public class Plate implements XMLSerializable {
     }
 
     public static Size getSizeEnum(int size) {
-        if(size == 48) {
-            return Size.w48;
+        switch (size) {
+            case 8:
+                return Size.w8;
+            case 16:
+                return Size.w16;
+            case 24:
+                return Size.w24;
+            case 32:
+                return Size.w32;
+            case 40:
+                return Size.w40;
+            case 48:
+                return Size.w48;
+            case 96:
+                return Size.w96;
+            case 384:
+                return Size.w384;
+            default:
+                return null;
         }
-        else if(size == 96) {
-            return Size.w96;
-        }
-        else if(size == 384) {
-            return Size.w384;
-        }
-        return null;
     }
 
     public Plate(int numberOfWells, Reaction.Type type) {
@@ -144,6 +158,21 @@ public class Plate implements XMLSerializable {
 
     private void init(Size size, Reaction.Type type, boolean initialiseReactions) {
         switch(size) {
+            case w8:
+                init(8, 1, type, initialiseReactions);
+                break;
+            case w16:
+                init(8, 2, type, initialiseReactions);
+                break;
+            case w24:
+                init(8, 3, type, initialiseReactions);
+                break;
+            case w32:
+                init(8, 4, type, initialiseReactions);
+                break;
+            case w40:
+                init(8, 5, type, initialiseReactions);
+                break;
             case w48 :
                 init(8, 6, type, initialiseReactions);
                 break;
@@ -277,6 +306,14 @@ public class Plate implements XMLSerializable {
     }
 
     public Reaction getReaction(int row, int col) {
+        if (row < 0 || row >= rows) {
+            throw new IllegalArgumentException("Row index out of bounds: " + row + ". Valid range: 0 - " + rows + ".");
+        }
+
+        if (col < 0 || col >= cols) {
+            throw new IllegalArgumentException("Column index out of bounds: " + col + ". Valid range: 0 - " + cols + ".");
+        }
+
         return getReaction(cols * row + col);
     }
 
@@ -317,6 +354,21 @@ public class Plate implements XMLSerializable {
         int cols;
         if(size != null) {
             switch(size) {
+                case w8:
+                    cols = 1;
+                    break;
+                case w16:
+                    cols = 2;
+                    break;
+                case w24:
+                    cols = 3;
+                    break;
+                case w32:
+                    cols = 4;
+                    break;
+                case w40:
+                    cols = 5;
+                    break;
                 case w48 :
                     cols = 6;
                     break;
@@ -350,6 +402,21 @@ public class Plate implements XMLSerializable {
         int cols;
         if(size != null) {
             switch(size) {
+                case w8:
+                    cols = 1;
+                    break;
+                case w16:
+                    cols = 2;
+                    break;
+                case w24:
+                    cols = 3;
+                    break;
+                case w32:
+                    cols = 4;
+                    break;
+                case w40:
+                    cols = 5;
+                    break;
                 case w48 :
                     cols = 6;
                     break;
