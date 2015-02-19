@@ -8,7 +8,6 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
@@ -326,11 +325,12 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             String attributeName = reactionAttributeGetter.getAttributeName();
             if (Dialogs.showYesNoDialog(
                     "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + "."
-                            + "<br><br> Move the existing extraction reactions to the plate and override the corresponding new extraction reactions?",
-                    "Existing Extractions With " + attributeName + " Detected",
+                            + "<br><br> Override new/edited extraction reactions with corresponding existing ones?"
+                            + "<br><br><strong>Note</strong>: Existing extraction reactions will be deleted.",
+                    "Existing Extraction Reactions With " + attributeName + " Detected",
                     dialogParent,
                     Dialogs.DialogIcon.QUESTION)) {
-                return overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
+                return overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
             } else {
                 List<ExtractionReaction> newExtractionReactionsAssociatedWithExistingAttributeValue = new ArrayList<ExtractionReaction>();
 
@@ -382,8 +382,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return existingExtractionsToNewExtractions;
     }
 
-    private static String overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions,
-                                                                                                         ReactionAttributeGetter<String> reactionAttributeGetter) {
+    private static String overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions,
+                                                                                                      ReactionAttributeGetter<String> reactionAttributeGetter) {
         List<String> extractionReactionsThatCouldNotBeOverridden = new ArrayList<String>();
 
         for (Map.Entry<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsAndNewExtractionReactions : existingExtractionReactionsToNewExtractionReactions.entrySet()) {
