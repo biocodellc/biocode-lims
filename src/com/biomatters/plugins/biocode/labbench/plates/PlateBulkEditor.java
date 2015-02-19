@@ -303,50 +303,50 @@ public class PlateBulkEditor {
                     if (Dialogs.showOptionsDialog(extractionBarcodeFieldSelection, actionTitle, true, platePanel)) {
                         Runnable runnable = new Runnable() {
                             public void run() {
-                                String extractionBarcodeFieldName = extractionBarcodeFieldSelection.getExtractionBarcodeFieldOptionValue().getName();
+                                Map<String, Pair<Integer, Integer>> tissueIDToPosition = new HashMap<String, Pair<Integer, Integer>>();
 
-                                Map<String, Pair<Integer, Integer>> tissueIdToPosition = new HashMap<String, Pair<Integer, Integer>>();
                                 for (int row = 0; row < plate.getRows(); row++) {
                                     for (int col = 0; col < plate.getCols(); col++) {
                                         Object tissueID = tissueSampleIDEditor.getValue(row, col);
-                                        String tissueIdAsString = (String) tissueID;
-                                        if (tissueID instanceof String && !tissueIdAsString.isEmpty()) {
-                                            if(tissueIdToPosition.containsKey(tissueIdAsString)) {
-                                                Dialogs.showMessageDialog("Cannot fetch extraction barcodes because multiple wells have the same tissue ID: " + tissueIdAsString);
+                                        String tissueIDAsString = (String)tissueID;
+                                        if (tissueID instanceof String && !tissueIDAsString.isEmpty()) {
+                                            if (tissueIDToPosition.containsKey(tissueIDAsString)) {
+                                                Dialogs.showMessageDialog("Cannot fetch extraction barcodes because multiple wells have the same tissue ID: " + tissueIDAsString);
+
                                                 return;
                                             }
-                                            tissueIdToPosition.put(tissueIdAsString, new Pair<Integer, Integer>(row, col));
 
+                                            tissueIDToPosition.put(tissueIDAsString, new Pair<Integer, Integer>(row, col));
                                         }
                                     }
                                 }
-                                if(tissueIdToPosition.isEmpty()) {
-                                    return;
-                                }
 
-                                try {
-                                    List<FimsSample> tissuesForSampleIds = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIdToPosition.keySet());
-                                    Multimap<String, FimsSample> samplesById = ArrayListMultimap.create();
-                                    for (FimsSample fimsSample : tissuesForSampleIds) {
-                                        samplesById.put(fimsSample.getId(), fimsSample);
-                                    }
+                                if (!tissueIDToPosition.isEmpty()) {
+                                    try {
+                                        Multimap<String, FimsSample> tissueIDToFimsSamples = ArrayListMultimap.create();
 
-                                    for (Map.Entry<String, Collection<FimsSample>> entry : samplesById.asMap().entrySet()) {
-                                        Pair<Integer, Integer> position = tissueIdToPosition.get(entry.getKey());
-                                        Collection<FimsSample> samplesForId = entry.getValue();
-                                        if (samplesForId.size() == 1) {
-                                            Object extractionBarcode = samplesForId.iterator().next().getFimsAttributeValue(extractionBarcodeFieldName);
-                                            if (extractionBarcode instanceof String) {
-                                                extractionBarcodeEditor.setValue(position.getItemA(), position.getItemB(), (String) extractionBarcode);
+                                        for (FimsSample fimsSample : activeFIMSConnection.retrieveSamplesForTissueIds(tissueIDToPosition.keySet())) {
+                                            tissueIDToFimsSamples.put(fimsSample.getId(), fimsSample);
+                                        }
+
+                                        String extractionBarcodeFieldName = extractionBarcodeFieldSelection.getExtractionBarcodeFieldOptionValue().getName();
+                                        for (Map.Entry<String, Collection<FimsSample>> tissueIDAndFimsSamples : tissueIDToFimsSamples.asMap().entrySet()) {
+                                            Collection<FimsSample> fimsSamples = tissueIDAndFimsSamples.getValue();
+                                            if (fimsSamples.size() == 1) {
+                                                Pair<Integer, Integer> position = tissueIDToPosition.get(tissueIDAndFimsSamples.getKey());
+                                                Object extractionBarcode = fimsSamples.iterator().next().getFimsAttributeValue(extractionBarcodeFieldName);
+                                                if (extractionBarcode instanceof String) {
+                                                    extractionBarcodeEditor.setValue(position.getItemA(), position.getItemB(), (String)extractionBarcode);
+                                                }
                                             }
                                         }
+
+                                    } catch (ConnectionException e) {
+                                        BiocodeUtilities.displayExceptionDialog("FIMS Connection Problem", "Failed to retrieve tissues from FIMS: " + e.getMessage(), e, Dialogs.getCurrentModalDialog());
                                     }
 
-                                } catch (ConnectionException e) {
-                                    BiocodeUtilities.displayExceptionDialog("FIMS Connection Problem", "Failed to retrieve tissues from FIMS: " + e.getMessage(), e, Dialogs.getCurrentModalDialog());
+                                    extractionBarcodeEditor.textViewFromValues();
                                 }
-
-                                extractionBarcodeEditor.textViewFromValues();
                             }
                         };
 
