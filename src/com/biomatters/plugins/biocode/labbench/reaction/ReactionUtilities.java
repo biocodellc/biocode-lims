@@ -486,7 +486,7 @@ public class ReactionUtilities {
         panelToShow.setBorder(new EmptyBorder(5, 10, 5, 10 ));
         panelToShow.add(new GLabel(
                 "<html>The traces you are adding include well numbers that do not match the plate size.<br><br>" +
-                "How do you want your traces to be added?</html>"), BorderLayout.NORTH);
+                        "How do you want your traces to be added?</html>"), BorderLayout.NORTH);
         panelToShow.add(panel, BorderLayout.CENTER);
         Object o = Dialogs.showDialog(options, panelToShow);
 
@@ -1186,7 +1186,7 @@ public class ReactionUtilities {
 
                 for (FimsSample fimsSample : fimsSamples) {
                     List<T> reactionsForTissueID = tissueIDsToReactions.get(fimsSample.getId());
-                    if (reactionsForTissueID != null && reactionsForTissueID.size() == 1) {
+                    if (reactionsForTissueID != null && reactionsForTissueID.size() != 1) {
                         reactionsForTissueID.get(0).setFimsSample(fimsSample);
                     }
                 }
@@ -1203,16 +1203,16 @@ public class ReactionUtilities {
     }
 
     public static Collection<Integer> getDatabaseIDOfExtractions(Collection<? extends Reaction> reactions) {
-        Collection<Integer> databaseIDOfExtractions = new HashSet<Integer>();
+        Collection<Integer> databaseIdOfExtractions = new HashSet<Integer>();
 
         for (Reaction reaction : reactions) {
             Integer databaseIDOfExtraction = reaction.getDatabaseIdOfExtraction();
             if (databaseIDOfExtraction != null) {
-                databaseIDOfExtractions.add(databaseIDOfExtraction);
+                databaseIdOfExtractions.add(databaseIDOfExtraction);
             }
         }
 
-        return databaseIDOfExtractions;
+        return databaseIdOfExtractions;
     }
 
     public static Collection<Integer> getIDs(Collection<? extends Reaction> reactions) {
