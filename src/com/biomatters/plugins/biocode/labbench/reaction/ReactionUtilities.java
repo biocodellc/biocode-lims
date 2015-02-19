@@ -1186,7 +1186,7 @@ public class ReactionUtilities {
 
                 for (FimsSample fimsSample : fimsSamples) {
                     List<T> reactionsForTissueID = tissueIDsToReactions.get(fimsSample.getId());
-                    if (reactionsForTissueID != null && reactionsForTissueID.size() != 1) {
+                    if (reactionsForTissueID != null && reactionsForTissueID.size() == 1) {
                         reactionsForTissueID.get(0).setFimsSample(fimsSample);
                     }
                 }
@@ -1203,16 +1203,16 @@ public class ReactionUtilities {
     }
 
     public static Collection<Integer> getDatabaseIDOfExtractions(Collection<? extends Reaction> reactions) {
-        Collection<Integer> databaseIdOfExtractions = new HashSet<Integer>();
+        Collection<Integer> databaseIDOfExtractions = new HashSet<Integer>();
 
         for (Reaction reaction : reactions) {
             Integer databaseIDOfExtraction = reaction.getDatabaseIdOfExtraction();
             if (databaseIDOfExtraction != null) {
-                databaseIdOfExtractions.add(databaseIDOfExtraction);
+                databaseIDOfExtractions.add(databaseIDOfExtraction);
             }
         }
 
-        return databaseIdOfExtractions;
+        return databaseIDOfExtractions;
     }
 
     public static Collection<Integer> getIDs(Collection<? extends Reaction> reactions) {

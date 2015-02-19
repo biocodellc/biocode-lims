@@ -386,22 +386,22 @@ public class WorkflowDocument extends MuitiPartDocument {
             editButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
-                    ReactionUtilities.editReactions(Arrays.asList(reaction), panel, false);
-                    @SuppressWarnings({"UnusedDeclaration", "UnnecessaryLocalVariable", "UnusedAssignment"}) SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
-                    if(reaction.hasError()) {
-                        try {
-                            reaction.setOptions(XMLSerializer.classFromXML(oldOptions, ReactionOptions.class));
-                        } catch (XMLSerializationException e1) {
-                            Dialogs.showMessageDialog("Error resetting options: could not deserailse your option's values.  It is recommended that you discard changes to this document if possible.");
+                    if (ReactionUtilities.editReactions(Arrays.asList(reaction), panel, false)) {
+                        @SuppressWarnings({"UnusedDeclaration", "UnnecessaryLocalVariable", "UnusedAssignment"}) SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
+                        if (reaction.hasError()) {
+                            try {
+                                reaction.setOptions(XMLSerializer.classFromXML(oldOptions, ReactionOptions.class));
+                            } catch (XMLSerializationException e1) {
+                                Dialogs.showMessageDialog("Error resetting options: could not deserialize your option's values.  It is recommended that you discard changes to this document if possible.");
+                            }
+                        } else {
+                            holder.remove(optionsPanel.get());
+                            optionsPanel.set(getReactionPanel(reaction));
+                            holder.add(optionsPanel.get(), BorderLayout.CENTER);
+                            holder.validate();
+                            fireChangeListeners();
                         }
-                    }
-                    else {
-                        holder.remove(optionsPanel.get());
-                        optionsPanel.set(getReactionPanel(reaction));
-                        holder.add(optionsPanel.get(), BorderLayout.CENTER);
-                        holder.validate();
                         changes = true;
-                        fireChangeListeners();
                     }
                 }
             });
@@ -526,10 +526,12 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
 
         public void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws DatabaseServiceException {
-            String reactionCheckResult = reaction.areReactionsValid(Arrays.asList(reaction), null);
+            if (!changes) {
+                String reactionCheckResult = reaction.areReactionsValid(Arrays.asList(reaction), null);
 
-            if (!reactionCheckResult.isEmpty()) {
-                Dialogs.showMessageDialog(reactionCheckResult);
+                if (!reactionCheckResult.isEmpty()) {
+                    Dialogs.showMessageDialog(reactionCheckResult);
+                }
             }
 
             connection.saveReactions(new Reaction[]{reaction}, reaction.getType(), progress);
