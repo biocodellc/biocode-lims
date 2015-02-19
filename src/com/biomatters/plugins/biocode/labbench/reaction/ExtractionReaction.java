@@ -91,18 +91,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             setWorkflow(new Workflow(r.getInt("workflow.id"), r.getString("workflow.name"), r.getString("extraction.extractionId"), r.getString("workflow.locus"), r.getDate("workflow.date")));
             options.setValue("workflowId", getWorkflow().getName());
         }
-
-        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
-        if (fimsConnection != null) {
-            try {
-                List<FimsSample> fimsSamples = fimsConnection.retrieveSamplesForTissueIds(Collections.singletonList(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
-                if (fimsSamples.size() == 1) {
-                    setFimsSample(fimsSamples.get(0));
-                }
-            } catch (ConnectionException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     public static void copyExtractionReaction(ExtractionReaction src, ExtractionReaction dest) {
@@ -185,6 +173,14 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Color.white;
     }
 
+    /**
+     * Validates the supplied extraction reactions. Sets the 'isError' attributes of the supplied extraction reactions
+     * based on the validation results.
+     *
+     * @param reactions Extraction reactions to validate.
+     * @param dialogParent Owner of dialogs displayed from this method.
+     * @return Summary describing errors or empty string if none are found.
+     */
     public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent) {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database.";
@@ -195,7 +191,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         StringBuilder errorBuilder = new StringBuilder();
 
         try {
-            String existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult = checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(reactions);
+            String existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult = checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(reactions, dialogParent);
             if (!existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult.isEmpty()) {
                 errorBuilder.append(existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult).append("<br><br>");
             }
@@ -283,15 +279,15 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return "";
     }
 
-    private static String checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
+    private static String checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent) throws DatabaseServiceException {
         StringBuilder errorBuilder = new StringBuilder();
 
-        String extractionIDCheck = checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(extractionReactions);
+        String extractionIDCheck = checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(extractionReactions, dialogParent);
         if (!extractionIDCheck.isEmpty()) {
             errorBuilder.append(extractionIDCheck).append("<br><br>");
         }
 
-        String extractionBarcodeCheck = checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(extractionReactions);
+        String extractionBarcodeCheck = checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(extractionReactions, dialogParent);
         if (!extractionBarcodeCheck.isEmpty()) {
             errorBuilder.append(extractionBarcodeCheck).append("<br><br>");
         }
@@ -301,17 +297,18 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return errorBuilder.toString();
     }
 
-    private static String checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
-        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionIDGetter(), new ExtractionReactionRetrieverViaID());
+    private static String checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent) throws DatabaseServiceException {
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionIDGetter(), new ExtractionReactionRetrieverViaID(), dialogParent);
     }
 
-    private static String checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions) throws DatabaseServiceException {
-        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaBarcode());
+    private static String checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent) throws DatabaseServiceException {
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaBarcode(), dialogParent);
     }
 
     private static String checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions,
                                                                                                              ReactionAttributeGetter<String> reactionAttributeGetter,
-                                                                                                             ReactionRetriever<ExtractionReaction, LIMSConnection, List<String>> reactionRetriever) throws DatabaseServiceException {
+                                                                                                             ReactionRetriever<ExtractionReaction, LIMSConnection, List<String>> reactionRetriever,
+                                                                                                             JComponent dialogParent) throws DatabaseServiceException {
         Map<String, List<ExtractionReaction>> attributeToNewExtractionReactions = ReactionUtilities.buildAttributeToReactionsMap(extractionReactions, reactionAttributeGetter);
 
         Collection<ExtractionReaction> existingExtractionReactions = reactionRetriever.retrieve(BiocodeService.getInstance().getActiveLIMSConnection(), new ArrayList<String>(attributeToNewExtractionReactions.keySet()));
@@ -320,7 +317,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         Map<String, List<ExtractionReaction>> attributeToExistingExtractionReactions = ReactionUtilities.buildAttributeToReactionsMap(existingExtractionReactions, reactionAttributeGetter);
 
-        Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions = buildExistingExtractionsReactionsToNewExtractionReactionsMap(
+        Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionReactionsToNewExtractionReactions = buildExistingExtractionReactionsToNewExtractionReactionsMap(
                 attributeToNewExtractionReactions,
                 attributeToExistingExtractionReactions
         );
@@ -331,7 +328,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + "."
                             + "<br><br> Move the existing extraction reactions to the plate and override the corresponding new extraction reactions?",
                     "Existing Extractions With " + attributeName + " Detected",
-                    null,
+                    dialogParent,
                     Dialogs.DialogIcon.QUESTION)) {
                 return overrideNewExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
             } else {
@@ -374,8 +371,8 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return justMovedExtractionReactions;
     }
 
-    private static Map<List<ExtractionReaction>, List<ExtractionReaction>> buildExistingExtractionsReactionsToNewExtractionReactionsMap(Map<String, List<ExtractionReaction>> identifierToNewExtractionReactions,
-                                                                                                                                        Map<String, List<ExtractionReaction>> identifierToExistingExtractionReactions) {
+    private static Map<List<ExtractionReaction>, List<ExtractionReaction>> buildExistingExtractionReactionsToNewExtractionReactionsMap(Map<String, List<ExtractionReaction>> identifierToNewExtractionReactions,
+                                                                                                                                       Map<String, List<ExtractionReaction>> identifierToExistingExtractionReactions) {
         Map<List<ExtractionReaction>, List<ExtractionReaction>> existingExtractionsToNewExtractions = new HashMap<List<ExtractionReaction>, List<ExtractionReaction>>();
 
         for (Map.Entry<String, List<ExtractionReaction>> identifierAndExtractionsThatExist : identifierToExistingExtractionReactions.entrySet()) {
@@ -409,7 +406,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
     }
 
     private static ExtractionReaction getExistingExtractionReactionToMove(Collection<ExtractionReaction> existingExtractionReactions) {
-        // todo: determine how to handle when existingExtractionReactions.size() > 1;
         return existingExtractionReactions.iterator().next();
     }
 

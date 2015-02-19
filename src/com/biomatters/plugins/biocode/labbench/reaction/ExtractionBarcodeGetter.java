@@ -7,7 +7,7 @@ import com.biomatters.plugins.biocode.BiocodeUtilities;
  * @author Gen Li
  *         Created on 10/02/15 3:40 PM
  */
-public class ExtractionBarcodeGetter implements ReactionAttributeGetter {
+public class ExtractionBarcodeGetter implements ReactionAttributeGetter<String> {
     public String get(Reaction reaction) {
         return reaction.getOptions().getValueAsString(BiocodeUtilities.EXTRACTION_BARCODE_FIELD.getCode());
     }

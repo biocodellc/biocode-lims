@@ -542,6 +542,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
     public abstract Color _getBackgroundColor();
 
+    /**
+     * Validates reactions.
+     *
+     * @param reactions Reactions to validate
+     * @param dialogParent Owner of dialogs displayed from this method.
+     * @return Summary describing errors or empty string if none are found.
+     */
     public abstract String areReactionsValid(List<T> reactions, JComponent dialogParent);
 
     public Dimension getPreferredSize() {

@@ -14,7 +14,9 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.options.NamePartOption;
@@ -1172,6 +1174,26 @@ public class ReactionUtilities {
         }
 
         return attributeToReactions;
+    }
+
+    public static <T extends Reaction> void setFimsSamplesOnReactions(Collection<T> reactions) {
+        FIMSConnection activeFIMSConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+
+        if (activeFIMSConnection != null) {
+            Map<String, List<T>> tissueIDsToReactions = buildAttributeToReactionsMap(reactions, new TissueIDGetter());
+            try {
+                List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIDsToReactions.keySet());
+
+                for (FimsSample fimsSample : fimsSamples) {
+                    List<T> reactionsForTissueID = tissueIDsToReactions.get(fimsSample.getId());
+                    if (reactionsForTissueID != null && reactionsForTissueID.size() != 1) {
+                        reactionsForTissueID.get(0).setFimsSample(fimsSample);
+                    }
+                }
+            } catch (ConnectionException e) {
+                Dialogs.showMessageDialog("", "Error occurred while retrieving fims samples for reactions. Reactions will be empty.");
+            }
+        }
     }
 
     public static void invalidateFieldWidthCacheOfReactions(Collection<? extends Reaction> reactions) {

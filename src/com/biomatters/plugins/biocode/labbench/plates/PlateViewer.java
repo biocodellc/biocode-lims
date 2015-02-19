@@ -402,8 +402,14 @@ public class PlateViewer extends JPanel {
                                 }
                             }
                         };
-                        new Thread(runnable, "Biocode plate creation thread").start();
-                        updatePanelAndReactions(allReactionsOnPlate);
+
+                        Runnable updatePanelRunnable = new Runnable() {
+                            public void run() {
+                                updatePanelAndReactions(allReactionsOnPlate);
+                            }
+                        };
+
+                        BiocodeService.block("Biocode plate creation thread", plateView, runnable, updatePanelRunnable);
                     }
                 });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);
@@ -448,16 +454,16 @@ public class PlateViewer extends JPanel {
         plateView.setPlate(plate);
     }
 
-    public void updatePanel() {
+    private void updatePanelAndReactions(Collection<Reaction> reactionsUpdated) {
+        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactionsUpdated);
+        updatePanel();
+    }
+
+    private void updatePanel() {
         plateView.invalidate();
 
         scroller.getViewport().validate();
 
         plateView.repaint();
-    }
-
-    public void updatePanelAndReactions(Collection<Reaction> reactionsUpdated) {
-        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactionsUpdated);
-        updatePanel();
     }
 }

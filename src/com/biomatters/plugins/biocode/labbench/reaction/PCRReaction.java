@@ -104,19 +104,6 @@ public class PCRReaction extends Reaction<PCRReaction> {
                 }
             }
         }
-
-        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
-        if (fimsConnection != null) {
-            try {
-                List<FimsSample> fimsSamples = fimsConnection.retrieveSamplesForTissueIds(Collections.singletonList(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
-                if (fimsSamples.size() == 1) {
-                    setFimsSample(fimsSamples.get(0));
-                }
-            } catch (ConnectionException e) {
-                e.printStackTrace();
-            }
-        }
-
     }
 
     public ReactionOptions _getOptions() {
@@ -171,6 +158,14 @@ public class PCRReaction extends Reaction<PCRReaction> {
         getOptions().setValue("extractionId", s);
     }
 
+    /**
+     * Validates the supplied PCR reactions. Sets the 'isError' attributes of the supplied PCR reactions
+     * based on the validation results.
+     *
+     * @param reactions PCR reactions to validate.
+     * @param dialogParent Owner of dialogs displayed from this method.
+     * @return Summary describing errors or empty string if none are found.
+     */
     public String areReactionsValid(List<PCRReaction> reactions, JComponent dialogParent) {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";

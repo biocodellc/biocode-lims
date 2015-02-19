@@ -281,21 +281,13 @@ public class PlateView extends JPanel {
     }
 
     public boolean checkForPlateSpecificErrors() {
-        boolean errorDetected = false;
-
-        errorDetected = errorDetected || checkForDuplicateAttributesAcrossReactionsOnPlate();
-
-        return errorDetected;
+        return checkForDuplicateAttributesAcrossReactionsOnPlate();
     }
 
     private boolean checkForDuplicateAttributesAcrossReactionsOnPlate() {
-        boolean errorDetected = false;
         Collection<Reaction> reactions = Arrays.asList(getPlate().getReactions());
-
-        errorDetected = errorDetected || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionIDGetter()) ;
-        errorDetected = errorDetected || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionBarcodeGetter());
-
-        return errorDetected;
+        return checkForDuplicateAttributesAmongReactions(reactions, new ExtractionIDGetter())
+                || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionBarcodeGetter());
     }
 
     private static boolean checkForDuplicateAttributesAmongReactions(Collection<Reaction> reactions, ReactionAttributeGetter<String> reactionAttributeGetter) {

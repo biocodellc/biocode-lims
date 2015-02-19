@@ -131,11 +131,6 @@ public class PlateDocumentViewer extends DocumentViewer{
                                         ((CycleSequencingReaction)r).purgeChromats();
                                     }
                                 }
-                                ThreadUtilities.invokeNowOrLater(new Runnable() {
-                                    public void run() {
-                                        reloadViewer();
-                                    }
-                                });
                             } catch (DatabaseServiceException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());
                                 Runnable runnable = new Runnable() {
@@ -157,8 +152,17 @@ public class PlateDocumentViewer extends DocumentViewer{
                             }
                         }
                     };
-                    new Thread(runnable).start();
-                    updatePanelAndReactions(allReactionsOnPlate);
+
+                    Runnable updatePanelRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            reloadViewer();
+
+                            updatePanelAndReactions(allReactionsOnPlate);
+                        }
+                    };
+
+                    BiocodeService.block("Biocode plate saving thread", plateView, runnable, updatePanelRunnable);
                 }
             }
         };
@@ -262,7 +266,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         return null;
     }
 
-    public void updatePanel() {
+    private void updatePanel() {
         keyPanel.removeAll();
         keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0, 0).getBackgroundColorer()));
         if(thingInsideScrollPane != null) {
@@ -272,7 +276,7 @@ public class PlateDocumentViewer extends DocumentViewer{
         }
     }
 
-    public void updatePanelAndReactions(Collection<Reaction> reactions) {
+    private void updatePanelAndReactions(Collection<Reaction> reactions) {
         ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactions);
         updatePanel();
     }

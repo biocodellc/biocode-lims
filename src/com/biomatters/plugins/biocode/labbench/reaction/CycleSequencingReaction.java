@@ -169,18 +169,6 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         if(result != null) {
             sequencingResults.add(result);
         }
-
-        FIMSConnection fimsConnection = BiocodeService.getInstance().getActiveFIMSConnection();
-        if (fimsConnection != null) {
-            try {
-                List<FimsSample> fimsSamples = fimsConnection.retrieveSamplesForTissueIds(Collections.singletonList(options.getValueAsString(ExtractionOptions.TISSUE_ID)));
-                if (fimsSamples.size() == 1) {
-                    setFimsSample(fimsSamples.get(0));
-                }
-            } catch (ConnectionException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     public void setCacheNumTraces(int cacheNumTraces) {
@@ -289,6 +277,14 @@ public class CycleSequencingReaction extends Reaction<CycleSequencingReaction>{
         return getTraces() != null;
     }
 
+    /**
+     * Validates the supplied cycle sequencing reactions. Sets the 'isError' attributes of the supplied cycle sequencing
+     * reactions based on the validation results.
+     *
+     * @param reactions Cycle sequencing reactions to validate.
+     * @param dialogParent Owner of dialogs displayed from this method.
+     * @return Summary describing errors or empty string if none are found.
+     */
     public String areReactionsValid(List<CycleSequencingReaction> reactions, JComponent dialogParent) {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database";

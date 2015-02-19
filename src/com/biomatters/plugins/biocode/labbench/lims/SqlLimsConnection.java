@@ -1575,10 +1575,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             } else {
                 plate = plates.get(plateId);
             }
-            Reaction reaction = plate.addReaction(resultSet);
-            if (reaction == null) {
-                //do nothing
-            }
+            plate.addReaction(resultSet);
         }
 
         if (previousId >= 0) {
@@ -1590,6 +1587,10 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
         }
         setInitialTraceCountsForPlates(plates);
+
+        for (Plate plate : plates.values()) {
+            ReactionUtilities.setFimsSamplesOnReactions(Arrays.asList(plate.getReactions()));
+        }
 
         final StringBuilder sb = new StringBuilder("");
         for (String line : totalErrors)
@@ -1605,6 +1606,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             };
             ThreadUtilities.invokeNowOrLater(runnable);
         }
+
         return new ArrayList<Plate>(plates.values());
     }
 
