@@ -541,7 +541,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
                 return;
             }
-            PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate(), false);
+            PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate());
             List<Reaction> allReactionsOnPlate = Arrays.asList(plateView.getPlate().getReactions());
             if (editor.editPlate(container)) {
                 String reactionValidityErrorCheck = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);

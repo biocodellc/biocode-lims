@@ -794,7 +794,7 @@ public class ReactionUtilities {
     }
 
     public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating) {
-        if(reactions == null || reactions.size() == 0) {
+        if(reactions == null || reactions.isEmpty()) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
 

@@ -206,7 +206,7 @@ public class PlateViewer extends JPanel {
                     Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
                     return;
                 }
-                final PlateBulkEditor editor = new PlateBulkEditor(getPlate(), true);
+                final PlateBulkEditor editor = new PlateBulkEditor(getPlate());
                 List<Reaction> allReactionsOnPlate = Arrays.asList(getPlate().getReactions());
                 if (editor.editPlate(selfReference)) {
                     String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
@@ -456,6 +456,7 @@ public class PlateViewer extends JPanel {
 
     private void updatePanelAndReactions(Collection<Reaction> reactionsUpdated) {
         ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactionsUpdated);
+
         updatePanel();
     }
 

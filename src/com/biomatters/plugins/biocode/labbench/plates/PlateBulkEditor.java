@@ -47,7 +47,6 @@ import java.util.prefs.Preferences;
 @SuppressWarnings({"ConstantConditions", "ConstantConditions"})
 public class PlateBulkEditor {
     private Plate plate;
-    private boolean newPlate;
     private SwapAction swapAction;
     private GeneiousAction archivePlateAction;
     private GeneiousAction importBarcodes;
@@ -66,10 +65,9 @@ public class PlateBulkEditor {
         DOWN_AND_ACROSS
     }
 
-    public PlateBulkEditor(Plate p, boolean newPlate) {
+    public PlateBulkEditor(Plate p) {
         plate = p;
-        this.newPlate = newPlate;
-        defaultFields = getDefaultFields(p, newPlate);
+        defaultFields = getDefaultFields(p);
     }
 
     /**
@@ -707,7 +705,7 @@ public class PlateBulkEditor {
         );
     }
 
-    private static List<DocumentField> getDefaultFields(Plate p, boolean newPlate) {
+    private static List<DocumentField> getDefaultFields(Plate p) {
         switch(p.getReactionType()) {
             case Extraction:
                 return Arrays.asList(
@@ -718,20 +716,11 @@ public class PlateBulkEditor {
                 );
             case PCR://drop through
             case CycleSequencing:
-                if(newPlate) {
-                    return Arrays.asList(
-                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                        LIMSConnection.WORKFLOW_LOCUS_FIELD,
-                        new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
-                    );
-                }
-                else {
-                    return Arrays.asList(
-                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                        LIMSConnection.WORKFLOW_LOCUS_FIELD,
-                        new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
-                    );
-                }
+                return Arrays.asList(
+                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    LIMSConnection.WORKFLOW_LOCUS_FIELD,
+                    new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                );
             default :
                 return Collections.EMPTY_LIST;
         }
