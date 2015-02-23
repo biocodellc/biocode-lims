@@ -2011,6 +2011,41 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
     }
 
+    @Override
+    public void setAssemblySequences(Map<Integer, String> assemblyIDToAssemblyIDToSet, ProgressListener progressListener) throws DatabaseServiceException {
+        if (!assemblyIDToAssemblyIDToSet.isEmpty()) {
+            ConnectionWrapper connection = null;
+            PreparedStatement reverseAssemblySequenceStatement = null;
+            CompositeProgressListener sequencesReversalProgress = new CompositeProgressListener(progressListener, assemblyIDToAssemblyIDToSet.size());
+            try {
+                connection = getConnection();
+
+                connection.beginTransaction();
+
+                reverseAssemblySequenceStatement = connection.prepareStatement("UPDATE assembly SET consensus = ? WHERE id = ?");
+                int numberOfSequencesToReverse = assemblyIDToAssemblyIDToSet.size(), i = 1;
+                for (Map.Entry<Integer, String> assemblyIDAndAssemblyIDToSet : assemblyIDToAssemblyIDToSet.entrySet()) {
+                    sequencesReversalProgress.beginSubtask("Saving sequence " + i + " of " + numberOfSequencesToReverse + ".");
+
+                    reverseAssemblySequenceStatement.setString(1, assemblyIDAndAssemblyIDToSet.getValue());
+                    reverseAssemblySequenceStatement.setInt(2, assemblyIDAndAssemblyIDToSet.getKey());
+
+                    if (reverseAssemblySequenceStatement.executeUpdate() != 1) {
+                        throw new DatabaseServiceException("An error occurred while attempting to update assembly sequence with assembly ID " + assemblyIDAndAssemblyIDToSet.getKey() + ".", false);
+                    }
+                }
+
+                connection.endTransaction();
+            } catch (SQLException e) {
+                throw new DatabaseServiceException(e, e.getMessage(), false);
+            } finally {
+                SqlUtilities.cleanUpStatements(reverseAssemblySequenceStatement);
+
+                returnConnection(connection);
+            }
+        }
+    }
+
     private AssembledSequence getAssembledSequence(ResultSet resultSet) throws SQLException {
         AssembledSequence seq = new AssembledSequence();
         seq.confidenceScore = resultSet.getString("assembly.confidence_scores");

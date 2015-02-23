@@ -259,6 +259,19 @@ public class ServerLimsConnection extends LIMSConnection {
     }
 
     @Override
+    public void setAssemblySequences(Map<Integer, String> assemblyIDToAssemblySequenceToSet, ProgressListener progressListener) throws DatabaseServiceException {
+        try {
+            target.path("update")
+                    .queryParam("ids", StringUtilities.join(",", assemblyIDToAssemblySequenceToSet.keySet()))
+                    .queryParam("sequences", StringUtilities.join(",", assemblyIDToAssemblySequenceToSet.values()));
+        } catch (WebApplicationException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        } catch (ProcessingException e) {
+            throw new DatabaseServiceException(e, e.getMessage(), false);
+        }
+    }
+
+    @Override
     public int addAssembly(boolean isPass, String notes, String technician, FailureReason failureReason, String failureNotes, boolean addChromatograms, AssembledSequence seq, List<Integer> reactionIds, Cancelable cancelable) throws DatabaseServiceException {
         //not sure if this need batch
         try {
