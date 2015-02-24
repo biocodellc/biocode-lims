@@ -93,6 +93,10 @@ public class AnnotateUtilities {
             }
             realProgress.beginSubtask("Annotating " + annotatedDocument.getName());
             if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
+                // Older versions of the Biocode plugin would incorrectly copy this field across to the alignment doc.
+                // Wipe out the value that has been set and let Geneious calculate it normally.
+                annotatedDocument.setFieldValue(DocumentField.NUCLEOTIDE_SEQUENCES_WITH_QUALITY_COUNT, null);
+
                 Set<DocumentField> fieldsAnnotated = new HashSet<DocumentField>();
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument) annotatedDocument.getDocument();
                 CompositeProgressListener progressForAlignment = new CompositeProgressListener(realProgress, alignment.getNumberOfSequences());
