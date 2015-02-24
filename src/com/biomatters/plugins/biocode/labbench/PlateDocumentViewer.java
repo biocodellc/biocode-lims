@@ -112,7 +112,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                                     String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
 
                                     if (!reactionValidityCheckResult.isEmpty()) {
-                                        Dialogs.showMessageDialog(reactionValidityCheckResult);
+                                        Dialogs.showMessageDialog(reactionValidityCheckResult + "<br><br>The affected wells have been highlighted in yellow.");
 
                                         errorDetected = true;
                                     }
@@ -505,7 +505,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 selectedReactions = Arrays.asList(plateView.getPlate().getReactions());
             }
 
-            if (ReactionUtilities.editReactions(selectedReactions, plateView, false)) {
+            if (ReactionUtilities.editReactions(selectedReactions, plateView, false, true)) {
                 plateView.checkForPlateSpecificErrors();
 
                 updatePanelAndReactions(selectedReactions);
@@ -547,7 +547,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 String reactionValidityErrorCheck = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
 
                 if (!reactionValidityErrorCheck.isEmpty()) {
-                    Dialogs.showMessageDialog(reactionValidityErrorCheck);
+                    Dialogs.showMessageDialog(reactionValidityErrorCheck + "<br><br>The affected wells have been highlighted in yellow.");
                 }
 
                 plateView.checkForPlateSpecificErrors();

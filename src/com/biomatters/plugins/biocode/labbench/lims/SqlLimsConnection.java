@@ -1512,15 +1512,14 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ResultSet plateSet = selectPlate.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (plates) query");
 
-            try {
-                plates = getPlatesFromResultSet(plateSet, cancelable);
-            } catch (ConnectionException e) {
-                throw new DatabaseServiceException(e, e.getMessage(), true);
-            }
+            plates = getPlatesFromResultSet(plateSet, cancelable);
+
             plateSet.close();
             return plates;
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Unable to retrieve plates: " + e.getMessage(), false);
+        } catch (ConnectionException e) {
+            throw new DatabaseServiceException(e, "Unable to retrieve plates: " + e.getMessage(), true);
         } finally {
             SqlUtilities.cleanUpStatements(selectPlate);
             returnConnection(connection);

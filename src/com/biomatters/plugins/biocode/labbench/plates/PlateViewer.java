@@ -212,7 +212,7 @@ public class PlateViewer extends JPanel {
                     String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
 
                     if (!reactionValidityCheckResult.isEmpty()) {
-                        Dialogs.showMessageDialog(reactionValidityCheckResult);
+                        Dialogs.showMessageDialog(reactionValidityCheckResult + "<br><br>The affected wells have been highlighted in yellow.");
                     }
 
                     plateView.checkForPlateSpecificErrors();
@@ -246,7 +246,7 @@ public class PlateViewer extends JPanel {
                     reactionsToEdit = Arrays.asList(plateView.getPlate().getReactions());
                 }
 
-                if (ReactionUtilities.editReactions(reactionsToEdit, plateView, true)) {
+                if (ReactionUtilities.editReactions(reactionsToEdit, plateView, true, true)) {
                     plateView.checkForPlateSpecificErrors();
 
                     updatePanelAndReactions(reactionsToEdit);
@@ -369,7 +369,7 @@ public class PlateViewer extends JPanel {
                                         String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
 
                                         if (!reactionValidityCheckResult.isEmpty()) {
-                                            Dialogs.showMessageDialog(reactionValidityCheckResult);
+                                            Dialogs.showMessageDialog(reactionValidityCheckResult + "<br><br>The affected wells have been highlighted in yellow.");
 
                                             errorDetected.set(true);
                                         }

@@ -190,7 +190,7 @@ public class PlateView extends JPanel {
                             final List<Reaction> selectedReactions = getSelectedReactions();
 
                             if (!selectedReactions.isEmpty()) {
-                                if (ReactionUtilities.editReactions(selectedReactions, selfReference, creating)) {
+                                if (ReactionUtilities.editReactions(selectedReactions, selfReference, creating, true)) {
                                     checkForPlateSpecificErrors();
 
                                     editResult.set(true);
@@ -281,10 +281,6 @@ public class PlateView extends JPanel {
     }
 
     public boolean checkForPlateSpecificErrors() {
-        return checkForDuplicateAttributesAcrossReactionsOnPlate();
-    }
-
-    private boolean checkForDuplicateAttributesAcrossReactionsOnPlate() {
         Collection<Reaction> reactions = Arrays.asList(getPlate().getReactions());
         return checkForDuplicateAttributesAmongReactions(reactions, new ExtractionIDGetter())
                 || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionBarcodeGetter());

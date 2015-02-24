@@ -793,7 +793,7 @@ public class ReactionUtilities {
         return -1;
     }
 
-    public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating) {
+    public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating, boolean edittingFromPlate) {
         if(reactions == null || reactions.isEmpty()) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -872,6 +872,10 @@ public class ReactionUtilities {
                 String error = reactions.get(0).areReactionsValid(reactions, owner);
 
                 if (!error.isEmpty()) {
+                    if (edittingFromPlate) {
+                        error += "<br><br><br><br>The affected wells have been highlighted in yellow.";
+                    }
+
                     Dialogs.showMessageDialog(error, "Invalid Reactions", owner, Dialogs.DialogIcon.INFORMATION);
                 }
             }
