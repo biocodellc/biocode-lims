@@ -1176,22 +1176,18 @@ public class ReactionUtilities {
         return attributeToReactions;
     }
 
-    public static <T extends Reaction> void setFimsSamplesOnReactions(Collection<T> reactions) {
+    public static <T extends Reaction> void setFimsSamplesOnReactions(Collection<T> reactions) throws ConnectionException {
         FIMSConnection activeFIMSConnection = BiocodeService.getInstance().getActiveFIMSConnection();
 
         if (activeFIMSConnection != null) {
             Map<String, List<T>> tissueIDsToReactions = buildAttributeToReactionsMap(reactions, new TissueIDGetter());
-            try {
-                List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIDsToReactions.keySet());
+            List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIDsToReactions.keySet());
 
-                for (FimsSample fimsSample : fimsSamples) {
-                    List<T> reactionsForTissueID = tissueIDsToReactions.get(fimsSample.getId());
-                    if (reactionsForTissueID != null && reactionsForTissueID.size() == 1) {
-                        reactionsForTissueID.get(0).setFimsSample(fimsSample);
-                    }
+            for (FimsSample fimsSample : fimsSamples) {
+                List<T> reactionsForTissueID = tissueIDsToReactions.get(fimsSample.getId());
+                if (reactionsForTissueID != null && reactionsForTissueID.size() == 1) {
+                    reactionsForTissueID.get(0).setFimsSample(fimsSample);
                 }
-            } catch (ConnectionException e) {
-                Dialogs.showMessageDialog("", "Error occurred while retrieving fims samples for reactions. Reactions will be empty.");
             }
         }
     }

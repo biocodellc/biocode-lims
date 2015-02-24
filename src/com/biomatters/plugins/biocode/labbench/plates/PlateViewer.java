@@ -409,7 +409,7 @@ public class PlateViewer extends JPanel {
                             }
                         };
 
-                        BiocodeService.block("Biocode plate creation thread", plateView, runnable, updatePanelRunnable);
+                        BiocodeService.block("Creating plate...", plateView, runnable, updatePanelRunnable);
                     }
                 });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);

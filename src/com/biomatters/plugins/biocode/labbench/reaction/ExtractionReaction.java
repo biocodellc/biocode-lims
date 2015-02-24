@@ -172,14 +172,6 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Color.white;
     }
 
-    /**
-     * Validates the supplied extraction reactions. Sets the 'isError' attributes of the supplied extraction reactions
-     * based on the validation results.
-     *
-     * @param reactions Extraction reactions to validate.
-     * @param dialogParent Owner of dialogs displayed from this method.
-     * @return Summary describing errors or empty string if none are found.
-     */
     public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent) {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database.";
@@ -272,7 +264,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
 
         if (errorBuilder.length() > 0) {
-            return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "<br>The affected reactions have been highlighted in yellow.</html>";
+            return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "<br>.</html>";
         }
 
         return "";
@@ -325,8 +317,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             String attributeName = reactionAttributeGetter.getAttributeName();
             if (Dialogs.showYesNoDialog(
                     "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + "."
-                            + "<br><br> Override new/edited extraction reactions with corresponding existing ones?"
-                            + "<br><br><strong>Note</strong>: Existing extraction reactions will be deleted.",
+                            + "<br><br>Move data to new/edited extraction reactions from corresponding existing ones?",
                     "Existing Extraction Reactions With " + attributeName + " Detected",
                     dialogParent,
                     Dialogs.DialogIcon.QUESTION)) {

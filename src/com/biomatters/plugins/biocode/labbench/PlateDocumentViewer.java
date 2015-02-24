@@ -162,7 +162,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                         }
                     };
 
-                    BiocodeService.block("Biocode plate saving thread", plateView, runnable, updatePanelRunnable);
+                    BiocodeService.block("Saving plate...", plateView, runnable, updatePanelRunnable);
                 }
             }
         };

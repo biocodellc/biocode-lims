@@ -1512,7 +1512,11 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             ResultSet plateSet = selectPlate.executeQuery();
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (plates) query");
 
-            plates = getPlatesFromResultSet(plateSet, cancelable);
+            try {
+                plates = getPlatesFromResultSet(plateSet, cancelable);
+            } catch (ConnectionException e) {
+                throw new DatabaseServiceException(e, e.getMessage(), true);
+            }
             plateSet.close();
             return plates;
         } catch (SQLException e) {
@@ -1540,7 +1544,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return queryBuilder.toString();
     }
 
-    private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException {
+    private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException, ConnectionException {
         Map<Integer, Plate> plates = new HashMap<Integer, Plate>();
         final Set<String> totalErrors = new HashSet<String>();
 
@@ -1588,9 +1592,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         }
         setInitialTraceCountsForPlates(plates);
 
+        Collection<Reaction> allReactions = new ArrayList<Reaction>();
         for (Plate plate : plates.values()) {
-            ReactionUtilities.setFimsSamplesOnReactions(Arrays.asList(plate.getReactions()));
+            allReactions.addAll(Arrays.asList(plate.getReactions()));
         }
+
+        ReactionUtilities.setFimsSamplesOnReactions(allReactions);
 
         final StringBuilder sb = new StringBuilder("");
         for (String line : totalErrors)
