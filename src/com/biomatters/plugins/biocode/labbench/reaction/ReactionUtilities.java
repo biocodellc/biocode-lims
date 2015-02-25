@@ -28,7 +28,6 @@ import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.annotation.Nullable;
-import javax.jdo.metadata.FieldMetadata;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
