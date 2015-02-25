@@ -527,7 +527,7 @@ public class WorkflowDocument extends MuitiPartDocument {
 
         public void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws DatabaseServiceException {
             if (!changes) {
-                String reactionCheckResult = reaction.areReactionsValid(Arrays.asList(reaction), null);
+                String reactionCheckResult = reaction.areReactionsValid(Arrays.asList(reaction), null, false);
 
                 if (!reactionCheckResult.isEmpty()) {
                     Dialogs.showMessageDialog(reactionCheckResult);

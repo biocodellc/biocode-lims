@@ -547,9 +547,22 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
      *
      * @param reactions Reactions to validate
      * @param dialogParent Owner of dialogs displayed from this method.
+     * @param editingPlate true if we are checking a plate of reactions, false if not.
      * @return Summary describing errors or empty string if none are found.
      */
-    public abstract String areReactionsValid(List<T> reactions, JComponent dialogParent);
+    public String areReactionsValid(List<T> reactions, JComponent dialogParent, boolean editingPlate) {
+        String errorMessage = _areReactionsValid(reactions, dialogParent, editingPlate);
+        if(!errorMessage.isEmpty() && editingPlate) {
+            return errorMessage + "<br><br>The affected wells have been highlighted in yellow.";
+        } else {
+            return errorMessage;
+        }
+    }
+
+    /**
+     * See {@link #areReactionsValid(java.util.List, javax.swing.JComponent, boolean)}
+     */
+    protected abstract String _areReactionsValid(List<T> reactions, JComponent dialogParent, boolean editingPlate);
 
     public Dimension getPreferredSize() {
         int y = PADDING+3;

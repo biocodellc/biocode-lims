@@ -172,7 +172,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Color.white;
     }
 
-    public String areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent) {
+    public String _areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent, boolean editingPlate) {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database.";
         }
@@ -213,7 +213,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                     }
                     if (sample.getId() == null) {
                         emptyFimsRecord = true;
-                        errorBuilder.append("Encountered a tissue record for the specimen ").append(sample.getSpecimenId()).append(" that has no tissue id.<br><br>");
+                        errorBuilder.append("Encountered a tissue record for the specimen ").append(sample.getSpecimenId()).append(" that has no tissue id.<br>");
                     } else {
                         docMap.put(sample.getId(), sample);
                     }
@@ -256,15 +256,28 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
             }
         }
 
+        List<String> emptyLocations = new ArrayList<String>();
         for (Reaction r : reactions) {
             if (!r.isEmpty() && r.getExtractionId().length() == 0) {
-                errorBuilder.append("Extraction reactions cannot have empty ids.<br><br>");
+                emptyLocations.add(r.getLocationString());
                 r.setHasError(true);
+            }
+        }
+        if(!emptyLocations.isEmpty()) {
+            errorBuilder.append("Extraction reactions cannot have empty ids");
+            errorBuilder.append(editingPlate ? ":" : ".");
+
+            if(editingPlate) {
+                if (emptyLocations.size() < 8) {
+                    errorBuilder.append(StringUtilities.humanJoin(emptyLocations)).append(".");
+                } else {
+                    errorBuilder.append("\n").append(StringUtilities.join("\n", emptyLocations));
+                }
             }
         }
 
         if (errorBuilder.length() > 0) {
-            return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "<br>.</html>";
+            return "<html><b>There were some errors in your data:</b><br>" + errorBuilder.toString() + "</html>";
         }
 
         return "";

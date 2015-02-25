@@ -209,10 +209,10 @@ public class PlateViewer extends JPanel {
                 final PlateBulkEditor editor = new PlateBulkEditor(getPlate());
                 List<Reaction> allReactionsOnPlate = Arrays.asList(getPlate().getReactions());
                 if (editor.editPlate(selfReference)) {
-                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
+                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
 
                     if (!reactionValidityCheckResult.isEmpty()) {
-                        Dialogs.showMessageDialog(reactionValidityCheckResult + "<br><br>The affected wells have been highlighted in yellow.");
+                        Dialogs.showMessageDialog(reactionValidityCheckResult);
                     }
 
                     plateView.checkForPlateSpecificErrors();
@@ -366,10 +366,10 @@ public class PlateViewer extends JPanel {
                             public void run() {
                                 try {
                                     if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
-                                        String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
+                                        String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
 
                                         if (!reactionValidityCheckResult.isEmpty()) {
-                                            Dialogs.showMessageDialog(reactionValidityCheckResult + "<br><br>The affected wells have been highlighted in yellow.");
+                                            Dialogs.showMessageDialog(reactionValidityCheckResult);
 
                                             errorDetected.set(true);
                                         }

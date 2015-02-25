@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
@@ -869,13 +868,9 @@ public class ReactionUtilities {
                 }
             }
             if (changedOptionCount > 0) {
-                String error = reactions.get(0).areReactionsValid(reactions, owner);
+                String error = reactions.get(0).areReactionsValid(reactions, owner, edittingFromPlate);
 
                 if (!error.isEmpty()) {
-                    if (edittingFromPlate) {
-                        error += "<br><br><br><br>The affected wells have been highlighted in yellow.";
-                    }
-
                     Dialogs.showMessageDialog(error, "Invalid Reactions", owner, Dialogs.DialogIcon.INFORMATION);
                 }
             }

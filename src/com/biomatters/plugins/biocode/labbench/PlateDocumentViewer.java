@@ -109,10 +109,10 @@ public class PlateDocumentViewer extends DocumentViewer{
                                 boolean errorDetected = false;
 
                                 if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
-                                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
+                                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
 
                                     if (!reactionValidityCheckResult.isEmpty()) {
-                                        Dialogs.showMessageDialog(reactionValidityCheckResult + "<br><br>The affected wells have been highlighted in yellow.");
+                                        Dialogs.showMessageDialog(reactionValidityCheckResult);
 
                                         errorDetected = true;
                                     }
@@ -544,10 +544,10 @@ public class PlateDocumentViewer extends DocumentViewer{
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate());
             List<Reaction> allReactionsOnPlate = Arrays.asList(plateView.getPlate().getReactions());
             if (editor.editPlate(container)) {
-                String reactionValidityErrorCheck = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView);
+                String reactionValidityErrorCheck = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
 
                 if (!reactionValidityErrorCheck.isEmpty()) {
-                    Dialogs.showMessageDialog(reactionValidityErrorCheck + "<br><br>The affected wells have been highlighted in yellow.");
+                    Dialogs.showMessageDialog(reactionValidityErrorCheck);
                 }
 
                 plateView.checkForPlateSpecificErrors();
