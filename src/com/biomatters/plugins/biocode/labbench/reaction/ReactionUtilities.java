@@ -28,6 +28,7 @@ import org.jdom.Element;
 import org.virion.jam.util.SimpleListener;
 
 import javax.annotation.Nullable;
+import javax.jdo.metadata.FieldMetadata;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
@@ -1180,17 +1181,30 @@ public class ReactionUtilities {
         return attributeToReactions;
     }
 
-    public static <T extends Reaction> void setFimsSamplesOnReactions(Collection<T> reactions) throws ConnectionException {
+    public static <T extends Reaction> void setFimsSamplesOnReactions(Collection<T> reactions) throws ConnectionException, DatabaseServiceException {
         FIMSConnection activeFIMSConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        LIMSConnection activeLIMSConnection = BiocodeService.getInstance().getActiveLIMSConnection();
 
-        if (activeFIMSConnection != null) {
-            Map<String, List<T>> tissueIDsToReactions = buildAttributeToReactionsMap(reactions, new TissueIDGetter());
-            List<FimsSample> fimsSamples = activeFIMSConnection.retrieveSamplesForTissueIds(tissueIDsToReactions.keySet());
+        if (activeFIMSConnection != null && activeLIMSConnection != null) {
+            Map<String, List<T>> extractionIDToReactions = ReactionUtilities.buildAttributeToReactionsMap(reactions, new ExtractionIDGetter());
 
-            for (FimsSample fimsSample : fimsSamples) {
-                List<T> reactionsForTissueID = tissueIDsToReactions.get(fimsSample.getId());
-                if (reactionsForTissueID != null && reactionsForTissueID.size() == 1) {
-                    reactionsForTissueID.get(0).setFimsSample(fimsSample);
+            Map<String, String> extractionIDToTissueID = activeLIMSConnection.getTissueIdsForExtractionIds("extraction", new ArrayList<String>(extractionIDToReactions.keySet()));
+
+            Map<String, FimsSample> tissueIDToFimsSample = new HashMap<String, FimsSample>();
+
+            for (FimsSample fimsSample : activeFIMSConnection.retrieveSamplesForTissueIds(extractionIDToTissueID.values())) {
+                tissueIDToFimsSample.put(fimsSample.getId(), fimsSample);
+            }
+
+            for (Map.Entry<String, List<T>> extractionIDAndReactions : extractionIDToReactions.entrySet()) {
+                String tissueIDForReactions = extractionIDToTissueID.get(extractionIDAndReactions.getKey());
+                if (tissueIDForReactions != null && !tissueIDForReactions.isEmpty()) {
+                    FimsSample fimsSampleForReactions = tissueIDToFimsSample.get(tissueIDForReactions);
+                    if (fimsSampleForReactions != null) {
+                        for (T reaction : extractionIDAndReactions.getValue()) {
+                            reaction.setFimsSample(fimsSampleForReactions);
+                        }
+                    }
                 }
             }
         }

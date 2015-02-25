@@ -1543,7 +1543,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return queryBuilder.toString();
     }
 
-    private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException, ConnectionException {
+    private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException, ConnectionException, DatabaseServiceException {
         Map<Integer, Plate> plates = new HashMap<Integer, Plate>();
         final Set<String> totalErrors = new HashSet<String>();
 
