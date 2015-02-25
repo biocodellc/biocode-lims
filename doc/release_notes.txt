@@ -1,4 +1,6 @@
 ==Biocode Plugin 2.8.8 - TBD==
+* The LIMS now actively tries to prevent duplicate extraction barcodes.  It will ask if extractions should be moved if duplicates are detected.
+* Fixed an issue where plates with errors could still be saved.
 * Fixed crash that would occur when changing columns in Primer Overview table.
 
 ==Biocode Plugin 2.8.7 - 14 January 2015==
