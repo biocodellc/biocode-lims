@@ -260,10 +260,13 @@ public class ServerLimsConnection extends LIMSConnection {
 
     @Override
     public void setAssemblySequences(Map<Integer, String> assemblyIDToAssemblySequenceToSet, ProgressListener progressListener) throws DatabaseServiceException {
+        Map<String, String> assemblyIDAsStringToAssemblySequenceToSet = new HashMap<String, String>();
+
+        for (Map.Entry<Integer, String> assemblyIDAndAssemblySequenceToSet : assemblyIDToAssemblySequenceToSet.entrySet()) {
+            assemblyIDAsStringToAssemblySequenceToSet.put(String.valueOf(assemblyIDAndAssemblySequenceToSet.getKey()), assemblyIDAndAssemblySequenceToSet.getValue());
+        }
         try {
-            target.path("update")
-                    .queryParam("ids", StringUtilities.join(",", assemblyIDToAssemblySequenceToSet.keySet()))
-                    .queryParam("sequences", StringUtilities.join(",", assemblyIDToAssemblySequenceToSet.values()));
+            target.path("update").request().put(Entity.entity(new StringMap(assemblyIDAsStringToAssemblySequenceToSet), MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {

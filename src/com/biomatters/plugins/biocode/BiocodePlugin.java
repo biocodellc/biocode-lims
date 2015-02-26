@@ -53,6 +53,7 @@ public class BiocodePlugin extends GeneiousPlugin {
             superBiocodeAction.addSubmenuDivider(0.1);
             superBiocodeAction.addSubmenuDivider(0.2);
             superBiocodeAction.addSubmenuDivider(0.5);
+            superBiocodeAction.addSubmenuDivider(0.9);
         }
         return superBiocodeAction;
     }

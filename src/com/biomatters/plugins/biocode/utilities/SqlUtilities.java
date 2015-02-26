@@ -254,10 +254,10 @@ public class SqlUtilities {
     }
 
     private static String getStringToPrint(Object o) {
-        String toPrint;
+        String toPrint = "";
         if (o instanceof CharSequence) {
             toPrint = "'" + o.toString().toLowerCase() + "'";
-        } else {
+        } else if (o != null) {
             toPrint = o.toString();
         }
         return toPrint;

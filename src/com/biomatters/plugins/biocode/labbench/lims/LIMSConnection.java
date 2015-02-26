@@ -454,8 +454,6 @@ public abstract class LIMSConnection {
 
     public abstract void setAssemblySequences(Map<Integer, String> assemblyIDToAssemblySequenceToSet, ProgressListener progressListener) throws DatabaseServiceException;
 
-    //public abstract boolean setAssemblySequences(Collection<Integer> assemblyIDs, ProgressListener progress);
-
     /**
      * @param plateIds the ids of the plates to check
      * returns all the empty plates in the database...

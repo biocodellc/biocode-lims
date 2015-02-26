@@ -74,36 +74,22 @@ public class Sequences {
     }
 
     @PUT
-    @Path("{update}")
-    public void update(@QueryParam("ids")String assemblyIDs, @QueryParam("sequences")String sequences) {
-        String[] assemblyIDsSplit = assemblyIDs.split(",");
-        String[] sequencesSplit = sequences.split(",");
-        Map<Integer, String> assemblyIDsToSequencesToSet = new HashMap<Integer, String>();
-
-        if (assemblyIDsSplit.length == 0) {
-            throw new InternalServerErrorException("Number of assembly IDs = 0.");
-        }
-
-        if (sequencesSplit.length == 0) {
-            throw new InternalServerErrorException("Number of sequences = 0.");
-        }
-
-        if (assemblyIDsSplit.length == sequencesSplit.length) {
-            throw new InternalServerErrorException("Number of assembly IDs (" + assemblyIDsSplit.length + ") != number of sequences (" + sequencesSplit.length + ").");
-        }
-
-        for (int i = 0; i < assemblyIDsSplit.length; i++) {
-            Integer assemblyID;
+    @Consumes("application/xml")
+    @Path("update")
+    public void update(StringMap assemblyIDToAssemblySequence) {
+        Map<Integer, String> assemblyIDAsIntegerToAssemblySequence = new HashMap<Integer, String>();
+        for (Map.Entry<String, String> assemblyIDAndAssemblySequence : assemblyIDToAssemblySequence.getMap().entrySet()) {
+            Integer assemblyIDAsInteger;
             try {
-                assemblyID = Integer.parseInt(assemblyIDsSplit[i]);
+                assemblyIDAsInteger = Integer.parseInt(assemblyIDAndAssemblySequence.getKey());
             } catch (NumberFormatException e) {
-                throw new InternalServerErrorException("Invalid assembly ID (" + assemblyIDsSplit[i] + "): " + e.getMessage() + ".", e);
+                throw new InternalServerErrorException("Invalid assembly ID (" + assemblyIDAndAssemblySequence.getKey() + "): " + e.getMessage() + ".", e);
             }
-            assemblyIDsToSequencesToSet.put(assemblyID, sequencesSplit[i]);
+            assemblyIDAsIntegerToAssemblySequence.put(assemblyIDAsInteger, assemblyIDAndAssemblySequence.getValue());
         }
 
         try {
-            LIMSInitializationListener.getLimsConnection().setAssemblySequences(assemblyIDsToSequencesToSet, ProgressListener.EMPTY);
+            LIMSInitializationListener.getLimsConnection().setAssemblySequences(assemblyIDAsIntegerToAssemblySequence, ProgressListener.EMPTY);
         } catch (DatabaseServiceException e) {
             throw new InternalServerErrorException(e.getMessage(), e);
         }
@@ -111,7 +97,7 @@ public class Sequences {
 
     @DELETE
     @Consumes("text/plain")
-    @Path("{id}/delete")
+    @Path("{id}")
     public void delete(@PathParam("id")String id) {
         try {
             List<Integer> integerListFromString = getIntegerListFromString(id);
