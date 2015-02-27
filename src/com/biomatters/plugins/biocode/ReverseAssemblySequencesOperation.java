@@ -22,7 +22,7 @@ import java.util.*;
  */
 public class ReverseAssemblySequencesOperation extends DocumentOperation {
     public GeneiousActionOptions getActionOptions() {
-        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Reverse Assembly Sequences That Exist In The LIMS", "").setInPopupMenu(true, 1);
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Reverse Assembly Sequences", "").setInPopupMenu(true, 1);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 
@@ -92,17 +92,17 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
     }
 
     private static void checkSequencesExistInLIMS(AnnotatedPluginDocument[] annotatedDocuments) throws DocumentOperationException {
-        Collection<Integer> assemblyIDsFromDocuments = getAssemblyIDs(annotatedDocuments);
+        List<Integer> assemblyIDsFromDocuments = new ArrayList<Integer>(getAssemblyIDs(annotatedDocuments));
         try {
             Collection<Integer> assembyIDsFromAssembledSequencesRetrievedFromLIMS = getAssemblyIDs(BiocodeService.getInstance().getActiveLIMSConnection().getAssemblySequences(
-                    new ArrayList<Integer>(assemblyIDsFromDocuments),
+                    assemblyIDsFromDocuments,
                     ProgressListener.EMPTY,
                     true
             ));
 
             for (Integer assemblyIDFromDocuments : assemblyIDsFromDocuments) {
                 if (!assembyIDsFromAssembledSequencesRetrievedFromLIMS.contains(assemblyIDFromDocuments)) {
-                    throw new DocumentOperationException("Assembly sequence with ID " + assemblyIDFromDocuments + " does not exist in the LIMS database.");
+                    throw new DocumentOperationException("Assembly sequence with ID " + assemblyIDFromDocuments + " does not exist in your LIMS database.");
                 }
             }
         } catch (DatabaseServiceException e) {
@@ -131,6 +131,6 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
     }
 
     public String getHelp() {
-        return "Select assembly sequence  the LIMS for reversing.";
+        return "Select assembly sequences for reversing.<br><br><strong>Note:</strong> assembly sequences must exist in your LIMS database.";
     }
 }
