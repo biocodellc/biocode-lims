@@ -130,8 +130,8 @@ public abstract class LimsTestCase extends Assert {
 
         int index = 0;
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            int row = index/12;
-            int column = index%12;
+            int row = index/extractionPlate.getCols();
+            int column = index%extractionPlate.getCols();
 
             ExtractionReaction reaction = (ExtractionReaction)extractionPlate.getReaction(row, column);
             reaction.setTissueId(entry.getKey());
@@ -149,8 +149,8 @@ public abstract class LimsTestCase extends Assert {
 
         int index = 0;
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            int row = index/12;
-            int column = index%12;
+            int row = index/extractionPlate.getCols();
+            int column = index%extractionPlate.getCols();
 
             ExtractionReaction reaction = (ExtractionReaction)extractionPlate.getReaction(row, column);
             reaction.setTissueId(entry.getKey());
@@ -174,8 +174,8 @@ public abstract class LimsTestCase extends Assert {
 
         int index = 0;
         for (String extractionId : extractionIds) {
-            int row = index/12;
-            int column = index%12;
+            int row = index/pcrPlate.getCols();
+            int column = index%pcrPlate.getCols();
 
             PCRReaction reaction = (PCRReaction)pcrPlate.getReaction(row, column);
             reaction.setExtractionId(extractionId);
@@ -200,8 +200,8 @@ public abstract class LimsTestCase extends Assert {
 
         int index = 0;
         for (String extractionId : extractionIds) {
-            int row = index/12;
-            int column = index%12;
+            int row = index/plate.getCols();
+            int column = index%plate.getCols();
 
             CycleSequencingReaction reaction = (CycleSequencingReaction)plate.getReaction(row, column);
             reaction.setExtractionId(extractionId);
