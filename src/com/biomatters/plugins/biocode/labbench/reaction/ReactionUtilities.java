@@ -792,7 +792,7 @@ public class ReactionUtilities {
         return -1;
     }
 
-    public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating, boolean edittingFromPlate) {
+    public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating, boolean editingFromPlate) {
         if(reactions == null || reactions.isEmpty()) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
@@ -868,7 +868,7 @@ public class ReactionUtilities {
                 }
             }
             if (changedOptionCount > 0) {
-                String error = reactions.get(0).areReactionsValid(reactions, owner, edittingFromPlate);
+                String error = reactions.get(0).areReactionsValid(reactions, owner, editingFromPlate);
 
                 if (!error.isEmpty()) {
                     Dialogs.showMessageDialog(error, "Invalid Reactions", owner, Dialogs.DialogIcon.INFORMATION);

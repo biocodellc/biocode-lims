@@ -282,11 +282,11 @@ public class PlateView extends JPanel {
 
     public boolean checkForPlateSpecificErrors() {
         Collection<Reaction> reactions = Arrays.asList(getPlate().getReactions());
-        return checkForDuplicateAttributesAmongReactions(reactions, new ExtractionIDGetter())
-                || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionBarcodeGetter());
+        return checkForDuplicateAttributesAmongReactions(reactions, new ExtractionIDGetter(), selfReference)
+                || checkForDuplicateAttributesAmongReactions(reactions, new ExtractionBarcodeGetter(), selfReference);
     }
 
-    private static boolean checkForDuplicateAttributesAmongReactions(Collection<Reaction> reactions, ReactionAttributeGetter<String> reactionAttributeGetter) {
+    private static boolean checkForDuplicateAttributesAmongReactions(Collection<Reaction> reactions, ReactionAttributeGetter<String> reactionAttributeGetter, JComponent dialogParent) {
         Map<String, List<Reaction>> attributeToReactions = ReactionUtilities.buildAttributeToReactionsMap(reactions, reactionAttributeGetter);
         List<String> duplications = new ArrayList<String>();
 
@@ -303,7 +303,12 @@ public class PlateView extends JPanel {
         }
 
         if (!duplications.isEmpty()) {
-            Dialogs.showMessageDialog("Reactions that are associated with the same " + reactionAttributeGetter.getAttributeName().toLowerCase() + " were detected on the plate:<br><br>" + StringUtilities.join("<br>", duplications));
+            Dialogs.showMessageDialog(
+                    "Reactions that are associated with the same " + reactionAttributeGetter.getAttributeName().toLowerCase() + " were detected on the plate:<br><br>" + StringUtilities.join("<br>", duplications),
+                    "Multiple Reactions With Same " + reactionAttributeGetter.getAttributeName() + " Detected",
+                    dialogParent,
+                    Dialogs.DialogIcon.INFORMATION
+            );
 
             return true;
         }
