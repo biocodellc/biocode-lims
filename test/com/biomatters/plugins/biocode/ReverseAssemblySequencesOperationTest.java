@@ -40,14 +40,19 @@ public class ReverseAssemblySequencesOperationTest extends LimsTestCase {
         AnnotatedPluginDocument annotatedSequenceDocument = DocumentUtilities.createAnnotatedPluginDocument(new DefaultNucleotideSequence("", "", sequence, new Date()));
         annotatedSequenceDocument.setFieldValue(LIMSConnection.SEQUENCE_ID, 1);
 
-        List<AnnotatedPluginDocument> listContainingSequenceReversed = new ReverseAssemblySequencesOperation().performOperation(
+        List<AnnotatedPluginDocument> assembledSequenceDocumentsReturnedByOperation = new ReverseAssemblySequencesOperation().performOperation(
                 new AnnotatedPluginDocument[]{ annotatedSequenceDocument },
                 ProgressListener.EMPTY,
                 new Options(getClass())
         );
 
-        assertEquals(1, listContainingSequenceReversed.size());
-        assertEquals(sequenceReverseComplement, ((SequenceDocument)listContainingSequenceReversed.get(0).getDocument()).getCharSequence().toString());
+        assertEquals(1, assembledSequenceDocumentsReturnedByOperation.size());
+        assertEquals(sequenceReverseComplement, ((SequenceDocument)assembledSequenceDocumentsReturnedByOperation.get(0).getDocument()).getCharSequence().toString());
+
+        List<AssembledSequence> assembledSequencesRetrievedFromLIMS = activeLIMSConnection.getAssemblySequences(Collections.singletonList(1), ProgressListener.EMPTY, true);
+
+        assertEquals(1, assembledSequencesRetrievedFromLIMS.size());
+        assertEquals(sequenceReverseComplement, assembledSequencesRetrievedFromLIMS.get(0).consensus);
     }
 
     private static void saveExtractionPCRAndForwardCycleSequencingPlatesToDatabase(LIMSConnection activeLIMSConnection, String extractionID, String locus) throws DatabaseServiceException, BadDataException {
