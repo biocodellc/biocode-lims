@@ -351,7 +351,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
                         "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + ".",
                         "Cannot Save Extraction Reactions",
                         dialogParent,
-                        Dialogs.DialogIcon.ERROR
+                        Dialogs.DialogIcon.INFORMATION
                 );
             }
         }
