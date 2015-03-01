@@ -172,7 +172,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return Color.white;
     }
 
-    public String _areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent, boolean editingPlate) {
+    public String _areReactionsValid(List<ExtractionReaction> reactions, JComponent dialogParent, boolean checkingFromPlate) {
         if (!BiocodeService.getInstance().isLoggedIn()) {
             return "You are not logged in to the database.";
         }
@@ -182,7 +182,7 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         StringBuilder errorBuilder = new StringBuilder();
 
         try {
-            String existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult = checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(reactions, dialogParent);
+            String existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult = checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(reactions, dialogParent, checkingFromPlate);
             if (!existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult.isEmpty()) {
                 errorBuilder.append(existingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactionsCheckResult).append("<br><br>");
             }
@@ -265,9 +265,9 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         }
         if(!emptyLocations.isEmpty()) {
             errorBuilder.append("Extraction reactions cannot have empty ids");
-            errorBuilder.append(editingPlate ? ":" : ".");
+            errorBuilder.append(checkingFromPlate ? ":" : ".");
 
-            if(editingPlate) {
+            if(checkingFromPlate) {
                 if (emptyLocations.size() < 8) {
                     errorBuilder.append(StringUtilities.humanJoin(emptyLocations)).append(".");
                 } else {
@@ -283,15 +283,15 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return "";
     }
 
-    private static String checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent) throws DatabaseServiceException {
+    private static String checkForExistingExtractionReactionsAssociatedWithAttributesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent, boolean checkingFromPlate) throws DatabaseServiceException {
         StringBuilder errorBuilder = new StringBuilder();
 
-        String extractionIDCheck = checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(extractionReactions, dialogParent);
+        String extractionIDCheck = checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(extractionReactions, dialogParent, checkingFromPlate);
         if (!extractionIDCheck.isEmpty()) {
             errorBuilder.append(extractionIDCheck).append("<br><br>");
         }
 
-        String extractionBarcodeCheck = checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(extractionReactions, dialogParent);
+        String extractionBarcodeCheck = checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(extractionReactions, dialogParent, checkingFromPlate);
         if (!extractionBarcodeCheck.isEmpty()) {
             errorBuilder.append(extractionBarcodeCheck).append("<br><br>");
         }
@@ -301,18 +301,19 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
         return errorBuilder.toString();
     }
 
-    private static String checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent) throws DatabaseServiceException {
-        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionIDGetter(), new ExtractionReactionRetrieverViaID(), dialogParent);
+    private static String checkForExistingExtractionReactionsAssociatedWithExtractionIDsOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent, boolean checkingFromPlate) throws DatabaseServiceException {
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionIDGetter(), new ExtractionReactionRetrieverViaID(), dialogParent, checkingFromPlate);
     }
 
-    private static String checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent) throws DatabaseServiceException {
-        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaBarcode(), dialogParent);
+    private static String checkForExistingExtractionReactionAssociatedWithExtractionBarcodesOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions, JComponent dialogParent, boolean checkingFromPlate) throws DatabaseServiceException {
+        return checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(extractionReactions, new ExtractionBarcodeGetter(), new ExtractionReactionRetrieverViaBarcode(), dialogParent, checkingFromPlate);
     }
 
     private static String checkForExistingExtractionReactionsAssociatedWithAttributeOfNewExtractionReactions(Collection<ExtractionReaction> extractionReactions,
                                                                                                              ReactionAttributeGetter<String> reactionAttributeGetter,
                                                                                                              ReactionRetriever<ExtractionReaction, LIMSConnection, List<String>> reactionRetriever,
-                                                                                                             JComponent dialogParent) throws DatabaseServiceException {
+                                                                                                             JComponent dialogParent,
+                                                                                                             boolean checkingFromPlate) throws DatabaseServiceException {
         Map<String, List<ExtractionReaction>> attributeToNewExtractionReactions = ReactionUtilities.buildAttributeToReactionsMap(extractionReactions, reactionAttributeGetter);
 
         Collection<ExtractionReaction> existingExtractionReactions = reactionRetriever.retrieve(BiocodeService.getInstance().getActiveLIMSConnection(), new ArrayList<String>(attributeToNewExtractionReactions.keySet()));
@@ -328,21 +329,30 @@ public class ExtractionReaction extends Reaction<ExtractionReaction>{
 
         if (!existingExtractionReactionsToNewExtractionReactions.isEmpty()) {
             String attributeName = reactionAttributeGetter.getAttributeName();
-            if (Dialogs.showYesNoDialog(
-                    "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + "."
-                            + "<br><br>Move data to new/edited extraction reactions from corresponding existing ones?",
-                    "Existing Extraction Reactions With " + attributeName + " Detected",
-                    dialogParent,
-                    Dialogs.DialogIcon.QUESTION)) {
-                return overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
-            } else {
-                List<ExtractionReaction> newExtractionReactionsAssociatedWithExistingAttributeValue = new ArrayList<ExtractionReaction>();
+            if (checkingFromPlate) {
+                if (Dialogs.showYesNoDialog(
+                        "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + "."
+                                + "<br><br>Move data to new/edited extraction reactions from corresponding existing ones?",
+                        "Move Extraction Reactions?",
+                        dialogParent,
+                        Dialogs.DialogIcon.QUESTION)) {
+                    return overrideExtractionReactionsWithExistingExtractionReactionsWithSameAttribute(existingExtractionReactionsToNewExtractionReactions, reactionAttributeGetter);
+                } else {
+                    List<ExtractionReaction> newExtractionReactionsAssociatedWithExistingAttributeValue = new ArrayList<ExtractionReaction>();
 
-                for (List<ExtractionReaction> groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode : existingExtractionReactionsToNewExtractionReactions.values()) {
-                    newExtractionReactionsAssociatedWithExistingAttributeValue.addAll(groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode);
+                    for (List<ExtractionReaction> groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode : existingExtractionReactionsToNewExtractionReactions.values()) {
+                        newExtractionReactionsAssociatedWithExistingAttributeValue.addAll(groupOfNewExtractionReactionsAssociatedWithSameExistingBarcode);
+                    }
+
+                    ReactionUtilities.setReactionErrorStates(newExtractionReactionsAssociatedWithExistingAttributeValue, true);
                 }
-
-                ReactionUtilities.setReactionErrorStates(newExtractionReactionsAssociatedWithExistingAttributeValue, true);
+            } else {
+                Dialogs.showMessageDialog(
+                        "Extraction reactions that are associated with the following " + attributeName.toLowerCase() + "(s) already exist: " + StringUtilities.join(", ", attributeToExistingExtractionReactions.keySet()) + ".",
+                        "Cannot Save Extraction Reactions",
+                        dialogParent,
+                        Dialogs.DialogIcon.ERROR
+                );
             }
         }
 

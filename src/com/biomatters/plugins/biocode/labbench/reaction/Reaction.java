@@ -562,7 +562,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     /**
      * See {@link #areReactionsValid(java.util.List, javax.swing.JComponent, boolean)}
      */
-    protected abstract String _areReactionsValid(List<T> reactions, JComponent dialogParent, boolean editingPlate);
+    protected abstract String _areReactionsValid(List<T> reactions, JComponent dialogParent, boolean checkingFromPlate);
 
     public Dimension getPreferredSize() {
         int y = PADDING+3;
