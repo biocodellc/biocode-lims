@@ -16,6 +16,7 @@ import java.util.Map;
  */
 public class StringMap implements XMLSerializable {
 
+    private static final String KEY = "entryKey";
     private Map<String, String> map;
 
     public StringMap() {
@@ -29,7 +30,7 @@ public class StringMap implements XMLSerializable {
     public Element toXML() {
         Element root = new Element(XMLSerializable.ROOT_ELEMENT_NAME);
         for (Map.Entry<String, String> entry : map.entrySet()) {
-            root.addContent(new Element(entry.getKey()).setText(entry.getValue()));
+            root.addContent(new Element("entry").setAttribute(KEY, entry.getKey()).setText(entry.getValue()));
         }
         return root;
     }
@@ -38,7 +39,7 @@ public class StringMap implements XMLSerializable {
     public void fromXML(Element element) throws XMLSerializationException {
         map = new HashMap<String, String>();
         for (Element child : element.getChildren()) {
-            map.put(child.getName(), child.getValue());
+            map.put(child.getAttributeValue(KEY), child.getValue());
         }
     }
 

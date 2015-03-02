@@ -83,7 +83,7 @@ public class Sequences {
             try {
                 assemblyIDAsInteger = Integer.parseInt(assemblyIDAndAssemblySequence.getKey());
             } catch (NumberFormatException e) {
-                throw new InternalServerErrorException("Invalid assembly ID (" + assemblyIDAndAssemblySequence.getKey() + "): " + e.getMessage() + ".", e);
+                throw new BadRequestException("Invalid assembly ID (" + assemblyIDAndAssemblySequence.getKey() + "): " + e.getMessage() + ".", e);
             }
             assemblyIDAsIntegerToAssemblySequence.put(assemblyIDAsInteger, assemblyIDAndAssemblySequence.getValue());
         }

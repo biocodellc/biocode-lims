@@ -73,7 +73,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         String plateName = "PCR_M037";
         String locus = "COI";
-        savePcrPlate(plateName, locus, service, extractionId);
+        savePcrPlate(plateName, locus, null, service, extractionId);
 
         List<AnnotatedPluginDocument> searchResults = service.retrieve(extractionId);
         boolean foundWorkflow = false;
@@ -98,10 +98,10 @@ public class LimsSearchTest extends LimsTestCase {
 
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate("Plate_M037", "MBIO24950.1", extractionId, service);
-        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, extractionId);
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", null, service, extractionId);
 
-        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, pcrPlate, extractionId);
-        saveCyclesequencingPlate(seqRName, "COI", CycleSequencingOptions.REVERSE_VALUE, service, pcrPlate, extractionId);
+        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, null, service, pcrPlate, extractionId);
+        saveCyclesequencingPlate(seqRName, "COI", CycleSequencingOptions.REVERSE_VALUE, null, service, pcrPlate, extractionId);
 
         List<AnnotatedPluginDocument> searchResults = service.retrieve(extractionId);
         boolean foundSeqF = false;
@@ -172,11 +172,11 @@ public class LimsSearchTest extends LimsTestCase {
 
         String locus = "COI";
         String plateName = "PCR_M037_COI";
-        savePcrPlate(plateName, locus, service, extractionId);
+        savePcrPlate(plateName, locus, null, service, extractionId);
 
         String locus2 = "16s";
         String plateName2 = "PCR_M037_16s";
-        savePcrPlate(plateName2, locus2, service, extractionId);
+        savePcrPlate(plateName2, locus2, null, service, extractionId);
 
         List<AnnotatedPluginDocument> searchResults = service.retrieve(
                 Query.Factory.createFieldQuery(LIMSConnection.WORKFLOW_LOCUS_FIELD, Condition.EQUAL, new Object[]{locus}),
@@ -214,7 +214,7 @@ public class LimsSearchTest extends LimsTestCase {
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate("MyPlate", service, values);
 
-        savePcrPlate("PCR", "COI", service, "1");
+        savePcrPlate("PCR", "COI", null, service, "1");
 
         int workflowCount = 0;
         List<AnnotatedPluginDocument> results = service.retrieve("");
@@ -258,11 +258,11 @@ public class LimsSearchTest extends LimsTestCase {
             if(i == 0) {
                 plateName = "PCR";
                 type = Reaction.Type.PCR;
-                savePcrPlate(plateName, "COI", service, "1", "2");
+                savePcrPlate(plateName, "COI", null, service, "1", "2");
             } else {
                 plateName = "SeqF";
                 type = Reaction.Type.CycleSequencing;
-                saveCyclesequencingPlate(plateName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, null, "1", "2");
+                saveCyclesequencingPlate(plateName, "COI", CycleSequencingOptions.FORWARD_VALUE, null, service, null, "1", "2");
             }
 
             List<AnnotatedPluginDocument> results = service.retrieve(plateName);
@@ -306,9 +306,9 @@ public class LimsSearchTest extends LimsTestCase {
 
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate("Plate_M037", "MBIO24950.1", extractionId, service);
-        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, extractionId);
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", null, service, extractionId);
 
-        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, service, pcrPlate, extractionId);
+        saveCyclesequencingPlate(seqFName, "COI", CycleSequencingOptions.FORWARD_VALUE, null, service, pcrPlate, extractionId);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[]{seqFName},
                 BiocodeService.getSearchDownloadOptions(false, true, false, false));
@@ -413,7 +413,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         String plateName = "PCR_M037";
         String locus = "COI";
-        savePcrPlate(plateName, locus, service, extractionId);
+        savePcrPlate(plateName, locus, null, service, extractionId);
 
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
@@ -481,7 +481,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         String plateName = "PCR_M037";
         String locus = "COI";
-        savePcrPlate(plateName, locus, service, extractionId);
+        savePcrPlate(plateName, locus, null, service, extractionId);
 
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
@@ -532,7 +532,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         String plateName = "PCR_M037";
         String locus = "COI";
-        savePcrPlate(plateName, locus, service, extractionId);
+        savePcrPlate(plateName, locus, null, service, extractionId);
 
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, 1);
@@ -600,7 +600,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         String plateName = "PCR_M037";
         String locus = "COI";
-        savePcrPlate(plateName, locus, service, extractionId);
+        savePcrPlate(plateName, locus, null, service, extractionId);
 
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
@@ -621,7 +621,7 @@ public class LimsSearchTest extends LimsTestCase {
 
         String plateName = "PCR_M037";
         String locus = "COI";
-        savePcrPlate(plateName, locus, service, extractionId);
+        savePcrPlate(plateName, locus, null, service, extractionId);
 
         Calendar cal = new GregorianCalendar();
         cal.add(GregorianCalendar.DAY_OF_MONTH, -1);
@@ -638,7 +638,7 @@ public class LimsSearchTest extends LimsTestCase {
     public void canFindPcrPlateWithNoWorkflows() throws DatabaseServiceException, BadDataException, SQLException {
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate("Plate_M037", "MBIO24950.1", "1", service);
-        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, "1");
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", null, service, "1");
         for (Reaction reaction : pcrPlate.getReactions()) {
             reaction.setExtractionId("");
             reaction.setWorkflow(null);
@@ -658,8 +658,8 @@ public class LimsSearchTest extends LimsTestCase {
     public void canFindSequencingPlateWithNoWorkflows() throws DatabaseServiceException, BadDataException, SQLException, DocumentOperationException {
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate("Plate_M037", "MBIO24950.1", "1", service);
-        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", service, "1");
-        Plate seqPlate = saveCyclesequencingPlate("SeqF_M037", "COI", "forward", service, pcrPlate, "1");
+        Plate pcrPlate = savePcrPlate("PCR_M037", "COI", null, service, "1");
+        Plate seqPlate = saveCyclesequencingPlate("SeqF_M037", "COI", "forward", null, service, pcrPlate, "1");
         for (Reaction reaction : seqPlate.getReactions()) {
             reaction.setExtractionId("");
             reaction.setWorkflow(null);
