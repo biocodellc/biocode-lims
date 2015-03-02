@@ -95,12 +95,12 @@ public abstract class LimsTestCase extends Assert {
      *
      * @return The Plate found or null if the document did not match
      */
-    protected Plate getPlateFromDocument(AnnotatedPluginDocument doc, String plateName, Reaction.Type expectedType, String... expectedExtractionIds) {
+    protected static Plate getPlateFromDocument(AnnotatedPluginDocument doc, String plateName, Reaction.Type expectedType, String... expectedExtractionIds) {
         if(PlateDocument.class.isAssignableFrom(doc.getDocumentClass())) {
             PlateDocument plateDoc = (PlateDocument) doc.getDocumentOrNull();
             if(plateDoc.getPlate().getReactionType() == expectedType && plateName.equals(doc.getName())) {
                 Reaction[] reactions = plateDoc.getPlate().getReactions();
-                assertEquals((int)Plate.Size.w96.numberOfReactions(), reactions.length);
+                assertEquals(Plate.Size.w96.numberOfReactions(), reactions.length);
                 for(int i=0; i<expectedExtractionIds.length; i++) {
                     assertEquals(expectedExtractionIds[i], reactions[i].getExtractionId());
                 }
@@ -114,17 +114,17 @@ public abstract class LimsTestCase extends Assert {
         return null;
     }
 
-    protected void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service) throws DatabaseServiceException, BadDataException {
+    protected static void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service) throws DatabaseServiceException, BadDataException {
         Map<String,String> values = Collections.singletonMap(tissue, extractionId);
         saveExtractionPlate(plateName, service, values, new Date());
     }
 
-    protected void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service, Date lastModified) throws DatabaseServiceException, BadDataException {
+    protected static void saveExtractionPlate(String plateName, String tissue, String extractionId, BiocodeService service, Date lastModified) throws DatabaseServiceException, BadDataException {
         Map<String,String> values = Collections.singletonMap(tissue, extractionId);
         saveExtractionPlate(plateName, service, values, lastModified);
     }
 
-    protected void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values, Date lastModified) throws DatabaseServiceException, BadDataException {
+    protected static void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values, Date lastModified) throws DatabaseServiceException, BadDataException {
         Plate extractionPlate = new Plate(Plate.Size.w96, Reaction.Type.Extraction, lastModified);
         extractionPlate.setName(plateName);
 
@@ -138,7 +138,7 @@ public abstract class LimsTestCase extends Assert {
         service.savePlate(extractionPlate, ProgressListener.EMPTY);
     }
 
-    protected void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values) throws DatabaseServiceException, BadDataException {
+    protected static void saveExtractionPlate(String plateName, BiocodeService service, Map<String, String> values) throws DatabaseServiceException, BadDataException {
         Plate extractionPlate = new Plate(Plate.Size.w96, Reaction.Type.Extraction);
         extractionPlate.setName(plateName);
 
@@ -152,12 +152,15 @@ public abstract class LimsTestCase extends Assert {
         service.savePlate(extractionPlate, ProgressListener.EMPTY);
     }
 
-    protected Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws SQLException, BadDataException, DatabaseServiceException {
+    protected static Plate savePcrPlate(String plateName, String locus, Thermocycle thermocycle, BiocodeService service, String... extractionIds) throws SQLException, BadDataException, DatabaseServiceException {
         Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
         pcrPlate.setName(plateName);
-        List<Thermocycle> thermocycle = BiocodeService.getInstance().getPCRThermocycles();
-        assertFalse("No default thermocycles in the system", thermocycle.isEmpty());
-        pcrPlate.setThermocycle(thermocycle.get(0));
+        if(thermocycle == null) {
+            List<Thermocycle> thermocycles = BiocodeService.getInstance().getPCRThermocycles();
+            assertFalse("No default thermocycles in the system", thermocycles.isEmpty());
+            thermocycle = thermocycles.get(0);
+        }
+        pcrPlate.setThermocycle(thermocycle);
         for (Reaction reaction : pcrPlate.getReactions()) {
             System.out.println(reaction.getLocus());
         }
@@ -172,15 +175,18 @@ public abstract class LimsTestCase extends Assert {
         return pcrPlate;
     }
 
-    protected Plate saveCyclesequencingPlate(String plateName, String locus, String direction, BiocodeService service, Plate copyReactionsFrom, String... extractionIds) throws DatabaseServiceException, BadDataException, DocumentOperationException {
+    protected static Plate saveCyclesequencingPlate(String plateName, String locus, String direction, Thermocycle thermocycle, BiocodeService service, Plate copyReactionsFrom, String... extractionIds) throws DatabaseServiceException, BadDataException, DocumentOperationException {
         Plate plate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
         if(copyReactionsFrom != null) {
             NewPlateDocumentOperation.copyPlateOfSameSize(copyReactionsFrom, plate, null);
         }
         plate.setName(plateName);
-        List<Thermocycle> thermocycle = BiocodeService.getInstance().getCycleSequencingThermocycles();
-        assertFalse("No default thermocycles in the system", thermocycle.isEmpty());
-        plate.setThermocycle(thermocycle.get(0));
+        if(thermocycle == null) {
+            List<Thermocycle> thermocycles = BiocodeService.getInstance().getCycleSequencingThermocycles();
+            assertFalse("No default thermocycles in the system", thermocycles.isEmpty());
+            thermocycle = thermocycles.get(0);
+        }
+        plate.setThermocycle(thermocycle);
 
         int index = 0;
         for (String extractionId : extractionIds) {

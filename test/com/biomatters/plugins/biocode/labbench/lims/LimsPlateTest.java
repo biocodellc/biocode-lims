@@ -26,7 +26,7 @@ public class LimsPlateTest extends LimsTestCase {
     public void locusSuccessfullySaved() throws DatabaseServiceException, BadDataException, SQLException, DocumentOperationException {
         BiocodeService service = BiocodeService.getInstance();
         saveExtractionPlate(extractionPlateName, "tissueID", extractionID, service);
-        savePcrPlate(pcrPlateName, initialLocus, service, extractionID);
+        savePcrPlate(pcrPlateName, initialLocus, null, service, extractionID);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[] { pcrPlateName },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));
@@ -47,7 +47,7 @@ public class LimsPlateTest extends LimsTestCase {
         for (int i = 0; i < extractionIDs.length; i++) {
             extractionIDs[i] = extractionID;
         }
-        savePcrPlate(pcrPlateName, initialLocus, service, extractionIDs);
+        savePcrPlate(pcrPlateName, initialLocus, null, service, extractionIDs);
 
         Query query = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.EQUAL, new Object[] { pcrPlateName },
                 BiocodeService.getSearchDownloadOptions(false, false, true, false));

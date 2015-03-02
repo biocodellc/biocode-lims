@@ -17,6 +17,7 @@ import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.ProgressListener;
 import org.junit.Test;
 
+import java.sql.SQLException;
 import java.util.*;
 
 /**
@@ -25,7 +26,7 @@ import java.util.*;
  */
 public class ReverseAssemblySequencesOperationTest extends LimsTestCase {
     @Test
-    public void testReverseSequence() throws DocumentOperationException, DatabaseServiceException, BadDataException {
+    public void testReverseSequence() throws DocumentOperationException, DatabaseServiceException, BadDataException, SQLException {
         String sequence = "ACTG";
         String sequenceReverseComplement = "CAGT";
         int assemblyID = 1;
@@ -34,7 +35,7 @@ public class ReverseAssemblySequencesOperationTest extends LimsTestCase {
         String extractionID = "1";
         LIMSConnection activeLIMSConnection = BiocodeService.getInstance().getActiveLIMSConnection();
 
-        saveExtractionPCRAndForwardCycleSequencingPlatesToDatabase(activeLIMSConnection, extractionID, locus);
+        saveExtractionPCRAndForwardCycleSequencingPlatesToDatabase(BiocodeService.getInstance(), extractionID, locus);
         activeLIMSConnection.addAssembly(true, "", "", null, "", false, createAssembledSequenceWithSuppliedFieldValuesAndZeroOrEmptyValuesForRestOfFields(assemblyID, workflowID, locus, sequence), Arrays.asList(assemblyID), ProgressListener.EMPTY);
 
         AnnotatedPluginDocument annotatedSequenceDocument = DocumentUtilities.createAnnotatedPluginDocument(new DefaultNucleotideSequence("", "", sequence, new Date()));
@@ -55,38 +56,12 @@ public class ReverseAssemblySequencesOperationTest extends LimsTestCase {
         assertEquals(sequenceReverseComplement, assembledSequencesRetrievedFromLIMS.get(0).consensus);
     }
 
-    private static void saveExtractionPCRAndForwardCycleSequencingPlatesToDatabase(LIMSConnection activeLIMSConnection, String extractionID, String locus) throws DatabaseServiceException, BadDataException {
+    private static void saveExtractionPCRAndForwardCycleSequencingPlatesToDatabase(BiocodeService service, String extractionID, String locus) throws DatabaseServiceException, BadDataException, SQLException, DocumentOperationException {
         Thermocycle thermocycle = new Thermocycle();
 
-        Plate extractionPlate = new Plate(Plate.Size.w96, Reaction.Type.Extraction);
-        extractionPlate.setName("Extraction");
-        ExtractionReaction extractionReaction = new ExtractionReaction();
-        extractionReaction.setExtractionId(extractionID);
-        Reaction[] extractionReactions = extractionPlate.getReactions();
-        extractionReactions[0] = extractionReaction;
-        extractionPlate.setReactions(extractionReactions);
-
-        Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
-        pcrPlate.setName("PCR");
-        PCRReaction pcrReaction = new PCRReaction();
-        pcrReaction.setExtractionId(extractionID);
-        pcrReaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
-        pcrPlate.setThermocycle(thermocycle);
-        Reaction[] pcrReactions = pcrPlate.getReactions();
-        pcrReactions[0] = pcrReaction;
-        pcrPlate.setReactions(pcrReactions);
-
-        Plate forwardCycleSequencingPlate = new Plate(Plate.Size.w96, Reaction.Type.CycleSequencing);
-        forwardCycleSequencingPlate.setName("CSF");
-        CycleSequencingReaction cycleSequencingReaction = new CycleSequencingReaction();
-        cycleSequencingReaction.setExtractionId(extractionID);
-        cycleSequencingReaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
-        forwardCycleSequencingPlate.setThermocycle(thermocycle);
-        Reaction[] forwardCycleSequencingReactions = forwardCycleSequencingPlate.getReactions();
-        forwardCycleSequencingReactions[0] = cycleSequencingReaction;
-        forwardCycleSequencingPlate.setReactions(forwardCycleSequencingReactions);
-
-        activeLIMSConnection.savePlates(Arrays.asList(extractionPlate, pcrPlate, forwardCycleSequencingPlate), ProgressListener.EMPTY);
+        saveExtractionPlate("Extraction", "tissueId" + System.currentTimeMillis(), extractionID, service);
+        Plate pcrPlate = savePcrPlate("PCR", locus, thermocycle, service, extractionID);
+        saveCyclesequencingPlate("CSF", locus, "forward", null, service, pcrPlate, extractionID);
     }
 
     private static AssembledSequence createAssembledSequenceWithSuppliedFieldValuesAndZeroOrEmptyValuesForRestOfFields(int id, int workflowID, String locus, String consensus) {
