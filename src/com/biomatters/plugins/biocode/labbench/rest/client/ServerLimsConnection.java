@@ -266,7 +266,7 @@ public class ServerLimsConnection extends LIMSConnection {
             assemblyIDAsStringToAssemblySequenceToSet.put(String.valueOf(assemblyIDAndAssemblySequenceToSet.getKey()), assemblyIDAndAssemblySequenceToSet.getValue());
         }
         try {
-            target.path("update").request().put(Entity.entity(new StringMap(assemblyIDAsStringToAssemblySequenceToSet), MediaType.APPLICATION_XML_TYPE));
+            target.path("sequences").path("update").request().put(Entity.entity(new StringMap(assemblyIDAsStringToAssemblySequenceToSet), MediaType.APPLICATION_XML_TYPE));
         } catch (WebApplicationException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } catch (ProcessingException e) {

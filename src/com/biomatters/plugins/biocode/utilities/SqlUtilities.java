@@ -254,7 +254,7 @@ public class SqlUtilities {
     }
 
     private static String getStringToPrint(Object o) {
-        String toPrint = "";
+        String toPrint = "NULL";
         if (o instanceof CharSequence) {
             toPrint = "'" + o.toString().toLowerCase() + "'";
         } else if (o != null) {
