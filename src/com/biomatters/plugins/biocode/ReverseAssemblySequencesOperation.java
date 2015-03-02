@@ -21,11 +21,10 @@ import java.util.*;
  *         Created on 18/02/15 5:21 PM
  */
 public class ReverseAssemblySequencesOperation extends DocumentOperation {
-
-    private static final String TOOLTIP_TEXT = "Select LIMS sequences to reverse complement them in the LIMS database.";
+    private static final String TOOLTIP_TEXT = "Select sequence documents from LIMS to reverse complement.";
 
     public GeneiousActionOptions getActionOptions() {
-        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Reverse LIMS Sequences", TOOLTIP_TEXT).setInPopupMenu(true, 1);
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Reverse Complement Sequences", TOOLTIP_TEXT).setInPopupMenu(true, 1);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 
@@ -37,20 +36,20 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
     public List<AnnotatedPluginDocument> performOperation(AnnotatedPluginDocument[] annotatedDocuments, ProgressListener progressListener, Options options) throws DocumentOperationException {
         CompositeProgressListener operationProgress = new CompositeProgressListener(progressListener, 4);
 
-        operationProgress.beginSubtask("Checking sequence documents...");
+        operationProgress.beginSubtask("Checking selected sequence documents...");
         checkSequencesAreValid(annotatedDocuments);
 
-        operationProgress.beginSubtask("Generating reversed sequences...");
+        operationProgress.beginSubtask("Generating reverse complemented sequences...");
         Map<Integer, String> assemblyIDToAssemblySequenceReversed = getAssemblyIDToAssemblySequenceReversedMap(annotatedDocuments);
 
-        operationProgress.beginSubtask("Saving reversed sequences to the LIMS database...");
+        operationProgress.beginSubtask("Saving generated sequences to LIMS...");
         try {
             BiocodeService.getInstance().getActiveLIMSConnection().setAssemblySequences(assemblyIDToAssemblySequenceReversed, progressListener);
         } catch (DatabaseServiceException e) {
             throw new DocumentOperationException(e.getMessage(), e);
         }
 
-        operationProgress.beginSubtask("Saving copies of reversed sequences...");
+        operationProgress.beginSubtask("Saving generated sequences to local database...");
         return DocumentUtilities.createAnnotatedPluginDocuments(getReversedSequenceDocuments(annotatedDocuments));
     }
 
@@ -65,7 +64,7 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
         for (AnnotatedPluginDocument annotatedDocument : annotatedDocuments) {
             assemblyIDToAssemblySequenceReversed.put(
                     (Integer)annotatedDocument.getFieldValue(LIMSConnection.SEQUENCE_ID.getCode()),
-                    SequenceUtilities.reverseComplement(((SequenceDocument) annotatedDocument.getDocument()).getCharSequence()).toString()
+                    SequenceUtilities.reverseComplement(((SequenceDocument)annotatedDocument.getDocument()).getCharSequence()).toString()
             );
         }
 
@@ -105,7 +104,7 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
 
             for (Integer assemblyIDFromDocuments : assemblyIDsFromDocuments) {
                 if (!assembyIDsFromAssembledSequencesRetrievedFromLIMS.contains(assemblyIDFromDocuments)) {
-                    throw new DocumentOperationException("Sequence with ID " + assemblyIDFromDocuments + " does not exist in your LIMS database.");
+                    throw new DocumentOperationException("Sequence with ID " + assemblyIDFromDocuments + " does not exist in the LIMS.");
                 }
             }
         } catch (DatabaseServiceException e) {
@@ -134,6 +133,6 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
     }
 
     public String getHelp() {
-        return TOOLTIP_TEXT + "<br><br><strong>Note:</strong> Sequences must exist in your LIMS database.";
+        return TOOLTIP_TEXT;
     }
 }
