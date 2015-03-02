@@ -256,21 +256,21 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
 
     private List<AnnotatedPluginDocument> cherryPick(AnnotatedPluginDocument[] annotatedDocuments, Options options) throws DocumentOperationException {
-        final List<Reaction> failedReactions;
-        if(SEQUENCE_DOCUMENT_SELECTION_SIGNATURE.matches(Arrays.asList(annotatedDocuments))) {
+        final List<Reaction> matchingReactions = new ArrayList<Reaction>();
+        if (SEQUENCE_DOCUMENT_SELECTION_SIGNATURE.matches(Arrays.asList(annotatedDocuments))) {
             validateSequenceDocuments(annotatedDocuments);
-            failedReactions = getReactionsFromSequences(annotatedDocuments);
+            matchingReactions.addAll(getReactionsFromSequences(annotatedDocuments));
         }
         else {
             List<PlateDocument> plateDocuments = new ArrayList<PlateDocument>();
-            for(AnnotatedPluginDocument doc : annotatedDocuments) {
+            for (AnnotatedPluginDocument doc : annotatedDocuments) {
                 plateDocuments.add((PlateDocument)doc.getDocument());
             }
 
-            failedReactions = getMatchingReactionsFromPlates(plateDocuments, options);
+            matchingReactions.addAll(getMatchingReactionsFromPlates(plateDocuments, options));
         }
 
-        if(failedReactions.size() == 0) {
+        if (matchingReactions.isEmpty()) {
             throw new DocumentOperationException("The selected plates do not contain any reactions that match your criteria");
         }
 
@@ -279,15 +279,18 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         final List<Reaction> newReactions;
         String reactionTypeString = options.getValueAsString("plateType");
         final Reaction.Type plateType = Reaction.Type.valueOf(reactionTypeString);
-        if(plateType == null) {
+        if (plateType == null) {
             throw new DocumentOperationException("There is no reaction type '"+reactionTypeString+"'");
         }
 
-        if(plateType == Reaction.Type.Extraction) { //if it's an extraction we want to move the existing extractions to this plate, not make new ones...
+        if (plateType == Reaction.Type.Extraction) { //if it's an extraction we want to move the existing extractions to this plate, not make new ones...
             try {
                 List<String> extractionIds = new ArrayList<String>();
-                for (Reaction failedReaction : failedReactions) {
-                    extractionIds.add(failedReaction.getExtractionId());
+                for (Reaction matchingReaction : matchingReactions) {
+                    String extractionID = matchingReaction.getExtractionId();
+                    if (extractionID != null & !extractionID.isEmpty()) {
+                        extractionIds.add(extractionID);
+                    }
                 }
                 List<ExtractionReaction> temp = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsForIds(extractionIds);
                 Map<String, Reaction> extractionReactions = new HashMap<String, Reaction>();
@@ -295,30 +298,30 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                     extractionReactions.put(reaction.getExtractionId(), reaction);
                 }
                 newReactions = new ArrayList<Reaction>();
-                for(Reaction r : failedReactions) {
+                for (Reaction r : matchingReactions) {
                     Reaction newReaction = extractionReactions.get(r.getExtractionId());
-                    if(newReaction == null) {
+                    if (newReaction == null) {
                         newReaction = new ExtractionReaction();
                         newReaction.setExtractionId(r.getExtractionId());
                     }
-                    newReactions.add(r);
+                    newReactions.add(newReaction);
                 }
             } catch (DatabaseServiceException e) {
-                throw new DocumentOperationException("Could not fetch existing extractions from database: "+e.getMessage());
+                throw new DocumentOperationException("Could not fetch existing extractions from database: " + e.getMessage());
             }
         }
         else {
-            newReactions = getNewReactions(failedReactions, plateType);
+            newReactions = getNewReactions(matchingReactions, plateType);
         }
 
         String plateSizeString = options.getValueAsString("plateSize");
-        if(plateSizeString.equals("null")) {
-            DocumentUtilities.addGeneratedDocument(DocumentUtilities.createAnnotatedPluginDocument(new CherryPickingDocument(getDocumentTitle(annotatedDocuments), failedReactions)), true);
+        if (plateSizeString.equals("null")) {
+            DocumentUtilities.addGeneratedDocument(DocumentUtilities.createAnnotatedPluginDocument(new CherryPickingDocument(getDocumentTitle(annotatedDocuments), matchingReactions)), true);
             return null;
         }
         final Plate.Size plateSize = Plate.Size.valueOf(plateSizeString);
 
-        final int numberOfPlatesRequired = (int)Math.ceil(((double)failedReactions.size())/plateSize.numberOfReactions());
+        final int numberOfPlatesRequired = (int)Math.ceil(((double)matchingReactions.size())/plateSize.numberOfReactions());
 
 
         final List<PlateViewer> plates = new ArrayList<PlateViewer>();
@@ -339,25 +342,20 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
                         }
                         System.out.println(n+": "+plateIndex);
                         int index = i * plateSize.numberOfReactions() + n;
-                        if(index > failedReactions.size()-1) {
+                        if (index > matchingReactions.size()-1) {
                             break;
                         }
-                        Reaction plateReaction = plate.getPlate().getReactions()[plateIndex];
-                        Reaction oldReaction = failedReactions.get(index);
-                        Reaction newReaction = newReactions.get(index);
 
-                        plateReaction.getOptions().valuesFromXML(newReaction.getOptions().valuesToXML("values"));
+                        Reaction newReaction = newReactions.get(index);
+                        Reaction plateReaction = plate.getPlate().getReactions()[plateIndex];
+
+                        ReactionUtilities.copyReaction(newReaction, plateReaction);
+                        plateReaction.setExtractionId(newReaction.getExtractionId());
                         plateReaction.setId(newReaction.getId());
-                        plateReaction.setWorkflow(newReaction.getWorkflow());
-                        FimsSample fimsSample = oldReaction.getFimsSample();
-                        if(fimsSample != null) {
-                            plateReaction.setFimsSample(newReaction.getFimsSample());
-                        }
-                        //todo: copy across the actual fields of the extractions
                     }
                     plates.add(plate);
                 }
-                for(PlateViewer viewer : plates) {
+                for (PlateViewer viewer : plates) {
                     viewer.displayInFrame(true, GuiUtilities.getMainFrame());
                 }
             }
@@ -368,7 +366,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
     public String getDocumentTitle(AnnotatedPluginDocument[] selectedPlates) {
         String title = "Cherry picking of ";
-        if(selectedPlates.length > 1) {
+        if (selectedPlates.length > 1) {
             title += selectedPlates.length+" plates";
         }
         else {
@@ -380,7 +378,7 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
     List<Reaction> getNewReactions(List<Reaction> failedReactions, Reaction.Type reactionType) {
         List<Reaction> newReactions = new ArrayList<Reaction>();
 
-        for(Reaction oldReaction : failedReactions) {
+        for (Reaction oldReaction : failedReactions) {
             Reaction newReaction = Reaction.getNewReaction(reactionType);
             ReactionUtilities.copyReaction(oldReaction, newReaction);
             newReaction.getOptions().setValue(ReactionOptions.RUN_STATUS, ReactionOptions.NOT_RUN_VALUE);
@@ -388,7 +386,6 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
         }
 
         return newReactions;
-
     }
 
     private List<Reaction> getReactionsFromSequences(AnnotatedPluginDocument[] annotatedDocuments) throws DocumentOperationException {
@@ -416,19 +413,19 @@ public class CherryPickingDocumentOperation extends DocumentOperation {
 
     List<Reaction> getMatchingReactionsFromPlates(List<PlateDocument> plates, Options options) throws DocumentOperationException {
         List<Reaction> reactions = new ArrayList<Reaction>();
-        for(PlateDocument doc : plates) {
+        for (PlateDocument doc : plates) {
             Plate plate = doc.getPlate();
-            for(Reaction r : plate.getReactions()) {
-                if(r.isEmpty()) {
+            for (Reaction r : plate.getReactions()) {
+                if (r.isEmpty()) {
                     continue;
                 }
                 boolean matches = true;
                 Options.MultipleOptions conditions = options.getMultipleOptions("conditions");
-                for(Options o : conditions.getValues()) {
+                for (Options o : conditions.getValues()) {
                     CherryPickingOptions cOptions = (CherryPickingOptions)o;
                     matches = matches && cOptions.reactionMatches(r);
                 }
-                if(matches) {
+                if (matches) {
                     reactions.add(r);
                 }
             }

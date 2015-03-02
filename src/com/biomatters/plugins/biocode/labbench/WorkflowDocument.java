@@ -38,15 +38,15 @@ public class WorkflowDocument extends MuitiPartDocument {
     private Workflow workflow;
     private List<ReactionPart> parts;
     Comparator<ReactionPart> reactionComparitor = new Comparator<ReactionPart>(){
-            public int compare(ReactionPart o1, ReactionPart o2) {
-                if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
-                    return -Integer.MAX_VALUE;
-                } else if(o2.getReaction() instanceof ExtractionReaction && !(o1.getReaction() instanceof ExtractionReaction)) {
-                    return Integer.MAX_VALUE;
-                }
-                return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
+        public int compare(ReactionPart o1, ReactionPart o2) {
+            if(o1.getReaction() instanceof ExtractionReaction && !(o2.getReaction() instanceof ExtractionReaction)) {
+                return -Integer.MAX_VALUE;
+            } else if(o2.getReaction() instanceof ExtractionReaction && !(o1.getReaction() instanceof ExtractionReaction)) {
+                return Integer.MAX_VALUE;
             }
-        };
+            return (int)(o1.getReaction().getDate().getTime()-o2.getReaction().getDate().getTime());
+        }
+    };
 
     @Override
     public boolean equals(Object o) {
@@ -100,6 +100,9 @@ public class WorkflowDocument extends MuitiPartDocument {
             fields.addAll(getFimsSample().getFimsAttributes());
             fields.addAll(getFimsSample().getTaxonomyAttributes());
         }
+        fields.addAll(Arrays.asList(new DocumentField("Number of Parts", "Number of parts in this workflow", "numberOfParts", Integer.class, true, false),
+                LIMSConnection.WORKFLOW_LOCUS_FIELD,
+                LIMSConnection.WORKFLOW_BCID_FIELD));
 
         fields.addAll(Arrays.asList(
                 new DocumentField(
@@ -371,50 +374,50 @@ public class WorkflowDocument extends MuitiPartDocument {
                     Reaction r = new ExtractionReaction(resultSet);
                     addReaction(r);
                 }
-            break;
-        case PCR :
-            reactionId = resultSet.getInt("pcr.id");
-            if(resultSet.wasNull()) {
-                return;  // Plate has no reactions
-            }
-            //check we don't already have it
-            alreadyThere = false;
-            for(ReactionPart part : parts) {
-                Reaction r = part.getReaction();
-                if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
-                    alreadyThere = true;
+                break;
+            case PCR :
+                reactionId = resultSet.getInt("pcr.id");
+                if(resultSet.wasNull()) {
+                    return;  // Plate has no reactions
                 }
-            }
-            if(!alreadyThere) {
-                Reaction r = new PCRReaction(resultSet);
-                addReaction(r);
-            }
-            break;
-        case CycleSequencing :
-            reactionId = resultSet.getInt("cyclesequencing.id");
-            if(resultSet.wasNull()) {
-                return;  // Plate has no reactions
-            }
-            //check we don't already have it
-            alreadyThere = false;
-            for(ReactionPart part : parts) {
-                Reaction r = part.getReaction();
-                if(r.getType() == Reaction.Type.CycleSequencing && r.getId() == reactionId) {
-                    // Note: This happens because we can have multiple pass/fail entries per reaction.  Since we order
-                    // by date descending we'll always be taking the most recent entry from the database.  In the future
-                    // we may want to display more than just the most recent entry.
-                    alreadyThere = true;
-                    SequencingResult seqResult = SequencingResult.fromResultSet(resultSet);
-                    if(seqResult != null) {
-                        ((CycleSequencingReaction)r).addSequencingResults(Collections.singletonList(seqResult));
+                //check we don't already have it
+                alreadyThere = false;
+                for(ReactionPart part : parts) {
+                    Reaction r = part.getReaction();
+                    if(r.getType() == Reaction.Type.PCR && r.getId() == reactionId) {
+                        alreadyThere = true;
                     }
                 }
-            }
-            if(!alreadyThere) {
-                Reaction r = new CycleSequencingReaction(resultSet);
-                addReaction(r);
-            }
-            break;
+                if(!alreadyThere) {
+                    Reaction r = new PCRReaction(resultSet);
+                    addReaction(r);
+                }
+                break;
+            case CycleSequencing :
+                reactionId = resultSet.getInt("cyclesequencing.id");
+                if(resultSet.wasNull()) {
+                    return;  // Plate has no reactions
+                }
+                //check we don't already have it
+                alreadyThere = false;
+                for(ReactionPart part : parts) {
+                    Reaction r = part.getReaction();
+                    if(r.getType() == Reaction.Type.CycleSequencing && r.getId() == reactionId) {
+                        // Note: This happens because we can have multiple pass/fail entries per reaction.  Since we order
+                        // by date descending we'll always be taking the most recent entry from the database.  In the future
+                        // we may want to display more than just the most recent entry.
+                        alreadyThere = true;
+                        SequencingResult seqResult = SequencingResult.fromResultSet(resultSet);
+                        if(seqResult != null) {
+                            ((CycleSequencingReaction)r).addSequencingResults(Collections.singletonList(seqResult));
+                        }
+                    }
+                }
+                if(!alreadyThere) {
+                    Reaction r = new CycleSequencingReaction(resultSet);
+                    addReaction(r);
+                }
+                break;
         }
     }
 
@@ -476,22 +479,22 @@ public class WorkflowDocument extends MuitiPartDocument {
             editButton.addActionListener(new ActionListener(){
                 public void actionPerformed(ActionEvent e) {
                     Element oldOptions = XMLSerializer.classToXML("options", reaction.getOptions());
-                    ReactionUtilities.editReactions(Arrays.asList(reaction), panel, false);
-                    @SuppressWarnings({"UnusedDeclaration", "UnnecessaryLocalVariable", "UnusedAssignment"}) SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
-                    if(reaction.hasError()) {
-                        try {
-                            reaction.setOptions(XMLSerializer.classFromXML(oldOptions, ReactionOptions.class));
-                        } catch (XMLSerializationException e1) {
-                            Dialogs.showMessageDialog("Error resetting options: could not deserailse your option's values.  It is recommended that you discard changes to this document if possible.");
+                    if (ReactionUtilities.editReactions(Arrays.asList(reaction), panel, false, false)) {
+                        @SuppressWarnings({"UnusedDeclaration", "UnnecessaryLocalVariable", "UnusedAssignment"}) SimpleListener licenseListenerReference = licenseListener;//to stop it being garbage collected before the panel is nullified
+                        if (reaction.hasError()) {
+                            try {
+                                reaction.setOptions(XMLSerializer.classFromXML(oldOptions, ReactionOptions.class));
+                            } catch (XMLSerializationException e1) {
+                                Dialogs.showMessageDialog("Error resetting options: could not deserialize your option's values.  It is recommended that you discard changes to this document if possible.");
+                            }
+                        } else {
+                            holder.remove(optionsPanel.get());
+                            optionsPanel.set(getReactionPanel(reaction));
+                            holder.add(optionsPanel.get(), BorderLayout.CENTER);
+                            holder.validate();
+                            fireChangeListeners();
                         }
-                    }
-                    else {
-                        holder.remove(optionsPanel.get());
-                        optionsPanel.set(getReactionPanel(reaction));
-                        holder.add(optionsPanel.get(), BorderLayout.CENTER);
-                        holder.validate();
                         changes = true;
-                        fireChangeListeners();
                     }
                 }
             });
@@ -578,15 +581,15 @@ public class WorkflowDocument extends MuitiPartDocument {
                     }
                     else {
                         if(reaction instanceof CycleSequencingReaction) {
-                        List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
-                        if(traces != null && traces.size() > 0) {
-                            List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(traces);
-                            DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
-                            DocumentViewerFactory factory = SequencesEditor.getViewerFactory(sequenceList);
-                            DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
-                            ExtendedPrintable printable = viewer.getExtendedPrintable();
-                            Options op = printable.getOptions(false);
-                            return printable.print(graphics, dimensions, pageIndex-2, op);
+                            List<Trace> traces = ((CycleSequencingReaction)reaction).getTraces();
+                            if(traces != null && traces.size() > 0) {
+                                List<NucleotideSequenceDocument> sequences = ReactionUtilities.getAllSequences(traces);
+                                DefaultSequenceListDocument sequenceList = DefaultSequenceListDocument.forNucleotideSequences(sequences);
+                                DocumentViewerFactory factory = SequencesEditor.getViewerFactory(sequenceList);
+                                DocumentViewer viewer = factory.createViewer(new AnnotatedPluginDocument[]{DocumentUtilities.createAnnotatedPluginDocument(sequenceList)});
+                                ExtendedPrintable printable = viewer.getExtendedPrintable();
+                                Options op = printable.getOptions(false);
+                                return printable.print(graphics, dimensions, pageIndex-2, op);
                             }
                         }
                     }
@@ -616,7 +619,14 @@ public class WorkflowDocument extends MuitiPartDocument {
         }
 
         public void saveChangesToDatabase(ProgressListener progress, LIMSConnection connection) throws DatabaseServiceException {
-            reaction.areReactionsValid(Arrays.asList(reaction), null, true);
+            if (!changes) {
+                String reactionCheckResult = reaction.areReactionsValid(Arrays.asList(reaction), null, false);
+
+                if (!reactionCheckResult.isEmpty()) {
+                    Dialogs.showMessageDialog(reactionCheckResult);
+                }
+            }
+
             connection.saveReactions(new Reaction[]{reaction}, reaction.getType(), progress);
             changes = false;
         }

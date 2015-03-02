@@ -13,10 +13,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BadDataException;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import com.biomatters.plugins.biocode.labbench.reaction.Thermocycle;
-import com.biomatters.plugins.biocode.labbench.reaction.ThermocycleEditor;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -25,9 +22,9 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.prefs.Preferences;
 
 /**
@@ -39,6 +36,8 @@ public class PlateViewer extends JPanel {
     private PlateView plateView;
     private PlateViewer selfReference = this;
     private Options.StringOption nameField;
+    private JScrollPane scroller;
+    private boolean hasCheckedPlateForErrorsAtLeastOnce = false;
 
     public PlateViewer(int numberOfReactions, Reaction.Type type) {
         plateView = new PlateView(numberOfReactions, type, true);
@@ -53,7 +52,7 @@ public class PlateViewer extends JPanel {
     private void init() {
         setLayout(new BorderLayout());
 
-        final JScrollPane scroller = new JScrollPane(plateView);
+        scroller = new JScrollPane(plateView);
         scroller.setBorder(new EmptyBorder(0,0,0,0));
         scroller.getVerticalScrollBar().setUnitIncrement(20);
         scroller.getHorizontalScrollBar().setUnitIncrement(20);
@@ -103,7 +102,7 @@ public class PlateViewer extends JPanel {
             final JComboBox thermocycleCombo = new GComboBox(thermocycleModel);
             ItemListener thermocycleComboListener = new ItemListener() {
                 public void itemStateChanged(ItemEvent e) {
-                    plateView.getPlate().setThermocycle((Thermocycle) thermocycleCombo.getSelectedItem());
+                    plateView.getPlate().setThermocycle((Thermocycle)thermocycleCombo.getSelectedItem());
                 }
             };
             thermocycleCombo.addItemListener(thermocycleComboListener);
@@ -198,36 +197,29 @@ public class PlateViewer extends JPanel {
         };
         toolbar.addAction(gelAction);
 
-
-
         //toolbar.addSeparator(new Dimension(1, 24));
         toolbar.addAction(new GeneiousAction.Divider());
 
         final GeneiousAction bulkEditAction = new GeneiousAction("Bulk Edit", "Paste data into the wells from a spreadsheet", BiocodePlugin.getIcons("bulkEdit_16.png")) {
             public void actionPerformed(ActionEvent e) {
-                if(!BiocodeService.getInstance().isLoggedIn()) {
+                if (!BiocodeService.getInstance().isLoggedIn()) {
                     Dialogs.showMessageDialog(BiocodeUtilities.NOT_CONNECTED_ERROR_MESSAGE);
                     return;
                 }
-                PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate());
-                if(editor.editPlate(selfReference)) {
-                    nameField.setValue(plateView.getPlate().getName());
-                    Runnable backgroundTask = new Runnable() {
-                        public void run() {
-                            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), plateView, true);
-                            if(error != null && error.length() > 0) {
-                                Dialogs.showMessageDialog(error);
-                            }
-                        }
-                    };
-                    Runnable updateTask = new Runnable() {
-                        public void run() {
-                            plateView.invalidate();
-                            scroller.getViewport().validate();
-                            plateView.repaint();
-                        }
-                    };
-                    BiocodeService.block("Checking reactions", selfReference, backgroundTask, updateTask);
+                final PlateBulkEditor editor = new PlateBulkEditor(getPlate());
+                List<Reaction> allReactionsOnPlate = Arrays.asList(getPlate().getReactions());
+                if (editor.editPlate(selfReference)) {
+                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
+
+                    if (!reactionValidityCheckResult.isEmpty()) {
+                        Dialogs.showMessageDialog(reactionValidityCheckResult);
+                    }
+
+                    plateView.checkForPlateSpecificErrors();
+
+                    updatePanelAndReactions(allReactionsOnPlate);
+
+                    hasCheckedPlateForErrorsAtLeastOnce = true;
                 }
             }
         };
@@ -236,30 +228,31 @@ public class PlateViewer extends JPanel {
         final GeneiousAction bulkChromatAction = new GeneiousAction("Bulk Add Traces", "Import trace files, and attach them to wells", StandardIcons.nucleotide.getIcons()) {
             public void actionPerformed(ActionEvent e) {
                 String error = ReactionUtilities.bulkLoadChromatograms(plateView.getPlate(), plateView);
-                if(error != null) {
+                if (error != null) {
                     Dialogs.showMessageDialog(error);
                     actionPerformed(e);
                 }
             }
         };
-        if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
+        if (plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
             toolbar.addAction(bulkChromatAction);
         }
 
         final GeneiousAction editAction = new GeneiousAction("Edit All Wells", "", StandardIcons.edit.getIcons()) {
             public void actionPerformed(ActionEvent e) {
-                List<Reaction> reactions = plateView.getSelectedReactions();
-                if (reactions.isEmpty()) {
-                    reactions = Arrays.asList(plateView.getPlate().getReactions());
+                List<Reaction> reactionsToEdit = plateView.getSelectedReactions();
+
+                if (reactionsToEdit.isEmpty()) {
+                    reactionsToEdit = Arrays.asList(plateView.getPlate().getReactions());
                 }
-                ReactionUtilities.editReactions(reactions, plateView, true);
-                for(Reaction r : reactions) {
-                    r.invalidateFieldWidthCache();
+
+                if (ReactionUtilities.editReactions(reactionsToEdit, plateView, true, true)) {
+                    plateView.checkForPlateSpecificErrors();
+
+                    updatePanelAndReactions(reactionsToEdit);
+
+                    hasCheckedPlateForErrorsAtLeastOnce = true;
                 }
-                plateView.repaint();
-                plateView.invalidate();
-                scroller.getViewport().validate();
-                plateView.repaint();
             }
         };
         toolbar.addAction(editAction);
@@ -274,9 +267,7 @@ public class PlateViewer extends JPanel {
         GeneiousAction displayAction = new GeneiousAction("Display Options", null, IconUtilities.getIcons("monitor16.png")) {
             public void actionPerformed(ActionEvent e) {
                 ReactionUtilities.showDisplayDialog(plateView.getPlate(), plateView);
-                plateView.invalidate();
-                scroller.getViewport().validate();
-                plateView.repaint();
+                updatePanel();
             }
         };
         toolbar.addAction(displayAction);
@@ -291,8 +282,6 @@ public class PlateViewer extends JPanel {
             };
             toolbar.addAction(exportPlateAction);
         }
-
-
 
         add(scroller, BorderLayout.CENTER);
 
@@ -367,32 +356,60 @@ public class PlateViewer extends JPanel {
                 okButton.addActionListener(new ActionListener(){
                     public void actionPerformed(ActionEvent e) {
                         final Plate plate = plateView.getPlate();
-
+                        final List<Reaction> allReactionsOnPlate = Arrays.asList(plate.getReactions());
                         final ProgressFrame progress = new ProgressFrame("Creating Plate", "", frame);
+                        final AtomicBoolean errorDetected = new AtomicBoolean(false);
                         progress.setCancelable(false);
                         progress.setIndeterminateProgress();
 
                         Runnable runnable = new Runnable() {
                             public void run() {
                                 try {
-                                    BiocodeService.getInstance().savePlate(plate, progress);
+                                    if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
+                                        String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
+
+                                        if (!reactionValidityCheckResult.isEmpty()) {
+                                            Dialogs.showMessageDialog(reactionValidityCheckResult);
+
+                                            errorDetected.set(true);
+                                        }
+
+                                        errorDetected.set(errorDetected.get() || plateView.checkForPlateSpecificErrors());
+
+                                        hasCheckedPlateForErrorsAtLeastOnce = true;
+                                    }
+
+                                    if (!errorDetected.get()) {
+                                        BiocodeService.getInstance().savePlate(plate, progress);
+                                    }
                                 } catch(BadDataException ex) {
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("You have some errors in your plate:\n\n" + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
-                                    return;
+                                    errorDetected.set(true);
                                 } catch(DatabaseServiceException ex){
                                     ex.printStackTrace();
                                     progress.setComplete();
                                     Dialogs.showMessageDialog("There was an error saving your plate: " + ex.getMessage(), "Plate Error", frame, Dialogs.DialogIcon.INFORMATION);
-                                    return;
+                                    errorDetected.set(true);
                                 } finally {
                                     progress.setComplete();
                                 }
+
                                 nameField.getParentOptions().savePreferences();
-                                frame.dispose();
+
+                                if (!errorDetected.get()) {
+                                    frame.dispose();
+                                }
                             }
                         };
-                        new Thread(runnable, "Biocode plate creation thread").start();
+
+                        Runnable updatePanelRunnable = new Runnable() {
+                            public void run() {
+                                updatePanelAndReactions(allReactionsOnPlate);
+                            }
+                        };
+
+                        BiocodeService.block("Creating plate...", plateView, runnable, updatePanelRunnable);
                     }
                 });
                 frame.getContentPane().add(closeButtonPanel, BorderLayout.SOUTH);
@@ -406,10 +423,7 @@ public class PlateViewer extends JPanel {
             }
         };
         ThreadUtilities.invokeNowOrWait(runnable);
-
     }
-
-
 
     public static void main(String[] args) {
         TestGeneious.initialize();
@@ -438,5 +452,19 @@ public class PlateViewer extends JPanel {
 
     public void setPlate(Plate plate) {
         plateView.setPlate(plate);
+    }
+
+    private void updatePanelAndReactions(Collection<Reaction> reactionsUpdated) {
+        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactionsUpdated);
+
+        updatePanel();
+    }
+
+    private void updatePanel() {
+        plateView.invalidate();
+
+        scroller.getViewport().validate();
+
+        plateView.repaint();
     }
 }

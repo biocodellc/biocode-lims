@@ -56,6 +56,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     private JComponent thingInsideScrollPane;
     private JPanel keyPanel;
     private JPanel thermocyclePanel;
+    private boolean hasCheckedPlateForErrorsAtLeastOnce = false;
 
     public PlateDocumentViewer(PlateDocument doc, AnnotatedPluginDocument aDoc, boolean local) {
         this.annotatedDocument = aDoc;
@@ -94,7 +95,10 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Dialogs.showMessageDialog("Please log in");
                     return;
                 }
-                plateDoc.setPlate(plateView.getPlate());
+                final Plate plate = plateView.getPlate();
+                final List<Reaction> allReactionsOnPlate = Arrays.asList(plate.getReactions());
+
+                plateDoc.setPlate(plate);
                 annotatedDocument.saveDocument();
                 setEnabled(false);
                 if(!isLocal) {
@@ -102,17 +106,31 @@ public class PlateDocumentViewer extends DocumentViewer{
                     Runnable runnable = new Runnable() {
                         public void run() {
                             try {
-                                BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
+                                boolean errorDetected = false;
+
+                                if (!hasCheckedPlateForErrorsAtLeastOnce && !plateView.isEditted()) {
+                                    String reactionValidityCheckResult = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
+
+                                    if (!reactionValidityCheckResult.isEmpty()) {
+                                        Dialogs.showMessageDialog(reactionValidityCheckResult);
+
+                                        errorDetected = true;
+                                    }
+
+                                    errorDetected = errorDetected || plateView.checkForPlateSpecificErrors();
+
+                                    hasCheckedPlateForErrorsAtLeastOnce = true;
+                                }
+
+                                if (!errorDetected) {
+                                    BiocodeService.getInstance().savePlate(plateView.getPlate(), progressFrame);
+                                }
+
                                 if(plateView.getPlate().getReactionType() == Reaction.Type.CycleSequencing) {
                                     for(Reaction r : plateView.getPlate().getReactions()) {
                                         ((CycleSequencingReaction)r).purgeChromats();
                                     }
                                 }
-                                ThreadUtilities.invokeNowOrLater(new Runnable() {
-                                    public void run() {
-                                        reloadViewer();
-                                    }
-                                });
                             } catch (DatabaseServiceException e1) {
                                 Dialogs.showMessageDialog("There was an error saving your plate:\n\n"+e1.getMessage());
                                 Runnable runnable = new Runnable() {
@@ -134,7 +152,17 @@ public class PlateDocumentViewer extends DocumentViewer{
                             }
                         }
                     };
-                    new Thread(runnable).start();
+
+                    Runnable updatePanelRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            reloadViewer();
+
+                            updatePanelAndReactions(allReactionsOnPlate);
+                        }
+                    };
+
+                    BiocodeService.block("Saving plate...", plateView, runnable, updatePanelRunnable);
                 }
             }
         };
@@ -154,9 +182,6 @@ public class PlateDocumentViewer extends DocumentViewer{
         });
 
         cocktailCount = new HashMap<Cocktail, Integer>();
-        
-
-
 
         saveAction.setEnabled(false);
         bulkEditAction.setProOnly(true);
@@ -243,12 +268,17 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     private void updatePanel() {
         keyPanel.removeAll();
-        keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0,0).getBackgroundColorer()));
+        keyPanel.add(getColorKeyPanel(plateView.getPlate().getReaction(0, 0).getBackgroundColorer()));
         if(thingInsideScrollPane != null) {
             keyPanel.invalidate();
             plateView.invalidate();
             thingInsideScrollPane.revalidate();
         }
+    }
+
+    private void updatePanelAndReactions(Collection<Reaction> reactions) {
+        ReactionUtilities.invalidateFieldWidthCacheOfReactions(reactions);
+        updatePanel();
     }
 
     private void updateThermocycleAction(boolean showDialogs){
@@ -470,16 +500,20 @@ public class PlateDocumentViewer extends DocumentViewer{
     GeneiousAction editAction = new GeneiousAction("Edit All Wells", null, StandardIcons.edit.getIcons()) {
         public void actionPerformed(ActionEvent e) {
             List<Reaction> selectedReactions = plateView.getSelectedReactions();
+
             if (selectedReactions.isEmpty()) {
                 selectedReactions = Arrays.asList(plateView.getPlate().getReactions());
             }
-            if(ReactionUtilities.editReactions(selectedReactions, plateView, false)) {
+
+            if (ReactionUtilities.editReactions(selectedReactions, plateView, false, true)) {
+                plateView.checkForPlateSpecificErrors();
+
+                updatePanelAndReactions(selectedReactions);
+
+                hasCheckedPlateForErrorsAtLeastOnce = true;
+
                 saveAction.setEnabled(true);
-                for(Reaction r : selectedReactions) {
-                    r.invalidateFieldWidthCache();
-                }
             }
-            updatePanel();
         }
     };
 
@@ -508,13 +542,22 @@ public class PlateDocumentViewer extends DocumentViewer{
                 return;
             }
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate());
-            editor.editPlate(container);
-            saveAction.setEnabled(true);
-            String error = plateView.getPlate().getReactions()[0].areReactionsValid(Arrays.asList(plateView.getPlate().getReactions()), container, true);
-            if(error != null && error.length() > 0) {
-                Dialogs.showMessageDialog(error, "Invalid Reactions", container, Dialogs.DialogIcon.INFORMATION);
+            List<Reaction> allReactionsOnPlate = Arrays.asList(plateView.getPlate().getReactions());
+            if (editor.editPlate(container)) {
+                String reactionValidityErrorCheck = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
+
+                if (!reactionValidityErrorCheck.isEmpty()) {
+                    Dialogs.showMessageDialog(reactionValidityErrorCheck);
+                }
+
+                plateView.checkForPlateSpecificErrors();
+
+                updatePanelAndReactions(allReactionsOnPlate);
+
+                hasCheckedPlateForErrorsAtLeastOnce = true;
+
+                saveAction.setEnabled(true);
             }
-            updatePanel();
         }
     };
 

@@ -7,12 +7,16 @@ import com.biomatters.geneious.publicapi.documents.sequence.SequenceAlignmentDoc
 import com.biomatters.geneious.publicapi.implementations.sequence.OligoSequenceDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.DocumentSelectionOption;
+import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.fims.MySQLFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
+import com.biomatters.plugins.biocode.labbench.reaction.CycleSequencingOptions;
 import com.biomatters.plugins.biocode.labbench.reaction.PCROptions;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.google.common.collect.HashMultimap;
 import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 
@@ -50,6 +54,15 @@ public class AnnotateUtilities {
     public static final DocumentField LIMS_ID = new DocumentField("id", "", "lims_id", Integer.class, false, false);
     public static final DocumentField ASSEMBLY_PARAMS_FIELD = new DocumentField("Assembly Parameters", "", "assemblyParams", String.class, false, false);
 
+    private static final String FORWARD_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE            = "fwd_primer_name";
+    private static final String FORWARD_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE        = "fwd_primer_seq";
+    private static final String REVERSE_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE            = "rev_primer_name";
+    private static final String REVERSE_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE        = "rev_primer_seq";
+    private static final String FORWARD_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE     = "seq_fwd_primer_name";
+    private static final String FORWARD_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE = "seq_fwd_primer_seq";
+    private static final String REVERSE_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE     = "seq_rev_primer_name";
+    private static final String REVERSE_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE = "seq_rev_primer_seq";
+
     private AnnotateUtilities() {
     }
 
@@ -79,6 +92,11 @@ public class AnnotateUtilities {
             }
             realProgress.beginSubtask("Annotating " + annotatedDocument.getName());
             if (SequenceAlignmentDocument.class.isAssignableFrom(annotatedDocument.getDocumentClass())) {
+                // Older versions of the Biocode plugin would incorrectly copy this field across to the alignment doc.
+                // Wipe out the value that has been set and let Geneious calculate it normally.
+                annotatedDocument.setFieldValue(DocumentField.NUCLEOTIDE_SEQUENCES_WITH_QUALITY_COUNT, null);
+
+                Set<DocumentField> fieldsAnnotated = new HashSet<DocumentField>();
                 SequenceAlignmentDocument alignment = (SequenceAlignmentDocument) annotatedDocument.getDocument();
                 CompositeProgressListener progressForAlignment = new CompositeProgressListener(realProgress, alignment.getNumberOfSequences());
                 for (int i = 0; i < alignment.getNumberOfSequences(); i ++)  {
@@ -86,12 +104,14 @@ public class AnnotateUtilities {
                     AnnotatedPluginDocument referencedDocument = alignment.getReferencedDocument(i);
                     if (referencedDocument != null) {
                         docsAnnotated.add(referencedDocument);
-                        newFields.addAll(annotateDocument(fimsDataGetter, failBlog, referencedDocument, true));
+                        fieldsAnnotated = annotateDocument(fimsDataGetter, failBlog, referencedDocument, true);
                     } else {
                         noReferencesList.add(alignment.getSequence(i).getName());
                     }
                 }
-                copyMatchingFieldsToContigAndSave(annotatedDocument);
+                copyMatchingFieldsToContig(annotatedDocument, getDocumentFieldCodesWithoutDuplicates(fieldsAnnotated));
+                copyMatchingDocumentNotesToContig(annotatedDocument);
+                newFields.addAll(fieldsAnnotated);
             } else {
                 newFields.addAll(annotateDocument(fimsDataGetter, failBlog, annotatedDocument, true));
             }
@@ -192,16 +212,41 @@ public class AnnotateUtilities {
     }
 
     /**
-     * copied from AssemblyOperationj
+     * Returns the codes of the supplied fields (without duplicates).
      *
-     * @param annotatedContig
-     * @throws com.biomatters.geneious.publicapi.plugin.DocumentOperationException
-     *
+     * @param fields Fields that returned codes are of.
+     * @return Codes of the supplied fields (without duplicates).
      */
-    private static void copyMatchingFieldsToContigAndSave(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
-        SequenceAlignmentDocument contig = (SequenceAlignmentDocument) annotatedContig.getDocument();
-        Map<DocumentField, Object> displayableFieldsToCopy = null;
-        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
+    private static Set<String> getDocumentFieldCodesWithoutDuplicates(Set<DocumentField> fields) {
+        Set<String> uniqueCodesFromFields = new HashSet<String>();
+
+        for (DocumentField field : fields)
+            uniqueCodesFromFields.add(field.getCode());
+
+        return uniqueCodesFromFields;
+    }
+
+    /**
+     * Code for Sequencing Primer note type defined in GenBank Submission plugin
+     */
+    private static final String PRIMER_NOTE_TYPE = "sequencingPrimer";
+
+    /**
+     * Copies matching document notes from sequences referenced by an assembly to the assembly itself.  Only copies the
+     * note if all values are the same.  The only exception is the Sequencing Primer note type defined by the GenBank
+     * submission plugin that gets merged so that any non-null field values are copied across if all sequences have the
+     * same value.
+     * <br><br>
+     * <b>Note</b>: This method was originally written for the Moorea Biocode Project.  It is duplicated in the AssemblyOperation in
+     * the Alignment Plugin.  Any changes to this method need to be made there too.
+     *
+     * @param annotatedContig The contig assembly to copy notes to from it's references
+     * @throws DocumentOperationException if documents cannot be loaded or edited
+     */
+    private static void copyMatchingDocumentNotesToContig(AnnotatedPluginDocument annotatedContig) throws DocumentOperationException {
+        SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
+        Map<String, DocumentNote> documentNotesToCopy = null;
+        for (int i = 0; i < contig.getNumberOfSequences(); i ++) {
             if (i == contig.getContigReferenceSequenceIndex()) {
                 continue;
             }
@@ -209,8 +254,134 @@ public class AnnotateUtilities {
             if (referencedDocument == null) {
                 return; //one sequence doesn't have a reference so bail on the whole thing
             }
+            if (documentNotesToCopy == null) {
+                documentNotesToCopy = new LinkedHashMap<String, DocumentNote>();
+                AnnotatedPluginDocument.DocumentNotes documentNotes = referencedDocument.getDocumentNotes(false);
+                for (DocumentNote note : documentNotes.getAllNotes()) {
+                    documentNotesToCopy.put(note.getNoteTypeCode(), note);
+                }
+            } else {
+                for (Map.Entry<String, DocumentNote> entry : new LinkedHashSet<Map.Entry<String, DocumentNote>>(documentNotesToCopy.entrySet())) {
+                    DocumentNote note = referencedDocument.getDocumentNotes(false).getNote(entry.getKey());
+                    if(!notesAreEqual(note, entry.getValue())) {
+                       documentNotesToCopy.remove(entry.getKey());
+                    }
+                }
+            }
+        }
+        if(documentNotesToCopy == null) {
+            return;  // Contig had no sequences to copy from
+        }
+
+        //noinspection StatementWithEmptyBody
+        if(documentNotesToCopy.get(PRIMER_NOTE_TYPE) == null) {
+            DocumentNote sequencingPrimerNote = hackToGetSequencingPrimerNoteToCopy(contig);
+            if(sequencingPrimerNote != null) {
+                documentNotesToCopy.put(sequencingPrimerNote.getNoteTypeCode(), sequencingPrimerNote);
+            }
+        } else {
+            //no need to do this if the note is already being copied...
+        }
+
+        if (documentNotesToCopy.isEmpty()) return;
+
+        AnnotatedPluginDocument.DocumentNotes contigNotes = annotatedContig.getDocumentNotes(true);
+        for (Map.Entry<String, DocumentNote> noteToCopy : documentNotesToCopy.entrySet()) {
+            DocumentNote existingNote = noteToCopy.getValue();
+            contigNotes.setNote(existingNote);
+        }
+        contigNotes.saveNotes();
+
+
+    }
+
+    private static DocumentNote hackToGetSequencingPrimerNoteToCopy(SequenceAlignmentDocument contig) {
+        DocumentNoteType sequencingPrimerNoteType = DocumentNoteUtilities.getNoteType(PRIMER_NOTE_TYPE);
+        if(sequencingPrimerNoteType == null) {
+            return null;  // GenBank Submission plugin not initialized
+        }
+
+        HashMultimap<String, Object> seenFieldValues = HashMultimap.create();
+        for (AnnotatedPluginDocument refDoc : contig.getReferencedDocuments()) {
+            if(refDoc == null) {
+                continue;
+            }
+
+            DocumentNote noteOnRef = refDoc.getDocumentNotes(false).getNote(PRIMER_NOTE_TYPE);
+            if(noteOnRef == null) {
+                continue;
+            }
+            for (DocumentNoteField field : sequencingPrimerNoteType.getFields()) {
+                Object value = noteOnRef.getFieldValue(field.getCode());
+                if(value != null) {
+                    seenFieldValues.put(field.getCode(), value);
+                }
+            }
+        }
+        if(seenFieldValues.isEmpty()) {
+            return null;
+        }
+
+        DocumentNote newNote = sequencingPrimerNoteType.createDocumentNote();
+        for (Map.Entry<String, Collection<Object>> entry : seenFieldValues.asMap().entrySet()) {
+            Collection<Object> valuesForField = entry.getValue();
+            if(valuesForField.size() == 1) {
+                newNote.setFieldValue(entry.getKey(), valuesForField.iterator().next());
+            }
+        }
+        return newNote;
+    }
+
+    private static boolean notesAreEqual(DocumentNote note1, DocumentNote note2) {
+        if(note1 == null || note2 == null) {
+            return false;
+        }
+        if(!note1.getNoteTypeCode().equals(note2.getNoteTypeCode())) {
+            return false;
+        }
+
+        List<DocumentNoteField> fields1 = note1.getFields();
+
+        for (DocumentNoteField fields : fields1) {
+            Object value1 = note1.getFieldValue(fields.getCode());
+            Object value2 = note2.getFieldValue(fields.getCode());
+            if(!GeneralUtilities.safeEquals(value1, value2)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Attempts to copy across all field values that are equal in all referenced documents to the document that
+     * references them.  No existing field values on the document will be overridden unless specified.
+     * <br><br>
+     * <b>Note</b>: This method is identical to the method with the same name inside the com.biomatters.plugins.alignment.assembly.AssemblyOperation class.
+     * Until further established upon, changes that are made to either of the two methods should also be made in the other.
+     *
+     * @param annotatedContig The document to copy fields to from the documents it references
+     * @param codesOfOverridableFields A set of {@link com.biomatters.geneious.publicapi.documents.DocumentField} codes
+     *                                 for which values will be copied across regardless of if the contig already has a
+     *                                 value for that field.
+     * @throws DocumentOperationException if there is a problem loading or saving the document
+     */
+    private static void copyMatchingFieldsToContig(AnnotatedPluginDocument annotatedContig, Set<String> codesOfOverridableFields) throws DocumentOperationException {
+        SequenceAlignmentDocument contig = (SequenceAlignmentDocument)annotatedContig.getDocument();
+        Map<DocumentField, Object> displayableFieldsToCopy = null;
+
+        for (int i = 0; i < contig.getNumberOfSequences(); i++) {
+            if (i == contig.getContigReferenceSequenceIndex()) {
+                continue;
+            }
+
+            AnnotatedPluginDocument referencedDocument = contig.getReferencedDocument(i);
+
+            if (referencedDocument == null) {
+                return; //one sequence doesn't have a reference so bail on the whole thing
+            }
+
             if (displayableFieldsToCopy == null) {
-                displayableFieldsToCopy = new HashMap<DocumentField, Object>();
+                displayableFieldsToCopy = new LinkedHashMap<DocumentField, Object>();
                 for (DocumentField field : referencedDocument.getDisplayableFields()) {
 //                    if (field.getCode().startsWith("biocode") || field.getCode().equalsIgnoreCase("tissueid")
 //                            || field.getCode().equals(DocumentField.TAXONOMY_FIELD.getCode())
@@ -223,32 +394,37 @@ public class AnnotateUtilities {
                     }
                 }
             } else {
-                for (Map.Entry<DocumentField, Object> fieldToCopy : new HashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
+                for (Map.Entry<DocumentField, Object> fieldToCopy : new LinkedHashSet<Map.Entry<DocumentField, Object>>(displayableFieldsToCopy.entrySet())) {
                     Object value = referencedDocument.getFieldValue(fieldToCopy.getKey());
                     if (value == null || !value.equals(fieldToCopy.getValue())) {
                         displayableFieldsToCopy.remove(fieldToCopy.getKey());
                     }
                 }
             }
-            if (displayableFieldsToCopy.isEmpty()) break;
-        }
-        if (displayableFieldsToCopy == null || displayableFieldsToCopy.isEmpty()) return;
 
-        for (Map.Entry<DocumentField, Object> fieldToCopy : displayableFieldsToCopy.entrySet()) {
-            annotatedContig.setFieldValue(fieldToCopy.getKey(), fieldToCopy.getValue());
         }
+        if (displayableFieldsToCopy == null || displayableFieldsToCopy.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<DocumentField, Object> fieldAndValue : displayableFieldsToCopy.entrySet()) {
+            DocumentField field = fieldAndValue.getKey();
+            if (annotatedContig.getFieldValue(field) == null || codesOfOverridableFields.contains(field.getCode())) {
+                annotatedContig.setFieldValue(field, fieldAndValue.getValue());
+            }
+        }
+
         annotatedContig.save();
     }
 
     /**
      * Annotates a document with data from a {@link FimsDataGetter}
      *
-     *
      * @param fimsDataGetter Used to get the FIMS fields and values
      * @param failBlog To add failure messages to, for example when there are no FIMs fields associated with the document
      * @param annotatedDocument The document to annotate
      * @param updateModifiedDate true to update the modified date when saving.  False to leave it as is.
-     * @return The set of FIMS {@link DocumentField}s that were annotated onto the document
+     * @return All FIMS/LIMS fields {@link DocumentField}s that were annotated onto the document
      * @throws DocumentOperationException
      */
     public static Set<DocumentField> annotateDocument(FimsDataGetter fimsDataGetter, List<String> failBlog, AnnotatedPluginDocument annotatedDocument, boolean updateModifiedDate) throws DocumentOperationException {
@@ -260,41 +436,33 @@ public class AnnotateUtilities {
             return Collections.emptySet();
         }
 
-        HashSet<DocumentField> fields = new HashSet<DocumentField>();
-        fields.addAll(fimsData.fimsSample.getFimsAttributes());
-        fields.addAll(fimsData.fimsSample.getTaxonomyAttributes());
+        HashSet<DocumentField> fieldsAnnotated = new HashSet<DocumentField>();
 
-        for (DocumentField documentField : fimsData.fimsSample.getFimsAttributes()) {
-            annotatedDocument.setFieldValue(documentField, fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
-        }
+        for (DocumentField field : fimsData.fimsSample.getFimsAttributes())
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, field, fimsData.fimsSample.getFimsAttributeValue(field.getCode())));
 
-        if (fimsData.sequencingPlateName != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName);
-        }
+        if (fimsData.sequencingPlateName != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName));
 
-        if (fimsData.reactionStatus != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus);
-        }
+        if (fimsData.reactionStatus != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus));
 
         if (fimsData.sequencingPlateName != null && fimsData.well != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString());
-            annotatedDocument.setFieldValue(BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString());
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString()));
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString()));
         }
 
-        if (fimsData.workflow != null) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName());
-        }
+        if (fimsData.workflow != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName()));
 
-        if (fimsData.extractionId != null) {
-            annotatedDocument.setFieldValue(LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId);
-        }
+        if (fimsData.extractionId != null)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId));
 
-        if (fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0) {
-            annotatedDocument.setFieldValue(BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode);
-        }
+        if (fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0)
+            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode));
 
-        final String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
-        final String ORGANISM_FIELD_INTRA_SEPARATOR = " ";
+        String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
+        String ORGANISM_FIELD_INTRA_SEPARATOR = " ";
         StringBuilder taxonomyFieldValuesBuilder = new StringBuilder();
         StringBuilder organismBuilder = new StringBuilder();
 
@@ -303,73 +471,129 @@ public class AnnotateUtilities {
 
             Object taxon = fimsData.fimsSample.getFimsAttributeValue(documentField.getCode());
 
-            if (taxon == null) {
+            if (taxon == null)
                 continue;
-            }
 
-            if (taxon != null && !(taxon instanceof String)) {
+            if (!(taxon instanceof String))
                 throw new DocumentOperationException("The tissue record " + fimsData.fimsSample.getId() + " has an invalid taxon value (" + taxon + ") for the taxon field " + documentField.getName());
-            }
-
 
             String taxonAsString = String.valueOf(taxon);
 
-            if (taxonAsString.isEmpty()) {
+            if (taxonAsString.isEmpty())
                 continue;
-            }
 
-            annotatedDocument.setFieldValue(new DocumentField(documentFieldName, documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false), fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()));
+            fieldsAnnotated.add(annotateDocumentAndReturnField(
+                    annotatedDocument,
+                    new DocumentField(documentFieldName, documentField.getDescription(), documentField.getCode(), documentField.getValueType(), false, false),
+                    fimsData.fimsSample.getFimsAttributeValue(documentField.getCode()))
+            );
 
             if (organismBuilder.length() == 0) {
-                if (documentFieldName.equalsIgnoreCase("genus")) {
+                if (documentFieldName.equalsIgnoreCase("genus"))
                     organismBuilder.append(taxonAsString);
-                }
 
-                if (taxonomyFieldValuesBuilder.length() != 0) {
+                if (taxonomyFieldValuesBuilder.length() != 0)
                     taxonomyFieldValuesBuilder.append(TAXONOMY_FIELD_INTRA_SEPARATOR);
-                }
 
                 taxonomyFieldValuesBuilder.append(taxonAsString);
-            } else {
+            } else
                 organismBuilder.append(ORGANISM_FIELD_INTRA_SEPARATOR).append(taxonAsString);
-            }
         }
 
         String taxonomy = taxonomyFieldValuesBuilder.length() == 0 ? null : taxonomyFieldValuesBuilder.toString();
-        annotatedDocument.setFieldValue(DocumentField.TAXONOMY_FIELD, taxonomy);
+        fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, DocumentField.TAXONOMY_FIELD, taxonomy));
 
         String organism = organismBuilder.length() == 0 ? null : organismBuilder.toString();
-        annotatedDocument.setFieldValue(DocumentField.ORGANISM_FIELD, organism);
+        fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, DocumentField.ORGANISM_FIELD, organism));
+
+        //annotate the primers...
+        AnnotatedPluginDocument.DocumentNotes notes = annotatedDocument.getDocumentNotes(true);
+        DocumentNote primerNote = notes.getNote(PRIMER_NOTE_TYPE);
+        if (primerNote == null) {
+            DocumentNoteType primerNoteType = DocumentNoteUtilities.getNoteType(PRIMER_NOTE_TYPE);
+            if (primerNoteType != null)
+                primerNote = primerNoteType.createDocumentNote();
+        }
 
         boolean savedDocument = false;
-        if (fimsData.workflow != null && fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR) != null) {
+        if (primerNote != null && fimsData.workflow != null) {
             Reaction pcrReaction = fimsData.workflow.getMostRecentReaction(Reaction.Type.PCR);
+            Reaction forwardSequencingReaction = fimsData.workflow.getMostRecentSequencingReaction(true);
+            Reaction reverseSequencingReaction = fimsData.workflow.getMostRecentSequencingReaction(false);
             Boolean directionForTrace = getDirectionForTrace(annotatedDocument);
 
-            AnnotatedPluginDocument forwardPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_OPTION_ID);
-            AnnotatedPluginDocument reversePrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
+            AnnotatedPluginDocument forwardPCRPrimer = null;
+            AnnotatedPluginDocument reversePCRPrimer = null;
+            AnnotatedPluginDocument forwardSequencingPrimer = null;
+            AnnotatedPluginDocument reverseSequencingPrimer = null;
 
-            String forwardPrimerName = null;
-            String forwardPrimerSequence = null;
-            String reversePrimerName = null;
-            String reversePrimerSequence = null;
-            
-            if (forwardPrimer != null && (directionForTrace == null || directionForTrace)) {
-                forwardPrimerName = forwardPrimer.getName();
-                                forwardPrimerSequence = ((OligoSequenceDocument) forwardPrimer.getDocument()).getBindingSequence().toString();
-            }
-            if (reversePrimer != null && (directionForTrace == null || !directionForTrace)) {
-                reversePrimerName = reversePrimer.getName();
-                                reversePrimerSequence = ((OligoSequenceDocument) reversePrimer.getDocument()).getBindingSequence().toString();
+            if (pcrReaction != null) {
+                forwardPCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_OPTION_ID);
+                reversePCRPrimer = getPrimer(pcrReaction, PCROptions.PRIMER_REVERSE_OPTION_ID);
             }
 
-            setSequencingPrimerNote(annotatedDocument, forwardPrimerName, forwardPrimerSequence, reversePrimerName, reversePrimerSequence);            
+            if (hasAllSequencingPrimerNoteFields(primerNote)) {
+                if (forwardSequencingReaction != null) {
+                    forwardSequencingPrimer = getPrimer(forwardSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
+                }
+
+                if (reverseSequencingReaction != null) {
+                    reverseSequencingPrimer = getPrimer(reverseSequencingReaction, CycleSequencingOptions.PRIMER_OPTION_ID);
+                }
+            }
+
+            if (forwardPCRPrimer != null) {
+                primerNote.setFieldValue(FORWARD_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, forwardPCRPrimer.getName());
+                primerNote.setFieldValue(FORWARD_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument) forwardPCRPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            if (reversePCRPrimer != null) {
+                primerNote.setFieldValue(REVERSE_PCR_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, reversePCRPrimer.getName());
+                primerNote.setFieldValue(REVERSE_PCR_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument)reversePCRPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            if (forwardSequencingPrimer != null && (directionForTrace == null || directionForTrace)) {
+                primerNote.setFieldValue(FORWARD_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, forwardSequencingPrimer.getName());
+                primerNote.setFieldValue(FORWARD_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument)forwardSequencingPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            if (reverseSequencingPrimer != null && (directionForTrace == null || !directionForTrace)) {
+                primerNote.setFieldValue(REVERSE_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE, reverseSequencingPrimer.getName());
+                primerNote.setFieldValue(REVERSE_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE, ((OligoSequenceDocument)reverseSequencingPrimer.getDocument()).getBindingSequence().toString());
+            }
+
+            notes.setNote(primerNote);
+            notes.saveNotes();
             savedDocument = true;
         }
-        if(!savedDocument) {
+
+        if (!savedDocument) {
             annotatedDocument.save(updateModifiedDate);
         }
-        return fields;
+
+        return fieldsAnnotated;
+    }
+
+    private static boolean hasAllSequencingPrimerNoteFields(DocumentNote note) {
+        return hasDocumentNoteField(note, FORWARD_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE)
+                && hasDocumentNoteField(note, FORWARD_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE)
+                && hasDocumentNoteField(note, REVERSE_SEQUENCING_PRIMER_NAME_DOCUMENT_NOTE_FIELD_CODE)
+                && hasDocumentNoteField(note, REVERSE_SEQUENCING_PRIMER_SEQUENCE_DOCUMENT_NOTE_FIELD_CODE);
+    }
+
+    private static boolean hasDocumentNoteField(DocumentNote note, String code) {
+        for (DocumentNoteField documentNoteField : note.getFields()) {
+            if (documentNoteField.getCode().equals(code)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static DocumentField annotateDocumentAndReturnField(AnnotatedPluginDocument document, DocumentField field, Object value) {
+        document.setFieldValue(field, value);
+        return field;
     }
 
     /**
@@ -390,9 +614,9 @@ public class AnnotateUtilities {
         return directionForTrace;
     }
 
-    private static AnnotatedPluginDocument getPrimer(Reaction pcrReaction, String optionKey) {
+    private static AnnotatedPluginDocument getPrimer(Reaction pcrOrSequencingReaction, String optionKey) {
         AnnotatedPluginDocument forwardPrimer = null;
-        DocumentSelectionOption option = (DocumentSelectionOption)pcrReaction.getOptions().getOption(optionKey);
+        DocumentSelectionOption option = (DocumentSelectionOption)pcrOrSequencingReaction.getOptions().getOption(optionKey);
         List<AnnotatedPluginDocument> value = option.getDocuments();
         if (value.size() > 0) {
             forwardPrimer = value.get(0);

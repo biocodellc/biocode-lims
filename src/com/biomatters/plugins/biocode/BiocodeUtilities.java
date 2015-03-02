@@ -355,7 +355,13 @@ public class BiocodeUtilities {
                     if (i == contig.getContigReferenceSequenceIndex()) continue;
                     AnnotatedPluginDocument traceDoc = contig.getReferencedDocument(i);
                     if (traceDoc == null) {
-                        throw new DocumentOperationException("The contig " + document.getName() + " is missing a reference for sequence " + contig.getSequence(i).getName() + ".");
+                        String nameOfSequenceAnnotatationWithoutReferenceDocument = contig.getSequence(i).getName();
+                        throw new DocumentOperationException(
+                                "There is no reference document for sequence <strong>" + nameOfSequenceAnnotatationWithoutReferenceDocument + "</strong>" +
+                                " in contig assembly <strong>" + contig.getName() + "</strong>." +
+                                " Extract " + nameOfSequenceAnnotatationWithoutReferenceDocument + " to create a new reference document for it and try again." +
+                                "<br><br>For more assistance, please contact Moorea Biocode support via " + BiocodePlugin.SUPPORT_EMAIL + "."
+                        );
                     }
                     traceDocs.add(traceDoc);
                 }

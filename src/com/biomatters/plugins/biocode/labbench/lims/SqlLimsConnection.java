@@ -735,19 +735,19 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     public LimsSearchResult getMatchingDocumentsFromLims(Query query, Collection<String> tissueIdsToMatch, Cancelable cancelable) throws DatabaseServiceException {
         LimsSearchResult result = new LimsSearchResult();
 
-        Boolean downloadTissues = BiocodeService.isDownloadTissues(query);
-        Boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
-        Boolean downloadPlates = BiocodeService.isDownloadPlates(query);
-        Boolean downloadSequences = BiocodeService.isDownloadSequences(query);
+        boolean isQueryAnInstanceOfBasicSearchQuery = query instanceof BasicSearchQuery;
 
-        if (query instanceof BasicSearchQuery) {
-            query = generateAdvancedQueryFromBasicQuery(query);
-        }
+        boolean downloadTissues = BiocodeService.isDownloadTissues(query);
+        boolean downloadWorkflows = BiocodeService.isDownloadWorkflows(query);
+        boolean downloadPlates = BiocodeService.isDownloadPlates(query);
+        boolean downloadSequences = BiocodeService.isDownloadSequences(query);
+
+        Query processedQuery = isQueryAnInstanceOfBasicSearchQuery ? generateAdvancedQueryFromBasicQuery(query) : query;
 
         List<AdvancedSearchQueryTerm> terms = new ArrayList<AdvancedSearchQueryTerm>();
         CompoundSearchQuery.Operator operator;
-        if (query instanceof CompoundSearchQuery) {
-            CompoundSearchQuery compoundQuery = (CompoundSearchQuery) query;
+        if (processedQuery instanceof CompoundSearchQuery) {
+            CompoundSearchQuery compoundQuery = (CompoundSearchQuery)processedQuery;
             operator = compoundQuery.getOperator();
             for (Query innerQuery : compoundQuery.getChildren()) {
                 if (isCompatibleSearchQueryTerm(innerQuery)) {
@@ -755,13 +755,12 @@ public abstract class SqlLimsConnection extends LIMSConnection {
                 }
             }
         } else {
-            if (isCompatibleSearchQueryTerm(query)) {
-                AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm) query;
+            if (isCompatibleSearchQueryTerm(processedQuery)) {
+                AdvancedSearchQueryTerm advancedQuery = (AdvancedSearchQueryTerm)processedQuery;
                 terms.add(advancedQuery);
             }
             operator = CompoundSearchQuery.Operator.AND;
         }
-
 
         Map<String, List<AdvancedSearchQueryTerm>> tableToTerms = mapQueryTermsToTable(terms);
         List<Object> sqlValues = new ArrayList<Object>();
@@ -779,7 +778,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         if (workflowPart != null) {
             sqlValues.addAll(workflowPart.parameters);
         }
-
 
         QueryPart platePart = getQueryForTable("plate", tableToTerms, operator);
         if (platePart != null) {
@@ -800,21 +798,18 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             }
         }
         boolean searchedForSamplesButFoundNone = tissueIdsToMatch != null && tissueIdsToMatch.isEmpty();  // samples == null when doing a browse query
-        if (searchedForSamplesButFoundNone && (operator == CompoundSearchQuery.Operator.AND ||
-                (operator == CompoundSearchQuery.Operator.OR && onlySearchingOnFIMSFields))
-        ) {
+        if (searchedForSamplesButFoundNone && (operator == CompoundSearchQuery.Operator.AND || (operator == CompoundSearchQuery.Operator.OR && onlySearchingOnFIMSFields))) {
             return result;
         }
 
-        StringBuilder workflowQuery = constructLimsQueryString(
-                tissueIdsToMatch, operator,
-                workflowPart, extractionPart, platePart, assemblyPart);
+        StringBuilder workflowQuery = constructLimsQueryString(tissueIdsToMatch, operator, workflowPart, extractionPart, platePart, assemblyPart);
         runLimsSearchQuery("LIMS query", result, workflowQuery.toString(), sqlValues, cancelable);
 
-
-        String noWorkflowQuery = getPcrAndSequencingPlatesWithNoWorkflowQuery(operator, workflowPart, extractionPart, platePart, assemblyPart);
-        if(noWorkflowQuery != null) {
-            runLimsSearchQuery("LIMS query (no workflow)", result, noWorkflowQuery, valuesForNoWorkflowQuery, cancelable);
+        if (isQueryAnInstanceOfBasicSearchQuery || (workflowPart == null && extractionPart == null && (tissueIdsToMatch == null || tissueIdsToMatch.isEmpty()))) {
+            String noWorkflowQuery = getPcrAndSequencingPlatesWithNoWorkflowQuery(operator, workflowPart, extractionPart, platePart, assemblyPart);
+            if (noWorkflowQuery != null) {
+                runLimsSearchQuery("LIMS query (no workflow)", result, noWorkflowQuery, valuesForNoWorkflowQuery, cancelable);
+            }
         }
 
         return result;
@@ -874,7 +869,6 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
-
     private String getPcrAndSequencingPlatesWithNoWorkflowQuery(CompoundSearchQuery.Operator operator, QueryPart workflowQueryConditions,
                                                                 QueryPart extractionQueryConditions, QueryPart plateQueryConditions, QueryPart assemblyQueryConditions) {
         if(operator == CompoundSearchQuery.Operator.AND && (workflowQueryConditions != null || extractionQueryConditions != null)) {
@@ -903,8 +897,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         queryBuilder.append(" LEFT OUTER JOIN extraction ON workflow.extractionId = extraction.id");
 
         queryBuilder.append(
-            " WHERE NOT EXISTS (SELECT workflow FROM pcr WHERE plate = plate.id AND workflow IS NOT NULL) " +
-            "AND NOT EXISTS (SELECT workflow FROM cyclesequencing WHERE plate = plate.id AND workflow IS NOT NULL) "
+                " WHERE NOT EXISTS (SELECT workflow FROM pcr WHERE plate = plate.id AND workflow IS NOT NULL) " +
+                        "AND NOT EXISTS (SELECT workflow FROM cyclesequencing WHERE plate = plate.id AND workflow IS NOT NULL) "
         );
 
         List<String> conditions = new ArrayList<String>();
@@ -1391,17 +1385,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     }
 
-    private String checkReactions(Plate plate) {
-        System.out.println("Checking " + plate.getName());
-        List<Reaction> reactions = new ArrayList<Reaction>();
-        for (Reaction r : plate.getReactions()) {
-            if (r != null) {
-                reactions.add(r);
-            }
-        }
-        return reactions.get(0).areReactionsValid(reactions, null, true);
-    }
-
     private static class QueryPart {
         private String queryConditions;
         private List<Object> parameters;
@@ -1556,10 +1539,13 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             System.out.println("\tTook " + (System.currentTimeMillis() - start) + "ms to do LIMS (plates) query");
 
             plates = getPlatesFromResultSet(plateSet, cancelable);
+
             plateSet.close();
             return plates;
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, "Unable to retrieve plates: " + e.getMessage(), false);
+        } catch (ConnectionException e) {
+            throw new DatabaseServiceException(e, "Unable to retrieve plates: " + e.getMessage(), true);
         } finally {
             SqlUtilities.cleanUpStatements(selectPlate);
             returnConnection(connection);
@@ -1583,7 +1569,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         return queryBuilder.toString();
     }
 
-    private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException {
+    private List<Plate> getPlatesFromResultSet(ResultSet resultSet, Cancelable cancelable) throws SQLException, ConnectionException, DatabaseServiceException {
         Map<Integer, Plate> plates = new HashMap<Integer, Plate>();
         final Set<String> totalErrors = new HashSet<String>();
 
@@ -1607,11 +1593,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                         }
                     };
                     ThreadUtilities.invokeNowOrWait(runnable);
-                    String error = checkReactions(prevPlate);
-                    if (error != null) {
-                        //noinspection StringConcatenationInsideStringBufferAppend
-                        totalErrors.add(error + "\n");
-                    }
                     plates.put(previousId, prevPlate);
                 }
             }
@@ -1623,27 +1604,25 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             } else {
                 plate = plates.get(plateId);
             }
-            Reaction reaction = plate.addReaction(resultSet);
-            if (reaction == null) {
-                //do nothing
-            }
+            plate.addReaction(resultSet);
         }
 
         if (previousId >= 0) {
             Plate prevPlate = plates.get(previousId);
             if (prevPlate != null) {
                 prevPlate.initialiseReactions();
-                String error = checkReactions(prevPlate);
-                if (error != null) {
-                    //noinspection StringConcatenationInsideStringBufferAppend
-                    totalErrors.add(error + "\n");
-                }
-
                 plates.put(previousId, prevPlate);
 
             }
         }
         setInitialTraceCountsForPlates(plates);
+
+        Collection<Reaction> allReactions = new ArrayList<Reaction>();
+        for (Plate plate : plates.values()) {
+            allReactions.addAll(Arrays.asList(plate.getReactions()));
+        }
+
+        ReactionUtilities.setFimsSamplesOnReactions(allReactions);
 
         final StringBuilder sb = new StringBuilder("");
         for (String line : totalErrors)
@@ -1654,13 +1633,12 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 public void run() {
                     if (sb.toString().contains("connection")) {
                         Dialogs.showMoreOptionsDialog(new Dialogs.DialogOptions(new String[]{"OK"}, "Connection Error"), "There was an error connecting to the server.  Try logging out and logging in again.", sb.toString());
-                    } else {
-                        Dialogs.showMessageDialog("Geneious has detected the following possible errors in your database.  Please contact your system administrator for asistance.\n\n" + sb, "Database errors detected", null, Dialogs.DialogIcon.WARNING);
                     }
                 }
             };
             ThreadUtilities.invokeNowOrLater(runnable);
         }
+
         return new ArrayList<Plate>(plates.values());
     }
 
@@ -1928,8 +1906,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         } catch (SQLException e) {
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
-                    returnConnection(connection);
-                }
+            returnConnection(connection);
+        }
     }
 
     @Override
@@ -2230,9 +2208,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     public void createOrUpdatePlate(Plate plate, ProgressListener progress) throws DatabaseServiceException {
         ConnectionWrapper connection = null;
         try {
-            //check the vaidity of the plate.
-            isPlateValid(plate);
-
             connection = getConnection();
             connection.beginTransaction();
 
@@ -2365,18 +2340,18 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     public void isPlateValid(Plate plate) throws DatabaseServiceException {
         try {
-            if(plate.getName() == null || plate.getName().length() == 0) {
+            if (plate.getName() == null || plate.getName().length() == 0) {
                 throw new BadDataException("Plates cannot have empty names");
             }
-            if(plate.getId() < 0) {
+            if (plate.getId() < 0) {
                 PreparedStatement plateCheckStatement = createStatement("SELECT name FROM plate WHERE name=?");
                 plateCheckStatement.setString(1, plate.getName());
-                if(plateCheckStatement.executeQuery().next()) {
-                    throw new BadDataException("A plate with the name '"+plate.getName()+"' already exists");
+                if (plateCheckStatement.executeQuery().next()) {
+                    throw new BadDataException("A plate with the name '" + plate.getName() + "' already exists");
                 }
                 plateCheckStatement.close();
             }
-            if(plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
+            if  (plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
                 throw new BadDataException("The plate has no thermocycle set");
             }
         } catch (BadDataException e) {
@@ -2425,6 +2400,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
     public void savePlates(List<Plate> plates, ProgressListener progress) throws BadDataException, DatabaseServiceException {
         for (Plate plate : plates) {
+            isPlateValid(plate);
             if (plate.getReactionType() == Reaction.Type.Extraction) {
                 saveExtractions(plate, progress);
             } else {
@@ -2439,19 +2415,19 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             connection = getConnection();
             connection.beginTransaction();
 
-            if(progress != null) {
+            if (progress != null) {
                 progress.setMessage("Creating new workflows");
             }
 
             //create workflows if necessary
             //int workflowCount = 0;
             List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
-            for(Reaction reaction : plate.getReactions()) {
-                if(reaction.getType() == Reaction.Type.Extraction) {
+            for (Reaction reaction : plate.getReactions()) {
+                if (reaction.getType() == Reaction.Type.Extraction) {
                     continue;
                 }
                 Object extractionId = reaction.getFieldValue("extractionId");
-                if(!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
+                if (!reaction.isEmpty() && extractionId != null && extractionId.toString().length() > 0 && (reaction.getWorkflow() == null || reaction.getWorkflow().getId() < 0)) {
                     reactionsWithoutWorkflows.add(reaction);
                 }
             }
@@ -2462,9 +2438,10 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     reaction.setWorkflow(workflowList.get(i));
                 }
             }
-            if(progress != null) {
+            if (progress != null) {
                 progress.setMessage("Creating the plate");
             }
+
             //we need to create the plate
             createOrUpdatePlate(plate, progress);
             connection.endTransaction();
@@ -2476,7 +2453,6 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
     }
 
     private void saveExtractions(Plate plate, ProgressListener progress) throws DatabaseServiceException, BadDataException {
-        isPlateValid(plate);
         createOrUpdatePlate(plate, progress);
     }
 

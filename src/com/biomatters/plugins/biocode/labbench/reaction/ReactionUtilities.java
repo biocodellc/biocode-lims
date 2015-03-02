@@ -14,7 +14,9 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ButtonOption;
+import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.options.NamePartOption;
@@ -65,7 +67,6 @@ public class ReactionUtilities {
             return superComponent;
         }
     };
-
 
     /**
      * Shows a dialog and tries to get chromatograms for each reaction by parsing the well name out of the abi file names
@@ -484,7 +485,7 @@ public class ReactionUtilities {
         panelToShow.setBorder(new EmptyBorder(5, 10, 5, 10 ));
         panelToShow.add(new GLabel(
                 "<html>The traces you are adding include well numbers that do not match the plate size.<br><br>" +
-                "How do you want your traces to be added?</html>"), BorderLayout.NORTH);
+                        "How do you want your traces to be added?</html>"), BorderLayout.NORTH);
         panelToShow.add(panel, BorderLayout.CENTER);
         Object o = Dialogs.showDialog(options, panelToShow);
 
@@ -620,7 +621,6 @@ public class ReactionUtilities {
         }
         return nucleotideDocuments;
     }
-
 
     public static void saveAbiFileFromPlate(Plate plate, JComponent owner) {
         Options options = new Options(ReactionUtilities.class);
@@ -792,8 +792,8 @@ public class ReactionUtilities {
         return -1;
     }
 
-    public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating) {
-        if(reactions == null || reactions.size() == 0) {
+    public static boolean editReactions(final List<Reaction> reactions, final JComponent owner, final boolean creating, boolean editingFromPlate) {
+        if(reactions == null || reactions.isEmpty()) {
             throw new IllegalArgumentException("reactions must be non-null and non-empty");
         }
 
@@ -835,12 +835,10 @@ public class ReactionUtilities {
             }
         });
 
-        boolean hasChanges = false;
-        if(choice.get().equals("OK")) {
+        if (choice.get().equals("OK")) {
             int changedOptionCount = 0;
-            hasChanges = true; //todo: check if options actually have changed...
             Element optionsElement = XMLSerializer.classToXML("options", options);
-            if(reactions.size() == 1) {
+            if (reactions.size() == 1) {
                 changedOptionCount = 1;
                 Reaction reaction = reactions.get(0);
                 try {
@@ -869,9 +867,10 @@ public class ReactionUtilities {
                     }
                 }
             }
-            if(changedOptionCount > 0) {
-                String error = reactions.get(0).areReactionsValid(reactions, owner, true);
-                if(error != null) {
+            if (changedOptionCount > 0) {
+                String error = reactions.get(0).areReactionsValid(reactions, owner, editingFromPlate);
+
+                if (!error.isEmpty()) {
                     Dialogs.showMessageDialog(error, "Invalid Reactions", owner, Dialogs.DialogIcon.INFORMATION);
                 }
             }
@@ -1011,7 +1010,6 @@ public class ReactionUtilities {
         return null;
     }
 
-
     /**
      * if an existing template matches the one we're trying to create, that one is returned instead unless createNewEvenIfItMatchesExisting is true
      * @param listSelector
@@ -1137,6 +1135,105 @@ public class ReactionUtilities {
             }
         }
         return sequences;
+    }
+
+    public static void setReactionErrorStates(Collection<? extends Reaction> reactions, boolean errorState) {
+        for (Reaction reaction : reactions) {
+            reaction.setHasError(errorState);
+        }
+    }
+
+    public static Collection<String> getWellNumbers(Collection<? extends Reaction> reactions) {
+        Collection<String> wellNumbers = new HashSet<String>();
+
+        for (Reaction reaction : reactions) {
+            wellNumbers.add(reaction.getLocationString());
+        }
+
+        return wellNumbers;
+    }
+
+    public static <T extends Reaction> Map<String, List<T>> buildAttributeToReactionsMap(Collection<T> reactions, ReactionAttributeGetter<String> reactionAttributeGetter) {
+        Map<String, List<T>> attributeToReactions = new HashMap<String, List<T>>();
+
+        for (T reaction : reactions) {
+            String attribute = reactionAttributeGetter.get(reaction);
+
+            if (attribute != null && !attribute.isEmpty()) {
+                List<T> reactionsAssociatedWithAttribute = attributeToReactions.get(attribute);
+
+                if (reactionsAssociatedWithAttribute == null) {
+                    reactionsAssociatedWithAttribute = new ArrayList<T>();
+
+                    attributeToReactions.put(attribute, reactionsAssociatedWithAttribute);
+                }
+
+                reactionsAssociatedWithAttribute.add(reaction);
+            }
+        }
+
+        return attributeToReactions;
+    }
+
+    public static <T extends Reaction> void setFimsSamplesOnReactions(Collection<T> reactions) throws ConnectionException, DatabaseServiceException {
+        FIMSConnection activeFIMSConnection = BiocodeService.getInstance().getActiveFIMSConnection();
+        LIMSConnection activeLIMSConnection = BiocodeService.getInstance().getActiveLIMSConnection();
+
+        if (activeFIMSConnection != null && activeLIMSConnection != null) {
+            Map<String, List<T>> extractionIDToReactions = ReactionUtilities.buildAttributeToReactionsMap(reactions, new ExtractionIDGetter());
+
+            Map<String, String> extractionIDToTissueID = activeLIMSConnection.getTissueIdsForExtractionIds("extraction", new ArrayList<String>(extractionIDToReactions.keySet()));
+
+            Map<String, FimsSample> tissueIDToFimsSample = new HashMap<String, FimsSample>();
+
+            for (FimsSample fimsSample : activeFIMSConnection.retrieveSamplesForTissueIds(extractionIDToTissueID.values())) {
+                tissueIDToFimsSample.put(fimsSample.getId(), fimsSample);
+            }
+
+            for (Map.Entry<String, List<T>> extractionIDAndReactions : extractionIDToReactions.entrySet()) {
+                String tissueIDForReactions = extractionIDToTissueID.get(extractionIDAndReactions.getKey());
+                if (tissueIDForReactions != null && !tissueIDForReactions.isEmpty()) {
+                    FimsSample fimsSampleForReactions = tissueIDToFimsSample.get(tissueIDForReactions);
+                    if (fimsSampleForReactions != null) {
+                        for (T reaction : extractionIDAndReactions.getValue()) {
+                            reaction.setFimsSample(fimsSampleForReactions);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static void invalidateFieldWidthCacheOfReactions(Collection<? extends Reaction> reactions) {
+        for (Reaction reaction : reactions) {
+            reaction.invalidateFieldWidthCache();
+        }
+    }
+
+    public static Collection<Integer> getDatabaseIDOfExtractions(Collection<? extends Reaction> reactions) {
+        Collection<Integer> databaseIDOfExtractions = new HashSet<Integer>();
+
+        for (Reaction reaction : reactions) {
+            Integer databaseIDOfExtraction = reaction.getDatabaseIdOfExtraction();
+            if (databaseIDOfExtraction != null) {
+                databaseIDOfExtractions.add(databaseIDOfExtraction);
+            }
+        }
+
+        return databaseIDOfExtractions;
+    }
+
+    public static Collection<Integer> getIDs(Collection<? extends Reaction> reactions) {
+        Collection<Integer> ids = new HashSet<Integer>();
+
+        for (Reaction reaction : reactions) {
+            int id = reaction.getId();
+            if (id != -1) {
+                ids.add(id);
+            }
+        }
+
+        return ids;
     }
 
     public static class DocumentFieldWrapper implements GComboBox.DescriptionProvider {

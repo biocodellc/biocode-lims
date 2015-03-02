@@ -302,6 +302,9 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
                                     final SplitPaneListSelector<DocumentField> fieldChooser = new SplitPaneListSelector<DocumentField>(availableFields, model.getVisibleColumns(), ReactionUtilities.DOCUMENT_FIELD_CELL_RENDERER, false);
                                     fieldChooser.setPreferredSize(new Dimension(400, 500));
                                     if (Dialogs.showOkCancelDialog(fieldChooser, "Manage Columns", table, Dialogs.DialogIcon.NO_ICON)) {
+                                        //dragged Column still points to old column which causes problem
+                                        table.getTableHeader().setDraggedColumn(null);
+
                                         Vector<DocumentField> newSelectedFields = fieldChooser.getSelectedFields();
                                         int[] selectedFields = new int[newSelectedFields.size()];
                                         int index = 0;

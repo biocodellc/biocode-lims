@@ -42,7 +42,7 @@ public class BiocodePlugin extends GeneiousPlugin {
     }
 
     private static GeneiousActionOptions superBiocodeAction;
-    public static final String PLUGIN_VERSION = "2.99.5";
+    public static final String PLUGIN_VERSION = "2.8.9";
     public static final String SUPPORT_EMAIL = "support@mooreabiocode.org";
 
     public static GeneiousActionOptions getSuperBiocodeAction() {
@@ -100,9 +100,9 @@ public class BiocodePlugin extends GeneiousPlugin {
                                          String extraInformation) throws IOException, JDOMException {
 
             addLabel("<html>There is a new version of the Biocode plugin available (" + latestVersion + "). " +
-                     "You are<br> " +
-                     "using " + getVersion() + ". If you would like to upgrade, please visit:<br> " +
-                     "<a href=\"" + latestVersionURL + "\">" + latestVersionURL + "</a><br><br></html>");
+                    "You are<br> " +
+                    "using " + getVersion() + ". If you would like to upgrade, please visit:<br> " +
+                    "<a href=\"" + latestVersionURL + "\">" + latestVersionURL + "</a><br><br></html>");
 
             releaseNotesDisplay = addMultipleLineStringOption("releaseNotes", "", releaseNotes, 10, true);
 
@@ -155,13 +155,6 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public void initialize(File pluginUserDirectory, File pluginDirectory) {
-
-        final String pluginVersionsXmlURL = "http://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?" +
-                                            "Version=" + getVersion() +
-                                            "&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" +
-                                            System.getProperty("os.version", "").replace(" ", "_") +
-                                            "&OSArch=" + System.getProperty("os.arch").replace(" ", "_");
-
         this.pluginUserDirectory = pluginUserDirectory;
         Runnable r = new Runnable(){
             public void run() {
@@ -169,6 +162,18 @@ public class BiocodePlugin extends GeneiousPlugin {
             }
         };
         new Thread(r).start();
+
+        if (compareVersions(Geneious.getVersion(), "8.1.0") < 0) {
+            checkUpdate();
+        }
+    }
+
+    private void checkUpdate() {
+        final String pluginVersionsXmlURL = "http://desktop-links.geneious.com/assets/plugins/biocode/PluginVersions.xml?" +
+                "Version=" + getVersion() +
+                "&OS=" + System.getProperty("os.name").replace(" ", "_") + "_" +
+                System.getProperty("os.version", "").replace(" ", "_") +
+                "&OSArch=" + System.getProperty("os.arch").replace(" ", "_");
 
         Runnable r2 = new Runnable(){
             public void run() {
@@ -186,10 +191,10 @@ public class BiocodePlugin extends GeneiousPlugin {
                                 new NewVersionAvailableDialogOptions(latestVersion, latestVersionURL, releaseNotes, extraInformation);
 
                         ThreadUtilities.invokeAndWait(new Runnable() {
-                              @Override
-                              public void run() {
-                                  Dialogs.showDialog(dialogOptions, newVersionAvailableDialogOptions.getPanel());
-                              }
+                            @Override
+                            public void run() {
+                                Dialogs.showDialog(dialogOptions, newVersionAvailableDialogOptions.getPanel());
+                            }
                         });
                     }
                 } catch (MalformedURLException e) {
@@ -212,7 +217,6 @@ public class BiocodePlugin extends GeneiousPlugin {
             new Thread(r2, "Checking for update versions of the biocode plugin").start();
         }
     }
-
 
 
     /**
@@ -353,7 +357,7 @@ public class BiocodePlugin extends GeneiousPlugin {
 
     @Override
     public DocumentOperation[] getDocumentOperations() {
-        DocumentOperation[] operations = new DocumentOperation[] {
+        return new DocumentOperation[] {
 //                new FillInTaxonomyOperation(),
                 new CherryPickingDocumentOperation(),
                 new NewPlateDocumentOperation(),
@@ -372,7 +376,6 @@ public class BiocodePlugin extends GeneiousPlugin {
                 //new ImportLimsOperation()
 //                new ExportForBarstoolOperation(false)
         };
-        return operations;
     }
 
     @Override

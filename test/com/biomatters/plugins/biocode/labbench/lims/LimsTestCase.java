@@ -130,9 +130,14 @@ public abstract class LimsTestCase extends Assert {
 
         int index = 0;
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            ExtractionReaction reaction = (ExtractionReaction)extractionPlate.getReaction(0, index++);
+            int row = index/extractionPlate.getCols();
+            int column = index%extractionPlate.getCols();
+
+            ExtractionReaction reaction = (ExtractionReaction)extractionPlate.getReaction(row, column);
             reaction.setTissueId(entry.getKey());
             reaction.setExtractionId(entry.getValue());
+
+            index++;
         }
 
         service.savePlate(extractionPlate, ProgressListener.EMPTY);
@@ -144,9 +149,14 @@ public abstract class LimsTestCase extends Assert {
 
         int index = 0;
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            ExtractionReaction reaction = (ExtractionReaction)extractionPlate.getReaction(0, index++);
+            int row = index/extractionPlate.getCols();
+            int column = index%extractionPlate.getCols();
+
+            ExtractionReaction reaction = (ExtractionReaction)extractionPlate.getReaction(row, column);
             reaction.setTissueId(entry.getKey());
             reaction.setExtractionId(entry.getValue());
+
+            index++;
         }
 
         service.savePlate(extractionPlate, ProgressListener.EMPTY);
@@ -161,11 +171,17 @@ public abstract class LimsTestCase extends Assert {
         for (Reaction reaction : pcrPlate.getReactions()) {
             System.out.println(reaction.getLocus());
         }
+
         int index = 0;
         for (String extractionId : extractionIds) {
-            PCRReaction reaction = (PCRReaction)pcrPlate.getReaction(0, index++);
+            int row = index/pcrPlate.getCols();
+            int column = index%pcrPlate.getCols();
+
+            PCRReaction reaction = (PCRReaction)pcrPlate.getReaction(row, column);
             reaction.setExtractionId(extractionId);
             reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
+
+            index++;
         }
 
         service.savePlate(pcrPlate, ProgressListener.EMPTY);
@@ -184,10 +200,15 @@ public abstract class LimsTestCase extends Assert {
 
         int index = 0;
         for (String extractionId : extractionIds) {
-            CycleSequencingReaction reaction = (CycleSequencingReaction)plate.getReaction(0, index++);
+            int row = index/plate.getCols();
+            int column = index%plate.getCols();
+
+            CycleSequencingReaction reaction = (CycleSequencingReaction)plate.getReaction(row, column);
             reaction.setExtractionId(extractionId);
             reaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
             reaction.getOptions().setValue(CycleSequencingOptions.DIRECTION, direction);
+
+            index++;
         }
         service.savePlate(plate, ProgressListener.EMPTY);
         return plate;

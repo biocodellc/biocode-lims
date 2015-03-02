@@ -283,7 +283,7 @@ public class PlateBulkEditor {
                             barcodeEditor.textViewFromValues();
                         }
                         catch(IOException ex) {
-                            Dialogs.showMessageDialog("Could not read the input file! "+ex.getMessage());
+                            Dialogs.showMessageDialog("Could not read the input file! " + ex.getMessage());
                         }
                     }
                 }
@@ -370,8 +370,12 @@ public class PlateBulkEditor {
                         }
                     }
 
-                    Runnable runnable = new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor);
-                    BiocodeService.block("Fetching Extractions from the database", barcodeEditor, runnable, null);
+                    BiocodeService.block(
+                            "Fetching Extractions from the database",
+                            getEditorForField(editors, new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false)),
+                            new ExtractionFetcherRunnable(barcodes, editors, plate, barcodeEditor),
+                            null
+                    );
                 }
             };
             toolsActions.add(getExtractionsFromBarcodes);
@@ -593,19 +597,19 @@ public class PlateBulkEditor {
 
         //check that the user hasn't forgotten to click the autodetect workflows button
         int workflowCount = 0;
-        for(DocumentFieldEditor editor : editors) {
-            if(editor.getField().getCode().equals(workflowField.getCode())) {
-                for(int row = 0; row < plate.getRows(); row++) {
-                    for(int col = 0; col < plate.getCols(); col++) {
-                        if(editor.getValue(row, col) != null && editor.getValue(row, col).toString().trim().length() > 0) {
+        for (DocumentFieldEditor editor : editors) {
+            if (editor.getField().getCode().equals(workflowField.getCode())) {
+                for (int row = 0; row < plate.getRows(); row++) {
+                    for (int col = 0; col < plate.getCols(); col++) {
+                        if (editor.getValue(row, col) != null && editor.getValue(row, col).toString().trim().length() > 0) {
                             workflowCount++;
                         }
                     }
                 }
             }
         }
-        if(workflowCount == 0 && fieldToCheck != null && autodetectAction != null) {
-            if(Dialogs.showYesNoDialog("You have not entered any workflows.  You should only enter no workflows if you are intending to start new workflows with these reactions (for example if you are sequencing a new locus).  <br><br>Do you want to autodetect the workflows? (If you have forgotten to click Autodetect Workflows, click yes)", "No workflows", owner, Dialogs.DialogIcon.QUESTION)){
+        if (workflowCount == 0 && fieldToCheck != null && autodetectAction != null) {
+            if (Dialogs.showYesNoDialog("You have not entered any workflows.  You should only enter no workflows if you are intending to start new workflows with these reactions (for example if you are sequencing a new locus).  <br><br>Do you want to autodetect the workflows? (If you have forgotten to click Autodetect Workflows, click yes)", "No workflows", owner, Dialogs.DialogIcon.QUESTION)){
                 autodetectAction.actionPerformed(null);
             }
         }
@@ -790,7 +794,11 @@ public class PlateBulkEditor {
                 return Arrays.asList(TISSUE_SAMPLE_ID_FIELD, EXTRACTION_ID_FIELD, EXTRACTION_BARCODE_FIELD, PARENT_EXTRACTION_ID_FIELD);
             case PCR://drop through
             case CycleSequencing:
-                return Arrays.asList(EXTRACTION_ID_FIELD, LIMSConnection.WORKFLOW_LOCUS_FIELD, WORKFLOW_ID_FIELD);
+                return Arrays.asList(
+                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    LIMSConnection.WORKFLOW_LOCUS_FIELD,
+                    new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
+                );
             default :
                 return Collections.EMPTY_LIST;
         }
@@ -1337,49 +1345,44 @@ public class PlateBulkEditor {
             DocumentFieldEditor extractionIdEditor = getEditorForField(editors, EXTRACTION_ID_FIELD);
             DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, PARENT_EXTRACTION_ID_FIELD);
 
+            tissueEditor.valuesFromTextView();
+            extractionIdEditor.valuesFromTextView();
+            parentExtractionEditor.valuesFromTextView();
+
             try {
                 List<ExtractionReaction> temp = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
                 Map<String, ExtractionReaction> extractions = new HashMap<String, ExtractionReaction>();
                 for (ExtractionReaction reaction : temp) {
                     extractions.put(reaction.getExtractionBarcode(), reaction);
                 }
-                for(int i=0; i < plate.getRows(); i++) {
-                    for(int j=0; j < plate.getCols(); j++) {
+                for (int i=0; i < plate.getRows(); i++) {
+                    for (int j=0; j < plate.getCols(); j++) {
                         Object barcode = barcodeEditor.getValue(i,j);
 
                         //get the extraction
                         ExtractionReaction reaction = null;
-                        if(barcode != null) {
+                        if (barcode != null) {
                             reaction = extractions.get(barcode.toString());
                         }
 
                         //fill in the values
-                        if(reaction != null) {
+                        if (reaction != null) {
                             if(extractionIdEditor != null)
-                                extractionIdEditor.setValue(i,j,reaction.getExtractionId());
+                                extractionIdEditor.setValue(i, j, reaction.getExtractionId());
                             if(parentExtractionEditor != null)
-                                parentExtractionEditor.setValue(i,j,""+reaction.getFieldValue("parentExtraction"));
+                                parentExtractionEditor.setValue(i, j, "" + reaction.getFieldValue("parentExtraction"));
                             if(tissueEditor != null)
-                                tissueEditor.setValue(i,j,reaction.getTissueId());
+                                tissueEditor.setValue(i, j, reaction.getTissueId());
                             //todo: original plate
                         }
-                        else {
-                            if(extractionIdEditor != null)
-                                extractionIdEditor.setValue(i,j,"");
-                            if(parentExtractionEditor != null)
-                                parentExtractionEditor.setValue(i,j,"");
-                            if(tissueEditor != null)
-                                tissueEditor.setValue(i,j,"");
-                        }
-
                     }
-                    if(extractionIdEditor != null)
-                        extractionIdEditor.textViewFromValues();
-                    if(parentExtractionEditor != null)
-                        parentExtractionEditor.textViewFromValues();
-                    if(tissueEditor != null)
-                        tissueEditor.textViewFromValues();
                 }
+                if(extractionIdEditor != null)
+                    extractionIdEditor.textViewFromValues();
+                if(parentExtractionEditor != null)
+                    parentExtractionEditor.textViewFromValues();
+                if(tissueEditor != null)
+                    tissueEditor.textViewFromValues();
             } catch (DatabaseServiceException e1) {
                 Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
                 return;
