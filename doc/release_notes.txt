@@ -1,4 +1,4 @@
-==Biocode Plugin 2.8.8 - TBD==
+==Biocode Plugin 2.8.8 - 2 March 2015==
 * The LIMS now actively tries to prevent duplicate extraction barcodes.  It will ask if extractions should be moved if duplicates are detected.
 * LIMS data will now be annotated with sequencing primers in addition to PCR primers if using GenBank Submission plugin v1.5.0 or greater.
 * Cherry picking an extraction plate will now correctly set the previous plate and well fields.
@@ -7,6 +7,9 @@
 * Fixed a bug that would cause all plates with no workflows to be returned in addition to normal search results when searching solely on FIMS fields.
 * Fixed a problem where 8-strip plates would be displayed with incorrect well numbers in some views.
 * Fixed a problem where annotating an assembly would prevent generation of a consensus with quality scores.
+* Removed the ability to move extraction reactions via the reaction editor invoked from the workflow document viewer.
+* Other minor fixes and improvements.
+
 
 ==Biocode Plugin 2.8.7 - 14 January 2015==
 * Added modifications in response to upcoming changes that will be made to the Biocode FIMS REST service.
