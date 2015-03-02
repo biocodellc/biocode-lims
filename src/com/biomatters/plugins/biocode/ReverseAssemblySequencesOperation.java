@@ -21,8 +21,11 @@ import java.util.*;
  *         Created on 18/02/15 5:21 PM
  */
 public class ReverseAssemblySequencesOperation extends DocumentOperation {
+
+    private static final String TOOLTIP_TEXT = "Select LIMS sequences to reverse complement them in the LIMS database.";
+
     public GeneiousActionOptions getActionOptions() {
-        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Reverse Assembly Sequences", "").setInPopupMenu(true, 1);
+        GeneiousActionOptions geneiousActionOptions = new GeneiousActionOptions("Reverse LIMS Sequences", TOOLTIP_TEXT).setInPopupMenu(true, 1);
         return GeneiousActionOptions.createSubmenuActionOptions(BiocodePlugin.getSuperBiocodeAction(), geneiousActionOptions);
     }
 
@@ -37,7 +40,7 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
         operationProgress.beginSubtask("Checking sequence documents...");
         checkSequencesAreValid(annotatedDocuments);
 
-        operationProgress.beginSubtask("Generating reversed sequences from sequence documents...");
+        operationProgress.beginSubtask("Generating reversed sequences...");
         Map<Integer, String> assemblyIDToAssemblySequenceReversed = getAssemblyIDToAssemblySequenceReversedMap(annotatedDocuments);
 
         operationProgress.beginSubtask("Saving reversed sequences to the LIMS database...");
@@ -47,7 +50,7 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
             throw new DocumentOperationException(e.getMessage(), e);
         }
 
-        operationProgress.beginSubtask("Generating documents from reversed sequences...");
+        operationProgress.beginSubtask("Saving copies of reversed sequences...");
         return DocumentUtilities.createAnnotatedPluginDocuments(getReversedSequenceDocuments(annotatedDocuments));
     }
 
@@ -102,7 +105,7 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
 
             for (Integer assemblyIDFromDocuments : assemblyIDsFromDocuments) {
                 if (!assembyIDsFromAssembledSequencesRetrievedFromLIMS.contains(assemblyIDFromDocuments)) {
-                    throw new DocumentOperationException("Assembly sequence with ID " + assemblyIDFromDocuments + " does not exist in your LIMS database.");
+                    throw new DocumentOperationException("Sequence with ID " + assemblyIDFromDocuments + " does not exist in your LIMS database.");
                 }
             }
         } catch (DatabaseServiceException e) {
@@ -131,6 +134,6 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
     }
 
     public String getHelp() {
-        return "Select assembly sequences for reversing.<br><br><strong>Note:</strong> assembly sequences must exist in your LIMS database.";
+        return TOOLTIP_TEXT + "<br><br><strong>Note:</strong> Sequences must exist in your LIMS database.";
     }
 }
