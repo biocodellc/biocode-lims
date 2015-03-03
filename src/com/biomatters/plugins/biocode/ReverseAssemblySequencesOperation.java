@@ -49,7 +49,7 @@ public class ReverseAssemblySequencesOperation extends DocumentOperation {
             throw new DocumentOperationException(e.getMessage(), e);
         }
 
-        operationProgress.beginSubtask("Saving generated sequences to local database...");
+        operationProgress.beginSubtask("Saving generated sequences...");
         return DocumentUtilities.createAnnotatedPluginDocuments(getReversedSequenceDocuments(annotatedDocuments));
     }
 
