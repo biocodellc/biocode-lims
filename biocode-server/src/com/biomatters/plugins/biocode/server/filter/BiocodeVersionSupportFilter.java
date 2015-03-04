@@ -8,12 +8,17 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 
 /**
+ * A filter to check that a valid version of biocode plugin submitted a request.
+ * The request would be rejected if it does not have biocode_version or ignore_version_check header.
+ * The request with ignore_version_check header will go through without further check.
+ * The request with biocode_version will be rejected if its value does not fall in the range between minVersion and maxVersion, which are configured in web.xml.
+ *
  * @author Frank Lee
  *         Created on 3/02/15 4:28 PM
  */
 public class BiocodeVersionSupportFilter implements Filter {
 
-    public static final String GENEIOUS_VERSION_STRING = "geneious_version";
+    public static final String BIOCODE_VERSION = "biocode_version";
     public static final String IGNORE_VERSION_CHECK = "ignore_version_check";
 
     private String minVersion;
@@ -30,7 +35,7 @@ public class BiocodeVersionSupportFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
 
-        String version = request.getHeader(GENEIOUS_VERSION_STRING);
+        String version = request.getHeader(BIOCODE_VERSION);
         String errorMsg = null;
 
         if (needCheckPath(request.getPathInfo()) && request.getHeader(IGNORE_VERSION_CHECK) == null) {
