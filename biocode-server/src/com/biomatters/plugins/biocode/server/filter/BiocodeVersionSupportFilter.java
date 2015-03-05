@@ -3,9 +3,7 @@ package com.biomatters.plugins.biocode.server.filter;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 
 /**
  * A filter to check that a valid version of biocode plugin submitted a request.
@@ -20,6 +18,7 @@ public class BiocodeVersionSupportFilter implements Filter {
 
     public static final String BIOCODE_VERSION = "biocode_version";
     public static final String IGNORE_VERSION_CHECK = "ignore_version_check";
+    public static final String ERROR_MSG_HEADER = "error_msg";
 
     private String minVersion;
     private String maxVersion;
@@ -94,20 +93,7 @@ public class BiocodeVersionSupportFilter implements Filter {
 
     public void reportError(String msg, HttpServletResponse response) throws IOException {
         response.setStatus(400);
-        BufferedWriter writer = null;
-        try {
-            writer = new BufferedWriter(new OutputStreamWriter(response.getOutputStream()));
-            writer.write(msg);
-            writer.flush();
-        } finally {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (IOException e){
-                    e.printStackTrace();
-                }
-            }
-        }
+        response.addHeader(ERROR_MSG_HEADER, msg);
     }
 
     @Override

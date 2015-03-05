@@ -10,6 +10,7 @@ import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.rest.client.ExceptionClientFilter;
 import com.biomatters.plugins.biocode.labbench.rest.client.ForbiddenExceptionClientFilter;
 import com.biomatters.plugins.biocode.labbench.rest.client.VersionHeaderAddingFilter;
 import org.glassfish.jersey.client.ClientConfig;
@@ -335,6 +336,7 @@ public class RestQueryUtils {
         }).withConfig(new ClientConfig());
         return clientBuilder.build().
                 register(ForbiddenExceptionClientFilter.class).
+                register(ExceptionClientFilter.class).
                 register(VersionHeaderAddingFilter.class).
                 register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false)).
                 register(authFeature).
