@@ -17,7 +17,7 @@
         </init-param>
         <init-param>
             <param-name>maxVersion</param-name>
-            <param-value>4.0.0</param-value>
+            <param-value>3.999.0</param-value>
         </init-param>
     </filter>
     <filter-mapping>
