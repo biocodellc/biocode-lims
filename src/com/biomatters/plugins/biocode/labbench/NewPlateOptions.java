@@ -11,6 +11,7 @@ import org.virion.jam.util.SimpleListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Steven Stones-Havas
@@ -35,25 +36,42 @@ public class NewPlateOptions extends Options{
         this.documents = documents;
 
         //analyse the documents
-        final boolean fromExistingPossible = documents.length > 0;
-        final boolean fourPlates = documents.length > 1;
+        final AtomicBoolean fourPlates = new AtomicBoolean(false);
         boolean allPcrOrSequencing = true;
         Plate.Size pSize = null;
         int numberOfReactions = 0;
-        for(AnnotatedPluginDocument doc : documents) {
-            PlateDocument plateDoc = (PlateDocument)doc.getDocument();
-            Plate.Size size = plateDoc.getPlate().getPlateSize();
-            if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                allPcrOrSequencing = false;
+
+        boolean fromExistingPlates = false;
+        boolean fromExistingTissues = false;
+        if (documents.length > 0) {
+            if (PlateDocument.class.isAssignableFrom(documents[0].getDocumentClass())) {
+                fromExistingPlates = true;
+            } else if (TissueDocument.class.isAssignableFrom(documents[0].getDocumentClass())) {
+                fromExistingTissues = true;
+            } else {
+                throw new DocumentOperationException("Invalid document type encountered: " + documents[0].getDocumentClass().getSimpleName() + ".");
             }
-            if(pSize != null && size != pSize) {
-                throw new DocumentOperationException("All selected plates must be of the same size");
+        }
+
+        if (fromExistingPlates) {
+            if (documents.length == 4) {
+                fourPlates.set(true);
             }
-            numberOfReactions += plateDoc.getPlate().getReactions().length;
-            pSize = size;
+            for (AnnotatedPluginDocument doc : documents) {
+                PlateDocument plateDoc = (PlateDocument) doc.getDocument();
+                Plate.Size size = plateDoc.getPlate().getPlateSize();
+                if (plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+                    allPcrOrSequencing = false;
+                }
+                if (pSize != null && size != pSize) {
+                    throw new DocumentOperationException("All selected plates must be of the same size");
+                }
+                numberOfReactions += plateDoc.getPlate().getReactions().length;
+                pSize = size;
+            }
         }
         final Plate.Size plateSize = pSize;
-        if(fourPlates && plateSize != Plate.Size.w96) {
+        if (fourPlates.get() && plateSize != Plate.Size.w96) {
             throw new DocumentOperationException("You may only combine 96 well plates.");
         }
 
@@ -78,8 +96,9 @@ public class NewPlateOptions extends Options{
         Options.BooleanOption fromExistingOption = null;
         Options.BooleanOption onlyFailed;
         ComboBoxOption passedOrFailed;
-        if(fromExistingPossible) {
-            fromExistingOption = addBooleanOption("fromExisting", "Create plate from existing document", false);
+
+        if (fromExistingPlates) {
+            fromExistingOption = addBooleanOption("fromExistingPlates", "Create plate from existing plate documents", false);
             fromExistingOption.setSpanningComponent(true);
             beginAlignHorizontally(null, false);
             onlyFailed = addBooleanOption("onlyFailed", "Copy only ", false);
@@ -94,6 +113,9 @@ public class NewPlateOptions extends Options{
             else {
                 onlyFailed.setEnabled(false);
             }
+        } else if (fromExistingTissues) {
+            fromExistingOption = addBooleanOption("fromExistingTissues", "Create plate from existing tissue documents", false);
+            fromExistingOption.setSpanningComponent(true);
         }
 
         addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
@@ -137,12 +159,11 @@ public class NewPlateOptions extends Options{
 
         addChildOptions("fromQuadrant", "Quadrant", "", docChooserOptions);
 
-
-        if(fromExistingOption != null) {
+        if (fromExistingOption != null) {
             final Options.BooleanOption fromExistingOption1 = fromExistingOption;
             SimpleListener fromExistingListener = new SimpleListener() {
                 public void objectChanged() {
-                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
+                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates.get() && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
                     docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(PLATE_384));
                     reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
                 }
@@ -183,9 +204,11 @@ public class NewPlateOptions extends Options{
         }
     }
 
-    public boolean isFromExisting() {
-        return "true".equals(getValueAsString("fromExisting"));
+    public boolean isFromExistingPlates() {
+        return "true".equals(getValueAsString("fromExistingPlates"));
     }
+
+    public boolean isFromExistingTissues() { return "true".equals(getValueAsString("fromExistingTissues"));}
 
     public boolean copyOnlyFailedReactions() {
         return "true".equals(getValueAsString("onlyFailed")) && "failed".equals(getValueAsString("passedOrFailed"));
@@ -198,21 +221,26 @@ public class NewPlateOptions extends Options{
     @Override
     public String verifyOptionsAreValid() {
         //analyse the documents
-        final boolean fourPlates = documents.length == 4;
+        boolean fourPlates = false;
         Plate.Size pSize = null;
-        for(AnnotatedPluginDocument doc : documents) {
-            PlateDocument plateDoc;
-            try {
-                plateDoc = (PlateDocument)doc.getDocument();
-            } catch (DocumentOperationException e) {
-                return e.getMessage();
+
+        if (isFromExistingPlates()) {
+            fourPlates = documents.length == 4;
+            for (AnnotatedPluginDocument doc : documents) {
+                PlateDocument plateDoc;
+                try {
+                    plateDoc = (PlateDocument) doc.getDocument();
+                } catch (DocumentOperationException e) {
+                    return e.getMessage();
+                }
+                Plate.Size size = plateDoc.getPlate().getPlateSize();
+                if (pSize != null && size != pSize) {
+                    return "All plates must be of the same size";
+                }
+                pSize = size;
             }
-            Plate.Size size = plateDoc.getPlate().getPlateSize();
-            if(pSize != null && size != pSize) {
-                return "All plates must be of the same size";
-            }
-            pSize = size;
         }
+
         final Plate.Size plateSize = pSize;
         if(fourPlates && plateSize != Plate.Size.w96) {
             return "You may only combine 96 well plates.  Select up to four 96 well plate documents.";
@@ -222,7 +250,7 @@ public class NewPlateOptions extends Options{
             return "Several plate documents can only be combined into a 384 well plate.  Select \"384 well plate\".";
         }
 
-        if(isFromExisting()) {
+        if(isFromExistingPlates()) {
             if(getPlateSize() == Plate.Size.w96 && plateSize != Plate.Size.w384 && documents.length > 1){
                 return "You can only create 96 well plates from a single 96 or 384 well plate document";
             }

@@ -1,6 +1,5 @@
 package com.biomatters.plugins.biocode.labbench;
 
-import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.*;
@@ -11,10 +10,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.plates.PlateViewer;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionOptions;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import jebl.util.ProgressListener;
 
 import java.util.*;
@@ -37,8 +33,9 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
     public DocumentSelectionSignature[] getSelectionSignatures() {
         return new DocumentSelectionSignature[]{
-                new DocumentSelectionSignature(new DocumentSelectionSignature.DocumentSelectionSignatureAtom[0]),
-                new DocumentSelectionSignature(PlateDocument.class,1,4)
+                new DocumentSelectionSignature(Object.class, 0, 0),
+                new DocumentSelectionSignature(PlateDocument.class, 1, 4),
+                new DocumentSelectionSignature(TissueDocument.class, 1, Integer.MAX_VALUE)
         };
     }
 
@@ -69,18 +66,24 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         Plate.Size pSize = null;
         final Plate.Size sizeFromOptions = options.getPlateSize();
         final Reaction.Type typeFromOptions = options.getReactionType();
-        final boolean fromExisting = options.isFromExisting();
+        final boolean fromExistingPlates = options.isFromExistingPlates();
+        final boolean fromExistingTissues = options.isFromExistingTissues();
         final boolean copyOnlyFailed = options.copyOnlyFailedReactions();
         final boolean copyOnlyPassed = options.copyOnlyPassedReactions();
         final AtomicReference<PlateViewer> plateViewer = new AtomicReference<PlateViewer>();
         final int numberOfReactionsFromOptions = options.getNumberOfReactions();
         int reactionCount = 0;
-        if(fromExisting) {
-            for(AnnotatedPluginDocument doc : documents) {
+
+        if (fromExistingTissues && !options.getReactionType().equals(Reaction.Type.Extraction)) {
+            throw new DocumentOperationException(options.getReactionType().name() + " plates cannot be created from tissue IDs.");
+        }
+
+        if (fromExistingPlates) {
+            for (AnnotatedPluginDocument doc : documents) {
                 PlateDocument plateDoc = (PlateDocument)doc.getDocument();
                 Plate.Size size = plateDoc.getPlate().getPlateSize();
                 reactionCount = plateDoc.getPlate().getReactions().length;
-                if(pSize != null && size != pSize) {
+                if (pSize != null && size != pSize) {
                     throw new DocumentOperationException("All plates must be of the same size");
                 }
                 pSize = size;                      
@@ -116,7 +119,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         };
         ThreadUtilities.invokeNowOrWait(runnable);
         
-        if(fromExisting) {
+        if(fromExistingPlates) {
             PlateDocument plateDoc = (PlateDocument)documents[0].getDocument();
             Plate plate = plateDoc.getPlate();
             Plate editingPlate = plateViewer.get().getPlate();
@@ -154,10 +157,57 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             }
 
             progressListener.setProgress(1.0);
+        } else if (fromExistingTissues) {
+            initializePlate(plateViewer.get().getPlate(), getTissueDocuments(documents));
         }
+
         plateViewer.get().displayInFrame(true, GuiUtilities.getMainFrame());
 
         return null;
+    }
+
+    private static Collection<TissueDocument> getTissueDocuments(AnnotatedPluginDocument[] annotatedPluginDocumentsContainingTissueDocuments) throws DocumentOperationException {
+        Collection<TissueDocument> tissueDocuments = new ArrayList<TissueDocument>();
+
+        for (AnnotatedPluginDocument annotatedPluginDocument : annotatedPluginDocumentsContainingTissueDocuments) {
+            if (!TissueDocument.class.isAssignableFrom(annotatedPluginDocument.getDocumentClass())) {
+                throw new DocumentOperationException("Unexpected document type, expected: TissueDocument, actual: " + annotatedPluginDocument.getDocumentClass().getSimpleName() + ".");
+            }
+
+            tissueDocuments.add((TissueDocument)annotatedPluginDocument.getDocument());
+        }
+
+        return tissueDocuments;
+    }
+
+    private static void initializePlate(Plate plate, Collection<TissueDocument> tissueDocuments) throws DocumentOperationException {
+        Iterator<String> tissueIDIterator = getTissueIDs(tissueDocuments).iterator();
+        for (Reaction reaction : plate.getReactions()) {
+            if (!(reaction instanceof ExtractionReaction)) {
+                throw new DocumentOperationException("Cannot assign tissue ID to non extraction reaction.");
+            }
+
+            if (!tissueIDIterator.hasNext()) {
+                break;
+            }
+
+            ((ExtractionReaction)reaction).setTissueId(tissueIDIterator.next());
+        }
+    }
+
+    private static Collection<String> getTissueIDs(Collection<TissueDocument> tissueDocuments) {
+        Collection<String> tissueIDs = new ArrayList<String>();
+
+        for (TissueDocument tissueDocument : tissueDocuments) {
+            String tissueID = tissueDocument.getId();
+            if (tissueID == null) {
+                tissueIDs.add("");
+            } else {
+                tissueIDs.add(tissueID);
+            }
+        }
+
+        return tissueIDs;
     }
 
     private void copyPlateToReactionList(Plate srcPlate, Plate destPlate) throws DocumentOperationException{
