@@ -1,5 +1,6 @@
 ==Biocode Plugin 3.0.0 - TBD==
 * 'BOLD Trace submission': New function to create packages for submission of traces to BOLD.
+* Added the ability to create extraction plates from tissue documents.
 * Search performance improvements.
 * Faster download of sequences.  Download of workflow documents is no longer required when downloading sequences.
 * The # Traces, # Sequences, # Passed Sequences and Sequence Progress fields now show up for workflow documents.
