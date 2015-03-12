@@ -18,7 +18,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -142,23 +141,27 @@ public class TableExporter {
 
     public static abstract class ExportTableAction extends GeneiousAction {
         protected JTable tableToExport;
-        public ExportTableAction(String actionName, JTable tableToExport) {
+        private String exportFileExtension;
+        private String exportFileExtensionDescription;
+
+        public ExportTableAction(String actionName, JTable tableToExport, String exportFileExtension, String exportFileExtensionDescription) {
             super(actionName);
             this.tableToExport = tableToExport;
+            this.exportFileExtension = exportFileExtension;
+            this.exportFileExtensionDescription = exportFileExtensionDescription;
         }
 
-        protected final File showSelectOutFileDialog(List<String> validFileExtensions, String description) {
+        private File showSelectOutFileDialog() {
             File outFile = null;
             JFileChooser exportFileChooser = new JFileChooser("", FileSystemView.getFileSystemView());
 
-            exportFileChooser.setFileFilter(new FileNameExtensionFilter(description, validFileExtensions.toArray(new String[validFileExtensions.size()])));
+            exportFileChooser.setFileFilter(new FileNameExtensionFilter(exportFileExtensionDescription, exportFileExtension));
 
             switch (exportFileChooser.showSaveDialog(tableToExport)) {
-                case JFileChooser.APPROVE_OPTION:
-                    outFile = exportFileChooser.getSelectedFile();
-                    break;
                 case JFileChooser.ERROR_OPTION:
-                    Dialogs.showMessageDialog("Error occurred while selecting export file.");
+                    Dialogs.showMessageDialog("An error occurred while selecting export file.");
+                case JFileChooser.APPROVE_OPTION:
+                    outFile = processExportFile(exportFileChooser.getSelectedFile());
                 case JFileChooser.CANCEL_OPTION:
                 default:
             }
@@ -166,47 +169,51 @@ public class TableExporter {
             return outFile;
         }
 
+        private File processExportFile(File exportFile) {
+            return exportFile.getAbsolutePath().endsWith(exportFileExtension) ? exportFile : new File(exportFile.getAbsolutePath() + exportFileExtension);
+        }
+
         @Override
         public void actionPerformed(ActionEvent actionEvent) {
-            try {
-                export();
-            } catch (DocumentOperationException e) {
-                Dialogs.showMessageDialog("An error occurred while trying to export table " + tableToExport.getName() + ": " + e.getMessage(), "Could not export table " + tableToExport.getName(), tableToExport, Dialogs.DialogIcon.ERROR);
+            File exportFile = showSelectOutFileDialog();
+            if (exportFile != null) {
+                try {
+                    export(exportFile);
+                } catch (DocumentOperationException e) {
+                    Dialogs.showMessageDialog("An error occurred while trying to export table " + tableToExport.getName() + ": " + e.getMessage(), "Could not export table " + tableToExport.getName(), tableToExport, Dialogs.DialogIcon.ERROR);
+                }
             }
         }
 
-        protected abstract void export() throws DocumentOperationException;
+        protected abstract void export(File exportFile) throws DocumentOperationException;
     }
 
     public static class ExportTableToSpreadsheetAction extends ExportTableAction {
         public ExportTableToSpreadsheetAction(JTable tableToExport) {
-            super("Export to Spreadsheet", tableToExport);
+            super("Export to Spreadsheet", tableToExport, ".xls", "Excel Binary File Format (*.xls)");
         }
 
         @Override
-        protected void export() throws DocumentOperationException {
-            File exportFile = showSelectOutFileDialog(Collections.singletonList(".xls"), "Excel Binary File Format (*.xls)");
-            if (exportFile != null) {
-                WritableWorkbook workbook = null;
-                try {
-                    workbook = Workbook.createWorkbook(exportFile);
+        protected void export(File exportFile) throws DocumentOperationException {
+            WritableWorkbook workbook = null;
+            try {
+                workbook = Workbook.createWorkbook(exportFile);
 
-                    ExcelUtilities.exportTable(workbook.createSheet(tableToExport.getName() + "Table to export", 0), tableToExport.getModel(), ProgressListener.EMPTY);
+                ExcelUtilities.exportTable(workbook.createSheet(tableToExport.getName() + "Table to export", 0), tableToExport.getModel(), ProgressListener.EMPTY);
 
-                    workbook.write();
-                } catch (WriteException e) {
-                    throw new DocumentOperationException(e.getMessage(), e);
-                } catch (IOException e) {
-                    throw new DocumentOperationException(e.getMessage(), e);
-                } finally {
-                    if (workbook != null) {
-                        try {
-                            workbook.close();
-                        } catch (WriteException e) {
-                            e.printStackTrace();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                workbook.write();
+            } catch (WriteException e) {
+                throw new DocumentOperationException(e.getMessage(), e);
+            } catch (IOException e) {
+                throw new DocumentOperationException(e.getMessage(), e);
+            } finally {
+                if (workbook != null) {
+                    try {
+                        workbook.close();
+                    } catch (WriteException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -215,36 +222,30 @@ public class TableExporter {
 
     public static class ExportTableToCSVAction extends ExportTableAction {
         public ExportTableToCSVAction(JTable tableToExport) {
-            super("Export to CSV file", tableToExport);
+            super("Export to CSV file", tableToExport, ".csv", "Comma Separated Values (*.csv)");
         }
 
         @Override
-        protected void export() throws DocumentOperationException {
-            File exportFile = showSelectOutFileDialog(Collections.singletonList(".csv"), "Comma Separated Values (*.csv)");
-            if (exportFile != null) {
-                try {
-                    TableExporter.writeTableToCSV(exportFile, tableToExport);
-                } catch (IOException e) {
-                    throw new DocumentOperationException(e.getMessage(), e);
-                }
+        protected void export(File exportFile) throws DocumentOperationException {
+            try {
+                TableExporter.writeTableToCSV(exportFile, tableToExport);
+            } catch (IOException e) {
+                throw new DocumentOperationException(e.getMessage(), e);
             }
         }
     }
 
     public static class ExportTableToTSVAction extends ExportTableAction {
         public ExportTableToTSVAction(JTable tableToExport) {
-            super("Export to TSV file", tableToExport);
+            super("Export to TSV file", tableToExport, ".tsv", "Tab Separated Values (*.tsv)");
         }
 
         @Override
-        protected void export() throws DocumentOperationException {
-            File exportFile = showSelectOutFileDialog(Collections.singletonList(".tsv"), "Tab Separated Values (*.tsv)");
-            if (exportFile != null) {
-                try {
-                    TableExporter.writeTableToTSV(exportFile, tableToExport);
-                } catch (IOException e) {
-                    throw new DocumentOperationException(e.getMessage(), e);
-                }
+        protected void export(File exportFile) throws DocumentOperationException {
+            try {
+                TableExporter.writeTableToTSV(exportFile, tableToExport);
+            } catch (IOException e) {
+                throw new DocumentOperationException(e.getMessage(), e);
             }
         }
     }
