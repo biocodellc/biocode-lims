@@ -393,24 +393,18 @@ public class Connection implements XMLSerializable {
         };
 
 
-        // This loads the top level connection options if they are necessary.  For example the selected table in a Fusion Tables connection.
-        Runnable loadTopLevelOptions = new Runnable() {
+        Runnable initializeOptions = new Runnable() {
             @Override
             public void run() {
                 try {
                     connectionOptions.prepare();
-                    connectionOptions.preUpdateOptions();
-                } catch (ConnectionException e) {
-                    //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
-                    e.printStackTrace();
-                }
-            }
-        };
 
-        final Runnable loadPossibleColumns = new Runnable() {
-            @Override
-            public void run() {
-                try {
+                    connectionOptions.preUpdateOptions();
+
+                    if (loginOptionsValuesLocal != null) {
+                        connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                    }
+
                     connectionOptions.updateOptions();
                 } catch (ConnectionException e) {
                     //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
@@ -420,18 +414,7 @@ public class Connection implements XMLSerializable {
         };
 
 
-        Runnable setSavedColumnValuesAndDoFinalPanelUpdate = new Runnable() {
-            @Override
-            public void run() {
-                if (loginOptionsValuesLocal != null) {
-                    connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
-                }
-
-                doSomethingInTheBackgroundThenSomethingElseInSwingThread(loadPossibleColumns, finalPanelUpdate);
-            }
-        };
-
-        doSomethingInTheBackgroundThenSomethingElseInSwingThread(loadTopLevelOptions, setSavedColumnValuesAndDoFinalPanelUpdate);
+        doSomethingInTheBackgroundThenSomethingElseInSwingThread(initializeOptions, finalPanelUpdate);
     }
 
     private void doSomethingInTheBackgroundThenSomethingElseInSwingThread(final Runnable backgroundSomething, final Runnable swingSomethingElse) {
