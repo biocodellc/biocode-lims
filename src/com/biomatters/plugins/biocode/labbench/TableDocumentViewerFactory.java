@@ -6,10 +6,12 @@ import com.biomatters.geneious.publicapi.components.GTable;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.*;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
 import com.biomatters.plugins.biocode.labbench.reaction.SplitPaneListSelector;
 import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
+import com.biomatters.plugins.biocode.utilities.TableExporter;
 import org.virion.jam.util.SimpleListener;
 
 import javax.swing.*;
@@ -77,8 +79,20 @@ public abstract class TableDocumentViewerFactory extends DocumentViewerFactory{
      * @param model ...
      * @return  ...
      */
-    protected ActionProvider getActionProvider(JTable table, TableModel model) {
-        return null;
+    protected ActionProvider getActionProvider(final JTable table, final TableModel model) {
+        return new ActionProvider() {
+            @Override
+            public List<GeneiousAction> getOtherActions() {
+                return Collections.<GeneiousAction>singletonList(new GeneiousAction.SubMenu(
+                        new GeneiousActionOptions("Export table", "", IconUtilities.getIcons("export16.png")),
+                        Arrays.<GeneiousAction>asList(
+                                new TableExporter.ExportTableToSpreadsheetAction(table),
+                                new TableExporter.ExportTableToCSVAction(table),
+                                new TableExporter.ExportTableToTSVAction(table)
+                        )
+                ));
+            }
+        };
     }
 
     public String getUniqueId() {
