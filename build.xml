@@ -104,7 +104,7 @@
         </copy>
     </target>
 
-    <target name="compile-plugin" depends="prepare,retrieve-plugin-dependencies">
+    <target name="compile-plugin" depends="clean,prepare,retrieve-plugin-dependencies">
         <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
             <classpath refid="classpath"/>
             <src path="${src}"/>
