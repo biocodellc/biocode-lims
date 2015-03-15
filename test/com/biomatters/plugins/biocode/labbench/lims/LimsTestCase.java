@@ -37,7 +37,7 @@ public abstract class LimsTestCase extends Assert {
     public static void waitForTissueColumnInitialization(String spreadsheetPath, ExcelFimsConnectionOptions options) {
         options.setValue(ExcelFimsConnectionOptions.CONNECTION_OPTIONS_KEY + "." +ExcelFimsConnectionOptions.FILE_LOCATION, spreadsheetPath);
         long timeWaited = 0;
-        while ("None".equals(options.getTissueColumn())) {
+        while ("none".equals(options.getTissueColumn().toLowerCase())) {
             ThreadUtilities.sleep(WAIT_INCREMENT);
             timeWaited += WAIT_INCREMENT;
             assertTrue("Waited " + timeWaited + "ms for Options to update and gave up.", timeWaited < MAX_TIME_TO_WAIT_FOR_OPTIONS_UPDATE);
