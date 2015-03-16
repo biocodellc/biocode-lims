@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Contains methods and classes for the exportation of JTables into various formats.
+ * Contains methods and classes for exporting JTables in various formats.
  *
  * Adapted from:
  * - com.biomatters.geneious.common.CSVTableExporter
@@ -38,10 +38,10 @@ public class TableExporter {
     private TableExporter() {
     }
 
-    public static String escapeValue(String value) {
+    public static String escapeValue(String value, String separator) {
         value = value.replaceAll("\"", "\"\"");
 
-        if (value.contains("\"") || value.contains(",") || value.contains("\n")) {
+        if (value.contains("\"") || value.contains(separator) || value.contains("\n")) {
             value = "\"" + value + "\"";
         }
 
@@ -56,7 +56,7 @@ public class TableExporter {
             } else {
                 writer.write(separator);
             }
-            writer.write(escapeValue(value));
+            writer.write(escapeValue(value, separator));
         }
         writer.newLine();
     }
@@ -94,7 +94,7 @@ public class TableExporter {
                 }
 
                 writeRow(writer, values, separator);
-            }
+                }
         } finally {
             GeneralUtilities.attemptClose(writer);
         }
@@ -127,7 +127,6 @@ public class TableExporter {
      * @param string the string to strip html tags from
      * @param onlyIfStartsWithHtmlTag if this is true, then only if the string starts with an html tag (&lt;html;&gt;) will any tags be stripped
      * @return the string without any html tags
-     * @since API 4.800 (Geneious 8.0.0)
      */
     private static String stripHtmlTags(String string, boolean onlyIfStartsWithHtmlTag) {
         if ((string == null) || "".equals(string) || (onlyIfStartsWithHtmlTag && !string.regionMatches(true, 0, "<html>", 0, 6))) {
@@ -170,7 +169,32 @@ public class TableExporter {
         }
 
         private File processExportFile(File exportFile) {
-            return exportFile.getAbsolutePath().endsWith(exportFileExtension) ? exportFile : new File(exportFile.getAbsolutePath() + exportFileExtension);
+            if (!exportFile.getAbsolutePath().endsWith(exportFileExtension)) {
+                exportFile = new File(exportFile.getAbsolutePath() + exportFileExtension);
+            }
+
+            if (exportFile.exists()) {
+                if (exportFile.isDirectory()) {
+                    Dialogs.showMessageDialog(
+                            "A directory named " + exportFile.getName() + " exists in the output directory.",
+                            "Cannot Export Table",
+                            tableToExport,
+                            Dialogs.DialogIcon.WARNING
+                    );
+
+                    exportFile = null;
+                }
+                else if (!Dialogs.showYesNoDialog(
+                        "A file named " + exportFile.getName() + " already exists in the output directory. " +
+                                "Do you wish to overwrite the existing file?",
+                        "File With Same Name Exists",
+                        tableToExport,
+                        Dialogs.DialogIcon.WARNING)) {
+                    exportFile = null;
+                }
+            }
+
+            return exportFile;
         }
 
         @Override
