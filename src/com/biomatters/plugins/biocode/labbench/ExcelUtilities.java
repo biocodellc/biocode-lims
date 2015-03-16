@@ -4,12 +4,10 @@ import com.biomatters.plugins.biocode.utilities.ObjectAndColor;
 import jxl.write.*;
 import jxl.write.Label;
 import jxl.format.Colour;
-import jxl.NumberCell;
 
 import javax.swing.table.TableModel;
 
 import jebl.util.ProgressListener;
-import com.biomatters.geneious.publicapi.plugin.Options;
 
 import java.awt.*;
 import java.lang.Number;
@@ -20,19 +18,18 @@ public class ExcelUtilities {
     @SuppressWarnings({"UnusedDeclaration"})
     public static void exportTable(WritableSheet sheet, TableModel table, ProgressListener progressListener) throws WriteException {
         WritableFont defaultFont = new WritableFont(WritableFont.ARIAL);
+        int columnCount = table.getColumnCount();
 
         //write out the column headers
-        for (int i = 0; i < table.getColumnCount(); i++) {
+        for (int i = 0; i < columnCount; i++) {
             WritableFont font = new WritableFont(defaultFont);
             font.setBoldStyle(WritableFont.BOLD);
             sheet.addCell(new Label(i, 0, table.getColumnName(i), new WritableCellFormat(font)));
             sheet.setColumnView(i, 25);
         }
 
-
-
         //write out the values
-        for (int i = 0; i < table.getColumnCount(); i++) {
+        for (int i = 0; i < columnCount; i++) {
             for (int j = 0; j < table.getRowCount(); j++) {
                 Object tableValue = table.getValueAt(j, i);
                 WritableCell cell;
@@ -48,7 +45,6 @@ public class ExcelUtilities {
                     font.setColour(closestColour);
                     format = new WritableCellFormat(font);
                 }
-
 
                 if(tableValue == null) {
                     cell = new Blank(i, j + 1);
@@ -71,6 +67,8 @@ public class ExcelUtilities {
 
                 sheet.addCell(cell);
             }
+
+            progressListener.setProgress(i + 1, columnCount);
         }
     }
 

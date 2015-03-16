@@ -1,10 +1,15 @@
 package com.biomatters.plugins.biocode.utilities;
 
 import com.biomatters.geneious.publicapi.components.Dialogs;
+import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
+import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
+import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
+import jebl.util.BasicProgressListener;
 import jebl.util.ProgressListener;
 import jxl.Workbook;
 import jxl.write.WritableWorkbook;
@@ -67,12 +72,13 @@ public class TableExporter {
      * @param outFile file to write the table to.
      * @param table table whose data is to be written.
      */
-    private static void writeTableToSeparatedValuesFile(File outFile, JTable table, String separator) throws IOException {
+    private static void writeTableToSeparatedValuesFile(File outFile, JTable table, String separator, ProgressListener progressListener) throws IOException {
         BufferedWriter writer = null;
         try {
             writer = new BufferedWriter(new FileWriter(outFile));
-            int columnCount = table.getColumnModel().getColumnCount();
+            int rowCount = table.getRowCount(), columnCount = table.getColumnModel().getColumnCount();
             List<String> values = new LinkedList<String>();
+
 
             for (int column = 0; column < columnCount; column++) {
                 // the sense fragments viewer needs this rather than table.getColumnName(column)
@@ -81,7 +87,7 @@ public class TableExporter {
 
             writeRow(writer, values, separator);
 
-            for (int row = 0; row < table.getRowCount(); row++) {
+            for (int row = 0; row < rowCount; row++) {
                 values.clear();
 
                 for (int column = 0; column < columnCount; column++) {
@@ -94,7 +100,8 @@ public class TableExporter {
                 }
 
                 writeRow(writer, values, separator);
-                }
+                progressListener.setProgress(row + 1, rowCount);
+            }
         } finally {
             GeneralUtilities.attemptClose(writer);
         }
@@ -105,9 +112,10 @@ public class TableExporter {
      * entire table into a .csv file.
      * @param outFile .csv file to write the table to.
      * @param table table whose data is to be written
+     * @param progressListener
      */
-    public static void writeTableToCSV(File outFile, JTable table) throws IOException {
-        writeTableToSeparatedValuesFile(outFile, table, COMMA);
+    public static void writeTableToCSV(File outFile, JTable table, ProgressListener progressListener) throws IOException {
+        writeTableToSeparatedValuesFile(outFile, table, COMMA, progressListener);
     }
 
     /**
@@ -115,9 +123,10 @@ public class TableExporter {
      * entire table into a .tsv file.
      * @param outFile .tsv file to write the table to.
      * @param table table whose data is to be written
+     * @param progressListener
      */
-    public static void writeTableToTSV(File outFile, JTable table) throws IOException {
-        writeTableToSeparatedValuesFile(outFile, table, TAB);
+    public static void writeTableToTSV(File outFile, JTable table, ProgressListener progressListener) throws IOException {
+        writeTableToSeparatedValuesFile(outFile, table, TAB, progressListener);
     }
 
     private static final Pattern htmlTagPattern = Pattern.compile("</?[a-zA-Z0-9][^>]*>");
@@ -199,13 +208,23 @@ public class TableExporter {
 
         @Override
         public void actionPerformed(ActionEvent actionEvent) {
-            File exportFile = showSelectOutFileDialog();
+            final File exportFile = showSelectOutFileDialog();
             if (exportFile != null) {
-                try {
-                    export(exportFile);
-                } catch (DocumentOperationException e) {
-                    Dialogs.showMessageDialog("An error occurred while trying to export table " + tableToExport.getName() + ": " + e.getMessage(), "Could not export table " + tableToExport.getName(), tableToExport, Dialogs.DialogIcon.ERROR);
-                }
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            export(exportFile);
+                        } catch (DocumentOperationException e) {
+                            Dialogs.showMessageDialog(
+                                    "An error occurred while trying to export table " + tableToExport.getName() + ": " + e.getMessage(),
+                                    "Could not export table " + tableToExport.getName(),
+                                    tableToExport,
+                                    Dialogs.DialogIcon.ERROR
+                            );
+                        }
+                    }
+                }).start();
             }
         }
 
@@ -223,7 +242,11 @@ public class TableExporter {
             try {
                 workbook = Workbook.createWorkbook(exportFile);
 
-                ExcelUtilities.exportTable(workbook.createSheet(tableToExport.getName() + "Table to export", 0), tableToExport.getModel(), ProgressListener.EMPTY);
+                ExcelUtilities.exportTable(
+                        workbook.createSheet(tableToExport.getName() + "Table to export", 0),
+                        tableToExport.getModel(),
+                        BiocodeUtilities.getBlockingProgressFrame("Exporting Table To Spreadsheet", tableToExport)
+                );
 
                 workbook.write();
             } catch (WriteException e) {
@@ -252,7 +275,11 @@ public class TableExporter {
         @Override
         protected void export(File exportFile) throws DocumentOperationException {
             try {
-                TableExporter.writeTableToCSV(exportFile, tableToExport);
+                TableExporter.writeTableToCSV(
+                        exportFile,
+                        tableToExport,
+                        BiocodeUtilities.getBlockingProgressFrame("Exporting Table To CSV File", tableToExport)
+                );
             } catch (IOException e) {
                 throw new DocumentOperationException(e.getMessage(), e);
             }
@@ -267,7 +294,11 @@ public class TableExporter {
         @Override
         protected void export(File exportFile) throws DocumentOperationException {
             try {
-                TableExporter.writeTableToTSV(exportFile, tableToExport);
+                TableExporter.writeTableToTSV(
+                        exportFile,
+                        tableToExport,
+                        BiocodeUtilities.getBlockingProgressFrame("Exporting Table To CSV File", tableToExport)
+                );
             } catch (IOException e) {
                 throw new DocumentOperationException(e.getMessage(), e);
             }
