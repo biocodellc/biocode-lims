@@ -5,12 +5,7 @@ import com.biomatters.geneious.publicapi.components.ProgressFrame;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.GeneiousAction;
 import com.biomatters.geneious.publicapi.utilities.GeneralUtilities;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
-import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
-import jebl.util.BasicProgressListener;
-import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import jxl.Workbook;
 import jxl.write.WritableWorkbook;
@@ -247,7 +242,7 @@ public class TableExporter {
             try {
                 workbook = Workbook.createWorkbook(exportFile);
 
-                ProgressFrame progressFrame = new ProgressFrame("Exporting Table To CSV", "", 0, true);
+                ProgressFrame progressFrame = new ProgressFrame("Exporting Table To Excel", "", 0, true);
 
                 ExcelUtilities.exportTable(
                         workbook.createSheet(tableToExport.getName() + "Table to export", 0),
@@ -308,7 +303,7 @@ public class TableExporter {
                 TableExporter.writeTableToTSV(
                         exportFile,
                         tableToExport,
-                        new ProgressFrame("Exporting Table To CSV", "", 0, true)
+                        new ProgressFrame("Exporting Table To TSV", "", 0, true)
                 );
             } catch (IOException e) {
                 throw new DocumentOperationException(e.getMessage(), e);
