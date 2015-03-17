@@ -73,19 +73,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable()
-            .authorizeRequests()
+                .authorizeRequests()
                 .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**").hasAuthority(LimsDatabaseConstants.AUTHORITY_ADMIN_CODE)
                 .antMatchers(INFO_URL + "/**").permitAll()
                 .antMatchers(BASE_URL + "/**", BCIDROOTS_URL + "/**").authenticated()
                 .anyRequest().permitAll().and()
-            .addFilter(filter())
-            .httpBasic();
+                .addFilter(filter())
+                .httpBasic();
 
         if (LIMSInitializationListener.getLDAPConfiguration() != null) {
             String LDAPAdminAuthority = LIMSInitializationListener.getLDAPConfiguration().getAdminAuthority();
             if (!StringVerificationUtilities.isStringNULLOrEmpty(LDAPAdminAuthority)) {
                 http.authorizeRequests()
-                    .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**").hasAuthority(LDAPAdminAuthority);
+                        .antMatchers(PROJECTS_URL + "/**", USERS_URL + "/**").hasAuthority(LDAPAdminAuthority);
             }
         }
     }
@@ -134,8 +134,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             connection = dataSource.getConnection();
             Set<String> tables = SqlUtilities.getDatabaseTableNamesLowerCase(connection);
 
-            if (!tables.contains(LimsDatabaseConstants.WORKFLOW_PROJECT_TABLE_NAME.toLowerCase())) {
-                dropAccessControlTables(connection);
+            if(!tables.contains(LimsDatabaseConstants.USERS_TABLE_NAME.toLowerCase())) {
                 setupTables(connection);
             }
 
@@ -149,17 +148,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         } finally {
             SqlUtilities.closeConnection(connection);
         }
-    }
-
-    private static void dropAccessControlTables(Connection connection) throws SQLException, IOException {
-        String dropAccessControlTablesScriptName = "drop_access_control_tables.sql";
-        InputStream dropAccessControlTablesScript = SecurityConfig.class.getResourceAsStream(dropAccessControlTablesScriptName);
-
-        if (dropAccessControlTablesScript == null) {
-            throw new IllegalStateException("Could not find " + dropAccessControlTablesScriptName);
-        }
-
-        DatabaseScriptRunner.runScript(connection, dropAccessControlTablesScript, false, false);
     }
 
     private static void setupTables(Connection connection) throws SQLException, IOException {

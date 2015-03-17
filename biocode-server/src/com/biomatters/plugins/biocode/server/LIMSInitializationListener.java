@@ -161,7 +161,7 @@ public class LIMSInitializationListener implements ServletContextListener {
             try {
                 portAsInt = Integer.parseInt(port);
             } catch (NumberFormatException e) {
-                System.err.println("The supplied LDAP port is invalid: " + port + ".");
+                System.err.println("Invalid LDAP configuration: Invalid port: " + port + ".");
                 return;
             }
 
@@ -380,7 +380,7 @@ public class LIMSInitializationListener implements ServletContextListener {
     private boolean setMultipleOptionsFromConfig(Properties config, String configKey, PasswordOptions fimsOptions, String multipleOptionsName, String optionNameToSet) {
         // Get the refernce to the first Option in the MultipleOptions.  The rest will not have been instantiated yet.
         Options.Option firstOption = fimsOptions.getOption(multipleOptionsName + "." + 0 + "." +
-                            optionNameToSet);
+                optionNameToSet);
         if (firstOption == null) {
             return false;
         }
@@ -531,17 +531,17 @@ public class LIMSInitializationListener implements ServletContextListener {
             connection = dataSource.getConnection();
 
             String selectBCIDRootsTableQuery = "SELECT * " +
-                                               "FROM information_schema.tables " +
-                                               "WHERE table_name=? " +
-                                               "AND table_schema IN (SELECT DATABASE())";
+                    "FROM information_schema.tables " +
+                    "WHERE table_name=? " +
+                    "AND table_schema IN (SELECT DATABASE())";
             String createBCIDRootsTableQuery = "CREATE TABLE " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME +
-                                               "(" +
-                                               "type VARCHAR(255) NOT NULL," +
-                                               "bcid_root VARCHAR(255) NOT NULL," +
-                                               "PRIMARY KEY (type)" +
-                                               ");";
+                    "(" +
+                    "type VARCHAR(255) NOT NULL," +
+                    "bcid_root VARCHAR(255) NOT NULL," +
+                    "PRIMARY KEY (type)" +
+                    ");";
             String populateBCIDRootsTableQuery = "INSERT INTO " + LimsDatabaseConstants.BCID_ROOTS_TABLE_NAME + " " +
-                                                 "VALUES (?, ?)";
+                    "VALUES (?, ?)";
 
             selectBCIDRootsTableStatement = connection.prepareStatement(selectBCIDRootsTableQuery);
             createBCIDRootsTableStatement = connection.prepareStatement(createBCIDRootsTableQuery);
