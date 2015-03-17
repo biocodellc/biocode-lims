@@ -10,6 +10,7 @@ import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ExcelUtilities;
 import jebl.util.BasicProgressListener;
+import jebl.util.CompositeProgressListener;
 import jebl.util.ProgressListener;
 import jxl.Workbook;
 import jxl.write.WritableWorkbook;
@@ -88,6 +89,10 @@ public class TableExporter {
             writeRow(writer, values, separator);
 
             for (int row = 0; row < rowCount; row++) {
+                if (progressListener.isCanceled()) {
+                    return;
+                }
+
                 values.clear();
 
                 for (int column = 0; column < columnCount; column++) {
@@ -242,11 +247,17 @@ public class TableExporter {
             try {
                 workbook = Workbook.createWorkbook(exportFile);
 
+                ProgressFrame progressFrame = new ProgressFrame("Exporting Table To CSV", "", 0, true);
+
                 ExcelUtilities.exportTable(
                         workbook.createSheet(tableToExport.getName() + "Table to export", 0),
                         tableToExport.getModel(),
-                        BiocodeUtilities.getBlockingProgressFrame("Exporting Table To Spreadsheet", tableToExport)
+                        progressFrame
                 );
+
+                if (progressFrame.isCanceled()) {
+                    return;
+                }
 
                 workbook.write();
             } catch (WriteException e) {
@@ -278,7 +289,7 @@ public class TableExporter {
                 TableExporter.writeTableToCSV(
                         exportFile,
                         tableToExport,
-                        BiocodeUtilities.getBlockingProgressFrame("Exporting Table To CSV File", tableToExport)
+                        new ProgressFrame("Exporting Table To CSV", "", 0, true)
                 );
             } catch (IOException e) {
                 throw new DocumentOperationException(e.getMessage(), e);
@@ -297,7 +308,7 @@ public class TableExporter {
                 TableExporter.writeTableToTSV(
                         exportFile,
                         tableToExport,
-                        BiocodeUtilities.getBlockingProgressFrame("Exporting Table To CSV File", tableToExport)
+                        new ProgressFrame("Exporting Table To CSV", "", 0, true)
                 );
             } catch (IOException e) {
                 throw new DocumentOperationException(e.getMessage(), e);
