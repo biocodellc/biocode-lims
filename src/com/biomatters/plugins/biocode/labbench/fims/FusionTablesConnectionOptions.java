@@ -205,7 +205,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
             }
         };
 
-        ThreadUtilities.invokeNowOrLater(runnable);
+        ThreadUtilities.invokeNowOrWait(runnable);
     }
 
 

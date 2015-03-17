@@ -60,7 +60,7 @@
         </javac>
     </target>
 
-    <target name="create-war" depends="clean, compile-server">
+    <target name="create-war" depends="compile-server">
         <war destfile="${warfile}" webxml="${server-folder}/web/WEB-INF/web.xml">
             <webinf dir="${server-folder}/web/WEB-INF"/>
             <classes dir="${classes}"/>
@@ -78,7 +78,7 @@
         </war>
     </target>
 
-    <target name="build-plugin" depends="clean,compile-plugin">
+    <target name="build-plugin" depends="compile-plugin">
         <jar jarfile="${build}/${plugin-name}.jar">
             <fileset dir="${classes}"/>
         </jar>
