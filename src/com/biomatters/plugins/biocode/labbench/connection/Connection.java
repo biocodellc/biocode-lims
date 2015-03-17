@@ -401,6 +401,10 @@ public class Connection implements XMLSerializable {
 
                     connectionOptions.preUpdateOptions();
 
+                    if (loginOptionsValuesLocal != null) {
+                        connectionOptions.valuesFromXML((Element) loginOptionsValuesLocal.clone());
+                    }
+
                     connectionOptions.updateOptions();
                 } catch (ConnectionException e) {
                     //todo: exception handling: exceptions here should also be thrown when you log in so handling this here is low priority
