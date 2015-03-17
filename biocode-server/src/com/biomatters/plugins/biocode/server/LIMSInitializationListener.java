@@ -161,7 +161,7 @@ public class LIMSInitializationListener implements ServletContextListener {
             try {
                 portAsInt = Integer.parseInt(port);
             } catch (NumberFormatException e) {
-                System.err.println("Invalid LDAP configuration: Invalid port: " + port + ".");
+                System.err.println("The supplied LDAP port is invalid: " + port + ".");
                 return;
             }
 

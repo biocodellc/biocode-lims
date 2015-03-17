@@ -134,7 +134,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             connection = dataSource.getConnection();
             Set<String> tables = SqlUtilities.getDatabaseTableNamesLowerCase(connection);
 
-            if(!tables.contains(LimsDatabaseConstants.USERS_TABLE_NAME.toLowerCase())) {
+            if (!tables.contains(LimsDatabaseConstants.WORKFLOW_PROJECT_TABLE_NAME.toLowerCase())) {
+                dropAccessControlTables(connection);
                 setupTables(connection);
             }
 
@@ -148,6 +149,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         } finally {
             SqlUtilities.closeConnection(connection);
         }
+    }
+
+    private static void dropAccessControlTables(Connection connection) throws SQLException, IOException {
+        String dropAccessControlTablesScriptName = "drop_access_control_tables.sql";
+        InputStream dropAccessControlTablesScript = SecurityConfig.class.getResourceAsStream(dropAccessControlTablesScriptName);
+
+        if (dropAccessControlTablesScript == null) {
+            throw new IllegalStateException("Could not find " + dropAccessControlTablesScriptName);
+        }
+
+        DatabaseScriptRunner.runScript(connection, dropAccessControlTablesScript, false, false);
     }
 
     private static void setupTables(Connection connection) throws SQLException, IOException {
