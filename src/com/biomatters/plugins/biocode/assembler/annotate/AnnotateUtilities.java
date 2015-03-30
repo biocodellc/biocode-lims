@@ -439,28 +439,50 @@ public class AnnotateUtilities {
 
         HashSet<DocumentField> fieldsAnnotated = new HashSet<DocumentField>();
 
-        for (DocumentField field : fimsData.fimsSample.getFimsAttributes())
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, field, fimsData.fimsSample.getFimsAttributeValue(field.getCode())));
-
-        if (fimsData.sequencingPlateName != null)
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName));
-
-        if (fimsData.reactionStatus != null)
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus));
-
-        if (fimsData.sequencingPlateName != null && fimsData.well != null) {
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString()));
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString()));
+        for (DocumentField field : fimsData.fimsSample.getFimsAttributes()) {
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, field.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, field, fimsData.fimsSample.getFimsAttributeValue(field.getCode())));
+            }
         }
 
-        if (fimsData.workflow != null)
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName()));
+        if (fimsData.sequencingPlateName != null) {
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.SEQUENCING_PLATE_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_PLATE_FIELD, fimsData.sequencingPlateName));
+            }
+        }
 
-        if (fimsData.extractionId != null)
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId));
+        if (fimsData.reactionStatus != null) {
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.REACTION_STATUS_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.REACTION_STATUS_FIELD, fimsData.reactionStatus));
+            }
+        }
 
-        if (fimsData.extractionBarcode != null && fimsData.extractionBarcode.length() > 0)
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode));
+        if (fimsData.sequencingPlateName != null && fimsData.well != null) {
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString()));
+            }
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.TRACE_ID_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString()));
+            }
+        }
+
+        if (fimsData.workflow != null) {
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.WORKFLOW_NAME_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.WORKFLOW_NAME_FIELD, fimsData.workflow.getName()));
+            }
+        }
+
+        if (fimsData.extractionId != null) {
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, LIMSConnection.EXTRACTION_ID_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, LIMSConnection.EXTRACTION_ID_FIELD, fimsData.extractionId));
+            }
+        }
+
+        if (fimsData.extractionBarcode != null && !fimsData.extractionBarcode.isEmpty()) {
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.EXTRACTION_BARCODE_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.EXTRACTION_BARCODE_FIELD, fimsData.extractionBarcode));
+            }
+        }
 
         String TAXONOMY_FIELD_INTRA_SEPARATOR = "; ";
         String ORGANISM_FIELD_INTRA_SEPARATOR = " ";
@@ -573,6 +595,15 @@ public class AnnotateUtilities {
         }
 
         return fieldsAnnotated;
+    }
+
+    private static boolean containsDocumentFieldWithCode(Collection<DocumentField> fields, String code) {
+        for (DocumentField field : fields) {
+            if (field.getCode().equals(code)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean hasAllSequencingPrimerNoteFields(DocumentNote note) {
