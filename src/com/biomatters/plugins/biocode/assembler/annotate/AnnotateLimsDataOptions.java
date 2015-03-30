@@ -53,9 +53,13 @@ public class AnnotateLimsDataOptions extends Options {
         reversePlateNameOption.setDescription("Name of cycle sequencing plate in LIMS for reverse reads, may be the same as forward plate or empty.");
         useExistingOptions.beginAlignHorizontally(null, false);
         List<OptionValue> valuesForMatching = new ArrayList<OptionValue>();
-        valuesForMatching.add(WELL_NUMBER);
         valuesForMatching.addAll(AnnotateUtilities.getOptionValuesForFimsFields());
-        valuesForMatching.add(BARCODE);
+        if (containsOptionValueWithLabel(valuesForMatching, WELL_NUMBER.getLabel())) {
+            valuesForMatching.add(WELL_NUMBER);
+        }
+        if (containsOptionValueWithLabel(valuesForMatching, BARCODE.getLabel())) {
+            valuesForMatching.add(BARCODE);
+        }
         idType = useExistingOptions.addComboBoxOption("idType", "", valuesForMatching, WELL_NUMBER);
         useExistingOptions.addLabel("is");
         useExistingOptions.addCustomOption(namePartOption);
@@ -92,6 +96,15 @@ public class AnnotateLimsDataOptions extends Options {
         useExistingPlates = addRadioOption("useExistingPlate", "", useExistingValues, useExistingValues[0], Alignment.VERTICAL_ALIGN);
         useExistingPlates.addDependent(useExistingValues[0], useExistingOptions, true);
         
+    }
+
+    private static boolean containsOptionValueWithLabel(Collection<OptionValue> values, String label) {
+        for (OptionValue value : values) {
+            if (value.getLabel().equals(label)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void updateOptions() {
