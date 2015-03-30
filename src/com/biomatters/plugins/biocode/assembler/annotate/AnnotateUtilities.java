@@ -452,8 +452,12 @@ public class AnnotateUtilities {
         }
 
         if (fimsData.sequencingPlateName != null && fimsData.well != null) {
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString()));
-            fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString()));
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.SEQUENCING_WELL_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.SEQUENCING_WELL_FIELD, fimsData.well.toString()));
+            }
+            if (!containsDocumentFieldWithCode(fieldsAnnotated, BiocodeUtilities.TRACE_ID_FIELD.getCode())) {
+                fieldsAnnotated.add(annotateDocumentAndReturnField(annotatedDocument, BiocodeUtilities.TRACE_ID_FIELD, fimsData.sequencingPlateName + "." + fimsData.well.toString()));
+            }
         }
 
         if (fimsData.workflow != null) {
@@ -582,6 +586,15 @@ public class AnnotateUtilities {
         }
 
         return fieldsAnnotated;
+    }
+
+    private static boolean containsDocumentFieldWithCode(Collection<DocumentField> fields, String code) {
+        for (DocumentField field : fields) {
+            if (field.getCode().equals(code)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean hasAllSequencingPrimerNoteFields(DocumentNote note) {
