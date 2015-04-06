@@ -80,6 +80,8 @@ public class VerifyTaxonomyOperation extends DocumentOperation {
         }
         Map<String, BiocodeTaxon> fullTaxonomies = fillInTaxonomyFromNcbi(taxonValues, progress);
         List<Pair<AnnotatedPluginDocument, BiocodeTaxon>> annotatedDocsWithTaxons = new ArrayList<Pair<AnnotatedPluginDocument, BiocodeTaxon>>();
+
+        if (progress.isCanceled()) return null;
         for(AnnotatedPluginDocument doc : docMap.keySet()) {
             taxonomyValue = doc.getFieldValue(DocumentField.TAXONOMY_FIELD);
             if(taxonomyValue != null) {
