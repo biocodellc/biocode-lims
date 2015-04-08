@@ -590,6 +590,23 @@ public class PlateBulkEditor {
         }
 
         for(DocumentFieldEditor editor : editors) {
+            if (editor.getField().getCode().equals(workflowField.getCode())) {
+                List<String> changes = editor.getChanges();
+                if (changes.size() > 0) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("These changes may break the workflow connection between different plates. Do you want to continue?\n");
+                    for (String change : changes) {
+                        sb.append(change).append("\n");
+                    }
+
+                    if (Dialogs.showDialog(new Dialogs.DialogOptions(Dialogs.OK_CANCEL, "Workflow id changed", null, Dialogs.DialogIcon.WARNING), sb.toString()) == Dialogs.CANCEL) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        for(DocumentFieldEditor editor : editors) {
             editor.valuesFromTextView();
         }
 
@@ -1002,6 +1019,39 @@ public class PlateBulkEditor {
                     }
                 }
             }
+        }
+
+        public List<String> getChanges()
+        {
+            List<String> ret = new ArrayList<String>();
+            String[] stringValues = valueArea.getText().split("\n");
+            int index = 0;
+            if(direction == Direction.DOWN_AND_ACROSS) {
+                for(int row = 0; row < plate.getRows(); row++) {
+                    for(int col = 0; col < plate.getCols(); col++) {
+                        String oldValue = values[row][col];
+                        String newValue = stringValues[index];
+                        if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
+                            ret.add(Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue);
+                        }
+                        index++;
+                    }
+                }
+            }
+            else {
+                for(int col = 0; col < plate.getCols(); col++) {
+                    for(int row = 0; row < plate.getRows(); row++) {
+                        String oldValue = values[row][col];
+                        String newValue = stringValues[index];
+                        if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
+                            ret.add(Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue);
+                        }
+                        index++;
+                    }
+                }
+            }
+
+            return ret;
         }
 
         public void setDirection(Direction dir) {
