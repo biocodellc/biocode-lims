@@ -456,7 +456,17 @@ public class Connection implements XMLSerializable {
     }
 
     public void updateNowThatWeHaveAPassword() throws ConnectionException {
-        connectionOptions.updateOptions();
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    connectionOptions.updateOptions();
+                } catch (ConnectionException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+
         if(originalConnectionOptionsXml != null) {
             connectionOptions.valuesFromXML(originalConnectionOptionsXml);
         }
