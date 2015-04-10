@@ -39,7 +39,6 @@
         <path refid="classpath"/>
         <pathelement path="${classes}"/>
         <fileset dir="${server-lib}"/>
-        <fileset dir="${server-folder}/lib"/>
     </path>
 
     <target name="compile-server" depends="compile-plugin, retrieve-server-dependencies">
