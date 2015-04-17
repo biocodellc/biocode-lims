@@ -2,7 +2,7 @@
     <settings defaultResolver="biocode" />
     <property name="ibiblio-maven2-root" value="http://repo1.maven.org/maven2/" />
     <resolvers>
-        <chain name="biocode">
+        <chain name="biocode" checkmodified="true">
             <filesystem name="local">
                 <ivy pattern="${ivy.settings.dir}/repository/[module]/ ivy-[revision].xml" />
                 <artifact pattern="${ivy.settings.dir}/repository/[module]/ [artifact]-[revision].[ext]" />
