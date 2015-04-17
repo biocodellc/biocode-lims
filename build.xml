@@ -144,7 +144,7 @@
     <ivy:settings file="ivysettings.xml" id="biocode.ivy.config"/>
 
     <target name="retrieve-plugin-dependencies" description="Retrieve dependencies with ivy">
-       <ivy:retrieve conf="build" settingsref="biocode.ivy.config"/>
+       <ivy:retrieve conf="build" settingsref="biocode.ivy.config" pattern="lib/[artifact]-[type]-[revision].[ext]"/>
     </target>
 
     <target name="evaluate-geneious-files-exists">

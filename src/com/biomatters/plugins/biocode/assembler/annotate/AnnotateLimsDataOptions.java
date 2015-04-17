@@ -51,7 +51,7 @@ public class AnnotateLimsDataOptions extends Options {
         reversePlateNameOption.setDescription("Name of cycle sequencing plate in LIMS for reverse reads, may be the same as forward plate or empty.");
         useExistingOptions.beginAlignHorizontally(null, false);
         List<OptionValue> valuesForMatching = new ArrayList<OptionValue>();
-        valuesForMatching.addAll(AnnotateUtilities.getOptionValuesForFimsFields());
+        valuesForMatching.addAll(BiocodeUtilities.getOptionValuesForFimsFields());
         if (containsOptionValueWithLabel(valuesForMatching, WELL_NUMBER.getLabel())) {
             valuesForMatching.add(WELL_NUMBER);
         }
