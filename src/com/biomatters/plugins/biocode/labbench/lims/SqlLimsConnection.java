@@ -420,12 +420,12 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             // We need DBCP including dependencies as well as the two JDBC drivers.
             // See http://commons.apache.org/proper/commons-dbcp/dependencies.html for dependencies.
             List<String> required = Arrays.asList(
-                    "commons-dbcp-1.4",
-                    "commons-logging-1.1.1",
-                    "commons-pool-1.6",
+                    "commons-dbcp",
+                    "commons-logging",
+                    "commons-pool",
                     "geronimo-jta_1.1_spec",
-                    "mysql-connector-java-5.1.6",
-                    "hsqldb-2.3.0"
+                    "mysql-connector-java",
+                    "hsqldb"
             );
             List<URL> urlsOfJar = new ArrayList<URL>();
             for (URL url : ((URLClassLoader) pluginClassLoader).getURLs()) {
