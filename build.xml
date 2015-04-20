@@ -1,8 +1,9 @@
 <project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench" default="create-plugin" basedir=".">
+    <dirname property="plugin.basedir" file="${ant.file.MooreaLabBench}"/>
 
     <property name="version-regex-pattern" value=".*PLUGIN_VERSION\s+=\s+&quot;(\d+\.\d+\.\d+)&quot;;.*"/>
 
-    <loadfile property="plugin.version" srcfile="src/com/biomatters/plugins/biocode/BiocodePlugin.java">
+    <loadfile property="plugin.version" srcfile="${plugin.basedir}/src/com/biomatters/plugins/biocode/BiocodePlugin.java">
         <filterchain>
             <linecontainsregexp>
                 <regexp pattern="${version-regex-pattern}"/>
@@ -16,16 +17,18 @@
     <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
     <property name="short-plugin-name" value="Biocode_${plugin.version}"/>
 
-    <property name="build" location="build"/>
-    <property name="classes" location="classes"/>
-    <property name="lib" location="lib"/>
-    <property name="resources" location="resources"/>
-    <property name="src" location="src"/>
-    <property name="test" location="test"/>
-    <property name="test.classes" location="testclasses"/>
-    <property name="test.data" location="testdata"/>
-    <property name="report" location="report"/>
-    <property name="GeneiousFiles" location="GeneiousFiles"/>
+    <property name="build" location="${plugin.basedir}/build"/>
+    <property name="classes" location="${plugin.basedir}/classes"/>
+    <property name="lib" location="${plugin.basedir}/lib"/>
+    <property name="resources" location="${plugin.basedir}/resources"/>
+    <property name="src" location="${plugin.basedir}/src"/>
+    <property name="test" location="${plugin.basedir}/test"/>
+    <property name="test.classes" location="${plugin.basedir}/testclasses"/>
+    <property name="test.data" location="${plugin.basedir}/testdata"/>
+    <property name="report" location="${plugin.basedir}/report"/>
+    <property name="doc" location="${plugin.basedir}/doc"/>
+    <property name="tools" location="${plugin.basedir}/tools"/>
+    <property name="GeneiousFiles" location="${plugin.basedir}/GeneiousFiles"/>
 
     <path id="classpath">
         <fileset dir="${lib}"/>
@@ -48,7 +51,7 @@
             <fileset dir="${build}">
                 <include name="${plugin-name}.jar"/>
             </fileset>
-            <fileset dir="lib">
+            <fileset dir="${lib}">
                 <include name="*.jar"/>
                 <!-- Exclude Javadoc and sources from build -->
                 <exclude name="*-sources.jar"/>
@@ -58,8 +61,8 @@
                 <exclude name="jdom*.jar"/>
                 <exclude name="jebl*.jar"/>
             </fileset>
-            <fileset dir="resources"/>
-            <fileset dir="doc">
+            <fileset dir="${resources}"/>
+            <fileset dir="${doc}">
                 <include name="readme.html"/>
             </fileset>
         </copy>
@@ -87,7 +90,7 @@
         <delete dir="${test.classes}"/>
         <delete dir="${report}"/>
         <delete dir="${GeneiousFiles}"/>
-        <delete file="GeneiousFiles.zip"/>
+        <delete file="${GeneiousFiles}.zip"/>
     </target>
 
     <target name="compile-tests" depends="compile-plugin">
@@ -101,7 +104,7 @@
     </target>
 
     <target name="test" depends="compile-tests, retrieve-geneious-runtime-dependencies">
-        <junit dir="GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
+        <junit dir="${GeneiousFiles}" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
             <batchtest todir="${report}">
             <fileset dir="${test.classes}">
                <include name="**/*Test.class"/>
@@ -134,17 +137,17 @@
 
     <!-- setup reference to the Ivy Ant tasks library -->
     <path id="ivy.lib.path">
-        <fileset dir="tools" includes="ivy*.jar"/>
+        <fileset dir="${tools}" includes="ivy*.jar"/>
     </path>
 
 
     <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
 
     <!-- load ivy settings -->
-    <ivy:settings file="ivysettings.xml" id="biocode.ivy.config"/>
+    <ivy:settings file="${plugin.basedir}/ivysettings.xml" id="biocode.ivy.config"/>
 
     <target name="retrieve-plugin-dependencies" description="Retrieve dependencies with ivy">
-       <ivy:retrieve conf="build" settingsref="biocode.ivy.config" pattern="lib/[artifact]-[type]-[revision].[ext]"/>
+       <ivy:retrieve conf="build" settingsref="biocode.ivy.config" pattern="${lib}/[artifact]-[revision]-[type].[ext]"/>
     </target>
 
     <target name="evaluate-geneious-files-exists">
@@ -154,8 +157,8 @@
     </target>
 
     <target name="retrieve-geneious-runtime-dependencies" description="Retrieve the Geneious runtime for running the tests" depends="evaluate-geneious-files-exists" unless="GeneiousFiles.exists">
-       <ivy:retrieve conf="test" type="resource" settingsref="biocode.ivy.config" pattern="${basedir}/[artifact].[ext]"/>
-       <unzip src="GeneiousFiles.zip" dest="."/>
+       <ivy:retrieve conf="test" type="resource" settingsref="biocode.ivy.config" pattern="${plugin.basedir}/[artifact].[ext]"/>
+       <unzip src="${plugin.basedir}/GeneiousFiles.zip" dest="${plugin.basedir}"/>
     </target>
 
     <target name="clean-ivy-cache">
