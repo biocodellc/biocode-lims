@@ -397,6 +397,16 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         }
     }
 
+    private static class Dependency {
+        final String name;
+        final String version;
+
+        public Dependency(String name, String version) {
+            this.name = name;
+            this.version = version;
+        }
+    }
+
     /**
      * Creates a {@link org.apache.commons.dbcp.BasicDataSource} using a custom ClassLoader.
      * <p/>
@@ -417,20 +427,22 @@ public abstract class SqlLimsConnection extends LIMSConnection {
     public static DataSource createBasicDataSource(String connectionUrl, Driver driver, String username, String password) throws ConnectionException {
         ClassLoader pluginClassLoader = SqlLimsConnection.class.getClassLoader();
         if(pluginClassLoader instanceof URLClassLoader) {
+            URLClassLoader urlClassLoader = (URLClassLoader) pluginClassLoader;
+            URL rootResource = urlClassLoader.getResource(".");
+            System.out.println(rootResource);
             // We need DBCP including dependencies as well as the two JDBC drivers.
             // See http://commons.apache.org/proper/commons-dbcp/dependencies.html for dependencies.
-            List<String> required = Arrays.asList(
-                    "commons-dbcp-1.4",
-                    "commons-logging-1.1.1",
-                    "commons-pool-1.6",
-                    "geronimo-jta_1.1_spec",
-                    "mysql-connector-java-5.1.6",
-                    "hsqldb-2.3.0"
+            List<Dependency> required = Arrays.asList(
+                    new Dependency("commons-dbcp", "1.4"),
+                    new Dependency("commons-logging", "1.1.1"),
+                    new Dependency("commons-pool", "1.6"),
+                    new Dependency("mysql-connector-java", "5.1.6"),
+                    new Dependency("hsqldb", "2.3.0")
             );
             List<URL> urlsOfJar = new ArrayList<URL>();
-            for (URL url : ((URLClassLoader) pluginClassLoader).getURLs()) {
-                for (String toCheckAgainst : required) {
-                    if(url.toString().contains(toCheckAgainst)) {
+            for (URL url : (urlClassLoader).getURLs()) {
+                for (Dependency toCheckAgainst : required) {
+                    if(url.toString().contains(toCheckAgainst.name) && url.toString().contains(toCheckAgainst.version)) {
                         urlsOfJar.add(url);
                     }
                 }
