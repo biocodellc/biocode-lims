@@ -1,6 +1,11 @@
 <project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench-sever" default="create-war" basedir=".">
 
-    <include file="../build.xml"/>
+    <property name="lib" value="../lib"/>
+    <property name="classes" value="../classes"/>
+    <property name="report" value="../report"/>
+    <property name="build" value="../build"/>
+    <property name="tools" value="../tools"/>
+    <property name="GeneiousFiles" location="../GeneiousFiles"/>
 
     <property name="server-src" value="src"/>
     <property name="server-lib" value="web/WEB-INF/lib"/>
@@ -8,6 +13,7 @@
     <property name="server-test" value="test"/>
     <property name="server-test.classes" value="testclasses"/>
     <property name="warfile" value="BiocodeLIMS.war"/>
+
 
     <path id="classpath">
         <fileset dir="${lib}"/>
@@ -19,7 +25,8 @@
         <fileset dir="${server-lib}"/>
     </path>
 
-    <target name="compile-server" depends="prepare, MooreaLabBench.compile-plugin, retrieve-server-dependencies">
+    <target name="compile-server" depends="prepare, retrieve-server-dependencies">
+        <ant antfile="build.xml" target="compile-plugin" inheritall="false" dir=".."/>
         <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
             <classpath refid="server-classpath"/>
             <src path="${server-src}"/>
@@ -49,7 +56,8 @@
         <mkdir dir="${server-test.classes}"/>
     </target>
 
-    <target name="clean" depends="MooreaLabBench.clean">
+    <target name="clean">
+        <ant antfile="build.xml" target="clean" inheritall="false" dir=".."/>
         <delete dir="${server-test.classes}"/>
         <delete dir="${server-lib}"/>
         <delete file="${warfile}"/>
@@ -66,7 +74,8 @@
     </target>
 
     <target name="server-test" depends="compile-server-tests">
-        <junit dir="${plugin.basedir}/GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
+        <ant antfile="build.xml" target="retrieve-geneious-runtime-dependencies" inheritall="false" dir=".."/>
+        <junit dir="../GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
             <batchtest todir="${report}">
                 <fileset dir="${server-test.classes}">
                     <include name="**/*Test.class"/>
@@ -97,11 +106,21 @@
         </junit>
     </target>
 
-    <!-- load ivy settings -->
-    <ivy:settings file="${plugin.basedir}/ivysettings.xml" id="biocode.ivy.config"/>
+    <!-- setup reference to the Ivy Ant tasks library -->
+    <path id="ivy.lib.path">
+        <fileset dir="${tools}" includes="ivy*.jar"/>
+    </path>
 
-    <target name="retrieve-server-dependencies" description="Retrieve all dependencies required to build the LIMS server war file" depends="MooreaLabBench.retrieve-plugin-dependencies,MooreaLabBench.retrieve-geneious-runtime-dependencies">
-        <ivy:retrieve conf="server" settingsref="biocode.ivy.config" pattern="web/WEB-INF/lib/[artifact]-[type]-[revision].[ext]"/>
+
+    <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+
+    <!-- load ivy settings -->
+    <ivy:settings file="../ivysettings.xml" id="biocode.ivy.config"/>
+
+    <target name="retrieve-server-dependencies" description="Retrieve all dependencies required to build the LIMS server war file">
+        <ant antfile="build.xml" target="retrieve-plugin-dependencies" inheritall="false" dir=".."/>
+        <ant antfile="build.xml" target="retrieve-geneious-runtime-dependencies" inheritall="false" dir=".."/>
+        <ivy:retrieve conf="build" settingsref="biocode.ivy.config" pattern="web/WEB-INF/lib/[artifact]-[type]-[revision].[ext]"/>
         <copy todir="${server-lib}">
             <fileset dir="${GeneiousFiles}">
                 <include name="iSeek.jar"/>
