@@ -1,40 +1,23 @@
-<project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench-sever" default="create-war" basedir=".">
+<project name="MooreaLabBench-sever" default="create-war" basedir=".">
 
-    <!-- Output directories shared with the plugin build -->
-    <property name="classes" value="../classes"/>
-    <property name="report" value="../report"/>
-    <property name="build" value="../build"/>
+    <import file="../shared.xml"/>
 
-    <!-- Common resources -->
+    <property name="plugin.classes" value="../classes"/>
     <property name="plugin.lib" value="../lib"/>
-    <property name="tools" value="../tools"/>
-    <property name="GeneiousFiles" location="../GeneiousFiles"/>
+    <property name="warfile" value="${build}/BiocodeLIMS.war"/>
 
-    <property name="src" value="src"/>
     <property name="lib" value="web/WEB-INF/lib"/>
-    <property name="resources" value="resources"/>
-    <property name="test.src" value="test"/>
-    <property name="test.classes" value="testclasses"/>
-    <property name="warfile" value="BiocodeLIMS.war"/>
-
 
     <path id="classpath">
+        <pathelement path="${plugin.classes}"/>
         <fileset dir="${plugin.lib}"/>
-        <pathelement path="${classes}"/>
         <fileset dir="${lib}"/>
     </path>
 
-    <target name="compile-server" depends="prepare, retrieve-server-dependencies">
-        <ant antfile="build.xml" target="compile-plugin" inheritall="false" dir=".."/>
-        <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
-            <classpath refid="classpath"/>
-            <src path="${src}"/>
-        </javac>
-    </target>
-
-    <target name="create-war" depends="compile-server">
+    <target name="create-war" depends="clean,prepare,compile">
         <war destfile="${warfile}" webxml="web/WEB-INF/web.xml">
             <webinf dir="web/WEB-INF"/>
+            <classes dir="${plugin.classes}"/>
             <classes dir="${classes}"/>
             <lib dir="${plugin.lib}">
                 <exclude name="GeneiousPublicAPI*.jar"/>
@@ -50,75 +33,14 @@
         </war>
     </target>
 
-    <target name="prepare">
-        <mkdir dir="${lib}"/>
-        <mkdir dir="${test.classes}"/>
-    </target>
-
-    <target name="clean">
-        <ant antfile="build.xml" target="clean" inheritall="false" dir=".."/>
-        <delete dir="${test.classes}"/>
-        <delete dir="${lib}"/>
+    <target name="clean" depends="shared.clean">
         <delete file="${warfile}"/>
     </target>
 
-    <target name="compile-server-tests" depends="compile-server">
-        <javac target="1.6" source="1.6" destdir="${test.classes}" debug="true">
-            <classpath>
-                <path refid="classpath"/>
-                <pathelement location="${classes}"/>
-            </classpath>
-            <src path="${test.src}"/>
-        </javac>
-    </target>
+    <target name="retrieve-build-dependencies" description="Retrieve all dependencies required to build the LIMS server war file" depends="shared.retrieve-build-dependencies">
+        <ant antfile="../build.xml" target="compile" inheritall="false"/>
+        <ant antfile="../build.xml" target="retrieve-test-dependencies" inheritall="false"/>
 
-    <target name="server-test" depends="compile-server-tests">
-        <ant antfile="build.xml" target="retrieve-geneious-runtime-dependencies" inheritall="false" dir=".."/>
-        <junit dir="../GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
-            <batchtest todir="${report}">
-                <fileset dir="${test.classes}">
-                    <include name="**/*Test.class"/>
-                </fileset>
-            </batchtest>
-            <classpath>
-                <file file="{GeneiousFiles}/iSeek.jar"/>
-                <fileset dir="${GeneiousFiles}/lib"/>
-                <pathelement location="${classes}"/>
-                <pathelement location="${resources}"/>
-                <pathelement location="${test.classes}"/>
-                <pathelement location="${GeneiousFiles}/resources"/>
-                <pathelement location="${GeneiousFiles}/bundledPlugins"/>
-                <path refid="classpath"/>
-            </classpath>
-            <env key="DISPLAY" value="0.0"/>
-            <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>
-            <formatter type="xml"/>
-            <jvmarg value="-Xms256M"/>
-            <jvmarg value="-ea"/>
-            <jvmarg value="-XX:MaxNewSize=40M"/>
-            <jvmarg value="-XX:MaxPermSize=256M"/>
-            <jvmarg value="-XX:ReservedCodeCacheSize=128m"/>
-            <jvmarg value="-Xss512K"/>
-            <sysproperty key="report.dir" value="${report}"/>
-            <sysproperty key="user.dir" value="${build}"/>
-        </junit>
-    </target>
-
-    <!-- setup reference to the Ivy Ant tasks library -->
-    <path id="ivy.lib.path">
-        <fileset dir="${tools}" includes="ivy*.jar"/>
-    </path>
-
-
-    <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
-
-    <!-- load ivy settings -->
-    <ivy:settings file="../ivysettings.xml" id="biocode.ivy.config"/>
-
-    <target name="retrieve-server-dependencies" description="Retrieve all dependencies required to build the LIMS server war file">
-        <ant antfile="build.xml" target="retrieve-plugin-dependencies" inheritall="false" dir=".."/>
-        <ant antfile="build.xml" target="retrieve-geneious-runtime-dependencies" inheritall="false" dir=".."/>
-        <ivy:retrieve conf="build" settingsref="biocode.ivy.config" pattern="web/WEB-INF/lib/[artifact]-[type]-[revision].[ext]"/>
         <copy todir="${lib}">
             <fileset dir="${GeneiousFiles}">
                 <include name="iSeek.jar"/>

@@ -1,0 +1,133 @@
+<project name="shared" xmlns:ivy="antlib:org.apache.ivy.ant" basedir=".">
+
+    <!-- Shared folders -->
+    <dirname property="shared.basedir" file="${ant.file.shared}"/>
+    <property name="tools" location="${shared.basedir}/tools"/>
+    <property name="GeneiousFiles" location="${shared.basedir}/GeneiousFiles"/>
+
+    <property name="build" location="${shared.basedir}/build"/>
+
+    <property name="report" location="report"/>
+    <property name="lib" location="lib"/>
+    <property name="resources" location="resources"/>
+    <property name="src" location="src"/>
+    <property name="classes" location="classes"/>
+    <property name="test.src" location="test"/>
+    <property name="test.classes" location="testclasses"/>
+    <property name="test.data" location="testdata"/>
+    <property name="doc" location="doc"/>
+
+    <!-- setup reference to the Ivy Ant tasks library -->
+    <path id="ivy.lib.path">
+        <fileset dir="${tools}" includes="ivy*.jar"/>
+    </path>
+
+    <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+
+    <!-- load ivy settings -->
+    <ivy:settings file="${shared.basedir}/ivysettings.xml" id="ivy.config"/>
+
+    <target name="evaluate-geneious-runtime-dependencies-exists"
+            description="Checks if the Geneious runtime files have already been created.
+            Ivy already handles caching the zip file, but we don't want to unzip it again.">
+        <condition property="geneious-runtime-dependencies.exists">
+            <available file="${GeneiousFiles}" type="dir"/>
+        </condition>
+    </target>
+
+    <target name="retrieve-build-dependencies" description="Retrieve dependencies with ivy">
+        <ivy:retrieve settingsref="ivy.config" type="jar,bundle" conf="build" pattern="${lib}/[artifact]-[revision]-[type].[ext]"/>
+        <ivy:retrieve settingsref="ivy.config" type="zip" conf="build" pattern="${shared.basedir}/[artifact].[ext]"/>
+    </target>
+
+    <target name="retrieve-test-dependencies" description="Retrieve the Geneious runtime for running the tests" depends="evaluate-geneious-runtime-dependencies-exists" unless="geneious-runtime-dependencies.exists">
+        <ivy:retrieve settingsref="ivy.config" type="jar,bundle" conf="test" pattern="${lib}/[artifact]-[revision]-[type].[ext]"/>
+        <ivy:retrieve type="resource" settingsref="ivy.config" pattern="${shared.basedir}/[artifact].[ext]" conf="test"/>
+        <ant target="unzip-GeneiousFiles"/>
+    </target>
+
+    <target name="evaluate.zip.exists">
+        <condition property="zip.exists">
+            <available file="${shared.basedir}/GeneiousFiles.zip" type="file"/>
+        </condition>
+    </target>
+    <target name="unzip-GeneiousFiles" depends="evaluate.zip.exists" if="zip.exists">
+        <unzip src="${shared.basedir}/GeneiousFiles.zip" dest="${shared.basedir}"/>
+    </target>
+
+    <target name="clean-ivy-cache">
+        <ivy:cleancache settingsRef="ivy.config"/>
+    </target>
+
+    <target name="prepare">
+        <mkdir dir="${build}"/>
+        <mkdir dir="${classes}"/>
+        <mkdir dir="${test.classes}"/>
+        <mkdir dir="${report}"/>
+        <mkdir dir="${lib}"/>
+    </target>
+
+    <target name="clean">
+        <delete dir="${lib}"/>
+        <delete dir="${build}"/>
+        <delete dir="${classes}"/>
+        <delete dir="${test.classes}"/>
+        <delete dir="${report}"/>
+        <delete dir="${GeneiousFiles}"/>
+        <delete file="${GeneiousFiles}.zip"/>
+    </target>
+
+    <path id="classpath" description="Override to add entries to classpath">
+        <fileset dir="${lib}"/>
+    </path>
+
+    <target name="compile" depends="retrieve-build-dependencies">
+        <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
+            <classpath refid="classpath"/>
+            <src path="${src}"/>
+        </javac>
+    </target>
+
+
+    <target name="compile-tests" depends="compile">
+        <javac target="1.6" source="1.6" destdir="${test.classes}" debug="true">
+            <classpath>
+                <path refid="classpath"/>
+                <pathelement location="${classes}"/>
+            </classpath>
+            <src path="${test.src}"/>
+        </javac>
+    </target>
+
+    <target name="test" depends="compile-tests, retrieve-test-dependencies">
+        <junit dir="${GeneiousFiles}" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
+            <batchtest todir="${report}">
+            <fileset dir="${test.classes}">
+               <include name="**/*Test.class"/>
+            </fileset>
+            </batchtest>
+            <classpath>
+                <file file="${GeneiousFiles}/iSeek.jar"/>
+                <fileset dir="${GeneiousFiles}/lib"/>
+                <pathelement location="${classes}"/>
+                <pathelement location="${resources}"/>
+                <pathelement location="${test.classes}"/>
+                <pathelement location="${test.data}"/>
+                <pathelement location="${GeneiousFiles}/resources"/>
+                <pathelement location="${GeneiousFiles}/bundledPlugins"/>
+                <path refid="classpath"/>
+            </classpath>
+            <env key="DISPLAY" value=":0.0"/>
+            <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>
+            <formatter type="xml"/>
+            <jvmarg value="-Xms256M"/>
+            <jvmarg value="-ea"/>
+            <jvmarg value="-XX:MaxNewSize=40M"/>
+            <jvmarg value="-XX:MaxPermSize=256M"/>
+            <jvmarg value="-XX:ReservedCodeCacheSize=128m"/>
+            <jvmarg value="-Xss512K"/>
+            <sysproperty key="report.dir" value="${report}"/>
+            <sysproperty key="user.dir" value="${build}"/>
+        </junit>
+    </target>
+</project>

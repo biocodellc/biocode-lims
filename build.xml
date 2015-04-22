@@ -1,7 +1,10 @@
-<project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench" default="create-plugin" basedir=".">
+<project name="MooreaLabBench" default="create-plugin" basedir=".">
+
+    <import file="shared.xml"/>
+
     <property name="version-regex-pattern" value=".*PLUGIN_VERSION\s+=\s+&quot;(\d+\.\d+\.\d+)&quot;;.*"/>
 
-    <loadfile property="plugin.version" srcfile="src/com/biomatters/plugins/biocode/BiocodePlugin.java">
+    <loadfile property="plugin.version" srcfile="${shared.basedir}/src/com/biomatters/plugins/biocode/BiocodePlugin.java">
         <filterchain>
             <linecontainsregexp>
                 <regexp pattern="${version-regex-pattern}"/>
@@ -15,24 +18,7 @@
     <property name="plugin-name" value="com.biomatters.plugins.biocode.BiocodePlugin"/>
     <property name="short-plugin-name" value="Biocode_${plugin.version}"/>
 
-    <property name="build" location="build"/>
-    <property name="classes" location="classes"/>
-    <property name="lib" location="lib"/>
-    <property name="resources" location="resources"/>
-    <property name="src" location="src"/>
-    <property name="test" location="test"/>
-    <property name="test.classes" location="testclasses"/>
-    <property name="test.data" location="testdata"/>
-    <property name="report" location="report"/>
-    <property name="doc" location="doc"/>
-    <property name="tools" location="tools"/>
-    <property name="GeneiousFiles" location="GeneiousFiles"/>
-
-    <path id="classpath">
-        <fileset dir="${lib}"/>
-    </path>
-
-    <target name="create-plugin" depends="build-plugin">
+    <target name="create-plugin" depends="clean,prepare,build-plugin">
         <zip zipfile="${build}/${short-plugin-name}.gplugin">
             <fileset dir="${build}">
                <include name="${plugin-name}/**/*"/>
@@ -40,7 +26,7 @@
         </zip>
     </target>
 
-    <target name="build-plugin" depends="compile-plugin">
+    <target name="build-plugin" depends="compile">
         <jar jarfile="${build}/${plugin-name}.jar">
             <fileset dir="${classes}"/>
         </jar>
@@ -64,102 +50,5 @@
                 <include name="readme.html"/>
             </fileset>
         </copy>
-    </target>
-
-    <target name="compile-plugin" depends="clean,prepare,retrieve-plugin-dependencies">
-        <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
-            <classpath refid="classpath"/>
-            <src path="${src}"/>
-        </javac>
-    </target>
-
-    <target name="prepare">
-        <mkdir dir="${build}"/>
-        <mkdir dir="${classes}"/>
-        <mkdir dir="${test.classes}"/>
-        <mkdir dir="${report}"/>
-        <mkdir dir="${lib}"/>
-    </target>
-
-    <target name="clean">
-        <delete dir="${lib}"/>
-        <delete dir="${build}"/>
-        <delete dir="${classes}"/>
-        <delete dir="${test.classes}"/>
-        <delete dir="${report}"/>
-        <delete dir="${GeneiousFiles}"/>
-        <delete file="${GeneiousFiles}.zip"/>
-    </target>
-
-    <target name="compile-tests" depends="compile-plugin">
-        <javac target="1.6" source="1.6" destdir="${test.classes}" debug="true">
-            <classpath>
-                <path refid="classpath"/>
-                <pathelement location="${classes}"/>
-            </classpath>
-            <src path="${test}"/>
-        </javac>
-    </target>
-
-    <target name="test" depends="compile-tests, retrieve-geneious-runtime-dependencies">
-        <junit dir="${GeneiousFiles}" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
-            <batchtest todir="${report}">
-            <fileset dir="${test.classes}">
-               <include name="**/*Test.class"/>
-            </fileset>
-            </batchtest>
-            <classpath>
-                <file file="${GeneiousFiles}/iSeek.jar"/>
-                <fileset dir="${GeneiousFiles}/lib"/>
-                <pathelement location="${classes}"/>
-                <pathelement location="${resources}"/>
-                <pathelement location="${test.classes}"/>
-                <pathelement location="${test.data}"/>
-                <pathelement location="${GeneiousFiles}/resources"/>
-                <pathelement location="${GeneiousFiles}/bundledPlugins"/>
-                <path refid="classpath"/>
-            </classpath>
-            <env key="DISPLAY" value=":0.0"/>
-            <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>
-            <formatter type="xml"/>
-            <jvmarg value="-Xms256M"/>
-            <jvmarg value="-ea"/>
-            <jvmarg value="-XX:MaxNewSize=40M"/>
-            <jvmarg value="-XX:MaxPermSize=256M"/>
-            <jvmarg value="-XX:ReservedCodeCacheSize=128m"/>
-            <jvmarg value="-Xss512K"/>
-            <sysproperty key="report.dir" value="${report}"/>
-            <sysproperty key="user.dir" value="${build}"/>
-        </junit>
-    </target>
-
-    <!-- setup reference to the Ivy Ant tasks library -->
-    <path id="ivy.lib.path">
-        <fileset dir="${tools}" includes="ivy*.jar"/>
-    </path>
-
-
-    <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
-
-    <!-- load ivy settings -->
-    <ivy:settings file="ivysettings.xml" id="biocode.ivy.config"/>
-
-    <target name="retrieve-plugin-dependencies" description="Retrieve dependencies with ivy">
-       <ivy:retrieve conf="build" settingsref="biocode.ivy.config" pattern="${lib}/[artifact]-[revision]-[type].[ext]"/>
-    </target>
-
-    <target name="evaluate-geneious-files-exists">
-        <condition property="GeneiousFiles.exists">
-           <available file="${GeneiousFiles}" type="dir"/>
-        </condition>
-    </target>
-
-    <target name="retrieve-geneious-runtime-dependencies" description="Retrieve the Geneious runtime for running the tests" depends="evaluate-geneious-files-exists" unless="GeneiousFiles.exists">
-       <ivy:retrieve conf="test" type="resource" settingsref="biocode.ivy.config" pattern="[artifact].[ext]"/>
-       <unzip src="GeneiousFiles.zip" dest="."/>
-    </target>
-
-    <target name="clean-ivy-cache">
-        <ivy:cleancache settingsRef="biocode.ivy.config"/>
     </target>
 </project>
