@@ -1,35 +1,34 @@
 <project xmlns:ivy="antlib:org.apache.ivy.ant" name="MooreaLabBench-sever" default="create-war" basedir=".">
 
-    <property name="lib" value="../lib"/>
+    <!-- Output directories shared with the plugin build -->
     <property name="classes" value="../classes"/>
     <property name="report" value="../report"/>
     <property name="build" value="../build"/>
+
+    <!-- Common resources -->
+    <property name="plugin.lib" value="../lib"/>
     <property name="tools" value="../tools"/>
     <property name="GeneiousFiles" location="../GeneiousFiles"/>
 
-    <property name="server-src" value="src"/>
-    <property name="server-lib" value="web/WEB-INF/lib"/>
-    <property name="server-resources" value="resources"/>
-    <property name="server-test" value="test"/>
-    <property name="server-test.classes" value="testclasses"/>
+    <property name="src" value="src"/>
+    <property name="lib" value="web/WEB-INF/lib"/>
+    <property name="resources" value="resources"/>
+    <property name="test.src" value="test"/>
+    <property name="test.classes" value="testclasses"/>
     <property name="warfile" value="BiocodeLIMS.war"/>
 
 
     <path id="classpath">
-        <fileset dir="${lib}"/>
-    </path>
-
-    <path id="server-classpath">
-        <path refid="classpath"/>
+        <fileset dir="${plugin.lib}"/>
         <pathelement path="${classes}"/>
-        <fileset dir="${server-lib}"/>
+        <fileset dir="${lib}"/>
     </path>
 
     <target name="compile-server" depends="prepare, retrieve-server-dependencies">
         <ant antfile="build.xml" target="compile-plugin" inheritall="false" dir=".."/>
         <javac target="1.6" source="1.6" destdir="${classes}" debug="true">
-            <classpath refid="server-classpath"/>
-            <src path="${server-src}"/>
+            <classpath refid="classpath"/>
+            <src path="${src}"/>
         </javac>
     </target>
 
@@ -37,14 +36,14 @@
         <war destfile="${warfile}" webxml="web/WEB-INF/web.xml">
             <webinf dir="web/WEB-INF"/>
             <classes dir="${classes}"/>
-            <lib dir="${lib}">
+            <lib dir="${plugin.lib}">
                 <exclude name="GeneiousPublicAPI*.jar"/>
                 <exclude name="jdom*.jar"/>
                 <exclude name="jebl*.jar"/>
             </lib>
-            <lib dir="${server-lib}"/>
+            <lib dir="${lib}"/>
             <fileset dir="web"/>
-            <fileset dir="${server-lib}">
+            <fileset dir="${lib}">
                 <include name="images/*"/>
             </fileset>
             <classes dir="resources"/>
@@ -52,24 +51,24 @@
     </target>
 
     <target name="prepare">
-        <mkdir dir="${server-lib}"/>
-        <mkdir dir="${server-test.classes}"/>
+        <mkdir dir="${lib}"/>
+        <mkdir dir="${test.classes}"/>
     </target>
 
     <target name="clean">
         <ant antfile="build.xml" target="clean" inheritall="false" dir=".."/>
-        <delete dir="${server-test.classes}"/>
-        <delete dir="${server-lib}"/>
+        <delete dir="${test.classes}"/>
+        <delete dir="${lib}"/>
         <delete file="${warfile}"/>
     </target>
 
     <target name="compile-server-tests" depends="compile-server">
-        <javac target="1.6" source="1.6" destdir="${server-test.classes}" debug="true">
+        <javac target="1.6" source="1.6" destdir="${test.classes}" debug="true">
             <classpath>
-                <path refid="server-classpath"/>
+                <path refid="classpath"/>
                 <pathelement location="${classes}"/>
             </classpath>
-            <src path="${server-test}"/>
+            <src path="${test.src}"/>
         </javac>
     </target>
 
@@ -77,7 +76,7 @@
         <ant antfile="build.xml" target="retrieve-geneious-runtime-dependencies" inheritall="false" dir=".."/>
         <junit dir="../GeneiousFiles" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
             <batchtest todir="${report}">
-                <fileset dir="${server-test.classes}">
+                <fileset dir="${test.classes}">
                     <include name="**/*Test.class"/>
                 </fileset>
             </batchtest>
@@ -85,12 +84,11 @@
                 <file file="{GeneiousFiles}/iSeek.jar"/>
                 <fileset dir="${GeneiousFiles}/lib"/>
                 <pathelement location="${classes}"/>
-                <pathelement location="${server-resources}"/>
-                <pathelement location="${server-test}"/>
-                <pathelement location="${server-test.classes}"/>
+                <pathelement location="${resources}"/>
+                <pathelement location="${test.classes}"/>
                 <pathelement location="${GeneiousFiles}/resources"/>
                 <pathelement location="${GeneiousFiles}/bundledPlugins"/>
-                <path refid="server-classpath"/>
+                <path refid="classpath"/>
             </classpath>
             <env key="DISPLAY" value="0.0"/>
             <env key="DYLD_LIBRARY_PATH" value="/Library/Application Support/Geneious/Frameworks"/>
@@ -121,7 +119,7 @@
         <ant antfile="build.xml" target="retrieve-plugin-dependencies" inheritall="false" dir=".."/>
         <ant antfile="build.xml" target="retrieve-geneious-runtime-dependencies" inheritall="false" dir=".."/>
         <ivy:retrieve conf="build" settingsref="biocode.ivy.config" pattern="web/WEB-INF/lib/[artifact]-[type]-[revision].[ext]"/>
-        <copy todir="${server-lib}">
+        <copy todir="${lib}">
             <fileset dir="${GeneiousFiles}">
                 <include name="iSeek.jar"/>
             </fileset>
