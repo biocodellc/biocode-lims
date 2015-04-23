@@ -99,7 +99,7 @@
         </javac>
     </target>
 
-    <target name="test" depends="compile-tests, retrieve-test-dependencies">
+    <target name="test" depends="clean, prepare, compile-tests, retrieve-test-dependencies">
         <junit dir="${GeneiousFiles}" fork="true" maxmemory="1024M" printsummary="on" timeout="180000">
             <batchtest todir="${report}">
             <fileset dir="${test.classes}">
