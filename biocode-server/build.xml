@@ -33,8 +33,13 @@
         </war>
     </target>
 
+    <target name="prepare" depends="shared.prepare">
+        <mkdir dir="${plugin.classes}"/>
+    </target>
+
     <target name="clean" depends="shared.clean">
         <delete file="${warfile}"/>
+        <delete dir="${plugin.classes}"/>
     </target>
 
     <target name="retrieve-build-dependencies" description="Retrieve all dependencies required to build the LIMS server war file" depends="shared.retrieve-build-dependencies">
