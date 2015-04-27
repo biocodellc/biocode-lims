@@ -48,7 +48,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
 
     @Override
     public String getDescription() {
-        return "Connection to the new Biocode FIMS (https://code.google.com/p/biocode-fims/)";
+        return "Connection to the new Biocode FIMS (https://github.com/biocodellc/biocode-fims)";
     }
 
     private Map<String, SoftReference<FimsSample>> cachedSamples = new HashMap<String, SoftReference<FimsSample>>();
