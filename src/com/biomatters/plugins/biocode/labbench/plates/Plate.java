@@ -307,11 +307,11 @@ public class Plate implements XMLSerializable {
 
     public Reaction getReaction(int row, int col) {
         if (row < 0 || row >= rows) {
-            throw new IllegalArgumentException("Row index out of bounds: " + row + ". Valid range: 0 - " + rows + ".");
+            throw new IllegalArgumentException("Row index out of bounds: " + row + ". Valid range: 0 - " + (rows - 1) + ".");
         }
 
         if (col < 0 || col >= cols) {
-            throw new IllegalArgumentException("Column index out of bounds: " + col + ". Valid range: 0 - " + cols + ".");
+            throw new IllegalArgumentException("Column index out of bounds: " + col + ". Valid range: 0 - " + (cols - 1) + ".");
         }
 
         return getReaction(cols * row + col);
