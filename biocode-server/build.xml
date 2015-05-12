@@ -4,7 +4,7 @@
 
     <property name="plugin.classes" value="../classes"/>
     <property name="plugin.lib" value="../lib"/>
-    <property name="warfile" value="${build}/BiocodeLIMS.war"/>
+    <property name="warfile" value="BiocodeLIMS.war"/>
 
     <property name="lib" value="web/WEB-INF/lib"/>
 
