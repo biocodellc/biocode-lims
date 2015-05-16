@@ -1024,7 +1024,7 @@ public class PlateBulkEditor {
         public List<String> getChanges()
         {
             List<String> ret = new ArrayList<String>();
-            String[] stringValues = valueArea.getText().split("\n");
+            String[] stringValues = valueArea.getText().split("\n", -1);
             int index = 0;
             if(direction == Direction.DOWN_AND_ACROSS) {
                 for(int row = 0; row < plate.getRows(); row++) {
