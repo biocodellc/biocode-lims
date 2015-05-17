@@ -41,9 +41,32 @@ public class Plate implements XMLSerializable {
     private int thermocycleId = -1;
 
     public enum Size {
+        w1("1", 1),
+        w2("2", 2),
+        w3("3", 3),
+        w4("4", 4),
+        w5("5", 5),
+        w6("6", 6),
+        w7("7", 7),
         w8("8", 8),
+        w9("9", 9),
+        w10("10", 10),
+        w11("11", 11),
+        w12("12", 12),
+        w13("13", 13),
+        w14("14", 14),
+        w15("15", 15),
         w16("16", 16),
+        w17("17", 17),
+        w18("18", 18),
+        w19("19", 19),
+        w20("20", 20),
+        w21("21", 21),
+        w22("22", 22),
+        w23("23", 23),
         w24("24", 24),
+        w25("25", 25),
+        w26("26", 26),
         w32("32", 32),
         w40("40", 40),
         w48("48", 48),
@@ -109,12 +132,58 @@ public class Plate implements XMLSerializable {
 
     public static Size getSizeEnum(int size) {
         switch (size) {
+            case 1:
+                return Size.w1;
+            case 2:
+                return Size.w2;
+            case 3:
+                return Size.w3;
+            case 4:
+                return Size.w4;
+            case 5:
+                return Size.w5;
+            case 6:
+                return Size.w6;
+            case 7:
+                return Size.w7;
             case 8:
                 return Size.w8;
+            case 9:
+                return Size.w9;
+            case 10:
+                return Size.w10;
+            case 11:
+                return Size.w11;
+            case 12:
+                return Size.w12;
+            case 13:
+                return Size.w13;
+            case 14:
+                return Size.w14;
+            case 15:
+                return Size.w15;
             case 16:
                 return Size.w16;
+            case 17:
+                return Size.w17;
+            case 18:
+                return Size.w18;
+            case 19:
+                return Size.w19;
+            case 20:
+                return Size.w20;
+            case 21:
+                return Size.w21;
+            case 22:
+                return Size.w22;
+            case 23:
+                return Size.w23;
             case 24:
                 return Size.w24;
+            case 25:
+                return Size.w25;
+            case 26:
+                return Size.w26;
             case 32:
                 return Size.w32;
             case 40:

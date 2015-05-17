@@ -154,36 +154,7 @@ public class NewPlateOptions extends Options{
     }
 
     public Plate.Size getPlateSize() {
-        Options.OptionValue plateSizeValue = (Options.OptionValue)getValue("plateType");
-
-        if(plateSizeValue.getName().equals("48Plate")) {
-            return Plate.Size.w48;
-        }
-        else if(plateSizeValue.getName().equals("96Plate")) {
-            return Plate.Size.w96;
-        }
-        else if(plateSizeValue.getName().equals("384Plate")) {
-            return Plate.Size.w384;
-        }
-        else if (plateSizeValue.getName().equals("strips")) {
-            switch (getNumberOfReactions()) {
-                case 8:
-                    return Plate.Size.w8;
-                case 16:
-                    return Plate.Size.w16;
-                case 24:
-                    return Plate.Size.w24;
-                case 32:
-                    return Plate.Size.w32;
-                case 40:
-                    return Plate.Size.w40;
-                case 48:
-                    return Plate.Size.w48;
-            }
-        }
-
-
-        return null;
+        return Plate.getSizeEnum(getNumberOfReactions());
     }
 
     public Reaction.Type getReactionType() {
