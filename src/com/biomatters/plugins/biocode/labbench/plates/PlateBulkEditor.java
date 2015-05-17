@@ -1024,13 +1024,18 @@ public class PlateBulkEditor {
         public List<String> getChanges() {
             List<String> changes = new ArrayList<String>();
             String[][] changesStoredInArray = new String[plate.getRows()][plate.getCols()];
+            String[] stringValuesWithPaddedValues = new String[plate.getRows()*plate.getCols()];
             String[] stringValues = valueArea.getText().split("\n", -1);
+            for (int i = 0; i < stringValues.length; i++) {
+                stringValuesWithPaddedValues[i] = stringValues[i];
+            }
+
             int index = 0;
 
             for(int row = 0; row < plate.getRows(); row++) {
                 for(int col = 0; col < plate.getCols(); col++) {
                     String oldValue = values[row][col];
-                    String newValue = stringValues[index];
+                    String newValue = stringValuesWithPaddedValues[index];
                     if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
                         changesStoredInArray[row][col] = Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue;
                     }
