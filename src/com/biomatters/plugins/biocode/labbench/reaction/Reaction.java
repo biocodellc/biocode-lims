@@ -551,26 +551,12 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
      * @param checkingFromPlate true if we are checking a plate of reactions, false if not.
      * @return Summary describing errors or empty string if none are found.
      */
-    public String areReactionsValid(final List<T> reactions, final JComponent dialogParent, final boolean checkingFromPlate) {
-        final AtomicReference<String> reactionCheckResultReference = new AtomicReference<String>();
-
-        Runnable reactionCheckRunnable = new Runnable() {
-            public void run() {
-                reactionCheckResultReference.set(_areReactionsValid(reactions, dialogParent, checkingFromPlate));
-            }
-        };
-
-        BiocodeService.block("Checking validity of reactions", null, reactionCheckRunnable, null);
-
-        while (reactionCheckResultReference.get() == null);
-
-        String reactionCheckResult = reactionCheckResultReference.get();
-
-        if (!reactionCheckResult.isEmpty() && checkingFromPlate) {
-            reactionCheckResult += "<br><br>The affected wells have been highlighted in yellow.";
+    public String areReactionsValid(List<T> reactions, JComponent dialogParent, boolean checkingFromPlate) {
+        String errorMessage = _areReactionsValid(reactions, dialogParent, checkingFromPlate);
+        if (!errorMessage.isEmpty() && checkingFromPlate) {
+            errorMessage += "<br><br>The affected wells have been highlighted in yellow.";
         }
-
-        return reactionCheckResult;
+        return errorMessage;
     }
 
     /**
