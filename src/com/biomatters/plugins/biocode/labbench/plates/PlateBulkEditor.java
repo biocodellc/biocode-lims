@@ -1021,37 +1021,38 @@ public class PlateBulkEditor {
             }
         }
 
-        public List<String> getChanges()
-        {
-            List<String> ret = new ArrayList<String>();
+        public List<String> getChanges() {
+            List<String> changes = new ArrayList<String>();
+            String[][] changesStoredInArray = new String[plate.getRows()][plate.getCols()];
             String[] stringValues = valueArea.getText().split("\n", -1);
             int index = 0;
-            if(direction == Direction.DOWN_AND_ACROSS) {
-                for(int row = 0; row < plate.getRows(); row++) {
-                    for(int col = 0; col < plate.getCols(); col++) {
-                        String oldValue = values[row][col];
-                        String newValue = stringValues[index];
-                        if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
-                            ret.add(Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue);
-                        }
-                        index++;
+
+            for(int row = 0; row < plate.getRows(); row++) {
+                for(int col = 0; col < plate.getCols(); col++) {
+                    String oldValue = values[row][col];
+                    String newValue = stringValues[index];
+                    if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
+                        changesStoredInArray[row][col] = Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue;
                     }
+                    index++;
                 }
             }
-            else {
-                for(int col = 0; col < plate.getCols(); col++) {
-                    for(int row = 0; row < plate.getRows(); row++) {
-                        String oldValue = values[row][col];
-                        String newValue = stringValues[index];
-                        if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
-                            ret.add(Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue);
-                        }
-                        index++;
+
+            if (direction == Direction.DOWN_AND_ACROSS) {
+                for (int row = 0; row < plate.getRows(); row++) {
+                    for (int col = 0; col < plate.getCols(); col++) {
+                        changes.add(changesStoredInArray[row][col]);
+                    }
+                }
+            } else {
+                for (int col = 0; col < plate.getCols(); col++) {
+                    for (int row = 0; row < plate.getRows(); row++) {
+                        changes.add(changesStoredInArray[row][col]);
                     }
                 }
             }
 
-            return ret;
+            return changes;
         }
 
         public void setDirection(Direction dir) {
