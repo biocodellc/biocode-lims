@@ -59,7 +59,7 @@ public abstract class LimsTestCase extends Assert {
         assertTrue("First FIMS option has changed from Excel FIMS.  Test needs updating",
                 _fimsOptions instanceof ExcelFimsConnectionOptions);
         ExcelFimsConnectionOptions fimsOptions = (ExcelFimsConnectionOptions) _fimsOptions;
-        waitForTissueColumnInitialization(TestUtilities.getPathToDemoFIMSExcel(LimsSearchTest.class, "demo video FIMS.xls"), fimsOptions);
+        waitForTissueColumnInitialization(TestUtilities.getResourcePath(LimsSearchTest.class, "demo video FIMS.xls"), fimsOptions);
 
         fimsOptions.setValue(TableFimsConnectionOptions.TISSUE_ID, "tissue_id");
         fimsOptions.setValue(TableFimsConnectionOptions.SPECIMEN_ID, "Specimen No.");

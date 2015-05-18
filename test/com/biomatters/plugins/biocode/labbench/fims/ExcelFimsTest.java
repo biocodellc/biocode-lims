@@ -1,12 +1,8 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
 import com.biomatters.geneious.publicapi.plugin.TestGeneious;
-import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.TestUtilities;
-import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSConnectionOptions;
-import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSOptions;
-import com.biomatters.plugins.biocode.labbench.fims.biocode.BiocodeFIMSUtils;
 import com.biomatters.plugins.biocode.labbench.lims.LimsTestCase;
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,7 +17,7 @@ public class ExcelFimsTest extends Assert {
         TestGeneious.initialize();
         ExcelFimsConnection connection = new ExcelFimsConnection();
         TableFimsConnectionOptions options = connection._getConnectionOptions();
-        LimsTestCase.waitForTissueColumnInitialization(TestUtilities.getPathToDemoFIMSExcel(ExcelFimsTest.class, "demo video FIMS.xls"), (ExcelFimsConnectionOptions)options);
+        LimsTestCase.waitForTissueColumnInitialization(TestUtilities.getResourcePath(ExcelFimsTest.class, "demo video FIMS.xls"), (ExcelFimsConnectionOptions)options);
         options.setValue(ExcelFimsConnectionOptions.TISSUE_ID, "tissue_id");
         connection._connect(options);
     }
@@ -31,7 +27,7 @@ public class ExcelFimsTest extends Assert {
         TestGeneious.initialize();
         ExcelFimsConnection connection = new ExcelFimsConnection();
         TableFimsConnectionOptions options = connection._getConnectionOptions();
-        LimsTestCase.waitForTissueColumnInitialization(TestUtilities.getPathToDemoFIMSExcel(ExcelFimsTest.class, "demo video FIMS with duplicate tissue ids.xls"), (ExcelFimsConnectionOptions)options);
+        LimsTestCase.waitForTissueColumnInitialization(TestUtilities.getResourcePath(ExcelFimsTest.class, "demo video FIMS with duplicate tissue ids.xls"), (ExcelFimsConnectionOptions)options);
         options.setValue(ExcelFimsConnectionOptions.TISSUE_ID, "tissue_id");
         connection._connect(options);
     }

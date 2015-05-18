@@ -60,11 +60,11 @@ public class PlateBulkEditor {
     private GeneiousAction autoGenerateIds;
     private GeneiousAction autodetectAction;
 
-    private static DocumentField TISSUE_SAMPLE_ID_FIELD = new DocumentField("Tissue Sample ID", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
-    private static DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction ID", "", "extractionId", String.class, false, false);
-    private static DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
-    private static DocumentField PARENT_EXTRACTION_ID_FIELD = new DocumentField("Parent Extraction ID", "", "parentExtraction", String.class, true, false);
-    private static DocumentField WORKFLOW_ID_FIELD = new DocumentField("Workflow ID", "", "workflowId", String.class, false, false);
+    public static DocumentField TISSUE_SAMPLE_ID_FIELD = new DocumentField("Tissue Sample ID", "", ExtractionOptions.TISSUE_ID, String.class, false, false);
+    public static DocumentField EXTRACTION_ID_FIELD = new DocumentField("Extraction ID", "", "extractionId", String.class, false, false);
+    public static DocumentField EXTRACTION_BARCODE_FIELD = new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false);
+    public static DocumentField PARENT_EXTRACTION_ID_FIELD = new DocumentField("Parent Extraction ID", "", "parentExtraction", String.class, true, false);
+    public static DocumentField WORKFLOW_ID_FIELD = new DocumentField("Workflow ID", "", "workflowId", String.class, false, false);
 
     private List<DocumentField> defaultFields;
     List<DocumentField> autoFillFields = getAutofillFields();
@@ -1023,41 +1023,60 @@ public class PlateBulkEditor {
 
         public List<String> getChanges() {
             List<String> changes = new ArrayList<String>();
-            String[][] changesStoredInArray = new String[plate.getRows()][plate.getCols()];
-            String[] stringValuesWithPaddedValues = new String[plate.getRows()*plate.getCols()];
-            String[] stringValues = valueArea.getText().split("\n", -1);
-            for (int i = 0; i < stringValues.length; i++) {
-                stringValuesWithPaddedValues[i] = stringValues[i];
-            }
 
-            int index = 0;
-
-            for(int row = 0; row < plate.getRows(); row++) {
-                for(int col = 0; col < plate.getCols(); col++) {
-                    String oldValue = values[row][col];
-                    String newValue = stringValuesWithPaddedValues[index];
-                    if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
-                        changesStoredInArray[row][col] = Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue;
-                    }
-                    index++;
-                }
-            }
-
-            if (direction == Direction.DOWN_AND_ACROSS) {
-                for (int row = 0; row < plate.getRows(); row++) {
-                    for (int col = 0; col < plate.getCols(); col++) {
-                        changes.add(changesStoredInArray[row][col]);
-                    }
-                }
-            } else {
+            String[][] newValues = getNewValues();
+            for (int row = 0; row < plate.getRows(); row++) {
                 for (int col = 0; col < plate.getCols(); col++) {
-                    for (int row = 0; row < plate.getRows(); row++) {
-                        changes.add(changesStoredInArray[row][col]);
+                    String oldValue = values[row][col];
+                    String newValue = newValues[row][col];
+                    if (oldValue != null && oldValue.trim().length() > 0 && !oldValue.equals(newValue)) {
+                        changes.add(Plate.getWellName(row, col) + " : " + oldValue + " => " + newValue);
                     }
                 }
             }
 
             return changes;
+        }
+
+        public String[][] getNewValues() {
+            int rows = plate.getRows(), columns = plate.getCols();
+
+            String[] newValues = valueArea.getText().split("\n", -1);
+            String[] newValuesPaddedOrTruncatedToPlateSize = Arrays.copyOf(newValues, rows*columns);
+            return convertToTwoDimensionalArray(newValuesPaddedOrTruncatedToPlateSize, rows, columns, direction);
+        }
+
+        private static String[][] convertToTwoDimensionalArray(String[] array, int rows, int columns, Direction direction) {
+            if (array == null) {
+                throw new IllegalArgumentException("The supplied String array argument must be non-null.");
+            }
+
+            if (array.length != rows*columns) {
+                throw new IllegalArgumentException(
+                        "The length of the supplied String array argument (" + array.length + ") " +
+                                "must be equal to the product of the supplied rows argument (" + rows + ") " +
+                                "and the supplied columns argument (" + columns + ")."
+                );
+            }
+
+            String[][] arrayConvertedToTwoDimensionalArray = new String[rows][columns];
+
+            int arrayIndex = 0;
+            if (direction == Direction.DOWN_AND_ACROSS) {
+                for (int row = 0; row < rows; row++) {
+                    for (int column = 0; column < columns; column++) {
+                        arrayConvertedToTwoDimensionalArray[row][column] = array[arrayIndex++];
+                    }
+                }
+            } else {
+                for (int column = 0; column < columns; column++) {
+                    for (int row = 0; row < rows; row++) {
+                        arrayConvertedToTwoDimensionalArray[row][column] = array[arrayIndex++];
+                    }
+                }
+            }
+
+            return arrayConvertedToTwoDimensionalArray;
         }
 
         public void setDirection(Direction dir) {
