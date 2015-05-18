@@ -18,6 +18,9 @@ public class PlateBulkEditorTest extends LimsTestCase {
 
         documentFieldEditor.setText(getNewLineSeparatedSequenceOfNumbers(0, 15));
         documentFieldEditor.valuesFromTextView();
+
+        assertTrue(documentFieldEditor.getChanges().isEmpty());
+
         documentFieldEditor.setText(getNewLineSeparatedSequenceOfNumbers(1, 16));
 
         List<String> changes = documentFieldEditor.getChanges();
