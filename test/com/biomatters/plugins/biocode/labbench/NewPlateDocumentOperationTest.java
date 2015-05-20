@@ -9,54 +9,66 @@ import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import jebl.util.ProgressListener;
 import org.junit.Test;
 
+import java.util.Collections;
+
 /**
  * @author Gen Li
  *         Created on 19/05/15 8:39 AM
  */
 public class NewPlateDocumentOperationTest extends LimsTestCase {
+    private static final String REACTION_TYPE_OPTION_NAME = "reactionType";
+    private static final String PLATE_TYPE_OPTION_NAME = "plateType";
+    private static final String STRIP_NUMBER_OPTION_NAME = "stripNumber";
+    private static final String REACTION_NUMBER_OPTION_NAME = "reactionNumber";
+    private static final String FROM_EXISTING_OPTION_NAME = "fromExisting";
+
+    private static final String EXTRACTION_REACTION_TYPE_VALUE = "extraction";
+    private static final String PCR_REACTION_TYPE_VALUE = "pcr";
+    private static final String STRIPS_PLATE_TYPE_VALUE = "strips";
+    private static final String INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE = "individualReactions";
+
     @Test
     public void testCreateTwoStripPCRPlateFromTwoStripExtractionPlate() throws DocumentOperationException {
-        NewPlateDocumentOperation newPlateDocumentOperation = new NewPlateDocumentOperation();
-
-        NewPlateOptions newTwoStripExtractionPlateOptions = new NewPlateOptions();
-
-        newTwoStripExtractionPlateOptions.getOption("reactionType").setValue(new Options.OptionValue("extraction", "Extraction"));
-        newTwoStripExtractionPlateOptions.getOption("plateType").setValue(new Options.OptionValue("strips", ""));
-        newTwoStripExtractionPlateOptions.getOption("stripNumber").setValue(2);
-
-        Plate twoStripExtractionPlate = newPlateDocumentOperation._performOperation(new AnnotatedPluginDocument[]{}, ProgressListener.EMPTY, newTwoStripExtractionPlateOptions);
-        AnnotatedPluginDocument twoStripExtractionPlateAnnotatedPluginDocument = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(twoStripExtractionPlate));
-
-        NewPlateOptions newTwoStripPCRPlateOptions = new NewPlateOptions(twoStripExtractionPlateAnnotatedPluginDocument);
-
-        newTwoStripPCRPlateOptions.getOption("fromExisting").setValue(true);
-        newTwoStripPCRPlateOptions.getOption("reactionType").setValue(new Options.OptionValue("pcr", "PCR"));
-        newTwoStripPCRPlateOptions.getOption("plateType").setValue(new Options.OptionValue("strips", ""));
-        newTwoStripPCRPlateOptions.getOption("stripNumber").setValue(2);
-
-        Plate twoStripPCRPlate = newPlateDocumentOperation._performOperation(new AnnotatedPluginDocument[]{twoStripExtractionPlateAnnotatedPluginDocument}, ProgressListener.EMPTY, newTwoStripPCRPlateOptions);
+        createPlate(PCR_REACTION_TYPE_VALUE, STRIPS_PLATE_TYPE_VALUE, 2, createPlate(EXTRACTION_REACTION_TYPE_VALUE, STRIPS_PLATE_TYPE_VALUE, 2, null));
     }
 
     @Test
     public void testCreateIndividualReactionsPlateFromIndividualReactionsPlate() throws DocumentOperationException {
-        NewPlateDocumentOperation newPlateDocumentOperation = new NewPlateDocumentOperation();
+        createPlate(PCR_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, 24, createPlate(EXTRACTION_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, 24, null));
+    }
 
-        NewPlateOptions newTwentyFourIndividualReactionsExtractionPlateOptions = new NewPlateOptions();
+    private static Plate createPlate(String reactionType, String plateType, int plateValue, Plate plate) throws DocumentOperationException {
+        AnnotatedPluginDocument annotatedExistingPlateDocument = null;
+        AnnotatedPluginDocument[] annotatedExistingPlateDocuments = new AnnotatedPluginDocument[]{};
 
-        newTwentyFourIndividualReactionsExtractionPlateOptions.getOption("reactionType").setValue(new Options.OptionValue("extraction", "Extraction"));
-        newTwentyFourIndividualReactionsExtractionPlateOptions.getOption("plateType").setValue(new Options.OptionValue("individualReactions", ""));
-        newTwentyFourIndividualReactionsExtractionPlateOptions.getOption("reactionNumber").setValue(24);
+        if (plate != null) {
+            annotatedExistingPlateDocument = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(plate));
+            annotatedExistingPlateDocuments = new AnnotatedPluginDocument[]{annotatedExistingPlateDocument};
+        }
 
-        Plate twentyFourIndividualReactionsExtractionPlate = newPlateDocumentOperation._performOperation(new AnnotatedPluginDocument[]{}, ProgressListener.EMPTY, newTwentyFourIndividualReactionsExtractionPlateOptions);
-        AnnotatedPluginDocument twentyFourIndividualReactionsExtractionPlateAnnotatedPluginDocument = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(twentyFourIndividualReactionsExtractionPlate));
+        return new NewPlateDocumentOperation()._performOperation(annotatedExistingPlateDocuments, ProgressListener.EMPTY, createNewPlateOptions(reactionType, plateType, plateValue, annotatedExistingPlateDocument));
+    }
 
-        NewPlateOptions twentyFourIndividualReactionsPCRPlateOptions = new NewPlateOptions(twentyFourIndividualReactionsExtractionPlateAnnotatedPluginDocument);
+    private static NewPlateOptions createNewPlateOptions(String reactionType, String plateType, int plateValue, AnnotatedPluginDocument annotatedExistingPlateDocument) throws DocumentOperationException {
+        NewPlateOptions newPlateOptions;
 
-        twentyFourIndividualReactionsPCRPlateOptions.getOption("fromExisting").setValue(true);
-        twentyFourIndividualReactionsPCRPlateOptions.getOption("reactionType").setValue(new Options.OptionValue("pcr", "PCR"));
-        twentyFourIndividualReactionsPCRPlateOptions.getOption("plateType").setValue(new Options.OptionValue("individualReactions", ""));
-        twentyFourIndividualReactionsPCRPlateOptions.getOption("reactionNumber").setValue(24);
+        if (annotatedExistingPlateDocument != null) {
+            newPlateOptions = new NewPlateOptions(annotatedExistingPlateDocument);
+            ((Options.BooleanOption)newPlateOptions.getOption(FROM_EXISTING_OPTION_NAME)).setValue(true);
+        } else {
+            newPlateOptions = new NewPlateOptions();
+        }
 
-        Plate twentyFourIndividualReactionsPCRPlate = newPlateDocumentOperation._performOperation(new AnnotatedPluginDocument[]{twentyFourIndividualReactionsExtractionPlateAnnotatedPluginDocument}, ProgressListener.EMPTY, twentyFourIndividualReactionsPCRPlateOptions);
+        newPlateOptions.getOption(REACTION_TYPE_OPTION_NAME).setValueFromString(reactionType);
+        newPlateOptions.getOption(PLATE_TYPE_OPTION_NAME).setValueFromString(plateType);
+        if (plateType.equals(STRIPS_PLATE_TYPE_VALUE)) {
+            ((Options.IntegerOption)newPlateOptions.getOption(STRIP_NUMBER_OPTION_NAME)).setValue(plateValue);
+        } else if (plateType.equals(INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE)) {
+            ((Options.IntegerOption)newPlateOptions.getOption(REACTION_NUMBER_OPTION_NAME)).setValue(plateValue);
+        } else {
+            throw new IllegalArgumentException("Unsupported plate type.");
+        }
+
+        return newPlateOptions;
     }
 }

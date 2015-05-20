@@ -5,14 +5,11 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.jdom.Element;
 
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -131,72 +128,16 @@ public class Plate implements XMLSerializable {
     }
 
     public static Size getSizeEnum(int size) {
-        switch (size) {
-            case 1:
-                return Size.w1;
-            case 2:
-                return Size.w2;
-            case 3:
-                return Size.w3;
-            case 4:
-                return Size.w4;
-            case 5:
-                return Size.w5;
-            case 6:
-                return Size.w6;
-            case 7:
-                return Size.w7;
-            case 8:
-                return Size.w8;
-            case 9:
-                return Size.w9;
-            case 10:
-                return Size.w10;
-            case 11:
-                return Size.w11;
-            case 12:
-                return Size.w12;
-            case 13:
-                return Size.w13;
-            case 14:
-                return Size.w14;
-            case 15:
-                return Size.w15;
-            case 16:
-                return Size.w16;
-            case 17:
-                return Size.w17;
-            case 18:
-                return Size.w18;
-            case 19:
-                return Size.w19;
-            case 20:
-                return Size.w20;
-            case 21:
-                return Size.w21;
-            case 22:
-                return Size.w22;
-            case 23:
-                return Size.w23;
-            case 24:
-                return Size.w24;
-            case 25:
-                return Size.w25;
-            case 26:
-                return Size.w26;
-            case 32:
-                return Size.w32;
-            case 40:
-                return Size.w40;
-            case 48:
-                return Size.w48;
-            case 96:
-                return Size.w96;
-            case 384:
-                return Size.w384;
-            default:
-                return null;
+        Size sizeToReturn = null;
+
+        for (Size sizeValue : Size.values()) {
+            if (sizeValue.size == size) {
+                sizeToReturn = sizeValue;
+                break;
+            }
         }
+
+        return sizeToReturn;
     }
 
     public Plate(int numberOfWells, Reaction.Type type) {
