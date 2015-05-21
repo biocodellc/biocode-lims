@@ -3298,7 +3298,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
 
         protected PreparedStatement prepareStatement(String query) throws SQLException {
             PreparedStatement statement = connection.prepareStatement(query);
-            statement.setQueryTimeout(BiocodeService.STATEMENT_QUERY_TIMEOUT);
+            statement.setQueryTimeout(STATEMENT_QUERY_TIMEOUT);
             return statement;
         }
 

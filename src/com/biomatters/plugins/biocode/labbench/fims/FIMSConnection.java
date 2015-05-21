@@ -11,6 +11,7 @@ import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
 import com.biomatters.plugins.biocode.labbench.FimsSample;
+import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
@@ -28,6 +29,7 @@ import java.io.IOException;
  * Time: 6:16:57 PM
  */
 public abstract class FIMSConnection {
+    protected static int STATEMENT_QUERY_TIMEOUT = 0;
 
     protected static String getProjectForSample(List<DocumentField> projectsLowestToHighest, FimsSample sample) {
         for (DocumentField projectField : projectsLowestToHighest) {
@@ -68,6 +70,7 @@ public abstract class FIMSConnection {
 
     public void connect(Options options) throws ConnectionException {
         _connect(options);
+        STATEMENT_QUERY_TIMEOUT = ((Options.IntegerOption)options.getParentOptions().getOption(LoginOptions.FIMS_STATEMENT_TIMEOUT_OPTION_NAME)).getValue();
 
         if(getTissueSampleDocumentField() == null) {
             throw new ConnectionException("You have an empty tissue sample field.  Please check your FIMS connection options");
