@@ -145,8 +145,10 @@ public class Plate implements XMLSerializable {
     }
 
     private void init(int numberOfWells, Reaction.Type type, boolean initializeReactions) {
-        if (numberOfWells % 8 == 0) {
-            init(8, numberOfWells / 8, type, initializeReactions);
+        if (numberOfWells == 384) {
+            init(16, 24, type, initializeReactions);
+        } else if (numberOfWells % 8 == 0) {
+            init(8, numberOfWells/8, type, initializeReactions);
         } else {
             init(1, numberOfWells, type, initializeReactions);
         }
@@ -167,31 +169,7 @@ public class Plate implements XMLSerializable {
     }
 
     private void init(Size size, Reaction.Type type, boolean initialiseReactions) {
-        switch(size) {
-            case w8:
-                init(8, 1, type, initialiseReactions);
-                break;
-            case w16:
-                init(8, 2, type, initialiseReactions);
-                break;
-            case w24:
-                init(8, 3, type, initialiseReactions);
-                break;
-            case w32:
-                init(8, 4, type, initialiseReactions);
-                break;
-            case w40:
-                init(8, 5, type, initialiseReactions);
-                break;
-            case w48 :
-                init(8, 6, type, initialiseReactions);
-                break;
-            case w96 :
-                init(8, 12, type, initialiseReactions);
-                break;
-            case w384 :
-                init(16, 24, type, initialiseReactions);
-        }
+        init(size.size, type, initialiseReactions);
     }
 
     public List<GelImage> getImages() {
@@ -582,7 +560,7 @@ public class Plate implements XMLSerializable {
             }
         }
 
-        
+
 
         return plateElement;
     }
