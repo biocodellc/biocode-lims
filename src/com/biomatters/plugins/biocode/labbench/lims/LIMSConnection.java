@@ -28,7 +28,7 @@ public abstract class LIMSConnection {
     public static final String EXPECTED_SERVER_FULL_VERSION = "9.2";
     public static final int BATCH_SIZE = 200;
 
-    protected static int STATEMENT_QUERY_TIMEOUT = 0;
+    public static int REQUEST_TIMEOUT = 0;
 
     /**
      * Was used for a beta version. But since we didn't actually break backwards compatibility we reverted back to the old
@@ -184,7 +184,7 @@ public abstract class LIMSConnection {
     public final void connect(PasswordOptions options) throws ConnectionException {
         this.limsOptions = options;
         _connect(options);
-        STATEMENT_QUERY_TIMEOUT = ((Options.IntegerOption)options.getOption(LoginOptions.LIMS_STATEMENT_TIMEOUT_OPTION_NAME)).getValue();
+        REQUEST_TIMEOUT = ((Options.IntegerOption)options.getOption(LoginOptions.LIMS_REQUEST_TIMEOUT_OPTION_NAME)).getValue();
     }
 
     protected abstract void _connect(PasswordOptions options) throws ConnectionException;
@@ -224,14 +224,14 @@ public abstract class LIMSConnection {
     public Statement createStatement() throws SQLException {
         Connection connection = getConnectionInternal();
         Statement statement = connection.createStatement();
-        statement.setQueryTimeout(STATEMENT_QUERY_TIMEOUT);
+        statement.setQueryTimeout(REQUEST_TIMEOUT);
         return statement;
     }
 
     public PreparedStatement createStatement(String sql) throws SQLException {
         Connection connection = getConnectionInternal();
         PreparedStatement statement = connection.prepareStatement(sql);
-        statement.setQueryTimeout(STATEMENT_QUERY_TIMEOUT);
+        statement.setQueryTimeout(REQUEST_TIMEOUT);
         return statement;
     }
 

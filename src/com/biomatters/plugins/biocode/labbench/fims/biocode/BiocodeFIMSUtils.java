@@ -3,6 +3,9 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
+import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.filter.LoggingFilter;
 
 import javax.ws.rs.NotFoundException;
@@ -32,7 +35,8 @@ public class BiocodeFIMSUtils {
     static final String BISCICOL_URL = "http://" + HOST + ":" + PORT;
 
     static WebTarget getFimsWebTarget(String hostname) {
-        return ClientBuilder.newClient().target(hostname)
+        return ClientBuilder.newBuilder()
+                .withConfig(new ClientConfig().property(ClientProperties.CONNECT_TIMEOUT, FIMSConnection.REQUEST_TIMEOUT* 1000)).newClient().target(hostname)
                             .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
     }
 

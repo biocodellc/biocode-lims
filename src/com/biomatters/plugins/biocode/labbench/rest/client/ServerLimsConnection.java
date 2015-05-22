@@ -58,7 +58,7 @@ public class ServerLimsConnection extends LIMSConnection {
             host = "http://" + host;
         }
 
-        target = RestQueryUtils.getBiocodeWebTarget(host, connectionOptions.getUsername(), connectionOptions.getPassword());
+        target = RestQueryUtils.getBiocodeWebTarget(host, connectionOptions.getUsername(), connectionOptions.getPassword(), LIMSConnection.REQUEST_TIMEOUT);
         try {
             testConnection();
         } catch (DatabaseServiceException e) {

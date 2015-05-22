@@ -14,6 +14,7 @@ import com.biomatters.plugins.biocode.labbench.rest.client.ExceptionClientFilter
 import com.biomatters.plugins.biocode.labbench.rest.client.ForbiddenExceptionClientFilter;
 import com.biomatters.plugins.biocode.labbench.rest.client.VersionHeaderAddingFilter;
 import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 import org.glassfish.jersey.filter.LoggingFilter;
 
@@ -326,14 +327,14 @@ public class RestQueryUtils {
         return "";
     }
 
-    public static WebTarget getBiocodeWebTarget(String host, String username, String password) throws ConnectionException {
+    public static WebTarget getBiocodeWebTarget(String host, String username, String password, int requestTimeoutInSeconds) throws ConnectionException {
         HttpAuthenticationFeature authFeature = HttpAuthenticationFeature.universal(username, password);
         ClientBuilder clientBuilder = ClientBuilder.newBuilder().sslContext(getSSLContext()).hostnameVerifier(new HostnameVerifier() {
             @Override
             public boolean verify(String s, SSLSession sslSession) {
                 return true;
             }
-        }).withConfig(new ClientConfig());
+        }).withConfig(new ClientConfig().property(ClientProperties.CONNECT_TIMEOUT, requestTimeoutInSeconds*1000));
         return clientBuilder.build().
                 register(ForbiddenExceptionClientFilter.class).
                 register(ExceptionClientFilter.class).
