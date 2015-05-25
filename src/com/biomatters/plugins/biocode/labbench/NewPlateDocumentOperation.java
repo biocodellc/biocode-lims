@@ -160,8 +160,9 @@ public class NewPlateDocumentOperation extends DocumentOperation {
 
             progressListener.setProgress(1.0);
         }
-        plateViewer.get().displayInFrame(true, GuiUtilities.getMainFrame());
-
+        if(!TestGeneious.isRunningTest() && !Geneious.isHeadless()) {
+            plateViewer.get().displayInFrame(true, GuiUtilities.getMainFrame());
+        }
         return plateViewer.get().getPlate();
     }
 
