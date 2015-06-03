@@ -29,7 +29,7 @@ import java.io.IOException;
  * Time: 6:16:57 PM
  */
 public abstract class FIMSConnection {
-    public static int REQUEST_TIMEOUT = 0;
+    protected int requestTimeout = LoginOptions.DEFAULT_TIMEOUT;
 
     protected static String getProjectForSample(List<DocumentField> projectsLowestToHighest, FimsSample sample) {
         for (DocumentField projectField : projectsLowestToHighest) {
@@ -69,8 +69,8 @@ public abstract class FIMSConnection {
     public abstract PasswordOptions getConnectionOptions();
 
     public void connect(Options options) throws ConnectionException {
+        requestTimeout = ((Options.IntegerOption)options.getParentOptions().getOption(LoginOptions.FIMS_REQUEST_TIMEOUT_OPTION_NAME)).getValue();
         _connect(options);
-        REQUEST_TIMEOUT = ((Options.IntegerOption)options.getParentOptions().getOption(LoginOptions.FIMS_REQUEST_TIMEOUT_OPTION_NAME)).getValue();
 
         if(getTissueSampleDocumentField() == null) {
             throw new ConnectionException("You have an empty tissue sample field.  Please check your FIMS connection options");

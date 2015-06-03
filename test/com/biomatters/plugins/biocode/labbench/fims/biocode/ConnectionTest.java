@@ -9,6 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 /**
@@ -19,14 +20,14 @@ public class ConnectionTest extends Assert {
 
     @Test
     public void getGraphs() throws DatabaseServiceException {
-        List<Graph> graphs = BiocodeFIMSUtils.getGraphsForProject("1");
+        List<Graph> graphs = client.getGraphsForProject("1");
         assertNotNull(graphs);
         assertFalse(graphs.isEmpty());
     }
 
     @Test
     public void getFimsData() throws DatabaseServiceException {
-        BiocodeFimsData data = BiocodeFIMSUtils.getData("1", null, null, null);
+        BiocodeFimsData data = client.getData("1", null, null, null);
 
         System.out.println(data.header);
         assertFalse(data.header.isEmpty());
@@ -34,22 +35,22 @@ public class ConnectionTest extends Assert {
 
     @Test
     public void checkLoginWorks() throws MalformedURLException, DatabaseServiceException, ConnectionException {
-        BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "demo", "demo");
-        for (Project project : BiocodeFIMSUtils.getProjects()) {
+        client.login("demo", "demo");
+        for (Project project : client.getProjects()) {
             System.out.println(project);
         }
     }
 
     @Test(expected = Exception.class)
     public void checkLoginCanFail() throws MalformedURLException, DatabaseServiceException {
-        BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "a", "bc");
+        client.login("a", "bc");
         fail("login should have thrown a ConnectionException because we used incorrect credentials");
     }
 
     @Test
     public void getProjects() throws DatabaseServiceException, MalformedURLException {
-        BiocodeFIMSUtils.login(BiocodeFIMSUtils.BISCICOL_URL, "demo", "demo");
-        List<Project> projects = BiocodeFIMSUtils.getProjects();
+        client.login("demo", "demo");
+        List<Project> projects = client.getProjects();
         assertFalse("There should be some projects", projects.isEmpty());
         for (Project project : projects) {
             assertNotNull(project.code);
@@ -61,16 +62,26 @@ public class ConnectionTest extends Assert {
 
     @Test(expected = DatabaseServiceException.class)
     public void checkProjectRetrievalWhenNotLoggedIn() throws DatabaseServiceException {
-        BiocodeFIMSUtils.getProjects();
+        client.getProjects();
     }
 
     @Before
-    public void shareSessionsForBiSciCol() {
-        SharedCookieHandler.registerHost(BiocodeFIMSUtils.HOST);
+    public void shareSessionsForBiSciCol() throws MalformedURLException {
+        SharedCookieHandler.registerHost(getHostname());
     }
 
+    private BiocodeFIMSClient client;
+
+    @Before
+    public void createClient() {
+        client = new BiocodeFIMSClient(BiocodeFIMSConnection.HOST);
+    }
     @After
-    public void logoutAfterTestDone() {
-        SharedCookieHandler.unregisterHost(BiocodeFIMSUtils.HOST);
+    public void logoutAfterTestDone() throws MalformedURLException {
+        SharedCookieHandler.unregisterHost(getHostname());
+    }
+
+    private String getHostname() throws MalformedURLException {
+        return new URL(BiocodeFIMSConnection.HOST).getHost();
     }
 }

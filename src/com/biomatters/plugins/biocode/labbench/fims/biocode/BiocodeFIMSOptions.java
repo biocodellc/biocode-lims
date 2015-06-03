@@ -43,4 +43,8 @@ public class BiocodeFIMSOptions extends TableFimsConnectionOptions {
     public Project getProject() {
         return connectionOptions.getProject();
     }
+
+    public String getHost() {
+        return connectionOptions.getHost();
+    }
 }

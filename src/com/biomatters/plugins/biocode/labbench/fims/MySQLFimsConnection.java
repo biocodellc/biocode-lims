@@ -53,13 +53,13 @@ public class MySQLFimsConnection extends TableFimsConnection {
 
     private Statement createStatement() throws SQLException {
         Statement statement = getConnection().createStatement();
-        statement.setQueryTimeout(REQUEST_TIMEOUT);
+        statement.setQueryTimeout(requestTimeout);
         return statement;
     }
 
     private PreparedStatement prepareStatement(String query) throws SQLException{
         PreparedStatement statement = getConnection().prepareStatement(query);
-        statement.setQueryTimeout(REQUEST_TIMEOUT);
+        statement.setQueryTimeout(requestTimeout);
         return statement;
     }
 

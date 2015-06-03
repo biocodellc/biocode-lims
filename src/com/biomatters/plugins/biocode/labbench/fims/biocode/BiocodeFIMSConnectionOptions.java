@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceExceptio
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
+import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.labbench.fims.TableFimsConnection;
 import com.biomatters.plugins.biocode.utilities.PasswordOption;
@@ -28,13 +29,14 @@ import java.util.prefs.Preferences;
  *       Created on 1/02/14 10:50 AM
  */public class BiocodeFIMSConnectionOptions extends PasswordOptions {
 
-    ComboBoxOption<ProjectOptionValue> projectOption;
+    private StringOption hostOption;
+    private ComboBoxOption<ProjectOptionValue> projectOption;
 
     private static final String DEFAULT_HOST = "http://biscicol.org";
 
     public BiocodeFIMSConnectionOptions() {
         super(BiocodePlugin.class);
-        final StringOption hostOption = addStringOption("host", "Host:", DEFAULT_HOST);
+        hostOption = addStringOption("host", "Host:", DEFAULT_HOST);
         final StringOption usernameOption = addStringOption("username", "Username:", "");
         final PasswordOption passwordOption = addCustomOption(new PasswordOption("password", "Password:", true));
         addButtonOption("authenticate", "", "Authenticate").addActionListener(new ActionListener() {
@@ -81,13 +83,14 @@ import java.util.prefs.Preferences;
     public void login(String host, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
         URL url = new URL(host);
         SharedCookieHandler.registerHost(url.getHost());
-        BiocodeFIMSUtils.login(host, username, password);
-        loadProjectsFromServer();
+        BiocodeFIMSClient client = new BiocodeFIMSClient(host, LoginOptions.DEFAULT_TIMEOUT);
+        client.login(username, password);
+        loadProjectsFromServer(client);
     }
 
-    private void loadProjectsFromServer() {
+    private void loadProjectsFromServer(BiocodeFIMSClient client) {
         try {
-            List<Project> projects = BiocodeFIMSUtils.getProjects();
+            List<Project> projects = client.getProjects();
             cacheProjects(projects);
 
             final List<ProjectOptionValue> optionValues = new ArrayList<ProjectOptionValue>();
@@ -183,7 +186,7 @@ import java.util.prefs.Preferences;
         static final ProjectOptionValue NO_VALUE = new ProjectOptionValue(null);
     }
 
-    private static final List<OptionValue> NO_FIELDS = Arrays.asList(new Options.OptionValue("None", "None"));
+    private static final List<OptionValue> NO_FIELDS = Collections.singletonList(new Options.OptionValue("None", "None"));
     public List<OptionValue> getFieldsAsOptionValues() throws DatabaseServiceException {
         List<OptionValue> fields = new ArrayList<OptionValue>();
         Project project = projectOption.getValue().project;
@@ -198,5 +201,9 @@ import java.util.prefs.Preferences;
 
     public Project getProject() {
         return projectOption.getValue().project;
+    }
+
+    public String getHost() {
+        return hostOption.getValue();
     }
 }

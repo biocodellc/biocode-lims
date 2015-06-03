@@ -4,7 +4,6 @@ import com.biomatters.geneious.publicapi.databaseservice.AdvancedSearchQueryTerm
 import com.biomatters.geneious.publicapi.databaseservice.CompoundSearchQuery;
 import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.geneious.publicapi.plugin.Geneious;
-import com.biomatters.plugins.biocode.labbench.fims.TAPIRFimsConnection;
 import org.jdom.*;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
@@ -16,7 +15,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -25,11 +23,13 @@ import java.util.List;
  * @version $Id: 19/08/2009 12:01:40 PM steve $
  */
 public class TAPIRClient {
-    private TapirSchema schema;
-    private URL accessPoint;
+    private final TapirSchema schema;
+    private final URL accessPoint;
+    private final int timeout;
 
-    public TAPIRClient(TapirSchema schema, String accessPoint) {
+    public TAPIRClient(TapirSchema schema, String accessPoint, int timeout) {
         this.schema = schema;
+        this.timeout = timeout;
         try {
             this.accessPoint = new URL(accessPoint);
         } catch (MalformedURLException e) {
@@ -137,6 +137,8 @@ public class TAPIRClient {
 
     private Element queryServer(Element query) throws IOException, JDOMException {
         URLConnection connection = accessPoint.openConnection();
+        connection.setConnectTimeout(timeout);
+        connection.setReadTimeout(timeout);
 
         XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
         StringWriter stringWriter = new StringWriter();

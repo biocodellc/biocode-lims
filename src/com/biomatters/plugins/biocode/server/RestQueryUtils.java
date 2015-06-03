@@ -334,7 +334,10 @@ public class RestQueryUtils {
             public boolean verify(String s, SSLSession sslSession) {
                 return true;
             }
-        }).withConfig(new ClientConfig().property(ClientProperties.CONNECT_TIMEOUT, requestTimeoutInSeconds*1000));
+        }).withConfig(new ClientConfig()
+                .property(ClientProperties.CONNECT_TIMEOUT, requestTimeoutInSeconds*1000)
+                .property(ClientProperties.READ_TIMEOUT, requestTimeoutInSeconds * 1000)
+        );
         return clientBuilder.build().
                 register(ForbiddenExceptionClientFilter.class).
                 register(ExceptionClientFilter.class).

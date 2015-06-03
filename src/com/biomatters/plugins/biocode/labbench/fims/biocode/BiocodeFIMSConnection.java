@@ -111,7 +111,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             return samples;
 
         try {
-            BiocodeFimsData data = BiocodeFIMSUtils.getData("" + project.id, graph,
+            BiocodeFimsData data = client.getData("" + project.id, graph,
                     form, filterText == null || filterText.length() == 0 ? null : filterText.toString());
 
             if (data.data.size() == 0) {
@@ -262,7 +262,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         List<Condition> supportedConditions = Arrays.asList(Condition.CONTAINS, Condition.EQUAL);
         if (termQuery.getValues().length == 1 && supportedConditions.contains(termQuery.getCondition())) {
             String columnName = termQuery.getField().getCode().replace(CODE_PREFIX, "");
-            if (columnName.equals(BiocodeFIMSUtils.EXPEDITION_NAME)) {
+            if (columnName.equals(BiocodeFIMSClient.EXPEDITION_NAME)) {
                 projectToSearch = termQuery.getValues()[0].toString();
             } else {
                 form.param(columnName, termQuery.getValues()[0].toString());
@@ -284,6 +284,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
         return new BiocodeFIMSOptions();
     }
 
+    private BiocodeFIMSClient client;
     private Project project;
     private Map<String, Graph> graphs;
 
@@ -293,13 +294,15 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptions()");
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
+        client = new BiocodeFIMSClient(fimsOptions.getHost(), requestTimeout);
+
         project = fimsOptions.getProject();
         if (project == null) {
             throw new ConnectionException("You must select a project");
         }
         graphs = new HashMap<String, Graph>();
         try {
-            List<Graph> graphsForExpedition = BiocodeFIMSUtils.getGraphsForProject("" + project.id);
+            List<Graph> graphsForExpedition = client.getGraphsForProject("" + project.id);
             if (graphsForExpedition.isEmpty()) {
                 throw new ConnectionException("Project has no expeditions");
             }
@@ -318,7 +321,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
     @Override
     public List<DocumentField> getTableColumns() throws IOException {
         List<DocumentField> fields = new ArrayList<DocumentField>();
-        fields.add(new DocumentField(BiocodeFIMSUtils.EXPEDITION_NAME, "", CODE_PREFIX + BiocodeFIMSUtils.EXPEDITION_NAME, String.class, true, false));
+        fields.add(new DocumentField(BiocodeFIMSClient.EXPEDITION_NAME, "", CODE_PREFIX + BiocodeFIMSClient.EXPEDITION_NAME, String.class, true, false));
         for (Project.Field field : project.getFields()) {
             fields.add(new DocumentField(field.name, field.name + "(" + field.uri + ")", CODE_PREFIX + field.uri, String.class, true, false));
         }

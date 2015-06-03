@@ -3,7 +3,6 @@ package com.biomatters.plugins.biocode.labbench.fims.biocode;
 import com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException;
 import com.biomatters.geneious.publicapi.utilities.StringUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
-import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.filter.LoggingFilter;
@@ -28,30 +27,34 @@ import java.util.logging.Logger;
  * @author Matthew Cheung
  *         Created on 7/02/14 5:51 AM
  */
-public class BiocodeFIMSUtils {
+public class BiocodeFIMSClient {
 
-    static final String HOST = "biscicol.org";
-    static final int PORT = 80;
-    static final String BISCICOL_URL = "http://" + HOST + ":" + PORT;
+    private WebTarget target;
 
-    static WebTarget getFimsWebTarget(String hostname) {
-        return ClientBuilder.newBuilder()
-                .withConfig(new ClientConfig().property(ClientProperties.CONNECT_TIMEOUT, FIMSConnection.REQUEST_TIMEOUT* 1000)).newClient().target(hostname)
-                            .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
+    public BiocodeFIMSClient(String hostname) {
+        this(hostname, 0);
+    }
+
+    public BiocodeFIMSClient(String hostname, int timeout) {
+        ClientConfig config = new ClientConfig()
+                .property(ClientProperties.CONNECT_TIMEOUT, timeout * 1000)
+                .property(ClientProperties.READ_TIMEOUT, timeout * 1000);
+
+        target = ClientBuilder.newBuilder().withConfig(config).build().target(hostname)
+                                    .register(new LoggingFilter(Logger.getLogger(BiocodePlugin.class.getName()), false));
     }
 
 
     /**
      *
-     * @param url The URL of the BiSciCol server
      * @param username The username to use to authenticate
      * @param password The password to use to authenticate
      * @throws MalformedURLException If the url specified was not a valid URL
      * @throws ProcessingException If a problem occurs accessing the webservice to login
      * @throws com.biomatters.geneious.publicapi.databaseservice.DatabaseServiceException If the server returned an error when we tried to authenticate
      */
-    static void login(String url, String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
-        WebTarget path = getFimsWebTarget(url).path("id/authenticationService/login");
+    void login(String username, String password) throws MalformedURLException, ProcessingException, DatabaseServiceException {
+        WebTarget path = target.path("id/authenticationService/login");
         Invocation.Builder request = path.request();
         Form formToPost = new Form().param("username", username).param("password", password);
         Response response = request.post(
@@ -84,14 +87,11 @@ public class BiocodeFIMSUtils {
         }
     }
 
-    static WebTarget getQueryTarget() {
-        WebTarget target = getFimsWebTarget(BISCICOL_URL);
-        target = target.path("biocode-fims/rest/query/json");
-        return target;
+    WebTarget getQueryTarget() {
+        return target.path("biocode-fims/rest/query/json");
     }
 
-    static List<Project> getProjects() throws DatabaseServiceException {
-        WebTarget target = getFimsWebTarget(BISCICOL_URL);
+    List<Project> getProjects() throws DatabaseServiceException {
         Invocation.Builder request = target.path("id/projectService/listUserProjects").request(MediaType.APPLICATION_JSON_TYPE);
         try {
             Response response = request.get();
@@ -104,20 +104,19 @@ public class BiocodeFIMSUtils {
             }
             return returnList;
         } catch(WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Error message from server: " + HOST + ": " + e.getMessage(), true);
+            throw new DatabaseServiceException(e, "Error message from server: " + target.getUri().getHost() + ": " + e.getMessage(), true);
         } catch(ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
     }
 
-    static List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
+    List<Graph> getGraphsForProject(String id) throws DatabaseServiceException {
         try {
-            WebTarget target = getFimsWebTarget(BISCICOL_URL);
             Invocation.Builder request = target.path("id/projectService/graphs").path(id).request(MediaType.APPLICATION_JSON_TYPE);
             Response response = request.get();
             return getRestServiceResult(GraphList.class, response).getData();
         } catch(WebApplicationException e) {
-            throw new DatabaseServiceException(e, "Error message from server: " + HOST + ": " + e.getMessage(), true);
+            throw new DatabaseServiceException(e, "Error message from server: " + target.getUri().getHost() + ": " + e.getMessage(), true);
         } catch(ProcessingException e) {
             throw new DatabaseServiceException(e, e.getMessage(), true);
         }
@@ -125,7 +124,7 @@ public class BiocodeFIMSUtils {
 
     static final String EXPEDITION_NAME = "Expedition";
 
-    static BiocodeFimsData getData(String project, Graph graph, Form searchTerms, String filter) throws DatabaseServiceException {
+    BiocodeFimsData getData(String project, Graph graph, Form searchTerms, String filter) throws DatabaseServiceException {
         if(filter != null && filter.contains(",")) {
             try {
                 filter = URLEncoder.encode(filter, "UTF-8");
@@ -154,7 +153,7 @@ public class BiocodeFIMSUtils {
         return data;
     }
 
-    private static BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
+    private BiocodeFimsData getBiocodeFimsData(String project, List<String> graphs, Form searchTerms, String filter) throws DatabaseServiceException {
         try {
             WebTarget target = getQueryTarget();
 
