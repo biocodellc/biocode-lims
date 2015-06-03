@@ -75,7 +75,7 @@ public class ServerFimsConnection extends FIMSConnection {
             host = "http://" + host;
         }
 
-        WebTarget server = RestQueryUtils.getBiocodeWebTarget(host, connetionOptions.getUsername(), connetionOptions.getPassword(), requestTimeout);
+        WebTarget server = RestQueryUtils.getBiocodeWebTarget(host, connetionOptions.getUsername(), connetionOptions.getPassword(), requestTimeoutInSeconds);
         try {
             String serverVersion = server.path("info").path("version").request(MediaType.TEXT_PLAIN_TYPE).get(String.class);
             if (!serverVersion.equals(EXPECTED_VERSION)) {

@@ -294,7 +294,7 @@ public class BiocodeFIMSConnection extends TableFimsConnection {
             throw new IllegalArgumentException("_connect() must be called with Options obtained from calling _getConnectionOptions()");
         }
         BiocodeFIMSOptions fimsOptions = (BiocodeFIMSOptions) options;
-        client = new BiocodeFIMSClient(fimsOptions.getHost(), requestTimeout);
+        client = new BiocodeFIMSClient(fimsOptions.getHost(), requestTimeoutInSeconds);
 
         project = fimsOptions.getProject();
         if (project == null) {

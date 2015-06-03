@@ -53,7 +53,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
     }
 
     public List<DocumentField> getTableColumns() throws IOException {
-        return FusionTableUtils.getTableColumns(tableId);
+        return FusionTableUtils.getTableColumns(tableId, requestTimeoutInSeconds);
     }
 
 
@@ -250,7 +250,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         System.out.println(sql);
 
         try {
-            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql, requestTimeoutInSeconds);
             List<List<Object>> rows = sqlresponse.getRows();
             if(rows == null) {
                 return Collections.emptyList();
@@ -371,7 +371,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         String sql = "SELECT ROWID FROM "+tableId;
         System.out.println(sql);
         try {
-            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql, requestTimeoutInSeconds);
             return sqlresponse.getRows().size();
         } catch (IOException e) {
             e.printStackTrace();
@@ -383,7 +383,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         DocumentField tissueCol = getTissueSampleDocumentField();
         DocumentField specimenCol = getSpecimenDocumentField();
 
-        Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+        Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql, requestTimeoutInSeconds);
 
         List<String> colHeaders = sqlresponse.getColumns();
         List<List<Object>> rows = sqlresponse.getRows();
@@ -421,7 +421,7 @@ public class FusionTablesFimsConnection extends TableFimsConnection{
         try {
             String columnList = StringUtilities.join(",", projectColumns);
             String sql = "SELECT " + columnList + " FROM " + tableId + " GROUP BY " + columnList;
-            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql);
+            Sqlresponse sqlresponse = FusionTableUtils.queryTable(sql, requestTimeoutInSeconds);
             List<List<Object>> rows = sqlresponse.getRows();
             if(rows == null) {
                 return Collections.emptyList();

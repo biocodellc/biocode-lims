@@ -74,7 +74,7 @@ public class TAPIRFimsConnection extends FIMSConnection{
         schema = dataStandard.schema;
 
         try {
-            client = new TAPIRClient(schema, options.getValueAsString("accessPoint"), requestTimeout);
+            client = new TAPIRClient(schema, options.getValueAsString("accessPoint"), requestTimeoutInSeconds);
             searchAttributes = getMatchingFields(client.getSearchAttributes(), false);
             taxonomyAttributes = getMatchingFields(client.getSearchAttributes(), true);
             for (DocumentField field : searchAttributes) {

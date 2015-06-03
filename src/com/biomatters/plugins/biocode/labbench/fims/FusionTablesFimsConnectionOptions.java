@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.fims;
 
+import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.geneious.publicapi.plugin.Options;
@@ -34,7 +35,7 @@ public class FusionTablesFimsConnectionOptions extends TableFimsConnectionOption
         if(tableId == null || tableId.length() == 0 || tableId.equals(FusionTablesConnectionOptions.NO_TABLE.getName())) {
             return NO_FIELDS;
         }
-        List<DocumentField> decodedValues = FusionTableUtils.getTableColumns(tableId);
+        List<DocumentField> decodedValues = FusionTableUtils.getTableColumns(tableId, LoginOptions.DEFAULT_TIMEOUT);
         if(decodedValues.size() == 0) {
             return NO_FIELDS;
         }

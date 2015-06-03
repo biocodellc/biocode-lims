@@ -5,12 +5,15 @@ import com.biomatters.geneious.publicapi.utilities.FileUtilities;
 import com.biomatters.plugins.biocode.BiocodePlugin;
 import com.biomatters.plugins.biocode.XmlUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
+import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.java6.auth.oauth2.FileCredentialStore;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -118,8 +121,8 @@ public class FusionTableUtils {
         return null;
     }
 
-    public static List<com.google.api.services.fusiontables.model.Table> listTables() throws IOException {
-        Fusiontables fusiontables = prepareForApiCall();
+    public static List<com.google.api.services.fusiontables.model.Table> listTables(int timeout) throws IOException {
+        Fusiontables fusiontables = prepareForApiCall(timeout);
         if(fusiontables == null) {
             return Collections.emptyList();
         }
@@ -135,19 +138,26 @@ public class FusionTableUtils {
         return tablelist.getItems();
     }
 
-    private static Fusiontables prepareForApiCall() throws IOException {
+    private static Fusiontables prepareForApiCall(final int timeoutInSeconds) throws IOException {
         Credential credential = getCredentialOnlyIfCached();
         if(credential == null) {
             return null;
         }
 
-        return new Fusiontables.Builder(
-                    HTTP_TRANSPORT, JSON_FACTORY, credential).setApplicationName(
-                    "MooreaBiocodePlugin/"+ BiocodePlugin.PLUGIN_VERSION).build();
+        return new Fusiontables.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+                .setApplicationName("MooreaBiocodePlugin/" + BiocodePlugin.PLUGIN_VERSION)
+                .setHttpRequestInitializer(new HttpRequestInitializer() {
+                    @Override
+                    public void initialize(HttpRequest request) throws IOException {
+                        request.setConnectTimeout(timeoutInSeconds * 1000);
+                        request.setReadTimeout(timeoutInSeconds * 1000);
+                    }
+                })
+                .build();
     }
 
-    private static Table getTable(String tableId) throws IOException {
-        Fusiontables fusiontables = prepareForApiCall();
+    private static Table getTable(String tableId, int timeout) throws IOException {
+        Fusiontables fusiontables = prepareForApiCall(timeout);
         if(fusiontables == null) {
             return null;
         }
@@ -159,8 +169,8 @@ public class FusionTableUtils {
         return table;
     }
 
-    public static List<DocumentField> getTableColumns(String tableId) throws IOException {
-        Table table = getTable(tableId);
+    public static List<DocumentField> getTableColumns(String tableId, int timeout) throws IOException {
+        Table table = getTable(tableId, timeout);
         if(table == null) {
             return Collections.emptyList();
         }
@@ -188,8 +198,8 @@ public class FusionTableUtils {
     }
 
 
-    public static Sqlresponse queryTable(String query) throws IOException {
-        Fusiontables fusiontables = prepareForApiCall();
+    public static Sqlresponse queryTable(String query, int timeout) throws IOException {
+        Fusiontables fusiontables = prepareForApiCall(timeout);
         if(fusiontables == null) {
             return null;
         }

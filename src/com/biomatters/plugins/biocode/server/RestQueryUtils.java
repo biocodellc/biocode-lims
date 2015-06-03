@@ -335,7 +335,7 @@ public class RestQueryUtils {
                 return true;
             }
         }).withConfig(new ClientConfig()
-                .property(ClientProperties.CONNECT_TIMEOUT, requestTimeoutInSeconds*1000)
+                .property(ClientProperties.CONNECT_TIMEOUT, requestTimeoutInSeconds * 1000)
                 .property(ClientProperties.READ_TIMEOUT, requestTimeoutInSeconds * 1000)
         );
         return clientBuilder.build().

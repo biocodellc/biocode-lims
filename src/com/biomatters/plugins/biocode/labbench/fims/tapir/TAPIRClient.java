@@ -25,11 +25,11 @@ import java.util.List;
 public class TAPIRClient {
     private final TapirSchema schema;
     private final URL accessPoint;
-    private final int timeout;
+    private final int timeoutInMilliseconds;
 
-    public TAPIRClient(TapirSchema schema, String accessPoint, int timeout) {
+    public TAPIRClient(TapirSchema schema, String accessPoint, int timeoutInSeconds) {
         this.schema = schema;
-        this.timeout = timeout;
+        this.timeoutInMilliseconds = timeoutInSeconds * 1000;
         try {
             this.accessPoint = new URL(accessPoint);
         } catch (MalformedURLException e) {
@@ -137,8 +137,8 @@ public class TAPIRClient {
 
     private Element queryServer(Element query) throws IOException, JDOMException {
         URLConnection connection = accessPoint.openConnection();
-        connection.setConnectTimeout(timeout);
-        connection.setReadTimeout(timeout);
+        connection.setConnectTimeout(timeoutInMilliseconds);
+        connection.setReadTimeout(timeoutInMilliseconds);
 
         XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
         StringWriter stringWriter = new StringWriter();

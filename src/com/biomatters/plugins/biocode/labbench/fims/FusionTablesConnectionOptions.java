@@ -9,6 +9,7 @@ import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.AnimatedIcon;
 import com.biomatters.plugins.biocode.labbench.ConnectionException;
+import com.biomatters.plugins.biocode.labbench.LoginOptions;
 import com.biomatters.plugins.biocode.labbench.PasswordOptions;
 import com.google.api.services.fusiontables.model.Table;
 import org.jdom.Element;
@@ -216,7 +217,7 @@ public class FusionTablesConnectionOptions extends PasswordOptions {
                 return tables;
             }
 
-            List<Table> tableJson = FusionTableUtils.listTables();
+            List<Table> tableJson = FusionTableUtils.listTables(LoginOptions.DEFAULT_TIMEOUT);
 
             tables = new ArrayList<OptionValue>();
             for(Table table : tableJson) {

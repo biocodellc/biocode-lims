@@ -128,13 +128,13 @@ public class MooreaFimsConnection extends FIMSConnection{
 
     private Statement createStatement() throws SQLException{
         Statement statement = getConnection().createStatement();
-        statement.setQueryTimeout(requestTimeout);
+        statement.setQueryTimeout(requestTimeoutInSeconds);
         return statement;
     }
 
     private PreparedStatement prepareStatement(String query) throws SQLException{
         PreparedStatement statement = getConnection().prepareStatement(query);
-        statement.setQueryTimeout(requestTimeout);
+        statement.setQueryTimeout(requestTimeoutInSeconds);
         return statement;
     }
 
