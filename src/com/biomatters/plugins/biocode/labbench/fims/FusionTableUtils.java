@@ -144,16 +144,21 @@ public class FusionTableUtils {
             return null;
         }
 
-        return new Fusiontables.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-                .setApplicationName("MooreaBiocodePlugin/" + BiocodePlugin.PLUGIN_VERSION)
-                .setHttpRequestInitializer(new HttpRequestInitializer() {
-                    @Override
-                    public void initialize(HttpRequest request) throws IOException {
-                        request.setConnectTimeout(timeoutInSeconds * 1000);
-                        request.setReadTimeout(timeoutInSeconds * 1000);
-                    }
-                })
-                .build();
+        Fusiontables.Builder builder = new Fusiontables.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential).
+                setApplicationName("MooreaBiocodePlugin/" + BiocodePlugin.PLUGIN_VERSION);
+        return applyTimeoutToBuilder(builder, timeoutInSeconds).build();
+    }
+
+    private static Fusiontables.Builder applyTimeoutToBuilder(Fusiontables.Builder builder, final int timeoutInSeconds) {
+        final HttpRequestInitializer original = builder.getHttpRequestInitializer();
+        return builder.setHttpRequestInitializer(new HttpRequestInitializer() {
+            @Override
+            public void initialize(HttpRequest request) throws IOException {
+                original.initialize(request);
+                request.setConnectTimeout(timeoutInSeconds * 1000);
+                request.setReadTimeout(timeoutInSeconds * 1000);
+            }
+        });
     }
 
     private static Table getTable(String tableId, int timeout) throws IOException {
