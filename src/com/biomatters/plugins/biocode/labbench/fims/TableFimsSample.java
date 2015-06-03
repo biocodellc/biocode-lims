@@ -137,10 +137,10 @@ public class TableFimsSample implements FimsSample {
             return XML_DATE_PREFIX + String.valueOf(((Date)value).getTime());
         }
         // Crash here for developers.
-//        assert value instanceof String : "TableFimsSample only supports serializing Strings or Dates to XML.  " +
-//                "If you've added a new type of DocumentField then you will need to add support for serializing it.  " +
-//                "Otherwise Geneious core will have a heart attack when it discovers that the value after fromXML() is a " +
-//                "String but the DocumentField is of another type";
+        assert value instanceof String : "TableFimsSample only supports serializing Strings or Dates to XML.  " +
+                "If you've added a new type of DocumentField then you will need to add support for serializing it.  " +
+                "Otherwise Geneious core will have a heart attack when it discovers that the value after fromXML() is a " +
+                "String but the DocumentField is of another type";
         return XmlUtilities.encodeXMLChars(value.toString());
     }
 
