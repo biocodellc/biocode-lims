@@ -175,19 +175,7 @@ public class NewPlateOptions extends Options{
     }
 
     public Plate.Size getPlateSize() {
-        Options.OptionValue plateSizeValue = (Options.OptionValue)getValue("plateType");
-
-        if(plateSizeValue.getName().equals("48Plate")) {
-            return Plate.Size.w48;
-        }
-        else if(plateSizeValue.getName().equals("96Plate")) {
-            return Plate.Size.w96;
-        }
-        else if(plateSizeValue.getName().equals("384Plate")) {
-            return Plate.Size.w384;
-        }
-
-        return null;
+        return Plate.getSizeEnum(getNumberOfReactions());
     }
 
     public Reaction.Type getReactionType() {
@@ -303,10 +291,20 @@ public class NewPlateOptions extends Options{
     }
 
     public int getNumberOfReactions() {
-        if(getValueAsString("plateType").equals("strips")) {
+        Options.OptionValue plateType = (Options.OptionValue)getValue("plateType");
+        if (plateType.equals(PLATE_48)) {
+            return 48;
+        } else if (plateType.equals(PLATE_96)) {
+            return 96;
+        } else if (plateType.equals(PLATE_384)) {
+            return 384;
+        } else if (plateType.equals(STRIPS)) {
             return (Integer)getOption("stripNumber").getValue()*8;   
+        } else if (plateType.equals(INDIVIDUAL_REACTIONS)) {
+            return (Integer)getOption("reactionNumber").getValue();
+        } else {
+            throw new IllegalStateException("Unknown plate type: " + plateType.getName() + ".");
         }
-        return (Integer)getOption("reactionNumber").getValue();
     }
 
     static class ComboBoxListener implements SimpleListener{

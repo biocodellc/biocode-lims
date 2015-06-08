@@ -1,7 +1,12 @@
 <PluginVersions>
-    <LatestVersion>2.8.8</LatestVersion>
-    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_8.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 2.8.8 - 2 March 2015==
+    <LatestVersion>2.8.9</LatestVersion>
+    <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_9.gplugin</LatestVersionURL>
+    <ReleaseNotes>==Biocode Plugin 2.8.9 - 8 June 2015==
+* Fixed a bug that prevented the creation of PCR plates from existing 8 strip extraction plates.
+* Fixed a problem preventing the use of the same extraction within PCR or cycle sequencing plates.
+* Other minor fixes.
+
+==Biocode Plugin 2.8.8 - 2 March 2015==
 * The LIMS now actively tries to prevent duplicate extraction barcodes.  It will ask if extractions should be moved if duplicates are detected.
 * LIMS data will now be annotated with sequencing primers in addition to PCR primers if using GenBank Submission plugin v1.5.0 or greater.
 * Cherry picking an extraction plate will now correctly set the previous plate and well fields.

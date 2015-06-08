@@ -29,6 +29,7 @@ import java.awt.print.PrinterException;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -499,21 +500,37 @@ public class PlateDocumentViewer extends DocumentViewer{
 
     GeneiousAction editAction = new GeneiousAction("Edit All Wells", null, StandardIcons.edit.getIcons()) {
         public void actionPerformed(ActionEvent e) {
-            List<Reaction> selectedReactions = plateView.getSelectedReactions();
+            final List<Reaction> selectedReactions = plateView.getSelectedReactions();
 
             if (selectedReactions.isEmpty()) {
-                selectedReactions = Arrays.asList(plateView.getPlate().getReactions());
+                selectedReactions.addAll(Arrays.asList(plateView.getPlate().getReactions()));
             }
 
-            if (ReactionUtilities.editReactions(selectedReactions, plateView, false, true)) {
-                plateView.checkForPlateSpecificErrors();
+            final AtomicBoolean okSelected = new AtomicBoolean();
 
-                updatePanelAndReactions(selectedReactions);
+            Runnable editReactionsRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    okSelected.set(ReactionUtilities.editReactions(selectedReactions, plateView, false, true));
+                }
+            };
 
-                hasCheckedPlateForErrorsAtLeastOnce = true;
+            Runnable postEditReactionsRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (okSelected.get()) {
+                        plateView.checkForPlateSpecificErrors();
 
-                saveAction.setEnabled(true);
-            }
+                        updatePanelAndReactions(selectedReactions);
+
+                        hasCheckedPlateForErrorsAtLeastOnce = true;
+
+                        saveAction.setEnabled(true);
+                    }
+                }
+            };
+
+            BiocodeService.block("Editing reactions...", plateView, editReactionsRunnable, postEditReactionsRunnable);
         }
     };
 
@@ -542,21 +559,33 @@ public class PlateDocumentViewer extends DocumentViewer{
                 return;
             }
             PlateBulkEditor editor = new PlateBulkEditor(plateView.getPlate());
-            List<Reaction> allReactionsOnPlate = Arrays.asList(plateView.getPlate().getReactions());
+            final List<Reaction> allReactionsOnPlate = Arrays.asList(plateView.getPlate().getReactions());
             if (editor.editPlate(container)) {
-                String reactionValidityErrorCheck = allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true);
+                final AtomicReference<String> referenceToReactionsCheckResult = new AtomicReference<String>();
+                Runnable reactionsCheckRunnable = new Runnable() {
+                    public void run() {
+                        referenceToReactionsCheckResult.set(allReactionsOnPlate.get(0).areReactionsValid(allReactionsOnPlate, plateView, true));
+                    }
+                };
 
-                if (!reactionValidityErrorCheck.isEmpty()) {
-                    Dialogs.showMessageDialog(reactionValidityErrorCheck);
-                }
+                Runnable postReactionsCheckRunnable = new Runnable() {
+                    public void run() {
+                        String reactionsCheckResult = referenceToReactionsCheckResult.get();
+                        if (!reactionsCheckResult.isEmpty()) {
+                            Dialogs.showMessageDialog(reactionsCheckResult);
+                        }
 
-                plateView.checkForPlateSpecificErrors();
+                        plateView.checkForPlateSpecificErrors();
 
-                updatePanelAndReactions(allReactionsOnPlate);
+                        updatePanelAndReactions(allReactionsOnPlate);
 
-                hasCheckedPlateForErrorsAtLeastOnce = true;
+                        hasCheckedPlateForErrorsAtLeastOnce = true;
 
-                saveAction.setEnabled(true);
+                        saveAction.setEnabled(true);
+                    }
+                };
+
+                BiocodeService.block("Checking reactions...", plateView, reactionsCheckRunnable, postReactionsCheckRunnable);
             }
         }
     };

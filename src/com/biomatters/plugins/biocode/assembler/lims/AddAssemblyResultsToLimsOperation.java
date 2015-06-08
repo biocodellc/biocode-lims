@@ -323,7 +323,17 @@ public class AddAssemblyResultsToLimsOperation extends DocumentOperation {
             }
             BiocodeUtilities.Well well = new BiocodeUtilities.Well(wellName);
 
-            Reaction reaction = plate.getReaction(well.row(), well.col());
+            Reaction reaction;
+            try {
+                reaction = plate.getReaction(well.row(), well.col());
+            } catch (IllegalArgumentException e) {
+                throw new DocumentOperationException(
+                        "Well " + wellName + " could not be found on " + plateName + ": " +  e.getMessage() + "\n\n" +
+                        "Your assembly and/or sequence documents may have been annotated with incorrect well " +
+                        "values as a result of a bug that had existed in v2.8.7 and earlier versions of the biocode plugin. " +
+                        "Please try re-annotating your assembly and/or sequence documents via fims/lims data using v2.8.8 or later of the plugin.", e
+                );
+            }
             if (reaction == null) {
                 return "No reaction found in well " + well.toPaddedString();
             }

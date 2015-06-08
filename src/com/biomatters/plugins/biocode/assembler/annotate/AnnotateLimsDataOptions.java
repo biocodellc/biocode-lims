@@ -55,7 +55,7 @@ public class AnnotateLimsDataOptions extends Options {
         if (containsOptionValueWithLabel(valuesForMatching, WELL_NUMBER.getLabel())) {
             valuesForMatching.add(WELL_NUMBER);
         }
-        if (containsOptionValueWithLabel(valuesForMatching, BARCODE.getLabel())) {
+        if (!containsOptionValueWithLabel(valuesForMatching, BARCODE.getLabel())) {
             valuesForMatching.add(BARCODE);
         }
         idType = useExistingOptions.addComboBoxOption("idType", "", valuesForMatching, WELL_NUMBER);

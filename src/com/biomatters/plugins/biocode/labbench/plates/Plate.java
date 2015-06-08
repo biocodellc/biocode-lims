@@ -5,14 +5,11 @@ import com.biomatters.geneious.publicapi.documents.XMLSerializationException;
 import com.biomatters.geneious.publicapi.documents.XMLSerializer;
 import com.biomatters.geneious.publicapi.utilities.ThreadUtilities;
 import com.biomatters.plugins.biocode.labbench.BiocodeService;
-import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import org.jdom.Element;
 
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -41,9 +38,32 @@ public class Plate implements XMLSerializable {
     private int thermocycleId = -1;
 
     public enum Size {
+        w1("1", 1),
+        w2("2", 2),
+        w3("3", 3),
+        w4("4", 4),
+        w5("5", 5),
+        w6("6", 6),
+        w7("7", 7),
         w8("8", 8),
+        w9("9", 9),
+        w10("10", 10),
+        w11("11", 11),
+        w12("12", 12),
+        w13("13", 13),
+        w14("14", 14),
+        w15("15", 15),
         w16("16", 16),
+        w17("17", 17),
+        w18("18", 18),
+        w19("19", 19),
+        w20("20", 20),
+        w21("21", 21),
+        w22("22", 22),
+        w23("23", 23),
         w24("24", 24),
+        w25("25", 25),
+        w26("26", 26),
         w32("32", 32),
         w40("40", 40),
         w48("48", 48),
@@ -108,26 +128,16 @@ public class Plate implements XMLSerializable {
     }
 
     public static Size getSizeEnum(int size) {
-        switch (size) {
-            case 8:
-                return Size.w8;
-            case 16:
-                return Size.w16;
-            case 24:
-                return Size.w24;
-            case 32:
-                return Size.w32;
-            case 40:
-                return Size.w40;
-            case 48:
-                return Size.w48;
-            case 96:
-                return Size.w96;
-            case 384:
-                return Size.w384;
-            default:
-                return null;
+        Size sizeToReturn = null;
+
+        for (Size sizeValue : Size.values()) {
+            if (sizeValue.size == size) {
+                sizeToReturn = sizeValue;
+                break;
+            }
         }
+
+        return sizeToReturn;
     }
 
     public Plate(int numberOfWells, Reaction.Type type) {
@@ -135,8 +145,10 @@ public class Plate implements XMLSerializable {
     }
 
     private void init(int numberOfWells, Reaction.Type type, boolean initializeReactions) {
-        if (numberOfWells % 8 == 0) {
-            init(8, numberOfWells / 8, type, initializeReactions);
+        if (numberOfWells == 384) {
+            init(16, 24, type, initializeReactions);
+        } else if (numberOfWells % 8 == 0) {
+            init(8, numberOfWells/8, type, initializeReactions);
         } else {
             init(1, numberOfWells, type, initializeReactions);
         }
@@ -157,31 +169,7 @@ public class Plate implements XMLSerializable {
     }
 
     private void init(Size size, Reaction.Type type, boolean initialiseReactions) {
-        switch(size) {
-            case w8:
-                init(8, 1, type, initialiseReactions);
-                break;
-            case w16:
-                init(8, 2, type, initialiseReactions);
-                break;
-            case w24:
-                init(8, 3, type, initialiseReactions);
-                break;
-            case w32:
-                init(8, 4, type, initialiseReactions);
-                break;
-            case w40:
-                init(8, 5, type, initialiseReactions);
-                break;
-            case w48 :
-                init(8, 6, type, initialiseReactions);
-                break;
-            case w96 :
-                init(8, 12, type, initialiseReactions);
-                break;
-            case w384 :
-                init(16, 24, type, initialiseReactions);
-        }
+        init(size.size, type, initialiseReactions);
     }
 
     public List<GelImage> getImages() {
@@ -307,11 +295,11 @@ public class Plate implements XMLSerializable {
 
     public Reaction getReaction(int row, int col) {
         if (row < 0 || row >= rows) {
-            throw new IllegalArgumentException("Row index out of bounds: " + row + ". Valid range: 0 - " + rows + ".");
+            throw new IllegalArgumentException("Row index out of bounds: " + row + ". Valid range: 0 - " + (rows - 1) + ".");
         }
 
         if (col < 0 || col >= cols) {
-            throw new IllegalArgumentException("Column index out of bounds: " + col + ". Valid range: 0 - " + cols + ".");
+            throw new IllegalArgumentException("Column index out of bounds: " + col + ". Valid range: 0 - " + (cols - 1) + ".");
         }
 
         return getReaction(cols * row + col);
@@ -572,7 +560,7 @@ public class Plate implements XMLSerializable {
             }
         }
 
-        
+
 
         return plateElement;
     }

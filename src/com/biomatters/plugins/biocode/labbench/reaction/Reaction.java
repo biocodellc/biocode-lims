@@ -25,6 +25,7 @@ import java.awt.image.ImageObserver;
 import java.text.ParseException;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 
 /**
@@ -410,13 +411,13 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
     public Element toXML() {
         Element element = new Element("Reaction");
         if(getThermocycle() != null) {
-            element.addContent(new Element("thermocycle").setText(""+getThermocycle().getId()));
+            element.addContent(new Element("thermocycle").setText("" + getThermocycle().getId()));
         }
         if(fimsSample != null) {
             element.addContent(XMLSerializer.classToXML("fimsSample", fimsSample));
         }
         if(getId() >= 0) {
-            element.addContent(new Element("id").setText(""+getId()));
+            element.addContent(new Element("id").setText("" + getId()));
         }
         if(getPlateId() >= 0) {
             element.addContent(new Element("plate").setText(""+ getPlateId()));
@@ -552,11 +553,10 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
      */
     public String areReactionsValid(List<T> reactions, JComponent dialogParent, boolean checkingFromPlate) {
         String errorMessage = _areReactionsValid(reactions, dialogParent, checkingFromPlate);
-        if(!errorMessage.isEmpty() && checkingFromPlate) {
-            return errorMessage + "<br><br>The affected wells have been highlighted in yellow.";
-        } else {
-            return errorMessage;
+        if (!errorMessage.isEmpty() && checkingFromPlate) {
+            errorMessage += "<br><br>The affected wells have been highlighted in yellow.";
         }
+        return errorMessage;
     }
 
     /**
