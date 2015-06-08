@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class NewPlateOptions extends Options{
 
+    static final String FROM_EXISTING_OPTION_NAME = "fromExistingPlates";
     private AnnotatedPluginDocument[] documents;
     private final OptionValue INDIVIDUAL_REACTIONS = new OptionValue("individualReactions", "");
     private final OptionValue STRIPS = new OptionValue("strips", "");
@@ -98,7 +99,7 @@ public class NewPlateOptions extends Options{
         ComboBoxOption passedOrFailed;
 
         if (fromExistingPlates) {
-            fromExistingOption = addBooleanOption("fromExistingPlates", "Create plate from existing plate documents", false);
+            fromExistingOption = addBooleanOption(FROM_EXISTING_OPTION_NAME, "Create plate from existing plate documents", false);
             fromExistingOption.setSpanningComponent(true);
             beginAlignHorizontally(null, false);
             onlyFailed = addBooleanOption("onlyFailed", "Copy only ", false);
@@ -193,7 +194,7 @@ public class NewPlateOptions extends Options{
     }
 
     public boolean isFromExistingPlates() {
-        return "true".equals(getValueAsString("fromExistingPlates"));
+        return "true".equals(getValueAsString(FROM_EXISTING_OPTION_NAME));
     }
 
     public boolean isFromExistingTissues() { return "true".equals(getValueAsString("fromExistingTissues"));}

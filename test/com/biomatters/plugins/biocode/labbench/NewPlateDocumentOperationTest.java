@@ -18,7 +18,6 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     private static final String PLATE_TYPE_OPTION_NAME = "plateType";
     private static final String STRIP_NUMBER_OPTION_NAME = "stripNumber";
     private static final String REACTION_NUMBER_OPTION_NAME = "reactionNumber";
-    private static final String FROM_EXISTING_OPTION_NAME = "fromExisting";
 
     private static final String EXTRACTION_REACTION_TYPE_VALUE = "extraction";
     private static final String PCR_REACTION_TYPE_VALUE = "pcr";
@@ -82,7 +81,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
 
         if (annotatedExistingPlateDocument.length > 0) {
             newPlateOptions = new NewPlateOptions(annotatedExistingPlateDocument);
-            Options.BooleanOption fromExistingOption = (Options.BooleanOption)newPlateOptions.getOption(FROM_EXISTING_OPTION_NAME);
+            Options.BooleanOption fromExistingOption = (Options.BooleanOption)newPlateOptions.getOption(NewPlateOptions.FROM_EXISTING_OPTION_NAME);
             fromExistingOption.setValue(true);
         } else {
             newPlateOptions = new NewPlateOptions();
