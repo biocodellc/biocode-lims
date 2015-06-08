@@ -1,7 +1,7 @@
-==Biocode Plugin 2.8.9 - 5 June 2015==
-* Fixed a bug that prevented the creation of pcr plates from existing 8 strip extraction plates.
-* Removed the checking of duplicate extraction ids within pcr and cycle sequencing plates.
-* Other fixes.
+==Biocode Plugin 2.8.9 - 8 June 2015==
+* Fixed a bug that prevented the creation of PCR plates from existing 8 strip extraction plates.
+* Fixed a problem preventing the use of the same extraction within PCR or cycle sequencing plates.
+* Other minor fixes.
 
 ==Biocode Plugin 2.8.8 - 2 March 2015==
 * The LIMS now actively tries to prevent duplicate extraction barcodes.  It will ask if extractions should be moved if duplicates are detected.
