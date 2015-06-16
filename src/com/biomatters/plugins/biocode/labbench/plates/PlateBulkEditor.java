@@ -1270,9 +1270,7 @@ public class PlateBulkEditor {
             DocumentFieldEditor extractionIdEditor = getEditorForField(editors, extractionField);
             DocumentFieldEditor parentExtractionEditor = getEditorForField(editors, parentExtractionField);
 
-            tissueEditor.valuesFromTextView();
-            extractionIdEditor.valuesFromTextView();
-            parentExtractionEditor.valuesFromTextView();
+            valuesFromTextView(tissueEditor, extractionIdEditor, parentExtractionEditor);
 
             try {
                 List<ExtractionReaction> temp = BiocodeService.getInstance().getActiveLIMSConnection().getExtractionsFromBarcodes(barcodes);
@@ -1311,6 +1309,14 @@ public class PlateBulkEditor {
             } catch (DatabaseServiceException e1) {
                 Dialogs.showMessageDialog("Could not get Workflow IDs from the database: " + e1.getMessage());
                 return;
+            }
+        }
+
+        private void valuesFromTextView(DocumentFieldEditor... editors) {
+            for (DocumentFieldEditor editor : editors) {
+                if(editor != null) {
+                    editor.valuesFromTextView();
+                }
             }
         }
     }
