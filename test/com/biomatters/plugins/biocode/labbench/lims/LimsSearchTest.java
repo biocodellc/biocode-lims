@@ -674,4 +674,73 @@ public class LimsSearchTest extends LimsTestCase {
         Plate plateFromSearch = getPlateFromDocument(results.get(0), seqPlate.getName(), Reaction.Type.CycleSequencing);
         assertNotNull(plateFromSearch);
     }
+
+    @Test
+    public void canSearchByPlateNameFims() throws DatabaseServiceException, BadDataException {
+        BiocodeService service = BiocodeService.getInstance();
+        String plateName = "M037_Extr";
+        saveExtractionPlate(plateName, "MBIO24950.1", "1", service);
+
+        List<AnnotatedPluginDocument> results = service.retrieve(
+                Query.Factory.createFieldQuery(service.getActiveFIMSConnection().getPlateDocumentField(), Condition.CONTAINS,
+                        new Object[]{"M037"}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                ProgressListener.EMPTY);
+        assertEquals(1, results.size());
+        Plate plateFromSearch = getPlateFromDocument(results.get(0), plateName, Reaction.Type.Extraction, "1");
+        assertNotNull(plateFromSearch);
+    }
+
+    @Test
+    public void canSearchByPlateNameLims() throws DatabaseServiceException, BadDataException {
+        BiocodeService service = BiocodeService.getInstance();
+        String plateName = "M037_Extr";
+        saveExtractionPlate(plateName, "MBIO24950.1", "1", service);
+
+        List<AnnotatedPluginDocument> results = service.retrieve(
+                Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.CONTAINS,
+                        new Object[]{"M037"}, BiocodeService.getSearchDownloadOptions(false, false, true, false)),
+                ProgressListener.EMPTY);
+        assertEquals(1, results.size());
+        Plate plateFromSearch = getPlateFromDocument(results.get(0), plateName, Reaction.Type.Extraction, "1");
+        assertNotNull(plateFromSearch);
+    }
+
+    @Test
+    public void canUseCompoundSearchesAcrossFimsAndLims() throws DatabaseServiceException, BadDataException {
+        BiocodeService service = BiocodeService.getInstance();
+        String m037Plate = "M037_Extr";
+        saveExtractionPlate(m037Plate, "MBIO24950.1", "1", service);
+
+        String m038Plate = "M038_Extr";
+        saveExtractionPlate(m038Plate, "MBIO819375.1", "2", service);
+
+
+        Map<String, Object> searchOptions = BiocodeService.getSearchDownloadOptions(false, false, true, false);
+        Query containsFimsPlate = Query.Factory.createFieldQuery(service.getActiveFIMSConnection().getPlateDocumentField(), Condition.CONTAINS,
+                new Object[]{"M037"}, searchOptions);
+        Query containsLimsPlate = Query.Factory.createFieldQuery(LIMSConnection.PLATE_NAME_FIELD, Condition.CONTAINS,
+                        new Object[]{"M038"}, searchOptions);
+
+        List<AnnotatedPluginDocument> results = service.retrieve(
+                Query.Factory.createOrQuery(new Query[]{containsFimsPlate, containsLimsPlate}, searchOptions),
+                ProgressListener.EMPTY);
+        assertEquals(2, results.size());
+        assertPlateExistsInResults(results, m037Plate, Reaction.Type.Extraction, "1");
+        assertPlateExistsInResults(results, m038Plate, Reaction.Type.Extraction, "2");
+
+        results = service.retrieve(
+                        Query.Factory.createAndQuery(new Query[]{containsFimsPlate, containsLimsPlate}, searchOptions),
+                        ProgressListener.EMPTY);
+        assertEquals(0, results.size());
+    }
+
+    private void assertPlateExistsInResults(List<AnnotatedPluginDocument> results, String plateName, Reaction.Type type, String... extractionIds) {
+        int count = 0;
+        for (AnnotatedPluginDocument result : results) {
+            if(getPlateFromDocument(result, plateName, type, extractionIds) != null) {
+                count++;
+            }
+        }
+        assertEquals(1, count);
+    }
 }

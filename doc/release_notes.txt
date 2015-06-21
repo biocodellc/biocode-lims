@@ -15,6 +15,10 @@ LIMS plugin back to version 2.1.
 * Remote MySQL users will need their database administrator to upgrade their database before using this version of the plugin.
 The schema upgrade script can be found at http://software.mooreabiocode.org
 
+==Biocode Plugin 2.8.10 - TBD==
+* Fixed a crash that occurs when viewing the Reporting service in Geneious 8.1 or later.
+* Fixed a crash that occurs when using the Bulk Editor to fetch PCR or Cycle Sequencing reactions from extraction barcodes.
+
 ==Biocode Plugin 2.8.9 - 8 June 2015==
 * Fixed a bug that prevented the creation of PCR plates from existing 8 strip extraction plates.
 * Fixed a problem preventing the use of the same extraction within PCR or cycle sequencing plates.

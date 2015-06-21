@@ -130,11 +130,12 @@ public class TableFimsSample implements FimsSample {
         return e;
     }
 
-    private static final String XML_DATE_PREFIX = "XML_Date_Value:";
-
     private static String valueToXmlStorage(Object value) {
-        if(value instanceof Date) {
-            return XML_DATE_PREFIX + String.valueOf(((Date)value).getTime());
+        for (Converter converter : Converter.values()) {
+            String converted = converter.convertToString(value);
+            if(converted != null) {
+                return converted;
+            }
         }
         // Crash here for developers.
         assert value instanceof String : "TableFimsSample only supports serializing Strings or Dates to XML.  " +
@@ -146,12 +147,10 @@ public class TableFimsSample implements FimsSample {
 
 
     private static Object valueFromXmlStorage(String elementText) {
-        if(elementText.startsWith(XML_DATE_PREFIX)) {
-            String longValueText = elementText.substring(XML_DATE_PREFIX.length());
-            try {
-                return new Date(Long.valueOf(longValueText));
-            } catch (NumberFormatException e) {
-                return null;
+        for (Converter converter : Converter.values()) {
+            Object converted = converter.convertFromString(elementText);
+            if(converted != null) {
+                return converted;
             }
         }
         return XmlUtilities.decodeXMLChars(elementText);
@@ -227,5 +226,86 @@ public class TableFimsSample implements FimsSample {
         int result = getId() != null ? getId().hashCode() : 0;
         result = 31 * result + (getSpecimenId() != null ? getSpecimenId().hashCode() : 0);
         return result;
+    }
+
+    /**
+     * Used to convert objects of a certain type to/from a String.
+     * @param <Type>
+     */
+    private static abstract class Converter<Type> {
+
+        private String prefix;
+        private Class<Type> type;
+
+        private Converter(String prefix, Class<Type> type) {
+            this.prefix = prefix;
+            this.type = type;
+        }
+
+        /**
+         * @param value The value to be converted into a String
+         * @return a String representation of the value or null if the value cannot be converted by this Converter
+         */
+        public final String convertToString(Object value) {
+            if(!type.isAssignableFrom(value.getClass())) {
+                return null;
+            }
+            return prefix + _convertToString(type.cast(value));
+        }
+
+        protected String _convertToString(Type value) {
+            return String.valueOf(value);
+        }
+
+        /**
+         *
+         * @param stringValue String to be converted back to value of the correct type.  Should have been obtained from
+         * calling {@link #convertToString(Object)}
+         * @return The converted value or null if the String was not in the correct format for this converter
+         */
+        public final Type convertFromString(String stringValue) {
+            if(!stringValue.startsWith(prefix)) {
+                return null;
+            }
+            String substring = stringValue.substring(prefix.length());
+            return _convertFromString(substring);
+        }
+
+        protected abstract Type _convertFromString(String stringValue);
+
+        private static final Converter<Date> DATE_CONVERTER = new Converter<Date>("XML_Date_Value:", Date.class) {
+            @Override
+            protected String _convertToString(Date value) {
+                return String.valueOf(value.getTime());
+            }
+
+            @Override
+            protected Date _convertFromString(String stringValue) {
+                try {
+                    return new Date(Long.valueOf(stringValue));
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+        };
+
+        private static final Converter<Double> DOUBLE_CONVERTER = new Converter<Double>("XML_Double_Value:", Double.class) {
+            @Override
+            protected Double _convertFromString(String stringValue) {
+                try {
+                    return Double.valueOf(stringValue);
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            }
+        };
+
+        /**
+         *
+         * @return All available converters
+         */
+        public static Collection<Converter> values() {
+            return Arrays.<Converter>asList(DATE_CONVERTER, DOUBLE_CONVERTER);
+        }
     }
 }

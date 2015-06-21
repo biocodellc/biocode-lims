@@ -1051,7 +1051,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         // INNER JOIN here because there should always be a plate for a reaction.  We have already joined the 3 reaction tables
         queryBuilder.append(" INNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
         if (plateQueryConditions != null) {
-            if (operator == CompoundSearchQuery.Operator.AND || extractionQueryConditions != null || workflowQueryConditions != null) {
+            if (operator == CompoundSearchQuery.Operator.AND || filterOnTissues || extractionQueryConditions != null || workflowQueryConditions != null) {
                 conditionBuilder.append(operatorString);
             }
             conditionBuilder.append("(").append(plateQueryConditions).append(")");

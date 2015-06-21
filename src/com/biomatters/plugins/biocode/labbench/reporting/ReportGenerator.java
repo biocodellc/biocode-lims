@@ -160,7 +160,7 @@ public class ReportGenerator {
             }
 
             public Object getElementAt(int index) {
-                if (reportManager.getReports().size() == 0) {
+                if (index < 0 || reportManager.getReports().size() == 0) {
                     return "<html><i>None...</i></html>";
                 }
                 return reportManager.getReports().get(index);
