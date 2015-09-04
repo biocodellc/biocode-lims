@@ -27,7 +27,7 @@ public class MooreaFimsConnectionOptions extends PasswordOptions{
     }
 
     private void init() {
-        serverOption = addStringOption("serverUrl", "Server:", "darwin.berkeley.edu");
+        serverOption = addStringOption("serverUrl", "Server:", "gall.bnhm.berkeley.edu");
         addIntegerOption("serverPort", "Port:", 3306, 0, Integer.MAX_VALUE);
         if(includeDatabaseAndTable) {
             addStringOption("database", "Database:", "");

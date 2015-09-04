@@ -562,7 +562,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         }
 
         try {
-            if(!(activeFIMSConnection instanceof MooreaFimsConnection) && connection.getLimsOptions().getValueAsString("server").equalsIgnoreCase("darwin.berkeley.edu")) {
+            if(!(activeFIMSConnection instanceof MooreaFimsConnection) && connection.getLimsOptions().getValueAsString("server").equalsIgnoreCase("gall.bnhm.berkeley.edu")) {
                 Dialogs.showMessageDialog("You cannot connect to the Moorea Lab Bench database using a field database other than the Moorea FIMS");
                 logOut();
                 progressListener.setProgress(1.0);
