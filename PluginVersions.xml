@@ -1,7 +1,16 @@
 <PluginVersions>
     <LatestVersion>2.8.9</LatestVersion>
     <LatestVersionURL>http://assets.geneious.com/plugins/biocode/Biocode_2_8_9.gplugin</LatestVersionURL>
-    <ReleaseNotes>==Biocode Plugin 2.8.9 - 8 June 2015==
+    <ReleaseNotes>==Biocode Plugin 2.8.11 - 4 September 2015==
+* Fixed a crash that occurs when viewing the Reporting service in Geneious 8.1 or later.
+* Fixed a crash that occurs when using the Bulk Editor to fetch PCR or Cycle Sequencing reactions from extraction barcodes.
+* Fixed an error that prevented the use of compound queries that searched across both FIMS and LIMS fields.
+* Changed default Moorea FIMS connection URL to gall.bnhm.berkeley.edu from darwin.berkeley.edu.
+
+==Biocode Plugin 2.8.10==
+Beta release of 2.8.11.
+
+==Biocode Plugin 2.8.9 - 8 June 2015==
 * Fixed a bug that prevented the creation of PCR plates from existing 8 strip extraction plates.
 * Fixed a problem preventing the use of the same extraction within PCR or cycle sequencing plates.
 * Other minor fixes.
