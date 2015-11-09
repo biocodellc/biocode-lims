@@ -207,7 +207,7 @@ public class LimsSearchTest extends LimsTestCase {
 
     @Test
     public void searchReturnsExtractionsWithoutWorkflow() throws BadDataException, DatabaseServiceException, SQLException {
-        Map<String, String> values = new HashMap<String, String>();
+        Map<String, String> values = new LinkedHashMap<String, String>();
         values.put("MBIO24950.1", "1");
         values.put("MBIO24951.1", "2");
 
