@@ -348,32 +348,7 @@ public class Plate implements XMLSerializable {
     public static BiocodeUtilities.Well getWell(int position, Size size) {
         int cols;
         if(size != null) {
-            switch(size) {
-                case w8:
-                    cols = 1;
-                    break;
-                case w16:
-                    cols = 2;
-                    break;
-                case w24:
-                    cols = 3;
-                    break;
-                case w32:
-                    cols = 4;
-                    break;
-                case w40:
-                    cols = 5;
-                    break;
-                case w48 :
-                    cols = 6;
-                    break;
-                case w96 :
-                    cols = 12;
-                    break;
-                case w384 :
-                default :
-                    cols = 24;
-            }
+            cols = getNumberOfColumns(size);
         }
         else {
             cols = 1+position;
@@ -381,6 +356,25 @@ public class Plate implements XMLSerializable {
         int row = position / cols;
         int col = position % cols;
         return new BiocodeUtilities.Well((char)(65+row), 1+col);
+    }
+
+    private static int getNumberOfColumns(Size size) {
+        int cols;
+        switch(size) {
+            case w96 :
+                cols = 12;
+                break;
+            case w384 :
+                cols = 24;
+                break;
+            default :
+                if(size.numberOfReactions() % 8 == 0) {
+                    cols = size.numberOfReactions()/8;
+                } else {
+                    cols = size.numberOfReactions();  // Default to a single row
+                }
+        }
+        return cols;
     }
 
     public Date lastModified() {
@@ -396,32 +390,7 @@ public class Plate implements XMLSerializable {
     public static int getWellLocation(BiocodeUtilities.Well well, Size size) {
         int cols;
         if(size != null) {
-            switch(size) {
-                case w8:
-                    cols = 1;
-                    break;
-                case w16:
-                    cols = 2;
-                    break;
-                case w24:
-                    cols = 3;
-                    break;
-                case w32:
-                    cols = 4;
-                    break;
-                case w40:
-                    cols = 5;
-                    break;
-                case w48 :
-                    cols = 6;
-                    break;
-                case w96 :
-                    cols = 12;
-                    break;
-                case w384 :
-                default :
-                    cols = 24;
-            }
+            cols = getNumberOfColumns(size);
         }
         else {
             cols = 1;
