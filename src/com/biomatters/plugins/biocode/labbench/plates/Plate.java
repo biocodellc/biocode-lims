@@ -37,6 +37,8 @@ public class Plate implements XMLSerializable {
     private boolean isDeleted = false;
     private int thermocycleId = -1;
 
+    public static final int MAX_INDIVIDUAL_REACTIONS = 30;
+
     public enum Size {
         w1("1", 1),
         w2("2", 2),
@@ -64,6 +66,11 @@ public class Plate implements XMLSerializable {
         w24("24", 24),
         w25("25", 25),
         w26("26", 26),
+        w27("27", 27),
+        w28("28", 28),
+        w29("29", 29),
+        w30("30", 30),
+        w31("31", 31),
         w32("32", 32),
         w40("40", 40),
         w48("48", 48),

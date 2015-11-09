@@ -38,8 +38,13 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
 
     @Test
     public void testCreateIndividualReactionsPCRPlateFromIndividualReactionsExtractionPlate() throws DocumentOperationException {
-        for (int numberOfIndividualReactions = 1; numberOfIndividualReactions <= 26; numberOfIndividualReactions++) {
-            createPlate(PCR_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions, createPlate(EXTRACTION_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions));
+        for (int numberOfIndividualReactions = 1; numberOfIndividualReactions <= Plate.MAX_INDIVIDUAL_REACTIONS; numberOfIndividualReactions++) {
+            if(numberOfIndividualReactions % 8 == 0) {
+                continue;  // These sizes are reserved for strips
+            }
+            Plate plate = createPlate(PCR_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions, createPlate(EXTRACTION_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions));
+            assertEquals(numberOfIndividualReactions, plate.getReactions().length);
+            assertEquals(1, plate.getRows());
         }
     }
 

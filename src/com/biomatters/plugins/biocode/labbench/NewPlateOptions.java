@@ -100,7 +100,8 @@ public class NewPlateOptions extends Options{
         final Options.RadioOption<Options.OptionValue> plateOption = addRadioOption("plateType", "", plateValues, PLATE_96, Options.Alignment.VERTICAL_ALIGN);
 
 
-        final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, 26);
+
+        final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS);
         final Options.IntegerOption stripNumber = addIntegerOption("stripNumber", "", 1, 1, 6);
         plateOption.addDependent(INDIVIDUAL_REACTIONS, reactionNumber, true);
         plateOption.addDependent(INDIVIDUAL_REACTIONS, addLabel(" individual reactions"), true);
