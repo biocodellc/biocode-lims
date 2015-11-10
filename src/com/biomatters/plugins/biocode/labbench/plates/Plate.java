@@ -361,9 +361,6 @@ public class Plate implements XMLSerializable {
     private static int getNumberOfColumns(Size size) {
         int cols;
         switch(size) {
-            case w96 :
-                cols = 12;
-                break;
             case w384 :
                 cols = 24;
                 break;
