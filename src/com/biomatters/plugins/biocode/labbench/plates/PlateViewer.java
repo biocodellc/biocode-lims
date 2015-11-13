@@ -94,7 +94,8 @@ public class PlateViewer extends JPanel {
         toolbar.addAction(fullZoomAction);
         toolbar.addAction(zoomOutAction);
 
-        if (plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
+        Reaction.Type reactionType = plateView.getPlate().getReactionType();
+        if (reactionType.hasThermocycles()) {
             final DefaultComboBoxModel thermocycleModel = new DefaultComboBoxModel();
             for (Thermocycle cycle : getThermocycles()) {
                 thermocycleModel.addElement(cycle);

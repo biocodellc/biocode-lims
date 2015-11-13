@@ -412,12 +412,19 @@ public class Plate implements XMLSerializable {
                 r = new PCRReaction(resultSet);
                 break;
             case CycleSequencing:
-            default:
                 if(resultSet.getObject("cyclesequencing.id") == null) {
                     return null;
                 }
                 r = new CycleSequencingReaction(resultSet);
                 break;
+            case GelQualification:
+                if(resultSet.getObject(GelQualificationReaction.DB_TABLE_NAME + ".id") == null) {
+                    return null;
+                }
+                r = new GelQualificationReaction(resultSet);
+                break;
+            default:
+                throw new IllegalArgumentException("Type " + type + " unsupported");
         }
         r.setPlateId(this.id);
         r.setPlateName(getName());

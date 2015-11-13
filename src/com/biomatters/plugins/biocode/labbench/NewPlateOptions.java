@@ -65,11 +65,10 @@ public class NewPlateOptions extends Options{
                 PLATE_384
         };
 
-        final Options.OptionValue[] typeValues = new Options.OptionValue[] {
-                new Options.OptionValue("extraction", "Extraction"),
-                new Options.OptionValue("pcr", "PCR"),
-                new Options.OptionValue("cyclesequencing", "Cycle Sequencing")
-        };
+        final List<OptionValue> typeValues = new ArrayList<OptionValue>();
+        for (Reaction.Type type : Reaction.Type.values()) {
+            typeValues.add(new OptionValue(type.name, type.label));
+        }
         final Options.OptionValue[] passedValues = new Options.OptionValue[] {
                 new Options.OptionValue("passed", "Passed"),
                 new Options.OptionValue("failed", "Failed")
@@ -96,7 +95,7 @@ public class NewPlateOptions extends Options{
             }
         }
 
-        addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
+        addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues.get(0));
         final Options.RadioOption<Options.OptionValue> plateOption = addRadioOption("plateType", "", plateValues, PLATE_96, Options.Alignment.VERTICAL_ALIGN);
 
 
@@ -160,16 +159,12 @@ public class NewPlateOptions extends Options{
 
     public Reaction.Type getReactionType() {
         Options.OptionValue reactionType = (Options.OptionValue)getValue("reactionType");
-
-        if(reactionType.getName().equals("extraction")) {
-            return Reaction.Type.Extraction;
+        for (Reaction.Type type : Reaction.Type.values()) {
+            if(type.name.equalsIgnoreCase(reactionType.getName())) {
+                return type;
+            }
         }
-        else if(reactionType.getName().equals("pcr")) {
-            return Reaction.Type.PCR;
-        }
-        else {
-            return Reaction.Type.CycleSequencing;
-        }
+        throw new IllegalStateException("invalid reaction type");
     }
 
     public boolean isFromExisting() {

@@ -230,7 +230,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     private void updateToolbar(boolean showDialogs) {
         updateThermocycleAction(showDialogs);
         boolean buttonsEnabled = !isLocal;
-        if(plateView.getPlate().getReactionType() != Reaction.Type.Extraction) {
+        if(plateView.getPlate().getReactionType().hasThermocycles()) {
             thermocycleAction.setEnabled(buttonsEnabled);
             editThermocycleAction.setEnabled(buttonsEnabled);
             addTracesAction.setEnabled(buttonsEnabled);
@@ -283,7 +283,7 @@ public class PlateDocumentViewer extends DocumentViewer{
     }
 
     private void updateThermocycleAction(boolean showDialogs){
-        if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
+        if(!plateView.getPlate().getReactionType().hasThermocycles()) {
             return;
         }
         List<GeneiousAction> actions = new ArrayList<GeneiousAction>();
@@ -296,15 +296,14 @@ public class PlateDocumentViewer extends DocumentViewer{
         }
         else {
             switch(plateView.getPlate().getReactionType()) {
-                case Extraction:
-                    cycles = Collections.emptyList();
-                    break;
                 case PCR:
                     cycles = BiocodeService.getInstance().getPCRThermocycles();
                     break;
                 case CycleSequencing:
                     cycles = BiocodeService.getInstance().getCycleSequencingThermocycles();
                     break;
+                default:
+                    cycles = Collections.emptyList();
             }
             if(cycles.size() == 0) {
                 thermocycleAction.setEnabled(false);
@@ -374,7 +373,7 @@ public class PlateDocumentViewer extends DocumentViewer{
                 actions.add(zoomInAction);
                 actions.add(fullZoomAction);
                 actions.add(zoomOutAction);
-                if(plateView.getPlate().getReactionType() == Reaction.Type.Extraction) {
+                if(!plateView.getPlate().getReactionType().hasThermocycles()) {
                     thermocycleAction = editThermocycleAction = null;
                     actions.addAll(Arrays.asList(editAction,
                             displayAction,

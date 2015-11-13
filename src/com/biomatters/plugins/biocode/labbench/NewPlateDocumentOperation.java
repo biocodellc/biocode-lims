@@ -257,7 +257,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             }
         }
         System.out.println(count+" reactions copied");
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
+        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType().linksToWorkflows()) {
             autodetectWorkflows(destPlate);
         }
         if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {

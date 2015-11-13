@@ -91,9 +91,30 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
 
     public enum Type {
-        Extraction,
-        PCR,
-        CycleSequencing
+        Extraction("extraction", "Extraction", false, false),
+        PCR("pcr", "PCR", true, true),
+        CycleSequencing("cyclesequencing", "Cycle Sequencing", true, true),
+        GelQualification("gelqualification", "Gel Qualification", false, false);
+
+        public String name;
+        public String label;
+        private boolean linksToWorkflows;
+        private boolean hasThermocycles;
+
+        private Type(String name, String label, boolean linksToWorkflows, boolean hasThermocycles) {
+            this.name = name;
+            this.label = label;
+            this.linksToWorkflows = linksToWorkflows;
+            this.hasThermocycles = hasThermocycles;
+        }
+
+        public boolean linksToWorkflows() {
+            return linksToWorkflows;
+        }
+
+        public boolean hasThermocycles() {
+            return hasThermocycles;
+        }
     }
 
     public GelImage getGelImage() {
@@ -112,6 +133,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 return new PCRReaction();
             case CycleSequencing :
                 return new CycleSequencingReaction();
+            case GelQualification :
+                return new GelQualificationReaction();
         }
         return null;
     }

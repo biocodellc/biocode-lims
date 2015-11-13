@@ -1054,7 +1054,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
         StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, " +
-                "plate.*, extraction.*, workflow.*, pcr.*, cyclesequencing.*, " +
+                "plate.*, extraction.*, " + GelQualificationReaction.DB_TABLE_NAME + ".*, workflow.*, pcr.*, cyclesequencing.*, " +
                 "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes FROM ");
         // We join plate twice because HSQL doesn't let us use aliases.  The way the query is written means the select would produce a derived table.
         queryBuilder.append("(SELECT * FROM plate WHERE id IN ");
@@ -1065,6 +1065,7 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         queryBuilder.append("LEFT OUTER JOIN workflow W ON extraction.id = W.extractionId ");
         queryBuilder.append("LEFT OUTER JOIN pcr ON pcr.plate = plate.id ");
         queryBuilder.append("LEFT OUTER JOIN cyclesequencing ON cyclesequencing.plate = plate.id ");
+        queryBuilder.append("LEFT OUTER JOIN " + GelQualificationReaction.DB_TABLE_NAME + " ON " + GelQualificationReaction.DB_TABLE_NAME + ".plate = plate.id ");
         queryBuilder.append("LEFT OUTER JOIN sequencing_result ON cyclesequencing.id = sequencing_result.reaction ");
         queryBuilder.append("LEFT OUTER JOIN assembly ON assembly.id = sequencing_result.assembly ");
 
@@ -1076,7 +1077,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         queryBuilder.append("END ");
 
         queryBuilder.append("LEFT OUTER JOIN extraction E ON E.id = " +
-                "CASE WHEN extraction.id IS NULL THEN workflow.extractionId ELSE extraction.id END ");  // So we get extraction ID for pcr and cyclesequencing reactions
+                "CASE WHEN " + GelQualificationReaction.DB_TABLE_NAME + ".extractionId IS NOT NULL THEN " + GelQualificationReaction.DB_TABLE_NAME + ".extractionId ELSE " +
+                "CASE WHEN extraction.id IS NULL THEN workflow.extractionId ELSE extraction.id END END ");  // So we get extraction ID for pcr and cyclesequencing reactions
 
         queryBuilder.append(" ORDER by plate.id, assembly.date desc");
         return queryBuilder.toString();
@@ -2218,21 +2220,20 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             //update the last-modified on the workflows associated with this plate...
-            String sql;
-            if (plate.getReactionType() == Reaction.Type.Extraction) {
-                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate="+plate.getId()+")";
-            }
-            else if(plate.getReactionType() == Reaction.Type.PCR){
-                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate="+plate.getId()+")";
-            }
-            else if(plate.getReactionType() == Reaction.Type.CycleSequencing){
-                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id="+plate.getId()+") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate="+plate.getId()+")";
+            if(plate.getReactionType() != Reaction.Type.GelQualification) {
+                String sql;
+                if (plate.getReactionType() == Reaction.Type.Extraction) {
+                    sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate=" + plate.getId() + ")";
+                } else if (plate.getReactionType() == Reaction.Type.PCR) {
+                    sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate=" + plate.getId() + ")";
+                } else if (plate.getReactionType() == Reaction.Type.CycleSequencing) {
+                    sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate=" + plate.getId() + ")";
 
+                } else {
+                    throw new SQLException("There is no reaction type " + plate.getReactionType());
+                }
+                connection.executeUpdate(sql);
             }
-            else {
-                throw new SQLException("There is no reaction type "+plate.getReactionType());
-            }
-            connection.executeUpdate(sql);
 
             connection.endTransaction();
         } catch (SQLException e) {
@@ -2293,7 +2294,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                 }
                 plateCheckStatement.close();
             }
-            if  (plate.getThermocycle() == null && plate.getReactionType() != Reaction.Type.Extraction) {
+            if  (plate.getThermocycle() == null && plate.getReactionType().hasThermocycles()) {
                 throw new BadDataException("The plate has no thermocycle set");
             }
         } catch (BadDataException e) {
@@ -2365,7 +2366,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             //int workflowCount = 0;
             List<Reaction> reactionsWithoutWorkflows = new ArrayList<Reaction>();
             for (Reaction reaction : plate.getReactions()) {
-                if (reaction.getType() == Reaction.Type.Extraction) {
+                if (!reaction.getType().linksToWorkflows()) {
                     continue;
                 }
                 Object extractionId = reaction.getFieldValue("extractionId");
@@ -2730,6 +2731,62 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     insertStatement.close();
                     updateStatement.close();
                     insertTracesStatement.close();
+                    break;
+                case GelQualification:
+                    List<String> extractionIds = new ArrayList<String>(reactions.length);
+                    for (Reaction reaction : reactions) {
+                        extractionIds.add(reaction.getExtractionId());
+                    }
+                    List<ExtractionReaction> extractions = getExtractionsForIds(extractionIds);
+                    Map<String, Integer> userIdToDatabaseId = new HashMap<String, Integer>();
+                    for (ExtractionReaction extraction : extractions) {
+                        userIdToDatabaseId.put(extraction.getExtractionId(), extraction.getId());
+                    }
+
+                    insertSQL  = "INSERT INTO gel_qualification (date, extractionId, plate, location, technician, notes, gelImage) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL  = "UPDATE gel_qualification SET date=?, extractionId=?, plate=?, location=?, technician=?, notes=?, gelImage=?  WHERE id=?";
+
+                    insertStatement = connection.prepareStatement(insertSQL);
+                    updateStatement = connection.prepareStatement(updateSQL);
+                    for (int i = 0; i < reactions.length; i++) {
+                        Reaction reaction = reactions[i];
+                        if(progress != null) {
+                            progress.setMessage("Saving reaction "+(i+1)+" of "+reactions.length);
+                        }
+                        if (!reaction.isEmpty() && reaction.getPlateId() >= 0) {
+                            PreparedStatement statement;
+                            boolean isUpdateNotInsert = reaction.getId() >= 0;
+                            if(isUpdateNotInsert) { //the reaction is already in the database
+                                statement = updateStatement;
+                                statement.setInt(8, reaction.getId());
+                            }
+                            else {
+                                statement = insertStatement;
+                            }
+                            ReactionOptions options = reaction.getOptions();
+                            statement.setDate(1, new java.sql.Date(((Date) options.getValue("date")).getTime()));
+                            statement.setInt(2, userIdToDatabaseId.get(options.getValueAsString("extractionId")));
+                            statement.setInt(3, reaction.getPlateId());
+                            statement.setInt(4, reaction.getPosition());
+                            statement.setString(5, options.getValueAsString("technician"));
+                            statement.setString(6, options.getValueAsString("notes"));
+                            GelImage image = reaction.getGelImage();
+                            statement.setBytes(7, image != null ? image.getImageBytes() : null);
+
+                            if(isUpdateNotInsert) {
+                                updateStatement.executeUpdate();
+                            } else {
+                                insertStatement.executeUpdate();
+                                ResultSet resultSet = getLastId.executeQuery();
+                                if(resultSet.next()) {
+                                    reaction.setId(resultSet.getInt(1));
+                                }
+                                resultSet.close();
+                            }
+                        }
+                    }
+                    insertStatement.close();
+                    updateStatement.close();
                     break;
             }
         } catch (SQLException e) {
