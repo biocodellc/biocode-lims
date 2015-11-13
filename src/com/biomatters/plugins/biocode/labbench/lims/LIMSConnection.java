@@ -22,7 +22,7 @@ import java.util.List;
 public abstract class LIMSConnection {
     @SuppressWarnings({"ConstantConditions"})
     public static final int EXPECTED_SERVER_MAJOR_VERSION = 9;
-    public static final String EXPECTED_SERVER_FULL_VERSION = "9.1";
+    public static final String EXPECTED_SERVER_FULL_VERSION = "9.2";
 
     /**
      * Was used for a beta version. But since we didn't actually break backwards compatibility we reverted back to the old
