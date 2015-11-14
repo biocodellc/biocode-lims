@@ -1,5 +1,6 @@
 package com.biomatters.plugins.biocode.labbench.reaction;
 
+import com.biomatters.geneious.publicapi.documents.DocumentField;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
 import com.biomatters.plugins.biocode.labbench.plates.GelImage;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
@@ -17,7 +18,7 @@ import java.util.List;
  */
 public class GelQualificationReaction extends Reaction {
 
-    public static final String DB_TABLE_NAME = "gel_qualification";
+    public static final String DB_TABLE_NAME = "gel_quantification";
 
     public GelQualificationReaction() {
     }
@@ -58,7 +59,7 @@ public class GelQualificationReaction extends Reaction {
 
     @Override
     public Type getType() {
-        return Type.GelQualification;
+        return Type.GelQuantification;
     }
 
     private ReactionOptions options;
@@ -102,5 +103,10 @@ public class GelQualificationReaction extends Reaction {
     @Override
     protected String _areReactionsValid(List reactions, JComponent dialogParent, boolean checkingFromPlate) {
         return "";//todo
+    }
+
+    public static List<DocumentField> getDefaultDisplayedFields() {
+        // todo Add other relevant fields eg. % above threshold
+        return Collections.singletonList(new DocumentField("Extraction Id", "", "extractionId", String.class, false, false));
     }
 }

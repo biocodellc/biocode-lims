@@ -434,7 +434,7 @@ CREATE TABLE sequencing_result (
 
 
 
-CREATE TABLE gel_qualification (
+CREATE TABLE gel_quantification (
   id INTEGER PRIMARY KEY IDENTITY,
   date timestamp default CURRENT_TIMESTAMP,
   extractionId INTEGER NOT NULL,

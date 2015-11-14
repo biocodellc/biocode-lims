@@ -25,7 +25,6 @@ import java.awt.image.ImageObserver;
 import java.text.ParseException;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 
 /**
@@ -94,7 +93,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
         Extraction("extraction", "Extraction", false, false),
         PCR("pcr", "PCR", true, true),
         CycleSequencing("cyclesequencing", "Cycle Sequencing", true, true),
-        GelQualification("gelqualification", "Gel Qualification", false, false);
+        GelQuantification("gelquantification", "Gel Quantification", false, false);
 
         public String name;
         public String label;
@@ -133,7 +132,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 return new PCRReaction();
             case CycleSequencing :
                 return new CycleSequencingReaction();
-            case GelQualification :
+            case GelQuantification:
                 return new GelQualificationReaction();
         }
         return null;

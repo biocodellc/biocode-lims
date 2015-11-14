@@ -417,7 +417,7 @@ public class Plate implements XMLSerializable {
                 }
                 r = new CycleSequencingReaction(resultSet);
                 break;
-            case GelQualification:
+            case GelQuantification:
                 if(resultSet.getObject(GelQualificationReaction.DB_TABLE_NAME + ".id") == null) {
                     return null;
                 }

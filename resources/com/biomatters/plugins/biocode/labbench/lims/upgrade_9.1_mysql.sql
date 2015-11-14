@@ -1,4 +1,4 @@
-CREATE TABLE gel_qualification (
+CREATE TABLE gel_quantification (
   id int(10) unsigned NOT NULL auto_increment,
   `date` timestamp NOT NULL default CURRENT_TIMESTAMP,
   extractionId INT(10) UNSIGNED NOT NULL,

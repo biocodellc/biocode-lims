@@ -1019,11 +1019,13 @@ public abstract class SqlLimsConnection extends LIMSConnection {
             conditionBuilder.append("(").append(workflowQueryConditions).append(")");
         }
 
+        queryBuilder.append(" LEFT OUTER JOIN ").append(GelQualificationReaction.DB_TABLE_NAME).append(" ON ")
+                    .append(GelQualificationReaction.DB_TABLE_NAME).append(".extractionId = extraction.id");
         queryBuilder.append(" LEFT OUTER JOIN ").append("pcr ON pcr.workflow = workflow.id ");
         queryBuilder.append(" LEFT OUTER JOIN ").append("cyclesequencing ON cyclesequencing.workflow = workflow.id ");
 
         // INNER JOIN here because there should always be a plate for a reaction.  We have already joined the 3 reaction tables
-        queryBuilder.append(" INNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id)");
+        queryBuilder.append(" INNER JOIN ").append("plate ON (extraction.plate = plate.id OR pcr.plate = plate.id OR cyclesequencing.plate = plate.id OR " + GelQualificationReaction.DB_TABLE_NAME + ".plate = plate.id)");
         if (plateQueryConditions != null) {
             if (operator == CompoundSearchQuery.Operator.AND || filterOnTissues || extractionQueryConditions != null || workflowQueryConditions != null) {
                 conditionBuilder.append(operatorString);
@@ -2184,55 +2186,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             }
 
             saveReactions(plate.getReactions(), plate.getReactionType(), progress);
-            Map<String, Set<Integer>> workflowLoci = new HashMap<String, Set<Integer>>();
-            for (Reaction reaction : plate.getReactions()) {
-                Set<Integer> ids = workflowLoci.get(reaction.getLocus());
-                if (ids == null) {
-                    ids = new HashSet<Integer>();
-                    workflowLoci.put(reaction.getLocus(), ids);
-                }
-                Workflow workflow = reaction.getWorkflow();
-                if (workflow != null) {
-                    ids.add(workflow.getId());
-                }
-            }
-
-            for (Map.Entry<String, Set<Integer>> stringSetEntry : workflowLoci.entrySet()) {
-                if (stringSetEntry.getValue().isEmpty()) {
-                    continue;
-                }
-                StringBuilder updateLociSql = new StringBuilder();
-                updateLociSql.append("UPDATE workflow SET workflow.locus = ? WHERE id IN ");
-                SqlUtilities.appendSetOfQuestionMarks(updateLociSql, stringSetEntry.getValue().size());
-                PreparedStatement updateLociStatement = connection.prepareStatement(updateLociSql.toString());
-                int i = 2;
-                updateLociStatement.setObject(1, stringSetEntry.getKey());
-                for (Integer id : stringSetEntry.getValue()) {
-                    updateLociStatement.setObject(i++, id);
-                }
-
-                int numberOfUpdatedWorkflows = updateLociStatement.executeUpdate();
-
-                if (numberOfUpdatedWorkflows != stringSetEntry.getValue().size()) {
-                    throw new DatabaseServiceException("Incorrect number of workflows updated, expected: " +
-                            stringSetEntry.getValue().size() + ", actual: " + numberOfUpdatedWorkflows, false);
-                }
-            }
-
-            //update the last-modified on the workflows associated with this plate...
-            if(plate.getReactionType() != Reaction.Type.GelQualification) {
-                String sql;
-                if (plate.getReactionType() == Reaction.Type.Extraction) {
-                    sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate=" + plate.getId() + ")";
-                } else if (plate.getReactionType() == Reaction.Type.PCR) {
-                    sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate=" + plate.getId() + ")";
-                } else if (plate.getReactionType() == Reaction.Type.CycleSequencing) {
-                    sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate=" + plate.getId() + ")";
-
-                } else {
-                    throw new SQLException("There is no reaction type " + plate.getReactionType());
-                }
-                connection.executeUpdate(sql);
+            if(plate.getReactionType() != Reaction.Type.GelQuantification) {
+                updateWorkflows(connection, plate);
             }
 
             connection.endTransaction();
@@ -2240,6 +2195,59 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             throw new DatabaseServiceException(e, e.getMessage(), false);
         } finally {
             returnConnection(connection);
+        }
+    }
+
+    private void updateWorkflows(ConnectionWrapper connection, Plate plate) throws SQLException, DatabaseServiceException {
+        Map<String, Set<Integer>> workflowLoci = new HashMap<String, Set<Integer>>();
+        for (Reaction reaction : plate.getReactions()) {
+            Set<Integer> ids = workflowLoci.get(reaction.getLocus());
+            if (ids == null) {
+                ids = new HashSet<Integer>();
+                workflowLoci.put(reaction.getLocus(), ids);
+            }
+            Workflow workflow = reaction.getWorkflow();
+            if (workflow != null) {
+                ids.add(workflow.getId());
+            }
+        }
+
+        for (Map.Entry<String, Set<Integer>> stringSetEntry : workflowLoci.entrySet()) {
+            if (stringSetEntry.getValue().isEmpty()) {
+                continue;
+            }
+            StringBuilder updateLociSql = new StringBuilder();
+            updateLociSql.append("UPDATE workflow SET workflow.locus = ? WHERE id IN ");
+            SqlUtilities.appendSetOfQuestionMarks(updateLociSql, stringSetEntry.getValue().size());
+            PreparedStatement updateLociStatement = connection.prepareStatement(updateLociSql.toString());
+            int i = 2;
+            updateLociStatement.setObject(1, stringSetEntry.getKey());
+            for (Integer id : stringSetEntry.getValue()) {
+                updateLociStatement.setObject(i++, id);
+            }
+
+            int numberOfUpdatedWorkflows = updateLociStatement.executeUpdate();
+
+            if (numberOfUpdatedWorkflows != stringSetEntry.getValue().size()) {
+                throw new DatabaseServiceException("Incorrect number of workflows updated, expected: " +
+                        stringSetEntry.getValue().size() + ", actual: " + numberOfUpdatedWorkflows, false);
+            }
+        }
+
+        //update the last-modified on the workflows associated with this plate...
+        if(plate.getReactionType() != Reaction.Type.GelQuantification) {
+            String sql;
+            if (plate.getReactionType() == Reaction.Type.Extraction) {
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE extractionId IN (SELECT id FROM extraction WHERE extraction.plate=" + plate.getId() + ")";
+            } else if (plate.getReactionType() == Reaction.Type.PCR) {
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE id IN (SELECT workflow FROM pcr WHERE pcr.plate=" + plate.getId() + ")";
+            } else if (plate.getReactionType() == Reaction.Type.CycleSequencing) {
+                sql = "UPDATE workflow SET workflow.date = (SELECT date from plate WHERE plate.id=" + plate.getId() + ") WHERE id IN (SELECT workflow FROM cyclesequencing WHERE cyclesequencing.plate=" + plate.getId() + ")";
+
+            } else {
+                throw new SQLException("There is no reaction type " + plate.getReactionType());
+            }
+            connection.executeUpdate(sql);
         }
     }
 
@@ -2732,7 +2740,7 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                     updateStatement.close();
                     insertTracesStatement.close();
                     break;
-                case GelQualification:
+                case GelQuantification:
                     List<String> extractionIds = new ArrayList<String>(reactions.length);
                     for (Reaction reaction : reactions) {
                         extractionIds.add(reaction.getExtractionId());
@@ -2743,8 +2751,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
                         userIdToDatabaseId.put(extraction.getExtractionId(), extraction.getId());
                     }
 
-                    insertSQL  = "INSERT INTO gel_qualification (date, extractionId, plate, location, technician, notes, gelImage) VALUES (?, ?, ?, ?, ?, ?, ?)";
-                    updateSQL  = "UPDATE gel_qualification SET date=?, extractionId=?, plate=?, location=?, technician=?, notes=?, gelImage=?  WHERE id=?";
+                    insertSQL  = "INSERT INTO " + GelQualificationReaction.DB_TABLE_NAME + " (date, extractionId, plate, location, technician, notes, gelImage) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    updateSQL  = "UPDATE " + GelQualificationReaction.DB_TABLE_NAME + " SET date=?, extractionId=?, plate=?, location=?, technician=?, notes=?, gelImage=?  WHERE id=?";
 
                     insertStatement = connection.prepareStatement(insertSQL);
                     updateStatement = connection.prepareStatement(updateSQL);

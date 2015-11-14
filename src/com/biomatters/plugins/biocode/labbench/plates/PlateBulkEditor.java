@@ -721,9 +721,12 @@ public class PlateBulkEditor {
                     LIMSConnection.WORKFLOW_LOCUS_FIELD,
                     new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
                 );
-            case GelQualification:
+            case GelQuantification:
                 // todo
-                Collections.singletonList(new DocumentField("Extraction Id", "", "extractionId", String.class, false, false)); // todo
+                return Arrays.asList(
+                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                        new DocumentField("Technician", "", "technician", String.class, false, false)
+                );
             default :
                 return Collections.EMPTY_LIST;
         }
