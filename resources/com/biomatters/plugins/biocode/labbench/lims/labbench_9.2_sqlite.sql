@@ -445,13 +445,13 @@ CREATE TABLE gel_quantification (
   volume double, -- Is this different to extraction vol?
   gelImage LONGVARBINARY,
   gelBuffer VARCHAR(255),
-  gelConc VARCHAR(255),  -- Check how we do conc in other cases.  Is it a varchar?
+  gelConc DOUBLE,
   stain VARCHAR(255),
-  stainConc VARCHAR(255),  -- Check how we do conc in other cases.  Is it a varchar?
+  stainConc VARCHAR(255),
   stainMethod VARCHAR(255),
-  gelLadder VARCHAR(255),  -- Should we make ladder it's own thign?  Then threshold would be a drop down?  SI only asked for open field though....
-  threshold VARCHAR(255),  -- Bulk edit?  Or no?
-  percent_above_threshold DOUBLE,  -- Needs to be available via Bulk Edit
+  gelLadder VARCHAR(255),
+  threshold INTEGER,
+  aboveThreshold INTEGER,
   FOREIGN KEY (extractionId) REFERENCES extraction(id) ON DELETE CASCADE ,
   FOREIGN KEY (plate) REFERENCES plate(id) ON DELETE CASCADE
 );

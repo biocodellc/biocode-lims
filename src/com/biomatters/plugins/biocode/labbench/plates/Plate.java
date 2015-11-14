@@ -418,10 +418,10 @@ public class Plate implements XMLSerializable {
                 r = new CycleSequencingReaction(resultSet);
                 break;
             case GelQuantification:
-                if(resultSet.getObject(GelQualificationReaction.DB_TABLE_NAME + ".id") == null) {
+                if(resultSet.getObject(GelQuantificationReaction.DB_TABLE_NAME + ".id") == null) {
                     return null;
                 }
-                r = new GelQualificationReaction(resultSet);
+                r = new GelQuantificationReaction(resultSet);
                 break;
             default:
                 throw new IllegalArgumentException("Type " + type + " unsupported");

@@ -35,6 +35,7 @@ import java.util.prefs.Preferences;
  * Represents a single reaction (ie a well on a plate)
  */
 public abstract class Reaction<T extends Reaction> implements XMLSerializable{
+    public static final DocumentField EXTRACTION_FIELD = DocumentField.createStringField("Extraction Id", "", "extractionId", false, false);
     private boolean selected;
     private int id=-1;
     private int plateId;
@@ -133,7 +134,7 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
             case CycleSequencing :
                 return new CycleSequencingReaction();
             case GelQuantification:
-                return new GelQualificationReaction();
+                return new GelQuantificationReaction();
         }
         return null;
     }

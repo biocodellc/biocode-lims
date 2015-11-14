@@ -521,27 +521,27 @@ CREATE TABLE sequencing_result (
 ) ENGINE=INNODB;
 
 CREATE TABLE gel_quantification (
-  id int(10) unsigned NOT NULL auto_increment,
+  id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `date` timestamp NOT NULL default CURRENT_TIMESTAMP,
   extractionId INT(10) UNSIGNED NOT NULL,
-  plate int(10) unsigned NOT NULL,
-  location int(10) unsigned NOT NULL,
+  plate int(10) UNSIGNED NOT NULL,
+  location int(10) UNSIGNED NOT NULL,
   technician VARCHAR(255),
-  notes longtext,
-  volume double,
+  notes LONGTEXT,
+  volume DOUBLE,
   gelImage longblob,
   gelBuffer VARCHAR(255),
-  gelConc VARCHAR(255),
+  gelConc DOUBLE,
   stain VARCHAR(255),
   stainConc VARCHAR(255),
   stainMethod VARCHAR(255),
   gelLadder VARCHAR(255),
-  threshold VARCHAR(255),
-  percent_above_threshold DOUBLE,
+  threshold INTEGER,
+  aboveThreshold INTEGER,
   PRIMARY KEY (id),
   FOREIGN KEY (extractionId) REFERENCES extraction(id) ON DELETE CASCADE ,
   FOREIGN KEY (plate) REFERENCES plate(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB AUTO_INCREMENT=1
 
 /*!40000 ALTER TABLE `traces` DISABLE KEYS */;
 /*!40000 ALTER TABLE `traces` ENABLE KEYS */;

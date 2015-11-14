@@ -1,13 +1,13 @@
 CREATE TABLE gel_quantification (
-  id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `date` timestamp NOT NULL default CURRENT_TIMESTAMP,
-  extractionId INT(10) UNSIGNED NOT NULL,
-  plate int(10) UNSIGNED NOT NULL,
-  location int(10) UNSIGNED NOT NULL,
+  id INTEGER PRIMARY KEY IDENTITY,
+  date timestamp default CURRENT_TIMESTAMP,
+  extractionId INTEGER NOT NULL,
+  plate INTEGER NOT NULL,
+  location INTEGER NOT NULL,
   technician VARCHAR(255),
-  notes LONGTEXT,
-  volume DOUBLE,
-  gelImage longblob,
+  notes LONGVARCHAR,
+  volume double, -- Is this different to extraction vol?
+  gelImage LONGVARBINARY,
   gelBuffer VARCHAR(255),
   gelConc DOUBLE,
   stain VARCHAR(255),
@@ -16,10 +16,9 @@ CREATE TABLE gel_quantification (
   gelLadder VARCHAR(255),
   threshold INTEGER,
   aboveThreshold INTEGER,
-  PRIMARY KEY (id),
   FOREIGN KEY (extractionId) REFERENCES extraction(id) ON DELETE CASCADE ,
   FOREIGN KEY (plate) REFERENCES plate(id) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
+);
 
 UPDATE databaseversion SET version = 9;
 INSERT INTO properties (name,value) VALUES ('fullDatabaseVersion', '9.2');

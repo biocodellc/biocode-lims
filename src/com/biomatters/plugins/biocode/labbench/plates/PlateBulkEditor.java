@@ -15,10 +15,7 @@ import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -710,23 +707,19 @@ public class PlateBulkEditor {
             case Extraction:
                 return Arrays.asList(
                     new DocumentField("Tissue Sample Id", "", ExtractionOptions.TISSUE_ID, String.class, false, false),
-                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    Reaction.EXTRACTION_FIELD,
                     new DocumentField("Extraction Barcode", "", "extractionBarcode", String.class, false, false),
                     new DocumentField("Parent Extraction Id", "", "parentExtraction", String.class, true, false)
                 );
             case PCR://drop through
             case CycleSequencing:
                 return Arrays.asList(
-                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    Reaction.EXTRACTION_FIELD,
                     LIMSConnection.WORKFLOW_LOCUS_FIELD,
                     new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
                 );
             case GelQuantification:
-                // todo
-                return Arrays.asList(
-                        new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
-                        new DocumentField("Technician", "", "technician", String.class, false, false)
-                );
+                return GelQuantificationReaction.getBulkEditorFields();
             default :
                 return Collections.EMPTY_LIST;
         }

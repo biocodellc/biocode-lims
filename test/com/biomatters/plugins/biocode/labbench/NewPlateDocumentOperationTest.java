@@ -6,6 +6,7 @@ import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
 import com.biomatters.plugins.biocode.labbench.lims.LimsTestCase;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
+import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.ProgressListener;
 import org.junit.Test;
 
@@ -21,7 +22,6 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     private static final String FROM_EXISTING_OPTION_NAME = "fromExisting";
 
     private static final String EXTRACTION_REACTION_TYPE_VALUE = "extraction";
-    private static final String PCR_REACTION_TYPE_VALUE = "pcr";
 
     private static final String STRIPS_PLATE_TYPE_VALUE = "strips";
     private static final String INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE = "individualReactions";
@@ -32,35 +32,51 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     @Test
     public void testCreateStripExtractionPlateFromStripExtractionPlate() throws DocumentOperationException {
         for (int numberOfStrips = 1; numberOfStrips <= 6; numberOfStrips++) {
-            createPlate(PCR_REACTION_TYPE_VALUE, STRIPS_PLATE_TYPE_VALUE, numberOfStrips, createPlate(EXTRACTION_REACTION_TYPE_VALUE, STRIPS_PLATE_TYPE_VALUE, numberOfStrips));
+            Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, STRIPS_PLATE_TYPE_VALUE, numberOfStrips);
+            for (Reaction.Type type : Reaction.Type.values()) {
+                createPlate(type.name, STRIPS_PLATE_TYPE_VALUE, numberOfStrips, extractionPlate);
+            }
         }
     }
 
     @Test
-    public void testCreateIndividualReactionsPCRPlateFromIndividualReactionsExtractionPlate() throws DocumentOperationException {
+    public void testCreateIndividualReactionsPlateFromIndividualReactionsExtractionPlate() throws DocumentOperationException {
         for (int numberOfIndividualReactions = 1; numberOfIndividualReactions <= Plate.MAX_INDIVIDUAL_REACTIONS; numberOfIndividualReactions++) {
             if(numberOfIndividualReactions % 8 == 0) {
                 continue;  // These sizes are reserved for strips
             }
-            Plate plate = createPlate(PCR_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions, createPlate(EXTRACTION_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions));
-            assertEquals(numberOfIndividualReactions, plate.getReactions().length);
-            assertEquals(1, plate.getRows());
+            Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions);
+            for (Reaction.Type type : Reaction.Type.values()) {
+                Plate plate = createPlate(type.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions, extractionPlate);
+                assertEquals(type, plate.getReactionType());
+                assertEquals(numberOfIndividualReactions, plate.getReactions().length);
+                assertEquals(1, plate.getRows());
+            }
         }
     }
 
     @Test
     public void testCreate48PCRPlateFrom48ExtractionPlate() throws DocumentOperationException {
-        createPlate(PCR_REACTION_TYPE_VALUE, FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0, createPlate(EXTRACTION_REACTION_TYPE_VALUE, FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0));
+        Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0);
+        for (Reaction.Type type : Reaction.Type.values()) {
+            createPlate(type.name, FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
+        }
     }
 
     @Test
     public void testCreate96PCRPlateFrom96ExtractionPlate() throws DocumentOperationException {
-        createPlate(PCR_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0, createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0));
+        Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        for (Reaction.Type type : Reaction.Type.values()) {
+            createPlate(type.name, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
+        }
     }
 
     @Test
     public void testCreate384PCRPlateFrom384ExtractionPlate() throws DocumentOperationException {
-        createPlate(PCR_REACTION_TYPE_VALUE, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, createPlate(EXTRACTION_REACTION_TYPE_VALUE, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0));
+        Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0);
+        for (Reaction.Type type : Reaction.Type.values()) {
+            createPlate(type.name, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
+        }
     }
 
     @Test
@@ -69,7 +85,9 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
         Plate ninetySixWellExtractionPlateTwo = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         Plate ninetySixWellExtractionPlateThree = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         Plate ninetySixWellExtractionPlateFour = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
-        createPlate(PCR_REACTION_TYPE_VALUE, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, ninetySixWellExtractionPlateOne, ninetySixWellExtractionPlateTwo, ninetySixWellExtractionPlateThree, ninetySixWellExtractionPlateFour);
+        for (Reaction.Type type : Reaction.Type.values()) {
+            createPlate(type.name, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, ninetySixWellExtractionPlateOne, ninetySixWellExtractionPlateTwo, ninetySixWellExtractionPlateThree, ninetySixWellExtractionPlateFour);
+        }
     }
 
     private static Plate createPlate(String reactionType, String plateType, int plateValue, Plate... plates) throws DocumentOperationException {
