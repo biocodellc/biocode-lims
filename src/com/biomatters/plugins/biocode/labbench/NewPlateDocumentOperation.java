@@ -204,9 +204,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             srcIndex += srcIncrement;
             destIndex += destIncrement;
         }
-        if(!srcPlate.getReactionType().linksToWorkflows() && destPlate.getReactionType().linksToWorkflows()) {
-            autodetectWorkflows(destPlate);
-        }
+        autoGenerateRequiredFields(srcPlate.getReactionType(), destPlate);
     }
 
     private void copy96To384(Plate[] srcPlates, Plate destPlate, Boolean passedOrFailed) throws DocumentOperationException{
@@ -234,12 +232,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        if(!reactionType.linksToWorkflows() && destPlate.getReactionType().linksToWorkflows()) {
-            autodetectWorkflows(destPlate);
-        }
-        if(reactionType == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
-            generateExtractionIds(destPlate);
-        }
+        autoGenerateRequiredFields(reactionType, destPlate);
     }
 
     private void copy384To96(Plate srcPlate, Plate destPlate, int quadrant, Boolean passedOrFailed) throws DocumentOperationException{
@@ -256,12 +249,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        if(!srcPlate.getReactionType().linksToWorkflows() && destPlate.getReactionType().linksToWorkflows()) {
-            autodetectWorkflows(destPlate);
-        }
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
-            generateExtractionIds(destPlate);
-        }
+        autoGenerateRequiredFields(srcPlate.getReactionType(), destPlate);
 
     }
 
@@ -270,7 +258,8 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             throw new IllegalArgumentException("Plates were of different sizes");
         }
 
-        if(srcPlate.getReactionType() == destPlate.getReactionType()) { //copy everything
+        Reaction.Type srcReactionType = srcPlate.getReactionType();
+        if(srcReactionType == destPlate.getReactionType()) { //copy everything
             destPlate.setName(srcPlate.getName());
             destPlate.setThermocycle(srcPlate.getThermocycle());
         }
@@ -288,10 +277,14 @@ public class NewPlateDocumentOperation extends DocumentOperation {
             }
         }
         System.out.println(count+" reactions copied");
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType().linksToWorkflows()) {
+        autoGenerateRequiredFields(srcReactionType, destPlate);
+    }
+
+    private static void autoGenerateRequiredFields(Reaction.Type srcReactionType, Plate destPlate) throws DocumentOperationException {
+        if(!srcReactionType.linksToWorkflows() && destPlate.getReactionType().linksToWorkflows()) {
             autodetectWorkflows(destPlate);
         }
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
+        if(srcReactionType == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
             generateExtractionIds(destPlate);
         }
     }
