@@ -199,7 +199,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         int max = Math.min(numToCopy, Math.min(srcReactions.length-srcStart, destReactions.length-destStart));
         int srcIndex = srcStart;
         int destIndex = destStart;
-        for(int i=0; i < max; i++) {
+        for(int i=0; i < max && destIndex < destReactions.length && srcIndex < srcReactions.length; i++) {
             ReactionUtilities.copyReaction(srcReactions[srcIndex], destReactions[destIndex]);
             srcIndex += srcIncrement;
             destIndex += destIncrement;
