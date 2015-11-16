@@ -164,7 +164,6 @@ public class NewPlateOptions extends Options{
                 infoLabel.setAdvanced(true);
             }
             addChildOptions("customCopy", "", "", customCopy);
-            useCustomCopyOption.addChildOptionsDependent(customCopy, true, true);
             insertStartOption = customCopy.addIntegerOption("insertStart", "Insert start at column:", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS);
             insertStartOption.setAdvanced(true);
             insertMethodOption = customCopy.addComboBoxOption("insertMethod", "Insert Method: ", Arrays.asList(ALTERNATING, SEQUENTIALLY), ALTERNATING);
@@ -178,6 +177,7 @@ public class NewPlateOptions extends Options{
             rowOptions.addComboBoxOption("row", "From: ", rowValues, rowValues.get(0));
             multipleRowOptions = customCopy.addMultipleOptions("rowOptions", rowOptions, true);
 
+            useCustomCopyOption.addChildOptionsDependent(customCopy, true, true);
 
             final Options.BooleanOption fromExistingOption1 = fromExistingOption;
             SimpleListener fromExistingListener = new SimpleListener() {
