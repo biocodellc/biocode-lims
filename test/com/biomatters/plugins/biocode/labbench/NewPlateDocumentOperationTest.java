@@ -86,6 +86,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
         Plate ninetySixWellExtractionPlateThree = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         Plate ninetySixWellExtractionPlateFour = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
+            createPlate(type.name, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, ninetySixWellExtractionPlateOne);
             createPlate(type.name, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, ninetySixWellExtractionPlateOne, ninetySixWellExtractionPlateTwo, ninetySixWellExtractionPlateThree, ninetySixWellExtractionPlateFour);
         }
     }

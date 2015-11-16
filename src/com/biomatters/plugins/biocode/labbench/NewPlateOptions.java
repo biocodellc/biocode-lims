@@ -144,14 +144,34 @@ public class NewPlateOptions extends Options{
                 public void objectChanged() {
                     quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
                     docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(PLATE_384));
-                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
+//                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
                 }
             };
             fromExistingOption.addChangeListener(fromExistingListener);
             plateOption.addChangeListener(fromExistingListener);
             fromExistingListener.objectChanged();
         }
+
+        BooleanOption customCopyOption = addBooleanOption("custom", "Custom Copy", false);
+        customCopyOption.setAdvanced(true);
+        Options customCopy = new Options(NewPlateOptions.class);
+        customCopy.addLabel("Note: Only supports copying into plates of individual reactions").setAdvanced(true);  // todo
+        addChildOptions("customCopy", "", "", customCopy);
+        customCopyOption.addChildOptionsDependent(customCopy, true, true);
+        customCopy.addIntegerOption("insertStart", "Insert start at column:", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS).setAdvanced(true);
+        customCopy.addComboBoxOption("insertMethod", "Insert Method: ", Arrays.asList(ALTERNATING, SEQUENTIALLY), ALTERNATING).setAdvanced(true);
+
+        Options rowOptions = new Options(NewPlateOptions.class);
+        List<OptionValue> rowValues = new ArrayList<OptionValue>();
+        for (int i = 0; i <10; i++) {
+            rowValues.add(new OptionValue("" + i, "Row " + i));
+        }
+        rowOptions.addComboBoxOption("row", "From: ", rowValues, rowValues.get(0));
+        customCopy.addMultipleOptions("rowOptions", rowOptions, true);
     }
+
+    private OptionValue ALTERNATING = new OptionValue("alternating", "Alternate Between Rows");
+    private OptionValue SEQUENTIALLY = new OptionValue("sequentially", "Sequential");
 
     public Plate.Size getPlateSize() {
         return Plate.getSizeEnum(getNumberOfReactions());
