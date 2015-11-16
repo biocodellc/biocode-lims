@@ -17,10 +17,7 @@ import com.biomatters.plugins.biocode.labbench.Workflow;
 import com.biomatters.plugins.biocode.labbench.fims.FIMSConnection;
 import com.biomatters.plugins.biocode.labbench.fims.MooreaFimsConnection;
 import com.biomatters.plugins.biocode.labbench.lims.LIMSConnection;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionOptions;
-import com.biomatters.plugins.biocode.labbench.reaction.ExtractionReaction;
-import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
-import com.biomatters.plugins.biocode.labbench.reaction.ReactionUtilities;
+import com.biomatters.plugins.biocode.labbench.reaction.*;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
@@ -812,10 +809,12 @@ public class PlateBulkEditor {
             case PCR://drop through
             case CycleSequencing:
                 return Arrays.asList(
-                    new DocumentField("Extraction Id", "", "extractionId", String.class, false, false),
+                    Reaction.EXTRACTION_FIELD,
                     LIMSConnection.WORKFLOW_LOCUS_FIELD,
                     new DocumentField("Workflow Id", "", "workflowId", String.class, false, false)
                 );
+            case GelQuantification:
+                return GelQuantificationReaction.getBulkEditorFields();
             default :
                 return Collections.EMPTY_LIST;
         }

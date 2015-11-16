@@ -25,7 +25,6 @@ import java.awt.image.ImageObserver;
 import java.text.ParseException;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.prefs.Preferences;
 
 /**
@@ -36,6 +35,7 @@ import java.util.prefs.Preferences;
  * Represents a single reaction (ie a well on a plate)
  */
 public abstract class Reaction<T extends Reaction> implements XMLSerializable{
+    public static final DocumentField EXTRACTION_FIELD = DocumentField.createStringField("Extraction Id", "", "extractionId", false, false);
     private boolean selected;
     private int id=-1;
     private int plateId;
@@ -91,9 +91,30 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
 
 
     public enum Type {
-        Extraction,
-        PCR,
-        CycleSequencing
+        Extraction("extraction", "Extraction", false, false),
+        PCR("pcr", "PCR", true, true),
+        CycleSequencing("cyclesequencing", "Cycle Sequencing", true, true),
+        GelQuantification("gelquantification", "Gel Quantification", false, false);
+
+        public String name;
+        public String label;
+        private boolean linksToWorkflows;
+        private boolean hasThermocycles;
+
+        private Type(String name, String label, boolean linksToWorkflows, boolean hasThermocycles) {
+            this.name = name;
+            this.label = label;
+            this.linksToWorkflows = linksToWorkflows;
+            this.hasThermocycles = hasThermocycles;
+        }
+
+        public boolean linksToWorkflows() {
+            return linksToWorkflows;
+        }
+
+        public boolean hasThermocycles() {
+            return hasThermocycles;
+        }
     }
 
     public GelImage getGelImage() {
@@ -112,6 +133,8 @@ public abstract class Reaction<T extends Reaction> implements XMLSerializable{
                 return new PCRReaction();
             case CycleSequencing :
                 return new CycleSequencingReaction();
+            case GelQuantification:
+                return new GelQuantificationReaction();
         }
         return null;
     }

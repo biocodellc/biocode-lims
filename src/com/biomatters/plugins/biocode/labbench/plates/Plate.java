@@ -37,6 +37,8 @@ public class Plate implements XMLSerializable {
     private boolean isDeleted = false;
     private int thermocycleId = -1;
 
+    public static final int MAX_INDIVIDUAL_REACTIONS = 30;
+
     public enum Size {
         w1("1", 1),
         w2("2", 2),
@@ -64,6 +66,11 @@ public class Plate implements XMLSerializable {
         w24("24", 24),
         w25("25", 25),
         w26("26", 26),
+        w27("27", 27),
+        w28("28", 28),
+        w29("29", 29),
+        w30("30", 30),
+        w31("31", 31),
         w32("32", 32),
         w40("40", 40),
         w48("48", 48),
@@ -341,32 +348,7 @@ public class Plate implements XMLSerializable {
     public static BiocodeUtilities.Well getWell(int position, Size size) {
         int cols;
         if(size != null) {
-            switch(size) {
-                case w8:
-                    cols = 1;
-                    break;
-                case w16:
-                    cols = 2;
-                    break;
-                case w24:
-                    cols = 3;
-                    break;
-                case w32:
-                    cols = 4;
-                    break;
-                case w40:
-                    cols = 5;
-                    break;
-                case w48 :
-                    cols = 6;
-                    break;
-                case w96 :
-                    cols = 12;
-                    break;
-                case w384 :
-                default :
-                    cols = 24;
-            }
+            cols = getNumberOfColumns(size);
         }
         else {
             cols = 1+position;
@@ -374,6 +356,22 @@ public class Plate implements XMLSerializable {
         int row = position / cols;
         int col = position % cols;
         return new BiocodeUtilities.Well((char)(65+row), 1+col);
+    }
+
+    private static int getNumberOfColumns(Size size) {
+        int cols;
+        switch(size) {
+            case w384 :
+                cols = 24;
+                break;
+            default :
+                if(size.numberOfReactions() % 8 == 0) {
+                    cols = size.numberOfReactions()/8;
+                } else {
+                    cols = size.numberOfReactions();  // Default to a single row
+                }
+        }
+        return cols;
     }
 
     public Date lastModified() {
@@ -389,32 +387,7 @@ public class Plate implements XMLSerializable {
     public static int getWellLocation(BiocodeUtilities.Well well, Size size) {
         int cols;
         if(size != null) {
-            switch(size) {
-                case w8:
-                    cols = 1;
-                    break;
-                case w16:
-                    cols = 2;
-                    break;
-                case w24:
-                    cols = 3;
-                    break;
-                case w32:
-                    cols = 4;
-                    break;
-                case w40:
-                    cols = 5;
-                    break;
-                case w48 :
-                    cols = 6;
-                    break;
-                case w96 :
-                    cols = 12;
-                    break;
-                case w384 :
-                default :
-                    cols = 24;
-            }
+            cols = getNumberOfColumns(size);
         }
         else {
             cols = 1;
@@ -439,12 +412,19 @@ public class Plate implements XMLSerializable {
                 r = new PCRReaction(resultSet);
                 break;
             case CycleSequencing:
-            default:
                 if(resultSet.getObject("cyclesequencing.id") == null) {
                     return null;
                 }
                 r = new CycleSequencingReaction(resultSet);
                 break;
+            case GelQuantification:
+                if(resultSet.getObject(GelQuantificationReaction.DB_TABLE_NAME + ".id") == null) {
+                    return null;
+                }
+                r = new GelQuantificationReaction(resultSet);
+                break;
+            default:
+                throw new IllegalArgumentException("Type " + type + " unsupported");
         }
         r.setPlateId(this.id);
         r.setPlateName(getName());

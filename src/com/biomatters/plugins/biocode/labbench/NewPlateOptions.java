@@ -1,13 +1,17 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.virion.jam.util.SimpleListener;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,25 +55,28 @@ public class NewPlateOptions extends Options{
                 fromExistingTissues = true;
             } else {
                 throw new DocumentOperationException("Invalid document type encountered: " + documents[0].getDocumentClass().getSimpleName() + ".");
+        int rows = 0;
+        for(AnnotatedPluginDocument doc : documents) {
+            PlateDocument plateDoc = (PlateDocument)doc.getDocument();
+            Plate.Size size = plateDoc.getPlate().getPlateSize();
+            Reaction.Type type = plateDoc.getPlate().getReactionType();
+            if(type != Reaction.Type.PCR && type != Reaction.Type.CycleSequencing) {
+                allPcrOrSequencing = false;
             }
+            if(pSize != null && size != pSize) {
+                throw new DocumentOperationException("All selected plates must be of the same size");
+            }
+            numberOfReactions += plateDoc.getPlate().getReactions().length;
+            pSize = size;
+            rows += plateDoc.getPlate().getRows();
         }
+                
 
         if (fromExistingPlates) {
             if (documents.length == 4) {
                 fourPlates.set(true);
             }
-            for (AnnotatedPluginDocument doc : documents) {
-                PlateDocument plateDoc = (PlateDocument) doc.getDocument();
-                Plate.Size size = plateDoc.getPlate().getPlateSize();
-                if (plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
-                    allPcrOrSequencing = false;
-                }
-                if (pSize != null && size != pSize) {
-                    throw new DocumentOperationException("All selected plates must be of the same size");
-                }
-                numberOfReactions += plateDoc.getPlate().getReactions().length;
-                pSize = size;
-            }
+            
         }
         final Plate.Size plateSize = pSize;
         if (fourPlates.get() && plateSize != Plate.Size.w96) {
@@ -84,11 +91,10 @@ public class NewPlateOptions extends Options{
                 PLATE_384
         };
 
-        final Options.OptionValue[] typeValues = new Options.OptionValue[] {
-                new Options.OptionValue("extraction", "Extraction"),
-                new Options.OptionValue("pcr", "PCR"),
-                new Options.OptionValue("cyclesequencing", "Cycle Sequencing")
-        };
+        final List<OptionValue> typeValues = new ArrayList<OptionValue>();
+        for (Reaction.Type type : Reaction.Type.values()) {
+            typeValues.add(new OptionValue(type.name, type.label));
+        }
         final Options.OptionValue[] passedValues = new Options.OptionValue[] {
                 new Options.OptionValue("passed", "Passed"),
                 new Options.OptionValue("failed", "Failed")
@@ -119,11 +125,12 @@ public class NewPlateOptions extends Options{
             fromExistingOption.setSpanningComponent(true);
         }
 
-        addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues[0]);
+        addComboBoxOption("reactionType", "Type of reaction", typeValues, typeValues.get(0));
         final Options.RadioOption<Options.OptionValue> plateOption = addRadioOption("plateType", "", plateValues, PLATE_96, Options.Alignment.VERTICAL_ALIGN);
 
 
-        final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, 26);
+
+        final Options.IntegerOption reactionNumber = addIntegerOption("reactionNumber", "", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS);
         final Options.IntegerOption stripNumber = addIntegerOption("stripNumber", "", 1, 1, 6);
         plateOption.addDependent(INDIVIDUAL_REACTIONS, reactionNumber, true);
         plateOption.addDependent(INDIVIDUAL_REACTIONS, addLabel(" individual reactions"), true);
@@ -160,13 +167,48 @@ public class NewPlateOptions extends Options{
 
         addChildOptions("fromQuadrant", "Quadrant", "", docChooserOptions);
 
-        if (fromExistingOption != null) {
+
+        if(fromExistingOption != null) {
+            useCustomCopyOption = addBooleanOption(USE_CUSTOM_COPY, "Custom Copy", false);
+            useCustomCopyOption.setDisabledValue(false);
+            plateOption.addDependent(useCustomCopyOption, INDIVIDUAL_REACTIONS);
+            fromExistingOption.addDependent(useCustomCopyOption, true);
+
+            useCustomCopyOption.setAdvanced(true);
+            Options customCopy = new Options(NewPlateOptions.class);
+
+            final Option<String, ? extends JComponent> infoLabel;
+            if (documents.length != 1) {
+                useCustomCopyOption.setEnabled(false);
+                infoLabel = customCopy.addLabelWithIcon("Can only custom copy with a single plate", StandardIcons.info.getIcons());
+                infoLabel.setAdvanced(true);
+            } else {
+                infoLabel = customCopy.addLabelWithIcon("Can only custom copy into plate of individual reactions", StandardIcons.info.getIcons());
+                infoLabel.setAdvanced(true);
+            }
+            addChildOptions("customCopy", "", "", customCopy);
+            useCustomCopyOption.addChildOptionsDependent(customCopy, true, true);
+            insertStartOption = customCopy.addIntegerOption("insertStart", "Insert start at column:", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS);
+            insertStartOption.setAdvanced(true);
+            insertMethodOption = customCopy.addComboBoxOption("insertMethod", "Insert Method: ", Arrays.asList(ALTERNATING, SEQUENTIALLY), ALTERNATING);
+            insertMethodOption.setAdvanced(true);
+
+            Options rowOptions = new Options(NewPlateOptions.class);
+            List<OptionValue> rowValues = new ArrayList<OptionValue>();
+            for (int i = 0; i < rows; i++) {
+                rowValues.add(new OptionValue("" + i, "Row " + (char) (i + 65)));
+            }
+            rowOptions.addComboBoxOption("row", "From: ", rowValues, rowValues.get(0));
+            multipleRowOptions = customCopy.addMultipleOptions("rowOptions", rowOptions, true);
+
+
             final Options.BooleanOption fromExistingOption1 = fromExistingOption;
             SimpleListener fromExistingListener = new SimpleListener() {
                 public void objectChanged() {
-                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates.get() && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
+                    infoLabel.setVisible(!useCustomCopyOption.isEnabled() && fromExistingOption1.getValue());
+                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
                     docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(PLATE_384));
-                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
+//                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
                 }
             };
             fromExistingOption.addChangeListener(fromExistingListener);
@@ -175,22 +217,21 @@ public class NewPlateOptions extends Options{
         }
     }
 
+    static final OptionValue ALTERNATING = new OptionValue("alternating", "Alternate Between Rows");
+    static final OptionValue SEQUENTIALLY = new OptionValue("sequentially", "Sequential");
+
     public Plate.Size getPlateSize() {
         return Plate.getSizeEnum(getNumberOfReactions());
     }
 
     public Reaction.Type getReactionType() {
         Options.OptionValue reactionType = (Options.OptionValue)getValue("reactionType");
-
-        if(reactionType.getName().equals("extraction")) {
-            return Reaction.Type.Extraction;
+        for (Reaction.Type type : Reaction.Type.values()) {
+            if(type.name.equalsIgnoreCase(reactionType.getName())) {
+                return type;
+            }
         }
-        else if(reactionType.getName().equals("pcr")) {
-            return Reaction.Type.PCR;
-        }
-        else {
-            return Reaction.Type.CycleSequencing;
-        }
+        throw new IllegalStateException("invalid reaction type");
     }
 
     public boolean isFromExistingPlates() {
@@ -249,7 +290,7 @@ public class NewPlateOptions extends Options{
             if(plateSize == null && getPlateSize() != null) {
                 return "You cannot create a "+getPlateSize()+" plate from a set of reactions.";
             }
-            if(!(plateSize == Plate.Size.w96 && getPlateSize() == Plate.Size.w384) && !(plateSize == Plate.Size.w384 && getPlateSize() == Plate.Size.w96) && plateSize != getPlateSize()) {
+            if(!(documents.length == 1 && isUseCustomCopy()) && !(plateSize == Plate.Size.w96 && getPlateSize() == Plate.Size.w384) && !(plateSize == Plate.Size.w384 && getPlateSize() == Plate.Size.w96) && plateSize != getPlateSize()) {
                 return "You cannot create a "+(getPlateSize() == null ? "set of reactions" : getPlateSize()+" well")+" plate from a "+plateSize+" well plate.";
             }
             if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w384) {
@@ -344,6 +385,30 @@ public class NewPlateOptions extends Options{
         }
     }
 
+    static final String USE_CUSTOM_COPY = "useCustomCopy";
+    BooleanOption useCustomCopyOption;
+    boolean isUseCustomCopy() {
+        return useCustomCopyOption.getValue();
+    }
 
+    private ComboBoxOption<OptionValue> insertMethodOption;
+    boolean isCopySequential() {
+        return SEQUENTIALLY == insertMethodOption.getValue();
+    }
+
+    private MultipleOptions multipleRowOptions;
+    List<Integer> getRowsToCopy() {
+        MultipleOptions rowOptions = multipleRowOptions;
+        List<Integer> rows = new ArrayList<Integer>();
+        for (Options options : rowOptions.getValues()) {
+            rows.add(Integer.valueOf(options.getValueAsString("row")));
+        }
+        return rows;
+    }
+
+    private IntegerOption insertStartOption;
+    int getStartIndex() {
+        return insertStartOption.getValue() - 1;
+    }
 
 }

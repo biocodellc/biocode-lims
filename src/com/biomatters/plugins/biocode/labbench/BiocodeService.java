@@ -1159,9 +1159,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     private List<Thermocycle> cyclesequencingThermocycles = null;
     private List<PCRCocktail> PCRCocktails = null;
     private List<CycleSequencingCocktail> cyclesequencingCocktails = null;
-    private List<DisplayFieldsTemplate> extractionDisplayedFields = null;
-    private List<DisplayFieldsTemplate> pcrDisplayedFields = null;
-    private List<DisplayFieldsTemplate> cycleSequencingDisplayedFields = null;
+    private Map<Reaction.Type, List<DisplayFieldsTemplate>> reactionToDisplayableFields = new HashMap<Reaction.Type, List<DisplayFieldsTemplate>>();
 
     public void buildCaches() throws DatabaseServiceException {
         try {
@@ -1189,9 +1187,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         cyclesequencingThermocycles = getThermocyclesFromDisk("cyclesequencing_thermocycle");
         PCRCocktails = getPCRCocktailsFromDisk();
         cyclesequencingCocktails = getCycleSequencingCocktailsFromDisk();
-        extractionDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.Extraction);
-        pcrDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.PCR);
-        cycleSequencingDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.CycleSequencing);
+        for (Reaction.Type type : Reaction.Type.values()) {
+            reactionToDisplayableFields.put(type, getDisplayFieldsTemplatesFromDisk(type));
+        }
     }
 
     private void saveCachesToDisk() throws IOException {
@@ -1199,9 +1197,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
         saveThermocyclesToDisk("cyclesequencing_thermocycle", cyclesequencingThermocycles);
         saveCocktailsToDisk(Cocktail.Type.pcr, PCRCocktails);
         saveCocktailsToDisk(Cocktail.Type.cyclesequencing, cyclesequencingCocktails);
-        saveDisplayedFieldsToDisk(Reaction.Type.Extraction, extractionDisplayedFields);
-        saveDisplayedFieldsToDisk(Reaction.Type.PCR, pcrDisplayedFields);
-        saveDisplayedFieldsToDisk(Reaction.Type.CycleSequencing, cycleSequencingDisplayedFields);
+        for (Reaction.Type type : Reaction.Type.values()) {
+            saveDisplayedFieldsToDisk(type, reactionToDisplayableFields.get(type));
+        }
     }
 
     private List<CycleSequencingCocktail> getCycleSequencingCocktailsFromDisk() throws JDOMException, IOException, XMLSerializationException{
@@ -1241,9 +1239,9 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
 
     public void updateDisplayFieldsTemplates() {
         try {
-            extractionDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.Extraction);
-            pcrDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.PCR);
-            cycleSequencingDisplayedFields = getDisplayFieldsTemplatesFromDisk(Reaction.Type.CycleSequencing);
+            for (Reaction.Type type : Reaction.Type.values()) {
+                reactionToDisplayableFields.put(type, getDisplayFieldsTemplatesFromDisk(type));
+            }
         } catch (JDOMException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -1267,6 +1265,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
                 case Extraction: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.Extraction, ExtractionReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.<String, Color>emptyMap())));
                 case PCR: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.PCR, PCRReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
                 case CycleSequencing: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.CycleSequencing, CycleSequencingReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(new DocumentField("run status", "", ReactionOptions.RUN_STATUS,String.class, false, false), colors)));
+                case GelQuantification: return Arrays.asList(new DisplayFieldsTemplate("Default", Reaction.Type.GelQuantification, GelQuantificationReaction.getDefaultDisplayedFields(), new Reaction.BackgroundColorer(null, Collections.<String, Color>emptyMap())));
                 default : throw new IllegalArgumentException("You must supply one of the supported reaction types");
             }
 
@@ -1380,12 +1379,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
     }
 
     public List<DisplayFieldsTemplate> getDisplayedFieldTemplates(Reaction.Type type) {
-        switch(type) {
-            case Extraction:return new ArrayList<DisplayFieldsTemplate>(extractionDisplayedFields);
-            case PCR:return new ArrayList<DisplayFieldsTemplate>(pcrDisplayedFields);
-            case CycleSequencing:return new ArrayList<DisplayFieldsTemplate>(cycleSequencingDisplayedFields);
-            default:throw new IllegalArgumentException("You must request one of the supported reaction types (Extraction, PCR, or Cycle Sequencing");
-        }
+        return reactionToDisplayableFields.get(type);
     }
 
     public DisplayFieldsTemplate getDisplayedFieldTemplate(Reaction.Type type, String name) {
@@ -1559,7 +1553,7 @@ public class BiocodeService extends PartiallyWritableDatabaseService {
             String extractionId = reaction.getExtractionId();
 
             if (!reaction.isEmpty()) {
-                if (reaction.getType() != Reaction.Type.Extraction && reaction.getLocus().equals("None")) {
+                if (reaction.getType().linksToWorkflows() && reaction.getLocus().equals("None")) {
                     throw new BadDataException("Locus is not specified for reaction with extraction id " + reaction.getExtractionId());
                 }
                 reactionsToSave.add(reaction);

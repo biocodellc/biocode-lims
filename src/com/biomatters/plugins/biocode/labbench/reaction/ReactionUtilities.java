@@ -1084,7 +1084,7 @@ public class ReactionUtilities {
     public static void copyReaction(Reaction srcReaction, Reaction destReaction) {
         destReaction.setExtractionId(srcReaction.getExtractionId());
         Object locus = srcReaction.getFieldValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode());
-        if(srcReaction.getType() != Reaction.Type.Extraction && locus != null) {
+        if(srcReaction.getType().linksToWorkflows() && locus != null) {
             destReaction.getOptions().setValue(LIMSConnection.WORKFLOW_LOCUS_FIELD.getCode(), locus);
         }
         destReaction.setFimsSample(srcReaction.getFimsSample());
