@@ -155,7 +155,21 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 copy96To384(plates, editingPlate, copy);
             }
             else if(sizeFromOptions == null) {
-                copyPlateToReactionList(plate, editingPlate);
+                copyPlateToReactionList(plate, editingPlate, 0, 0, 1, 1, Integer.MAX_VALUE);
+            } else if(options.isUseCustomCopy()) {
+                List<Integer> rowsToCopy = options.getRowsToCopy();
+                int start = options.getStartIndex();
+                for (Integer rowIndex : rowsToCopy) {
+                    int increment = options.isCopySequential() ? 1 : rowsToCopy.size();
+
+                    copyPlateToReactionList(plate, editingPlate, rowIndex * plate.getCols(), start, 1, increment, plate.getCols());
+
+                    if(options.isCopySequential()) {
+                        start += plate.getCols();
+                    } else {
+                        start++;
+                    }
+                }
             }
 
             progressListener.setProgress(1.0);
@@ -166,14 +180,31 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         return plateViewer.get().getPlate();
     }
 
-    private void copyPlateToReactionList(Plate srcPlate, Plate destPlate) throws DocumentOperationException{
+    /**
+     *
+     * @param srcPlate {@link Plate} to copy from
+     * @param destPlate {@link Plate} to copy to
+     * @param srcStart The index in the source plate to start
+     * @param destStart The index in the destination plate to start
+     * @param srcIncrement
+     * @param destIncrement
+     * @param numToCopy The number of reactions to copy or Integer.MAX_VALUE to copy all reactions from the source plate
+     * @throws DocumentOperationException if anything goes wrong creating the reactions
+     */
+    private void copyPlateToReactionList(Plate srcPlate, Plate destPlate, int srcStart, int destStart, int srcIncrement, int destIncrement, int numToCopy) throws DocumentOperationException{
         Reaction[] srcReactions = srcPlate.getReactions();
         Reaction[] destReactions = destPlate.getReactions();
 
-        for(int i=0; i < Math.min(srcReactions.length, destReactions.length); i++) {
-            ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
+
+        int max = Math.min(numToCopy, Math.min(srcReactions.length-srcStart, destReactions.length-destStart));
+        int srcIndex = srcStart;
+        int destIndex = destStart;
+        for(int i=0; i < max; i++) {
+            ReactionUtilities.copyReaction(srcReactions[srcIndex], destReactions[destIndex]);
+            srcIndex += srcIncrement;
+            destIndex += destIncrement;
         }
-        if(!srcPlate.getReactionType().linksToWorkflows()) {
+        if(!srcPlate.getReactionType().linksToWorkflows() && destPlate.getReactionType().linksToWorkflows()) {
             autodetectWorkflows(destPlate);
         }
     }

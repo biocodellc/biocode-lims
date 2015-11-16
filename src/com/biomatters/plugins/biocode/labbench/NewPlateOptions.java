@@ -146,17 +146,17 @@ public class NewPlateOptions extends Options{
 
 
         if(fromExistingOption != null) {
-            final BooleanOption customCopyOption = addBooleanOption("custom", "Custom Copy", false);
-            customCopyOption.setDisabledValue(false);
-            plateOption.addDependent(customCopyOption, INDIVIDUAL_REACTIONS);
-            fromExistingOption.addDependent(customCopyOption, true);
+            useCustomCopyOption = addBooleanOption(USE_CUSTOM_COPY, "Custom Copy", false);
+            useCustomCopyOption.setDisabledValue(false);
+            plateOption.addDependent(useCustomCopyOption, INDIVIDUAL_REACTIONS);
+            fromExistingOption.addDependent(useCustomCopyOption, true);
 
-            customCopyOption.setAdvanced(true);
+            useCustomCopyOption.setAdvanced(true);
             Options customCopy = new Options(NewPlateOptions.class);
 
             final Option<String, ? extends JComponent> infoLabel;
             if (documents.length != 1) {
-                customCopyOption.setEnabled(false);
+                useCustomCopyOption.setEnabled(false);
                 infoLabel = customCopy.addLabelWithIcon("Can only custom copy with a single plate", StandardIcons.info.getIcons());
                 infoLabel.setAdvanced(true);
             } else {
@@ -164,9 +164,11 @@ public class NewPlateOptions extends Options{
                 infoLabel.setAdvanced(true);
             }
             addChildOptions("customCopy", "", "", customCopy);
-            customCopyOption.addChildOptionsDependent(customCopy, true, true);
-            customCopy.addIntegerOption("insertStart", "Insert start at column:", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS).setAdvanced(true);
-            customCopy.addComboBoxOption("insertMethod", "Insert Method: ", Arrays.asList(ALTERNATING, SEQUENTIALLY), ALTERNATING).setAdvanced(true);
+            useCustomCopyOption.addChildOptionsDependent(customCopy, true, true);
+            insertStartOption = customCopy.addIntegerOption("insertStart", "Insert start at column:", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS);
+            insertStartOption.setAdvanced(true);
+            insertMethodOption = customCopy.addComboBoxOption("insertMethod", "Insert Method: ", Arrays.asList(ALTERNATING, SEQUENTIALLY), ALTERNATING);
+            insertMethodOption.setAdvanced(true);
 
             Options rowOptions = new Options(NewPlateOptions.class);
             List<OptionValue> rowValues = new ArrayList<OptionValue>();
@@ -174,13 +176,13 @@ public class NewPlateOptions extends Options{
                 rowValues.add(new OptionValue("" + i, "Row " + (char) (i + 65)));
             }
             rowOptions.addComboBoxOption("row", "From: ", rowValues, rowValues.get(0));
-            customCopy.addMultipleOptions("rowOptions", rowOptions, true);
+            multipleRowOptions = customCopy.addMultipleOptions("rowOptions", rowOptions, true);
 
 
             final Options.BooleanOption fromExistingOption1 = fromExistingOption;
             SimpleListener fromExistingListener = new SimpleListener() {
                 public void objectChanged() {
-                    infoLabel.setVisible(!customCopyOption.isEnabled() && fromExistingOption1.getValue());
+                    infoLabel.setVisible(!useCustomCopyOption.isEnabled() && fromExistingOption1.getValue());
                     quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
                     docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(PLATE_384));
 //                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
@@ -192,8 +194,8 @@ public class NewPlateOptions extends Options{
         }
     }
 
-    private OptionValue ALTERNATING = new OptionValue("alternating", "Alternate Between Rows");
-    private OptionValue SEQUENTIALLY = new OptionValue("sequentially", "Sequential");
+    static final OptionValue ALTERNATING = new OptionValue("alternating", "Alternate Between Rows");
+    static final OptionValue SEQUENTIALLY = new OptionValue("sequentially", "Sequential");
 
     public Plate.Size getPlateSize() {
         return Plate.getSizeEnum(getNumberOfReactions());
@@ -353,6 +355,30 @@ public class NewPlateOptions extends Options{
         }
     }
 
+    static final String USE_CUSTOM_COPY = "useCustomCopy";
+    BooleanOption useCustomCopyOption;
+    boolean isUseCustomCopy() {
+        return useCustomCopyOption.getValue();
+    }
 
+    private ComboBoxOption<OptionValue> insertMethodOption;
+    boolean isCopySequential() {
+        return SEQUENTIALLY == insertMethodOption.getValue();
+    }
+
+    private MultipleOptions multipleRowOptions;
+    List<Integer> getRowsToCopy() {
+        MultipleOptions rowOptions = multipleRowOptions;
+        List<Integer> rows = new ArrayList<Integer>();
+        for (Options options : rowOptions.getValues()) {
+            rows.add(Integer.valueOf(options.getValueAsString("row")));
+        }
+        return rows;
+    }
+
+    private IntegerOption insertStartOption;
+    int getStartIndex() {
+        return insertStartOption.getValue() - 1;
+    }
 
 }

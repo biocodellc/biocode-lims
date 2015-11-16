@@ -10,6 +10,10 @@ import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import jebl.util.ProgressListener;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * @author Gen Li
  *         Created on 19/05/15 8:39 AM
@@ -94,12 +98,76 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
         }
     }
 
+    @Test
+    public void testAlternatingCustomCopy() throws DocumentOperationException {
+        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(STRIPS_PLATE_TYPE_VALUE, 5);
+        Options.OptionValue method = NewPlateOptions.ALTERNATING;
+        testCustomCopy(extractionPlate, method, 1, "1,2,3,4,5".split(","));
+        testCustomCopy(extractionPlate, method, 2, "1,6,2,7,3,8,4,9,5,10".split(","));
+        testCustomCopy(extractionPlate, method, 3, ("1,6,11,2,7,12,3,8,13,4,9,14,5,10,15").split(","));
+    }
+
+    @Test
+    public void testSequentialCustomCopy() throws DocumentOperationException {
+        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(STRIPS_PLATE_TYPE_VALUE, 5);
+        Options.OptionValue method = NewPlateOptions.SEQUENTIALLY;
+        testCustomCopy(extractionPlate, method, 1, "1,2,3,4,5".split(","));
+        testCustomCopy(extractionPlate, method, 2, "1,2,3,4,5,6,7,8,9,10".split(","));
+        testCustomCopy(extractionPlate, method, 3, ("1,2,3,4,5,6,7,8,9,10,11,12,13,14,15").split(","));
+    }
+
+    private void testCustomCopy(Plate extractionPlate, Options.OptionValue method, int rowsToCopy, String... expectedIds) throws DocumentOperationException {
+        AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
+        NewPlateOptions options = createNewPlateOptions(Reaction.Type.GelQuantification.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, extractionPlate.getCols() * rowsToCopy, annotatedPlate);
+        options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
+        options.setValue("customCopy.insertStart", 1);
+        options.setValue("customCopy.insertMethod", method);
+        Options customCopyOptions = options.getChildOptions().get("customCopy");
+        for (int i = 0; i < rowsToCopy; i++) {
+            customCopyOptions.setStringValue("rowOptions." + i + ".row", "" + i);
+        }
+
+        Plate plate = createPlateUsingOptions(false, options, annotatedPlate);
+        Reaction[] reactions = plate.getReactions();
+        List<String> actualIds = new ArrayList<String>();
+        for (int reactionIndex = 0; reactionIndex < reactions.length; reactionIndex++) {
+            Reaction reaction = reactions[reactionIndex];
+            actualIds.add(reaction.getExtractionId());
+        }
+        assertEquals(Arrays.asList(expectedIds), actualIds);
+    }
+
+    @Test
+    public void testCustomCopyInSmithsonianGelQuantificationFormat() throws DocumentOperationException {
+        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        AnnotatedPluginDocument annotatedPlate = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(extractionPlate));
+        NewPlateOptions options = createNewPlateOptions(Reaction.Type.GelQuantification.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, 30, annotatedPlate);
+        options.setValue(NewPlateOptions.USE_CUSTOM_COPY, true);
+        options.setValue("customCopy.insertStart", 4);  // First three wells are the control
+        options.setValue("customCopy.insertMethod", NewPlateOptions.ALTERNATING);
+        List<Plate> gelPlates = new ArrayList<Plate>();
+        for(int rowIndex=0; rowIndex<extractionPlate.getRows();) {
+            Options customCopyOptions = options.getChildOptions().get("customCopy");
+            customCopyOptions.setStringValue("rowOptions.0.row", "" + rowIndex++);
+            customCopyOptions.setStringValue("rowOptions.1.row", "" + rowIndex++);
+
+            Plate plate = createPlateUsingOptions(false, options, annotatedPlate);
+            Reaction[] reactions = plate.getReactions();
+            for (int reactionIndex = 0; reactionIndex < reactions.length; reactionIndex++) {
+                Reaction reaction = reactions[reactionIndex];
+                assertEquals(reactionIndex < 3 || reactionIndex > reactions.length-4, reaction.isEmpty());
+            }
+            gelPlates.add(plate);
+        }
+        assertEquals(4, gelPlates.size());  // There should be 4x 30-well gel quantification plates from a single 96-well plate.
+    }
+
     private static Plate createExtractionNonEmptyExtractionPlate(String plateType, int plateValue) throws DocumentOperationException {
         Plate plate = createPlate(false, EXTRACTION_REACTION_TYPE_VALUE, plateType, plateValue);
         Reaction[] reactions = plate.getReactions();
         for (int i = 0; i < reactions.length; i++) {
             Reaction reaction = reactions[i];
-            reaction.setExtractionId("" + i + ".1");
+            reaction.setExtractionId("" + (i+1));
         }
         return plate;
     }
@@ -114,8 +182,13 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
         for (int i = 0; i < plates.length; i++) {
             annotatedExistingPlateDocuments[i] = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(plates[i]));
         }
+        NewPlateOptions options = createNewPlateOptions(reactionType, plateType, plateValue, annotatedExistingPlateDocuments);
 
-        Plate plate = new NewPlateDocumentOperation()._performOperation(annotatedExistingPlateDocuments, ProgressListener.EMPTY, createNewPlateOptions(reactionType, plateType, plateValue, annotatedExistingPlateDocuments));
+        return createPlateUsingOptions(checkForNotEmpty, options, annotatedExistingPlateDocuments);
+    }
+
+    private static Plate createPlateUsingOptions(boolean checkForNotEmpty, NewPlateOptions options, AnnotatedPluginDocument... annotatedExistingPlateDocuments) throws DocumentOperationException {
+        Plate plate = new NewPlateDocumentOperation()._performOperation(annotatedExistingPlateDocuments, ProgressListener.EMPTY, options);
         if(checkForNotEmpty) {
             for (Reaction reaction : plate.getReactions()) {
                 assertFalse(reaction.isEmpty());
