@@ -162,6 +162,24 @@ public abstract class LimsTestCase extends Assert {
         service.savePlate(extractionPlate, ProgressListener.EMPTY);
     }
 
+    protected Plate saveGelQuantificationPlate(String plateName, BiocodeService service, String... extractionIds) throws DatabaseServiceException, BadDataException {
+        Plate gelPlate = new Plate(Plate.Size.w96, Reaction.Type.GelQuantification);
+        gelPlate.setName(plateName);
+
+        int index = 0;
+        for (String extractionId : extractionIds) {
+            int row = index/gelPlate.getCols();
+            int column = index%gelPlate.getCols();
+
+            Reaction reaction = gelPlate.getReaction(row, column);
+            reaction.setExtractionId(extractionId);
+
+            index++;
+        }
+        service.savePlate(gelPlate, ProgressListener.EMPTY);
+        return gelPlate;
+    }
+
     protected Plate savePcrPlate(String plateName, String locus, BiocodeService service, String... extractionIds) throws SQLException, BadDataException, DatabaseServiceException {
         Plate pcrPlate = new Plate(Plate.Size.w96, Reaction.Type.PCR);
         pcrPlate.setName(plateName);

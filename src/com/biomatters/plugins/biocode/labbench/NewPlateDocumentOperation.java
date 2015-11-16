@@ -173,7 +173,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
         for(int i=0; i < Math.min(srcReactions.length, destReactions.length); i++) {
             ReactionUtilities.copyReaction(srcReactions[i], destReactions[i]);
         }
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction) {
+        if(!srcPlate.getReactionType().linksToWorkflows()) {
             autodetectWorkflows(destPlate);
         }
     }
@@ -203,7 +203,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        if(reactionType == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
+        if(!reactionType.linksToWorkflows() && destPlate.getReactionType().linksToWorkflows()) {
             autodetectWorkflows(destPlate);
         }
         if(reactionType == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {
@@ -225,7 +225,7 @@ public class NewPlateDocumentOperation extends DocumentOperation {
                 }
             }
         }
-        if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() != Reaction.Type.Extraction) {
+        if(!srcPlate.getReactionType().linksToWorkflows() && destPlate.getReactionType().linksToWorkflows()) {
             autodetectWorkflows(destPlate);
         }
         if(srcPlate.getReactionType() == Reaction.Type.Extraction && destPlate.getReactionType() == Reaction.Type.Extraction) {

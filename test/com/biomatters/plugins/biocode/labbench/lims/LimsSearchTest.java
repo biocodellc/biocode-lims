@@ -124,6 +124,50 @@ public class LimsSearchTest extends LimsTestCase {
     }
 
     @Test
+    public void gelQuantificationSearch() throws DatabaseServiceException, BadDataException {
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_M037", tissue, extractionId, service);
+
+        String plateName = "PCR_M037";
+        saveGelQuantificationPlate(plateName, service, extractionId);
+
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(extractionId);
+        boolean found = false;
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(getPlateFromDocument(searchResult, plateName, Reaction.Type.GelQuantification, extractionId) != null) {
+                found = true;
+            }
+        }
+        assertTrue(found);
+    }
+
+    @Test
+    public void workflowsDoNotContainGelQuantificationReactions() throws DatabaseServiceException, BadDataException {
+        String tissue = "MBIO24950.1";
+        String extractionId = "MBIO24950.1.1";
+
+        BiocodeService service = BiocodeService.getInstance();
+        saveExtractionPlate("Plate_M037", tissue, extractionId, service);
+
+        String plateName = "PCR_M037";
+        saveGelQuantificationPlate(plateName, service, extractionId);
+
+        List<AnnotatedPluginDocument> searchResults = service.retrieve(extractionId);
+        boolean found = false;
+        for (AnnotatedPluginDocument searchResult : searchResults) {
+            if(WorkflowDocument.class.isAssignableFrom(searchResult.getDocumentClass())) {
+                WorkflowDocument workflow = (WorkflowDocument) searchResult.getDocumentOrNull();
+                for (Reaction reaction : workflow.getReactions()) {
+                    assertFalse(reaction.getType() == Reaction.Type.GelQuantification);
+                }
+            }
+        }
+    }
+
+    @Test
     public void searchByTissueDoesNotReturnExtra() throws IOException, BadDataException, SQLException, DatabaseServiceException {
         String plateName = "Plate_M037";
         String tissue = "MBIO24950.1";
