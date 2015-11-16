@@ -43,7 +43,8 @@ public class NewPlateOptions extends Options{
         for(AnnotatedPluginDocument doc : documents) {
             PlateDocument plateDoc = (PlateDocument)doc.getDocument();
             Plate.Size size = plateDoc.getPlate().getPlateSize();
-            if(plateDoc.getPlate().getReactionType() == Reaction.Type.Extraction) {
+            Reaction.Type type = plateDoc.getPlate().getReactionType();
+            if(type != Reaction.Type.PCR && type != Reaction.Type.CycleSequencing) {
                 allPcrOrSequencing = false;
             }
             if(pSize != null && size != pSize) {

@@ -762,6 +762,9 @@ public class ReportGenerator {
             case Extraction:
                 reaction = new ExtractionReaction();
                 break;
+            case GelQuantification:
+                reaction = new GelQuantificationReaction();
+                break;
             case PCR:
                 reaction = new PCRReaction();
                 break;

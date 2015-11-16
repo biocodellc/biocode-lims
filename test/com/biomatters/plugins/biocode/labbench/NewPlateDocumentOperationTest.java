@@ -32,7 +32,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
     @Test
     public void testCreateStripExtractionPlateFromStripExtractionPlate() throws DocumentOperationException {
         for (int numberOfStrips = 1; numberOfStrips <= 6; numberOfStrips++) {
-            Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, STRIPS_PLATE_TYPE_VALUE, numberOfStrips);
+            Plate extractionPlate = createExtractionNonEmptyExtractionPlate(STRIPS_PLATE_TYPE_VALUE, numberOfStrips);
             for (Reaction.Type type : Reaction.Type.values()) {
                 createPlate(type.name, STRIPS_PLATE_TYPE_VALUE, numberOfStrips, extractionPlate);
             }
@@ -45,19 +45,23 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
             if(numberOfIndividualReactions % 8 == 0) {
                 continue;  // These sizes are reserved for strips
             }
-            Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions);
+            Plate extractionPlate = createExtractionNonEmptyExtractionPlate(INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions);
             for (Reaction.Type type : Reaction.Type.values()) {
                 Plate plate = createPlate(type.name, INDIVIDUAL_REACTIONS_PLATE_TYPE_VALUE, numberOfIndividualReactions, extractionPlate);
                 assertEquals(type, plate.getReactionType());
                 assertEquals(numberOfIndividualReactions, plate.getReactions().length);
                 assertEquals(1, plate.getRows());
+                int count = 0;
+                for (Reaction reaction : plate.getReactions()) {
+                    assertFalse(reaction.isEmpty());
+                }
             }
         }
     }
 
     @Test
     public void testCreate48PCRPlateFrom48ExtractionPlate() throws DocumentOperationException {
-        Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0);
+        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
             createPlate(type.name, FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
         }
@@ -65,7 +69,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
 
     @Test
     public void testCreate96PCRPlateFrom96ExtractionPlate() throws DocumentOperationException {
-        Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
             createPlate(type.name, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
         }
@@ -73,7 +77,7 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
 
     @Test
     public void testCreate384PCRPlateFrom384ExtractionPlate() throws DocumentOperationException {
-        Plate extractionPlate = createPlate(EXTRACTION_REACTION_TYPE_VALUE, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0);
+        Plate extractionPlate = createExtractionNonEmptyExtractionPlate(THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
             createPlate(type.name, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, extractionPlate);
         }
@@ -81,23 +85,43 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
 
     @Test
     public void testCreate384PCRPlateFromFour96ExtractionPlates() throws DocumentOperationException {
-        Plate ninetySixWellExtractionPlateOne = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
-        Plate ninetySixWellExtractionPlateTwo = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
-        Plate ninetySixWellExtractionPlateThree = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
-        Plate ninetySixWellExtractionPlateFour = createPlate(EXTRACTION_REACTION_TYPE_VALUE, NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        Plate ninetySixWellExtractionPlateOne = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        Plate ninetySixWellExtractionPlateTwo = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        Plate ninetySixWellExtractionPlateThree = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
+        Plate ninetySixWellExtractionPlateFour = createExtractionNonEmptyExtractionPlate(NINETY_SIX_WELL_PLATE_TYPE_VALUE, 0);
         for (Reaction.Type type : Reaction.Type.values()) {
             createPlate(type.name, THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE, 0, ninetySixWellExtractionPlateOne, ninetySixWellExtractionPlateTwo, ninetySixWellExtractionPlateThree, ninetySixWellExtractionPlateFour);
         }
     }
 
+    private static Plate createExtractionNonEmptyExtractionPlate(String plateType, int plateValue) throws DocumentOperationException {
+        Plate plate = createPlate(false, EXTRACTION_REACTION_TYPE_VALUE, plateType, plateValue);
+        Reaction[] reactions = plate.getReactions();
+        for (int i = 0; i < reactions.length; i++) {
+            Reaction reaction = reactions[i];
+            reaction.setExtractionId("" + i + ".1");
+        }
+        return plate;
+    }
+
     private static Plate createPlate(String reactionType, String plateType, int plateValue, Plate... plates) throws DocumentOperationException {
+        return createPlate(true, reactionType, plateType, plateValue, plates);
+    }
+
+    private static Plate createPlate(boolean checkForNotEmpty, String reactionType, String plateType, int plateValue, Plate... plates) throws DocumentOperationException {
         AnnotatedPluginDocument[] annotatedExistingPlateDocuments = new AnnotatedPluginDocument[plates.length];
 
         for (int i = 0; i < plates.length; i++) {
             annotatedExistingPlateDocuments[i] = DocumentUtilities.createAnnotatedPluginDocument(new PlateDocument(plates[i]));
         }
 
-        return new NewPlateDocumentOperation()._performOperation(annotatedExistingPlateDocuments, ProgressListener.EMPTY, createNewPlateOptions(reactionType, plateType, plateValue, annotatedExistingPlateDocuments));
+        Plate plate = new NewPlateDocumentOperation()._performOperation(annotatedExistingPlateDocuments, ProgressListener.EMPTY, createNewPlateOptions(reactionType, plateType, plateValue, annotatedExistingPlateDocuments));
+        if(checkForNotEmpty) {
+            for (Reaction reaction : plate.getReactions()) {
+                assertFalse(reaction.isEmpty());
+            }
+        }
+        return plate;
     }
 
     private static NewPlateOptions createNewPlateOptions(String reactionType, String plateType, int plateValue, AnnotatedPluginDocument... annotatedExistingPlateDocument) throws DocumentOperationException {
@@ -122,6 +146,11 @@ public class NewPlateDocumentOperationTest extends LimsTestCase {
         } else if (plateType.equals(FOURTY_EIGHT_WELL_PLATE_TYPE_VALUE)) {
         } else if (plateType.equals(NINETY_SIX_WELL_PLATE_TYPE_VALUE)) {
         } else if (plateType.equals(THREE_HUNDRED_EIGHTY_FOUR_WELL_PLATE_TYPE_VALUE)) {
+            for(int i=0; i<4; i++) {
+                if(annotatedExistingPlateDocument.length > i) {
+                    newPlateOptions.setValue("fromQuadrant" + (".q") + (i+1), annotatedExistingPlateDocument[i].getURN().toString());
+                }
+            }
         } else {
             throw new IllegalArgumentException("Unsupported plate type: " + plateType + ".");
         }

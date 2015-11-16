@@ -1327,6 +1327,9 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
             case Extraction:
                 tableName = "extraction";
                 break;
+            case GelQuantification:
+                tableName = GelQuantificationReaction.DB_TABLE_NAME;
+                break;
             case PCR:
                 tableName = "pcr";
                 break;
@@ -1846,6 +1849,8 @@ private void deleteReactions(ProgressListener progress, Plate plate) throws Data
         switch(reactionType) {
             case Extraction:
                 throw new RuntimeException("You should not be adding extractions to existing workflows!");
+            case GelQuantification:
+                throw new RuntimeException("Gel Quantification reactions do not have workflows");
             case PCR:
             case CycleSequencing:
                 sqlBuilder.append("SELECT extraction.extractionId AS id, workflow.name AS workflow, workflow.date AS date, workflow.id AS workflowId, extraction.date FROM extraction, workflow WHERE workflow.extractionId = extraction.id AND (");
