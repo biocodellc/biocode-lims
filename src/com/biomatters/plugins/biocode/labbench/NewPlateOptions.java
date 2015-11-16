@@ -254,16 +254,16 @@ public class NewPlateOptions extends Options{
             if(getPlateSize() == Plate.Size.w96 && plateSize != Plate.Size.w384 && documents.length > 1){
                 return "You can only create 96 well plates from a single 96 or 384 well plate document";
             }
-            if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w96 && plateSize != Plate.Size.w384) {
+            else if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w96 && plateSize != Plate.Size.w384) {
                 return "You can only create 384 well plates from a single 384 well or up to 4 96 well plate documents";
             }
-            if(plateSize == null && getPlateSize() != null) {
+            else if(plateSize == null && getPlateSize() != null) {
                 return "You cannot create a "+getPlateSize()+" plate from a set of reactions.";
             }
-            if(!(plateSize == Plate.Size.w96 && getPlateSize() == Plate.Size.w384) && !(plateSize == Plate.Size.w384 && getPlateSize() == Plate.Size.w96) && plateSize != getPlateSize()) {
+            else if(plateSize != getPlateSize() && !(documents.length == 1 && isUseCustomCopy())) {
                 return "You cannot create a "+(getPlateSize() == null ? "set of reactions" : getPlateSize()+" well")+" plate from a "+plateSize+" well plate.";
             }
-            if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w384) {
+            else if(getPlateSize() == Plate.Size.w384 && plateSize != Plate.Size.w384) {
                 int docCount = 0;
                 for(int i=0; i < 4; i++) {
                     AnnotatedPluginDocument doc = getPlateForQuadrant(documents, i);
