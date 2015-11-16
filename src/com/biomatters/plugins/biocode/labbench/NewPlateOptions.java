@@ -1,13 +1,17 @@
 package com.biomatters.plugins.biocode.labbench;
 
+import com.biomatters.geneious.publicapi.components.Dialogs;
 import com.biomatters.geneious.publicapi.documents.AnnotatedPluginDocument;
 import com.biomatters.geneious.publicapi.plugin.DocumentOperationException;
 import com.biomatters.geneious.publicapi.plugin.Options;
+import com.biomatters.geneious.publicapi.utilities.IconUtilities;
+import com.biomatters.geneious.publicapi.utilities.StandardIcons;
 import com.biomatters.plugins.biocode.BiocodeUtilities;
 import com.biomatters.plugins.biocode.labbench.plates.Plate;
 import com.biomatters.plugins.biocode.labbench.reaction.Reaction;
 import org.virion.jam.util.SimpleListener;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,6 +44,7 @@ public class NewPlateOptions extends Options{
         boolean allPcrOrSequencing = true;
         Plate.Size pSize = null;
         int numberOfReactions = 0;
+        int rows = 0;
         for(AnnotatedPluginDocument doc : documents) {
             PlateDocument plateDoc = (PlateDocument)doc.getDocument();
             Plate.Size size = plateDoc.getPlate().getPlateSize();
@@ -52,6 +57,7 @@ public class NewPlateOptions extends Options{
             }
             numberOfReactions += plateDoc.getPlate().getReactions().length;
             pSize = size;
+            rows += plateDoc.getPlate().getRows();
         }
         final Plate.Size plateSize = pSize;
         if(fourPlates && plateSize != Plate.Size.w96) {
@@ -140,9 +146,41 @@ public class NewPlateOptions extends Options{
 
 
         if(fromExistingOption != null) {
+            final BooleanOption customCopyOption = addBooleanOption("custom", "Custom Copy", false);
+            customCopyOption.setDisabledValue(false);
+            plateOption.addDependent(customCopyOption, INDIVIDUAL_REACTIONS);
+            fromExistingOption.addDependent(customCopyOption, true);
+
+            customCopyOption.setAdvanced(true);
+            Options customCopy = new Options(NewPlateOptions.class);
+
+            final Option<String, ? extends JComponent> infoLabel;
+            if (documents.length != 1) {
+                customCopyOption.setEnabled(false);
+                infoLabel = customCopy.addLabelWithIcon("Can only custom copy with a single plate", StandardIcons.info.getIcons());
+                infoLabel.setAdvanced(true);
+            } else {
+                infoLabel = customCopy.addLabelWithIcon("Can only custom copy into plate of individual reactions", StandardIcons.info.getIcons());
+                infoLabel.setAdvanced(true);
+            }
+            addChildOptions("customCopy", "", "", customCopy);
+            customCopyOption.addChildOptionsDependent(customCopy, true, true);
+            customCopy.addIntegerOption("insertStart", "Insert start at column:", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS).setAdvanced(true);
+            customCopy.addComboBoxOption("insertMethod", "Insert Method: ", Arrays.asList(ALTERNATING, SEQUENTIALLY), ALTERNATING).setAdvanced(true);
+
+            Options rowOptions = new Options(NewPlateOptions.class);
+            List<OptionValue> rowValues = new ArrayList<OptionValue>();
+            for (int i = 0; i < rows; i++) {
+                rowValues.add(new OptionValue("" + i, "Row " + (char) (i + 65)));
+            }
+            rowOptions.addComboBoxOption("row", "From: ", rowValues, rowValues.get(0));
+            customCopy.addMultipleOptions("rowOptions", rowOptions, true);
+
+
             final Options.BooleanOption fromExistingOption1 = fromExistingOption;
             SimpleListener fromExistingListener = new SimpleListener() {
                 public void objectChanged() {
+                    infoLabel.setVisible(!customCopyOption.isEnabled() && fromExistingOption1.getValue());
                     quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
                     docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(PLATE_384));
 //                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
@@ -152,23 +190,6 @@ public class NewPlateOptions extends Options{
             plateOption.addChangeListener(fromExistingListener);
             fromExistingListener.objectChanged();
         }
-
-        BooleanOption customCopyOption = addBooleanOption("custom", "Custom Copy", false);
-        customCopyOption.setAdvanced(true);
-        Options customCopy = new Options(NewPlateOptions.class);
-        customCopy.addLabel("Note: Only supports copying into plates of individual reactions").setAdvanced(true);  // todo
-        addChildOptions("customCopy", "", "", customCopy);
-        customCopyOption.addChildOptionsDependent(customCopy, true, true);
-        customCopy.addIntegerOption("insertStart", "Insert start at column:", 1, 1, Plate.MAX_INDIVIDUAL_REACTIONS).setAdvanced(true);
-        customCopy.addComboBoxOption("insertMethod", "Insert Method: ", Arrays.asList(ALTERNATING, SEQUENTIALLY), ALTERNATING).setAdvanced(true);
-
-        Options rowOptions = new Options(NewPlateOptions.class);
-        List<OptionValue> rowValues = new ArrayList<OptionValue>();
-        for (int i = 0; i <10; i++) {
-            rowValues.add(new OptionValue("" + i, "Row " + i));
-        }
-        rowOptions.addComboBoxOption("row", "From: ", rowValues, rowValues.get(0));
-        customCopy.addMultipleOptions("rowOptions", rowOptions, true);
     }
 
     private OptionValue ALTERNATING = new OptionValue("alternating", "Alternate Between Rows");
