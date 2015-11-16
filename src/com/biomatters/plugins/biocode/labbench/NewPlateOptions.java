@@ -55,28 +55,30 @@ public class NewPlateOptions extends Options{
                 fromExistingTissues = true;
             } else {
                 throw new DocumentOperationException("Invalid document type encountered: " + documents[0].getDocumentClass().getSimpleName() + ".");
-        int rows = 0;
-        for(AnnotatedPluginDocument doc : documents) {
-            PlateDocument plateDoc = (PlateDocument)doc.getDocument();
-            Plate.Size size = plateDoc.getPlate().getPlateSize();
-            Reaction.Type type = plateDoc.getPlate().getReactionType();
-            if(type != Reaction.Type.PCR && type != Reaction.Type.CycleSequencing) {
-                allPcrOrSequencing = false;
             }
-            if(pSize != null && size != pSize) {
-                throw new DocumentOperationException("All selected plates must be of the same size");
-            }
-            numberOfReactions += plateDoc.getPlate().getReactions().length;
-            pSize = size;
-            rows += plateDoc.getPlate().getRows();
         }
-                
+        int rows = 0;
+
 
         if (fromExistingPlates) {
             if (documents.length == 4) {
                 fourPlates.set(true);
             }
-            
+            for(AnnotatedPluginDocument doc : documents) {
+                PlateDocument plateDoc = (PlateDocument)doc.getDocument();
+                Plate.Size size = plateDoc.getPlate().getPlateSize();
+                Reaction.Type type = plateDoc.getPlate().getReactionType();
+                if(type != Reaction.Type.PCR && type != Reaction.Type.CycleSequencing) {
+                    allPcrOrSequencing = false;
+                }
+                if(pSize != null && size != pSize) {
+                    throw new DocumentOperationException("All selected plates must be of the same size");
+                }
+                numberOfReactions += plateDoc.getPlate().getReactions().length;
+                pSize = size;
+                rows += plateDoc.getPlate().getRows();
+            }
+
         }
         final Plate.Size plateSize = pSize;
         if (fourPlates.get() && plateSize != Plate.Size.w96) {
@@ -206,7 +208,7 @@ public class NewPlateOptions extends Options{
             SimpleListener fromExistingListener = new SimpleListener() {
                 public void objectChanged() {
                     infoLabel.setVisible(!useCustomCopyOption.isEnabled() && fromExistingOption1.getValue());
-                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
+                    quadrantOptions.setVisible(fromExistingOption1.getValue() && !fourPlates.get() && plateSize == Plate.Size.w384 && plateOption.getValue().equals(PLATE_96));
                     docChooserOptions.setVisible(fromExistingOption1.getValue() && plateSize == Plate.Size.w96 && plateOption.getValue().equals(PLATE_384));
 //                    reactionNumber.setEnabled(!fromExistingOption1.getValue() || plateSize == null);
                 }
