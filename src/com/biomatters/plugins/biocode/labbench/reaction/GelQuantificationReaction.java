@@ -46,6 +46,20 @@ public class GelQuantificationReaction extends Reaction<GelQuantificationReactio
         String parent = resultSet.getString("parent");
         options.setValue("parentExtractionId", parent == null ? "" : parent);
 
+
+        String originalPlate = resultSet.getString(GelQuantificationOptions.ORIGINAL_PLATE);
+        if(originalPlate != null) {
+            options.setValue(GelQuantificationOptions.ORIGINAL_PLATE, originalPlate);
+            int originalPlateSize = resultSet.getInt(GelQuantificationOptions.ORIGINAL_PLATE_SIZE);
+            if (originalPlateSize != -1) {
+                Plate.Size size = Plate.getSizeEnum(originalPlateSize);
+                int originalLocation = resultSet.getInt(GelQuantificationOptions.ORIGINAL_WELL);
+                if (originalLocation != -1) {
+                    options.setValue(GelQuantificationOptions.ORIGINAL_WELL, Plate.getWell(originalLocation, size).toPaddedString());
+                }
+            }
+        }
+
         setCreated(resultSet.getTimestamp(DB_TABLE_NAME + ".date"));
         options.getOption("date").setValue(resultSet.getDate(DB_TABLE_NAME + ".date")); //we use getOption() here because the toString() method of java.sql.Date is different to the toString() method of java.util.Date, so setValueFromString() fails in DateOption
         setPosition(resultSet.getInt(DB_TABLE_NAME + ".location"));

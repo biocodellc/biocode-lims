@@ -19,11 +19,18 @@ public class GelQuantificationOptions extends ReactionOptions {
     private static final String TISSUE_ID = "tissueId";
     private static final String PARENT_EXTRACTION_ID = "parentExtractionId";
 
+    public static final String ORIGINAL_PLATE = "originalPlate";
+    public static final String ORIGINAL_PLATE_SIZE = "originalPlateSize";
+    public static final String ORIGINAL_WELL = "originalWell";
+
     public GelQuantificationOptions() {
         addStringOption(TISSUE_ID, "Tissue ID", "");
         addStringOption(PARENT_EXTRACTION_ID, "Parent Extraction ID", "");
         addStringOption(Reaction.EXTRACTION_FIELD.getCode(), Reaction.EXTRACTION_FIELD.getName(), "");
         addDateOption("date", "Date", new Date());
+
+        addStringOption(ORIGINAL_PLATE, "Extraction Plate", "");
+        addStringOption(ORIGINAL_WELL, "Extraction Well", "");
 
         addStringOption("gelBuffer", "Gel Buffer", "");
         addDoubleOption("gelConc", "Gel Concentration", 0.0).setUnits("%");

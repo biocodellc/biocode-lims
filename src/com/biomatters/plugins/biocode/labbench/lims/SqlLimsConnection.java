@@ -1056,6 +1056,9 @@ public abstract class SqlLimsConnection extends LIMSConnection {
 
     private String constructPlateQuery(Collection<Integer> plateIds) {
         StringBuilder queryBuilder = new StringBuilder("SELECT E.id, E.extractionId, E.extractionBarcode, E.parent, " +
+                "EP.name AS " + GelQuantificationOptions.ORIGINAL_PLATE + ", " +
+                "EP.size AS " + GelQuantificationOptions.ORIGINAL_PLATE_SIZE + "," +
+                "E.location AS " + GelQuantificationOptions.ORIGINAL_WELL + ", " +
                 "plate.*, extraction.*, " + GelQuantificationReaction.DB_TABLE_NAME + ".*, workflow.*, pcr.*, cyclesequencing.*, " +
                 "assembly.id, assembly.progress, assembly.date, assembly.notes, assembly.failure_reason, assembly.failure_notes FROM ");
         // We join plate twice because HSQL doesn't let us use aliases.  The way the query is written means the select would produce a derived table.
@@ -1081,6 +1084,8 @@ public abstract class SqlLimsConnection extends LIMSConnection {
         queryBuilder.append("LEFT OUTER JOIN extraction E ON E.id = " +
                 "CASE WHEN " + GelQuantificationReaction.DB_TABLE_NAME + ".extractionId IS NOT NULL THEN " + GelQuantificationReaction.DB_TABLE_NAME + ".extractionId ELSE " +
                 "CASE WHEN extraction.id IS NULL THEN workflow.extractionId ELSE extraction.id END END ");  // So we get extraction ID for pcr and cyclesequencing reactions
+
+        queryBuilder.append("LEFT OUTER JOIN plate EP ON EP.id = E.plate");
 
         queryBuilder.append(" ORDER by plate.id, assembly.date desc");
         return queryBuilder.toString();
